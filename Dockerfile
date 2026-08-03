@@ -25,7 +25,8 @@ ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL \
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npm run build
+# Garante que a pasta public exista mesmo que o repo nao a tenha (evita falha no COPY do runner).
+RUN mkdir -p public && npm run build
 
 # ---- 3. Runner (producao) --------------------------------------------------
 FROM node:20-alpine AS runner
