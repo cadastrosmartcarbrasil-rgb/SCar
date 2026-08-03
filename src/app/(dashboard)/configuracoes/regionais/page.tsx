@@ -1,0 +1,190 @@
+'use client';
+
+import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
+import { Plus, Pencil, Trash2, Building2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Modal } from '@/components/ui/modal';
+import { FormField, Input, Select } from '@/components/ui/field';
+import { useRegionais, useSaveRegional, useDeleteRegional, useUsuarios } from '@/hooks/use-config';
+import type { RegionaisRow } from '@/lib/database.types';
+
+type Endereco = { logradouro?: string; cidade?: string; uf?: string };
+
+export default function RegionaisPage() {
+  const { data: regionais, isLoading } = useRegionais();
+  const { data: usuarios } = useUsuarios();
+  const salvar = useSaveRegional();
+  const excluir = useDeleteRegional();
+
+  const [aberto, setAberto] = useState(false);
+  const [editando, setEditando] = useState<Partial<RegionaisRow> | null>(null);
+
+  const nomesUsuarios = useMemo(
+    () => new Map((usuarios ?? []).map((u) => [u.id, u.nome])),
+    [usuarios],
+  );
+
+  function novo() {
+    setEditando({ nome: '', cnpj: '', endereco: {}, responsavel_id: null });
+    setAberto(true);
+  }
+  function editar(r: RegionaisRow) {
+    setEditando(r);
+    setAberto(true);
+  }
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editando?.nome) return toast.error('Informe o nome da regional');
+    salvar.mutate(editando, {
+      onSuccess: () => {
+        toast.success('Regional salva');
+        setAberto(false);
+      },
+      onError: (err) => toast.error((err as Error).message),
+    });
+  }
+
+  const endereco = (editando?.endereco ?? {}) as Endereco;
+  const setEndereco = (patch: Partial<Endereco>) =>
+    setEditando((p) => ({ ...p, endereco: { ...endereco, ...patch } }));
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-slate-500">
+          Cadastre as regionais (franquias). Cada regional tem seus dados isolados por seguranca (RLS):
+          usuarios, clientes, veiculos e financeiro ficam restritos a sua propria regional.
+        </p>
+        <Button onClick={novo}>
+          <Plus className="h-4 w-4" /> Nova Regional
+        </Button>
+      </div>
+
+      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
+              <th className="px-4 py-2">Nome</th>
+              <th className="px-4 py-2">CNPJ</th>
+              <th className="px-4 py-2">Cidade/UF</th>
+              <th className="px-4 py-2">Responsavel</th>
+              <th className="px-4 py-2 text-right">Acoes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {isLoading && (
+              <tr>
+                <td colSpan={5} className="px-4 py-6 text-center text-slate-400">
+                  Carregando...
+                </td>
+              </tr>
+            )}
+            {(regionais ?? []).map((r) => {
+              const end = (r.endereco ?? {}) as Endereco;
+              return (
+                <tr key={r.id} className="border-b border-slate-50 last:border-0">
+                  <td className="px-4 py-2 font-medium text-slate-800">
+                    <span className="inline-flex items-center gap-2">
+                      <Building2 className="h-4 w-4 text-brand-500" /> {r.nome}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2 text-slate-600">{r.cnpj ?? '-'}</td>
+                  <td className="px-4 py-2 text-slate-600">
+                    {end.cidade ? `${end.cidade}/${end.uf ?? ''}` : '-'}
+                  </td>
+                  <td className="px-4 py-2 text-slate-600">
+                    {r.responsavel_id ? nomesUsuarios.get(r.responsavel_id) ?? '-' : '-'}
+                  </td>
+                  <td className="px-4 py-2">
+                    <div className="flex justify-end gap-1">
+                      <button onClick={() => editar(r)} className="rounded p-1.5 text-slate-500 hover:bg-slate-100">
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm(`Excluir a regional "${r.nome}"?`))
+                            excluir.mutate(r.id, {
+                              onSuccess: () => toast.success('Regional excluida'),
+                              onError: (e) => toast.error((e as Error).message),
+                            });
+                        }}
+                        className="rounded p-1.5 text-rose-500 hover:bg-rose-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+            {!isLoading && (regionais ?? []).length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-4 py-6 text-center text-slate-400">
+                  Nenhuma regional cadastrada.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <Modal open={aberto} onClose={() => setAberto(false)} title={editando?.id ? 'Editar Regional' : 'Nova Regional'}>
+        <form onSubmit={submit} className="space-y-3">
+          <FormField label="Nome da regional *">
+            <Input
+              value={editando?.nome ?? ''}
+              onChange={(e) => setEditando((p) => ({ ...p, nome: e.target.value }))}
+              placeholder="Ex.: Franquia Sao Paulo Centro"
+            />
+          </FormField>
+          <FormField label="CNPJ">
+            <Input
+              value={editando?.cnpj ?? ''}
+              onChange={(e) => setEditando((p) => ({ ...p, cnpj: e.target.value }))}
+              placeholder="00.000.000/0000-00"
+            />
+          </FormField>
+          <FormField label="Logradouro">
+            <Input value={endereco.logradouro ?? ''} onChange={(e) => setEndereco({ logradouro: e.target.value })} />
+          </FormField>
+          <div className="grid grid-cols-3 gap-3">
+            <FormField label="Cidade" className="col-span-2">
+              <Input value={endereco.cidade ?? ''} onChange={(e) => setEndereco({ cidade: e.target.value })} />
+            </FormField>
+            <FormField label="UF">
+              <Input
+                maxLength={2}
+                value={endereco.uf ?? ''}
+                onChange={(e) => setEndereco({ uf: e.target.value.toUpperCase() })}
+              />
+            </FormField>
+          </div>
+          <FormField label="Responsavel">
+            <Select
+              value={editando?.responsavel_id ?? ''}
+              onChange={(e) => setEditando((p) => ({ ...p, responsavel_id: e.target.value || null }))}
+            >
+              <option value="">-- Nenhum --</option>
+              {(usuarios ?? []).map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.nome}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="secondary" onClick={() => setAberto(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={salvar.isPending}>
+              {salvar.isPending ? 'Salvando...' : 'Salvar'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+    </div>
+  );
+}

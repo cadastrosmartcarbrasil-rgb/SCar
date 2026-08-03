@@ -28,6 +28,8 @@ export type TipoDocumentoAnexo =
   | 'FOTO_AVARIA' | 'BOLETIM_OCORRENCIA' | 'CNH' | 'CRLV' | 'NOTA_FISCAL';
 export type StatusCotacao = 'EM_ABERTO' | 'APROVADA' | 'REJEITADA';
 export type CodigoTemplate = 'BOAS_VINDAS' | 'LEMBRETE_BOLETO' | 'NOVO_EVENTO';
+export type ProvedorBanco = 'ASAAS' | 'PJBANK' | 'CORA' | 'INTER' | 'GERENCIANET' | 'OUTRO';
+export type AmbienteIntegracao = 'sandbox' | 'producao';
 
 // ---- Helper para linhas com timestamps ------------------------------------
 type Timestamps = {
@@ -229,6 +231,20 @@ export type EmailTemplatesRow = Timestamps & {
   ativo: boolean;
 };
 
+export type IntegracoesBancariasRow = Timestamps & {
+  id: string;
+  nome: string;
+  provedor: ProvedorBanco;
+  ambiente: AmbienteIntegracao;
+  api_url: string | null;
+  api_key: string | null;
+  api_token_extra: string | null;
+  webhook_secret: string | null;
+  regional_id: string | null;
+  is_padrao: boolean;
+  ativo: boolean;
+};
+
 // ---- Retornos de funcoes (RPC) --------------------------------------------
 export type DreLinha = {
   grupo: TipoCategoriaDre;
@@ -302,6 +318,7 @@ export type Database = {
       itens_cotacao: TableDef<ItensCotacaoRow, [Rel<'cotacao_id', 'cotacoes_pecas'>]>;
       notas_fiscais_evento: TableDef<NotasFiscaisEventoRow>;
       email_templates: TableDef<EmailTemplatesRow>;
+      integracoes_bancarias: TableDef<IntegracoesBancariasRow, [Rel<'regional_id', 'regionais'>]>;
     };
     Views: { [_ in never]: never };
     Functions: {

@@ -7,11 +7,13 @@ import {
   Users,
   AlertTriangle,
   DollarSign,
+  Settings,
   LogOut,
   ShieldCheck,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
+import type { PapelUsuario } from '@/lib/database.types';
 
 const NAV = [
   { href: '/dashboard', label: 'Visao Geral', icon: LayoutDashboard },
@@ -20,10 +22,13 @@ const NAV = [
   { href: '/financeiro', label: 'Financeiro / DRE', icon: DollarSign },
 ];
 
-export function Sidebar() {
+export function Sidebar({ papel }: { papel?: PapelUsuario }) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
+  const nav = papel === 'admin'
+    ? [...NAV, { href: '/configuracoes', label: 'Configuracoes', icon: Settings }]
+    : NAV;
 
   async function sair() {
     await supabase.auth.signOut();
@@ -41,7 +46,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 space-y-1 p-3">
-        {NAV.map((item) => {
+        {nav.map((item) => {
           const active = pathname === item.href || pathname.startsWith(item.href + '/');
           return (
             <Link

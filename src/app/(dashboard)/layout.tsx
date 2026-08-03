@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { Sidebar } from '@/components/layout/sidebar';
+import { SemAcesso } from '@/components/layout/sem-acesso';
 
 // Layout do painel de gestao. Garante sessao de staff (perfil em usuarios).
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -17,11 +18,21 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .eq('id', user.id)
     .maybeSingle();
 
-  if (!perfil) redirect('/portal');
+  if (!perfil) {
+    // Nao e staff: se for associado (cliente), vai ao portal; senao, sem acesso.
+    // Esse teste evita o loop de redirecionamento dashboard <-> portal.
+    const { data: cliente } = await supabase
+      .from('clientes')
+      .select('id')
+      .eq('auth_user_id', user.id)
+      .maybeSingle();
+    if (cliente) redirect('/portal');
+    return <SemAcesso email={user.email ?? ''} />;
+  }
 
   return (
     <div className="flex min-h-screen">
-      <Sidebar />
+      <Sidebar papel={perfil.papel} />
       <div className="flex-1">
         <header className="flex items-center justify-between border-b border-slate-200 bg-white px-8 py-3">
           <span className="text-sm text-slate-500">Painel de Gestao</span>
