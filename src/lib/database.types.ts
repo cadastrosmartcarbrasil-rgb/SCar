@@ -35,6 +35,8 @@ export type StatusCotacao = 'EM_ABERTO' | 'APROVADA' | 'REJEITADA';
 export type CodigoTemplate = 'BOAS_VINDAS' | 'LEMBRETE_BOLETO' | 'NOVO_EVENTO';
 export type ProvedorBanco = 'ASAAS' | 'PJBANK' | 'CORA' | 'INTER' | 'GERENCIANET' | 'OUTRO';
 export type AmbienteIntegracao = 'sandbox' | 'producao';
+export type CanalComunicacao = 'EMAIL' | 'SMS' | 'WHATSAPP';
+export type StatusComunicacao = 'pendente' | 'enviado' | 'falha';
 
 // ---- Helper para linhas com timestamps ------------------------------------
 type Timestamps = {
@@ -124,6 +126,20 @@ export type VeiculosRow = Timestamps & {
   quilometragem: number | null;
   tipo_cambio: TipoCambio | null;
   combustivel: Combustivel | null;
+};
+
+export type ComunicacoesRow = {
+  id: string;
+  cliente_id: string | null;
+  canal: CanalComunicacao;
+  destino: string | null;
+  assunto: string | null;
+  conteudo: string | null;
+  status: StatusComunicacao;
+  template_codigo: string | null;
+  erro: string | null;
+  regional_id: string | null;
+  created_at: string;
 };
 
 export type MarcasRow = {
@@ -353,6 +369,7 @@ export type Database = {
       integracoes_bancarias: TableDef<IntegracoesBancariasRow, [Rel<'regional_id', 'regionais'>]>;
       marcas: TableDef<MarcasRow>;
       modelos: TableDef<ModelosRow, [Rel<'marca_id', 'marcas'>]>;
+      comunicacoes: TableDef<ComunicacoesRow, [Rel<'cliente_id', 'clientes'>]>;
     };
     Views: { [_ in never]: never };
     Functions: {
