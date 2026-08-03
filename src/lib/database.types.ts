@@ -17,7 +17,11 @@ export type TipoPessoa = 'PF' | 'PJ';
 export type StatusCliente =
   | 'ativo' | 'inadimplente' | 'cancelado' | 'inativo' | 'suspenso' | 'excluido';
 export type UsoVeiculo = 'passeio' | 'app' | 'comercial';
-export type StatusVeiculo = 'ativo' | 'suspenso' | 'baixado';
+export type StatusVeiculo = 'ativo' | 'suspenso' | 'baixado' | 'inativo' | 'excluido';
+export type TipoNegociacao =
+  | 'venda' | 'substituicao' | 'reativacao' | 'troca_titularidade' | 'renovacao';
+export type TipoCambio = 'manual' | 'automatico' | 'automatizado';
+export type Combustivel = 'gasolina' | 'flex' | 'diesel' | 'alcool' | 'eletrico';
 export type StatusTitulo = 'pendente' | 'pago' | 'cancelado' | 'vencido';
 export type TipoMovimentacao = 'RECEITA' | 'DESPESA';
 export type TipoCategoriaDre = 'RECEITA' | 'CUSTO_VARIAVEL' | 'DESPESA_FIXA';
@@ -114,6 +118,27 @@ export type VeiculosRow = Timestamps & {
   vendedor_id: string | null;
   plano_protecao_id: string | null;
   status: StatusVeiculo;
+  data_contrato: string | null;
+  tipo_negociacao: TipoNegociacao | null;
+  codigo_fipe: string | null;
+  quilometragem: number | null;
+  tipo_cambio: TipoCambio | null;
+  combustivel: Combustivel | null;
+};
+
+export type MarcasRow = {
+  id: string;
+  nome: string;
+  ativo: boolean;
+  created_at: string;
+};
+
+export type ModelosRow = {
+  id: string;
+  marca_id: string;
+  nome: string;
+  ativo: boolean;
+  created_at: string;
 };
 
 export type CategoriasDreRow = {
@@ -326,6 +351,8 @@ export type Database = {
       notas_fiscais_evento: TableDef<NotasFiscaisEventoRow>;
       email_templates: TableDef<EmailTemplatesRow>;
       integracoes_bancarias: TableDef<IntegracoesBancariasRow, [Rel<'regional_id', 'regionais'>]>;
+      marcas: TableDef<MarcasRow>;
+      modelos: TableDef<ModelosRow, [Rel<'marca_id', 'marcas'>]>;
     };
     Views: { [_ in never]: never };
     Functions: {

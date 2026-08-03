@@ -7,6 +7,9 @@ import type {
   CategoriasDreRow,
   IntegracoesBancariasRow,
   UsuariosRow,
+  MarcasRow,
+  ModelosRow,
+  VendedoresRow,
 } from '@/lib/database.types';
 
 // ---------------------------------------------------------------------------
@@ -221,5 +224,136 @@ export function useUpdateUsuario() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['config', 'usuarios'] }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Vendedores (consultores)
+// ---------------------------------------------------------------------------
+export function useVendedores() {
+  const supabase = createClient();
+  return useQuery<VendedoresRow[]>({
+    queryKey: ['config', 'vendedores'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('vendedores').select('*');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function useSaveVendedor() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: Partial<VendedoresRow>) => {
+      const payload = {
+        usuario_id: v.usuario_id,
+        regional_id: v.regional_id || null,
+        taxa_comissao_adesao: v.taxa_comissao_adesao ?? 0,
+        taxa_comissao_recorrente: v.taxa_comissao_recorrente ?? 0,
+        ativo: v.ativo ?? true,
+      };
+      if (v.id) {
+        const { error } = await supabase.from('vendedores').update(payload).eq('id', v.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('vendedores').insert(payload);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['config', 'vendedores'] }),
+  });
+}
+
+export function useDeleteVendedor() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('vendedores').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['config', 'vendedores'] }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Marcas e Modelos de veiculos
+// ---------------------------------------------------------------------------
+export function useMarcas() {
+  const supabase = createClient();
+  return useQuery<MarcasRow[]>({
+    queryKey: ['config', 'marcas'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('marcas').select('*').order('nome');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function useModelos(marcaId?: string) {
+  const supabase = createClient();
+  return useQuery<ModelosRow[]>({
+    queryKey: ['config', 'modelos', marcaId ?? 'all'],
+    queryFn: async () => {
+      let q = supabase.from('modelos').select('*').order('nome');
+      if (marcaId) q = q.eq('marca_id', marcaId);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function useSaveMarca() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (nome: string) => {
+      const { error } = await supabase.from('marcas').insert({ nome });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['config', 'marcas'] }),
+  });
+}
+
+export function useDeleteMarca() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('marcas').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['config', 'marcas'] });
+      qc.invalidateQueries({ queryKey: ['config', 'modelos'] });
+    },
+  });
+}
+
+export function useSaveModelo() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: { marca_id: string; nome: string }) => {
+      const { error } = await supabase.from('modelos').insert(v);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['config', 'modelos'] }),
+  });
+}
+
+export function useDeleteModelo() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('modelos').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['config', 'modelos'] }),
   });
 }

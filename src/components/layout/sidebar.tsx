@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
   Users,
+  Car,
   AlertTriangle,
   DollarSign,
   Settings,
@@ -18,6 +19,7 @@ import type { PapelUsuario } from '@/lib/database.types';
 const NAV = [
   { href: '/dashboard', label: 'Visao Geral', icon: LayoutDashboard },
   { href: '/associados', label: 'Associados', icon: Users },
+  { href: '/veiculos', label: 'Veiculos', icon: Car },
   { href: '/sinistros', label: 'Sinistros', icon: AlertTriangle },
   { href: '/financeiro', label: 'Financeiro / DRE', icon: DollarSign },
 ];
