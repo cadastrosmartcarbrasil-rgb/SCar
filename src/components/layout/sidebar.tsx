@@ -17,7 +17,7 @@ import type { PapelUsuario } from '@/lib/database.types';
 
 const NAV = [
   { href: '/dashboard', label: 'Visao Geral', icon: LayoutDashboard },
-  { href: '/clientes', label: 'Clientes & Veiculos', icon: Users },
+  { href: '/associados', label: 'Associados', icon: Users },
   { href: '/sinistros', label: 'Sinistros', icon: AlertTriangle },
   { href: '/financeiro', label: 'Financeiro / DRE', icon: DollarSign },
 ];

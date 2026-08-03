@@ -14,7 +14,8 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type PapelUsuario =
   | 'admin' | 'gestor_regional' | 'consultor_vendas' | 'financeiro' | 'sinistro' | 'cotador';
 export type TipoPessoa = 'PF' | 'PJ';
-export type StatusCliente = 'ativo' | 'inadimplente' | 'cancelado';
+export type StatusCliente =
+  | 'ativo' | 'inadimplente' | 'cancelado' | 'inativo' | 'suspenso' | 'excluido';
 export type UsoVeiculo = 'passeio' | 'app' | 'comercial';
 export type StatusVeiculo = 'ativo' | 'suspenso' | 'baixado';
 export type StatusTitulo = 'pendente' | 'pago' | 'cancelado' | 'vencido';
@@ -75,7 +76,13 @@ export type ClientesRow = Timestamps & {
   cpf_cnpj: string;
   rg_ie: string | null;
   email: string | null;
+  email_adicional: string | null;
   telefone: string | null;
+  celular: string | null;
+  data_nascimento: string | null;
+  sexo: string | null;
+  nome_mae: string | null;
+  matricula: string | null;
   endereco: Json;
   status: StatusCliente;
   regional_id: string | null;
