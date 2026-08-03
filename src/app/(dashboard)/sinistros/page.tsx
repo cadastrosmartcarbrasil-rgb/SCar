@@ -1,13 +1,23 @@
+import Link from 'next/link';
+import { Plus } from 'lucide-react';
 import { KanbanBoard } from '@/components/sinistros/kanban-board';
 
 export default function SinistrosPage() {
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Sinistros / Eventos</h1>
-        <p className="text-sm text-slate-500">
-          Arraste os protocolos entre as colunas para atualizar o status do pipeline.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">Eventos / Sinistros</h1>
+          <p className="text-sm text-slate-500">
+            Arraste os protocolos entre as colunas para atualizar o status do pipeline.
+          </p>
+        </div>
+        <Link
+          href="/sinistros/novo"
+          className="inline-flex items-center gap-1.5 rounded-md bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700"
+        >
+          <Plus className="h-4 w-4" /> Novo Evento
+        </Link>
       </div>
       <KanbanBoard />
     </div>

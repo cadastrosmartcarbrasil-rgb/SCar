@@ -39,19 +39,21 @@ export function useTitulosAssociado(id: string) {
   });
 }
 
+export type EventoAssociado = EventosSinistroRow & { tipos_evento?: { nome: string } | null };
+
 export function useEventosAssociado(id: string) {
   const supabase = createClient();
-  return useQuery<EventosSinistroRow[]>({
+  return useQuery<EventoAssociado[]>({
     queryKey: ['associado', id, 'eventos'],
     enabled: !!id,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('eventos_sinistro')
-        .select('*')
+        .select('*, tipos_evento(nome)')
         .eq('cliente_id', id)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as unknown as EventoAssociado[];
     },
   });
 }

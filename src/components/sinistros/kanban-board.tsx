@@ -66,7 +66,9 @@ export function KanbanBoard() {
                 >
                   <p className="text-xs font-mono text-brand-600">{evento.numero_protocolo}</p>
                   <p className="mt-1 text-sm font-medium text-slate-800">
-                    {evento.veiculos?.placa ?? 'Veiculo'} - {TIPO_EVENTO_LABEL[evento.tipo_evento]}
+                    {evento.veiculos?.placa ?? 'Veiculo'} -{' '}
+                    {evento.tipos_evento?.nome ??
+                      (evento.tipo_evento ? TIPO_EVENTO_LABEL[evento.tipo_evento] : 'Evento')}
                   </p>
                   <p className="truncate text-xs text-slate-500">
                     {evento.clientes?.nome_razao_social}

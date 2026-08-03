@@ -249,7 +249,9 @@ function AbaEventos({ associadoId }: { associadoId: string }) {
                 return (
                   <tr key={e.id} className="border-b border-slate-50">
                     <td className="py-2 font-mono text-brand-600">{e.numero_protocolo}</td>
-                    <td className="py-2">{TIPO_EVENTO_LABEL[e.tipo_evento]}</td>
+                    <td className="py-2">
+                      {e.tipos_evento?.nome ?? (e.tipo_evento ? TIPO_EVENTO_LABEL[e.tipo_evento] : '-')}
+                    </td>
                     <td className="py-2">{formatDate(e.data_ocorrencia)}</td>
                     <td className="py-2">
                       <span className={`rounded border px-2 py-0.5 text-xs ${col?.cor ?? ''}`}>{col?.titulo ?? e.status}</span>

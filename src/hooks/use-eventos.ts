@@ -13,6 +13,7 @@ import type {
 export interface EventoComRelacionamentos extends EventosSinistroRow {
   veiculos?: { placa: string; marca: string | null; modelo: string | null } | null;
   clientes?: { nome_razao_social: string } | null;
+  tipos_evento?: { nome: string } | null;
 }
 
 const BUCKET = process.env.NEXT_PUBLIC_SUPABASE_BUCKET_SINISTROS ?? 'sinistros-docs';
@@ -26,7 +27,7 @@ export function useEventos() {
       const { data, error } = await supabase
         .from('eventos_sinistro')
         .select(
-          'id, numero_protocolo, veiculo_id, cliente_id, data_ocorrencia, tipo_evento, descricao, status, operador_atual_id, regional_id, created_at, updated_at, veiculos(placa, marca, modelo), clientes(nome_razao_social)',
+          'id, numero_protocolo, veiculo_id, cliente_id, data_ocorrencia, tipo_evento, tipo_evento_id, descricao, status, operador_atual_id, regional_id, created_at, updated_at, veiculos(placa, marca, modelo), clientes(nome_razao_social), tipos_evento(nome)',
         )
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -43,7 +44,7 @@ export function useEvento(eventoId: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('eventos_sinistro')
-        .select('*, veiculos(placa, marca, modelo, chassi), clientes(nome_razao_social, cpf_cnpj)')
+        .select('*, veiculos(placa, marca, modelo, chassi, renavam), clientes(nome_razao_social, cpf_cnpj, matricula, telefone, celular), tipos_evento(nome)')
         .eq('id', eventoId)
         .single();
       if (error) throw error;

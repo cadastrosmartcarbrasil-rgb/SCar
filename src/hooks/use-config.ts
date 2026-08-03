@@ -10,6 +10,7 @@ import type {
   MarcasRow,
   ModelosRow,
   VendedoresRow,
+  TiposEventoRow,
 } from '@/lib/database.types';
 
 // ---------------------------------------------------------------------------
@@ -355,5 +356,44 @@ export function useDeleteModelo() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['config', 'modelos'] }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Tipos de evento (sinistro)
+// ---------------------------------------------------------------------------
+export function useTiposEvento() {
+  const supabase = createClient();
+  return useQuery<TiposEventoRow[]>({
+    queryKey: ['config', 'tipos-evento'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('tipos_evento').select('*').order('nome');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function useSaveTipoEvento() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (nome: string) => {
+      const { error } = await supabase.from('tipos_evento').insert({ nome });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['config', 'tipos-evento'] }),
+  });
+}
+
+export function useDeleteTipoEvento() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('tipos_evento').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['config', 'tipos-evento'] }),
   });
 }

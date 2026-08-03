@@ -2,22 +2,28 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { ArrowRightLeft, Clock, Paperclip, Wrench, Info } from 'lucide-react';
+import { ArrowRightLeft, Clock, Paperclip, Wrench, Info, DollarSign } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { UploadAnexos } from './upload-anexos';
 import { CotacaoPecas } from './cotacao-pecas';
-import {
-  useEvento,
-  useHistoricoProtocolo,
-  useTransferirProtocolo,
-} from '@/hooks/use-eventos';
+import { EventoFinanceiro } from './evento-financeiro';
+import { useEvento, useHistoricoProtocolo, useTransferirProtocolo } from '@/hooks/use-eventos';
 import { PIPELINE_SINISTRO, TIPO_EVENTO_LABEL } from '@/types/domain';
-import { formatDate } from '@/lib/utils';
-import type { StatusEvento } from '@/lib/database.types';
+import { formatDate, formatCurrency } from '@/lib/utils';
+import type { StatusEvento, TipoEvento, Json } from '@/lib/database.types';
 
-type Aba = 'info' | 'anexos' | 'cotacao' | 'historico';
+type Aba = 'info' | 'reparo' | 'financeiro' | 'anexos' | 'historico';
 
-// Tela completa de gestao de um protocolo de sinistro.
+interface LocalEvento {
+  cep?: string;
+  logradouro?: string;
+  numero?: string;
+  complemento?: string;
+  bairro?: string;
+  cidade?: string;
+  estado?: string;
+}
+
 export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
   const { data: evento, isLoading } = useEvento(eventoId);
   const { data: historico } = useHistoricoProtocolo(eventoId);
@@ -28,13 +34,20 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
 
   if (isLoading || !evento) return <p className="text-sm text-slate-500">Carregando protocolo...</p>;
 
-  const veiculo = (evento as { veiculos?: { placa: string; marca: string | null; modelo: string | null } }).veiculos;
-  const cliente = (evento as { clientes?: { nome_razao_social: string; cpf_cnpj: string } }).clientes;
+  const e = evento as Record<string, unknown> & {
+    veiculos?: { placa: string; marca: string | null; modelo: string | null; chassi: string | null; renavam: string | null };
+    clientes?: { nome_razao_social: string; cpf_cnpj: string; matricula: string | null; telefone: string | null; celular: string | null };
+    tipos_evento?: { nome: string } | null;
+  };
+  const veiculo = e.veiculos;
+  const cliente = e.clientes;
+  const local = (evento.local_evento as Json as LocalEvento) ?? {};
+  const tipoNome =
+    e.tipos_evento?.nome ?? (evento.tipo_evento ? TIPO_EVENTO_LABEL[evento.tipo_evento as TipoEvento] : '-');
 
   function tramitar() {
     transferir.mutate(
       {
-        // Numa app real, o destino sai de um seletor de operadores; aqui mantemos o atual.
         destino: evento!.operador_atual_id ?? '',
         parecer: parecer || undefined,
         novoStatus: (novoStatus || undefined) as StatusEvento | undefined,
@@ -45,21 +58,21 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
           setParecer('');
           setNovoStatus('');
         },
-        onError: (e) => toast.error((e as Error).message),
+        onError: (err) => toast.error((err as Error).message),
       },
     );
   }
 
   const abas: { id: Aba; label: string; icon: React.ElementType }[] = [
     { id: 'info', label: 'Dados', icon: Info },
+    { id: 'reparo', label: 'Reparo', icon: Wrench },
+    { id: 'financeiro', label: 'Financeiro', icon: DollarSign },
     { id: 'anexos', label: 'Anexos', icon: Paperclip },
-    { id: 'cotacao', label: 'Cotacao de Pecas', icon: Wrench },
     { id: 'historico', label: 'Historico', icon: Clock },
   ];
 
   return (
     <div className="grid gap-6 lg:grid-cols-3">
-      {/* Coluna principal */}
       <div className="space-y-4 lg:col-span-2">
         <Card>
           <CardHeader>
@@ -67,7 +80,7 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
               <div>
                 <p className="font-mono text-sm text-brand-600">{evento.numero_protocolo}</p>
                 <CardTitle className="text-lg font-semibold text-slate-900">
-                  {TIPO_EVENTO_LABEL[evento.tipo_evento]} - {veiculo?.placa}
+                  {tipoNome} - {veiculo?.placa}
                 </CardTitle>
               </div>
               <StatusBadge status={evento.status} />
@@ -75,15 +88,13 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
           </CardHeader>
 
           <CardContent>
-            <div className="flex gap-1 border-b border-slate-200">
+            <div className="flex flex-wrap gap-1 border-b border-slate-200">
               {abas.map((a) => (
                 <button
                   key={a.id}
                   onClick={() => setAba(a.id)}
                   className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm ${
-                    aba === a.id
-                      ? 'border-brand-600 text-brand-700'
-                      : 'border-transparent text-slate-500 hover:text-slate-700'
+                    aba === a.id ? 'border-brand-600 text-brand-700' : 'border-transparent text-slate-500 hover:text-slate-700'
                   }`}
                 >
                   <a.icon className="h-4 w-4" />
@@ -94,21 +105,72 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
 
             <div className="pt-4">
               {aba === 'info' && (
-                <dl className="grid grid-cols-2 gap-3 text-sm">
-                  <Field label="Cliente" value={cliente?.nome_razao_social} />
-                  <Field label="CPF/CNPJ" value={cliente?.cpf_cnpj} />
-                  <Field label="Veiculo" value={`${veiculo?.marca ?? ''} ${veiculo?.modelo ?? ''}`} />
-                  <Field label="Placa" value={veiculo?.placa} />
-                  <Field label="Data da Ocorrencia" value={formatDate(evento.data_ocorrencia)} />
-                  <Field label="Aberto em" value={formatDate(evento.created_at)} />
-                  <div className="col-span-2">
-                    <dt className="text-slate-500">Descricao</dt>
-                    <dd className="text-slate-800">{evento.descricao ?? '-'}</dd>
-                  </div>
-                </dl>
+                <div className="space-y-5 text-sm">
+                  <Secao titulo="Envolvidos e datas">
+                    <Campo label="Associado" value={cliente?.nome_razao_social} />
+                    <Campo label="Matricula" value={cliente?.matricula} />
+                    <Campo label="Veiculo" value={`${veiculo?.marca ?? ''} ${veiculo?.modelo ?? ''} - ${veiculo?.placa ?? ''}`} />
+                    <Campo label="Contato" value={cliente?.celular || cliente?.telefone} />
+                    <Campo label="Veiculo envolvido" value={evento.envolvido_tipo === 'TERCEIRO' ? 'De Terceiro' : 'Do Associado'} />
+                    <Campo label="Envolvimento" value={evento.tipo_envolvimento === 'CAUSADOR' ? 'Causador' : evento.tipo_envolvimento === 'VITIMA' ? 'Vitima' : '-'} />
+                    <Campo label="Tipo de evento" value={tipoNome} />
+                    <Campo label="Data do evento" value={formatDate(evento.data_ocorrencia)} />
+                    <Campo label="Data da comunicacao" value={evento.data_comunicacao ? formatDate(evento.data_comunicacao) : '-'} />
+                    <Campo label="Aberto em" value={formatDate(evento.created_at)} />
+                  </Secao>
+
+                  <Secao titulo="Local do evento">
+                    <Campo label="Logradouro" value={[local.logradouro, local.numero].filter(Boolean).join(', ')} />
+                    <Campo label="Complemento" value={local.complemento} />
+                    <Campo label="Bairro" value={local.bairro} />
+                    <Campo label="Cidade/UF" value={local.cidade ? `${local.cidade}/${local.estado ?? ''}` : '-'} />
+                    <Campo label="CEP" value={local.cep} />
+                  </Secao>
+
+                  <Secao titulo="Boletim de Ocorrencia">
+                    <Campo label="Numero" value={evento.bo_numero} />
+                    <Campo label="Data" value={evento.bo_data ? formatDate(evento.bo_data) : '-'} />
+                    <Campo label="Unidade" value={evento.bo_unidade} />
+                    <div className="col-span-2">
+                      <dt className="text-slate-500">Resumo do B.O.</dt>
+                      <dd className="text-slate-800">{evento.bo_resumo || '-'}</dd>
+                    </div>
+                  </Secao>
+
+                  <Secao titulo="Valores">
+                    <Campo label="FIPE atualizado" value={evento.valor_fipe_atualizado != null ? formatCurrency(evento.valor_fipe_atualizado) : '-'} />
+                    <Campo label="Participacao (franquia)" value={evento.valor_participacao != null ? formatCurrency(evento.valor_participacao) : '-'} />
+                  </Secao>
+
+                  {evento.descricao && (
+                    <div>
+                      <dt className="text-slate-500">Descricao / relato</dt>
+                      <dd className="text-slate-800">{evento.descricao}</dd>
+                    </div>
+                  )}
+                </div>
               )}
+
+              {aba === 'reparo' && (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                      <Wrench className="h-4 w-4" /> Reparo do veiculo (proprio)
+                    </h3>
+                    <CotacaoPecas eventoId={eventoId} tipoReparo="PROPRIO" />
+                  </div>
+                  <div className="border-t border-slate-200 pt-5">
+                    <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                      <Wrench className="h-4 w-4" /> Reparo de veiculo de terceiro
+                    </h3>
+                    <CotacaoPecas eventoId={eventoId} tipoReparo="TERCEIRO" />
+                  </div>
+                </div>
+              )}
+
+              {aba === 'financeiro' && <EventoFinanceiro eventoId={eventoId} regionalId={evento.regional_id} />}
               {aba === 'anexos' && <UploadAnexos eventoId={eventoId} />}
-              {aba === 'cotacao' && <CotacaoPecas eventoId={eventoId} />}
+
               {aba === 'historico' && (
                 <ol className="relative space-y-4 border-l border-slate-200 pl-4">
                   {(historico ?? []).map((h) => (
@@ -124,9 +186,7 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
                       <p className="text-[11px] text-slate-400">{formatDate(h.created_at)}</p>
                     </li>
                   ))}
-                  {(historico ?? []).length === 0 && (
-                    <li className="text-sm text-slate-400">Sem tramitacoes.</li>
-                  )}
+                  {(historico ?? []).length === 0 && <li className="text-sm text-slate-400">Sem tramitacoes.</li>}
                 </ol>
               )}
             </div>
@@ -134,7 +194,7 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
         </Card>
       </div>
 
-      {/* Coluna lateral: tramitacao */}
+      {/* Tramitacao */}
       <div>
         <Card>
           <CardHeader>
@@ -147,7 +207,7 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
               <label className="text-xs text-slate-500">Novo status</label>
               <select
                 value={novoStatus}
-                onChange={(e) => setNovoStatus(e.target.value as StatusEvento)}
+                onChange={(ev) => setNovoStatus(ev.target.value as StatusEvento)}
                 className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
               >
                 <option value="">Manter status atual</option>
@@ -162,7 +222,7 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
               <label className="text-xs text-slate-500">Parecer / observacoes</label>
               <textarea
                 value={parecer}
-                onChange={(e) => setParecer(e.target.value)}
+                onChange={(ev) => setParecer(ev.target.value)}
                 rows={4}
                 className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
                 placeholder="Descreva a analise ou motivo da transferencia..."
@@ -182,7 +242,16 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
   );
 }
 
-function Field({ label, value }: { label: string; value?: string | null }) {
+function Secao({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{titulo}</h3>
+      <dl className="grid grid-cols-2 gap-3">{children}</dl>
+    </div>
+  );
+}
+
+function Campo({ label, value }: { label: string; value?: string | null }) {
   return (
     <div>
       <dt className="text-slate-500">{label}</dt>
@@ -193,9 +262,5 @@ function Field({ label, value }: { label: string; value?: string | null }) {
 
 function StatusBadge({ status }: { status: StatusEvento }) {
   const col = PIPELINE_SINISTRO.find((c) => c.status === status);
-  return (
-    <span className={`rounded-md border px-2 py-1 text-xs font-medium ${col?.cor ?? ''}`}>
-      {col?.titulo ?? status}
-    </span>
-  );
+  return <span className={`rounded-md border px-2 py-1 text-xs font-medium ${col?.cor ?? ''}`}>{col?.titulo ?? status}</span>;
 }

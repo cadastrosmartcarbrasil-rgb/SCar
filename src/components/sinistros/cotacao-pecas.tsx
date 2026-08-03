@@ -6,23 +6,27 @@ import { Plus, Trash2 } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { formatCurrency } from '@/lib/utils';
-import type { CotacoesPecasRow, ItensCotacaoRow } from '@/lib/database.types';
+import type { CotacoesPecasRow, ItensCotacaoRow, TipoReparo } from '@/lib/database.types';
 
 // Modulo de cotacao de pecas: lancamento de fornecedor e itens.
 // valor_total e recalculado por trigger no banco (fn_recalcular_cotacao).
-export function CotacaoPecas({ eventoId }: { eventoId: string }) {
+// tipoReparo separa reparo do veiculo proprio x veiculo de terceiro.
+export function CotacaoPecas({ eventoId, tipoReparo }: { eventoId: string; tipoReparo?: TipoReparo }) {
   const supabase = createClient();
   const qc = useQueryClient();
   const [fornecedor, setFornecedor] = useState('');
+  const chave = ['eventos', eventoId, 'cotacoes', tipoReparo ?? 'all'];
 
   const { data: cotacoes } = useQuery<(CotacoesPecasRow & { itens_cotacao: ItensCotacaoRow[] })[]>({
-    queryKey: ['eventos', eventoId, 'cotacoes'],
+    queryKey: chave,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from('cotacoes_pecas')
         .select('*, itens_cotacao(*)')
         .eq('evento_id', eventoId)
         .order('created_at', { ascending: true });
+      if (tipoReparo) q = q.eq('tipo_reparo', tipoReparo);
+      const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as never;
     },
@@ -30,14 +34,16 @@ export function CotacaoPecas({ eventoId }: { eventoId: string }) {
 
   const criarCotacao = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
-        .from('cotacoes_pecas')
-        .insert({ evento_id: eventoId, fornecedor_nome: fornecedor || 'Novo fornecedor' });
+      const { error } = await supabase.from('cotacoes_pecas').insert({
+        evento_id: eventoId,
+        fornecedor_nome: fornecedor || 'Novo fornecedor',
+        tipo_reparo: tipoReparo ?? 'PROPRIO',
+      });
       if (error) throw error;
     },
     onSuccess: () => {
       setFornecedor('');
-      qc.invalidateQueries({ queryKey: ['eventos', eventoId, 'cotacoes'] });
+      qc.invalidateQueries({ queryKey: chave });
     },
     onError: (e) => toast.error((e as Error).message),
   });
@@ -52,7 +58,7 @@ export function CotacaoPecas({ eventoId }: { eventoId: string }) {
       });
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['eventos', eventoId, 'cotacoes'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: chave }),
     onError: (e) => toast.error((e as Error).message),
   });
 
@@ -61,7 +67,16 @@ export function CotacaoPecas({ eventoId }: { eventoId: string }) {
       const { error } = await supabase.from('itens_cotacao').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['eventos', eventoId, 'cotacoes'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: chave }),
+  });
+
+  const mudarStatus = useMutation({
+    mutationFn: async (v: { id: string; status: CotacoesPecasRow['status'] }) => {
+      const { error } = await supabase.from('cotacoes_pecas').update({ status: v.status }).eq('id', v.id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: chave }),
+    onError: (e) => toast.error((e as Error).message),
   });
 
   return (
@@ -82,7 +97,7 @@ export function CotacaoPecas({ eventoId }: { eventoId: string }) {
       </div>
 
       {(cotacoes ?? []).map((c) => (
-        <CotacaoCard key={c.id} cotacao={c} onAddItem={addItem} onDelItem={delItem} />
+        <CotacaoCard key={c.id} cotacao={c} onAddItem={addItem} onDelItem={delItem} onStatus={mudarStatus} />
       ))}
       {(cotacoes ?? []).length === 0 && (
         <p className="text-sm text-slate-400">Nenhuma cotacao lancada.</p>
@@ -91,14 +106,22 @@ export function CotacaoPecas({ eventoId }: { eventoId: string }) {
   );
 }
 
+const STATUS_COTACAO_COR: Record<string, string> = {
+  EM_ABERTO: 'bg-slate-100 text-slate-600',
+  APROVADA: 'bg-emerald-50 text-emerald-700',
+  REJEITADA: 'bg-rose-50 text-rose-700',
+};
+
 function CotacaoCard({
   cotacao,
   onAddItem,
   onDelItem,
+  onStatus,
 }: {
   cotacao: CotacoesPecasRow & { itens_cotacao: ItensCotacaoRow[] };
   onAddItem: ReturnType<typeof useMutation<void, Error, { cotacaoId: string; desc: string; qtd: number; unit: number }>>;
   onDelItem: ReturnType<typeof useMutation<void, Error, string>>;
+  onStatus: ReturnType<typeof useMutation<void, Error, { id: string; status: CotacoesPecasRow['status'] }>>;
 }) {
   const [desc, setDesc] = useState('');
   const [qtd, setQtd] = useState(1);
@@ -107,10 +130,28 @@ function CotacaoCard({
   return (
     <div className="rounded-lg border border-slate-200 p-3">
       <div className="mb-2 flex items-center justify-between">
-        <p className="font-medium text-slate-800">{cotacao.fornecedor_nome}</p>
-        <span className="text-sm font-semibold text-brand-700">
-          {formatCurrency(cotacao.valor_total)}
-        </span>
+        <div className="flex items-center gap-2">
+          <p className="font-medium text-slate-800">{cotacao.fornecedor_nome}</p>
+          <span className={`rounded px-2 py-0.5 text-xs ${STATUS_COTACAO_COR[cotacao.status] ?? ''}`}>
+            {cotacao.status}
+          </span>
+        </div>
+        <span className="text-sm font-semibold text-brand-700">{formatCurrency(cotacao.valor_total)}</span>
+      </div>
+
+      <div className="mb-2 flex gap-2">
+        <button
+          onClick={() => onStatus.mutate({ id: cotacao.id, status: 'APROVADA' })}
+          className="rounded border border-emerald-200 px-2 py-0.5 text-xs text-emerald-700 hover:bg-emerald-50"
+        >
+          Aprovar
+        </button>
+        <button
+          onClick={() => onStatus.mutate({ id: cotacao.id, status: 'REJEITADA' })}
+          className="rounded border border-rose-200 px-2 py-0.5 text-xs text-rose-700 hover:bg-rose-50"
+        >
+          Rejeitar
+        </button>
       </div>
 
       <table className="w-full text-sm">

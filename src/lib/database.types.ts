@@ -37,6 +37,9 @@ export type ProvedorBanco = 'ASAAS' | 'PJBANK' | 'CORA' | 'INTER' | 'GERENCIANET
 export type AmbienteIntegracao = 'sandbox' | 'producao';
 export type CanalComunicacao = 'EMAIL' | 'SMS' | 'WHATSAPP';
 export type StatusComunicacao = 'pendente' | 'enviado' | 'falha';
+export type EnvolvidoTipo = 'ASSOCIADO' | 'TERCEIRO';
+export type TipoEnvolvimento = 'CAUSADOR' | 'VITIMA';
+export type TipoReparo = 'PROPRIO' | 'TERCEIRO';
 
 // ---- Helper para linhas com timestamps ------------------------------------
 type Timestamps = {
@@ -193,6 +196,7 @@ export type MovimentacoesCaixaRow = Timestamps & {
   regional_id: string | null;
   comprovante_url: string | null;
   titulo_id: string | null;
+  evento_id: string | null;
 };
 
 export type ComissoesVendasRow = Timestamps & {
@@ -211,11 +215,29 @@ export type EventosSinistroRow = Timestamps & {
   veiculo_id: string;
   cliente_id: string;
   data_ocorrencia: string;
-  tipo_evento: TipoEvento;
+  tipo_evento: TipoEvento | null;
+  tipo_evento_id: string | null;
   descricao: string | null;
   status: StatusEvento;
   operador_atual_id: string | null;
   regional_id: string | null;
+  data_comunicacao: string | null;
+  envolvido_tipo: EnvolvidoTipo;
+  tipo_envolvimento: TipoEnvolvimento | null;
+  local_evento: Json;
+  valor_fipe_atualizado: number | null;
+  valor_participacao: number | null;
+  bo_numero: string | null;
+  bo_data: string | null;
+  bo_unidade: string | null;
+  bo_resumo: string | null;
+};
+
+export type TiposEventoRow = {
+  id: string;
+  nome: string;
+  ativo: boolean;
+  created_at: string;
 };
 
 export type HistoricoProtocoloRow = {
@@ -248,6 +270,7 @@ export type CotacoesPecasRow = Timestamps & {
   cnpj: string | null;
   valor_total: number;
   status: StatusCotacao;
+  tipo_reparo: TipoReparo;
 };
 
 export type ItensCotacaoRow = {
@@ -358,8 +381,10 @@ export type Database = {
           Rel<'cliente_id', 'clientes'>,
           Rel<'operador_atual_id', 'usuarios'>,
           Rel<'regional_id', 'regionais'>,
+          Rel<'tipo_evento_id', 'tipos_evento'>,
         ]
       >;
+      tipos_evento: TableDef<TiposEventoRow>;
       historico_protocolo: TableDef<HistoricoProtocoloRow>;
       anexos_evento: TableDef<AnexosEventoRow>;
       cotacoes_pecas: TableDef<CotacoesPecasRow>;
