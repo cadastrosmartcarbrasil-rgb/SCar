@@ -1,0 +1,6 @@
+# Caddy: proxy reverso para o app Next.js com HTTPS/SSL automatico.
+# O certificado Let's Encrypt e emitido/renovado sozinho para {$DOMAIN}.
+{$DOMAIN} {
+	encode gzip
+	reverse_proxy app:3000
+}

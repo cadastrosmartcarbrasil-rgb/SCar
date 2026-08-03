@@ -1,0 +1,51 @@
+# ============================================================================
+# SCar :: docker-compose.yml
+# Sobe o app Next.js + Caddy (proxy reverso com HTTPS/SSL automatico).
+#
+# Uso no VPS:
+#   1) Preencha o arquivo .env (copie de .env.docker.example)
+#   2) docker compose up -d --build
+#
+# O Caddy obtem e renova o certificado SSL do dominio automaticamente
+# (Let's Encrypt), desde que o DNS do dominio ja aponte para o IP do VPS.
+# ============================================================================
+services:
+  app:
+    build:
+      context: .
+      args:
+        # NEXT_PUBLIC_* precisam existir no build (sao embutidas no bundle).
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        NEXT_PUBLIC_SUPABASE_BUCKET_SINISTROS: ${NEXT_PUBLIC_SUPABASE_BUCKET_SINISTROS}
+    restart: unless-stopped
+    expose:
+      - "3000"
+    environment:
+      NODE_ENV: production
+      # Variaveis de servidor (runtime). A service_role NUNCA vai para o cliente.
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      NEXT_PUBLIC_SUPABASE_BUCKET_SINISTROS: ${NEXT_PUBLIC_SUPABASE_BUCKET_SINISTROS}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+volumes:
+  caddy_data:
+  caddy_config:

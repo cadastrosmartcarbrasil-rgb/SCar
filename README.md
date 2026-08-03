@@ -150,6 +150,43 @@ npm run db:types               # supabase gen types typescript --local
 
 ---
 
+## 4. Deploy com Docker no VPS (Ubuntu 24.04)
+
+Alternativa à Vercel: rodar em containers no seu próprio VPS. O `docker-compose`
+sobe o app Next.js (imagem `standalone`) + **Caddy** como proxy reverso, que
+emite e renova o **certificado HTTPS/SSL automaticamente** (Let's Encrypt).
+
+Pré-requisitos no VPS: Docker + Docker Compose e o **DNS do domínio apontando
+para o IP do VPS** (registro A).
+
+```bash
+# 1. Clonar o repositório
+git clone -b claude/scar-project-btasdf \
+  https://github.com/cadastrosmartcarbrasil-rgb/scar.git
+cd scar
+
+# 2. Configurar variáveis (dominio + chaves do Supabase)
+cp .env.docker.example .env
+nano .env        # preencha DOMAIN e as chaves NEXT_PUBLIC_* / SERVICE_ROLE
+
+# 3. Subir (build + start em background)
+docker compose up -d --build
+
+# 4. Acompanhar (o Caddy emite o SSL nos primeiros segundos)
+docker compose logs -f
+```
+
+Pronto: o app fica em `https://SEU_DOMINIO`. Atualizações futuras:
+
+```bash
+git pull && docker compose up -d --build
+```
+
+Arquivos envolvidos: `Dockerfile` (multi-stage), `docker-compose.yml`
+(app + caddy), `Caddyfile` (proxy + HTTPS) e `.env.docker.example` (modelo de env).
+
+---
+
 ## Rotas principais
 
 | Rota | Descrição |
