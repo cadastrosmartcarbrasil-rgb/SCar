@@ -43,6 +43,9 @@ export type TipoReparo = 'PROPRIO' | 'TERCEIRO';
 export type MetodoPreco = 'FAIXA_FIPE' | 'FIXO' | 'PERCENTUAL_FIPE';
 export type TipoValorFaixa = 'VALOR' | 'PERCENTUAL';
 export type MandatoStatus = 'VIGENTE' | 'EXPIRADO' | 'EM_RENOVACAO';
+export type StatusLancamento = 'pendente' | 'pago_parcial' | 'quitado' | 'cancelado' | 'atrasado';
+export type FormaPagamento = 'PIX' | 'BOLETO' | 'TRANSFERENCIA' | 'CARTAO' | 'DINHEIRO';
+export type StatusConciliacao = 'NAO_CONCILIADO' | 'CONCILIADO_MANUAL' | 'CONCILIADO_API';
 
 // ---- Helper para linhas com timestamps ------------------------------------
 type Timestamps = {
@@ -284,6 +287,86 @@ export type ParticipacaoFaixaRow = {
   valor: number;
 };
 
+export type FornecedoresRow = Timestamps & {
+  id: string;
+  tipo_pessoa: TipoPessoa;
+  documento: string;
+  razao_social: string;
+  nome_fantasia: string | null;
+  situacao_cadastral: string | null;
+  cnae_principal: string | null;
+  email: string | null;
+  telefone: string | null;
+  endereco: Json;
+  dados_receita: Json;
+  ativo: boolean;
+};
+
+export type CentrosCustoRow = {
+  id: string;
+  nome: string;
+  codigo: string | null;
+  ativo: boolean;
+  created_at: string;
+};
+
+export type ContasBancariasRow = {
+  id: string;
+  nome: string;
+  banco: string | null;
+  agencia: string | null;
+  conta: string | null;
+  tipo: string | null;
+  chave_pix: string | null;
+  ativo: boolean;
+  created_at: string;
+};
+
+export type LancamentosFinanceirosRow = Timestamps & {
+  id: string;
+  tipo: TipoMovimentacao;
+  fornecedor_id: string | null;
+  cliente_id: string | null;
+  descricao: string;
+  categoria_dre_id: string | null;
+  centro_custo_id: string | null;
+  evento_id: string | null;
+  regional_id: string | null;
+  valor_original: number;
+  data_emissao: string;
+  data_vencimento: string;
+  status: StatusLancamento;
+  forma_pagamento_prevista: FormaPagamento | null;
+};
+
+export type BaixasFinanceirasRow = {
+  id: string;
+  lancamento_id: string;
+  data_pagamento: string;
+  valor_pago: number;
+  desconto: number;
+  juros_multa: number;
+  valor_liquido: number;
+  conta_bancaria_id: string | null;
+  comprovante_transacao_id: string | null;
+  id_transacao_bancaria_externa: string | null;
+  end_to_end_id_pix: string | null;
+  status_conciliacao: StatusConciliacao;
+  created_at: string;
+};
+
+export type AnexosFinanceirosRow = {
+  id: string;
+  lancamento_id: string | null;
+  baixa_id: string | null;
+  nome_arquivo: string;
+  mime_type: string | null;
+  tamanho_bytes: number | null;
+  url_storage: string;
+  hash_md5: string | null;
+  created_at: string;
+};
+
 export type EmpresaRow = Timestamps & {
   id: string;
   razao_social: string;
@@ -519,6 +602,15 @@ export type Database = {
       mandatos: TableDef<MandatosRow, [Rel<'empresa_id', 'empresa'>]>;
       diretoria: TableDef<DiretoriaRow, [Rel<'mandato_id', 'mandatos'>]>;
       empresa_documentos: TableDef<EmpresaDocumentosRow, [Rel<'empresa_id', 'empresa'>]>;
+      fornecedores: TableDef<FornecedoresRow>;
+      centros_custo: TableDef<CentrosCustoRow>;
+      contas_bancarias: TableDef<ContasBancariasRow>;
+      lancamentos_financeiros: TableDef<
+        LancamentosFinanceirosRow,
+        [Rel<'fornecedor_id', 'fornecedores'>, Rel<'cliente_id', 'clientes'>, Rel<'categoria_dre_id', 'categorias_dre'>]
+      >;
+      baixas_financeiras: TableDef<BaixasFinanceirasRow, [Rel<'lancamento_id', 'lancamentos_financeiros'>]>;
+      anexos_financeiros: TableDef<AnexosFinanceirosRow, [Rel<'lancamento_id', 'lancamentos_financeiros'>]>;
     };
     Views: { [_ in never]: never };
     Functions: {

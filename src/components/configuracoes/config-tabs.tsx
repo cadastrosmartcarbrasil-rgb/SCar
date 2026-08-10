@@ -3,13 +3,14 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Building2, Users, Landmark, ListTree, Car, BadgeDollarSign, AlertTriangle, Truck, Package, Building,
+  Building2, Users, Landmark, ListTree, Car, BadgeDollarSign, AlertTriangle, Truck, Package, Building, Store,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const TABS = [
   { href: '/configuracoes/empresa', label: 'Empresa', icon: Building },
   { href: '/configuracoes/regionais', label: 'Regionais', icon: Building2 },
+  { href: '/configuracoes/fornecedores', label: 'Fornecedores', icon: Store },
   { href: '/configuracoes/usuarios', label: 'Usuarios & Perfis', icon: Users },
   { href: '/configuracoes/vendedores', label: 'Vendedores', icon: BadgeDollarSign },
   { href: '/configuracoes/marcas-modelos', label: 'Marcas & Modelos', icon: Car },
