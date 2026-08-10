@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/modal';
 import { FormField, Input, Select } from '@/components/ui/field';
 import { useAssociados } from '@/hooks/use-associados';
 import { useRegionais, useVendedores, useUsuarios, useMarcas, useModelos } from '@/hooks/use-config';
+import { useTiposVeiculo } from '@/hooks/use-precificacao';
 import { useVeiculos, useSaveVeiculo, useExcluirVeiculo } from '@/hooks/use-veiculos';
 import { consultarPlaca, normalizarPlaca, placaValida } from '@/lib/placa';
 import { formatCurrency } from '@/lib/utils';
@@ -57,6 +58,7 @@ export default function VeiculosPage() {
   const { data: usuarios } = useUsuarios();
   const { data: marcas } = useMarcas();
   const { data: modelos } = useModelos();
+  const { data: tiposVeiculo } = useTiposVeiculo();
   const salvar = useSaveVeiculo();
   const excluir = useExcluirVeiculo();
 
@@ -352,6 +354,17 @@ export default function VeiculosPage() {
               </Select>
             </FormField>
           </div>
+
+          <FormField label="Categoria de risco (tipo de veiculo p/ precificacao)">
+            <Select value={form.tipo_veiculo_id ?? ''} onChange={(e) => setF({ tipo_veiculo_id: e.target.value || null })}>
+              <option value="">-- Selecione --</option>
+              {(tiposVeiculo ?? []).map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.nome}
+                </option>
+              ))}
+            </Select>
+          </FormField>
 
           {/* FIPE */}
           <div className="grid grid-cols-2 gap-3 rounded-lg border border-slate-200 p-3">

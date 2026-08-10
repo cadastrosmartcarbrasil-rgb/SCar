@@ -40,6 +40,8 @@ export type StatusComunicacao = 'pendente' | 'enviado' | 'falha';
 export type EnvolvidoTipo = 'ASSOCIADO' | 'TERCEIRO';
 export type TipoEnvolvimento = 'CAUSADOR' | 'VITIMA';
 export type TipoReparo = 'PROPRIO' | 'TERCEIRO';
+export type MetodoPreco = 'FAIXA_FIPE' | 'FIXO' | 'PERCENTUAL_FIPE';
+export type TipoValorFaixa = 'VALOR' | 'PERCENTUAL';
 
 // ---- Helper para linhas com timestamps ------------------------------------
 type Timestamps = {
@@ -129,6 +131,7 @@ export type VeiculosRow = Timestamps & {
   quilometragem: number | null;
   tipo_cambio: TipoCambio | null;
   combustivel: Combustivel | null;
+  tipo_veiculo_id: string | null;
 };
 
 export type ComunicacoesRow = {
@@ -239,6 +242,63 @@ export type TiposEventoRow = {
   ativo: boolean;
   created_at: string;
 };
+
+export type TiposVeiculoRow = Timestamps & {
+  id: string;
+  nome: string;
+  status: boolean;
+};
+
+export type ProdutosRow = Timestamps & {
+  id: string;
+  nome: string;
+  fornecedor_nome: string;
+  tipo_evento_id: string | null;
+  metodo_preco: MetodoPreco;
+  valor_fixo: number | null;
+  percentual: number | null;
+  obrigatorio: boolean;
+  categoria: string;
+  dados_adicionais: Json;
+  status: boolean;
+};
+
+export type TabelaPrecosFaixaRow = {
+  id: string;
+  tipo_veiculo_id: string;
+  produto_id: string;
+  fipe_minimo: number;
+  fipe_maximo: number;
+  valor_mensal: number;
+  tipo_valor: TipoValorFaixa;
+  created_at: string;
+};
+
+export type ParticipacaoFaixaRow = {
+  id: string;
+  tipo_veiculo_id: string;
+  fipe_minimo: number;
+  fipe_maximo: number;
+  tipo_valor: TipoValorFaixa;
+  valor: number;
+};
+
+// Retorno do motor de calculo (calcular_mensalidade)
+export interface ItemMensalidade {
+  produto_id: string;
+  nome: string;
+  valor: number;
+  fornecedor: string;
+  categoria: string;
+  obrigatorio: boolean;
+}
+export interface CalculoMensalidade {
+  valor_fipe: number;
+  detalhamento_produtos: ItemMensalidade[];
+  subtotal_taxa_admin: number;
+  subtotal_beneficios_parceiros: number;
+  valor_total_mensalidade: number;
+}
 
 export type HistoricoProtocoloRow = {
   id: string;
@@ -395,6 +455,14 @@ export type Database = {
       marcas: TableDef<MarcasRow>;
       modelos: TableDef<ModelosRow, [Rel<'marca_id', 'marcas'>]>;
       comunicacoes: TableDef<ComunicacoesRow, [Rel<'cliente_id', 'clientes'>]>;
+      tipos_veiculo: TableDef<TiposVeiculoRow>;
+      produtos: TableDef<ProdutosRow, [Rel<'tipo_evento_id', 'tipos_evento'>]>;
+      tabela_precos_faixa: TableDef<
+        TabelaPrecosFaixaRow,
+        [Rel<'tipo_veiculo_id', 'tipos_veiculo'>, Rel<'produto_id', 'produtos'>]
+      >;
+      participacao_faixa: TableDef<ParticipacaoFaixaRow, [Rel<'tipo_veiculo_id', 'tipos_veiculo'>]>;
+      plano_produtos: TableDef<{ plano_id: string; produto_id: string }>;
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -414,6 +482,14 @@ export type Database = {
           p_novo_status?: StatusEvento | null;
         };
         Returns: EventosSinistroRow;
+      };
+      calcular_mensalidade: {
+        Args: { p_fipe: number; p_tipo_veiculo_id: string; p_produtos_ids?: string[] };
+        Returns: CalculoMensalidade;
+      };
+      calcular_participacao: {
+        Args: { p_fipe: number; p_tipo_veiculo_id: string };
+        Returns: number;
       };
     };
     Enums: {

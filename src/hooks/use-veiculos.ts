@@ -52,6 +52,7 @@ export function useSaveVeiculo() {
         quilometragem: v.quilometragem ?? null,
         tipo_cambio: v.tipo_cambio || null,
         combustivel: v.combustivel || null,
+        tipo_veiculo_id: v.tipo_veiculo_id || null,
       };
       if (v.id) {
         const { error } = await supabase.from('veiculos').update(payload).eq('id', v.id);

@@ -2,7 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Building2, Users, Landmark, ListTree, Car, BadgeDollarSign, AlertTriangle } from 'lucide-react';
+import {
+  Building2, Users, Landmark, ListTree, Car, BadgeDollarSign, AlertTriangle, Truck, Package,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const TABS = [
@@ -10,7 +12,9 @@ const TABS = [
   { href: '/configuracoes/usuarios', label: 'Usuarios & Perfis', icon: Users },
   { href: '/configuracoes/vendedores', label: 'Vendedores', icon: BadgeDollarSign },
   { href: '/configuracoes/marcas-modelos', label: 'Marcas & Modelos', icon: Car },
+  { href: '/configuracoes/tipos-veiculo', label: 'Tipos de Veiculo', icon: Truck },
   { href: '/configuracoes/tipos-evento', label: 'Tipos de Evento', icon: AlertTriangle },
+  { href: '/configuracoes/produtos', label: 'Produtos', icon: Package },
   { href: '/configuracoes/integracoes', label: 'Integracoes Bancarias', icon: Landmark },
   { href: '/configuracoes/plano-contas', label: 'Plano de Contas', icon: ListTree },
 ];

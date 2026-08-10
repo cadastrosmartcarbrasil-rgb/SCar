@@ -8,6 +8,7 @@ import {
   Car,
   AlertTriangle,
   DollarSign,
+  Calculator,
   Settings,
   LogOut,
   ShieldCheck,
@@ -21,6 +22,7 @@ const NAV = [
   { href: '/associados', label: 'Associados', icon: Users },
   { href: '/veiculos', label: 'Veiculos', icon: Car },
   { href: '/sinistros', label: 'Sinistros', icon: AlertTriangle },
+  { href: '/precificacao', label: 'Precificacao', icon: Calculator },
   { href: '/financeiro', label: 'Financeiro / DRE', icon: DollarSign },
 ];
 
