@@ -30,9 +30,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
     return <SemAcesso email={user.email ?? ''} />;
   }
 
+  const { data: empresa } = await supabase.from('empresa').select('logo_url, nome_fantasia').limit(1).maybeSingle();
+
   return (
     <div className="flex min-h-screen">
-      <Sidebar papel={perfil.papel} />
+      <Sidebar papel={perfil.papel} logoUrl={empresa?.logo_url ?? null} />
       <div className="flex-1">
         <header className="flex items-center justify-between border-b border-slate-200 bg-white px-8 py-3">
           <span className="text-sm text-slate-500">Painel de Gestao</span>

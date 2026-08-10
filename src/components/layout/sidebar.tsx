@@ -11,7 +11,6 @@ import {
   Calculator,
   Settings,
   LogOut,
-  ShieldCheck,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
@@ -26,7 +25,7 @@ const NAV = [
   { href: '/financeiro', label: 'Financeiro / DRE', icon: DollarSign },
 ];
 
-export function Sidebar({ papel }: { papel?: PapelUsuario }) {
+export function Sidebar({ papel, logoUrl }: { papel?: PapelUsuario; logoUrl?: string | null }) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
@@ -42,11 +41,13 @@ export function Sidebar({ papel }: { papel?: PapelUsuario }) {
 
   return (
     <aside className="flex w-60 shrink-0 flex-col border-r border-slate-200 bg-white">
-      <div className="flex items-center gap-2 border-b border-slate-200 px-5 py-4">
-        <div className="rounded-lg bg-brand-600 p-1.5 text-white">
-          <ShieldCheck className="h-5 w-5" />
-        </div>
-        <span className="font-semibold text-slate-900">SCar</span>
+      <div className="flex items-center gap-2 border-b border-slate-200 px-4 py-4">
+        {logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={logoUrl} alt="Logo" className="max-h-9 max-w-[180px] object-contain" />
+        ) : (
+          <img src="/logo-smartcar.svg" alt="SmartCar" className="max-h-9 max-w-[180px] object-contain" />
+        )}
       </div>
 
       <nav className="flex-1 space-y-1 p-3">

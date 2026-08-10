@@ -42,6 +42,7 @@ export type TipoEnvolvimento = 'CAUSADOR' | 'VITIMA';
 export type TipoReparo = 'PROPRIO' | 'TERCEIRO';
 export type MetodoPreco = 'FAIXA_FIPE' | 'FIXO' | 'PERCENTUAL_FIPE';
 export type TipoValorFaixa = 'VALOR' | 'PERCENTUAL';
+export type MandatoStatus = 'VIGENTE' | 'EXPIRADO' | 'EM_RENOVACAO';
 
 // ---- Helper para linhas com timestamps ------------------------------------
 type Timestamps = {
@@ -283,6 +284,57 @@ export type ParticipacaoFaixaRow = {
   valor: number;
 };
 
+export type EmpresaRow = Timestamps & {
+  id: string;
+  razao_social: string;
+  nome_fantasia: string | null;
+  cnpj: string | null;
+  inscricao_estadual: string | null;
+  ie_isento: boolean;
+  inscricao_municipal: string | null;
+  im_isento: boolean;
+  site: string | null;
+  email_principal: string | null;
+  email_financeiro: string | null;
+  email_juridico: string | null;
+  telefone_fixo: string | null;
+  whatsapp_principal: string | null;
+  whatsapp_suporte: string | null;
+  endereco: Json;
+  logo_url: string | null;
+};
+
+export type MandatosRow = Timestamps & {
+  id: string;
+  empresa_id: string;
+  data_inicio: string;
+  data_fim: string;
+  status: MandatoStatus;
+  observacoes: string | null;
+};
+
+export type DiretoriaRow = {
+  id: string;
+  mandato_id: string;
+  cargo: string;
+  nome_completo: string;
+  cpf: string | null;
+  telefone: string | null;
+  whatsapp: string | null;
+  email: string | null;
+  created_at: string;
+};
+
+export type EmpresaDocumentosRow = {
+  id: string;
+  empresa_id: string;
+  nome_arquivo: string;
+  tipo_documento: string;
+  url_arquivo: string;
+  tamanho_bytes: number | null;
+  data_upload: string;
+};
+
 // Retorno do motor de calculo (calcular_mensalidade)
 export interface ItemMensalidade {
   produto_id: string;
@@ -463,6 +515,10 @@ export type Database = {
       >;
       participacao_faixa: TableDef<ParticipacaoFaixaRow, [Rel<'tipo_veiculo_id', 'tipos_veiculo'>]>;
       plano_produtos: TableDef<{ plano_id: string; produto_id: string }>;
+      empresa: TableDef<EmpresaRow>;
+      mandatos: TableDef<MandatosRow, [Rel<'empresa_id', 'empresa'>]>;
+      diretoria: TableDef<DiretoriaRow, [Rel<'mandato_id', 'mandatos'>]>;
+      empresa_documentos: TableDef<EmpresaDocumentosRow, [Rel<'empresa_id', 'empresa'>]>;
     };
     Views: { [_ in never]: never };
     Functions: {
