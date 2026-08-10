@@ -120,6 +120,44 @@ export function useContasBancarias() {
   });
 }
 
+export function useSaveContaBancaria() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<void, Error, Partial<ContasBancariasRow>>({
+    mutationFn: async (c) => {
+      const payload = {
+        nome: c.nome,
+        banco: c.banco || null,
+        agencia: c.agencia || null,
+        conta: c.conta || null,
+        tipo: c.tipo || null,
+        chave_pix: c.chave_pix || null,
+        ativo: c.ativo ?? true,
+      };
+      if (c.id) {
+        const { error } = await supabase.from('contas_bancarias').update(payload).eq('id', c.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('contas_bancarias').insert(payload);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['contas-bancarias'] }),
+  });
+}
+
+export function useDeleteContaBancaria() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<void, Error, string>({
+    mutationFn: async (id) => {
+      const { error } = await supabase.from('contas_bancarias').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['contas-bancarias'] }),
+  });
+}
+
 export function useCentrosCusto() {
   const supabase = createClient();
   return useQuery<CentrosCustoRow[]>({

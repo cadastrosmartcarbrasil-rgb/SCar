@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   DollarSign,
   Calculator,
+  Store,
   Settings,
   LogOut,
 } from 'lucide-react';
@@ -22,6 +23,7 @@ const NAV = [
   { href: '/veiculos', label: 'Veiculos', icon: Car },
   { href: '/sinistros', label: 'Sinistros', icon: AlertTriangle },
   { href: '/precificacao', label: 'Precificacao', icon: Calculator },
+  { href: '/fornecedores', label: 'Fornecedores', icon: Store },
   { href: '/financeiro', label: 'Financeiro / DRE', icon: DollarSign },
 ];
 
