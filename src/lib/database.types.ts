@@ -639,6 +639,10 @@ export type Database = {
         Args: { p_fipe: number; p_tipo_veiculo_id: string };
         Returns: number;
       };
+      substituir_tabela_precos: {
+        Args: { p_tipo_veiculo: string; p_faixas: Json; p_participacoes: Json };
+        Returns: undefined;
+      };
     };
     Enums: {
       papel_usuario: PapelUsuario;

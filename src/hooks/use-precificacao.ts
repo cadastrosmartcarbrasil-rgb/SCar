@@ -6,6 +6,8 @@ import type {
   TiposVeiculoRow,
   ProdutosRow,
   CalculoMensalidade,
+  TabelaPrecosFaixaRow,
+  ParticipacaoFaixaRow,
 } from '@/lib/database.types';
 
 export function useTiposVeiculo() {
@@ -81,6 +83,67 @@ export function useDeleteTipoVeiculo() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['precificacao', 'tipos-veiculo'] }),
+  });
+}
+
+// --- Editor da matriz de precos ---
+export function useTabelaPrecos(tipoVeiculoId?: string) {
+  const supabase = createClient();
+  return useQuery<TabelaPrecosFaixaRow[]>({
+    queryKey: ['precificacao', 'tabela', tipoVeiculoId ?? 'none'],
+    enabled: !!tipoVeiculoId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('tabela_precos_faixa')
+        .select('*')
+        .eq('tipo_veiculo_id', tipoVeiculoId!)
+        .order('fipe_minimo');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function useParticipacoes(tipoVeiculoId?: string) {
+  const supabase = createClient();
+  return useQuery<ParticipacaoFaixaRow[]>({
+    queryKey: ['precificacao', 'participacao', tipoVeiculoId ?? 'none'],
+    enabled: !!tipoVeiculoId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('participacao_faixa')
+        .select('*')
+        .eq('tipo_veiculo_id', tipoVeiculoId!)
+        .order('fipe_minimo');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export interface SalvarTabelaPayload {
+  tipoVeiculoId: string;
+  faixas: { produto_id: string; fipe_minimo: number; fipe_maximo: number; valor_mensal: number; tipo_valor: string }[];
+  participacoes: { fipe_minimo: number; fipe_maximo: number; valor: number; tipo_valor: string }[];
+}
+
+// Substitui a matriz do tipo de veiculo de forma atomica (RPC transacional).
+export function useSalvarTabela() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<void, Error, SalvarTabelaPayload>({
+    mutationFn: async ({ tipoVeiculoId, faixas, participacoes }) => {
+      const { error } = await supabase.rpc('substituir_tabela_precos', {
+        p_tipo_veiculo: tipoVeiculoId,
+        p_faixas: faixas,
+        p_participacoes: participacoes,
+      });
+      if (error) throw error;
+    },
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: ['precificacao', 'tabela', v.tipoVeiculoId] });
+      qc.invalidateQueries({ queryKey: ['precificacao', 'participacao', v.tipoVeiculoId] });
+    },
   });
 }
 

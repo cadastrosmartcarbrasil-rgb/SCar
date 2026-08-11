@@ -2,14 +2,38 @@
 
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Calculator, Loader2 } from 'lucide-react';
+import { Calculator, Loader2, Table2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FormField, Input, Select } from '@/components/ui/field';
 import { useTiposVeiculo, useProdutos, useSimularPreco, type ResultadoSimulacao } from '@/hooks/use-precificacao';
+import { TabelaPrecosEditor } from '@/components/precificacao/tabela-precos-editor';
 import { formatCurrency } from '@/lib/utils';
 
+type Aba = 'simulador' | 'tabela';
+
 export default function PrecificacaoPage() {
+  const [aba, setAba] = useState<Aba>('simulador');
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold text-slate-900">Precificacao</h1>
+        <p className="text-sm text-slate-500">Simule mensalidades e edite a matriz de precos (FIPE x tipo de veiculo).</p>
+      </div>
+      <div className="flex flex-wrap gap-1 border-b border-slate-200">
+        {([['simulador', 'Simulador', Calculator], ['tabela', 'Tabela de Precos', Table2]] as const).map(([id, label, Icon]) => (
+          <button key={id} onClick={() => setAba(id)}
+            className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm ${aba === id ? 'border-brand-600 font-medium text-brand-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+            <Icon className="h-4 w-4" /> {label}
+          </button>
+        ))}
+      </div>
+      {aba === 'simulador' ? <Simulador /> : <TabelaPrecosEditor />}
+    </div>
+  );
+}
+
+function Simulador() {
   const { data: tipos } = useTiposVeiculo();
   const { data: produtos } = useProdutos();
   const simular = useSimularPreco();
@@ -43,15 +67,7 @@ export default function PrecificacaoPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Simulador de Precificacao</h1>
-        <p className="text-sm text-slate-500">
-          Calcula a mensalidade pela matriz de risco (FIPE x tipo de veiculo), conforme a tabela SmartCar.
-        </p>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
+    <div className="grid gap-6 lg:grid-cols-2">
         {/* Entrada */}
         <Card>
           <CardHeader>
@@ -169,7 +185,6 @@ export default function PrecificacaoPage() {
             )}
           </CardContent>
         </Card>
-      </div>
     </div>
   );
 }
