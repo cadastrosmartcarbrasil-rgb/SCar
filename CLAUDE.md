@@ -47,15 +47,30 @@ middleware.ts                   # refresh de sessao + guard de rotas
 · `0010_precificacao` · `0011_empresa` · `0012_financeiro_fornecedores` · `0013_editor_precos`
 · `0014_marcas_modelos` (enum `status_cadastro` ATIVO/INATIVO/SUSPENSO + colunas `tipo_veiculo`,
 `idade_maxima`, `status` em modelos e `status` em marcas) · `0015_seed_marcas_modelos`
-(carga do relatorio SGA: 241 marcas, 8819 modelos; idempotente via `on conflict do nothing`).
+(carga do relatorio SGA: 241 marcas, 8819 modelos; idempotente via `on conflict do nothing`)
+· `0016_cotas_participacao` (desacopla a COTA DE PARTICIPACAO do Plano: catalogo
+`cotas_participacao` V5..V15 = %FIPE; `modelos.cota_participacao_id/grupo_veiculo/especial`;
+`veiculos.cota_participacao_id/modelo_id`; backfill via parser do texto SGA;
+`calcular_participacao(fipe,tipo,cota)` overload + `calcular_participacao_veiculo(veic,fipe)`
+com precedencia veiculo>modelo>faixa. Parser TS em `src/lib/participacao.ts`).
 
 ## Módulos (status: todos funcionais)
 Associados (painel `/associados/[id]` com abas) · Veículos/Contratos · Eventos/Sinistros
 (protocolo, reparo próprio/terceiro, financeiro do evento) · Precificação (simulador + editor de
 tabela FIPE com reajuste %) · Empresa (logo/diretoria/mandatos/documentos) · Fornecedores (auto
 CNPJ/CEP) · Financeiro (contas a pagar/receber + baixas + DRE) · Configurações (regionais, usuários,
-vendedores, marcas/modelos, tipos de veículo, tipos de evento, produtos, contas bancárias,
-integrações bancárias, plano de contas).
+vendedores, marcas/modelos, tipos de veículo, cotas de participação (V5..V15), tipos de evento,
+produtos, contas bancárias, integrações bancárias, plano de contas).
+
+## Cota de participação (rateio no evento) — arquitetura
+- **Desacoplada do Plano.** O Plano define a mensalidade (produtos); a cota (% da FIPE no rateio)
+  é uma dimensão própria resolvida por **precedência**: `veiculo.cota` (override) → `modelo.cota`
+  (herdada do texto SGA) → `participacao_faixa` (padrão por tipo/faixa, comportamento antigo).
+- **Catálogo `cotas_participacao`** (V5=5%…V15=15%): editar o % num único lugar reflete em todos.
+- **Parser** do texto `[ESPECIAL] V<N> <GRUPO>` (número após V = %). SQL no backfill do 0016 e
+  TS em `src/lib/participacao.ts` (`parseCategoriaSGA`) — usados para preencher a cota ao salvar modelo.
+- Motor: `calcular_participacao_veiculo(veic,fipe)` p/ veículo real; `calcular_participacao(fipe,tipo,cota)`
+  (3-arg) p/ preview no simulador; a versão 2-arg antiga segue intacta.
 
 ## Banco de dados — regras
 - **Migrations são append-only.** Nunca reescreva uma migration já aplicada em produção; crie a próxima (`ALTER ...`).

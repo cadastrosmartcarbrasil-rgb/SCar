@@ -137,6 +137,8 @@ export type VeiculosRow = Timestamps & {
   tipo_cambio: TipoCambio | null;
   combustivel: Combustivel | null;
   tipo_veiculo_id: string | null;
+  cota_participacao_id: string | null;
+  modelo_id: string | null;
 };
 
 export type ComunicacoesRow = {
@@ -169,6 +171,18 @@ export type ModelosRow = {
   idade_maxima: number;
   ativo: boolean;
   status: StatusCadastro;
+  cota_participacao_id: string | null;
+  grupo_veiculo: string | null;
+  especial: boolean;
+  created_at: string;
+};
+
+export type CotasParticipacaoRow = {
+  id: string;
+  codigo: string;
+  percentual: number;
+  descricao: string | null;
+  ativo: boolean;
   created_at: string;
 };
 
@@ -565,6 +579,8 @@ export type Database = {
           Rel<'plano_protecao_id', 'planos_protecao'>,
           Rel<'vendedor_id', 'vendedores'>,
           Rel<'regional_id', 'regionais'>,
+          Rel<'cota_participacao_id', 'cotas_participacao'>,
+          Rel<'modelo_id', 'modelos'>,
         ]
       >;
       categorias_dre: TableDef<CategoriasDreRow>;
@@ -593,7 +609,11 @@ export type Database = {
       email_templates: TableDef<EmailTemplatesRow>;
       integracoes_bancarias: TableDef<IntegracoesBancariasRow, [Rel<'regional_id', 'regionais'>]>;
       marcas: TableDef<MarcasRow>;
-      modelos: TableDef<ModelosRow, [Rel<'marca_id', 'marcas'>]>;
+      modelos: TableDef<
+        ModelosRow,
+        [Rel<'marca_id', 'marcas'>, Rel<'cota_participacao_id', 'cotas_participacao'>]
+      >;
+      cotas_participacao: TableDef<CotasParticipacaoRow>;
       comunicacoes: TableDef<ComunicacoesRow, [Rel<'cliente_id', 'clientes'>]>;
       tipos_veiculo: TableDef<TiposVeiculoRow>;
       produtos: TableDef<ProdutosRow, [Rel<'tipo_evento_id', 'tipos_evento'>]>;
@@ -641,7 +661,13 @@ export type Database = {
         Returns: CalculoMensalidade;
       };
       calcular_participacao: {
-        Args: { p_fipe: number; p_tipo_veiculo_id: string };
+        Args:
+          | { p_fipe: number; p_tipo_veiculo_id: string }
+          | { p_fipe: number; p_tipo_veiculo_id: string; p_cota_id: string | null };
+        Returns: number;
+      };
+      calcular_participacao_veiculo: {
+        Args: { p_veiculo_id: string; p_fipe: number };
         Returns: number;
       };
       substituir_tabela_precos: {

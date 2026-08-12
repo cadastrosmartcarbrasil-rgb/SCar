@@ -359,6 +359,9 @@ export function useSaveModelo() {
       tipo_veiculo?: string | null;
       idade_maxima?: number;
       status?: StatusCadastro;
+      cota_participacao_id?: string | null;
+      grupo_veiculo?: string | null;
+      especial?: boolean;
     }) => {
       const status = v.status ?? 'ATIVO';
       const payload = {
@@ -368,6 +371,9 @@ export function useSaveModelo() {
         idade_maxima: v.idade_maxima ?? 0,
         status,
         ativo: status === 'ATIVO',
+        cota_participacao_id: v.cota_participacao_id ?? null,
+        grupo_veiculo: v.grupo_veiculo?.trim() ? v.grupo_veiculo.trim() : null,
+        especial: v.especial ?? false,
       };
       if (v.id) {
         const { error } = await supabase.from('modelos').update(payload).eq('id', v.id);

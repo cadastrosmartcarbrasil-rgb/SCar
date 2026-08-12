@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Building2, Users, Landmark, ListTree, Car, BadgeDollarSign, AlertTriangle, Truck, Package, Building, Wallet,
+  Building2, Users, Landmark, ListTree, Car, BadgeDollarSign, AlertTriangle, Truck, Package, Building, Wallet, Percent,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -14,6 +14,7 @@ const TABS = [
   { href: '/configuracoes/vendedores', label: 'Vendedores', icon: BadgeDollarSign },
   { href: '/configuracoes/marcas-modelos', label: 'Marcas & Modelos', icon: Car },
   { href: '/configuracoes/tipos-veiculo', label: 'Tipos de Veiculo', icon: Truck },
+  { href: '/configuracoes/cotas-participacao', label: 'Cotas de Participacao', icon: Percent },
   { href: '/configuracoes/tipos-evento', label: 'Tipos de Evento', icon: AlertTriangle },
   { href: '/configuracoes/produtos', label: 'Produtos', icon: Package },
   { href: '/configuracoes/contas-bancarias', label: 'Contas Bancarias', icon: Wallet },

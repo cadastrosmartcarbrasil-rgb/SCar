@@ -8,7 +8,23 @@ import type {
   CalculoMensalidade,
   TabelaPrecosFaixaRow,
   ParticipacaoFaixaRow,
+  CotasParticipacaoRow,
 } from '@/lib/database.types';
+
+export function useCotasParticipacao() {
+  const supabase = createClient();
+  return useQuery<CotasParticipacaoRow[]>({
+    queryKey: ['precificacao', 'cotas-participacao'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('cotas_participacao')
+        .select('*')
+        .order('percentual');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
 
 export function useTiposVeiculo() {
   const supabase = createClient();
@@ -42,15 +58,23 @@ export interface ResultadoSimulacao {
 // Chama o motor de calculo no banco (fonte unica de verdade).
 export function useSimularPreco() {
   const supabase = createClient();
-  return useMutation<ResultadoSimulacao, Error, { fipe: number; tipoVeiculoId: string; produtosIds: string[] }>({
-    mutationFn: async ({ fipe, tipoVeiculoId, produtosIds }) => {
+  return useMutation<
+    ResultadoSimulacao,
+    Error,
+    { fipe: number; tipoVeiculoId: string; produtosIds: string[]; cotaId?: string | null }
+  >({
+    mutationFn: async ({ fipe, tipoVeiculoId, produtosIds, cotaId }) => {
       const [mensal, part] = await Promise.all([
         supabase.rpc('calcular_mensalidade', {
           p_fipe: fipe,
           p_tipo_veiculo_id: tipoVeiculoId,
           p_produtos_ids: produtosIds,
         }),
-        supabase.rpc('calcular_participacao', { p_fipe: fipe, p_tipo_veiculo_id: tipoVeiculoId }),
+        supabase.rpc('calcular_participacao', {
+          p_fipe: fipe,
+          p_tipo_veiculo_id: tipoVeiculoId,
+          p_cota_id: cotaId ?? null,
+        }),
       ]);
       if (mensal.error) throw mensal.error;
       if (part.error) throw part.error;
@@ -144,6 +168,41 @@ export function useSalvarTabela() {
       qc.invalidateQueries({ queryKey: ['precificacao', 'tabela', v.tipoVeiculoId] });
       qc.invalidateQueries({ queryKey: ['precificacao', 'participacao', v.tipoVeiculoId] });
     },
+  });
+}
+
+export function useSaveCota() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (c: { id?: string; codigo: string; percentual: number; descricao?: string | null; ativo?: boolean }) => {
+      const payload = {
+        codigo: c.codigo.trim().toUpperCase(),
+        percentual: c.percentual,
+        descricao: c.descricao ?? null,
+        ativo: c.ativo ?? true,
+      };
+      if (c.id) {
+        const { error } = await supabase.from('cotas_participacao').update(payload).eq('id', c.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('cotas_participacao').insert(payload);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['precificacao', 'cotas-participacao'] }),
+  });
+}
+
+export function useDeleteCota() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('cotas_participacao').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['precificacao', 'cotas-participacao'] }),
   });
 }
 

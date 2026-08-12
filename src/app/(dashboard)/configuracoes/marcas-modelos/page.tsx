@@ -13,6 +13,8 @@ import {
   useSaveModelo,
   useDeleteModelo,
 } from '@/hooks/use-config';
+import { useCotasParticipacao } from '@/hooks/use-precificacao';
+import { parseCategoriaSGA } from '@/lib/participacao';
 import type { StatusCadastro, ModelosRow, MarcasRow } from '@/lib/database.types';
 
 const STATUS: { value: StatusCadastro; label: string }[] = [
@@ -38,10 +40,29 @@ export default function MarcasModelosPage() {
   const [buscaMarca, setBuscaMarca] = useState('');
   const { data: modelos } = useModelos(marcaSel ?? undefined);
 
+  const { data: cotas } = useCotasParticipacao();
   const salvarMarca = useSaveMarca();
   const excluirMarca = useDeleteMarca();
   const salvarModelo = useSaveModelo();
   const excluirModelo = useDeleteModelo();
+
+  // Mapa codigo->id e id->codigo das cotas, + derivacao a partir do texto do tipo.
+  const cotaIdPorCodigo = useMemo(
+    () => new Map((cotas ?? []).map((c) => [c.codigo, c.id])),
+    [cotas],
+  );
+  const cotaCodigoPorId = useMemo(
+    () => new Map((cotas ?? []).map((c) => [c.id, c])),
+    [cotas],
+  );
+  function derivarCota(tipo: string | null | undefined) {
+    const p = parseCategoriaSGA(tipo);
+    return {
+      cota_participacao_id: p.codigoCota ? cotaIdPorCodigo.get(p.codigoCota) ?? null : null,
+      grupo_veiculo: p.grupo || null,
+      especial: p.especial,
+    };
+  }
 
   // Nova marca
   const [novaMarca, setNovaMarca] = useState('');
@@ -215,6 +236,7 @@ export default function MarcasModelosPage() {
                         tipo_veiculo: novoTipo.trim() || null,
                         idade_maxima: novaIdade === '' ? 0 : Number(novaIdade),
                         status: novoStatus,
+                        ...derivarCota(novoTipo),
                       },
                       {
                         onSuccess: () => {
@@ -239,6 +261,7 @@ export default function MarcasModelosPage() {
                     <tr className="border-y border-slate-100 text-left text-[11px] uppercase text-slate-400">
                       <th className="px-3 py-1.5">Modelo</th>
                       <th className="px-2 py-1.5">Tipo</th>
+                      <th className="px-2 py-1.5">Cota</th>
                       <th className="px-2 py-1.5">Idade</th>
                       <th className="px-2 py-1.5">Status</th>
                       <th className="px-2 py-1.5"></th>
@@ -249,12 +272,26 @@ export default function MarcasModelosPage() {
                       <ModeloRow
                         key={mo.id}
                         modelo={mo}
+                        cotaLabel={
+                          mo.cota_participacao_id
+                            ? (() => {
+                                const c = cotaCodigoPorId.get(mo.cota_participacao_id);
+                                return c ? `${c.codigo} · ${(c.percentual * 100).toFixed(0)}%` : null;
+                              })()
+                            : null
+                        }
                         emEdicao={editModelo === mo.id}
                         onEditar={() => setEditModelo(mo.id)}
                         onCancelar={() => setEditModelo(null)}
                         onSalvar={(patch) =>
                           salvarModelo.mutate(
-                            { id: mo.id, marca_id: mo.marca_id, nome: mo.nome, ...patch },
+                            {
+                              id: mo.id,
+                              marca_id: mo.marca_id,
+                              nome: mo.nome,
+                              ...patch,
+                              ...derivarCota(patch.tipo_veiculo),
+                            },
                             {
                               onSuccess: () => {
                                 setEditModelo(null);
@@ -273,7 +310,7 @@ export default function MarcasModelosPage() {
                     ))}
                     {(modelos ?? []).length === 0 && (
                       <tr>
-                        <td colSpan={5} className="px-3 py-4 text-sm text-slate-400">
+                        <td colSpan={6} className="px-3 py-4 text-sm text-slate-400">
                           Nenhum modelo nesta marca.
                         </td>
                       </tr>
@@ -334,6 +371,7 @@ function MarcaItem({
 
 function ModeloRow({
   modelo,
+  cotaLabel,
   emEdicao,
   onEditar,
   onCancelar,
@@ -341,6 +379,7 @@ function ModeloRow({
   onExcluir,
 }: {
   modelo: ModelosRow;
+  cotaLabel: string | null;
   emEdicao: boolean;
   onEditar: () => void;
   onCancelar: () => void;
@@ -356,6 +395,15 @@ function ModeloRow({
       <tr className="border-b border-slate-50">
         <td className="px-3 py-1.5">{modelo.nome}</td>
         <td className="px-2 py-1.5 text-slate-500">{modelo.tipo_veiculo ?? '-'}</td>
+        <td className="px-2 py-1.5">
+          {cotaLabel ? (
+            <span className="rounded bg-indigo-50 px-1.5 py-0.5 text-[11px] font-medium text-indigo-700">
+              {cotaLabel}
+            </span>
+          ) : (
+            <span className="text-slate-300">-</span>
+          )}
+        </td>
         <td className="px-2 py-1.5 text-slate-500">{modelo.idade_maxima || '-'}</td>
         <td className="px-2 py-1.5">
           <StatusBadge status={modelo.status} />
@@ -383,6 +431,9 @@ function ModeloRow({
           onChange={(e) => setTipo(e.target.value)}
           className="w-28 rounded border border-slate-300 px-1.5 py-1 text-xs"
         />
+      </td>
+      <td className="px-2 py-1.5 text-[11px] text-slate-400">
+        {cotaLabel ?? 'auto'}
       </td>
       <td className="px-2 py-1.5">
         <input

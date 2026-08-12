@@ -6,7 +6,7 @@ import { Calculator, Loader2, Table2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FormField, Input, Select } from '@/components/ui/field';
-import { useTiposVeiculo, useProdutos, useSimularPreco, type ResultadoSimulacao } from '@/hooks/use-precificacao';
+import { useTiposVeiculo, useProdutos, useSimularPreco, useCotasParticipacao, type ResultadoSimulacao } from '@/hooks/use-precificacao';
 import { TabelaPrecosEditor } from '@/components/precificacao/tabela-precos-editor';
 import { formatCurrency } from '@/lib/utils';
 
@@ -36,10 +36,12 @@ export default function PrecificacaoPage() {
 function Simulador() {
   const { data: tipos } = useTiposVeiculo();
   const { data: produtos } = useProdutos();
+  const { data: cotas } = useCotasParticipacao();
   const simular = useSimularPreco();
 
   const [tipoVeiculoId, setTipoVeiculoId] = useState('');
   const [fipe, setFipe] = useState<number | ''>('');
+  const [cotaId, setCotaId] = useState('');
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [resultado, setResultado] = useState<ResultadoSimulacao | null>(null);
 
@@ -58,7 +60,7 @@ function Simulador() {
     if (!tipoVeiculoId) return toast.error('Selecione o tipo de veiculo');
     if (fipe === '' || Number(fipe) <= 0) return toast.error('Informe o valor FIPE');
     simular.mutate(
-      { fipe: Number(fipe), tipoVeiculoId, produtosIds: [...selecionados] },
+      { fipe: Number(fipe), tipoVeiculoId, produtosIds: [...selecionados], cotaId: cotaId || null },
       {
         onSuccess: (r) => setResultado(r),
         onError: (e) => toast.error(e.message),
@@ -97,6 +99,17 @@ function Simulador() {
                 />
               </FormField>
             </div>
+
+            <FormField label="Cota de participacao (opcional)">
+              <Select value={cotaId} onChange={(e) => setCotaId(e.target.value)}>
+                <option value="">Padrao da faixa (tabela)</option>
+                {(cotas ?? []).map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.codigo} — {(c.percentual * 100).toFixed(0)}% da FIPE
+                  </option>
+                ))}
+              </Select>
+            </FormField>
 
             <div>
               <p className="mb-1 text-sm font-medium text-slate-600">Itens base (obrigatorios)</p>
