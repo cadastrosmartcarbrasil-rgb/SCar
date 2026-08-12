@@ -32,7 +32,7 @@ src/
     supabase/{client,server,admin,middleware}.ts
     documento.ts                # validarCPF/CNPJ, formatar*, calcularIdade
     cep.ts / cnpj.ts / placa.ts # integracoes externas (ViaCEP, BrasilAPI, placa)
-    fipe.ts                     # Tabela FIPE (apifipe.com.br) - proxy server-side /api/fipe
+    fipe.ts                     # Tabela FIPE (placafipe.com.br) - proxy server-side /api/fipe
     utils.ts                    # cn, formatCurrency, formatDate, monthRange
   hooks/                        # um arquivo por dominio (use-*.ts), TanStack Query
   components/                   # ui/ (Button,Input,Modal,Card,field), + por dominio
@@ -110,15 +110,20 @@ Só então: commit + push. (Docker build da imagem NÃO builda aqui: proxy bloqu
 - Raw URL de arquivo (branch tem `/`, use `refs/heads/`):
   `https://raw.githubusercontent.com/cadastrosmartcarbrasil-rgb/scar/refs/heads/claude/scar-project-btasdf/<path>`
 
-## Integração FIPE (apifipe.com.br)
-- Contrato (token = ÚLTIMO segmento do path): `GET {base}/{tipo}/{token}` → marcas ·
-  `.../{marca}/{token}` → modelos · `.../{marca}/{modelo}/{token}` → anos ·
-  `.../{marca}/{modelo}/{ano}/{token}` → valor. `tipo` ∈ carros|motos|caminhoes.
-  `codAno` = `ano-combustivel` (1 Gasolina,2 Álcool,3 Diesel,4 Elétrico,5 Flex,6 Híbrido).
-- Token é secreto: vive só no servidor (`/api/fipe/route.ts`, env `FIPE_API_TOKEN`/`FIPE_API_BASE`);
-  o cliente chama o proxy interno `/api/fipe?tipo=&marca=&modelo=&ano=`. Sem token → modo manual.
-- Cascata na UI: `<FipeConsulta>` (hooks `use-fipe.ts`) preenche marca/modelo/ano/valor_fipe/
-  codigo_fipe/combustivel no form de veículo. Normalização é best-effort (nomes de campo variam).
+## Integração FIPE (placafipe.com.br)
+- Contrato: **POST JSON, token NO CORPO**, base `https://api.placafipe.com.br`, envelope
+  `{codigo,msg,tempo,...payload}`. Endpoints: `getplacafipe {placa}` → `{fipe:[...]}` (placa→valor);
+  `get-veiculos-tipos {}`; `get-marcas {codigo_tipo_veiculo?}` → `[{codigo_marca,descricao}]`;
+  `get-modelos {codigo_marca}` → `{modelos:[{Label,Value}], anos:[{Label,Value}]}`;
+  `fipebycodigo {codigo_fipe,ano}` → valor. `valor` vem tipo `"22159.00"` (ponto decimal!) —
+  `parseValor` trata isso e o formato BR. Combustível vem textual ("GASOLINA") → `combustivelEnum`.
+- Token é secreto: só no servidor (`/api/fipe/route.ts`, POST, env `PLACAFIPE_TOKEN`/`PLACAFIPE_BASE`);
+  o cliente chama o proxy interno com `{action, ...params}`. Sem token → modo manual.
+- UI: no form de veículo o botão **Consultar** da placa chama `getplacafipe` (placa→dados+valor);
+  `<FipeConsulta>` faz a cascata manual (hooks `use-fipe.ts`). Ambos preenchem
+  marca/modelo/ano/valor_fipe/codigo_fipe/combustivel. Normalização best-effort.
+- **A confirmar em teste real:** no `fipebycodigo` da cascata, passamos o Value do modelo como
+  `codigo_fipe` — se a API esperar o código FIPE textual, ajustar em `/api/fipe` (um ponto só).
 
 ## Gotchas já resolvidos (não repetir)
 - Erro `syntax error near "//"` no SQL Editor = arquivo TypeScript colado por engano; SQL começa com `--`.

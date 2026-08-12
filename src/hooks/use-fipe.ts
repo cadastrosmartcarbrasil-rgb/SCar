@@ -1,45 +1,44 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import {
-  fipeMarcas, fipeModelos, fipeAnos, fipeValor,
-  type FipeTipo, type FipeItem, type FipeValor,
+  fipePorPlaca, fipeMarcas, fipeModelos, fipeValor,
+  type FipeItem, type FipeValor,
 } from '@/lib/fipe';
 
 const STALE = 1000 * 60 * 60; // 1h: tabela FIPE muda mensalmente
 
-export function useFipeMarcas(tipo: FipeTipo) {
-  return useQuery<{ configured: boolean; itens: FipeItem[] }>({
-    queryKey: ['fipe', 'marcas', tipo],
-    enabled: !!tipo,
-    staleTime: STALE,
-    queryFn: () => fipeMarcas(tipo),
+// Placa -> dados + valor FIPE (uma chamada). Mutation (dispara ao clicar).
+export function useFipePorPlaca() {
+  return useMutation<{ configured: boolean; valor: FipeValor | null; opcoes: FipeValor[] }, Error, string>({
+    mutationFn: (placa: string) => fipePorPlaca(placa),
   });
 }
 
-export function useFipeModelos(tipo: FipeTipo, marca?: string) {
+export function useFipeMarcas(tipoCodigo?: number) {
   return useQuery<{ configured: boolean; itens: FipeItem[] }>({
-    queryKey: ['fipe', 'modelos', tipo, marca ?? ''],
-    enabled: !!tipo && !!marca,
+    queryKey: ['fipe', 'marcas', tipoCodigo ?? 0],
+    enabled: !!tipoCodigo,
     staleTime: STALE,
-    queryFn: () => fipeModelos(tipo, marca!),
+    queryFn: () => fipeMarcas(tipoCodigo!),
   });
 }
 
-export function useFipeAnos(tipo: FipeTipo, marca?: string, modelo?: string) {
-  return useQuery<{ configured: boolean; itens: FipeItem[] }>({
-    queryKey: ['fipe', 'anos', tipo, marca ?? '', modelo ?? ''],
-    enabled: !!tipo && !!marca && !!modelo,
+// get-modelos devolve modelos + anos da marca numa so chamada.
+export function useFipeModelos(codigoMarca?: string) {
+  return useQuery<{ configured: boolean; modelos: FipeItem[]; anos: FipeItem[] }>({
+    queryKey: ['fipe', 'modelos', codigoMarca ?? ''],
+    enabled: !!codigoMarca,
     staleTime: STALE,
-    queryFn: () => fipeAnos(tipo, marca!, modelo!),
+    queryFn: () => fipeModelos(codigoMarca!),
   });
 }
 
-export function useFipeValor(tipo: FipeTipo, marca?: string, modelo?: string, ano?: string) {
-  return useQuery<{ configured: boolean; valor: FipeValor }>({
-    queryKey: ['fipe', 'valor', tipo, marca ?? '', modelo ?? '', ano ?? ''],
-    enabled: !!tipo && !!marca && !!modelo && !!ano,
+export function useFipeValor(codigoFipe?: string, ano?: string) {
+  return useQuery<{ configured: boolean; valor: FipeValor | null }>({
+    queryKey: ['fipe', 'valor', codigoFipe ?? '', ano ?? ''],
+    enabled: !!codigoFipe && !!ano,
     staleTime: STALE,
-    queryFn: () => fipeValor(tipo, marca!, modelo!, ano!),
+    queryFn: () => fipeValor(codigoFipe!, ano!),
   });
 }

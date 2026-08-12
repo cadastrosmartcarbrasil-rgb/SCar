@@ -12,6 +12,7 @@ import { useTiposVeiculo } from '@/hooks/use-precificacao';
 import { useVeiculos, useSaveVeiculo, useExcluirVeiculo } from '@/hooks/use-veiculos';
 import { consultarPlaca, normalizarPlaca, placaValida } from '@/lib/placa';
 import { FipeConsulta } from '@/components/fipe/fipe-consulta';
+import { useFipePorPlaca } from '@/hooks/use-fipe';
 import { formatCurrency } from '@/lib/utils';
 import type {
   VeiculosRow,
@@ -61,6 +62,7 @@ export default function VeiculosPage() {
   const { data: tiposVeiculo } = useTiposVeiculo();
   const salvar = useSaveVeiculo();
   const excluir = useExcluirVeiculo();
+  const fipePorPlaca = useFipePorPlaca();
 
   const [busca, setBusca] = useState('');
   const [aberto, setAberto] = useState(false);
@@ -100,22 +102,33 @@ export default function VeiculosPage() {
     const p = normalizarPlaca(form.placa ?? '');
     if (!placaValida(p)) return toast.error('Placa invalida');
     setConsultando(true);
-    const r = await consultarPlaca(p);
+    // 1) dados cadastrais da placa (provedor de placa, se configurado)
+    // 2) valor + dados FIPE pela placa (placafipe getplacafipe)
+    const [r, fipe] = await Promise.all([
+      consultarPlaca(p),
+      fipePorPlaca.mutateAsync(p).catch(() => null),
+    ]);
     setConsultando(false);
-    if (!r.found) {
+
+    const v = fipe?.valor ?? null;
+    const preencheu = (r && r.found) || !!v;
+    if (!preencheu) {
       toast.message('Consulta indisponivel - preencha os dados manualmente.');
       return;
     }
     setForm((f) => ({
       ...f,
-      marca: r.marca ?? f.marca,
-      modelo: r.modelo ?? f.modelo,
-      ano_fabricacao: r.ano_fabricacao ?? f.ano_fabricacao,
-      ano_modelo: r.ano_modelo ?? f.ano_modelo,
-      cor: r.cor ?? f.cor,
-      chassi: r.chassi ?? f.chassi,
+      marca: r?.marca ?? v?.marca ?? f.marca,
+      modelo: r?.modelo ?? v?.modelo ?? f.modelo,
+      ano_fabricacao: r?.ano_fabricacao ?? f.ano_fabricacao,
+      ano_modelo: r?.ano_modelo ?? v?.anoModelo ?? f.ano_modelo,
+      cor: r?.cor ?? f.cor,
+      chassi: r?.chassi ?? f.chassi,
+      valor_fipe: v?.valor ?? f.valor_fipe,
+      codigo_fipe: v?.codigoFipe ?? f.codigo_fipe,
+      combustivel: (v?.combustivel as Combustivel) ?? f.combustivel,
     }));
-    toast.success('Dados da placa preenchidos');
+    toast.success(v ? `Placa + FIPE: ${formatCurrency(v.valor ?? 0)}` : 'Dados da placa preenchidos');
   }
 
   function submit(e: React.FormEvent) {
