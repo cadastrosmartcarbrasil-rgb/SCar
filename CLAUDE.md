@@ -41,6 +41,14 @@ src/
 middleware.ts                   # refresh de sessao + guard de rotas
 ```
 
+## Migrations (ordem)
+`0001_schema` · `0002_functions_triggers` · `0003_rls` · `0004_seed` · `0005_integracoes_bancarias`
+· `0006_associados` · `0007_veiculos_contratos` · `0008_comunicacoes` · `0009_eventos_completo`
+· `0010_precificacao` · `0011_empresa` · `0012_financeiro_fornecedores` · `0013_editor_precos`
+· `0014_marcas_modelos` (enum `status_cadastro` ATIVO/INATIVO/SUSPENSO + colunas `tipo_veiculo`,
+`idade_maxima`, `status` em modelos e `status` em marcas) · `0015_seed_marcas_modelos`
+(carga do relatorio SGA: 241 marcas, 8819 modelos; idempotente via `on conflict do nothing`).
+
 ## Módulos (status: todos funcionais)
 Associados (painel `/associados/[id]` com abas) · Veículos/Contratos · Eventos/Sinistros
 (protocolo, reparo próprio/terceiro, financeiro do evento) · Precificação (simulador + editor de

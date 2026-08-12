@@ -46,6 +46,7 @@ export type MandatoStatus = 'VIGENTE' | 'EXPIRADO' | 'EM_RENOVACAO';
 export type StatusLancamento = 'pendente' | 'pago_parcial' | 'quitado' | 'cancelado' | 'atrasado';
 export type FormaPagamento = 'PIX' | 'BOLETO' | 'TRANSFERENCIA' | 'CARTAO' | 'DINHEIRO';
 export type StatusConciliacao = 'NAO_CONCILIADO' | 'CONCILIADO_MANUAL' | 'CONCILIADO_API';
+export type StatusCadastro = 'ATIVO' | 'INATIVO' | 'SUSPENSO';
 
 // ---- Helper para linhas com timestamps ------------------------------------
 type Timestamps = {
@@ -156,6 +157,7 @@ export type MarcasRow = {
   id: string;
   nome: string;
   ativo: boolean;
+  status: StatusCadastro;
   created_at: string;
 };
 
@@ -163,7 +165,10 @@ export type ModelosRow = {
   id: string;
   marca_id: string;
   nome: string;
+  tipo_veiculo: string | null;
+  idade_maxima: number;
   ativo: boolean;
+  status: StatusCadastro;
   created_at: string;
 };
 
@@ -648,6 +653,7 @@ export type Database = {
       papel_usuario: PapelUsuario;
       status_evento: StatusEvento;
       status_titulo: StatusTitulo;
+      status_cadastro: StatusCadastro;
     };
     CompositeTypes: { [_ in never]: never };
   };

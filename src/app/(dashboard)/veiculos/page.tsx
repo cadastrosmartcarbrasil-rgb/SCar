@@ -57,7 +57,6 @@ export default function VeiculosPage() {
   const { data: vendedores } = useVendedores();
   const { data: usuarios } = useUsuarios();
   const { data: marcas } = useMarcas();
-  const { data: modelos } = useModelos();
   const { data: tiposVeiculo } = useTiposVeiculo();
   const salvar = useSaveVeiculo();
   const excluir = useExcluirVeiculo();
@@ -73,12 +72,12 @@ export default function VeiculosPage() {
     [associados],
   );
 
-  // modelos sugeridos para a marca digitada
-  const modelosDaMarca = useMemo(() => {
-    const marca = (marcas ?? []).find((m) => m.nome.toLowerCase() === (form.marca ?? '').toLowerCase());
-    if (!marca) return [];
-    return (modelos ?? []).filter((mo) => mo.marca_id === marca.id);
-  }, [marcas, modelos, form.marca]);
+  // modelos sugeridos para a marca digitada (busca sob demanda pela marca)
+  const marcaSelecionada = useMemo(
+    () => (marcas ?? []).find((m) => m.nome.toLowerCase() === (form.marca ?? '').toLowerCase()),
+    [marcas, form.marca],
+  );
+  const { data: modelosDaMarca = [] } = useModelos(marcaSelecionada?.id);
 
   const filtrados = useMemo(() => {
     const t = busca.toLowerCase();

@@ -11,6 +11,7 @@ import type {
   ModelosRow,
   VendedoresRow,
   TiposEventoRow,
+  StatusCadastro,
 } from '@/lib/database.types';
 
 // ---------------------------------------------------------------------------
@@ -294,14 +295,19 @@ export function useMarcas() {
   });
 }
 
+// Carrega os modelos de UMA marca. O catalogo tem milhares de modelos, entao
+// so busca quando uma marca esta selecionada (evita fetch de tudo de uma vez).
 export function useModelos(marcaId?: string) {
   const supabase = createClient();
   return useQuery<ModelosRow[]>({
-    queryKey: ['config', 'modelos', marcaId ?? 'all'],
+    queryKey: ['config', 'modelos', marcaId ?? 'none'],
+    enabled: !!marcaId,
     queryFn: async () => {
-      let q = supabase.from('modelos').select('*').order('nome');
-      if (marcaId) q = q.eq('marca_id', marcaId);
-      const { data, error } = await q;
+      const { data, error } = await supabase
+        .from('modelos')
+        .select('*')
+        .eq('marca_id', marcaId!)
+        .order('nome');
       if (error) throw error;
       return data ?? [];
     },
@@ -312,9 +318,16 @@ export function useSaveMarca() {
   const supabase = createClient();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (nome: string) => {
-      const { error } = await supabase.from('marcas').insert({ nome });
-      if (error) throw error;
+    mutationFn: async (v: { id?: string; nome: string; status?: StatusCadastro }) => {
+      const status = v.status ?? 'ATIVO';
+      const payload = { nome: v.nome, status, ativo: status === 'ATIVO' };
+      if (v.id) {
+        const { error } = await supabase.from('marcas').update(payload).eq('id', v.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('marcas').insert(payload);
+        if (error) throw error;
+      }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['config', 'marcas'] }),
   });
@@ -339,9 +352,30 @@ export function useSaveModelo() {
   const supabase = createClient();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (v: { marca_id: string; nome: string }) => {
-      const { error } = await supabase.from('modelos').insert(v);
-      if (error) throw error;
+    mutationFn: async (v: {
+      id?: string;
+      marca_id: string;
+      nome: string;
+      tipo_veiculo?: string | null;
+      idade_maxima?: number;
+      status?: StatusCadastro;
+    }) => {
+      const status = v.status ?? 'ATIVO';
+      const payload = {
+        marca_id: v.marca_id,
+        nome: v.nome,
+        tipo_veiculo: v.tipo_veiculo?.trim() ? v.tipo_veiculo.trim() : null,
+        idade_maxima: v.idade_maxima ?? 0,
+        status,
+        ativo: status === 'ATIVO',
+      };
+      if (v.id) {
+        const { error } = await supabase.from('modelos').update(payload).eq('id', v.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('modelos').insert(payload);
+        if (error) throw error;
+      }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['config', 'modelos'] }),
   });
