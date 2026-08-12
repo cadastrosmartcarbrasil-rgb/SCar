@@ -32,12 +32,13 @@ src/
     supabase/{client,server,admin,middleware}.ts
     documento.ts                # validarCPF/CNPJ, formatar*, calcularIdade
     cep.ts / cnpj.ts / placa.ts # integracoes externas (ViaCEP, BrasilAPI, placa)
+    fipe.ts                     # Tabela FIPE (apifipe.com.br) - proxy server-side /api/fipe
     utils.ts                    # cn, formatCurrency, formatDate, monthRange
   hooks/                        # um arquivo por dominio (use-*.ts), TanStack Query
   components/                   # ui/ (Button,Input,Modal,Card,field), + por dominio
   app/(dashboard)/              # telas internas (layout gateia staff + mostra logo)
   app/(auth)/login, app/portal  # login staff e portal do associado
-  app/api/                      # route handlers (cnpj, placa, usuarios, portal/login, boletos)
+  app/api/                      # route handlers (cnpj, placa, fipe, usuarios, portal/login, boletos)
 middleware.ts                   # refresh de sessao + guard de rotas
 ```
 
@@ -108,6 +109,16 @@ Só então: commit + push. (Docker build da imagem NÃO builda aqui: proxy bloqu
   `cd /opt/scar && git pull && docker compose up -d --build`.
 - Raw URL de arquivo (branch tem `/`, use `refs/heads/`):
   `https://raw.githubusercontent.com/cadastrosmartcarbrasil-rgb/scar/refs/heads/claude/scar-project-btasdf/<path>`
+
+## Integração FIPE (apifipe.com.br)
+- Contrato (token = ÚLTIMO segmento do path): `GET {base}/{tipo}/{token}` → marcas ·
+  `.../{marca}/{token}` → modelos · `.../{marca}/{modelo}/{token}` → anos ·
+  `.../{marca}/{modelo}/{ano}/{token}` → valor. `tipo` ∈ carros|motos|caminhoes.
+  `codAno` = `ano-combustivel` (1 Gasolina,2 Álcool,3 Diesel,4 Elétrico,5 Flex,6 Híbrido).
+- Token é secreto: vive só no servidor (`/api/fipe/route.ts`, env `FIPE_API_TOKEN`/`FIPE_API_BASE`);
+  o cliente chama o proxy interno `/api/fipe?tipo=&marca=&modelo=&ano=`. Sem token → modo manual.
+- Cascata na UI: `<FipeConsulta>` (hooks `use-fipe.ts`) preenche marca/modelo/ano/valor_fipe/
+  codigo_fipe/combustivel no form de veículo. Normalização é best-effort (nomes de campo variam).
 
 ## Gotchas já resolvidos (não repetir)
 - Erro `syntax error near "//"` no SQL Editor = arquivo TypeScript colado por engano; SQL começa com `--`.

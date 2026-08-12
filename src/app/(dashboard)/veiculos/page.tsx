@@ -11,6 +11,7 @@ import { useRegionais, useVendedores, useUsuarios, useMarcas, useModelos } from 
 import { useTiposVeiculo } from '@/hooks/use-precificacao';
 import { useVeiculos, useSaveVeiculo, useExcluirVeiculo } from '@/hooks/use-veiculos';
 import { consultarPlaca, normalizarPlaca, placaValida } from '@/lib/placa';
+import { FipeConsulta } from '@/components/fipe/fipe-consulta';
 import { formatCurrency } from '@/lib/utils';
 import type {
   VeiculosRow,
@@ -364,6 +365,20 @@ export default function VeiculosPage() {
               ))}
             </Select>
           </FormField>
+
+          {/* Consulta FIPE -> preenche marca/modelo/ano/valor automaticamente */}
+          <FipeConsulta
+            onSelecionar={(sel) =>
+              setF({
+                ...(sel.marcaNome ? { marca: sel.marcaNome } : {}),
+                ...(sel.modeloNome ? { modelo: sel.modeloNome } : {}),
+                ...(sel.valor.codigoFipe ? { codigo_fipe: sel.valor.codigoFipe } : {}),
+                ...(sel.valor.valor != null ? { valor_fipe: sel.valor.valor } : {}),
+                ...(sel.valor.anoModelo ? { ano_modelo: sel.valor.anoModelo } : {}),
+                ...(sel.valor.combustivel ? { combustivel: sel.valor.combustivel as Combustivel } : {}),
+              })
+            }
+          />
 
           {/* FIPE */}
           <div className="grid grid-cols-2 gap-3 rounded-lg border border-slate-200 p-3">
