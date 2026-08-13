@@ -30,6 +30,12 @@ services:
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       EMAIL_FROM: ${EMAIL_FROM:-}
+      # Integracao FIPE (placafipe.com.br) - token so no servidor (runtime).
+      PLACAFIPE_TOKEN: ${PLACAFIPE_TOKEN:-}
+      PLACAFIPE_BASE: ${PLACAFIPE_BASE:-}
+      # Consulta de placa (opcional).
+      PLACA_API_URL: ${PLACA_API_URL:-}
+      PLACA_API_KEY: ${PLACA_API_KEY:-}
 
   caddy:
     image: caddy:2-alpine
