@@ -34,8 +34,8 @@ export function FipeConsulta({
 
   const naoConfigurado = marcas.data && marcas.data.configured === false;
 
-  const marcaNome = useMemo(() => marcas.data?.itens.find((i) => i.cod === marca)?.nome ?? '', [marcas.data, marca]);
-  const modeloNome = useMemo(() => modelos.data?.modelos.find((i) => i.cod === modelo)?.nome ?? '', [modelos.data, modelo]);
+  const marcaNome = useMemo(() => marcas.data?.itens?.find((i) => i.cod === marca)?.nome ?? '', [marcas.data, marca]);
+  const modeloNome = useMemo(() => modelos.data?.modelos?.find((i) => i.cod === modelo)?.nome ?? '', [modelos.data, modelo]);
 
   useEffect(() => { setMarca(''); setModelo(''); setAno(''); }, [tipoCodigo]);
   useEffect(() => { setModelo(''); setAno(''); }, [marca]);
@@ -72,7 +72,7 @@ export function FipeConsulta({
 
         <div>
           <label className="text-xs text-slate-500">Marca {marcas.isFetching && <Loader2 className="ml-1 inline h-3 w-3 animate-spin" />}</label>
-          <Select value={marca} onChange={(e) => setMarca(e.target.value)} className="mt-0.5" disabled={!marcas.data?.itens.length}>
+          <Select value={marca} onChange={(e) => setMarca(e.target.value)} className="mt-0.5" disabled={!marcas.data?.itens?.length}>
             <option value="">-- Marca --</option>
             {(marcas.data?.itens ?? []).map((i) => <option key={i.cod} value={i.cod}>{i.nome}</option>)}
           </Select>
@@ -80,7 +80,7 @@ export function FipeConsulta({
 
         <div>
           <label className="text-xs text-slate-500">Modelo {modelos.isFetching && <Loader2 className="ml-1 inline h-3 w-3 animate-spin" />}</label>
-          <Select value={modelo} onChange={(e) => setModelo(e.target.value)} className="mt-0.5" disabled={!marca || !modelos.data?.modelos.length}>
+          <Select value={modelo} onChange={(e) => setModelo(e.target.value)} className="mt-0.5" disabled={!marca || !modelos.data?.modelos?.length}>
             <option value="">-- Modelo --</option>
             {(modelos.data?.modelos ?? []).map((i) => <option key={i.cod} value={i.cod}>{i.nome}</option>)}
           </Select>
@@ -88,7 +88,7 @@ export function FipeConsulta({
 
         <div>
           <label className="text-xs text-slate-500">Ano</label>
-          <Select value={ano} onChange={(e) => setAno(e.target.value)} className="mt-0.5" disabled={!marca || !modelos.data?.anos.length}>
+          <Select value={ano} onChange={(e) => setAno(e.target.value)} className="mt-0.5" disabled={!marca || !modelos.data?.anos?.length}>
             <option value="">-- Ano --</option>
             {(modelos.data?.anos ?? []).map((i) => <option key={i.cod} value={i.cod}>{i.nome}</option>)}
           </Select>
