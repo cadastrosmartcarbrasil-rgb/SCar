@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, Car, Search, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
-import { FormField, Input, Select } from '@/components/ui/field';
+import { FormField, Input, Select, MoneyInput } from '@/components/ui/field';
 import { useAssociados } from '@/hooks/use-associados';
 import { useRegionais, useVendedores, useUsuarios, useMarcas, useModelos } from '@/hooks/use-config';
 import { useTiposVeiculo } from '@/hooks/use-precificacao';
@@ -399,12 +399,10 @@ export default function VeiculosPage() {
               <Input value={form.codigo_fipe ?? ''} onChange={(e) => setF({ codigo_fipe: e.target.value })} placeholder="002001-5" />
             </FormField>
             <FormField label="Valor FIPE (R$)">
-              <Input
-                type="number"
-                step="0.01"
-                min={0}
-                value={form.valor_fipe ?? ''}
-                onChange={(e) => setF({ valor_fipe: Number(e.target.value) || null })}
+              <MoneyInput
+                value={form.valor_fipe ?? null}
+                onChange={(v) => setF({ valor_fipe: v })}
+                placeholder="0,00"
               />
             </FormField>
             <p className="col-span-2 text-xs text-slate-400">
