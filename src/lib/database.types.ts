@@ -12,7 +12,7 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 
 // ---- Enums -----------------------------------------------------------------
 export type PapelUsuario =
-  | 'admin' | 'gestor_regional' | 'consultor_vendas' | 'financeiro' | 'sinistro' | 'cotador';
+  | 'admin' | 'gestor_regional' | 'consultor_vendas' | 'financeiro' | 'sinistro' | 'cotador' | 'auditoria';
 export type TipoPessoa = 'PF' | 'PJ';
 export type StatusCliente =
   | 'ativo' | 'inadimplente' | 'cancelado' | 'inativo' | 'suspenso' | 'excluido';
@@ -47,6 +47,9 @@ export type StatusLancamento = 'pendente' | 'pago_parcial' | 'quitado' | 'cancel
 export type FormaPagamento = 'PIX' | 'BOLETO' | 'TRANSFERENCIA' | 'CARTAO' | 'DINHEIRO';
 export type StatusConciliacao = 'NAO_CONCILIADO' | 'CONCILIADO_MANUAL' | 'CONCILIADO_API';
 export type StatusCadastro = 'ATIVO' | 'INATIVO' | 'SUSPENSO';
+export type StatusLead =
+  | 'NOVO' | 'ORCAMENTO_GERADO' | 'PROPOSTA_ENVIADA' | 'APROVADO' | 'EM_AUDITORIA' | 'ATIVO' | 'PERDIDO';
+export type OrigemFipe = 'API' | 'MANUAL' | 'CONTINGENCIA';
 
 // ---- Helper para linhas com timestamps ------------------------------------
 type Timestamps = {
@@ -184,6 +187,82 @@ export type CotasParticipacaoRow = {
   descricao: string | null;
   ativo: boolean;
   created_at: string;
+};
+
+export type LeadsRow = Timestamps & {
+  id: string;
+  nome: string;
+  celular: string;
+  email: string | null;
+  cpf_cnpj: string | null;
+  placa: string | null;
+  tipo_veiculo_id: string | null;
+  marca: string | null;
+  modelo: string | null;
+  modelo_id: string | null;
+  ano_modelo: number | null;
+  combustivel: Combustivel | null;
+  valor_fipe: number | null;
+  codigo_fipe: string | null;
+  cota_participacao_id: string | null;
+  uso: UsoVeiculo;
+  origem_fipe: OrigemFipe;
+  status: StatusLead;
+  consultor_id: string | null;
+  regional_id: string | null;
+  observacoes: string | null;
+  perdido_motivo: string | null;
+  cliente_id: string | null;
+  veiculo_id: string | null;
+  aprovado_em: string | null;
+  auditado_em: string | null;
+  auditado_por: string | null;
+  created_by: string | null;
+};
+
+export type CotacoesRow = {
+  id: string;
+  lead_id: string;
+  fipe: number;
+  tipo_veiculo_id: string | null;
+  cota_participacao_id: string | null;
+  itens: CotacaoItem[];
+  total_mensalidade: number;
+  participacao: number;
+  modo_envio: string;
+  token: string;
+  enviada_em: string | null;
+  created_by: string | null;
+  created_at: string;
+};
+
+export type CotacaoItem = {
+  produto_id: string;
+  nome: string;
+  valor: number;
+  obrigatorio: boolean;
+};
+
+export type LeadHistoricoRow = {
+  id: string;
+  lead_id: string;
+  de: StatusLead | null;
+  para: StatusLead;
+  usuario_id: string | null;
+  obs: string | null;
+  created_at: string;
+};
+
+export type FipePrecosLocalRow = {
+  id: string;
+  tipo_veiculo: string | null;
+  marca: string;
+  modelo: string;
+  ano_modelo: number;
+  codigo_fipe: string | null;
+  valor: number;
+  mes_referencia: string | null;
+  updated_at: string;
 };
 
 export type CategoriasDreRow = {
@@ -614,6 +693,20 @@ export type Database = {
         [Rel<'marca_id', 'marcas'>, Rel<'cota_participacao_id', 'cotas_participacao'>]
       >;
       cotas_participacao: TableDef<CotasParticipacaoRow>;
+      leads: TableDef<
+        LeadsRow,
+        [
+          Rel<'consultor_id', 'usuarios'>,
+          Rel<'regional_id', 'regionais'>,
+          Rel<'tipo_veiculo_id', 'tipos_veiculo'>,
+          Rel<'cota_participacao_id', 'cotas_participacao'>,
+          Rel<'cliente_id', 'clientes'>,
+          Rel<'veiculo_id', 'veiculos'>,
+        ]
+      >;
+      cotacoes: TableDef<CotacoesRow, [Rel<'lead_id', 'leads'>]>;
+      lead_historico: TableDef<LeadHistoricoRow, [Rel<'lead_id', 'leads'>, Rel<'usuario_id', 'usuarios'>]>;
+      fipe_precos_local: TableDef<FipePrecosLocalRow>;
       comunicacoes: TableDef<ComunicacoesRow, [Rel<'cliente_id', 'clientes'>]>;
       tipos_veiculo: TableDef<TiposVeiculoRow>;
       produtos: TableDef<ProdutosRow, [Rel<'tipo_evento_id', 'tipos_evento'>]>;
@@ -669,6 +762,10 @@ export type Database = {
       calcular_participacao_veiculo: {
         Args: { p_veiculo_id: string; p_fipe: number };
         Returns: number;
+      };
+      autorizar_entrada_lead: {
+        Args: { p_lead_id: string; p_cpf_cnpj?: string | null };
+        Returns: string;
       };
       substituir_tabela_precos: {
         Args: { p_tipo_veiculo: string; p_faixas: Json; p_participacoes: Json };

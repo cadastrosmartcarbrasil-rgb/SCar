@@ -15,6 +15,15 @@ export function formatPercent(fraction: number | null | undefined): string {
   return PCT.format(fraction ?? 0);
 }
 
+// Mascara de celular BR: (11) 91234-5678
+export function maskCelular(v: string): string {
+  const d = (v ?? '').replace(/\D/g, '').slice(0, 11);
+  if (d.length <= 2) return d.replace(/(\d{0,2})/, '($1');
+  if (d.length <= 6) return d.replace(/(\d{2})(\d{0,4})/, '($1) $2');
+  if (d.length <= 10) return d.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
+  return d.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+}
+
 export function formatDate(value: string | Date | null | undefined): string {
   if (!value) return '-';
   const d = typeof value === 'string' ? new Date(value) : value;

@@ -54,9 +54,16 @@ middleware.ts                   # refresh de sessao + guard de rotas
 `veiculos.cota_participacao_id/modelo_id`; backfill via parser do texto SGA;
 `calcular_participacao(fipe,tipo,cota)` overload + `calcular_participacao_veiculo(veic,fipe)`
 com precedencia veiculo>modelo>faixa. Parser TS em `src/lib/participacao.ts`).
+· `0017_crm_vendas` (Vendas/CRM: papel `auditoria`; enums `status_lead`/`origem_fipe`;
+tabelas `leads`, `cotacoes` (snapshot+token publico), `lead_historico`, `fipe_precos_local`;
+trigger auto APROVADO->EM_AUDITORIA; `autorizar_entrada_lead()` SECURITY DEFINER cria
+cliente+veiculo so p/ auditoria/admin; `pode_auditar()`).
 
 ## Módulos (status: todos funcionais)
-Associados (painel `/associados/[id]` com abas) · Veículos/Contratos · Eventos/Sinistros
+Vendas/CRM (`/vendas` mobile-first: captura de lead + FIPE por placa/cascata, cotação com
+link público `/cotacao/[token]` detalhada/consolidada + print-PDF, esteira com trava de
+Auditoria — só papel `auditoria`/`admin` clica "Autorizar Entrada" e efetiva cliente+veículo)
+· Associados (painel `/associados/[id]` com abas) · Veículos/Contratos · Eventos/Sinistros
 (protocolo, reparo próprio/terceiro, financeiro do evento) · Precificação (simulador + editor de
 tabela FIPE com reajuste %) · Empresa (logo/diretoria/mandatos/documentos) · Fornecedores (auto
 CNPJ/CEP) · Financeiro (contas a pagar/receber + baixas + DRE) · Configurações (regionais, usuários,

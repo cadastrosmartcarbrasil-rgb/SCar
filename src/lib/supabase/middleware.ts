@@ -5,7 +5,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 import type { Database } from '@/lib/database.types';
 
 // Rotas publicas (nao exigem sessao).
-const PUBLIC_PATHS = ['/login', '/portal/login', '/auth/callback'];
+// /cotacao/<token> e a cotacao publica compartilhavel (link enviado ao cliente).
+const PUBLIC_PATHS = ['/login', '/portal/login', '/auth/callback', '/cotacao'];
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
