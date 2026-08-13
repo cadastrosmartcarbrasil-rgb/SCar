@@ -11582,9 +11582,11 @@ create index if not exists idx_fipe_local_codigo on fipe_precos_local (codigo_fi
 -- ============================================================================
 
 -- Quem pode auditar (autorizar entrada na base).
+-- Compara como TEXTO de proposito: assim o literal 'auditoria' nao e resolvido
+-- como valor de enum na mesma transacao que o adicionou (erro 55P04 no Supabase).
 create or replace function pode_auditar()
 returns boolean language sql stable security definer set search_path = public as $$
-  select coalesce(auth_papel() in ('auditoria','admin'), false);
+  select coalesce(auth_papel()::text in ('auditoria','admin'), false);
 $$;
 
 -- updated_at
