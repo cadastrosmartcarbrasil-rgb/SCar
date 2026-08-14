@@ -15,7 +15,7 @@ const METODOS: { v: MetodoPreco; l: string }[] = [
   { v: 'FAIXA_FIPE', l: 'Por faixa FIPE (matriz)' },
   { v: 'PERCENTUAL_FIPE', l: 'Percentual da FIPE' },
 ];
-const CATEGORIAS = ['ADMIN', 'CASCO', 'RASTREADOR', 'BENEFICIO'];
+const CATEGORIAS = ['ADMIN', 'CASCO', 'RASTREADOR', 'RCF', 'VIDROS', 'BENEFICIO'];
 
 export default function ProdutosPage() {
   const { data: produtos, isLoading } = useProdutos();

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/field';
 import {
   useTiposVeiculo, useProdutos, useTabelaPrecos, useParticipacoes, useAdesoes, useSalvarTabela,
+  useSalvarRegraRastreador,
 } from '@/hooks/use-precificacao';
 
 interface Banda {
@@ -26,9 +27,20 @@ export function TabelaPrecosEditor() {
   const { data: participacoes } = useParticipacoes(tipoId || undefined);
   const { data: adesoes } = useAdesoes(tipoId || undefined);
   const salvar = useSalvarTabela();
+  const salvarRegra = useSalvarRegraRastreador();
+
+  const tipoSel = useMemo(() => (tipos ?? []).find((t) => t.id === tipoId), [tipos, tipoId]);
+  const [regra, setRegra] = useState({ exige: false, limite: 0, valor: 0 });
+  useEffect(() => {
+    if (tipoSel) setRegra({
+      exige: tipoSel.exige_rastreador,
+      limite: Number(tipoSel.valor_limite_isencao ?? 0),
+      valor: Number(tipoSel.valor_mensalidade_rastreador ?? 0),
+    });
+  }, [tipoSel]);
 
   const faixaProdutos = useMemo(
-    () => (produtos ?? []).filter((p) => p.metodo_preco === 'FAIXA_FIPE'),
+    () => (produtos ?? []).filter((p) => p.metodo_preco === 'FAIXA_FIPE' && p.status),
     [produtos],
   );
 
@@ -152,6 +164,41 @@ export function TabelaPrecosEditor() {
           </div>
         )}
       </div>
+
+      {tipoId && (
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <div className="flex flex-wrap items-end gap-4">
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <input type="checkbox" checked={regra.exige} onChange={(e) => setRegra({ ...regra, exige: e.target.checked })} className="h-4 w-4 rounded border-slate-300" />
+              Exige rastreador (gatilho de isencao)
+            </label>
+            <div>
+              <label className="text-xs text-slate-500">Isento ate FIPE (R$)</label>
+              <NumInput value={regra.limite} onChange={(v) => setRegra({ ...regra, limite: v })} w="w-28" />
+            </div>
+            <div>
+              <label className="text-xs text-slate-500">Mensalidade rastreador (R$)</label>
+              <NumInput value={regra.valor} onChange={(v) => setRegra({ ...regra, valor: v })} w="w-28" />
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={salvarRegra.isPending}
+              onClick={() =>
+                salvarRegra.mutate(
+                  { tipoVeiculoId: tipoId, exige: regra.exige, limite: regra.limite, valor: regra.valor },
+                  { onSuccess: () => toast.success('Regra de rastreador salva'), onError: (e) => toast.error(e.message) },
+                )
+              }
+            >
+              <Save className="h-4 w-4" /> Salvar regra
+            </Button>
+          </div>
+          <p className="mt-2 text-xs text-slate-400">
+            Acima do limite FIPE, o rastreador entra automaticamente na cotacao base. Abaixo, e isento (R$ 0).
+          </p>
+        </div>
+      )}
 
       {!tipoId ? (
         <p className="text-sm text-slate-400">Selecione um tipo de veiculo para editar a matriz de precos.</p>

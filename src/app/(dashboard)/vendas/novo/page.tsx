@@ -9,7 +9,7 @@ import { Input, Select, MoneyInput } from '@/components/ui/field';
 import { Button } from '@/components/ui/button';
 import { FipeConsulta } from '@/components/fipe/fipe-consulta';
 import { useFipePorPlaca } from '@/hooks/use-fipe';
-import { useTiposVeiculo, useProdutos, useCotasParticipacao, useSimularPreco } from '@/hooks/use-precificacao';
+import { useTiposVeiculo, useProdutos, useCotasParticipacao, useSimularPreco, usePlanos } from '@/hooks/use-precificacao';
 import { useSaveLead, useSalvarCotacao } from '@/hooks/use-vendas';
 import { normalizarPlaca, placaValida } from '@/lib/placa';
 import { maskCelular, formatCurrency } from '@/lib/utils';
@@ -20,6 +20,7 @@ export default function NovoLeadPage() {
   const { data: tipos } = useTiposVeiculo();
   const { data: produtos } = useProdutos();
   const { data: cotas } = useCotasParticipacao();
+  const { data: planos } = usePlanos();
   const fipePorPlaca = useFipePorPlaca();
   const simular = useSimularPreco();
   const salvarLead = useSaveLead();
@@ -40,6 +41,7 @@ export default function NovoLeadPage() {
   const [valorFipe, setValorFipe] = useState<number | null>(null);
   const [codigoFipe, setCodigoFipe] = useState('');
   const [cotaId, setCotaId] = useState('');
+  const [planoId, setPlanoId] = useState('');
   const [origemFipe, setOrigemFipe] = useState<OrigemFipe>('MANUAL');
   const [mostrarCascata, setMostrarCascata] = useState(false);
   // Cotacao
@@ -85,7 +87,7 @@ export default function NovoLeadPage() {
     if (!tipoVeiculoId) return toast.error('Selecione o tipo de veiculo');
     if (!valorFipe) return toast.error('Informe o valor FIPE');
     simular.mutate(
-      { fipe: valorFipe, tipoVeiculoId, produtosIds: [...selecionados], cotaId: cotaId || null },
+      { fipe: valorFipe, tipoVeiculoId, produtosIds: [...selecionados], planoId: planoId || null, cotaId: cotaId || null },
       {
         onSuccess: (r) => { setTotal(r.calculo.valor_total_mensalidade); setParticipacao(r.participacao); setAdesao(r.adesao); },
         onError: (e) => toast.error(e.message),
@@ -119,6 +121,7 @@ export default function NovoLeadPage() {
         fipe: valorFipe,
         tipoVeiculoId,
         cotaId: cotaId || null,
+        planoId: planoId || null,
         produtosIds: [...selecionados],
         modoEnvio,
       });
@@ -199,6 +202,12 @@ export default function NovoLeadPage() {
 
       {/* 3. Cotacao */}
       <Secao icon={Calculator} titulo="3. Cotacao">
+        <Campo label="Plano / Combo">
+          <Select value={planoId} onChange={(e) => setPlanoId(e.target.value)}>
+            <option value="">Sem combo (base + avulsos)</option>
+            {(planos ?? []).filter((p) => p.ativo).map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+          </Select>
+        </Campo>
         <div>
           <p className="mb-1 text-xs font-medium uppercase text-slate-400">Itens obrigatorios</p>
           <div className="flex flex-wrap gap-1.5">
@@ -207,7 +216,7 @@ export default function NovoLeadPage() {
           </div>
         </div>
         <div>
-          <p className="mb-1 text-xs font-medium uppercase text-slate-400">Adicionais (opcionais)</p>
+          <p className="mb-1 text-xs font-medium uppercase text-slate-400">Adicionais avulsos (fora do plano)</p>
           <div className="space-y-1">
             {opcionais.map((p) => (
               <label key={p.id} className="flex items-center gap-2 text-sm text-slate-700">

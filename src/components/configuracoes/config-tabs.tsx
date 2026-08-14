@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Building2, Users, Landmark, ListTree, Car, BadgeDollarSign, AlertTriangle, Truck, Package, Building, Wallet, Percent,
+  Building2, Users, Landmark, ListTree, Car, BadgeDollarSign, AlertTriangle, Truck, Package, Building, Wallet, Percent, Layers,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -17,6 +17,7 @@ const TABS = [
   { href: '/configuracoes/cotas-participacao', label: 'Cotas de Participacao', icon: Percent },
   { href: '/configuracoes/tipos-evento', label: 'Tipos de Evento', icon: AlertTriangle },
   { href: '/configuracoes/produtos', label: 'Produtos', icon: Package },
+  { href: '/configuracoes/planos', label: 'Planos & Combos', icon: Layers },
   { href: '/configuracoes/contas-bancarias', label: 'Contas Bancarias', icon: Wallet },
   { href: '/configuracoes/integracoes', label: 'Integracoes Bancarias', icon: Landmark },
   { href: '/configuracoes/plano-contas', label: 'Plano de Contas', icon: ListTree },

@@ -5,11 +5,12 @@ import { createClient } from '@/lib/supabase/client';
 import type {
   TiposVeiculoRow,
   ProdutosRow,
-  CalculoMensalidade,
+  CotacaoPlano,
   TabelaPrecosFaixaRow,
   ParticipacaoFaixaRow,
   AdesaoFaixaRow,
   CotasParticipacaoRow,
+  PlanosProtecaoRow,
 } from '@/lib/database.types';
 
 export function useCotasParticipacao() {
@@ -52,25 +53,27 @@ export function useProdutos() {
 }
 
 export interface ResultadoSimulacao {
-  calculo: CalculoMensalidade;
+  calculo: CotacaoPlano;
   participacao: number;
   adesao: number;
 }
 
-// Chama o motor de calculo no banco (fonte unica de verdade).
+// Motor de combos (cotar_plano): base + regra de rastreador + produtos do plano
+// + avulsos. A participacao respeita a cota override quando informada.
 export function useSimularPreco() {
   const supabase = createClient();
   return useMutation<
     ResultadoSimulacao,
     Error,
-    { fipe: number; tipoVeiculoId: string; produtosIds: string[]; cotaId?: string | null }
+    { fipe: number; tipoVeiculoId: string; produtosIds: string[]; planoId?: string | null; cotaId?: string | null }
   >({
-    mutationFn: async ({ fipe, tipoVeiculoId, produtosIds, cotaId }) => {
-      const [mensal, part] = await Promise.all([
-        supabase.rpc('calcular_mensalidade', {
+    mutationFn: async ({ fipe, tipoVeiculoId, produtosIds, planoId, cotaId }) => {
+      const [cot, part] = await Promise.all([
+        supabase.rpc('cotar_plano', {
           p_fipe: fipe,
           p_tipo_veiculo_id: tipoVeiculoId,
-          p_produtos_ids: produtosIds,
+          p_plano_id: planoId ?? null,
+          p_avulsos_ids: produtosIds,
         }),
         supabase.rpc('calcular_participacao', {
           p_fipe: fipe,
@@ -78,12 +81,12 @@ export function useSimularPreco() {
           p_cota_id: cotaId ?? null,
         }),
       ]);
-      if (mensal.error) throw mensal.error;
+      if (cot.error) throw cot.error;
       if (part.error) throw part.error;
-      const calculo = mensal.data as unknown as CalculoMensalidade;
+      const calculo = cot.data as unknown as CotacaoPlano;
       return {
         calculo,
-        participacao: Number(part.data ?? 0),
+        participacao: Number(part.data ?? calculo.franquia_participacao ?? 0),
         adesao: Number(calculo.taxa_adesao ?? 0),
       };
     },
@@ -254,5 +257,116 @@ export function useSaveProduto() {
       }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['precificacao', 'produtos'] }),
+  });
+}
+
+// --- Regra de rastreador (por tipo de veiculo) ---
+export function useSalvarRegraRastreador() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<
+    void,
+    Error,
+    { tipoVeiculoId: string; exige: boolean; limite: number; valor: number }
+  >({
+    mutationFn: async ({ tipoVeiculoId, exige, limite, valor }) => {
+      const { error } = await supabase
+        .from('tipos_veiculo')
+        .update({
+          exige_rastreador: exige,
+          valor_limite_isencao: limite,
+          valor_mensalidade_rastreador: valor,
+        })
+        .eq('id', tipoVeiculoId);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['precificacao', 'tipos-veiculo'] }),
+  });
+}
+
+// --- Planos / Combos ---
+export function usePlanos() {
+  const supabase = createClient();
+  return useQuery<PlanosProtecaoRow[]>({
+    queryKey: ['precificacao', 'planos'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('planos_protecao')
+        .select('*')
+        .order('nivel')
+        .order('nome');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function usePlanoProdutos(planoId?: string) {
+  const supabase = createClient();
+  return useQuery<string[]>({
+    queryKey: ['precificacao', 'plano-produtos', planoId ?? 'none'],
+    enabled: !!planoId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('plano_produtos')
+        .select('produto_id')
+        .eq('plano_id', planoId!);
+      if (error) throw error;
+      return (data ?? []).map((r) => r.produto_id);
+    },
+  });
+}
+
+export function useSavePlano() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<
+    string,
+    Error,
+    { id?: string; nome: string; descricao_comercial?: string | null; nivel?: number; ativo?: boolean; produtosIds: string[] }
+  >({
+    mutationFn: async ({ id, nome, descricao_comercial, nivel, ativo, produtosIds }) => {
+      const payload = {
+        nome: nome.trim(),
+        descricao_comercial: descricao_comercial ?? null,
+        nivel: nivel ?? 0,
+        ativo: ativo ?? true,
+      };
+      let planoId = id;
+      if (planoId) {
+        const { error } = await supabase.from('planos_protecao').update(payload).eq('id', planoId);
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase.from('planos_protecao').insert(payload).select('id').single();
+        if (error) throw error;
+        planoId = data.id;
+      }
+      // Substitui os vinculos de produtos do plano.
+      const { error: delErr } = await supabase.from('plano_produtos').delete().eq('plano_id', planoId);
+      if (delErr) throw delErr;
+      if (produtosIds.length > 0) {
+        const { error: insErr } = await supabase
+          .from('plano_produtos')
+          .insert(produtosIds.map((pid) => ({ plano_id: planoId!, produto_id: pid })));
+        if (insErr) throw insErr;
+      }
+      return planoId!;
+    },
+    onSuccess: (planoId) => {
+      qc.invalidateQueries({ queryKey: ['precificacao', 'planos'] });
+      qc.invalidateQueries({ queryKey: ['precificacao', 'plano-produtos', planoId] });
+    },
+  });
+}
+
+export function useDeletePlano() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<void, Error, string>({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('planos_protecao').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['precificacao', 'planos'] }),
   });
 }

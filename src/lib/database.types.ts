@@ -114,6 +114,8 @@ export type PlanosProtecaoRow = Timestamps & {
   cota_participacao: number;
   coberturas: Json;
   ativo: boolean;
+  descricao_comercial: string | null;
+  nivel: number;
 };
 
 export type VeiculosRow = Timestamps & {
@@ -238,7 +240,7 @@ export type CotacoesRow = {
 };
 
 export type CotacaoItem = {
-  produto_id: string;
+  produto_id: string | null;
   nome: string;
   valor: number;
   obrigatorio: boolean;
@@ -350,6 +352,9 @@ export type TiposVeiculoRow = Timestamps & {
   id: string;
   nome: string;
   status: boolean;
+  exige_rastreador: boolean;
+  valor_limite_isencao: number;
+  valor_mensalidade_rastreador: number;
 };
 
 export type ProdutosRow = Timestamps & {
@@ -527,7 +532,7 @@ export type EmpresaDocumentosRow = {
 
 // Retorno do motor de calculo (calcular_mensalidade)
 export interface ItemMensalidade {
-  produto_id: string;
+  produto_id: string | null;
   nome: string;
   valor: number;
   fornecedor: string;
@@ -541,6 +546,19 @@ export interface CalculoMensalidade {
   subtotal_beneficios_parceiros: number;
   valor_total_mensalidade: number;
   taxa_adesao: number;
+}
+
+// Retorno do motor de combos (cotar_plano)
+export interface CotacaoPlano {
+  valor_fipe: number;
+  plano_id: string | null;
+  plano_nome: string | null;
+  detalhamento_produtos: ItemMensalidade[];
+  subtotal_taxa_admin: number;
+  subtotal_beneficios_parceiros: number;
+  valor_total_mensalidade: number;
+  taxa_adesao: number;
+  franquia_participacao: number;
 }
 
 export type HistoricoProtocoloRow = {
@@ -777,6 +795,15 @@ export type Database = {
       calcular_adesao: {
         Args: { p_fipe: number; p_tipo_veiculo_id: string };
         Returns: number;
+      };
+      cotar_plano: {
+        Args: {
+          p_fipe: number;
+          p_tipo_veiculo_id: string;
+          p_plano_id?: string | null;
+          p_avulsos_ids?: string[];
+        };
+        Returns: CotacaoPlano;
       };
       autorizar_entrada_lead: {
         Args: { p_lead_id: string; p_cpf_cnpj?: string | null };

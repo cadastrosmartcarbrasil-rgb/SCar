@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import type {
-  LeadsRow, CotacoesRow, LeadHistoricoRow, CotacaoItem, StatusLead, CalculoMensalidade,
+  LeadsRow, CotacoesRow, LeadHistoricoRow, CotacaoItem, StatusLead, CotacaoPlano,
 } from '@/lib/database.types';
 
 // Papel do usuario logado (para gate da Auditoria).
@@ -124,17 +124,17 @@ export function useSalvarCotacao() {
   return useMutation<
     CotacoesRow,
     Error,
-    { leadId: string; fipe: number; tipoVeiculoId: string; cotaId?: string | null; produtosIds: string[]; modoEnvio?: string }
+    { leadId: string; fipe: number; tipoVeiculoId: string; cotaId?: string | null; planoId?: string | null; produtosIds: string[]; modoEnvio?: string }
   >({
-    mutationFn: async ({ leadId, fipe, tipoVeiculoId, cotaId, produtosIds, modoEnvio }) => {
+    mutationFn: async ({ leadId, fipe, tipoVeiculoId, cotaId, planoId, produtosIds, modoEnvio }) => {
       const { data: { user } } = await supabase.auth.getUser();
-      const [mensal, part] = await Promise.all([
-        supabase.rpc('calcular_mensalidade', { p_fipe: fipe, p_tipo_veiculo_id: tipoVeiculoId, p_produtos_ids: produtosIds }),
+      const [cot, part] = await Promise.all([
+        supabase.rpc('cotar_plano', { p_fipe: fipe, p_tipo_veiculo_id: tipoVeiculoId, p_plano_id: planoId ?? null, p_avulsos_ids: produtosIds }),
         supabase.rpc('calcular_participacao', { p_fipe: fipe, p_tipo_veiculo_id: tipoVeiculoId, p_cota_id: cotaId ?? null }),
       ]);
-      if (mensal.error) throw mensal.error;
+      if (cot.error) throw cot.error;
       if (part.error) throw part.error;
-      const calc = mensal.data as unknown as CalculoMensalidade;
+      const calc = cot.data as unknown as CotacaoPlano;
       const itens: CotacaoItem[] = calc.detalhamento_produtos.map((i) => ({
         produto_id: i.produto_id, nome: i.nome, valor: i.valor, obrigatorio: i.obrigatorio,
       }));
@@ -145,7 +145,7 @@ export function useSalvarCotacao() {
         cota_participacao_id: cotaId ?? null,
         itens,
         total_mensalidade: calc.valor_total_mensalidade,
-        participacao: Number(part.data ?? 0),
+        participacao: Number(part.data ?? calc.franquia_participacao ?? 0),
         taxa_adesao: Number(calc.taxa_adesao ?? 0),
         modo_envio: modoEnvio ?? 'DETALHADA',
         created_by: user?.id ?? null,

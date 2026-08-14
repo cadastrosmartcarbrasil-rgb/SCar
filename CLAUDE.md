@@ -65,6 +65,17 @@ Rastreador; participacao 1500 ate 35k, 1800 ate 40k, 4% FIPE de 40k+; NOVO
 `calcular_mensalidade` passa a devolver `taxa_adesao`; overload
 `substituir_tabela_precos(uuid,jsonb,jsonb,jsonb)` c/ adesao; `cotacoes.taxa_adesao`;
 rebuild das 46 faixas 0..250000).
+· `0019_planos_combos_motor` (evolucao atuarial: (1) RASTREADOR vira REGRA por tipo
+de veiculo -- colunas `tipos_veiculo.exige_rastreador/valor_limite_isencao/
+valor_mensalidade_rastreador`; sai da matriz produto-por-faixa (produto aposentado)
+e `calcular_mensalidade` aplica o gatilho de isencao na base; (2) RCF sai da BASE e
+vira MODULO OPCIONAL por faixa de cobertura -- produtos RCF 30/50/75/100mil
+categoria `RCF`, nao-obrigatorios; a Cotacao Base (Plano Prata) passa a ser
+Casco+TaxaAdmin+Assist24h+Rastreador(regra) = coluna "PRATA S/ TERCEIRO" da planilha;
+(3) COMBOS: `planos_protecao.descricao_comercial/nivel` + `plano_produtos`; seed
+Prata/Ouro/Diamante; motor `cotar_plano(fipe,tipo,plano_id,avulsos[])` devolve
+mensalidade+adesao+franquia+detalhamento. Novos opcionais Carro Reserva 10/30d,
+Vidros III/Completa, Assist VIP com preco 0 a definir em Configuracoes->Produtos).
 
 ## Módulos (status: todos funcionais)
 Vendas/CRM (`/vendas` mobile-first: captura de lead + FIPE por placa/cascata, cotação com
@@ -75,7 +86,19 @@ Auditoria — só papel `auditoria`/`admin` clica "Autorizar Entrada" e efetiva 
 tabela FIPE com reajuste %) · Empresa (logo/diretoria/mandatos/documentos) · Fornecedores (auto
 CNPJ/CEP) · Financeiro (contas a pagar/receber + baixas + DRE) · Configurações (regionais, usuários,
 vendedores, marcas/modelos, tipos de veículo, cotas de participação (V5..V15), tipos de evento,
-produtos, contas bancárias, integrações bancárias, plano de contas).
+produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações bancárias, plano de contas).
+
+## Motor de cotação e combos (0019) — arquitetura
+- **Cotação Base (Plano Prata)** = Casco + Taxa Admin + Assistência 24h + **Rastreador (regra)**.
+  RCF NÃO entra na base. Bate a coluna "PRATA S/ TERCEIRO" da planilha Passeio.
+- **Rastreador é regra por tipo de veículo** (`tipos_veiculo.exige_rastreador/valor_limite_isencao/
+  valor_mensalidade_rastreador`), não mais produto-por-faixa. `calcular_mensalidade` aplica o gatilho
+  de isenção (Passeio: isento até 60k, R$35 acima). Editável em Precificação→Tabela (painel da regra).
+- **RCF = módulo opcional** por faixa de cobertura (produtos categoria `RCF`: 30/50/75/100mil).
+- **Combos**: `planos_protecao` (+`descricao_comercial`/`nivel`) ⨯ `plano_produtos` (opcionais amarrados).
+  `cotar_plano(fipe, tipo, plano_id?, avulsos[]?)` → mensalidade + adesão + franquia + detalhamento.
+  Precedência: base(obrigatórios+regra rastreador) + produtos do plano + avulsos. Usado por Simulador,
+  Vendas/novo e snapshot da cotação. Preços dos opcionais novos: cadastrar em Configurações→Produtos.
 
 ## Cota de participação (rateio no evento) — arquitetura
 - **Desacoplada do Plano.** O Plano define a mensalidade (produtos); a cota (% da FIPE no rateio)
