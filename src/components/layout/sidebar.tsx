@@ -94,9 +94,9 @@ export function Sidebar({ papel, logoUrl }: { papel?: PapelUsuario; logoUrl?: st
 
   const Nav = ({ onNav }: { onNav?: () => void }) => (
     <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2">
-      <p className="px-3 pb-1.5 pt-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Operacao</p>
+      <p className="px-3 pb-1.5 pt-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Operacao</p>
       {OPERACAO.map((i) => <NavLink key={i.href} item={i} onNav={onNav} />)}
-      <p className="px-3 pb-1.5 pt-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Gestao</p>
+      <p className="px-3 pb-1.5 pt-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Gestao</p>
       {gestao.map((i) => <NavLink key={i.href} item={i} onNav={onNav} />)}
     </nav>
   );
@@ -123,7 +123,7 @@ export function Sidebar({ papel, logoUrl }: { papel?: PapelUsuario; logoUrl?: st
       {aberto && (
         <div className="fixed inset-0 z-40 md:hidden">
           <div className="absolute inset-0 bg-slate-900/50" onClick={() => setAberto(false)} />
-          <aside className="cockpit-stripe absolute left-0 top-0 flex h-full w-72 flex-col bg-gradient-to-b from-[#1E2B4D] to-[#131D38] shadow-xl">
+          <aside className="cockpit absolute left-0 top-0 flex h-full w-72 flex-col shadow-xl">
             <div className="flex items-center justify-between px-4 py-4">
               <Wordmark />
               <button onClick={() => setAberto(false)} aria-label="Fechar" className="text-slate-400 hover:text-white">
@@ -139,7 +139,7 @@ export function Sidebar({ papel, logoUrl }: { papel?: PapelUsuario; logoUrl?: st
       )}
 
       {/* Sidebar desktop (cabine) */}
-      <aside className="cockpit-stripe hidden w-64 shrink-0 flex-col bg-gradient-to-b from-[#1E2B4D] to-[#131D38] md:flex">
+      <aside className="cockpit hidden w-64 shrink-0 flex-col md:flex">
         <div className="px-4 py-5">
           <Wordmark />
         </div>

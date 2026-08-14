@@ -19,11 +19,12 @@ body {
   letter-spacing: -0.01em;
 }
 
-/* Pinstripe diagonal da marca (rodape do site) — usado na cabine (sidebar). */
-.cockpit-stripe {
-  background-image: repeating-linear-gradient(
-    -45deg,
-    transparent 0 13px,
-    rgba(255, 255, 255, 0.02) 13px 14px
-  );
+/* Cabine (sidebar): fundo navy da marca + pinstripe diagonal do rodape do site.
+   Uma unica declaracao de background (cor solida de fallback + duas camadas de
+   imagem) para nao ser sobrescrita por utilitarios de gradiente do Tailwind. */
+.cockpit {
+  background-color: #1e2b4d;
+  background-image:
+    repeating-linear-gradient(-45deg, transparent 0 13px, rgba(255, 255, 255, 0.02) 13px 14px),
+    linear-gradient(180deg, #1e2b4d 0%, #131d38 100%);
 }
