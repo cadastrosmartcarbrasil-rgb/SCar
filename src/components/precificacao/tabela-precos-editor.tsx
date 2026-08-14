@@ -39,8 +39,11 @@ export function TabelaPrecosEditor() {
     });
   }, [tipoSel]);
 
+  // A matriz base por faixa FIPE contem apenas os componentes OBRIGATORIOS que
+  // variam por faixa (Protecao Casco e Taxa Administrativa). Opcionais (RCF,
+  // vidros, etc.) e o Rastreador (regra) nao ocupam coluna aqui.
   const faixaProdutos = useMemo(
-    () => (produtos ?? []).filter((p) => p.metodo_preco === 'FAIXA_FIPE' && p.status),
+    () => (produtos ?? []).filter((p) => p.metodo_preco === 'FAIXA_FIPE' && p.status && p.obrigatorio),
     [produtos],
   );
 

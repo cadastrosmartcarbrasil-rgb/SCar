@@ -76,6 +76,12 @@ Casco+TaxaAdmin+Assist24h+Rastreador(regra) = coluna "PRATA S/ TERCEIRO" da plan
 Prata/Ouro/Diamante; motor `cotar_plano(fipe,tipo,plano_id,avulsos[])` devolve
 mensalidade+adesao+franquia+detalhamento. Novos opcionais Carro Reserva 10/30d,
 Vidros III/Completa, Assist VIP com preco 0 a definir em Configuracoes->Produtos).
+· `0020_fix_matriz_base` (corretiva/idempotente: garante que a matriz base por
+faixa FIPE tenha SO os obrigatorios variaveis -- Protecao Casco (FAIXA/obrig/ativo,
+categoria CASCO) + Taxa Administrativa (ADMIN); RCF sempre FIXO/opcional/categoria
+RCF; Assist 24h FIXO/obrig; Rastreador aposentado; limpa faixas indevidas de
+RCF/Rastreador/nao-FAIXA. O editor tambem passa a montar colunas so por
+`FAIXA_FIPE && status && obrigatorio`).
 
 ## Módulos (status: todos funcionais)
 Vendas/CRM (`/vendas` mobile-first: captura de lead + FIPE por placa/cascata, cotação com
