@@ -36,7 +36,20 @@ const GESTAO: Item[] = [
   { href: '/financeiro', label: 'Financeiro / DRE', icon: DollarSign },
 ];
 
-// Marca em texto (o logo do site tem tinta navy e some sobre a cabine escura).
+// Marca da cabine: usa a logo cadastrada em Configuracoes -> Empresa. Como a
+// logo tem tinta escura, vai numa placa branca para aparecer sobre o navy.
+// Sem logo cadastrada, cai no wordmark em texto.
+function Brand({ logoUrl }: { logoUrl?: string | null }) {
+  if (!logoUrl) return <Wordmark />;
+  return (
+    <div className="rounded-xl bg-white px-3 py-2.5 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.35)]">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={logoUrl} alt="Smart Car Brasil" className="mx-auto max-h-12 w-auto object-contain" />
+    </div>
+  );
+}
+
+// Marca em texto (fallback quando nao ha logo cadastrada).
 function Wordmark() {
   return (
     <div className="flex items-center gap-2.5">
@@ -124,8 +137,8 @@ export function Sidebar({ papel, logoUrl }: { papel?: PapelUsuario; logoUrl?: st
         <div className="fixed inset-0 z-40 md:hidden">
           <div className="absolute inset-0 bg-slate-900/50" onClick={() => setAberto(false)} />
           <aside className="cockpit absolute left-0 top-0 flex h-full w-72 flex-col shadow-xl">
-            <div className="flex items-center justify-between px-4 py-4">
-              <Wordmark />
+            <div className="flex items-center justify-between gap-3 px-4 py-4">
+              <div className="min-w-0 flex-1"><Brand logoUrl={logoUrl} /></div>
               <button onClick={() => setAberto(false)} aria-label="Fechar" className="text-slate-400 hover:text-white">
                 <X className="h-5 w-5" />
               </button>
@@ -141,7 +154,7 @@ export function Sidebar({ papel, logoUrl }: { papel?: PapelUsuario; logoUrl?: st
       {/* Sidebar desktop (cabine) */}
       <aside className="cockpit hidden w-64 shrink-0 flex-col md:flex">
         <div className="px-4 py-5">
-          <Wordmark />
+          <Brand logoUrl={logoUrl} />
         </div>
         <Nav />
         <button onClick={sair} className="flex items-center gap-3 border-t border-white/10 px-5 py-3.5 text-sm text-slate-400 transition hover:text-white">
