@@ -3,12 +3,27 @@
 @tailwind utilities;
 
 :root {
-  --background: #f8fafc;
+  --background: #eef2f8; /* ground levemente frio (viés navy), cards em branco destacam */
 }
 
 html,
 body {
   background: var(--background);
-  color: #0f172a;
+  color: #14213d;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Numeros de "painel de instrumentos": tabulares e alinhados. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Pinstripe diagonal da marca (rodape do site) — usado na cabine (sidebar). */
+.cockpit-stripe {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent 0 13px,
+    rgba(255, 255, 255, 0.02) 13px 14px
+  );
 }

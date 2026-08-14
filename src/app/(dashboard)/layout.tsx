@@ -36,11 +36,18 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <div className="flex min-h-screen flex-col md:flex-row">
       <Sidebar papel={perfil.papel} logoUrl={empresa?.logo_url ?? null} />
       <div className="min-w-0 flex-1">
-        <header className="hidden items-center justify-between border-b border-slate-200 bg-white px-8 py-3 md:flex">
-          <span className="text-sm text-slate-500">Painel de Gestao</span>
-          <span className="text-sm font-medium text-slate-700">
-            {perfil.nome} · <span className="text-slate-400">{perfil.papel}</span>
-          </span>
+        <header className="relative hidden items-center justify-between border-b border-slate-200 bg-white px-8 py-3.5 md:flex">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Painel de Gestao</span>
+          <div className="flex items-center gap-2.5">
+            <div className="text-right leading-tight">
+              <p className="text-[13px] font-semibold text-slate-800">{perfil.nome}</p>
+              <p className="text-[11px] capitalize text-slate-400">{perfil.papel}</p>
+            </div>
+            <span className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-brand-800 text-xs font-bold text-white">
+              {(perfil.nome ?? '?').slice(0, 2).toUpperCase()}
+            </span>
+          </div>
+          <span className="absolute inset-x-0 bottom-0 h-[2px] bg-[linear-gradient(90deg,#1E2B4D_0%,#139AD6_38%,#22A7E4_56%,transparent_92%)] opacity-80" />
         </header>
         <main className="p-4 md:p-8">{children}</main>
       </div>

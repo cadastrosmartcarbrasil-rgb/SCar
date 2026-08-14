@@ -17,6 +17,12 @@ Prioridade: **segurança (RLS)** e **sempre validado** antes de commitar.
 - **Supabase** (Postgres + RLS + Auth + Storage). O caminho de dados usa **`supabase-js`** (respeita RLS),
   NÃO Prisma (Prisma ignora RLS).
 - **TanStack Query** para cache/estado client-side. **Tailwind** + lucide-react + Recharts.
+- **Design system (marca Smart Car Brasil):** tema "cockpit". `tailwind.config.ts` define
+  `brand` = **NAVY** (`brand-600 #1E2B4D`, a barra do site; acao primaria/estrutura) e `cyan` =
+  **CIANO** da marca (`cyan-500 #22A7E4`/`cyan-600 #139AD6`; energia/acento — o "CAR" e o rodape).
+  Sidebar = cabine escura (navy + pinstripe `.cockpit-stripe`, wordmark SMART**CAR**BRASIL, item
+  ativo com glow ciano). Numeros de painel usam `.tnum` (tabular). Ground `--background #eef2f8`,
+  cards brancos `rounded-2xl`. Botao primario navy; foco/realce em ciano. Status colors a parte.
 - **Edge Functions (Deno)** para webhook bancário e e-mail (Resend).
 - **RLS é a espinha de segurança.** Toda tabela tem policies; multi-tenant por `regional`.
 
