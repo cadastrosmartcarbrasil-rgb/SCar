@@ -146,6 +146,7 @@ export function useSalvarCotacao() {
         itens,
         total_mensalidade: calc.valor_total_mensalidade,
         participacao: Number(part.data ?? 0),
+        taxa_adesao: Number(calc.taxa_adesao ?? 0),
         modo_envio: modoEnvio ?? 'DETALHADA',
         created_by: user?.id ?? null,
       }).select('*').single();

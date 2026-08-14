@@ -229,6 +229,7 @@ export type CotacoesRow = {
   itens: CotacaoItem[];
   total_mensalidade: number;
   participacao: number;
+  taxa_adesao: number;
   modo_envio: string;
   token: string;
   enviada_em: string | null;
@@ -385,6 +386,14 @@ export type ParticipacaoFaixaRow = {
   valor: number;
 };
 
+export type AdesaoFaixaRow = {
+  id: string;
+  tipo_veiculo_id: string;
+  fipe_minimo: number;
+  fipe_maximo: number;
+  valor: number;
+};
+
 export type FornecedoresRow = Timestamps & {
   id: string;
   tipo_pessoa: TipoPessoa;
@@ -531,6 +540,7 @@ export interface CalculoMensalidade {
   subtotal_taxa_admin: number;
   subtotal_beneficios_parceiros: number;
   valor_total_mensalidade: number;
+  taxa_adesao: number;
 }
 
 export type HistoricoProtocoloRow = {
@@ -715,6 +725,7 @@ export type Database = {
         [Rel<'tipo_veiculo_id', 'tipos_veiculo'>, Rel<'produto_id', 'produtos'>]
       >;
       participacao_faixa: TableDef<ParticipacaoFaixaRow, [Rel<'tipo_veiculo_id', 'tipos_veiculo'>]>;
+      adesao_faixa: TableDef<AdesaoFaixaRow, [Rel<'tipo_veiculo_id', 'tipos_veiculo'>]>;
       plano_produtos: TableDef<{ plano_id: string; produto_id: string }>;
       empresa: TableDef<EmpresaRow>;
       mandatos: TableDef<MandatosRow, [Rel<'empresa_id', 'empresa'>]>;
@@ -763,12 +774,18 @@ export type Database = {
         Args: { p_veiculo_id: string; p_fipe: number };
         Returns: number;
       };
+      calcular_adesao: {
+        Args: { p_fipe: number; p_tipo_veiculo_id: string };
+        Returns: number;
+      };
       autorizar_entrada_lead: {
         Args: { p_lead_id: string; p_cpf_cnpj?: string | null };
         Returns: string;
       };
       substituir_tabela_precos: {
-        Args: { p_tipo_veiculo: string; p_faixas: Json; p_participacoes: Json };
+        Args:
+          | { p_tipo_veiculo: string; p_faixas: Json; p_participacoes: Json }
+          | { p_tipo_veiculo: string; p_faixas: Json; p_participacoes: Json; p_adesoes: Json };
         Returns: undefined;
       };
     };

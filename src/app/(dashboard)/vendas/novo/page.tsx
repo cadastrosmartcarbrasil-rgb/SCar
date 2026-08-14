@@ -47,6 +47,7 @@ export default function NovoLeadPage() {
   const [modoEnvio, setModoEnvio] = useState<'DETALHADA' | 'CONSOLIDADA'>('DETALHADA');
   const [total, setTotal] = useState<number | null>(null);
   const [participacao, setParticipacao] = useState<number | null>(null);
+  const [adesao, setAdesao] = useState<number | null>(null);
 
   const obrigatorios = useMemo(() => (produtos ?? []).filter((p) => p.obrigatorio && p.status), [produtos]);
   const opcionais = useMemo(() => (produtos ?? []).filter((p) => !p.obrigatorio && p.status), [produtos]);
@@ -86,7 +87,7 @@ export default function NovoLeadPage() {
     simular.mutate(
       { fipe: valorFipe, tipoVeiculoId, produtosIds: [...selecionados], cotaId: cotaId || null },
       {
-        onSuccess: (r) => { setTotal(r.calculo.valor_total_mensalidade); setParticipacao(r.participacao); },
+        onSuccess: (r) => { setTotal(r.calculo.valor_total_mensalidade); setParticipacao(r.participacao); setAdesao(r.adesao); },
         onError: (e) => toast.error(e.message),
       },
     );
@@ -227,6 +228,9 @@ export default function NovoLeadPage() {
           <div className="rounded-xl bg-brand-50 p-3 text-center">
             <p className="text-xs uppercase text-brand-600">Mensalidade</p>
             <p className="text-2xl font-bold text-brand-700">{formatCurrency(total)}</p>
+            {adesao != null && adesao > 0 && (
+              <p className="mt-1 text-xs text-emerald-600">Taxa de adesao (unica): {formatCurrency(adesao)}</p>
+            )}
             {participacao != null && participacao > 0 && (
               <p className="mt-1 text-xs text-slate-500">Participacao no evento: {formatCurrency(participacao)}</p>
             )}

@@ -58,6 +58,13 @@ com precedencia veiculo>modelo>faixa. Parser TS em `src/lib/participacao.ts`).
 tabelas `leads`, `cotacoes` (snapshot+token publico), `lead_historico`, `fipe_precos_local`;
 trigger auto APROVADO->EM_AUDITORIA; `autorizar_entrada_lead()` SECURITY DEFINER cria
 cliente+veiculo so p/ auditoria/admin; `pode_auditar()`).
+· `0018_passeio_padrao_adesao` (padroniza Passeio pela planilha "Veiculos Passeio":
+BASICOS da mensalidade = Taxa Administrativa + Assistencia 24h + Protecao Casco +
+Rastreador; participacao 1500 ate 35k, 1800 ate 40k, 4% FIPE de 40k+; NOVO
+`adesao_faixa` (cobranca unica por faixa: 250/350/500) + `calcular_adesao(fipe,tipo)`;
+`calcular_mensalidade` passa a devolver `taxa_adesao`; overload
+`substituir_tabela_precos(uuid,jsonb,jsonb,jsonb)` c/ adesao; `cotacoes.taxa_adesao`;
+rebuild das 46 faixas 0..250000).
 
 ## Módulos (status: todos funcionais)
 Vendas/CRM (`/vendas` mobile-first: captura de lead + FIPE por placa/cascata, cotação com

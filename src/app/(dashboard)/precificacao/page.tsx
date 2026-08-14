@@ -190,6 +190,11 @@ function Simulador() {
                   </div>
                 </div>
 
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+                  Taxa de adesao (cobranca unica):{' '}
+                  <strong>{formatCurrency(resultado.adesao)}</strong>
+                </div>
+
                 <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
                   Participacao (franquia) em caso de evento:{' '}
                   <strong>{formatCurrency(resultado.participacao)}</strong>

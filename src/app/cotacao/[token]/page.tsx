@@ -82,6 +82,13 @@ export default async function CotacaoPublicaPage({ params }: { params: { token: 
             <p className="mt-1 text-xs text-slate-500">por mes</p>
           </div>
 
+          {/* Taxa de adesao (cobranca unica) */}
+          {cot.taxa_adesao > 0 && (
+            <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-center text-xs text-emerald-800">
+              Taxa de adesao (cobranca unica): <b>{formatCurrency(cot.taxa_adesao)}</b>
+            </p>
+          )}
+
           {/* Participacao */}
           {cot.participacao > 0 && (
             <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">

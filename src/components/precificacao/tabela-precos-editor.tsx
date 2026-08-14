@@ -6,7 +6,7 @@ import { Plus, Trash2, Save, Percent, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/field';
 import {
-  useTiposVeiculo, useProdutos, useTabelaPrecos, useParticipacoes, useSalvarTabela,
+  useTiposVeiculo, useProdutos, useTabelaPrecos, useParticipacoes, useAdesoes, useSalvarTabela,
 } from '@/hooks/use-precificacao';
 
 interface Banda {
@@ -14,6 +14,7 @@ interface Banda {
   fipe_maximo: number;
   participacao_tipo: 'VALOR' | 'PERCENTUAL';
   participacao_valor: number; // se PERCENTUAL, em % (ex.: 4)
+  adesao: number; // taxa de adesao (cobranca unica) da faixa, R$
   valores: Record<string, number>; // produtoId -> R$
 }
 
@@ -23,6 +24,7 @@ export function TabelaPrecosEditor() {
   const [tipoId, setTipoId] = useState('');
   const { data: tabela } = useTabelaPrecos(tipoId || undefined);
   const { data: participacoes } = useParticipacoes(tipoId || undefined);
+  const { data: adesoes } = useAdesoes(tipoId || undefined);
   const salvar = useSalvarTabela();
 
   const faixaProdutos = useMemo(
@@ -38,6 +40,7 @@ export function TabelaPrecosEditor() {
     if (!tipoId) return;
     const keys = new Map<string, { min: number; max: number }>();
     (participacoes ?? []).forEach((p) => keys.set(`${p.fipe_minimo}_${p.fipe_maximo}`, { min: Number(p.fipe_minimo), max: Number(p.fipe_maximo) }));
+    (adesoes ?? []).forEach((a) => keys.set(`${a.fipe_minimo}_${a.fipe_maximo}`, { min: Number(a.fipe_minimo), max: Number(a.fipe_maximo) }));
     (tabela ?? []).forEach((t) => keys.set(`${t.fipe_minimo}_${t.fipe_maximo}`, { min: Number(t.fipe_minimo), max: Number(t.fipe_maximo) }));
     const lista = [...keys.values()].sort((a, b) => a.min - b.min);
 
@@ -48,17 +51,19 @@ export function TabelaPrecosEditor() {
           .filter((t) => Number(t.fipe_minimo) === min && Number(t.fipe_maximo) === max)
           .forEach((t) => { valores[t.produto_id] = Number(t.valor_mensal); });
         const part = (participacoes ?? []).find((p) => Number(p.fipe_minimo) === min && Number(p.fipe_maximo) === max);
+        const ades = (adesoes ?? []).find((a) => Number(a.fipe_minimo) === min && Number(a.fipe_maximo) === max);
         const tipoPart = (part?.tipo_valor ?? 'VALOR') as 'VALOR' | 'PERCENTUAL';
         return {
           fipe_minimo: min,
           fipe_maximo: max,
           participacao_tipo: tipoPart,
           participacao_valor: tipoPart === 'PERCENTUAL' ? Number(part?.valor ?? 0) * 100 : Number(part?.valor ?? 0),
+          adesao: Number(ades?.valor ?? 0),
           valores,
         };
       }),
     );
-  }, [tipoId, tabela, participacoes]);
+  }, [tipoId, tabela, participacoes, adesoes]);
 
   function setBanda(i: number, patch: Partial<Banda>) {
     setBandas((bs) => bs.map((b, idx) => (idx === i ? { ...b, ...patch } : b)));
@@ -69,7 +74,7 @@ export function TabelaPrecosEditor() {
   function addBanda() {
     const ultima = bandas[bandas.length - 1];
     const min = ultima ? ultima.fipe_maximo + 1 : 0;
-    setBandas((bs) => [...bs, { fipe_minimo: min, fipe_maximo: min + 5000, participacao_tipo: 'VALOR', participacao_valor: 0, valores: {} }]);
+    setBandas((bs) => [...bs, { fipe_minimo: min, fipe_maximo: min + 5000, participacao_tipo: 'VALOR', participacao_valor: 0, adesao: ultima?.adesao ?? 0, valores: {} }]);
   }
   function removeBanda(i: number) {
     setBandas((bs) => bs.filter((_, idx) => idx !== i));
@@ -82,6 +87,7 @@ export function TabelaPrecosEditor() {
       bs.map((b) => ({
         ...b,
         participacao_valor: b.participacao_tipo === 'VALOR' ? round2(b.participacao_valor * fator) : b.participacao_valor,
+        adesao: round2(b.adesao * fator),
         valores: Object.fromEntries(Object.entries(b.valores).map(([k, v]) => [k, round2(v * fator)])),
       })),
     );
@@ -108,8 +114,13 @@ export function TabelaPrecosEditor() {
       valor: b.participacao_tipo === 'PERCENTUAL' ? b.participacao_valor / 100 : b.participacao_valor,
       tipo_valor: b.participacao_tipo,
     }));
+    const adesoesPayload = bandas.map((b) => ({
+      fipe_minimo: b.fipe_minimo,
+      fipe_maximo: b.fipe_maximo,
+      valor: b.adesao,
+    }));
     salvar.mutate(
-      { tipoVeiculoId: tipoId, faixas, participacoes: participacoesPayload },
+      { tipoVeiculoId: tipoId, faixas, participacoes: participacoesPayload, adesoes: adesoesPayload },
       { onSuccess: () => toast.success('Tabela salva'), onError: (e) => toast.error(e.message) },
     );
   }
@@ -153,6 +164,7 @@ export function TabelaPrecosEditor() {
                 <th className="px-2 py-2">FIPE max</th>
                 {faixaProdutos.map((p) => <th key={p.id} className="px-2 py-2">{p.nome}</th>)}
                 <th className="px-2 py-2">Particip.</th>
+                <th className="px-2 py-2">Adesao (R$)</th>
                 <th className="px-2 py-2"></th>
               </tr>
             </thead>
@@ -174,13 +186,14 @@ export function TabelaPrecosEditor() {
                       </select>
                     </div>
                   </td>
+                  <td className="px-2 py-1"><NumInput value={b.adesao} onChange={(v) => setBanda(i, { adesao: v })} w="w-20" /></td>
                   <td className="px-2 py-1">
                     <button onClick={() => removeBanda(i)}><Trash2 className="h-4 w-4 text-rose-400 hover:text-rose-600" /></button>
                   </td>
                 </tr>
               ))}
               {bandas.length === 0 && (
-                <tr><td colSpan={faixaProdutos.length + 4} className="px-2 py-6 text-center text-slate-400">Nenhuma faixa. Clique em Faixa para adicionar.</td></tr>
+                <tr><td colSpan={faixaProdutos.length + 5} className="px-2 py-6 text-center text-slate-400">Nenhuma faixa. Clique em Faixa para adicionar.</td></tr>
               )}
             </tbody>
           </table>
