@@ -19,6 +19,8 @@ import {
 } from '@/hooks/use-sac';
 import { SERVICOS_SAC, STATUS_ATENDIMENTO_LABEL, STATUS_EVENTO_LABEL, type ServicoSac } from '@/lib/sac-servicos';
 import { useContratosVeiculo, useVistoriasVeiculo } from '@/hooks/use-veiculo-ficha';
+import { useHistoricoAssistenciaVeiculo } from '@/hooks/use-assistencia';
+import { STATUS_ACIONAMENTO_LABEL } from '@/lib/assistencia';
 import { statusVeiculoResumo } from '@/lib/sac';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { OpcionalElegibilidade, TipoAtendimento, TipoFaturamento } from '@/lib/database.types';
@@ -270,11 +272,18 @@ function AtendimentoVeiculo({ clienteId, veiculoId, podeTrocar, onTrocar }: {
   const [servico, setServico] = useState<ServicoSac | null>(null);
   const gerarBoleto = useGerarBoleto();
   const { data: atendimentos } = useAtendimentosVeiculo(veiculoId);
+  // Historico da Assistencia 24h na propria ficha do veiculo.
+  const { data: acionamentos24h } = useHistoricoAssistenciaVeiculo(veiculoId);
 
   function acionar(s: ServicoSac) {
     // Evento (sinistro): vai DIRETO para o registro completo, com o veiculo ja selecionado.
     if (s.modo === 'evento') {
       router.push(`/sinistros/novo?placa=${encodeURIComponent(veiculo?.placa ?? '')}`);
+      return;
+    }
+    // Assistencia 24h: painel proprio, com trava financeira e limites do opcional.
+    if (s.modo === 'assistencia') {
+      router.push(`/assistencia?placa=${encodeURIComponent(veiculo?.placa ?? '')}`);
       return;
     }
     if (s.modo === 'boleto') {
@@ -337,6 +346,36 @@ function AtendimentoVeiculo({ clienteId, veiculoId, podeTrocar, onTrocar }: {
                     </li>
                   ))}
                 </ul>
+              </CardContent>
+            </Card>
+          )}
+
+          {(acionamentos24h?.length ?? 0) > 0 && (
+            <Card>
+              <CardContent className="pt-5">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Assistencia 24h deste veiculo</p>
+                <ul className="divide-y divide-slate-100">
+                  {acionamentos24h!.map((h) => (
+                    <li key={h.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+                      <span className="flex items-center gap-2">
+                        <span className="font-mono text-xs text-slate-400">{h.codigo_os ?? h.protocolo}</span>
+                        <b className="text-slate-700">{h.servico}</b>
+                        {h.computa_limite && <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[11px] text-amber-700">conta no limite</span>}
+                      </span>
+                      <span className="flex items-center gap-2 text-xs text-slate-400">
+                        {h.prestador ?? ''}
+                        {formatDate(h.criado_em)}
+                        <span className={`rounded-full px-2 py-0.5 font-medium ${STATUS_ACIONAMENTO_LABEL[h.status].cor}`}>
+                          {STATUS_ACIONAMENTO_LABEL[h.status].label}
+                        </span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <Link href={`/assistencia?placa=${encodeURIComponent(veiculo.placa)}`}
+                  className="mt-2 inline-block text-xs font-medium text-cyan-700 hover:underline">
+                  Abrir painel da Assistencia 24h
+                </Link>
               </CardContent>
             </Card>
           )}

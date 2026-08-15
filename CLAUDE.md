@@ -4,17 +4,18 @@
 > Mantenha este arquivo atualizado ao adicionar módulos/migrations (é barato e faz o projeto andar rápido).
 
 ## Estado atual (retomar aqui) — atualizado nesta sessão
-- **Branch:** `claude/claude-md-opcao-x-98kfj5` (a partir do `6efa280`) · **entrega da sessão:**
-  migrations `0024_cobrancas` + `0025_cobranca_modulo` e o **módulo Cobrança** (`/cobrancas`, menu lateral):
-  dashboard com KPIs/filtros, geração automática na ativação, boletagem em lote (6 meses) e
-  camada de integração bancária (service pattern + remessas).
-- **Migrations no repo:** `0001`..`0025` (todas validadas no harness pg local). **Deploy:** rodar as
+- **Branch:** `claude/claude-md-opcao-x-98kfj5` (a partir do `6efa280`) · **entregas da sessão:**
+  (1) módulo **Cobrança** (`0024`+`0025`, `/cobrancas`): dashboard com KPIs/filtros, geração
+  automática na ativação, boletagem em lote (6 meses) e integração bancária (service pattern +
+  remessas); (2) módulo **Assistência 24h** (`0026`, `/assistencia`): parametrização de serviços,
+  trava financeira com alçada de liberação, cotação → OS → voucher e lançamento em Contas a Pagar.
+- **Migrations no repo:** `0001`..`0026` (todas validadas no harness pg local). **Deploy:** rodar as
   novas no Supabase SQL Editor (na ordem) + no VPS `cd /opt/scar && git pull && sudo docker compose up -d --build`.
 - **Design system "cockpit"** aplicado (navy `#1E2B4D` + ciano `#139AD6`); sidebar usa a logo de
   `Configurações → Empresa` (placa branca). Dashboard com KPIs de instrumento + tacômetro (inadimplência real).
 - **SAC** (`/sac`) veículo-first + lazy: lista resumida → clica → detalhe sob demanda → menu de serviços;
   aba **Eventos**; banner de **alertas** do associado; marcadores (evento/assist 24h/alerta) na lista.
-- **Vitest** ativo (`npm test`, 43/43) — `sac.ts`, `cobranca.ts` e `pagamentos/` (mock + Asaas + fábrica).
+- **Vitest** ativo (`npm test`, 61/61) — `sac.ts`, `cobranca.ts`, `pagamentos/` (mock + Asaas + fábrica) e `assistencia.ts` (KM excedente, trava, voucher).
 - **Próximos passos oferecidos** (o usuário escolhe no próximo chat):
   1. **Ligar o gateway real** (Asaas): implementar `AsaasGateway.emitir` (esqueleto pronto, endpoints
      e mapeamento documentados) + webhook chamando `registrar_retorno_cobranca`/baixa do título.
@@ -68,12 +69,14 @@ src/
     utils.ts                    # cn, formatCurrency, formatDate, monthRange
     cobranca.ts                 # regras de mensalidade/vencimento (espelha o SQL) + testes
     pagamentos/                 # service pattern do gateway (types/mock/asaas/index) + testes
+    assistencia.ts              # KM excedente, trava do acionamento e voucher do prestador + testes
   hooks/                        # um arquivo por dominio (use-*.ts), TanStack Query
   components/                   # ui/ (Button,Input,Modal,Card,field), + por dominio
   app/(dashboard)/              # telas internas (layout gateia staff + mostra logo)
   app/(auth)/login, app/portal  # login staff e portal do associado
   app/api/                      # route handlers (cnpj, placa, fipe, usuarios, portal/login, boletos)
   app/api/v1/cobrancas/         # gerar (lote por periodo) e remessa (envio ao banco)
+  app/api/v1/assistencia/       # acionamento (com alcada de liberacao) e voucher do prestador
 middleware.ts                   # refresh de sessao + guard de rotas
 ```
 
@@ -171,9 +174,25 @@ gateway_status/gateway_erro/enviado_em`; novas tabelas `cobranca_remessas` + `co
 (D) DASHBOARD — `listar_cobrancas(...)` (filtros: placa, associado/CPF, vencimento de/ate, faixa de
 valor, status, regional) + `resumo_cobrancas(...)` (emitido x recebido, inadimplencia %/valor,
 a vencer 7/15/30) + `titulos_para_remessa(...)` e `status_cobranca_efetivo()` (pendente vencido = vencido)).
+· `0026_assistencia_24h` (MODULO ASSISTENCIA 24H: papel `assistencia_24h` (comparado como TEXTO,
+gotcha do 0017); catalogo `servicos_assistencia` (valor padrao, plano de contas `categoria_dre_id`,
+`cobra_km_excedente`+`valor_km_excedente`+`km_franquia`, `computa_limite`+`limite_quantidade`+
+`limite_janela_meses`, status) + seed de 9 servicos; `fornecedores` ganha `prestador_assistencia/
+whatsapp/cobertura/chave_pix/observacoes` e a tabela `prestador_servicos` (o que cada prestador
+atende e por quanto); `acionamentos_assistencia` (protocolo ASS-YYYYMMDD-XXXX + `codigo_os`
+OS-YYYYMMDD-XXXX, origem/destino jsonb, valores, trava e liberacao, `lancamento_id`),
+`acionamento_cotacoes` e `acionamento_historico` (trilha automatica por trigger). Motor:
+`elegibilidade_assistencia(veic)` (consumo por janela flutuante em MESES, so conta AUTORIZADO/
+EM_ATENDIMENTO/CONCLUIDO), `situacao_assistencia_veiculo(veic)` (ativo + adimplente + alertas ->
+`pode_acionar`+`motivos[]`), `abrir_acionamento(...)` (bloqueia e so passa com
+`pode_liberar_assistencia()` + justificativa), `registrar_cotacao_assistencia`,
+`confirmar_prestador_assistencia` (gera a OS e calcula KM excedente), `concluir_acionamento`
+(cria o lancamento em Contas a Pagar, idempotente), `cancelar_acionamento`,
+`marcar_voucher_enviado`, `historico_assistencia_veiculo` e `prestadores_do_servico`).
 
 ## Módulos (status: todos funcionais)
-SAC / Atendimento (`/sac`: **veículo-first + lazy** — busca por Nome/CPF/Placa → `visao-360` traz
+Assistência 24h (`/assistencia`: painel de acionamento com trava + limites em tempo real, cotação,
+OS, voucher ao prestador e Contas a Pagar) · SAC / Atendimento (`/sac`: **veículo-first + lazy** — busca por Nome/CPF/Placa → `visao-360` traz
 uma **lista resumida leve** (Placa/Marca-Modelo/Ano/Status, sem opcionais); ao clicar, `/api/v1/sac/veiculo`
 carrega o **detalhe sob demanda** e isola o item, abrindo o **menu modular de serviços**
 (`SERVICOS_SAC`): **Evento** (redireciona direto p/ `/sinistros/novo?placa=` — chamamos sinistro
@@ -207,6 +226,35 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
   `cotar_plano(fipe, tipo, plano_id?, avulsos[]?)` → mensalidade + adesão + franquia + detalhamento.
   Precedência: base(obrigatórios+regra rastreador) + produtos do plano + avulsos. Usado por Simulador,
   Vendas/novo e snapshot da cotação. Preços dos opcionais novos: cadastrar em Configurações→Produtos.
+
+## Módulo Assistência 24h (0026) — fluxo, trava e integrações
+- **Entradas:** menu lateral → **Assistência 24h** (`/assistencia`) e o card **Assistência 24h** do
+  SAC (leva a `/assistencia?placa=` com o veículo já selecionado). Abas: Painel de Acionamento,
+  Acionamentos, Serviços 24h e Prestadores.
+- **Parametrização** (aba Serviços 24h): descrição, **valor padrão pago**, **plano de contas**
+  (`categorias_dre`, usado no lançamento), **KM excedente** (checkbox + valor + franquia) e a
+  **regra de limite** (checkbox + N usos / janela em meses). Status Ativo/Inativo. 9 serviços vêm
+  no seed (Reboque Passeio/Utilitário, Chaveiro, Auxílio Mecânico, Troca de Pneu, Pane Seca,
+  Carga de Bateria, Carro Reserva, Transporte).
+- **Trava:** `situacao_assistencia_veiculo` exige veículo **ATIVO**, sem título vencido (do veículo
+  ou do associado, no agrupado), associado não marcado como inadimplente e sem alerta cadastral
+  ativo. O limite do serviço entra na mesma avaliação (`elegibilidade_assistencia`, janela
+  flutuante em MESES — cancelado não consome).
+- **Alçada:** bloqueado, o painel abre o modal **Liberação de superior**: e-mail + senha do gestor
+  (`admin`/`financeiro`/`gestor_regional`) + justificativa. A rota `/api/v1/assistencia/acionamento`
+  autentica o gestor numa **sessão efêmera** e chama `abrir_acionamento` com ela — a alçada é
+  conferida no banco (`pode_liberar_assistencia`) e ficam gravados `liberado_por`,
+  `liberacao_justificativa` e os `bloqueio_motivos`.
+- **Operação:** cotação com prestadores (valores acordados vêm de `prestador_servicos`) →
+  `confirmar_prestador_assistencia` gera a **OS** (`OS-YYYYMMDD-XXXX`) já com o KM excedente →
+  `/api/v1/assistencia/voucher` monta o comunicado (texto/HTML), envia por e-mail via **Resend**
+  (quando `RESEND_API_KEY` existe) e devolve **link do WhatsApp** + texto para copiar.
+- **Financeiro:** `concluir_acionamento` cria o **lançamento em Contas a Pagar** (DESPESA,
+  fornecedor = prestador, plano de contas do serviço, descrição com o código da OS) — idempotente;
+  a baixa é a do Financeiro. O papel **`assistencia_24h`** tem policy para cadastrar prestadores e
+  lançar/baixar contas a pagar.
+- **Ficha do veículo:** o histórico de acionamentos aparece no SAC (card "Assistência 24h deste
+  veículo") e no próprio painel, marcando quais consumiram cota.
 
 ## Módulo Cobrança (0025) — navegação, dashboard, lote e banco
 - **Menu lateral → "Cobrança" (`/cobrancas`)**, com 3 abas: **Visão Geral** (dashboard),

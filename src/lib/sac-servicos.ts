@@ -7,8 +7,9 @@ import {
 import type { TipoAtendimento, StatusAtendimento, StatusEvento } from '@/lib/database.types';
 
 // 'chamado' abre um atendimento (modal); 'boleto' aciona o motor de faturas;
-// 'evento' redireciona direto para a abertura de EVENTO (sinistro).
-export type ModoServico = 'chamado' | 'boleto' | 'evento';
+// 'evento' redireciona para a abertura de EVENTO (sinistro) e 'assistencia'
+// leva ao painel da Assistencia 24h com o veiculo ja selecionado.
+export type ModoServico = 'chamado' | 'boleto' | 'evento' | 'assistencia';
 
 export interface ServicoSac {
   id: string;
@@ -30,7 +31,7 @@ export const SERVICOS_SAC: ServicoSac[] = [
   },
   {
     id: 'assistencia', titulo: 'Assistencia 24h', descricao: 'Guincho, chaveiro, mecanico, pane seca...',
-    icon: LifeBuoy, cor: 'bg-cyan-50 text-cyan-600', modo: 'chamado',
+    icon: LifeBuoy, cor: 'bg-cyan-50 text-cyan-600', modo: 'assistencia',
     tipos: [{ value: 'ASSISTENCIA_24H', label: 'Assistencia 24h' }],
     subtipos: ['Guincho', 'Chaveiro', 'Mecanico', 'Pane seca', 'Troca de pneu', 'Transporte'],
   },

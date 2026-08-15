@@ -1,0 +1,636 @@
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
+import {
+  Search, ShieldCheck, ShieldAlert, LifeBuoy, Loader2, Lock, Send, CheckCircle2, Ban,
+  Copy, MessageCircle, FileText, Truck, History,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Modal } from '@/components/ui/modal';
+import { FormField, Input, Select, MoneyInput } from '@/components/ui/field';
+import {
+  useBuscaVeiculoAssistencia, useSituacaoAssistencia, useElegibilidadeAssistencia,
+  useServicosAssistencia, useAbrirAcionamento, usePrestadoresDoServico, useCotacoes,
+  useRegistrarCotacao, useConfirmarPrestador, useConcluirAcionamento, useCancelarAcionamento,
+  useEnviarVoucher, useAcionamento, useHistoricoAssistenciaVeiculo,
+  type VeiculoAssistencia, type AbrirAcionamentoInput,
+} from '@/hooks/use-assistencia';
+import {
+  avaliarBloqueio, rotuloLimite, calcularKmExcedente, calcularTotalOS,
+  STATUS_ACIONAMENTO_LABEL,
+} from '@/lib/assistencia';
+import { formatCurrency, formatDate } from '@/lib/utils';
+import type { ServicosAssistenciaRow } from '@/lib/database.types';
+
+export function PainelAcionamento({ placaInicial }: { placaInicial?: string | null }) {
+  const [termo, setTermo] = useState(placaInicial ?? '');
+  const [veiculo, setVeiculo] = useState<VeiculoAssistencia | null>(null);
+  const [acionamentoId, setAcionamentoId] = useState<string | null>(null);
+
+  const { data: achados, isFetching } = useBuscaVeiculoAssistencia(termo);
+  const { data: situacao } = useSituacaoAssistencia(veiculo?.id ?? null);
+  const { data: elegibilidade } = useElegibilidadeAssistencia(veiculo?.id ?? null);
+  const { data: servicos } = useServicosAssistencia(true);
+  const { data: historico } = useHistoricoAssistenciaVeiculo(veiculo?.id ?? null);
+
+  // Placa vinda do SAC: seleciona sozinho quando ha um unico resultado.
+  useEffect(() => {
+    if (!veiculo && placaInicial && (achados?.length ?? 0) === 1) setVeiculo(achados![0]);
+  }, [achados, placaInicial, veiculo]);
+
+  const [servicoAcionar, setServicoAcionar] = useState<ServicosAssistenciaRow | null>(null);
+
+  if (acionamentoId) {
+    return (
+      <OrdemServico
+        acionamentoId={acionamentoId}
+        onVoltar={() => setAcionamentoId(null)}
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      {/* Busca do veiculo pela placa */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-4">
+        <FormField label="Placa do veiculo">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Input
+              className="pl-9"
+              autoFocus
+              placeholder="Digite a placa (min. 3 caracteres)"
+              value={termo}
+              onChange={(e) => { setTermo(e.target.value.toUpperCase()); setVeiculo(null); }}
+            />
+          </div>
+        </FormField>
+
+        {isFetching && <p className="mt-2 text-sm text-slate-400">Buscando...</p>}
+        {!veiculo && (achados?.length ?? 0) > 0 && (
+          <ul className="mt-2 divide-y divide-slate-100 rounded-lg border border-slate-200">
+            {achados!.map((v) => (
+              <li key={v.id}>
+                <button
+                  onClick={() => setVeiculo(v)}
+                  className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-slate-50"
+                >
+                  <span>
+                    <span className="font-semibold text-slate-800">{v.placa}</span>
+                    <span className="ml-2 text-slate-500">{[v.marca, v.modelo].filter(Boolean).join(' ')}</span>
+                  </span>
+                  <span className="text-xs text-slate-400">{v.associado}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {!isFetching && termo.length >= 3 && (achados?.length ?? 0) === 0 && (
+          <p className="mt-2 text-sm text-slate-400">Nenhum veiculo com essa placa.</p>
+        )}
+      </div>
+
+      {veiculo && (
+        <>
+          {/* Trava: situacao do veiculo */}
+          <div className={`rounded-2xl border p-4 ${situacao?.pode_acionar ? 'border-emerald-200 bg-emerald-50/50' : 'border-rose-200 bg-rose-50/50'}`}>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="flex items-center gap-2 text-base font-semibold text-slate-900">
+                  {situacao?.pode_acionar ? (
+                    <ShieldCheck className="h-5 w-5 text-emerald-600" />
+                  ) : (
+                    <ShieldAlert className="h-5 w-5 text-rose-600" />
+                  )}
+                  {veiculo.placa} — {[veiculo.marca, veiculo.modelo].filter(Boolean).join(' ')}
+                </p>
+                <p className="mt-0.5 text-sm text-slate-600">
+                  {veiculo.associado}
+                  {veiculo.telefone ? ` · ${veiculo.telefone}` : ''}
+                </p>
+              </div>
+              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${situacao?.pode_acionar ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                {situacao?.pode_acionar ? 'Liberado para acionar' : 'Acionamento bloqueado'}
+              </span>
+            </div>
+            {!situacao?.pode_acionar && (situacao?.motivos?.length ?? 0) > 0 && (
+              <ul className="mt-2 list-disc space-y-0.5 pl-5 text-sm text-rose-700">
+                {situacao!.motivos.map((m) => <li key={m}>{m}</li>)}
+              </ul>
+            )}
+            {situacao && situacao.valor_em_atraso > 0 && (
+              <p className="mt-1 text-xs text-rose-600">
+                Total em atraso: {formatCurrency(Number(situacao.valor_em_atraso))}
+              </p>
+            )}
+          </div>
+
+          {/* Servicos com o limite em TEMPO REAL */}
+          <div>
+            <p className="mb-2 text-sm font-semibold text-slate-700">Servico solicitado</p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {(servicos ?? []).map((s) => {
+                const e = elegibilidade?.find((x) => x.servico_id === s.id);
+                const esgotado = !!e && e.computa_limite && !e.elegivel;
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => setServicoAcionar(s)}
+                    className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-cyan-400 hover:shadow-md"
+                  >
+                    <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${esgotado ? 'bg-rose-50 text-rose-600' : 'bg-cyan-50 text-cyan-600'}`}>
+                      <LifeBuoy className="h-5 w-5" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-slate-800">{s.descricao}</span>
+                      <span className="block text-xs text-slate-500">
+                        {formatCurrency(Number(s.valor_padrao))}
+                        {s.cobra_km_excedente ? ` + ${formatCurrency(Number(s.valor_km_excedente))}/km apos ${s.km_franquia}km` : ''}
+                      </span>
+                      {e && (
+                        <span className={`mt-1 inline-block rounded px-1.5 py-0.5 text-[11px] ${esgotado ? 'bg-rose-50 text-rose-700' : e.computa_limite ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
+                          {rotuloLimite(e)}
+                          {e.ultimo_uso ? ` · ultimo ${formatDate(e.ultimo_uso)}` : ''}
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Historico do veiculo */}
+          {(historico?.length ?? 0) > 0 && (
+            <div className="rounded-2xl border border-slate-200 bg-white">
+              <div className="flex items-center gap-2 border-b border-slate-200 px-5 py-3">
+                <History className="h-4 w-4 text-brand-700" />
+                <h2 className="text-sm font-semibold text-slate-900">Acionamentos deste veiculo</h2>
+              </div>
+              <ul className="divide-y divide-slate-100">
+                {historico!.map((h) => (
+                  <li key={h.id} className="flex flex-wrap items-center justify-between gap-2 px-5 py-2 text-sm">
+                    <span className="flex items-center gap-2">
+                      <span className="font-mono text-xs text-slate-400">{h.codigo_os ?? h.protocolo}</span>
+                      <span className="text-slate-700">{h.servico}</span>
+                      {h.computa_limite && <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[11px] text-amber-700">conta no limite</span>}
+                    </span>
+                    <span className="flex items-center gap-3">
+                      <span className="text-xs text-slate-400">{formatDate(h.criado_em)}</span>
+                      <span className="tnum text-slate-600">{formatCurrency(Number(h.valor_total))}</span>
+                      <span className={`rounded px-2 py-0.5 text-xs ${STATUS_ACIONAMENTO_LABEL[h.status].cor}`}>
+                        {STATUS_ACIONAMENTO_LABEL[h.status].label}
+                      </span>
+                      <button onClick={() => setAcionamentoId(h.id)} className="text-xs font-medium text-cyan-700 hover:underline">
+                        Abrir
+                      </button>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </>
+      )}
+
+      {servicoAcionar && veiculo && (
+        <ModalAcionar
+          veiculo={veiculo}
+          servico={servicoAcionar}
+          bloqueio={avaliarBloqueio(situacao, elegibilidade?.find((e) => e.servico_id === servicoAcionar.id))}
+          onClose={() => setServicoAcionar(null)}
+          onAberto={(id) => { setServicoAcionar(null); setAcionamentoId(id); }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Modal de abertura (com liberacao de superior quando bloqueado)
+// ---------------------------------------------------------------------------
+function ModalAcionar({
+  veiculo, servico, bloqueio, onClose, onAberto,
+}: {
+  veiculo: VeiculoAssistencia;
+  servico: ServicosAssistenciaRow;
+  bloqueio: ReturnType<typeof avaliarBloqueio>;
+  onClose: () => void;
+  onAberto: (id: string) => void;
+}) {
+  const abrir = useAbrirAcionamento();
+  const [form, setForm] = useState({
+    solicitante: veiculo.associado,
+    telefone: veiculo.telefone ?? '',
+    origem: '',
+    cidade: '',
+    uf: '',
+    referencia: '',
+    destino: '',
+    km_previsto: '' as string,
+    observacoes: '',
+  });
+  const [liberacao, setLiberacao] = useState<{ email: string; senha: string; justificativa: string } | null>(
+    bloqueio.bloqueado ? { email: '', senha: '', justificativa: '' } : null,
+  );
+
+  function enviar(e: React.FormEvent) {
+    e.preventDefault();
+    if (bloqueio.bloqueado) {
+      if (!liberacao?.email || !liberacao.senha || !liberacao.justificativa.trim()) {
+        return toast.error('Preencha as credenciais do gestor e a justificativa');
+      }
+    }
+    const payload: AbrirAcionamentoInput = {
+      veiculo_id: veiculo.id,
+      servico_id: servico.id,
+      solicitante: form.solicitante || null,
+      telefone: form.telefone || null,
+      origem: {
+        logradouro: form.origem || undefined,
+        cidade: form.cidade || undefined,
+        uf: form.uf || undefined,
+        referencia: form.referencia || undefined,
+      },
+      destino: form.destino ? { logradouro: form.destino } : {},
+      km_previsto: form.km_previsto ? Number(form.km_previsto) : null,
+      observacoes: form.observacoes || null,
+      liberacao: bloqueio.bloqueado ? liberacao : null,
+    };
+    abrir.mutate(payload, {
+      onSuccess: (r) => {
+        toast.success(
+          r.liberado_por
+            ? `Acionamento ${r.acionamento.protocolo} aberto com liberacao de ${r.liberado_por}`
+            : `Acionamento ${r.acionamento.protocolo} aberto`,
+        );
+        onAberto(r.acionamento.id);
+      },
+      onError: (e) => toast.error(e.message),
+    });
+  }
+
+  return (
+    <Modal open onClose={onClose} title={`Acionar ${servico.descricao} — ${veiculo.placa}`}>
+      <form onSubmit={enviar} className="space-y-3">
+        {bloqueio.bloqueado && (
+          <div className="rounded-lg border border-rose-200 bg-rose-50 p-3">
+            <p className="flex items-center gap-2 text-sm font-semibold text-rose-700">
+              <Lock className="h-4 w-4" /> Acionamento bloqueado
+            </p>
+            <ul className="mt-1 list-disc space-y-0.5 pl-5 text-xs text-rose-700">
+              {bloqueio.motivos.map((m) => <li key={m}>{m}</li>)}
+            </ul>
+            <p className="mt-2 text-xs text-rose-600">
+              Para prosseguir, um gestor (admin, financeiro ou gestor regional) precisa autorizar
+              com as proprias credenciais.
+            </p>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              <FormField label="E-mail do gestor">
+                <Input
+                  type="email" autoComplete="off"
+                  value={liberacao?.email ?? ''}
+                  onChange={(e) => setLiberacao((l) => ({ ...(l ?? { senha: '', justificativa: '' }), email: e.target.value }))}
+                />
+              </FormField>
+              <FormField label="Senha do gestor">
+                <Input
+                  type="password" autoComplete="new-password"
+                  value={liberacao?.senha ?? ''}
+                  onChange={(e) => setLiberacao((l) => ({ ...(l ?? { email: '', justificativa: '' }), senha: e.target.value }))}
+                />
+              </FormField>
+              <FormField label="Justificativa da liberacao" className="sm:col-span-2">
+                <Input
+                  value={liberacao?.justificativa ?? ''}
+                  onChange={(e) => setLiberacao((l) => ({ ...(l ?? { email: '', senha: '' }), justificativa: e.target.value }))}
+                  placeholder="Ex.: veiculo parado em rodovia, risco ao associado"
+                />
+              </FormField>
+            </div>
+          </div>
+        )}
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <FormField label="Solicitante">
+            <Input value={form.solicitante} onChange={(e) => setForm({ ...form, solicitante: e.target.value })} />
+          </FormField>
+          <FormField label="Telefone de contato">
+            <Input value={form.telefone} onChange={(e) => setForm({ ...form, telefone: e.target.value })} />
+          </FormField>
+          <FormField label="Local (endereco)" className="sm:col-span-2">
+            <Input value={form.origem} onChange={(e) => setForm({ ...form, origem: e.target.value })} placeholder="Rua/avenida, numero" />
+          </FormField>
+          <FormField label="Cidade">
+            <Input value={form.cidade} onChange={(e) => setForm({ ...form, cidade: e.target.value })} />
+          </FormField>
+          <FormField label="UF">
+            <Input maxLength={2} value={form.uf} onChange={(e) => setForm({ ...form, uf: e.target.value.toUpperCase() })} />
+          </FormField>
+          <FormField label="Ponto de referencia" className="sm:col-span-2">
+            <Input value={form.referencia} onChange={(e) => setForm({ ...form, referencia: e.target.value })} />
+          </FormField>
+          <FormField label="Destino (quando houver)" className="sm:col-span-2">
+            <Input value={form.destino} onChange={(e) => setForm({ ...form, destino: e.target.value })} placeholder="Oficina, residencia..." />
+          </FormField>
+          <FormField label="KM previsto">
+            <Input type="number" min={0} value={form.km_previsto} onChange={(e) => setForm({ ...form, km_previsto: e.target.value })} />
+          </FormField>
+          <FormField label="Observacoes">
+            <Input value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} />
+          </FormField>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-1">
+          <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>
+          <Button type="submit" variant={bloqueio.bloqueado ? 'danger' : 'primary'} disabled={abrir.isPending}>
+            {abrir.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <LifeBuoy className="h-4 w-4" />}
+            {bloqueio.bloqueado ? 'Liberar e acionar' : 'Abrir acionamento'}
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Ordem de Servico: cotacao -> prestador -> voucher -> conclusao
+// ---------------------------------------------------------------------------
+export function OrdemServico({ acionamentoId, onVoltar }: { acionamentoId: string; onVoltar?: () => void }) {
+  const { data: a } = useAcionamento(acionamentoId);
+  const { data: servicos } = useServicosAssistencia();
+  const { data: prestadores } = usePrestadoresDoServico(a?.servico_id ?? null);
+  const { data: cotacoes } = useCotacoes(acionamentoId);
+  const registrar = useRegistrarCotacao();
+  const confirmar = useConfirmarPrestador();
+  const concluir = useConcluirAcionamento();
+  const cancelar = useCancelarAcionamento();
+  const voucher = useEnviarVoucher();
+
+  const [cot, setCot] = useState({ fornecedor_id: '', valor: 0 as number | null, valor_km: 0 as number | null, prazo: '' });
+  const [kmReal, setKmReal] = useState('');
+  const [textoVoucher, setTextoVoucher] = useState<{ texto: string; whatsapp: string | null } | null>(null);
+
+  const servico = useMemo(
+    () => servicos?.find((s) => s.id === a?.servico_id) ?? null,
+    [servicos, a?.servico_id],
+  );
+
+  if (!a) return <p className="text-sm text-slate-400">Carregando acionamento...</p>;
+
+  const finalizado = a.status === 'CONCLUIDO' || a.status === 'CANCELADO';
+  const kmExc = servico ? calcularKmExcedente(Number(kmReal || a.km_previsto || 0), Number(servico.km_franquia)) : 0;
+
+  function escolher(fornecedorId: string, valor: number, valorKm: number | null, prazo: number | null) {
+    if (!servico) return;
+    const total = calcularTotalOS(servico, valor, kmExc, valorKm);
+    confirmar.mutate(
+      {
+        acionamento_id: a!.id,
+        fornecedor_id: fornecedorId,
+        valor_servico: valor,
+        km_excedente: kmExc,
+        valor_km: valorKm,
+        prazo_min: prazo,
+      },
+      {
+        onSuccess: (os) => toast.success(`OS ${os.codigo_os} gerada — ${formatCurrency(total.total)}`),
+        onError: (e) => toast.error(e.message),
+      },
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      {onVoltar && (
+        <button onClick={onVoltar} className="text-sm font-medium text-cyan-700 hover:text-cyan-800">
+          ← Voltar ao painel
+        </button>
+      )}
+
+      {/* Cabecalho da OS */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="font-mono text-xs text-slate-400">{a.protocolo}{a.codigo_os ? ` · ${a.codigo_os}` : ''}</p>
+            <h2 className="text-lg font-semibold text-slate-900">{a.servicos_assistencia?.descricao}</h2>
+            <p className="text-sm text-slate-600">
+              {a.veiculos?.placa} — {a.clientes?.nome_razao_social}
+            </p>
+          </div>
+          <div className="text-right">
+            <span className={`rounded px-2 py-0.5 text-xs ${STATUS_ACIONAMENTO_LABEL[a.status].cor}`}>
+              {STATUS_ACIONAMENTO_LABEL[a.status].label}
+            </span>
+            <p className="tnum mt-1 text-xl font-semibold text-slate-900">{formatCurrency(Number(a.valor_total))}</p>
+            {Number(a.valor_km_excedente) > 0 && (
+              <p className="text-xs text-slate-400">
+                servico {formatCurrency(Number(a.valor_servico))} + km {formatCurrency(Number(a.valor_km_excedente))}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {a.liberado_por && (
+          <p className="mt-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-800">
+            <Lock className="mr-1 inline h-3 w-3" />
+            Liberado por superior — {a.liberacao_justificativa}
+            {a.bloqueio_motivos?.length ? ` (motivos: ${a.bloqueio_motivos.join('; ')})` : ''}
+          </p>
+        )}
+        {a.lancamento_id && (
+          <p className="mt-2 rounded-lg bg-emerald-50 p-2 text-xs text-emerald-800">
+            <FileText className="mr-1 inline h-3 w-3" />
+            Lancado em Contas a Pagar para {a.fornecedores?.razao_social}.
+          </p>
+        )}
+      </div>
+
+      {/* Cotacao */}
+      {!finalizado && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+          <h3 className="text-sm font-semibold text-slate-700">Cotacao com prestadores</h3>
+          <div className="mt-3 grid gap-3 md:grid-cols-5">
+            <FormField label="Prestador" className="md:col-span-2">
+              <Select
+                value={cot.fornecedor_id}
+                onChange={(e) => {
+                  const p = prestadores?.find((x) => x.fornecedor_id === e.target.value);
+                  setCot({
+                    fornecedor_id: e.target.value,
+                    valor: p?.valor_acordado ?? Number(servico?.valor_padrao ?? 0),
+                    valor_km: p?.valor_km ?? Number(servico?.valor_km_excedente ?? 0),
+                    prazo: p?.prazo_medio_min ? String(p.prazo_medio_min) : '',
+                  });
+                }}
+              >
+                <option value="">Selecione...</option>
+                {(prestadores ?? []).map((p) => (
+                  <option key={p.fornecedor_id} value={p.fornecedor_id}>
+                    {p.razao_social}{p.cobertura ? ` — ${p.cobertura}` : ''}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+            <FormField label="Valor negociado">
+              <MoneyInput value={cot.valor} onChange={(v) => setCot({ ...cot, valor: v })} />
+            </FormField>
+            {servico?.cobra_km_excedente && (
+              <FormField label="Valor do KM">
+                <MoneyInput value={cot.valor_km} onChange={(v) => setCot({ ...cot, valor_km: v })} />
+              </FormField>
+            )}
+            <FormField label="Prazo (min)">
+              <Input type="number" min={0} value={cot.prazo} onChange={(e) => setCot({ ...cot, prazo: e.target.value })} />
+            </FormField>
+          </div>
+          <div className="mt-2 flex justify-end">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                if (!cot.fornecedor_id) return toast.error('Selecione o prestador');
+                registrar.mutate(
+                  {
+                    acionamento_id: a.id,
+                    fornecedor_id: cot.fornecedor_id,
+                    valor: cot.valor ?? 0,
+                    valor_km: cot.valor_km,
+                    prazo_min: cot.prazo ? Number(cot.prazo) : null,
+                  },
+                  { onSuccess: () => toast.success('Cotacao registrada'), onError: (e) => toast.error(e.message) },
+                );
+              }}
+            >
+              Registrar cotacao
+            </Button>
+          </div>
+
+          {(cotacoes?.length ?? 0) > 0 && (
+            <ul className="mt-3 divide-y divide-slate-100 rounded-lg border border-slate-200">
+              {cotacoes!.map((c) => (
+                <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
+                  <span className="flex items-center gap-2">
+                    <Truck className="h-4 w-4 text-slate-400" />
+                    <span className="font-medium text-slate-700">{c.fornecedores?.razao_social}</span>
+                    {c.escolhida && <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[11px] text-emerald-700">escolhido</span>}
+                  </span>
+                  <span className="flex items-center gap-3">
+                    <span className="tnum text-slate-700">{formatCurrency(Number(c.valor))}</span>
+                    {c.prazo_estimado_min && <span className="text-xs text-slate-400">{c.prazo_estimado_min} min</span>}
+                    <Button
+                      variant="ghost"
+                      className="px-2 py-1 text-xs"
+                      onClick={() => escolher(c.fornecedor_id, Number(c.valor), c.valor_km, c.prazo_estimado_min)}
+                      disabled={confirmar.isPending}
+                    >
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Confirmar e gerar OS
+                    </Button>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {servico?.cobra_km_excedente && (
+            <p className="mt-2 text-xs text-slate-500">
+              KM excedente calculado: <strong>{kmExc} km</strong> (franquia de {servico.km_franquia} km).
+              Informe o KM real abaixo antes de confirmar para ajustar o valor.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Voucher + conclusao */}
+      {a.codigo_os && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+          <h3 className="text-sm font-semibold text-slate-700">Comunicado ao prestador e fechamento</h3>
+          <div className="mt-3 flex flex-wrap items-end gap-3">
+            <Button
+              variant="secondary"
+              disabled={voucher.isPending}
+              onClick={() =>
+                voucher.mutate(
+                  { acionamento_id: a.id },
+                  {
+                    onSuccess: (r) => {
+                      setTextoVoucher({ texto: r.texto, whatsapp: r.whatsapp });
+                      toast.success(r.email_enviado ? `Voucher enviado para ${r.destinatario}` : 'Voucher gerado');
+                    },
+                    onError: (e) => toast.error(e.message),
+                  },
+                )
+              }
+            >
+              <Send className="h-4 w-4" /> Gerar/enviar voucher
+            </Button>
+
+            {!finalizado && (
+              <>
+                <FormField label="KM percorrido">
+                  <Input type="number" min={0} value={kmReal} onChange={(e) => setKmReal(e.target.value)} className="w-32" />
+                </FormField>
+                <Button
+                  disabled={concluir.isPending}
+                  onClick={() =>
+                    concluir.mutate(
+                      { acionamento_id: a.id, km_percorrido: kmReal ? Number(kmReal) : null },
+                      {
+                        onSuccess: () => toast.success('OS concluida e lancada em Contas a Pagar'),
+                        onError: (e) => toast.error(e.message),
+                      },
+                    )
+                  }
+                >
+                  <CheckCircle2 className="h-4 w-4" /> Concluir OS
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="text-rose-600"
+                  onClick={() => {
+                    const motivo = window.prompt('Motivo do cancelamento:');
+                    if (!motivo) return;
+                    cancelar.mutate(
+                      { acionamento_id: a.id, motivo },
+                      { onSuccess: () => toast.success('Acionamento cancelado'), onError: (e) => toast.error(e.message) },
+                    );
+                  }}
+                >
+                  <Ban className="h-4 w-4" /> Cancelar
+                </Button>
+              </>
+            )}
+          </div>
+
+          {textoVoucher && (
+            <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <pre className="whitespace-pre-wrap text-xs text-slate-700">{textoVoucher.texto}</pre>
+              <div className="mt-2 flex gap-2">
+                <Button
+                  variant="secondary"
+                  className="px-2 py-1 text-xs"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(textoVoucher.texto);
+                    toast.success('Comunicado copiado');
+                  }}
+                >
+                  <Copy className="h-3.5 w-3.5" /> Copiar
+                </Button>
+                {textoVoucher.whatsapp && (
+                  <a
+                    href={textoVoucher.whatsapp}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-700"
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" /> Enviar no WhatsApp
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

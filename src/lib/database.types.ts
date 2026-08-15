@@ -12,7 +12,8 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 
 // ---- Enums -----------------------------------------------------------------
 export type PapelUsuario =
-  | 'admin' | 'gestor_regional' | 'consultor_vendas' | 'financeiro' | 'sinistro' | 'cotador' | 'auditoria';
+  | 'admin' | 'gestor_regional' | 'consultor_vendas' | 'financeiro' | 'sinistro' | 'cotador' | 'auditoria'
+  | 'assistencia_24h';
 export type TipoPessoa = 'PF' | 'PJ';
 export type StatusCliente =
   | 'ativo' | 'inadimplente' | 'cancelado' | 'inativo' | 'suspenso' | 'excluido';
@@ -62,6 +63,9 @@ export type StatusCadastro = 'ATIVO' | 'INATIVO' | 'SUSPENSO';
 export type StatusLead =
   | 'NOVO' | 'ORCAMENTO_GERADO' | 'PROPOSTA_ENVIADA' | 'APROVADO' | 'EM_AUDITORIA' | 'ATIVO' | 'PERDIDO';
 export type OrigemFipe = 'API' | 'MANUAL' | 'CONTINGENCIA';
+// 0026 :: Assistencia 24h
+export type StatusAcionamento =
+  | 'ABERTO' | 'EM_COTACAO' | 'AUTORIZADO' | 'EM_ATENDIMENTO' | 'CONCLUIDO' | 'CANCELADO';
 
 // ---- Helper para linhas com timestamps ------------------------------------
 type Timestamps = {
@@ -626,6 +630,154 @@ export type FornecedoresRow = Timestamps & {
   endereco: Json;
   dados_receita: Json;
   ativo: boolean;
+  // 0026: campos de prestador da Assistencia 24h
+  prestador_assistencia: boolean;
+  whatsapp: string | null;
+  cobertura: string | null;
+  chave_pix: string | null;
+  observacoes: string | null;
+};
+
+// ---- Assistencia 24h (0026) ------------------------------------------------
+export type ServicosAssistenciaRow = Timestamps & {
+  id: string;
+  descricao: string;
+  valor_padrao: number;
+  categoria_dre_id: string | null;
+  cobra_km_excedente: boolean;
+  valor_km_excedente: number;
+  km_franquia: number;
+  computa_limite: boolean;
+  limite_quantidade: number;
+  limite_janela_meses: number;
+  produto_id: string | null;
+  observacoes: string | null;
+  ativo: boolean;
+  ordem: number;
+};
+
+export type PrestadorServicosRow = {
+  fornecedor_id: string;
+  servico_id: string;
+  valor_acordado: number | null;
+  valor_km: number | null;
+  prazo_medio_min: number | null;
+  ativo: boolean;
+};
+
+export type AcionamentosAssistenciaRow = Timestamps & {
+  id: string;
+  protocolo: string | null;
+  codigo_os: string | null;
+  veiculo_id: string;
+  cliente_id: string;
+  servico_id: string;
+  atendimento_id: string | null;
+  evento_id: string | null;
+  status: StatusAcionamento;
+  solicitante_nome: string | null;
+  solicitante_telefone: string | null;
+  origem: Json;
+  destino: Json;
+  km_previsto: number | null;
+  km_percorrido: number | null;
+  km_excedente: number;
+  observacoes: string | null;
+  prestador_id: string | null;
+  valor_servico: number;
+  valor_km_excedente: number;
+  valor_total: number;
+  prazo_estimado_min: number | null;
+  computa_limite: boolean;
+  bloqueio_motivos: string[];
+  liberado_por: string | null;
+  liberado_em: string | null;
+  liberacao_justificativa: string | null;
+  lancamento_id: string | null;
+  voucher_enviado_em: string | null;
+  aberto_por: string | null;
+  concluido_em: string | null;
+  cancelado_motivo: string | null;
+  regional_id: string | null;
+};
+
+export type AcionamentoCotacoesRow = {
+  id: string;
+  acionamento_id: string;
+  fornecedor_id: string;
+  valor: number;
+  valor_km: number | null;
+  prazo_estimado_min: number | null;
+  observacao: string | null;
+  escolhida: boolean;
+  created_by: string | null;
+  created_at: string;
+};
+
+export type AcionamentoHistoricoRow = {
+  id: string;
+  acionamento_id: string;
+  status: StatusAcionamento;
+  observacao: string | null;
+  usuario_id: string | null;
+  created_at: string;
+};
+
+// Consumo do limite por servico, em tempo real (RPC elegibilidade_assistencia)
+export type ElegibilidadeAssistencia = {
+  servico_id: string;
+  descricao: string;
+  computa_limite: boolean;
+  limite_quantidade: number;
+  janela_meses: number;
+  usados: number;
+  restantes: number | null;
+  elegivel: boolean;
+  ultimo_uso: string | null;
+};
+
+// Trava do veiculo (RPC situacao_assistencia_veiculo)
+export type SituacaoAssistencia = {
+  veiculo_id: string;
+  placa: string;
+  cliente_id: string;
+  associado: string;
+  status_veiculo: StatusVeiculo;
+  veiculo_ativo: boolean;
+  inadimplente: boolean;
+  titulos_vencidos: number;
+  valor_em_atraso: number;
+  pendencia_cadastral: boolean;
+  alertas_ativos: number;
+  pode_acionar: boolean;
+  motivos: string[];
+};
+
+// Prestador habilitado (RPC prestadores_do_servico)
+export type PrestadorDoServico = {
+  fornecedor_id: string;
+  razao_social: string;
+  telefone: string | null;
+  whatsapp: string | null;
+  email: string | null;
+  cobertura: string | null;
+  valor_acordado: number | null;
+  valor_km: number | null;
+  prazo_medio_min: number | null;
+};
+
+// Linha do historico do veiculo (RPC historico_assistencia_veiculo)
+export type HistoricoAssistencia = {
+  id: string;
+  protocolo: string | null;
+  codigo_os: string | null;
+  servico: string;
+  status: StatusAcionamento;
+  prestador: string | null;
+  valor_total: number;
+  computa_limite: boolean;
+  criado_em: string;
+  concluido_em: string | null;
 };
 
 export type CentrosCustoRow = {
@@ -987,6 +1139,35 @@ export type Database = {
       diretoria: TableDef<DiretoriaRow, [Rel<'mandato_id', 'mandatos'>]>;
       empresa_documentos: TableDef<EmpresaDocumentosRow, [Rel<'empresa_id', 'empresa'>]>;
       fornecedores: TableDef<FornecedoresRow>;
+      servicos_assistencia: TableDef<
+        ServicosAssistenciaRow,
+        [Rel<'categoria_dre_id', 'categorias_dre'>, Rel<'produto_id', 'produtos'>]
+      >;
+      prestador_servicos: TableDef<
+        PrestadorServicosRow,
+        [Rel<'fornecedor_id', 'fornecedores'>, Rel<'servico_id', 'servicos_assistencia'>]
+      >;
+      acionamentos_assistencia: TableDef<
+        AcionamentosAssistenciaRow,
+        [
+          Rel<'veiculo_id', 'veiculos'>,
+          Rel<'cliente_id', 'clientes'>,
+          Rel<'servico_id', 'servicos_assistencia'>,
+          Rel<'prestador_id', 'fornecedores'>,
+          Rel<'lancamento_id', 'lancamentos_financeiros'>,
+          Rel<'atendimento_id', 'atendimentos'>,
+          Rel<'liberado_por', 'usuarios'>,
+          Rel<'aberto_por', 'usuarios'>,
+        ]
+      >;
+      acionamento_cotacoes: TableDef<
+        AcionamentoCotacoesRow,
+        [Rel<'acionamento_id', 'acionamentos_assistencia'>, Rel<'fornecedor_id', 'fornecedores'>]
+      >;
+      acionamento_historico: TableDef<
+        AcionamentoHistoricoRow,
+        [Rel<'acionamento_id', 'acionamentos_assistencia'>, Rel<'usuario_id', 'usuarios'>]
+      >;
       centros_custo: TableDef<CentrosCustoRow>;
       contas_bancarias: TableDef<ContasBancariasRow>;
       lancamentos_financeiros: TableDef<
@@ -1141,6 +1322,78 @@ export type Database = {
         Args: { p_remessa_id: string };
         Returns: CobrancaRemessasRow;
       };
+      elegibilidade_assistencia: {
+        Args: { p_veiculo_id: string };
+        Returns: ElegibilidadeAssistencia[];
+      };
+      situacao_assistencia_veiculo: {
+        Args: { p_veiculo_id: string };
+        Returns: SituacaoAssistencia[];
+      };
+      prestadores_do_servico: {
+        Args: { p_servico_id: string };
+        Returns: PrestadorDoServico[];
+      };
+      historico_assistencia_veiculo: {
+        Args: { p_veiculo_id: string; p_limite?: number };
+        Returns: HistoricoAssistencia[];
+      };
+      abrir_acionamento: {
+        Args: {
+          p_veiculo_id: string;
+          p_servico_id: string;
+          p_solicitante?: string | null;
+          p_telefone?: string | null;
+          p_origem?: Json;
+          p_destino?: Json;
+          p_km_previsto?: number | null;
+          p_observacoes?: string | null;
+          p_liberacao_justificativa?: string | null;
+          p_atendimento_id?: string | null;
+        };
+        Returns: AcionamentosAssistenciaRow;
+      };
+      registrar_cotacao_assistencia: {
+        Args: {
+          p_acionamento_id: string;
+          p_fornecedor_id: string;
+          p_valor: number;
+          p_valor_km?: number | null;
+          p_prazo_min?: number | null;
+          p_observacao?: string | null;
+        };
+        Returns: AcionamentoCotacoesRow;
+      };
+      confirmar_prestador_assistencia: {
+        Args: {
+          p_acionamento_id: string;
+          p_fornecedor_id: string;
+          p_valor_servico: number;
+          p_km_excedente?: number;
+          p_valor_km?: number | null;
+          p_prazo_min?: number | null;
+        };
+        Returns: AcionamentosAssistenciaRow;
+      };
+      concluir_acionamento: {
+        Args: {
+          p_acionamento_id: string;
+          p_km_percorrido?: number | null;
+          p_observacao?: string | null;
+          p_vencimento?: string | null;
+        };
+        Returns: AcionamentosAssistenciaRow;
+      };
+      cancelar_acionamento: {
+        Args: { p_acionamento_id: string; p_motivo: string };
+        Returns: AcionamentosAssistenciaRow;
+      };
+      marcar_voucher_enviado: {
+        Args: { p_acionamento_id: string };
+        Returns: AcionamentosAssistenciaRow;
+      };
+      pode_assistencia: { Args: Record<string, never>; Returns: boolean };
+      pode_liberar_assistencia: { Args: Record<string, never>; Returns: boolean };
       valor_mensalidade_veiculo: {
         Args: { p_veiculo_id: string };
         Returns: number;
