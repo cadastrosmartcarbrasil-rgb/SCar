@@ -62,12 +62,24 @@ export async function GET(request: Request) {
     .eq('tipo', 'ASSISTENCIA_24H')
     .limit(300);
 
+  // Alertas ativos dos veiculos do associado -> abrem no SAC no mesmo instante.
+  const veicIds = (veiculos ?? []).map((v) => v.id);
+  const { data: alertas } = veicIds.length
+    ? await supabase
+        .from('veiculo_alertas')
+        .select('id, veiculo_id, mensagem, tipos_alerta(nome, severidade), veiculos(placa)')
+        .in('veiculo_id', veicIds)
+        .eq('ativo', true)
+    : { data: [] };
+
   const titulosVeic: TituloVeiculo[] = (titulos ?? []).map((t) => ({
     veiculo_id: t.veiculo_id, status: t.status, data_vencimento: t.data_vencimento,
   }));
   const eventosPorVeiculo = new Map<string, number>();
   for (const e of eventos ?? []) eventosPorVeiculo.set(e.veiculo_id, (eventosPorVeiculo.get(e.veiculo_id) ?? 0) + 1);
   const assistVeiculos = new Set((assist ?? []).map((a) => a.veiculo_id).filter(Boolean));
+  const alertasPorVeiculo = new Map<string, number>();
+  for (const a of alertas ?? []) alertasPorVeiculo.set(a.veiculo_id, (alertasPorVeiculo.get(a.veiculo_id) ?? 0) + 1);
 
   const veiculosOut = (veiculos ?? []).map((v) => ({
     id: v.id,
@@ -81,6 +93,16 @@ export async function GET(request: Request) {
     inadimplente: veiculoInadimplente({ id: v.id, tipo_faturamento: v.tipo_faturamento }, titulosVeic),
     eventos_qtd: eventosPorVeiculo.get(v.id) ?? 0,
     tem_assistencia: assistVeiculos.has(v.id),
+    alertas_qtd: alertasPorVeiculo.get(v.id) ?? 0,
+  }));
+
+  const alertasOut = (alertas ?? []).map((a) => ({
+    id: a.id,
+    veiculo_id: a.veiculo_id,
+    placa: (a.veiculos as unknown as { placa: string } | null)?.placa ?? null,
+    nome: (a.tipos_alerta as unknown as { nome: string } | null)?.nome ?? 'Alerta',
+    severidade: (a.tipos_alerta as unknown as { severidade: string } | null)?.severidade ?? 'MEDIA',
+    mensagem: a.mensagem,
   }));
 
   const eventosOut = (eventos ?? []).map((e) => ({
@@ -97,5 +119,5 @@ export async function GET(request: Request) {
     (titulos ?? []).map<TituloResumo>((t) => ({ status: t.status, data_vencimento: t.data_vencimento, valor: Number(t.valor) })),
   );
 
-  return NextResponse.json({ associado, veiculos: veiculosOut, financeiro: { resumo }, eventos: eventosOut });
+  return NextResponse.json({ associado, veiculos: veiculosOut, financeiro: { resumo }, eventos: eventosOut, alertas: alertasOut });
 }

@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import {
   Search, User, Phone, Mail, Loader2, CheckCircle2, XCircle, ShieldCheck,
   Layers, SplitSquareHorizontal, ChevronLeft, Send,
-  Car, AlertTriangle, LifeBuoy, Settings2,
+  Car, AlertTriangle, LifeBuoy, Settings2, Bell, FileSignature, ClipboardCheck, X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -18,6 +18,7 @@ import {
   useAbrirAtendimento, useAtendimentosVeiculo, type Visao360, type VeiculoDetalhe,
 } from '@/hooks/use-sac';
 import { SERVICOS_SAC, STATUS_ATENDIMENTO_LABEL, STATUS_EVENTO_LABEL, type ServicoSac } from '@/lib/sac-servicos';
+import { useContratosVeiculo, useVistoriasVeiculo } from '@/hooks/use-veiculo-ficha';
 import { statusVeiculoResumo } from '@/lib/sac';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { OpcionalElegibilidade, TipoAtendimento, TipoFaturamento } from '@/lib/database.types';
@@ -78,6 +79,7 @@ export default function SacPage() {
       {v360 && (
         <div className="space-y-5">
           <AssociadoHeader v360={v360} />
+          <AlertasBanner alertas={v360.alertas} />
 
           {/* Abas: Veiculos | Eventos do associado */}
           <div className="flex gap-1 border-b border-slate-200">
@@ -150,6 +152,32 @@ function ListaEventos({ v360 }: { v360: Visao360 }) {
   );
 }
 
+// Alertas ativos do associado — abrem no mesmo instante ao localizar.
+function AlertasBanner({ alertas }: { alertas: Visao360['alertas'] }) {
+  const [fechado, setFechado] = useState(false);
+  if (alertas.length === 0 || fechado) return null;
+  return (
+    <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2 text-sm font-semibold text-amber-900">
+          <Bell className="h-4 w-4" /> {alertas.length} alerta(s) neste associado
+        </div>
+        <button onClick={() => setFechado(true)} className="text-amber-500 hover:text-amber-700"><X className="h-4 w-4" /></button>
+      </div>
+      <ul className="mt-2 space-y-1">
+        {alertas.map((a) => (
+          <li key={a.id} className="flex flex-wrap items-center gap-2 text-sm text-amber-800">
+            <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${a.severidade === 'ALTA' ? 'bg-rose-200 text-rose-800' : a.severidade === 'BAIXA' ? 'bg-slate-200 text-slate-700' : 'bg-amber-200 text-amber-900'}`}>{a.severidade}</span>
+            <b>{a.nome}</b>
+            {a.placa && <span className="font-mono text-xs text-amber-700">· {a.placa}</span>}
+            {a.mensagem && <span className="text-amber-700">— {a.mensagem}</span>}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function AssociadoHeader({ v360 }: { v360: Visao360 }) {
   const a = v360.associado;
   const r = v360.financeiro.resumo;
@@ -212,6 +240,11 @@ function ListaVeiculos({ v360, onSelect }: { v360: Visao360; onSelect: (id: stri
                     {v.tem_assistencia && (
                       <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-cyan-50 px-2 py-0.5 text-[10px] font-semibold text-cyan-700">
                         <LifeBuoy className="h-3 w-3" /> Assist 24h
+                      </span>
+                    )}
+                    {v.alertas_qtd > 0 && (
+                      <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                        <Bell className="h-3 w-3" /> {v.alertas_qtd} alerta{v.alertas_qtd > 1 ? 's' : ''}
                       </span>
                     )}
                   </td>
@@ -369,8 +402,54 @@ function VeiculoDetalheCard({ clienteId, veiculo }: { clienteId: string; veiculo
             </ul>
           )}
         </div>
+
+        <FichaExtras veiculoId={veiculo.id} />
       </CardContent>
     </Card>
+  );
+}
+
+// Seções da ficha do veículo: Contratos de adesão e Vistorias (anexos).
+function FichaExtras({ veiculoId }: { veiculoId: string }) {
+  const { data: contratos } = useContratosVeiculo(veiculoId);
+  const { data: vistorias } = useVistoriasVeiculo(veiculoId);
+  return (
+    <div className="mt-5 grid gap-4 sm:grid-cols-2">
+      <div className="rounded-xl border border-slate-200 p-3">
+        <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+          <FileSignature className="h-3.5 w-3.5" /> Contratos de adesao
+        </p>
+        {(contratos?.length ?? 0) === 0 ? (
+          <p className="text-xs text-slate-400">Nenhum contrato. O termo sera emitido ao concluir a venda (aceite eletronico).</p>
+        ) : (
+          <ul className="space-y-1.5">
+            {contratos!.map((c) => (
+              <li key={c.id} className="flex items-center justify-between text-sm">
+                <span className="text-slate-600">{formatDate(c.created_at)}</span>
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">{c.status}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <div className="rounded-xl border border-slate-200 p-3">
+        <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+          <ClipboardCheck className="h-3.5 w-3.5" /> Vistorias
+        </p>
+        {(vistorias?.length ?? 0) === 0 ? (
+          <p className="text-xs text-slate-400">Nenhuma vistoria registrada para este veiculo.</p>
+        ) : (
+          <ul className="space-y-1.5">
+            {vistorias!.map((vi) => (
+              <li key={vi.id} className="flex items-center justify-between text-sm">
+                <span className="text-slate-600">{vi.tipo || 'Vistoria'} · {vi.data_vistoria ? formatDate(vi.data_vistoria) : formatDate(vi.created_at)}</span>
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">{vi.status}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
   );
 }
 

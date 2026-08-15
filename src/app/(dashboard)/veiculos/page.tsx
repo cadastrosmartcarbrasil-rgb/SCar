@@ -1,15 +1,18 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Car, Search, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Car, Search, Loader2, Calculator, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { FormField, Input, Select, MoneyInput } from '@/components/ui/field';
 import { useAssociados } from '@/hooks/use-associados';
 import { useRegionais, useVendedores, useUsuarios, useMarcas, useModelos } from '@/hooks/use-config';
-import { useTiposVeiculo } from '@/hooks/use-precificacao';
+import { useTiposVeiculo, usePlanos, useProdutos } from '@/hooks/use-precificacao';
 import { useVeiculos, useSaveVeiculo, useExcluirVeiculo } from '@/hooks/use-veiculos';
+import {
+  useTiposAlerta, useVeiculoProdutos, useVeiculoAlertas, useCalcularMensalidadeVeiculo,
+} from '@/hooks/use-veiculo-ficha';
 import { consultarPlaca, normalizarPlaca, placaValida } from '@/lib/placa';
 import { FipeConsulta } from '@/components/fipe/fipe-consulta';
 import { useFipePorPlaca } from '@/hooks/use-fipe';
@@ -60,14 +63,29 @@ export default function VeiculosPage() {
   const { data: usuarios } = useUsuarios();
   const { data: marcas } = useMarcas();
   const { data: tiposVeiculo } = useTiposVeiculo();
+  const { data: planos } = usePlanos();
+  const { data: produtos } = useProdutos();
+  const { data: tiposAlerta } = useTiposAlerta();
   const salvar = useSaveVeiculo();
   const excluir = useExcluirVeiculo();
   const fipePorPlaca = useFipePorPlaca();
+  const calcMensal = useCalcularMensalidadeVeiculo();
 
   const [busca, setBusca] = useState('');
   const [aberto, setAberto] = useState(false);
   const [form, setForm] = useState<Partial<VeiculosRow>>({});
   const [consultando, setConsultando] = useState(false);
+  const [opcionais, setOpcionais] = useState<Set<string>>(new Set());
+  const [alertas, setAlertas] = useState<Set<string>>(new Set());
+
+  const vProdutos = useVeiculoProdutos(form.id);
+  const vAlertas = useVeiculoAlertas(form.id);
+  useEffect(() => { if (vProdutos.data) setOpcionais(new Set(vProdutos.data)); }, [vProdutos.data]);
+  useEffect(() => { if (vAlertas.data) setAlertas(new Set(vAlertas.data)); }, [vAlertas.data]);
+
+  const opcionaisDisp = useMemo(() => (produtos ?? []).filter((p) => !p.obrigatorio && p.status), [produtos]);
+  const toggleSet = (setter: React.Dispatch<React.SetStateAction<Set<string>>>, id: string) =>
+    setter((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   const nomeUsuario = useMemo(() => new Map((usuarios ?? []).map((u) => [u.id, u.nome])), [usuarios]);
   const nomeAssociado = useMemo(
@@ -95,7 +113,19 @@ export default function VeiculosPage() {
 
   function novo() {
     setForm({ status: 'ativo', uso: 'passeio', data_contrato: undefined });
+    setOpcionais(new Set());
+    setAlertas(new Set());
     setAberto(true);
+  }
+
+  function calcularMensalidade() {
+    calcMensal.mutate(
+      { fipe: form.valor_fipe ?? 0, tipoVeiculoId: form.tipo_veiculo_id ?? null, planoId: form.plano_protecao_id ?? null, opcionaisIds: [...opcionais] },
+      {
+        onSuccess: (valor) => { setF({ valor_mensalidade: valor }); toast.success(`Mensalidade calculada: ${formatCurrency(valor)}`); },
+        onError: (e) => toast.error(e.message),
+      },
+    );
   }
 
   async function consultar() {
@@ -135,7 +165,7 @@ export default function VeiculosPage() {
     e.preventDefault();
     if (!form.cliente_id) return toast.error('Selecione o associado');
     if (!placaValida(form.placa ?? '')) return toast.error('Placa invalida');
-    salvar.mutate(form, {
+    salvar.mutate({ ...form, opcionaisIds: [...opcionais], alertasIds: [...alertas] }, {
       onSuccess: () => {
         toast.success('Veiculo salvo');
         setAberto(false);
@@ -406,8 +436,73 @@ export default function VeiculosPage() {
               />
             </FormField>
             <p className="col-span-2 text-xs text-slate-400">
-              O valor FIPE sera a base do calculo das mensalidades (a ser configurado depois).
+              O valor FIPE e a base do calculo da mensalidade.
             </p>
+          </div>
+
+          {/* Plano, opcionais e cobranca */}
+          <div className="space-y-3 rounded-lg border border-slate-200 p-3">
+            <p className="text-sm font-semibold text-slate-700">Plano & Cobranca</p>
+            <FormField label="Plano de protecao">
+              <Select value={form.plano_protecao_id ?? ''} onChange={(e) => setF({ plano_protecao_id: e.target.value || null })}>
+                <option value="">-- Sem plano --</option>
+                {(planos ?? []).filter((p) => p.ativo).map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+              </Select>
+            </FormField>
+            <div>
+              <p className="mb-1 text-sm font-medium text-slate-600">Produtos opcionais</p>
+              <div className="grid grid-cols-2 gap-1">
+                {opcionaisDisp.map((p) => (
+                  <label key={p.id} className="flex items-center gap-2 text-sm text-slate-700">
+                    <input type="checkbox" checked={opcionais.has(p.id)} onChange={() => toggleSet(setOpcionais, p.id)} className="h-4 w-4 rounded border-slate-300" />
+                    {p.nome}
+                  </label>
+                ))}
+                {opcionaisDisp.length === 0 && <span className="text-xs text-slate-400">Nenhum opcional cadastrado.</span>}
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <FormField label="Valor da mensalidade (R$)">
+                <MoneyInput value={form.valor_mensalidade ?? null} onChange={(v) => setF({ valor_mensalidade: v })} placeholder="0,00" />
+              </FormField>
+              <div className="flex items-end">
+                <Button type="button" variant="secondary" onClick={calcularMensalidade} disabled={calcMensal.isPending} className="w-full">
+                  {calcMensal.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Calculator className="h-4 w-4" />} Calcular
+                </Button>
+              </div>
+              <FormField label="Dia de vencimento">
+                <Input type="number" min={1} max={31} value={form.dia_vencimento ?? ''} onChange={(e) => setF({ dia_vencimento: Number(e.target.value) || null })} placeholder="ex.: 10" />
+              </FormField>
+            </div>
+          </div>
+
+          {/* Situacao do bem */}
+          <div className="grid grid-cols-4 items-end gap-3">
+            <label className="flex items-center gap-2 pb-2 text-sm text-slate-700">
+              <input type="checkbox" checked={form.alienado ?? false} onChange={(e) => setF({ alienado: e.target.checked })} className="h-4 w-4 rounded border-slate-300" />
+              Alienado
+            </label>
+            <FormField label="Financeira / gravame" className="col-span-2">
+              <Input value={form.alienado_financeira ?? ''} onChange={(e) => setF({ alienado_financeira: e.target.value })} disabled={!form.alienado} placeholder="Banco / financeira" />
+            </FormField>
+            <FormField label="Nº de portas">
+              <Input type="number" min={0} max={9} value={form.numero_portas ?? ''} onChange={(e) => setF({ numero_portas: Number(e.target.value) || null })} />
+            </FormField>
+          </div>
+
+          {/* Alertas do veiculo */}
+          <div className="rounded-lg border border-slate-200 p-3">
+            <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-slate-700"><Bell className="h-4 w-4 text-amber-500" /> Alertas ativos</p>
+            <div className="grid grid-cols-2 gap-1">
+              {(tiposAlerta ?? []).map((a) => (
+                <label key={a.id} className="flex items-center gap-2 text-sm text-slate-700">
+                  <input type="checkbox" checked={alertas.has(a.id)} onChange={() => toggleSet(setAlertas, a.id)} className="h-4 w-4 rounded border-slate-300" />
+                  {a.nome}
+                </label>
+              ))}
+              {(tiposAlerta ?? []).length === 0 && <span className="text-xs text-slate-400">Cadastre alertas em Configuracoes &gt; Alertas.</span>}
+            </div>
+            <p className="mt-1 text-xs text-slate-400">Alertas ativos abrem automaticamente no SAC ao localizar o associado.</p>
           </div>
 
           {/* Dados do contrato */}

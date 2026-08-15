@@ -26,11 +26,16 @@ export function useVeiculos(associadoId?: string) {
   });
 }
 
+export type SaveVeiculoInput = Partial<VeiculosRow> & {
+  opcionaisIds?: string[]; // produtos opcionais do veiculo (veiculo_produtos)
+  alertasIds?: string[];   // tipos de alerta ativos no veiculo (veiculo_alertas)
+};
+
 export function useSaveVeiculo() {
   const supabase = createClient();
   const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (v: Partial<VeiculosRow>) => {
+  return useMutation<string, Error, SaveVeiculoInput>({
+    mutationFn: async (v) => {
       const payload = {
         cliente_id: v.cliente_id,
         placa: (v.placa ?? '').toUpperCase().replace(/[^A-Z0-9]/g, ''),
@@ -53,16 +58,53 @@ export function useSaveVeiculo() {
         tipo_cambio: v.tipo_cambio || null,
         combustivel: v.combustivel || null,
         tipo_veiculo_id: v.tipo_veiculo_id || null,
+        // ficha ampliada
+        plano_protecao_id: v.plano_protecao_id || null,
+        alienado: v.alienado ?? false,
+        alienado_financeira: v.alienado_financeira || null,
+        numero_portas: v.numero_portas ?? null,
+        valor_mensalidade: v.valor_mensalidade ?? null,
+        dia_vencimento: v.dia_vencimento ?? null,
       };
-      if (v.id) {
-        const { error } = await supabase.from('veiculos').update(payload).eq('id', v.id);
+
+      let veiculoId = v.id;
+      if (veiculoId) {
+        const { error } = await supabase.from('veiculos').update(payload).eq('id', veiculoId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('veiculos').insert(payload);
+        const { data, error } = await supabase.from('veiculos').insert(payload).select('id').single();
         if (error) throw error;
+        veiculoId = data.id;
       }
+
+      // Produtos opcionais do veiculo (substitui o conjunto).
+      if (v.opcionaisIds) {
+        await supabase.from('veiculo_produtos').delete().eq('veiculo_id', veiculoId);
+        if (v.opcionaisIds.length) {
+          const { error } = await supabase.from('veiculo_produtos')
+            .insert(v.opcionaisIds.map((pid) => ({ veiculo_id: veiculoId!, produto_id: pid })));
+          if (error) throw error;
+        }
+      }
+
+      // Alertas ativos do veiculo (substitui o conjunto ativo).
+      if (v.alertasIds) {
+        const { data: { user } } = await supabase.auth.getUser();
+        await supabase.from('veiculo_alertas').delete().eq('veiculo_id', veiculoId).eq('ativo', true);
+        if (v.alertasIds.length) {
+          const { error } = await supabase.from('veiculo_alertas')
+            .insert(v.alertasIds.map((tid) => ({ veiculo_id: veiculoId!, tipo_alerta_id: tid, ativo: true, created_by: user?.id ?? null })));
+          if (error) throw error;
+        }
+      }
+
+      return veiculoId!;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['veiculos'] }),
+    onSuccess: (id) => {
+      qc.invalidateQueries({ queryKey: ['veiculos'] });
+      qc.invalidateQueries({ queryKey: ['ficha', 'veiculo-produtos', id] });
+      qc.invalidateQueries({ queryKey: ['ficha', 'veiculo-alertas', id] });
+    },
   });
 }
 

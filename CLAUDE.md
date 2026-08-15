@@ -106,6 +106,14 @@ com protocolo ATD-YYYYMMDD-XXXX; `abrir_atendimento()` SECURITY DEFINER com TRAV
 PROPRIEDADE -- so staff-na-regional ou o proprio dono (auth_cliente_id); RLS pronta
 p/ Portal. Menu modular em `src/lib/sac-servicos.ts` (SERVICOS_SAC), API
 `/api/v1/sac/atendimento`, SAC refeito veiculo-first (seleciona 1 veiculo -> isola)).
+· `0023_veiculo_ficha` (ficha ampliada do veiculo: colunas `alienado`/`alienado_financeira`/
+`numero_portas`/`valor_mensalidade`/`dia_vencimento`; `veiculo_produtos` (opcionais do veiculo;
+plano ja em veiculos.plano_protecao_id); ALERTAS reutilizaveis `tipos_alerta` (catalogo) +
+`veiculo_alertas` (o SAC abre os ativos ao localizar o associado); `contratos_adesao` (termo
+pos-venda + token de aceite eletronico -- estrutura, termo depois); `vistorias`+`vistoria_anexos`
+(modulo proprio depois, mas ja aparecem na ficha). RLS por veiculo (staff-regional ou dono);
+seed de 5 alertas. Form de veiculo ganhou Plano+Opcionais+Calcular mensalidade (cotar_plano)+
+dia de vencimento+alienado+portas+alertas; nova tela Configuracoes->Alertas).
 
 ## Módulos (status: todos funcionais)
 SAC / Atendimento (`/sac`: **veículo-first + lazy** — busca por Nome/CPF/Placa → `visao-360` traz

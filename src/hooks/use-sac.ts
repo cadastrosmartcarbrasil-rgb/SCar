@@ -20,6 +20,16 @@ export interface VeiculoResumo {
   inadimplente: boolean;
   eventos_qtd: number;
   tem_assistencia: boolean;
+  alertas_qtd: number;
+}
+// Alerta ativo de um veiculo do associado (abre no SAC ao localizar).
+export interface AlertaResumo {
+  id: string;
+  veiculo_id: string;
+  placa: string | null;
+  nome: string;
+  severidade: string;
+  mensagem: string | null;
 }
 // Evento (sinistro) do associado — aba Eventos.
 export interface EventoResumo {
@@ -41,6 +51,7 @@ export interface Visao360 {
   veiculos: VeiculoResumo[];
   financeiro: { resumo: StatusFinanceiro };
   eventos: EventoResumo[];
+  alertas: AlertaResumo[];
 }
 export interface BuscaHit {
   cliente_id: string;

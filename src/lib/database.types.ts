@@ -27,6 +27,9 @@ export type TipoAtendimento =
   | 'SEGUNDA_VIA_BOLETO' | 'VISTORIA_ACESSORIOS' | 'ALTERACAO_CADASTRAL' | 'CANCELAMENTO';
 export type CanalAtendimento = 'SAC_INTERNO' | 'PORTAL';
 export type StatusAtendimento = 'ABERTO' | 'EM_ANDAMENTO' | 'CONCLUIDO' | 'CANCELADO';
+export type SeveridadeAlerta = 'BAIXA' | 'MEDIA' | 'ALTA';
+export type StatusContratoAdesao = 'PENDENTE' | 'ENVIADO' | 'ACEITO' | 'RECUSADO' | 'CANCELADO';
+export type StatusVistoria = 'AGENDADA' | 'PENDENTE' | 'APROVADA' | 'REPROVADA';
 export type TipoNegociacao =
   | 'venda' | 'substituicao' | 'reativacao' | 'troca_titularidade' | 'renovacao';
 export type TipoCambio = 'manual' | 'automatico' | 'automatizado';
@@ -156,6 +159,11 @@ export type VeiculosRow = Timestamps & {
   categoria: string | null;
   data_ativacao: string | null;
   tipo_faturamento: TipoFaturamento;
+  alienado: boolean;
+  alienado_financeira: string | null;
+  numero_portas: number | null;
+  valor_mensalidade: number | null;
+  dia_vencimento: number | null;
 };
 
 export type FaturasRow = Timestamps & {
@@ -177,6 +185,53 @@ export type FaturaItensRow = {
   veiculo_id: string | null;
   descricao: string;
   valor: number;
+  created_at: string;
+};
+
+export type TiposAlertaRow = {
+  id: string;
+  nome: string;
+  descricao: string | null;
+  severidade: SeveridadeAlerta;
+  ativo: boolean;
+  created_at: string;
+};
+export type VeiculoAlertasRow = {
+  id: string;
+  veiculo_id: string;
+  tipo_alerta_id: string;
+  mensagem: string | null;
+  ativo: boolean;
+  created_by: string | null;
+  created_at: string;
+  resolvido_em: string | null;
+};
+export type ContratosAdesaoRow = Timestamps & {
+  id: string;
+  cliente_id: string;
+  veiculo_id: string | null;
+  status: StatusContratoAdesao;
+  documento_url: string | null;
+  token: string;
+  aceito_em: string | null;
+  aceito_ip: string | null;
+  regional_id: string | null;
+};
+export type VistoriasRow = Timestamps & {
+  id: string;
+  veiculo_id: string;
+  tipo: string | null;
+  status: StatusVistoria;
+  data_vistoria: string | null;
+  observacoes: string | null;
+  created_by: string | null;
+};
+export type VistoriaAnexosRow = {
+  id: string;
+  vistoria_id: string;
+  url: string;
+  tipo: string | null;
+  descricao: string | null;
   created_at: string;
 };
 
@@ -808,6 +863,12 @@ export type Database = {
         AtendimentosRow,
         [Rel<'cliente_id', 'clientes'>, Rel<'veiculo_id', 'veiculos'>, Rel<'aberto_por', 'usuarios'>, Rel<'evento_id', 'eventos_sinistro'>]
       >;
+      veiculo_produtos: TableDef<{ veiculo_id: string; produto_id: string }, [Rel<'veiculo_id', 'veiculos'>, Rel<'produto_id', 'produtos'>]>;
+      tipos_alerta: TableDef<TiposAlertaRow>;
+      veiculo_alertas: TableDef<VeiculoAlertasRow, [Rel<'veiculo_id', 'veiculos'>, Rel<'tipo_alerta_id', 'tipos_alerta'>]>;
+      contratos_adesao: TableDef<ContratosAdesaoRow, [Rel<'cliente_id', 'clientes'>, Rel<'veiculo_id', 'veiculos'>]>;
+      vistorias: TableDef<VistoriasRow, [Rel<'veiculo_id', 'veiculos'>]>;
+      vistoria_anexos: TableDef<VistoriaAnexosRow, [Rel<'vistoria_id', 'vistorias'>]>;
       comunicacoes: TableDef<ComunicacoesRow, [Rel<'cliente_id', 'clientes'>]>;
       tipos_veiculo: TableDef<TiposVeiculoRow>;
       produtos: TableDef<ProdutosRow, [Rel<'tipo_evento_id', 'tipos_evento'>]>;
