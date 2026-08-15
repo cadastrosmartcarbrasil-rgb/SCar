@@ -4,9 +4,11 @@ import {
   AlertTriangle, LifeBuoy, ArrowUpCircle, CreditCard, ClipboardCheck, UserCog,
   type LucideIcon,
 } from 'lucide-react';
-import type { TipoAtendimento, StatusAtendimento } from '@/lib/database.types';
+import type { TipoAtendimento, StatusAtendimento, StatusEvento } from '@/lib/database.types';
 
-export type ModoServico = 'chamado' | 'boleto';
+// 'chamado' abre um atendimento (modal); 'boleto' aciona o motor de faturas;
+// 'evento' redireciona direto para a abertura de EVENTO (sinistro).
+export type ModoServico = 'chamado' | 'boleto' | 'evento';
 
 export interface ServicoSac {
   id: string;
@@ -22,9 +24,9 @@ export interface ServicoSac {
 
 export const SERVICOS_SAC: ServicoSac[] = [
   {
-    id: 'sinistro', titulo: 'Sinistro', descricao: 'Abertura / acompanhamento de sinistro',
-    icon: AlertTriangle, cor: 'bg-rose-50 text-rose-600', modo: 'chamado',
-    tipos: [{ value: 'SINISTRO', label: 'Sinistro' }], linkSinistro: true,
+    id: 'evento', titulo: 'Evento (Sinistro)', descricao: 'Abrir evento — vai direto para o registro completo',
+    icon: AlertTriangle, cor: 'bg-rose-50 text-rose-600', modo: 'evento',
+    tipos: [{ value: 'SINISTRO', label: 'Evento' }],
   },
   {
     id: 'assistencia', titulo: 'Assistencia 24h', descricao: 'Guincho, chaveiro, mecanico, pane seca...',
@@ -63,4 +65,13 @@ export const STATUS_ATENDIMENTO_LABEL: Record<StatusAtendimento, { label: string
   EM_ANDAMENTO: { label: 'Em andamento', cor: 'bg-amber-50 text-amber-700' },
   CONCLUIDO: { label: 'Concluido', cor: 'bg-emerald-50 text-emerald-700' },
   CANCELADO: { label: 'Cancelado', cor: 'bg-slate-100 text-slate-600' },
+};
+
+export const STATUS_EVENTO_LABEL: Record<StatusEvento, { label: string; cor: string }> = {
+  ABERTO: { label: 'Aberto', cor: 'bg-cyan-50 text-cyan-700' },
+  EM_ANALISE: { label: 'Em analise', cor: 'bg-amber-50 text-amber-700' },
+  COTACAO_PECAS: { label: 'Cotacao de pecas', cor: 'bg-amber-50 text-amber-700' },
+  REPARO: { label: 'Em reparo', cor: 'bg-brand-50 text-brand-700' },
+  CONCLUIDO: { label: 'Concluido', cor: 'bg-emerald-50 text-emerald-700' },
+  NEGADO: { label: 'Negado', cor: 'bg-rose-50 text-rose-700' },
 };

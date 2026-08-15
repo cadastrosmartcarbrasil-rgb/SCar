@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -65,6 +65,23 @@ export default function NovoEventoPage() {
     setForm((f) => ({ ...f, valor_fipe_atualizado: v.valor_fipe ?? '' }));
     toast.success('Veiculo localizado');
   }
+
+  // Prefill vindo do SAC: /sinistros/novo?placa=ABC1D23 -> busca automatica.
+  useEffect(() => {
+    const p0 = new URLSearchParams(window.location.search).get('placa');
+    if (!p0) return;
+    const p = normalizarPlaca(p0);
+    setPlaca(p);
+    if (!placaValida(p)) return;
+    (async () => {
+      const v = await buscar.mutateAsync(p);
+      if (v) {
+        setVeiculo(v);
+        setForm((f) => ({ ...f, valor_fipe_atualizado: v.valor_fipe ?? '' }));
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function onCepBlur() {
     if (soDigitos(local.cep ?? '').length !== 8) return;

@@ -111,11 +111,13 @@ p/ Portal. Menu modular em `src/lib/sac-servicos.ts` (SERVICOS_SAC), API
 SAC / Atendimento (`/sac`: **veículo-first + lazy** — busca por Nome/CPF/Placa → `visao-360` traz
 uma **lista resumida leve** (Placa/Marca-Modelo/Ano/Status, sem opcionais); ao clicar, `/api/v1/sac/veiculo`
 carrega o **detalhe sob demanda** e isola o item, abrindo o **menu modular de serviços**
-(`SERVICOS_SAC`): Sinistro, Assistência 24h,
-Upgrade/Cobertura, 2ª via de Boleto, Vistoria/Acessórios, Cadastro/Cancelamento — cada um cria
-um `atendimento` vinculado ao `veiculo_id` (trava de propriedade no banco). Também: toggle de
-faturamento Agrupado↔Individual, status financeiro, elegibilidade de opcionais (janela flutuante
-12m). APIs REST em `/api/v1/sac/*` — `busca`, `visao-360`, `faturamento`, `boleto`, `atendimento`
+(`SERVICOS_SAC`): **Evento** (redireciona direto p/ `/sinistros/novo?placa=` — chamamos sinistro
+de EVENTO), Assistência 24h, Upgrade/Cobertura, 2ª via de Boleto, Vistoria/Acessórios,
+Cadastro/Cancelamento — os demais criam um `atendimento` vinculado ao `veiculo_id` (trava de
+propriedade no banco). Abas **Veículos | Eventos** (eventos do associado c/ atalho "Gerenciar" →
+`/sinistros/[id]`); a lista de veículos marca quem já teve **evento** ou acionou **Assist 24h**.
+Também: toggle de faturamento Agrupado↔Individual, status financeiro, elegibilidade de opcionais
+(janela flutuante 12m). APIs REST em `/api/v1/sac/*` — `busca`, `visao-360`, `faturamento`, `boleto`, `atendimento`
 — reutilizáveis por Portal do Associado/Assistência 24h/Chatbot).
 Vendas/CRM (`/vendas` mobile-first: captura de lead + FIPE por placa/cascata, cotação com
 link público `/cotacao/[token]` detalhada/consolidada + print-PDF, esteira com trava de

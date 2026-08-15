@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   ClientesRow, VeiculosRow, FaturasRow, OpcionalElegibilidade, TipoFaturamento,
-  AtendimentosRow, TipoAtendimento, CanalAtendimento, Json, StatusVeiculo,
+  AtendimentosRow, TipoAtendimento, CanalAtendimento, Json, StatusVeiculo, StatusEvento,
 } from '@/lib/database.types';
 import type { StatusFinanceiro } from '@/lib/sac';
 
@@ -18,6 +18,18 @@ export interface VeiculoResumo {
   tipo_faturamento: TipoFaturamento;
   plano_nome: string | null;
   inadimplente: boolean;
+  eventos_qtd: number;
+  tem_assistencia: boolean;
+}
+// Evento (sinistro) do associado — aba Eventos.
+export interface EventoResumo {
+  id: string;
+  veiculo_id: string;
+  placa: string | null;
+  numero_protocolo: string | null;
+  tipo: string | null;
+  status: StatusEvento;
+  data_ocorrencia: string;
 }
 // DETALHE completo (carregado sob demanda ao clicar no veiculo).
 export interface VeiculoDetalhe extends VeiculosRow {
@@ -28,6 +40,7 @@ export interface Visao360 {
   associado: ClientesRow;
   veiculos: VeiculoResumo[];
   financeiro: { resumo: StatusFinanceiro };
+  eventos: EventoResumo[];
 }
 export interface BuscaHit {
   cliente_id: string;

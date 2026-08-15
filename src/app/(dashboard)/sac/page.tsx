@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   Search, User, Phone, Mail, Loader2, CheckCircle2, XCircle, ShieldCheck,
-  Layers, SplitSquareHorizontal, ChevronLeft, ExternalLink, Send,
+  Layers, SplitSquareHorizontal, ChevronLeft, Send,
+  Car, AlertTriangle, LifeBuoy, Settings2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -15,15 +17,18 @@ import {
   useSacBusca, useVisao360, useVeiculoDetalhe, useToggleFaturamento, useGerarBoleto,
   useAbrirAtendimento, useAtendimentosVeiculo, type Visao360, type VeiculoDetalhe,
 } from '@/hooks/use-sac';
-import { SERVICOS_SAC, STATUS_ATENDIMENTO_LABEL, type ServicoSac } from '@/lib/sac-servicos';
+import { SERVICOS_SAC, STATUS_ATENDIMENTO_LABEL, STATUS_EVENTO_LABEL, type ServicoSac } from '@/lib/sac-servicos';
 import { statusVeiculoResumo } from '@/lib/sac';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { OpcionalElegibilidade, TipoAtendimento, TipoFaturamento } from '@/lib/database.types';
+
+type Aba = 'veiculos' | 'eventos';
 
 export default function SacPage() {
   const [q, setQ] = useState('');
   const [clienteId, setClienteId] = useState<string | undefined>();
   const [veiculoId, setVeiculoId] = useState<string | undefined>();
+  const [aba, setAba] = useState<Aba>('veiculos');
   const busca = useSacBusca(q);
   const { data: v360, isLoading } = useVisao360(clienteId);
 
@@ -34,6 +39,7 @@ export default function SacPage() {
   function abrirAssociado(id: string) {
     setClienteId(id);
     setVeiculoId(undefined);
+    setAba('veiculos');
     setQ('');
   }
 
@@ -72,7 +78,21 @@ export default function SacPage() {
       {v360 && (
         <div className="space-y-5">
           <AssociadoHeader v360={v360} />
-          {!veiculoId ? (
+
+          {/* Abas: Veiculos | Eventos do associado */}
+          <div className="flex gap-1 border-b border-slate-200">
+            {([['veiculos', 'Veiculos', Car, v360.veiculos.length], ['eventos', 'Eventos', AlertTriangle, v360.eventos.length]] as const).map(([id, label, Icon, n]) => (
+              <button key={id} onClick={() => setAba(id)}
+                className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm transition ${aba === id ? 'border-brand-600 font-medium text-brand-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+                <Icon className="h-4 w-4" /> {label}
+                <span className={`tnum rounded-full px-1.5 text-[11px] ${aba === id ? 'bg-brand-50 text-brand-700' : 'bg-slate-100 text-slate-500'}`}>{n}</span>
+              </button>
+            ))}
+          </div>
+
+          {aba === 'eventos' ? (
+            <ListaEventos v360={v360} />
+          ) : !veiculoId ? (
             <ListaVeiculos v360={v360} onSelect={setVeiculoId} />
           ) : (
             <AtendimentoVeiculo
@@ -84,6 +104,48 @@ export default function SacPage() {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// Aba Eventos: sinistros do associado com atalhos de gerenciamento.
+function ListaEventos({ v360 }: { v360: Visao360 }) {
+  if (v360.eventos.length === 0) {
+    return <p className="text-sm text-slate-400">Nenhum evento registrado para este associado.</p>;
+  }
+  return (
+    <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
+            <th className="px-4 py-2.5">Protocolo</th>
+            <th className="px-4 py-2.5">Veiculo</th>
+            <th className="px-4 py-2.5">Tipo</th>
+            <th className="px-4 py-2.5">Data</th>
+            <th className="px-4 py-2.5">Status</th>
+            <th className="px-4 py-2.5"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {v360.eventos.map((e) => {
+            const st = STATUS_EVENTO_LABEL[e.status];
+            return (
+              <tr key={e.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/60">
+                <td className="px-4 py-2.5 font-mono text-xs text-slate-500">{e.numero_protocolo}</td>
+                <td className="px-4 py-2.5"><span className="rounded bg-slate-100 px-2 py-0.5 font-mono text-xs font-semibold text-slate-700">{e.placa}</span></td>
+                <td className="px-4 py-2.5 text-slate-600">{e.tipo ?? '—'}</td>
+                <td className="tnum px-4 py-2.5 text-slate-600">{formatDate(e.data_ocorrencia)}</td>
+                <td className="px-4 py-2.5"><span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${st?.cor ?? 'bg-slate-100 text-slate-600'}`}>{st?.label ?? e.status}</span></td>
+                <td className="px-4 py-2.5 text-right">
+                  <Link href={`/sinistros/${e.id}`} className="inline-flex items-center gap-1 text-xs font-medium text-cyan-700 hover:text-cyan-800">
+                    <Settings2 className="h-3.5 w-3.5" /> Gerenciar
+                  </Link>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -140,7 +202,19 @@ function ListaVeiculos({ v360, onSelect }: { v360: Visao360; onSelect: (id: stri
               return (
                 <tr key={v.id} onClick={() => onSelect(v.id)} className="cursor-pointer border-b border-slate-50 transition last:border-0 hover:bg-cyan-50/40">
                   <td className="px-4 py-2.5"><span className="rounded-md bg-slate-100 px-2 py-0.5 font-mono font-semibold text-slate-700">{v.placa}</span></td>
-                  <td className="px-4 py-2.5 text-slate-700">{[v.marca, v.modelo].filter(Boolean).join(' ') || '—'}</td>
+                  <td className="px-4 py-2.5 text-slate-700">
+                    <span>{[v.marca, v.modelo].filter(Boolean).join(' ') || '—'}</span>
+                    {v.eventos_qtd > 0 && (
+                      <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700">
+                        <AlertTriangle className="h-3 w-3" /> {v.eventos_qtd > 1 ? `${v.eventos_qtd} eventos` : 'Evento'}
+                      </span>
+                    )}
+                    {v.tem_assistencia && (
+                      <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-cyan-50 px-2 py-0.5 text-[10px] font-semibold text-cyan-700">
+                        <LifeBuoy className="h-3 w-3" /> Assist 24h
+                      </span>
+                    )}
+                  </td>
                   <td className="tnum px-4 py-2.5 text-slate-600">{v.ano_modelo ?? '—'}</td>
                   <td className="px-4 py-2.5"><span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${st.cor}`}>{st.label}</span></td>
                   <td className="px-4 py-2.5 text-right"><span className="text-xs font-medium text-cyan-700">Atender →</span></td>
@@ -158,12 +232,18 @@ function ListaVeiculos({ v360, onSelect }: { v360: Visao360; onSelect: (id: stri
 function AtendimentoVeiculo({ clienteId, veiculoId, podeTrocar, onTrocar }: {
   clienteId: string; veiculoId: string; podeTrocar: boolean; onTrocar: () => void;
 }) {
+  const router = useRouter();
   const { data: veiculo, isLoading } = useVeiculoDetalhe(veiculoId);
   const [servico, setServico] = useState<ServicoSac | null>(null);
   const gerarBoleto = useGerarBoleto();
   const { data: atendimentos } = useAtendimentosVeiculo(veiculoId);
 
   function acionar(s: ServicoSac) {
+    // Evento (sinistro): vai DIRETO para o registro completo, com o veiculo ja selecionado.
+    if (s.modo === 'evento') {
+      router.push(`/sinistros/novo?placa=${encodeURIComponent(veiculo?.placa ?? '')}`);
+      return;
+    }
     if (s.modo === 'boleto') {
       gerarBoleto.mutate({ cliente_id: clienteId }, {
         onSuccess: (d) => toast.success(`Faturas da competencia ${d.competencia} prontas (${d.faturas.length})`),
@@ -359,12 +439,6 @@ function ServicoModal({ servico, veiculo, onClose }: { servico: ServicoSac; veic
         <FormField label="Descricao">
           <Textarea rows={3} value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Detalhe a solicitacao..." />
         </FormField>
-
-        {servico.linkSinistro && (
-          <Link href={`/sinistros/novo?veiculo=${veiculo.id}`} className="inline-flex items-center gap-1 text-xs font-medium text-cyan-700 hover:text-cyan-800">
-            <ExternalLink className="h-3.5 w-3.5" /> Abrir sinistro completo (com pecas e reparo)
-          </Link>
-        )}
 
         <div className="flex justify-end gap-2 pt-1">
           <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>
