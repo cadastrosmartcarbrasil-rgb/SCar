@@ -1,0 +1,62 @@
+name: CI
+
+# Roda o mesmo fluxo de validacao usado antes de cada commit:
+# tipos -> testes unitarios -> migrations + testes de banco -> build.
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+
+    # Postgres 16 (mesma versao do Supabase) para aplicar as migrations e rodar
+    # as suites de supabase/tests/.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: pgtest
+          POSTGRES_PASSWORD: pgtest
+          POSTGRES_DB: postgres
+        ports: ['5433:5432']
+        options: >-
+          --health-cmd "pg_isready -U pgtest"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # Credenciais dummy: o build do Next so precisa que as variaveis existam.
+      NEXT_PUBLIC_SUPABASE_URL: https://dummy.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy
+      SUPABASE_SERVICE_ROLE_KEY: dummy
+      PGPASSWORD: pgtest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Tipos (tsc --noEmit)
+        run: npm run typecheck
+
+      - name: Testes unitarios (Vitest)
+        run: npm test
+
+      - name: Instalar client do Postgres
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client-16
+
+      - name: Migrations + testes de banco
+        run: bash scripts/db-test.sh --schema
+        env:
+          PGTEST_EXTERNO: '1'
+
+      - name: Build de producao
+        run: npm run build

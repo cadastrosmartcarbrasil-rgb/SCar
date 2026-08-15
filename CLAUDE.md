@@ -3,43 +3,74 @@
 > Memória do projeto. Leia isto no início de cada sessão em vez de varrer o repositório inteiro.
 > Mantenha este arquivo atualizado ao adicionar módulos/migrations (é barato e faz o projeto andar rápido).
 
-## Estado atual (retomar aqui) — atualizado nesta sessão
-- **Branch:** `claude/claude-md-opcao-x-98kfj5` (a partir do `6efa280`) · **entregas da sessão:**
-  (1) módulo **Cobrança** (`0024`+`0025`, `/cobrancas`): dashboard com KPIs/filtros, geração
-  automática na ativação, boletagem em lote (6 meses) e integração bancária (service pattern +
-  remessas); (2) módulo **Assistência 24h** (`0026`, `/assistencia`): parametrização de serviços,
-  trava financeira com alçada de liberação, cotação → OS → voucher e lançamento em Contas a Pagar;
-  (3) refino financeiro/operacional da 24h (`0027`): centro de custo obrigatório, OS editável com
-  auditoria e sincronia automática com o Contas a Pagar + filtro de centro de custo no DRE;
-  (4) refino do **CRM de Vendas** (`0028`): Kanban com drag-and-drop, status **Em Negociação**,
-  cotação editável com trava dos itens do plano e **política de desconto por franquia** com alçada.
-- **Migrations no repo:** `0001`..`0028` (todas validadas no harness pg local). **Deploy:** rodar as
-  novas no Supabase SQL Editor (na ordem) + no VPS `cd /opt/scar && git pull && sudo docker compose up -d --build`.
-- **Design system "cockpit"** aplicado (navy `#1E2B4D` + ciano `#139AD6`); sidebar usa a logo de
-  `Configurações → Empresa` (placa branca). Dashboard com KPIs de instrumento + tacômetro (inadimplência real).
-- **SAC** (`/sac`) veículo-first + lazy: lista resumida → clica → detalhe sob demanda → menu de serviços;
-  aba **Eventos**; banner de **alertas** do associado; marcadores (evento/assist 24h/alerta) na lista.
-- **Vitest** ativo (`npm test`, 76/76) — `sac.ts`, `cobranca.ts`, `pagamentos/`, `assistencia.ts` e `crm.ts` (Kanban, itens obrigatórios, desconto).
-- **Próximos passos oferecidos** (o usuário escolhe no próximo chat):
-  1. **Ligar o gateway real** (Asaas): implementar `AsaasGateway.emitir` (esqueleto pronto, endpoints
-     e mapeamento documentados) + webhook chamando `registrar_retorno_cobranca`/baixa do título.
-  2. **Termo de adesão**: gerar documento + página pública de **aceite eletrônico** (`contratos_adesao.token`,
-     nos moldes da cotação pública `/cotacao/[token]`).
-  3. **Módulo de Vistoria**: captura com upload de fotos (bucket) + status (tabelas `vistorias`/`vistoria_anexos` já existem).
-  4. **Portal do Associado**: login CPF + autosserviço reusando `SERVICOS_SAC` + `abrir_atendimento` + RLS por dono.
-  5. **Fila de atendimentos** p/ a equipe tramitar chamados (Assist 24h, Upgrade, etc.).
-- **Pendências técnicas conhecidas:** o envio ao banco usa o **MockGateway** (linha digitável/PIX
-  fictícios, determinísticos) até cadastrar a integração real em Configurações → Integrações bancárias;
-  `/api/boletos/emitir-lote` é a rotina ANTIGA (mock, cobra taxa_administrativa) — usar
-  `/api/v1/cobrancas/*`; preços dos opcionais novos (RCF 50/75/100mil, Carro Reserva 10/30d,
-  Vidros III/Completa, Assist VIP) começam em R$0 — cadastrar em Configurações → Produtos.
+## Estado atual (retomar aqui) — revisão consolidada
+
+**Um único projeto, um único repositório:** `cadastrosmartcarbrasil-rgb/scar`.
+O trabalho e o deploy acontecem no branch **`claude/claude-md-opcao-x-98kfj5`**
+(contém todo o histórico + os módulos novos). O `claude/scar-project-btasdf` é o
+branch padrão do GitHub e está parado em `953c53c` — não é outro projeto.
+
+### Comandos que resolvem 90% da sessão
+| Objetivo | Comando |
+|---|---|
+| Validar tudo antes de commitar | `npm run validate` (tipos → Vitest → migrations+testes de banco+schema → build) |
+| Só os testes de banco | `npm run test:db` · um módulo: `npm run test:db -- 0028` |
+| Regerar o `supabase/schema.sql` | `npm run schema` (rodar SEMPRE após criar/editar migration) |
+| Publicar no VPS | Windows: `.\scripts\deploy.ps1` · Linux/WSL: `npm run deploy` |
+| Achar a pasta do projeto no VPS | `.\scripts\deploy.ps1 -Descobrir` |
+
+O passo a passo do deploy (incluindo as migrations no Supabase) está em **`DEPLOY.md`**.
+CI no GitHub Actions (`.github/workflows/ci.yml`) roda a mesma validação a cada push.
+
+### O que foi entregue nesta fase (migrations 0024→0028)
+1. **Cobrança** (`0024`+`0025`, menu → `/cobrancas`): mensalidade por veículo
+   (`dia_vencimento` + `valor_mensalidade`), faturas → títulos, dashboard com KPIs e
+   filtros, geração automática na ativação do veículo, boletagem em lote (6 meses) e
+   camada de integração bancária (service pattern + remessas).
+2. **Assistência 24h** (`0026`, menu → `/assistencia`): catálogo de serviços com KM
+   excedente e limite por janela, trava financeira/cadastral com alçada de liberação,
+   cotação → OS → voucher (e-mail/WhatsApp) → Contas a Pagar.
+3. **Refino da 24h** (`0027`): centro de custo `ASSIST24` obrigatório, OS editável
+   (valores, trajeto, troca de prestador, cancelamento) com auditoria e sincronia
+   automática do título; DRE ganhou filtro por centro de custo e passou a considerar
+   as baixas de contas a pagar/receber.
+4. **CRM de Vendas** (`0028`): Kanban com drag-and-drop, status **Em Negociação**,
+   cotação editável com trava dos itens obrigatórios do plano e política de desconto
+   por franquia com alçada de Gestor/Diretor.
+
+### Estado de validação
+- **Migrations `0001`..`0028`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **Testes de banco:** 5 suites em `supabase/tests/*.test.sql` (0024, 0025, 0026, 0027, 0028) — todas passando.
+- **Vitest:** 76/76 (`sac.ts`, `cobranca.ts`, `pagamentos/`, `assistencia.ts`, `crm.ts`).
+- `npx tsc --noEmit` limpo e `npm run build` OK (43 rotas).
+
+### Pendências conhecidas (não são bugs, são decisões pendentes)
+- **Gateway bancário mockado:** `MockGateway` gera linha digitável/PIX fictícios e
+  determinísticos. Ligar o real = implementar `AsaasGateway.emitir` (esqueleto com
+  endpoints e mapeamento prontos) + webhook chamando `registrar_retorno_cobranca`.
+- **`/api/boletos/emitir-lote` é a rotina ANTIGA** (mock, cobra `taxa_administrativa`) —
+  usar `/api/v1/cobrancas/*`. Pode ser removida quando você autorizar.
+- **Cadastros que precisam de valor:** preços dos opcionais novos (RCF 50/75/100mil,
+  Carro Reserva 10/30d, Vidros III/Completa, Assist VIP) nascem em R$0
+  (Configurações → Produtos); serviços 24h vêm com valores de referência
+  (Assistência 24h → Serviços 24h); **desconto máximo por regional nasce 0%**
+  (Configurações → Regionais) — ou seja, hoje nenhum desconto passa sem alçada.
+- **DRE mudou de comportamento** no `0027`: passou a incluir as baixas de contas a
+  pagar/receber. Os números ficam maiores (e corretos) do que antes.
+
+### Próximos passos oferecidos (o usuário escolhe)
+1. **Ligar o gateway real** (Asaas) — emissão + webhook + baixa automática.
+2. **Termo de adesão** com aceite eletrônico (`contratos_adesao.token`, nos moldes de `/cotacao/[token]`).
+3. **Módulo de Vistoria** (tabelas `vistorias`/`vistoria_anexos` já existem; falta upload + status).
+4. **Portal do Associado** (login CPF, autosserviço reusando `SERVICOS_SAC` + RLS por dono).
+5. **Fila de atendimentos** para a equipe tramitar chamados.
 
 ## O que é
 Sistema de gestão para **associação de proteção veicular** (associados, frota, eventos/sinistros,
 financeiro, precificação por FIPE). Escala esperada: grande (maior que o "Smartvida").
 Prioridade: **segurança (RLS)** e **sempre validado** antes de commitar.
 
-- **Repo:** `cadastrosmartcarbrasil-rgb/scar` · **branch de trabalho:** `claude/scar-project-btasdf`
+- **Repo:** `cadastrosmartcarbrasil-rgb/scar` · **branch de trabalho/deploy:** `claude/claude-md-opcao-x-98kfj5`
 - **Produção:** `https://app.smartvidanet.com.br` (VPS KingHost, Docker + Caddy/HTTPS auto)
 - **Idioma:** UI e mensagens em português (sem acentuação em identificadores/SQL para evitar problemas).
 
@@ -61,8 +92,15 @@ Prioridade: **segurança (RLS)** e **sempre validado** antes de commitar.
 ```
 supabase/
   migrations/0001..NNNN_*.sql   # historico imutavel; FONTE DE VERDADE do banco
-  schema.sql                    # consolidado (todas as migrations) p/ colar no SQL Editor
+  schema.sql                    # consolidado (gerado por npm run schema) p/ o SQL Editor
+  tests/*.test.sql              # testes FUNCIONAIS do banco (um por modulo) + bootstrap.sql
   functions/                    # edge functions (webhook-banco, enviar-email)
+scripts/
+  db-test.sh                    # sobe pg, aplica migrations e roda supabase/tests em bancos isolados
+  schema-build.sh               # regenera supabase/schema.sql
+  deploy.ps1 / deploy.sh        # publica no VPS (roda o git pull DENTRO do servidor)
+DEPLOY.md                       # runbook de deploy (migrations + VPS + diagnostico)
+.github/workflows/ci.yml        # CI: tipos, Vitest, migrations+testes de banco, build
 src/
   lib/
     database.types.ts           # tipos do banco (MANUAL, ver "Convencao de tipos")
@@ -386,28 +424,34 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
 - Versões: `@supabase/ssr@^0.7`, `@supabase/supabase-js@2.111`. Não voltar o ssr para 0.5 (arity incompatível).
 
 ## Fluxo de validação (fazer SEMPRE antes de commitar)
-Há um Postgres 16 local para testar migrations de verdade (usuário `pgtest`, porta 5433, socket/host 127.0.0.1).
-Padrão usado nas sessões:
-1. Subir pg como `pgtest`, dropar/recriar schemas `public/auth/storage` + roles `authenticated/anon/service_role`.
-2. Aplicar `bootstrap.sql` (stubs de `auth.users`, `auth.uid()`, `storage.*`) e depois todas as migrations em ordem com `ON_ERROR_STOP`.
-3. Rodar testes funcionais (ex.: triggers, baixa financeira, motor de preço) — validar valores esperados.
-4. `npx tsc --noEmit` (0 erros) e `npm run build` (com env dummy) — 0 erros.
-5. Testes unitarios de logica pura: `npm test` (Vitest; ex.: `src/lib/sac.test.ts`).
-Só então: commit + push. (Docker build da imagem NÃO builda aqui: proxy bloqueia Docker Hub — validar só schema+tsc+build.)
+Um comando só, que é o mesmo que o CI roda:
+
+```bash
+npm run validate      # tsc --noEmit -> vitest -> migrations+testes de banco+schema.sql -> next build
+```
+
+Por trás dele:
+1. `npm run typecheck` — 0 erros (a convenção de tipos abaixo evita o bug de `never`).
+2. `npm test` — lógica pura espelhada do SQL (`sac`, `cobranca`, `pagamentos`, `assistencia`, `crm`).
+3. `npm run test:db -- --schema` — sobe um Postgres 16 local, aplica **todas** as
+   migrations em ordem, valida o `schema.sql` consolidado e roda cada suite de
+   `supabase/tests/` num banco isolado (clone por template, para um teste não sujar o outro).
+4. `npm run build` — build de produção com env dummy.
+
+**Ao criar uma migration nova:** escreva também a suite `supabase/tests/00NN_*.test.sql`
+(padrão: um bloco `do $$ ... $$` com `assert` e um `raise notice '=== ... PASSARAM ==='`
+no fim — o runner procura por "PASSARAM") e rode `npm run schema`.
 
 ## Commit / deploy
 - Commits em PT, com footer:
   `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>` + linha `Claude-Session:`.
-- **ATENÇÃO — branch de deploy:** o VPS (`/opt/scar`) hoje acompanha
-  **`claude/claude-md-opcao-x-98kfj5`** (branch desta sessão, que contém todo o histórico do
-  `claude/scar-project-btasdf` + o módulo Cobrança). O `claude/scar-project-btasdf` segue como
-  branch padrão do repo, parado em `953c53c`. **Mesmo repositório, dois branches** — não são
-  projetos diferentes. Se uma sessão futura for configurada para outro branch, avise o usuário
-  logo no início: senão o `git pull` do VPS não traz o código novo e a tela "some" (foi o que
-  aconteceu com o menu Cobrança).
-- Push para o branch da sessão; consolidar os branches só com autorização do usuário.
-- **Atualizar produção:** (A) rodar as migrations novas no Supabase SQL Editor, na ordem;
-  (B) no VPS: `cd /opt/scar && git pull origin <branch-da-sessao> && docker compose up -d --build`.
+- Push para **`claude/claude-md-opcao-x-98kfj5`** (branch de trabalho E de deploy).
+  Consolidar com o branch padrão só com autorização do usuário.
+- **Publicar:** `DEPLOY.md` tem o runbook. Resumo: (A) migrations novas no Supabase
+  SQL Editor, na ordem; (B) `.\scripts\deploy.ps1` (Windows) ou `npm run deploy`.
+- **O `git pull` roda DENTRO do VPS.** Rodar no PowerShell do Windows dá
+  `fatal: not a git repository` — foi o erro que mais custou tempo nesta fase.
+  Toda janela nova de terminal começa fora do servidor; o `ssh` precisa ser refeito.
 - Raw URL de arquivo (branch tem `/`, use `refs/heads/`):
   `https://raw.githubusercontent.com/cadastrosmartcarbrasil-rgb/scar/refs/heads/<branch>/<path>`
 
@@ -432,8 +476,30 @@ Só então: commit + push. (Docker build da imagem NÃO builda aqui: proxy bloqu
 - Comparar `old.status` (enum) com `''` quebra; usar `is [not] distinct from`.
 - `useSearchParams` exige `<Suspense>` no build.
 - Faltava pasta `public/` para o Docker (`COPY /app/public`) — já criada; Dockerfile faz `mkdir -p public`.
+- **Novo valor de enum não pode ser USADO na mesma transação** que o adicionou (55P04 no
+  SQL Editor). Padrão adotado: `alter type ... add value if not exists` + comparar como
+  TEXTO no resto do arquivo (`auth_papel()::text in ('assistencia_24h')`, `p_status not in
+  ('EM_NEGOCIACAO', ...)`, `status::text`). Vale para `auditoria` (0017), `assistencia_24h`
+  (0026) e `EM_NEGOCIACAO` (0028).
+- **Função que devolve uma linha após efeitos colaterais** precisa re-selecionar o registro
+  antes do `return` — senão devolve o estado velho (mordeu em `trocar_prestador_acionamento`,
+  que só preenche `lancamento_id` depois da sincronia).
+- **Auditoria com `now()` não ordena** duas edições da mesma transação (timestamp idêntico);
+  `acionamento_edicoes.created_at` usa `clock_timestamp()`.
+- **`coalesce` entre enum e texto não compila** — casteie antes: `coalesce(cat.tipo::text, ...)::tipo_categoria_dre`.
+- **Teste de banco que roda 2x no mesmo banco colide** (CPF/placa únicos). O runner cria um
+  banco por suite via `create database ... template scar_base`.
 
 ## Como me manter rápido nas próximas sessões
-- Leia este arquivo primeiro. Para achar código específico, use busca direcionada (não leia tudo).
-- `supabase/schema.sql` responde quase tudo sobre o banco sem abrir 13 migrations.
-- Ao entregar um módulo novo: atualize a lista "Módulos" e a lista de migrations aqui.
+- **Leia este arquivo primeiro** e vá direto ao ponto: busca direcionada (grep) no que
+  o "Mapa do repositório" e a lista de migrations indicarem. Não varra o repo.
+- `supabase/schema.sql` responde quase tudo sobre o banco sem abrir 28 migrations.
+- **Nunca reescreva migration já aplicada** — crie a próxima (`ALTER ...`).
+- **Rotina de entrega, sem exceção:** migration + suite em `supabase/tests/` +
+  espelho da lógica pura em `src/lib/*.ts` com Vitest + `npm run schema` +
+  `npm run validate` + commit/push + atualizar ESTE arquivo (Estado atual,
+  Migrations, Módulos e a seção do módulo).
+- **Não invente ambiente novo:** o harness de banco, os scripts de deploy e o CI já
+  estão no repositório. Se algo falhar, conserte o script — não crie um caminho paralelo.
+- **Antes de responder "não dá"** sobre acesso a repo/arquivo, confira o branch: o
+  deploy e o trabalho vivem em `claude/claude-md-opcao-x-98kfj5`.
