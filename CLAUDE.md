@@ -108,8 +108,10 @@ p/ Portal. Menu modular em `src/lib/sac-servicos.ts` (SERVICOS_SAC), API
 `/api/v1/sac/atendimento`, SAC refeito veiculo-first (seleciona 1 veiculo -> isola)).
 
 ## Módulos (status: todos funcionais)
-SAC / Atendimento (`/sac`: **veículo-first** — busca por Nome/CPF/Placa → seleciona 1 veículo →
-isola o item e abre o **menu modular de serviços** (`SERVICOS_SAC`): Sinistro, Assistência 24h,
+SAC / Atendimento (`/sac`: **veículo-first + lazy** — busca por Nome/CPF/Placa → `visao-360` traz
+uma **lista resumida leve** (Placa/Marca-Modelo/Ano/Status, sem opcionais); ao clicar, `/api/v1/sac/veiculo`
+carrega o **detalhe sob demanda** e isola o item, abrindo o **menu modular de serviços**
+(`SERVICOS_SAC`): Sinistro, Assistência 24h,
 Upgrade/Cobertura, 2ª via de Boleto, Vistoria/Acessórios, Cadastro/Cancelamento — cada um cria
 um `atendimento` vinculado ao `veiculo_id` (trava de propriedade no banco). Também: toggle de
 faturamento Agrupado↔Individual, status financeiro, elegibilidade de opcionais (janela flutuante

@@ -1,21 +1,22 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import {
-  Search, User, Car, Phone, Mail, Loader2, CheckCircle2, XCircle, ShieldCheck,
-  Layers, SplitSquareHorizontal, ChevronLeft, ChevronRight, ExternalLink, Send,
+  Search, User, Phone, Mail, Loader2, CheckCircle2, XCircle, ShieldCheck,
+  Layers, SplitSquareHorizontal, ChevronLeft, ExternalLink, Send,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Modal } from '@/components/ui/modal';
 import { Input, Select, Textarea, FormField } from '@/components/ui/field';
 import {
-  useSacBusca, useVisao360, useToggleFaturamento, useGerarBoleto,
-  useAbrirAtendimento, useAtendimentosVeiculo, type Visao360, type Veiculo360,
+  useSacBusca, useVisao360, useVeiculoDetalhe, useToggleFaturamento, useGerarBoleto,
+  useAbrirAtendimento, useAtendimentosVeiculo, type Visao360, type VeiculoDetalhe,
 } from '@/hooks/use-sac';
 import { SERVICOS_SAC, STATUS_ATENDIMENTO_LABEL, type ServicoSac } from '@/lib/sac-servicos';
+import { statusVeiculoResumo } from '@/lib/sac';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { OpcionalElegibilidade, TipoAtendimento, TipoFaturamento } from '@/lib/database.types';
 
@@ -26,7 +27,6 @@ export default function SacPage() {
   const busca = useSacBusca(q);
   const { data: v360, isLoading } = useVisao360(clienteId);
 
-  // Auto-seleciona quando o associado tem um unico veiculo.
   useEffect(() => {
     if (v360 && !veiculoId && v360.veiculos.length === 1) setVeiculoId(v360.veiculos[0].id);
   }, [v360, veiculoId]);
@@ -37,16 +37,11 @@ export default function SacPage() {
     setQ('');
   }
 
-  const veiculo = useMemo(
-    () => v360?.veiculos.find((x) => x.id === veiculoId),
-    [v360, veiculoId],
-  );
-
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">SAC · Atendimento</h1>
-        <p className="mt-0.5 text-sm text-slate-500">Selecione o associado, depois o veiculo. O atendimento fica isolado no item escolhido.</p>
+        <p className="mt-0.5 text-sm text-slate-500">Selecione o associado, depois o veiculo. O detalhe carrega ao clicar.</p>
       </div>
 
       {/* Busca global */}
@@ -77,13 +72,12 @@ export default function SacPage() {
       {v360 && (
         <div className="space-y-5">
           <AssociadoHeader v360={v360} />
-
-          {!veiculo ? (
-            <SeletorVeiculo v360={v360} onSelect={setVeiculoId} />
+          {!veiculoId ? (
+            <ListaVeiculos v360={v360} onSelect={setVeiculoId} />
           ) : (
             <AtendimentoVeiculo
-              v360={v360}
-              veiculo={veiculo}
+              clienteId={v360.associado.id}
+              veiculoId={veiculoId}
               podeTrocar={v360.veiculos.length > 1}
               onTrocar={() => setVeiculoId(undefined)}
             />
@@ -121,44 +115,57 @@ function AssociadoHeader({ v360 }: { v360: Visao360 }) {
   );
 }
 
-// Passo 1: escolher o veiculo (so a lista, sem detalhar nenhum ainda).
-function SeletorVeiculo({ v360, onSelect }: { v360: Visao360; onSelect: (id: string) => void }) {
+// Passo 1: LISTA resumida (tabela leve). So Placa, Marca/Modelo, Ano e Status.
+function ListaVeiculos({ v360, onSelect }: { v360: Visao360; onSelect: (id: string) => void }) {
+  if (v360.veiculos.length === 0) {
+    return <p className="text-sm text-slate-400">Este associado nao possui veiculos cadastrados.</p>;
+  }
   return (
     <div>
-      <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
-        <Car className="h-4 w-4 text-cyan-600" /> Selecione o veiculo do atendimento
-      </p>
-      {v360.veiculos.length === 0 ? (
-        <p className="text-sm text-slate-400">Este associado nao possui veiculos cadastrados.</p>
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {v360.veiculos.map((v) => (
-            <button key={v.id} onClick={() => onSelect(v.id)} className="group flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-cyan-400 hover:shadow-md">
-              <div>
-                <span className="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-sm font-semibold text-slate-700">{v.placa}</span>
-                <p className="mt-1.5 text-sm text-slate-600">{[v.marca, v.modelo].filter(Boolean).join(' ') || 'Veiculo'} {v.ano_modelo ?? ''}</p>
-                <p className="text-xs text-slate-400">{v.plano_nome ?? 'Sem plano'} · {v.status}</p>
-              </div>
-              <ChevronRight className="h-5 w-5 text-slate-300 transition group-hover:text-cyan-500" />
-            </button>
-          ))}
-        </div>
-      )}
+      <p className="mb-2 text-sm font-semibold text-slate-700">Veiculos ({v360.veiculos.length}) — clique para atender</p>
+      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
+              <th className="px-4 py-2.5">Placa</th>
+              <th className="px-4 py-2.5">Marca / Modelo</th>
+              <th className="px-4 py-2.5">Ano</th>
+              <th className="px-4 py-2.5">Status</th>
+              <th className="px-4 py-2.5"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {v360.veiculos.map((v) => {
+              const st = statusVeiculoResumo(v.status, v.inadimplente);
+              return (
+                <tr key={v.id} onClick={() => onSelect(v.id)} className="cursor-pointer border-b border-slate-50 transition last:border-0 hover:bg-cyan-50/40">
+                  <td className="px-4 py-2.5"><span className="rounded-md bg-slate-100 px-2 py-0.5 font-mono font-semibold text-slate-700">{v.placa}</span></td>
+                  <td className="px-4 py-2.5 text-slate-700">{[v.marca, v.modelo].filter(Boolean).join(' ') || '—'}</td>
+                  <td className="tnum px-4 py-2.5 text-slate-600">{v.ano_modelo ?? '—'}</td>
+                  <td className="px-4 py-2.5"><span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${st.cor}`}>{st.label}</span></td>
+                  <td className="px-4 py-2.5 text-right"><span className="text-xs font-medium text-cyan-700">Atender →</span></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
 
-// Passo 2: veiculo isolado + menu modular de servicos.
-function AtendimentoVeiculo({ v360, veiculo, podeTrocar, onTrocar }: {
-  v360: Visao360; veiculo: Veiculo360; podeTrocar: boolean; onTrocar: () => void;
+// Passo 2: detalhe do veiculo carregado SOB DEMANDA + menu modular de servicos.
+function AtendimentoVeiculo({ clienteId, veiculoId, podeTrocar, onTrocar }: {
+  clienteId: string; veiculoId: string; podeTrocar: boolean; onTrocar: () => void;
 }) {
+  const { data: veiculo, isLoading } = useVeiculoDetalhe(veiculoId);
   const [servico, setServico] = useState<ServicoSac | null>(null);
   const gerarBoleto = useGerarBoleto();
-  const { data: atendimentos } = useAtendimentosVeiculo(veiculo.id);
+  const { data: atendimentos } = useAtendimentosVeiculo(veiculoId);
 
   function acionar(s: ServicoSac) {
     if (s.modo === 'boleto') {
-      gerarBoleto.mutate({ cliente_id: v360.associado.id }, {
+      gerarBoleto.mutate({ cliente_id: clienteId }, {
         onSuccess: (d) => toast.success(`Faturas da competencia ${d.competencia} prontas (${d.faturas.length})`),
         onError: (e) => toast.error(e.message),
       });
@@ -171,65 +178,68 @@ function AtendimentoVeiculo({ v360, veiculo, podeTrocar, onTrocar }: {
     <div className="space-y-5">
       {podeTrocar && (
         <button onClick={onTrocar} className="inline-flex items-center gap-1 text-sm font-medium text-cyan-700 hover:text-cyan-800">
-          <ChevronLeft className="h-4 w-4" /> Trocar veiculo
+          <ChevronLeft className="h-4 w-4" /> Voltar a lista de veiculos
         </button>
       )}
 
-      {/* Veiculo isolado */}
-      <VeiculoDetalhe v360={v360} veiculo={veiculo} />
+      {isLoading || !veiculo ? (
+        <Card><CardContent className="py-10 text-center text-sm text-slate-400"><Loader2 className="mx-auto h-5 w-5 animate-spin" /> Carregando detalhes do veiculo...</CardContent></Card>
+      ) : (
+        <>
+          <VeiculoDetalheCard clienteId={clienteId} veiculo={veiculo} />
 
-      {/* Menu modular de servicos */}
-      <div>
-        <p className="mb-2 text-sm font-semibold text-slate-700">O que voce precisa para este veiculo?</p>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {SERVICOS_SAC.map((s) => (
-            <button key={s.id} onClick={() => acionar(s)} disabled={s.modo === 'boleto' && gerarBoleto.isPending}
-              className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-cyan-400 hover:shadow-md disabled:opacity-60">
-              <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${s.cor}`}>
-                {s.modo === 'boleto' && gerarBoleto.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <s.icon className="h-5 w-5" />}
-              </span>
-              <span>
-                <span className="block text-sm font-semibold text-slate-800">{s.titulo}</span>
-                <span className="block text-xs text-slate-500">{s.descricao}</span>
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Acompanhamento */}
-      {(atendimentos?.length ?? 0) > 0 && (
-        <Card>
-          <CardContent className="pt-5">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Atendimentos deste veiculo</p>
-            <ul className="divide-y divide-slate-100">
-              {atendimentos!.map((a) => (
-                <li key={a.id} className="flex items-center justify-between gap-2 py-2 text-sm">
-                  <span className="flex items-center gap-2">
-                    <span className="font-mono text-xs text-slate-400">{a.numero_protocolo}</span>
-                    <b className="text-slate-700">{a.assunto || a.tipo}</b>
+          <div>
+            <p className="mb-2 text-sm font-semibold text-slate-700">O que voce precisa para este veiculo?</p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {SERVICOS_SAC.map((s) => (
+                <button key={s.id} onClick={() => acionar(s)} disabled={s.modo === 'boleto' && gerarBoleto.isPending}
+                  className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-cyan-400 hover:shadow-md disabled:opacity-60">
+                  <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${s.cor}`}>
+                    {s.modo === 'boleto' && gerarBoleto.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <s.icon className="h-5 w-5" />}
                   </span>
-                  <span className="flex items-center gap-2 text-xs text-slate-400">
-                    {formatDate(a.created_at)}
-                    <span className={`rounded-full px-2 py-0.5 font-medium ${STATUS_ATENDIMENTO_LABEL[a.status].cor}`}>{STATUS_ATENDIMENTO_LABEL[a.status].label}</span>
+                  <span>
+                    <span className="block text-sm font-semibold text-slate-800">{s.titulo}</span>
+                    <span className="block text-xs text-slate-500">{s.descricao}</span>
                   </span>
-                </li>
+                </button>
               ))}
-            </ul>
-          </CardContent>
-        </Card>
-      )}
+            </div>
+          </div>
 
-      {servico && <ServicoModal servico={servico} veiculo={veiculo} onClose={() => setServico(null)} />}
+          {(atendimentos?.length ?? 0) > 0 && (
+            <Card>
+              <CardContent className="pt-5">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Atendimentos deste veiculo</p>
+                <ul className="divide-y divide-slate-100">
+                  {atendimentos!.map((a) => (
+                    <li key={a.id} className="flex items-center justify-between gap-2 py-2 text-sm">
+                      <span className="flex items-center gap-2">
+                        <span className="font-mono text-xs text-slate-400">{a.numero_protocolo}</span>
+                        <b className="text-slate-700">{a.assunto || a.tipo}</b>
+                      </span>
+                      <span className="flex items-center gap-2 text-xs text-slate-400">
+                        {formatDate(a.created_at)}
+                        <span className={`rounded-full px-2 py-0.5 font-medium ${STATUS_ATENDIMENTO_LABEL[a.status].cor}`}>{STATUS_ATENDIMENTO_LABEL[a.status].label}</span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
+
+          {servico && <ServicoModal servico={servico} veiculo={veiculo} onClose={() => setServico(null)} />}
+        </>
+      )}
     </div>
   );
 }
 
-function VeiculoDetalhe({ v360, veiculo }: { v360: Visao360; veiculo: Veiculo360 }) {
+function VeiculoDetalheCard({ clienteId, veiculo }: { clienteId: string; veiculo: VeiculoDetalhe }) {
   const toggle = useToggleFaturamento();
   const setModo = (tipo: TipoFaturamento) => {
     if (tipo === veiculo.tipo_faturamento) return;
-    toggle.mutate({ veiculo_id: veiculo.id, tipo, cliente_id: v360.associado.id }, {
+    toggle.mutate({ veiculo_id: veiculo.id, tipo, cliente_id: clienteId }, {
       onSuccess: () => toast.success('Modo de faturamento atualizado'),
       onError: (e) => toast.error(e.message),
     });
@@ -258,8 +268,12 @@ function VeiculoDetalhe({ v360, veiculo }: { v360: Visao360; veiculo: Veiculo360
 
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {dado('Chassi', veiculo.chassi)}
+          {dado('Renavam', veiculo.renavam)}
           {dado('Ano', veiculo.ano_modelo)}
           {dado('Cor', veiculo.cor)}
+          {dado('Combustivel', veiculo.combustivel)}
+          {dado('Categoria', veiculo.categoria)}
+          {dado('FIPE', veiculo.valor_fipe != null ? formatCurrency(veiculo.valor_fipe) : null)}
           {dado('Plano', veiculo.plano_nome)}
         </div>
 
@@ -296,8 +310,7 @@ function OpcionalRow({ o }: { o: OpcionalElegibilidade }) {
   );
 }
 
-// Fluxo especifico do servico (chamado), com dados do veiculo pre-carregados.
-function ServicoModal({ servico, veiculo, onClose }: { servico: ServicoSac; veiculo: Veiculo360; onClose: () => void }) {
+function ServicoModal({ servico, veiculo, onClose }: { servico: ServicoSac; veiculo: VeiculoDetalhe; onClose: () => void }) {
   const abrir = useAbrirAtendimento();
   const [tipo, setTipo] = useState<TipoAtendimento>(servico.tipos[0].value);
   const [subtipo, setSubtipo] = useState(servico.subtipos?.[0] ?? '');
@@ -307,14 +320,7 @@ function ServicoModal({ servico, veiculo, onClose }: { servico: ServicoSac; veic
   function enviar(e: React.FormEvent) {
     e.preventDefault();
     abrir.mutate(
-      {
-        veiculo_id: veiculo.id,
-        tipo,
-        canal: 'SAC_INTERNO',
-        assunto,
-        descricao,
-        dados: subtipo ? { subtipo } : {},
-      },
+      { veiculo_id: veiculo.id, tipo, canal: 'SAC_INTERNO', assunto, descricao, dados: subtipo ? { subtipo } : {} },
       {
         onSuccess: (d) => { toast.success(`Solicitacao aberta: ${d.atendimento.numero_protocolo}`); onClose(); },
         onError: (err) => toast.error(err.message),
@@ -325,7 +331,6 @@ function ServicoModal({ servico, veiculo, onClose }: { servico: ServicoSac; veic
   return (
     <Modal open onClose={onClose} title={servico.titulo}>
       <form onSubmit={enviar} className="space-y-3">
-        {/* Veiculo pre-carregado (read-only) */}
         <div className="rounded-lg bg-slate-50 p-3 text-sm">
           <p className="text-[11px] font-semibold uppercase text-slate-400">Veiculo do atendimento</p>
           <p className="mt-0.5 font-medium text-slate-700">

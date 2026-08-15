@@ -115,6 +115,36 @@ export interface StatusFinanceiro {
   adimplente: boolean;
 }
 
+// Inadimplencia por veiculo: titulo vencido ligado ao veiculo, ou titulo
+// agrupado (veiculo_id nulo) vencido quando o veiculo e faturado de forma agrupada.
+export interface TituloVeiculo {
+  veiculo_id: string | null;
+  status: 'pendente' | 'pago' | 'cancelado' | 'vencido';
+  data_vencimento: string;
+}
+export function veiculoInadimplente(
+  veiculo: { id: string; tipo_faturamento: TipoFaturamento },
+  titulos: TituloVeiculo[],
+  hoje: Date = new Date(),
+): boolean {
+  const hojeStr = hoje.toISOString().slice(0, 10);
+  const vencido = (t: TituloVeiculo) => t.status === 'vencido' || (t.status === 'pendente' && t.data_vencimento < hojeStr);
+  return titulos.some(
+    (t) => vencido(t) && (t.veiculo_id === veiculo.id || (t.veiculo_id === null && veiculo.tipo_faturamento === 'AGRUPADO_ASSOCIADO')),
+  );
+}
+
+// Rotulo/cor de status para a LISTA resumida (Ativo/Inadimplente/Inativo/Cancelado...).
+export function statusVeiculoResumo(status: string, inadimplente: boolean): { label: string; cor: string } {
+  if (status === 'baixado') return { label: 'Cancelado', cor: 'bg-slate-100 text-slate-600' };
+  if (status === 'inativo' || status === 'excluido') return { label: 'Inativo', cor: 'bg-slate-100 text-slate-600' };
+  if (status === 'suspenso') return { label: 'Suspenso', cor: 'bg-amber-50 text-amber-700' };
+  if (status === 'vistoria_pendente') return { label: 'Vistoria pendente', cor: 'bg-amber-50 text-amber-700' };
+  if (status === 'em_evento') return { label: 'Em evento', cor: 'bg-cyan-50 text-cyan-700' };
+  if (inadimplente) return { label: 'Inadimplente', cor: 'bg-rose-50 text-rose-700' };
+  return { label: 'Ativo', cor: 'bg-emerald-50 text-emerald-700' };
+}
+
 export function resumoFinanceiro(titulos: TituloResumo[], hoje: Date = new Date()): StatusFinanceiro {
   let abertos = 0, pagos = 0, vencidos = 0, valorEmAberto = 0;
   const hojeStr = hoje.toISOString().slice(0, 10);

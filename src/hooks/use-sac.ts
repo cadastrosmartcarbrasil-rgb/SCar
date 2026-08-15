@@ -3,28 +3,31 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   ClientesRow, VeiculosRow, FaturasRow, OpcionalElegibilidade, TipoFaturamento,
-  AtendimentosRow, TipoAtendimento, CanalAtendimento, Json,
+  AtendimentosRow, TipoAtendimento, CanalAtendimento, Json, StatusVeiculo,
 } from '@/lib/database.types';
 import type { StatusFinanceiro } from '@/lib/sac';
 
-export interface Veiculo360 extends VeiculosRow {
+// Item da LISTA resumida (leve): so o essencial para identificar o veiculo.
+export interface VeiculoResumo {
+  id: string;
+  placa: string;
+  marca: string | null;
+  modelo: string | null;
+  ano_modelo: number | null;
+  status: StatusVeiculo;
+  tipo_faturamento: TipoFaturamento;
+  plano_nome: string | null;
+  inadimplente: boolean;
+}
+// DETALHE completo (carregado sob demanda ao clicar no veiculo).
+export interface VeiculoDetalhe extends VeiculosRow {
   plano_nome: string | null;
   opcionais: OpcionalElegibilidade[];
 }
-export interface TituloLite {
-  id: string;
-  veiculo_id: string | null;
-  valor: number;
-  data_vencimento: string;
-  status: 'pendente' | 'pago' | 'cancelado' | 'vencido';
-  url_boleto: string | null;
-  linha_digitavel: string | null;
-}
 export interface Visao360 {
   associado: ClientesRow;
-  veiculos: Veiculo360[];
-  financeiro: { resumo: StatusFinanceiro; titulos: TituloLite[] };
-  faturas: FaturasRow[];
+  veiculos: VeiculoResumo[];
+  financeiro: { resumo: StatusFinanceiro };
 }
 export interface BuscaHit {
   cliente_id: string;
@@ -60,11 +63,28 @@ export function useVisao360(clienteId?: string) {
   });
 }
 
+// Detalhe do veiculo — carregado SOB DEMANDA (lazy) ao selecionar na lista.
+export function useVeiculoDetalhe(veiculoId?: string) {
+  return useQuery<VeiculoDetalhe>({
+    queryKey: ['sac', 'veiculo', veiculoId ?? 'none'],
+    enabled: !!veiculoId,
+    queryFn: async () => {
+      const r = await jget<{ veiculo: VeiculosRow; plano_nome: string | null; opcionais: OpcionalElegibilidade[] }>(
+        `/api/v1/sac/veiculo?veiculo_id=${veiculoId}`,
+      );
+      return { ...r.veiculo, plano_nome: r.plano_nome, opcionais: r.opcionais };
+    },
+  });
+}
+
 export function useToggleFaturamento() {
   const qc = useQueryClient();
   return useMutation<unknown, Error, { veiculo_id: string; tipo: TipoFaturamento; cliente_id: string }>({
     mutationFn: (v) => jpost('/api/v1/sac/faturamento', { veiculo_id: v.veiculo_id, tipo: v.tipo }),
-    onSuccess: (_d, v) => qc.invalidateQueries({ queryKey: ['sac', '360', v.cliente_id] }),
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: ['sac', '360', v.cliente_id] });
+      qc.invalidateQueries({ queryKey: ['sac', 'veiculo', v.veiculo_id] });
+    },
   });
 }
 

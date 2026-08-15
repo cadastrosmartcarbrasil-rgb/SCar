@@ -3,9 +3,12 @@ import {
   calcularElegibilidade,
   montarFaturas,
   resumoFinanceiro,
+  veiculoInadimplente,
+  statusVeiculoResumo,
   type OpcionalCfg,
   type EventoUso,
   type VeiculoFaturavel,
+  type TituloVeiculo,
 } from './sac';
 
 const HOJE = new Date('2026-08-15T12:00:00Z');
@@ -80,6 +83,38 @@ describe('montarFaturas — troca de modo Agrupado <-> Individual', () => {
     );
     expect(plano.agrupada).toBeNull();
     expect(plano.individuais).toHaveLength(2);
+  });
+});
+
+describe('veiculoInadimplente / statusVeiculoResumo (lista resumida)', () => {
+  const veic = { id: 'a', tipo_faturamento: 'AGRUPADO_ASSOCIADO' as const };
+  const titulos: TituloVeiculo[] = [
+    { veiculo_id: 'a', status: 'pago', data_vencimento: '2026-06-10' },
+    { veiculo_id: 'b', status: 'vencido', data_vencimento: '2026-07-10' }, // de outro veiculo
+  ];
+
+  it('nao inadimplente quando o vencido e de outro veiculo', () => {
+    expect(veiculoInadimplente(veic, titulos, HOJE)).toBe(false);
+  });
+
+  it('inadimplente com titulo vencido do proprio veiculo', () => {
+    expect(veiculoInadimplente(veic, [{ veiculo_id: 'a', status: 'vencido', data_vencimento: '2026-07-10' }], HOJE)).toBe(true);
+  });
+
+  it('agrupado: titulo consolidado (veiculo_id nulo) vencido conta como inadimplente', () => {
+    expect(veiculoInadimplente(veic, [{ veiculo_id: null, status: 'pendente', data_vencimento: '2026-07-10' }], HOJE)).toBe(true);
+  });
+
+  it('individual: titulo consolidado vencido NAO afeta o veiculo', () => {
+    const ind = { id: 'a', tipo_faturamento: 'INDIVIDUAL_VEICULO' as const };
+    expect(veiculoInadimplente(ind, [{ veiculo_id: null, status: 'vencido', data_vencimento: '2026-07-10' }], HOJE)).toBe(false);
+  });
+
+  it('rotulo de status: cancelado/inativo/inadimplente/ativo', () => {
+    expect(statusVeiculoResumo('baixado', false).label).toBe('Cancelado');
+    expect(statusVeiculoResumo('inativo', false).label).toBe('Inativo');
+    expect(statusVeiculoResumo('ativo', true).label).toBe('Inadimplente');
+    expect(statusVeiculoResumo('ativo', false).label).toBe('Ativo');
   });
 });
 
