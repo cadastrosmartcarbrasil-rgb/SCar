@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
   Search, ShieldCheck, ShieldAlert, LifeBuoy, Loader2, Lock, Send, CheckCircle2, Ban,
-  Copy, MessageCircle, FileText, Truck, History,
+  Copy, MessageCircle, FileText, Truck, History, Pencil, Repeat, ClipboardList,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
@@ -14,13 +14,14 @@ import {
   useServicosAssistencia, useAbrirAcionamento, usePrestadoresDoServico, useCotacoes,
   useRegistrarCotacao, useConfirmarPrestador, useConcluirAcionamento, useCancelarAcionamento,
   useEnviarVoucher, useAcionamento, useHistoricoAssistenciaVeiculo,
-  type VeiculoAssistencia, type AbrirAcionamentoInput,
+  useAtualizarAcionamento, useTrocarPrestador, useEdicoesAcionamento,
+  type VeiculoAssistencia, type AbrirAcionamentoInput, type AcionamentoComRel,
 } from '@/hooks/use-assistencia';
 import {
   avaliarBloqueio, rotuloLimite, calcularKmExcedente, calcularTotalOS,
   STATUS_ACIONAMENTO_LABEL,
 } from '@/lib/assistencia';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 import type { ServicosAssistenciaRow } from '@/lib/database.types';
 
 export function PainelAcionamento({ placaInicial }: { placaInicial?: string | null }) {
@@ -371,6 +372,9 @@ export function OrdemServico({ acionamentoId, onVoltar }: { acionamentoId: strin
   const [cot, setCot] = useState({ fornecedor_id: '', valor: 0 as number | null, valor_km: 0 as number | null, prazo: '' });
   const [kmReal, setKmReal] = useState('');
   const [textoVoucher, setTextoVoucher] = useState<{ texto: string; whatsapp: string | null } | null>(null);
+  const [editando, setEditando] = useState(false);
+  const [trocando, setTrocando] = useState(false);
+  const [cancelando, setCancelando] = useState(false);
 
   const servico = useMemo(
     () => servicos?.find((s) => s.id === a?.servico_id) ?? null,
@@ -584,19 +588,14 @@ export function OrdemServico({ acionamentoId, onVoltar }: { acionamentoId: strin
                 >
                   <CheckCircle2 className="h-4 w-4" /> Concluir OS
                 </Button>
-                <Button
-                  variant="ghost"
-                  className="text-rose-600"
-                  onClick={() => {
-                    const motivo = window.prompt('Motivo do cancelamento:');
-                    if (!motivo) return;
-                    cancelar.mutate(
-                      { acionamento_id: a.id, motivo },
-                      { onSuccess: () => toast.success('Acionamento cancelado'), onError: (e) => toast.error(e.message) },
-                    );
-                  }}
-                >
-                  <Ban className="h-4 w-4" /> Cancelar
+                <Button variant="secondary" onClick={() => setEditando(true)}>
+                  <Pencil className="h-4 w-4" /> Editar OS
+                </Button>
+                <Button variant="secondary" onClick={() => setTrocando(true)}>
+                  <Repeat className="h-4 w-4" /> Trocar prestador
+                </Button>
+                <Button variant="ghost" className="text-rose-600" onClick={() => setCancelando(true)}>
+                  <Ban className="h-4 w-4" /> Cancelar OS
                 </Button>
               </>
             )}
@@ -631,6 +630,319 @@ export function OrdemServico({ acionamentoId, onVoltar }: { acionamentoId: strin
           )}
         </div>
       )}
+
+      {/* Auditoria das edicoes */}
+      <TrilhaEdicoes acionamentoId={a.id} />
+
+      {editando && (
+        <ModalEditarOS acionamento={a} servico={servico} onClose={() => setEditando(false)} />
+      )}
+      {trocando && (
+        <ModalTrocarPrestador acionamento={a} onClose={() => setTrocando(false)} />
+      )}
+      {cancelando && (
+        <ModalCancelar
+          onClose={() => setCancelando(false)}
+          onConfirmar={(motivo) =>
+            cancelar.mutate(
+              { acionamento_id: a.id, motivo },
+              {
+                onSuccess: () => { toast.success('Acionamento cancelado'); setCancelando(false); },
+                onError: (e) => toast.error(e.message),
+              },
+            )
+          }
+          carregando={cancelar.isPending}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Edicao dinamica: valores, trajeto e KM (sincroniza o Contas a Pagar)
+// ---------------------------------------------------------------------------
+function ModalEditarOS({
+  acionamento, servico, onClose,
+}: {
+  acionamento: AcionamentoComRel;
+  servico: ServicosAssistenciaRow | null;
+  onClose: () => void;
+}) {
+  const atualizar = useAtualizarAcionamento();
+  const destinoAtual = (acionamento.destino ?? {}) as Record<string, string | undefined>;
+  const [form, setForm] = useState({
+    valor_servico: Number(acionamento.valor_servico) as number | null,
+    km_excedente: String(acionamento.km_excedente ?? 0),
+    valor_km: (Number(acionamento.km_excedente) > 0
+      ? Number(acionamento.valor_km_excedente) / Number(acionamento.km_excedente)
+      : Number(servico?.valor_km_excedente ?? 0)) as number | null,
+    km_percorrido: acionamento.km_percorrido != null ? String(acionamento.km_percorrido) : '',
+    destino: destinoAtual.logradouro ?? '',
+    prazo: acionamento.prazo_estimado_min != null ? String(acionamento.prazo_estimado_min) : '',
+    observacoes: acionamento.observacoes ?? '',
+    motivo: '',
+  });
+
+  const previa = calcularTotalOS(
+    servico ?? { cobra_km_excedente: false, valor_km_excedente: 0, km_franquia: 0 },
+    form.valor_servico ?? 0,
+    Number(form.km_excedente || 0),
+    form.valor_km,
+  );
+
+  function salvar(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.motivo.trim()) return toast.error('Descreva o motivo da alteracao (fica na auditoria)');
+    atualizar.mutate(
+      {
+        acionamento_id: acionamento.id,
+        valor_servico: form.valor_servico,
+        km_excedente: Number(form.km_excedente || 0),
+        valor_km: form.valor_km,
+        km_percorrido: form.km_percorrido ? Number(form.km_percorrido) : null,
+        destino: form.destino ? { logradouro: form.destino } : null,
+        prazo_min: form.prazo ? Number(form.prazo) : null,
+        observacoes: form.observacoes || null,
+        motivo: form.motivo,
+      },
+      {
+        onSuccess: (os) => {
+          toast.success(`OS atualizada — novo total ${formatCurrency(Number(os.valor_total))}`);
+          onClose();
+        },
+        onError: (e) => toast.error(e.message),
+      },
+    );
+  }
+
+  return (
+    <Modal open onClose={onClose} title={`Editar ${acionamento.codigo_os ?? acionamento.protocolo}`}>
+      <form onSubmit={salvar} className="space-y-3">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <FormField label="Valor do servico">
+            <MoneyInput value={form.valor_servico} onChange={(v) => setForm({ ...form, valor_servico: v })} />
+          </FormField>
+          {servico?.cobra_km_excedente && (
+            <>
+              <FormField label="KM excedente">
+                <Input type="number" min={0} value={form.km_excedente}
+                  onChange={(e) => setForm({ ...form, km_excedente: e.target.value })} />
+              </FormField>
+              <FormField label="Valor do KM">
+                <MoneyInput value={form.valor_km} onChange={(v) => setForm({ ...form, valor_km: v })} />
+              </FormField>
+            </>
+          )}
+          <FormField label="KM percorrido">
+            <Input type="number" min={0} value={form.km_percorrido}
+              onChange={(e) => setForm({ ...form, km_percorrido: e.target.value })} />
+          </FormField>
+          <FormField label="Destino do reboque" className="sm:col-span-2">
+            <Input value={form.destino} onChange={(e) => setForm({ ...form, destino: e.target.value })}
+              placeholder="Oficina, residencia, patio..." />
+          </FormField>
+          <FormField label="Prazo (min)">
+            <Input type="number" min={0} value={form.prazo} onChange={(e) => setForm({ ...form, prazo: e.target.value })} />
+          </FormField>
+          <FormField label="Observacoes">
+            <Input value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} />
+          </FormField>
+          <FormField label="Motivo da alteracao (auditoria)" className="sm:col-span-2">
+            <Input value={form.motivo} onChange={(e) => setForm({ ...form, motivo: e.target.value })}
+              placeholder="Ex.: trajeto maior que o previsto" />
+          </FormField>
+        </div>
+
+        <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
+          Novo total: <strong className="tnum">{formatCurrency(previa.total)}</strong>
+          {previa.valorKmExcedente > 0 && (
+            <span className="text-xs text-slate-400"> (servico {formatCurrency(previa.valorServico)} + km {formatCurrency(previa.valorKmExcedente)})</span>
+          )}
+          <span className="mt-1 block text-xs text-slate-500">
+            O titulo no Contas a Pagar e recalculado automaticamente, desde que ainda nao tenha baixa.
+          </span>
+        </p>
+
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>
+          <Button type="submit" disabled={atualizar.isPending}>Salvar alteracoes</Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Troca de prestador (cancela o lancamento anterior e gera o novo)
+// ---------------------------------------------------------------------------
+function ModalTrocarPrestador({ acionamento, onClose }: { acionamento: AcionamentoComRel; onClose: () => void }) {
+  const { data: prestadores } = usePrestadoresDoServico(acionamento.servico_id);
+  const trocar = useTrocarPrestador();
+  const [form, setForm] = useState({ fornecedor_id: '', valor: null as number | null, valor_km: null as number | null, prazo: '', motivo: '' });
+
+  function confirmar(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.fornecedor_id) return toast.error('Selecione o novo prestador');
+    if (!form.motivo.trim()) return toast.error('Informe a justificativa da troca');
+    trocar.mutate(
+      {
+        acionamento_id: acionamento.id,
+        fornecedor_id: form.fornecedor_id,
+        motivo: form.motivo,
+        valor_servico: form.valor,
+        valor_km: form.valor_km,
+        prazo_min: form.prazo ? Number(form.prazo) : null,
+      },
+      {
+        onSuccess: (os) => {
+          toast.success(`Prestador trocado — novo total ${formatCurrency(Number(os.valor_total))}`);
+          onClose();
+        },
+        onError: (e) => toast.error(e.message),
+      },
+    );
+  }
+
+  return (
+    <Modal open onClose={onClose} title="Trocar prestador da OS">
+      <form onSubmit={confirmar} className="space-y-3">
+        <p className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
+          O lancamento do prestador atual ({acionamento.fornecedores?.razao_social ?? '-'}) sera
+          cancelado no Contas a Pagar (se ainda nao tiver baixa) e um novo sera gerado para o
+          substituto. O voucher precisa ser reenviado.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <FormField label="Novo prestador" className="sm:col-span-2">
+            <Select
+              value={form.fornecedor_id}
+              onChange={(e) => {
+                const p = prestadores?.find((x) => x.fornecedor_id === e.target.value);
+                setForm({
+                  ...form,
+                  fornecedor_id: e.target.value,
+                  valor: p?.valor_acordado ?? null,
+                  valor_km: p?.valor_km ?? null,
+                  prazo: p?.prazo_medio_min ? String(p.prazo_medio_min) : '',
+                });
+              }}
+            >
+              <option value="">Selecione...</option>
+              {(prestadores ?? [])
+                .filter((p) => p.fornecedor_id !== acionamento.prestador_id)
+                .map((p) => (
+                  <option key={p.fornecedor_id} value={p.fornecedor_id}>
+                    {p.razao_social}{p.cobertura ? ` — ${p.cobertura}` : ''}
+                  </option>
+                ))}
+            </Select>
+          </FormField>
+          <FormField label="Valor negociado">
+            <MoneyInput value={form.valor} onChange={(v) => setForm({ ...form, valor: v })} />
+          </FormField>
+          <FormField label="Valor do KM">
+            <MoneyInput value={form.valor_km} onChange={(v) => setForm({ ...form, valor_km: v })} />
+          </FormField>
+          <FormField label="Prazo (min)">
+            <Input type="number" min={0} value={form.prazo} onChange={(e) => setForm({ ...form, prazo: e.target.value })} />
+          </FormField>
+          <FormField label="Justificativa (obrigatoria)" className="sm:col-span-2">
+            <Input value={form.motivo} onChange={(e) => setForm({ ...form, motivo: e.target.value })}
+              placeholder="Ex.: guincho desistiu / demora acima do combinado" />
+          </FormField>
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={onClose}>Voltar</Button>
+          <Button type="submit" disabled={trocar.isPending}>Confirmar troca</Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Cancelamento com justificativa obrigatoria
+// ---------------------------------------------------------------------------
+function ModalCancelar({
+  onClose, onConfirmar, carregando,
+}: {
+  onClose: () => void;
+  onConfirmar: (motivo: string) => void;
+  carregando?: boolean;
+}) {
+  const [motivo, setMotivo] = useState('');
+  return (
+    <Modal open onClose={onClose} title="Cancelar acionamento">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!motivo.trim()) return toast.error('A justificativa e obrigatoria');
+          onConfirmar(motivo);
+        }}
+        className="space-y-3"
+      >
+        <p className="text-sm text-slate-600">
+          O lancamento no Contas a Pagar tambem sera cancelado, se ainda nao tiver baixa.
+        </p>
+        <FormField label="Justificativa (obrigatoria)">
+          <Input value={motivo} onChange={(e) => setMotivo(e.target.value)}
+            placeholder="Ex.: associado resolveu com terceiro / prestador nao compareceu" />
+        </FormField>
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={onClose}>Voltar</Button>
+          <Button type="submit" variant="danger" disabled={carregando}>Cancelar OS</Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Trilha de auditoria da OS
+// ---------------------------------------------------------------------------
+const CAMPO_LABEL: Record<string, string> = {
+  prestador: 'Prestador',
+  valor_servico: 'Valor do servico',
+  km_excedente: 'KM excedente',
+  valor_km_excedente: 'Valor do KM excedente',
+  valor_total: 'Valor total',
+  destino: 'Destino',
+  km_percorrido: 'KM percorrido',
+  prazo_estimado_min: 'Prazo (min)',
+  status: 'Status',
+  contas_a_pagar: 'Contas a pagar',
+};
+
+function TrilhaEdicoes({ acionamentoId }: { acionamentoId: string }) {
+  const { data: edicoes } = useEdicoesAcionamento(acionamentoId);
+  if (!edicoes || edicoes.length === 0) return null;
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white">
+      <div className="flex items-center gap-2 border-b border-slate-200 px-5 py-3">
+        <ClipboardList className="h-4 w-4 text-brand-700" />
+        <h3 className="text-sm font-semibold text-slate-900">Historico de alteracoes</h3>
+      </div>
+      <ul className="divide-y divide-slate-100">
+        {edicoes.map((e) => (
+          <li key={e.id} className="px-5 py-2 text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-slate-700">
+                <b>{CAMPO_LABEL[e.campo] ?? e.campo}</b>
+                {e.valor_anterior || e.valor_novo ? (
+                  <span className="text-slate-500">
+                    {' '}: {e.valor_anterior ?? '—'} → {e.valor_novo ?? '—'}
+                  </span>
+                ) : null}
+              </span>
+              <span className="text-xs text-slate-400">
+                {formatDateTime(e.created_at)} · {e.operador}
+              </span>
+            </div>
+            {e.motivo && <p className="text-xs text-slate-500">Motivo: {e.motivo}</p>}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

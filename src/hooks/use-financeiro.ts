@@ -14,19 +14,25 @@ import type {
 export interface LancamentoComRel extends LancamentosFinanceirosRow {
   fornecedores?: { razao_social: string } | null;
   clientes?: { nome_razao_social: string } | null;
+  centros_custo?: { nome: string } | null;
 }
 
-export function useLancamentos(filtro?: { tipo?: TipoMovimentacao; status?: StatusLancamento }) {
+export function useLancamentos(filtro?: {
+  tipo?: TipoMovimentacao;
+  status?: StatusLancamento;
+  centroCustoId?: string | null;
+}) {
   const supabase = createClient();
   return useQuery<LancamentoComRel[]>({
-    queryKey: ['lancamentos', filtro?.tipo ?? 'all', filtro?.status ?? 'all'],
+    queryKey: ['lancamentos', filtro?.tipo ?? 'all', filtro?.status ?? 'all', filtro?.centroCustoId ?? 'all'],
     queryFn: async () => {
       let q = supabase
         .from('lancamentos_financeiros')
-        .select('*, fornecedores(razao_social), clientes(nome_razao_social)')
+        .select('*, fornecedores(razao_social), clientes(nome_razao_social), centros_custo(nome)')
         .order('data_vencimento', { ascending: true });
       if (filtro?.tipo) q = q.eq('tipo', filtro.tipo);
       if (filtro?.status) q = q.eq('status', filtro.status);
+      if (filtro?.centroCustoId) q = q.eq('centro_custo_id', filtro.centroCustoId);
       const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as unknown as LancamentoComRel[];

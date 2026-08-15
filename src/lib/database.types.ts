@@ -766,6 +766,40 @@ export type PrestadorDoServico = {
   prazo_medio_min: number | null;
 };
 
+// Auditoria de edicoes da OS (0027)
+export type AcionamentoEdicoesRow = {
+  id: string;
+  acionamento_id: string;
+  campo: string;
+  valor_anterior: string | null;
+  valor_novo: string | null;
+  motivo: string | null;
+  usuario_id: string | null;
+  created_at: string;
+};
+
+// Linha do historico de edicoes (RPC historico_edicoes_acionamento)
+export type EdicaoAcionamento = {
+  id: string;
+  campo: string;
+  valor_anterior: string | null;
+  valor_novo: string | null;
+  motivo: string | null;
+  operador: string;
+  created_at: string;
+};
+
+// Receitas x despesas por centro de custo (RPC resumo_por_centro_custo)
+export type ResumoCentroCusto = {
+  centro_custo_id: string | null;
+  centro_custo: string;
+  codigo: string | null;
+  receitas: number;
+  despesas: number;
+  resultado: number;
+  lancamentos: number;
+};
+
 // Linha do historico do veiculo (RPC historico_assistencia_veiculo)
 export type HistoricoAssistencia = {
   id: string;
@@ -1168,11 +1202,20 @@ export type Database = {
         AcionamentoHistoricoRow,
         [Rel<'acionamento_id', 'acionamentos_assistencia'>, Rel<'usuario_id', 'usuarios'>]
       >;
+      acionamento_edicoes: TableDef<
+        AcionamentoEdicoesRow,
+        [Rel<'acionamento_id', 'acionamentos_assistencia'>, Rel<'usuario_id', 'usuarios'>]
+      >;
       centros_custo: TableDef<CentrosCustoRow>;
       contas_bancarias: TableDef<ContasBancariasRow>;
       lancamentos_financeiros: TableDef<
         LancamentosFinanceirosRow,
-        [Rel<'fornecedor_id', 'fornecedores'>, Rel<'cliente_id', 'clientes'>, Rel<'categoria_dre_id', 'categorias_dre'>]
+        [
+          Rel<'fornecedor_id', 'fornecedores'>,
+          Rel<'cliente_id', 'clientes'>,
+          Rel<'categoria_dre_id', 'categorias_dre'>,
+          Rel<'centro_custo_id', 'centros_custo'>,
+        ]
       >;
       baixas_financeiras: TableDef<BaixasFinanceirasRow, [Rel<'lancamento_id', 'lancamentos_financeiros'>]>;
       anexos_financeiros: TableDef<AnexosFinanceirosRow, [Rel<'lancamento_id', 'lancamentos_financeiros'>]>;
@@ -1180,12 +1223,54 @@ export type Database = {
     Views: { [_ in never]: never };
     Functions: {
       gerar_dre: {
-        Args: { p_data_inicio: string; p_data_fim: string; p_regional_id?: string | null };
+        Args:
+          | { p_data_inicio: string; p_data_fim: string; p_regional_id?: string | null }
+          | { p_data_inicio: string; p_data_fim: string; p_regional_id: string | null; p_centro_custo_id: string | null };
         Returns: DreLinha[];
       };
       gerar_dre_resumo: {
-        Args: { p_data_inicio: string; p_data_fim: string; p_regional_id?: string | null };
+        Args:
+          | { p_data_inicio: string; p_data_fim: string; p_regional_id?: string | null }
+          | { p_data_inicio: string; p_data_fim: string; p_regional_id: string | null; p_centro_custo_id: string | null };
         Returns: DreResumo[];
+      };
+      resumo_por_centro_custo: {
+        Args: { p_data_inicio: string; p_data_fim: string; p_regional_id?: string | null };
+        Returns: ResumoCentroCusto[];
+      };
+      centro_custo_assistencia: { Args: Record<string, never>; Returns: string };
+      atualizar_acionamento: {
+        Args: {
+          p_acionamento_id: string;
+          p_valor_servico?: number | null;
+          p_km_excedente?: number | null;
+          p_valor_km?: number | null;
+          p_km_percorrido?: number | null;
+          p_destino?: Json | null;
+          p_prazo_min?: number | null;
+          p_observacoes?: string | null;
+          p_motivo?: string | null;
+        };
+        Returns: AcionamentosAssistenciaRow;
+      };
+      trocar_prestador_acionamento: {
+        Args: {
+          p_acionamento_id: string;
+          p_fornecedor_id: string;
+          p_motivo: string;
+          p_valor_servico?: number | null;
+          p_valor_km?: number | null;
+          p_prazo_min?: number | null;
+        };
+        Returns: AcionamentosAssistenciaRow;
+      };
+      sincronizar_lancamento_acionamento: {
+        Args: { p_acionamento_id: string };
+        Returns: LancamentosFinanceirosRow;
+      };
+      historico_edicoes_acionamento: {
+        Args: { p_acionamento_id: string };
+        Returns: EdicaoAcionamento[];
       };
       transferir_protocolo: {
         Args: {

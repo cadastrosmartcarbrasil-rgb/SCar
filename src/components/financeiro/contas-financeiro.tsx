@@ -29,7 +29,11 @@ const FORMAS: FormaPagamento[] = ['PIX', 'BOLETO', 'TRANSFERENCIA', 'CARTAO', 'D
 
 export function ContasFinanceiro() {
   const [tipoFiltro, setTipoFiltro] = useState<TipoMovimentacao | ''>('');
-  const { data: lancamentos, isLoading } = useLancamentos({ tipo: tipoFiltro || undefined });
+  const [centroFiltro, setCentroFiltro] = useState('');
+  const { data: lancamentos, isLoading } = useLancamentos({
+    tipo: tipoFiltro || undefined,
+    centroCustoId: centroFiltro || null,
+  });
   const { data: fornecedores } = useFornecedores();
   const { data: categorias } = usePlanoContas();
   const { data: centros } = useCentrosCusto();
@@ -64,7 +68,13 @@ export function ContasFinanceiro() {
             </button>
           ))}
         </div>
-        <Button onClick={abrirNovo}><Plus className="h-4 w-4" /> Novo Lancamento</Button>
+        <div className="flex items-center gap-2">
+          <Select value={centroFiltro} onChange={(e) => setCentroFiltro(e.target.value)} className="mt-0 w-56">
+            <option value="">Todos os centros de custo</option>
+            {(centros ?? []).map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+          </Select>
+          <Button onClick={abrirNovo}><Plus className="h-4 w-4" /> Novo Lancamento</Button>
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
@@ -74,6 +84,7 @@ export function ContasFinanceiro() {
               <th className="px-4 py-2">Tipo</th>
               <th className="px-4 py-2">Descricao</th>
               <th className="px-4 py-2">Favorecido / Pagador</th>
+              <th className="px-4 py-2">Centro de custo</th>
               <th className="px-4 py-2">Vencimento</th>
               <th className="px-4 py-2 text-right">Valor</th>
               <th className="px-4 py-2">Status</th>
@@ -81,7 +92,7 @@ export function ContasFinanceiro() {
             </tr>
           </thead>
           <tbody>
-            {isLoading && <tr><td colSpan={7} className="px-4 py-6 text-center text-slate-400">Carregando...</td></tr>}
+            {isLoading && <tr><td colSpan={8} className="px-4 py-6 text-center text-slate-400">Carregando...</td></tr>}
             {(lancamentos ?? []).map((l) => (
               <tr key={l.id} className="border-b border-slate-50 last:border-0">
                 <td className="px-4 py-2">
@@ -91,6 +102,7 @@ export function ContasFinanceiro() {
                 </td>
                 <td className="px-4 py-2 font-medium text-slate-800">{l.descricao}</td>
                 <td className="px-4 py-2 text-slate-600">{l.fornecedores?.razao_social ?? l.clientes?.nome_razao_social ?? '-'}</td>
+                <td className="px-4 py-2 text-xs text-slate-500">{l.centros_custo?.nome ?? '-'}</td>
                 <td className="px-4 py-2 text-slate-600">{formatDate(l.data_vencimento)}</td>
                 <td className="px-4 py-2 text-right font-medium">{formatCurrency(l.valor_original)}</td>
                 <td className="px-4 py-2"><span className={`rounded px-2 py-0.5 text-xs ${STATUS_COR[l.status]}`}>{STATUS_LABEL[l.status]}</span></td>
@@ -103,7 +115,7 @@ export function ContasFinanceiro() {
                 </td>
               </tr>
             ))}
-            {!isLoading && (lancamentos ?? []).length === 0 && <tr><td colSpan={7} className="px-4 py-6 text-center text-slate-400">Nenhum lancamento.</td></tr>}
+            {!isLoading && (lancamentos ?? []).length === 0 && <tr><td colSpan={8} className="px-4 py-6 text-center text-slate-400">Nenhum lancamento.</td></tr>}
           </tbody>
         </table>
       </div>

@@ -13,6 +13,7 @@ import type {
   HistoricoAssistencia,
   FornecedoresRow,
   StatusAcionamento,
+  EdicaoAcionamento,
   Json,
 } from '@/lib/database.types';
 
@@ -283,6 +284,86 @@ export function useConcluirAcionamento() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['assistencia'] }),
+  });
+}
+
+// Edicao dinamica da OS: valores, KM, destino, prazo e observacoes.
+// O motivo alimenta a auditoria (acionamento_edicoes).
+export function useAtualizarAcionamento() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<AcionamentosAssistenciaRow, Error, {
+    acionamento_id: string;
+    valor_servico?: number | null;
+    km_excedente?: number | null;
+    valor_km?: number | null;
+    km_percorrido?: number | null;
+    destino?: Json | null;
+    prazo_min?: number | null;
+    observacoes?: string | null;
+    motivo?: string | null;
+  }>({
+    mutationFn: async (c) => {
+      const { data, error } = await supabase.rpc('atualizar_acionamento', {
+        p_acionamento_id: c.acionamento_id,
+        p_valor_servico: c.valor_servico ?? null,
+        p_km_excedente: c.km_excedente ?? null,
+        p_valor_km: c.valor_km ?? null,
+        p_km_percorrido: c.km_percorrido ?? null,
+        p_destino: c.destino ?? null,
+        p_prazo_min: c.prazo_min ?? null,
+        p_observacoes: c.observacoes ?? null,
+        p_motivo: c.motivo ?? null,
+      });
+      if (error) throw error;
+      return data as AcionamentosAssistenciaRow;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['assistencia'] }),
+  });
+}
+
+// Troca de prestador: cancela o lancamento anterior (se em aberto) e gera o
+// novo para o substituto. Justificativa obrigatoria.
+export function useTrocarPrestador() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<AcionamentosAssistenciaRow, Error, {
+    acionamento_id: string;
+    fornecedor_id: string;
+    motivo: string;
+    valor_servico?: number | null;
+    valor_km?: number | null;
+    prazo_min?: number | null;
+  }>({
+    mutationFn: async (c) => {
+      const { data, error } = await supabase.rpc('trocar_prestador_acionamento', {
+        p_acionamento_id: c.acionamento_id,
+        p_fornecedor_id: c.fornecedor_id,
+        p_motivo: c.motivo,
+        p_valor_servico: c.valor_servico ?? null,
+        p_valor_km: c.valor_km ?? null,
+        p_prazo_min: c.prazo_min ?? null,
+      });
+      if (error) throw error;
+      return data as AcionamentosAssistenciaRow;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['assistencia'] }),
+  });
+}
+
+// Auditoria: o que mudou na OS, quando, por quem e por que.
+export function useEdicoesAcionamento(acionamentoId: string | null) {
+  const supabase = createClient();
+  return useQuery<EdicaoAcionamento[]>({
+    queryKey: ['assistencia', 'edicoes', acionamentoId],
+    enabled: !!acionamentoId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('historico_edicoes_acionamento', {
+        p_acionamento_id: acionamentoId as string,
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
   });
 }
 

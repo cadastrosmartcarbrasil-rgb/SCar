@@ -30,6 +30,16 @@ export function formatDate(value: string | Date | null | undefined): string {
   return new Intl.DateTimeFormat('pt-BR').format(d);
 }
 
+/** Data + hora (usado em trilhas de auditoria). */
+export function formatDateTime(value: string | Date | null | undefined): string {
+  if (!value) return '-';
+  const d = typeof value === 'string' ? new Date(value) : value;
+  return new Intl.DateTimeFormat('pt-BR', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  }).format(d);
+}
+
 /** Primeiro e ultimo dia do mes de referencia (YYYY-MM-DD). */
 export function monthRange(ref = new Date()): { inicio: string; fim: string } {
   const inicio = new Date(ref.getFullYear(), ref.getMonth(), 1);

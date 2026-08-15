@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useDre, useDreResumo } from '@/hooks/use-dre';
+import { useDre, useDreResumo, useResumoCentroCusto } from '@/hooks/use-dre';
+import { useCentrosCusto } from '@/hooks/use-financeiro';
 import { formatCurrency, monthRange } from '@/lib/utils';
 import type { TipoCategoriaDre } from '@/lib/database.types';
 
@@ -17,10 +18,13 @@ export function DreReport({ regionalId }: { regionalId?: string | null }) {
   const range = monthRange();
   const [inicio, setInicio] = useState(range.inicio);
   const [fim, setFim] = useState(range.fim);
+  const [centroCustoId, setCentroCustoId] = useState('');
 
-  const filtro = { inicio, fim, regionalId };
+  const { data: centros } = useCentrosCusto();
+  const filtro = { inicio, fim, regionalId, centroCustoId: centroCustoId || null };
   const { data: linhas, isLoading } = useDre(filtro);
   const { data: resumo } = useDreResumo(filtro);
+  const { data: porCentro } = useResumoCentroCusto({ inicio, fim, regionalId });
 
   const grupos: TipoCategoriaDre[] = ['RECEITA', 'CUSTO_VARIAVEL', 'DESPESA_FIXA'];
 
@@ -47,8 +51,71 @@ export function DreReport({ regionalId }: { regionalId?: string | null }) {
               className="mt-1 block rounded-md border border-slate-300 px-2 py-1.5 text-sm"
             />
           </div>
+          <div>
+            <label className="text-xs text-slate-500">Centro de custo</label>
+            <select
+              value={centroCustoId}
+              onChange={(e) => setCentroCustoId(e.target.value)}
+              className="mt-1 block rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm"
+            >
+              <option value="">Todos</option>
+              {(centros ?? []).map((c) => (
+                <option key={c.id} value={c.id}>{c.nome}</option>
+              ))}
+            </select>
+          </div>
+          {centroCustoId && (
+            <p className="text-xs text-slate-500">
+              Mostrando apenas o que foi liquidado neste centro de custo.
+            </p>
+          )}
         </CardContent>
       </Card>
+
+      {/* Receitas x Despesas por centro de custo (isola a Assistencia 24h) */}
+      {(porCentro?.length ?? 0) > 0 && (
+        <Card>
+          <CardHeader><CardTitle>Receitas x Despesas por centro de custo</CardTitle></CardHeader>
+          <CardContent className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
+                  <th className="px-2 py-2">Centro de custo</th>
+                  <th className="px-2 py-2 text-right">Receitas</th>
+                  <th className="px-2 py-2 text-right">Despesas</th>
+                  <th className="px-2 py-2 text-right">Resultado</th>
+                  <th className="px-2 py-2 text-right">Lancamentos</th>
+                </tr>
+              </thead>
+              <tbody>
+                {porCentro!.map((c) => (
+                  <tr
+                    key={c.centro_custo_id ?? 'sem'}
+                    onClick={() => setCentroCustoId(c.centro_custo_id ?? '')}
+                    className={`cursor-pointer border-b border-slate-50 last:border-0 hover:bg-slate-50 ${
+                      centroCustoId && centroCustoId === c.centro_custo_id ? 'bg-cyan-50/60' : ''
+                    }`}
+                  >
+                    <td className="px-2 py-2 font-medium text-slate-700">
+                      {c.centro_custo}
+                      {c.codigo && <span className="ml-1 text-xs text-slate-400">({c.codigo})</span>}
+                    </td>
+                    <td className="tnum px-2 py-2 text-right text-emerald-700">{formatCurrency(Number(c.receitas))}</td>
+                    <td className="tnum px-2 py-2 text-right text-rose-700">{formatCurrency(Number(c.despesas))}</td>
+                    <td className={`tnum px-2 py-2 text-right font-medium ${Number(c.resultado) < 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
+                      {formatCurrency(Number(c.resultado))}
+                    </td>
+                    <td className="tnum px-2 py-2 text-right text-slate-500">{c.lancamentos}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="mt-2 text-xs text-slate-400">
+              Clique num centro de custo para filtrar o DRE abaixo.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Cards resumo */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

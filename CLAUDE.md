@@ -8,8 +8,10 @@
   (1) módulo **Cobrança** (`0024`+`0025`, `/cobrancas`): dashboard com KPIs/filtros, geração
   automática na ativação, boletagem em lote (6 meses) e integração bancária (service pattern +
   remessas); (2) módulo **Assistência 24h** (`0026`, `/assistencia`): parametrização de serviços,
-  trava financeira com alçada de liberação, cotação → OS → voucher e lançamento em Contas a Pagar.
-- **Migrations no repo:** `0001`..`0026` (todas validadas no harness pg local). **Deploy:** rodar as
+  trava financeira com alçada de liberação, cotação → OS → voucher e lançamento em Contas a Pagar;
+  (3) refino financeiro/operacional da 24h (`0027`): centro de custo obrigatório, OS editável com
+  auditoria e sincronia automática com o Contas a Pagar + filtro de centro de custo no DRE.
+- **Migrations no repo:** `0001`..`0027` (todas validadas no harness pg local). **Deploy:** rodar as
   novas no Supabase SQL Editor (na ordem) + no VPS `cd /opt/scar && git pull && sudo docker compose up -d --build`.
 - **Design system "cockpit"** aplicado (navy `#1E2B4D` + ciano `#139AD6`); sidebar usa a logo de
   `Configurações → Empresa` (placa branca). Dashboard com KPIs de instrumento + tacômetro (inadimplência real).
@@ -189,6 +191,19 @@ EM_ATENDIMENTO/CONCLUIDO), `situacao_assistencia_veiculo(veic)` (ativo + adimple
 `confirmar_prestador_assistencia` (gera a OS e calcula KM excedente), `concluir_acionamento`
 (cria o lancamento em Contas a Pagar, idempotente), `cancelar_acionamento`,
 `marcar_voucher_enviado`, `historico_assistencia_veiculo` e `prestadores_do_servico`).
+· `0027_assistencia_centro_custo` (REFINO DA 24H: (A) CENTRO DE CUSTO — seed do centro
+`ASSIST24` "Assistencia 24 Horas" + `centro_custo_assistencia()`; todo lancamento do modulo nasce
+nele (backfill dos antigos); prestadores seguem em `fornecedores` e o pagamento no fluxo padrao;
+(B) OS EDITAVEL — `atualizar_acionamento(valor,km,valor_km,km_percorrido,destino,prazo,obs,motivo)`,
+`trocar_prestador_acionamento(acion,fornecedor,motivo,...)` (cancela o lancamento anterior em
+aberto e gera o novo; zera o voucher) e `cancelar_acionamento` com justificativa OBRIGATORIA;
+(C) SINCRONIA — `sincronizar_lancamento_acionamento()` cria/atualiza/cancela o titulo enquanto ele
+nao tem baixa; com baixa, NAO altera e registra a divergencia; (D) AUDITORIA — `acionamento_edicoes`
++ trigger `fn_acionamento_auditoria` (campo, de->para, quem, quando, motivo via
+`set_config('scar.motivo_edicao')`; `created_at` usa `clock_timestamp()` p/ ordenar edicoes da mesma
+transacao) e `historico_edicoes_acionamento()`; (E) RELATORIOS — `gerar_dre`/`gerar_dre_resumo`
+ganham 4o argumento `p_centro_custo_id` e passam a considerar as BAIXAS de contas a pagar/receber
+(as versoes de 3 args delegam); novo `resumo_por_centro_custo(inicio,fim,regional?)`).
 
 ## Módulos (status: todos funcionais)
 Assistência 24h (`/assistencia`: painel de acionamento com trava + limites em tempo real, cotação,
@@ -255,6 +270,19 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
   lançar/baixar contas a pagar.
 - **Ficha do veículo:** o histórico de acionamentos aparece no SAC (card "Assistência 24h deste
   veículo") e no próprio painel, marcando quais consumiram cota.
+- **Centro de custo (0027):** todo lançamento do módulo nasce no centro **"Assistência 24 Horas"**
+  (`ASSIST24`) — nada de estrutura financeira paralela: prestador é `fornecedores`, pagamento é
+  Contas a Pagar, classificação é o plano de contas do serviço + esse centro de custo.
+- **OS editável (0027):** "Editar OS" (valor, KM excedente, KM percorrido, destino, prazo,
+  observações), "Trocar prestador" (justificativa obrigatória) e "Cancelar OS" (justificativa
+  obrigatória). Toda alteração **sincroniza o título** no Contas a Pagar: em aberto, recalcula;
+  na troca, cancela o do prestador anterior e gera o do substituto; **se já houve baixa, não mexe**
+  e registra a divergência para tratamento manual.
+- **Auditoria:** card "Histórico de alterações" na OS — campo, de → para, data/hora, operador e
+  motivo (trigger no banco, pega até alteração feita fora das telas).
+- **Relatórios:** `/financeiro` → DRE com **filtro por centro de custo** e a tabela
+  **Receitas × Despesas por centro de custo** (clicar num centro filtra o DRE). A aba Contas a
+  Pagar/Receber também filtra e exibe o centro de custo.
 
 ## Módulo Cobrança (0025) — navegação, dashboard, lote e banco
 - **Menu lateral → "Cobrança" (`/cobrancas`)**, com 3 abas: **Visão Geral** (dashboard),
