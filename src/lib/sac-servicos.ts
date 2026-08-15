@@ -1,0 +1,66 @@
+// Estrutura modular das opcoes de atendimento ligadas ao VEICULO selecionado.
+// Fonte unica reutilizada pelo SAC interno e pelo Portal do Associado.
+import {
+  AlertTriangle, LifeBuoy, ArrowUpCircle, CreditCard, ClipboardCheck, UserCog,
+  type LucideIcon,
+} from 'lucide-react';
+import type { TipoAtendimento, StatusAtendimento } from '@/lib/database.types';
+
+export type ModoServico = 'chamado' | 'boleto';
+
+export interface ServicoSac {
+  id: string;
+  titulo: string;
+  descricao: string;
+  icon: LucideIcon;
+  cor: string; // classes do chip do icone
+  modo: ModoServico;
+  tipos: { value: TipoAtendimento; label: string }[]; // tipo(s) de atendimento
+  subtipos?: string[]; // opcoes internas (vao em dados.subtipo)
+  linkSinistro?: boolean; // oferece atalho para o fluxo completo de sinistro
+}
+
+export const SERVICOS_SAC: ServicoSac[] = [
+  {
+    id: 'sinistro', titulo: 'Sinistro', descricao: 'Abertura / acompanhamento de sinistro',
+    icon: AlertTriangle, cor: 'bg-rose-50 text-rose-600', modo: 'chamado',
+    tipos: [{ value: 'SINISTRO', label: 'Sinistro' }], linkSinistro: true,
+  },
+  {
+    id: 'assistencia', titulo: 'Assistencia 24h', descricao: 'Guincho, chaveiro, mecanico, pane seca...',
+    icon: LifeBuoy, cor: 'bg-cyan-50 text-cyan-600', modo: 'chamado',
+    tipos: [{ value: 'ASSISTENCIA_24H', label: 'Assistencia 24h' }],
+    subtipos: ['Guincho', 'Chaveiro', 'Mecanico', 'Pane seca', 'Troca de pneu', 'Transporte'],
+  },
+  {
+    id: 'upgrade', titulo: 'Upgrade / Cobertura', descricao: 'Alteracao de categoria ou cobertura',
+    icon: ArrowUpCircle, cor: 'bg-brand-50 text-brand-600', modo: 'chamado',
+    tipos: [{ value: 'UPGRADE_COBERTURA', label: 'Upgrade / Cobertura' }],
+  },
+  {
+    id: 'boleto', titulo: '2a via de Boleto', descricao: 'Boleto ou comprovante de pagamento',
+    icon: CreditCard, cor: 'bg-emerald-50 text-emerald-600', modo: 'boleto',
+    tipos: [{ value: 'SEGUNDA_VIA_BOLETO', label: '2a via de Boleto' }],
+  },
+  {
+    id: 'vistoria', titulo: 'Vistoria / Acessorios', descricao: 'Solicitar vistoria ou incluir acessorios',
+    icon: ClipboardCheck, cor: 'bg-amber-50 text-amber-600', modo: 'chamado',
+    tipos: [{ value: 'VISTORIA_ACESSORIOS', label: 'Vistoria / Acessorios' }],
+    subtipos: ['Vistoria', 'Inclusao de acessorio'],
+  },
+  {
+    id: 'cadastro', titulo: 'Cadastro / Cancelamento', descricao: 'Alteracao cadastral ou cancelamento',
+    icon: UserCog, cor: 'bg-slate-100 text-slate-600', modo: 'chamado',
+    tipos: [
+      { value: 'ALTERACAO_CADASTRAL', label: 'Alteracao cadastral' },
+      { value: 'CANCELAMENTO', label: 'Cancelamento' },
+    ],
+  },
+];
+
+export const STATUS_ATENDIMENTO_LABEL: Record<StatusAtendimento, { label: string; cor: string }> = {
+  ABERTO: { label: 'Aberto', cor: 'bg-cyan-50 text-cyan-700' },
+  EM_ANDAMENTO: { label: 'Em andamento', cor: 'bg-amber-50 text-amber-700' },
+  CONCLUIDO: { label: 'Concluido', cor: 'bg-emerald-50 text-emerald-700' },
+  CANCELADO: { label: 'Cancelado', cor: 'bg-slate-100 text-slate-600' },
+};

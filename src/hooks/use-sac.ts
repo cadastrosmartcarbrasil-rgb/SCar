@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   ClientesRow, VeiculosRow, FaturasRow, OpcionalElegibilidade, TipoFaturamento,
+  AtendimentosRow, TipoAtendimento, CanalAtendimento, Json,
 } from '@/lib/database.types';
 import type { StatusFinanceiro } from '@/lib/sac';
 
@@ -72,5 +73,31 @@ export function useGerarBoleto() {
   return useMutation<{ competencia: string; faturas: FaturasRow[] }, Error, { cliente_id: string }>({
     mutationFn: (v) => jpost('/api/v1/sac/boleto', { cliente_id: v.cliente_id }),
     onSuccess: (_d, v) => qc.invalidateQueries({ queryKey: ['sac', '360', v.cliente_id] }),
+  });
+}
+
+// Historico de atendimentos do veiculo selecionado (acompanhamento).
+export function useAtendimentosVeiculo(veiculoId?: string) {
+  return useQuery<AtendimentosRow[]>({
+    queryKey: ['sac', 'atendimentos', veiculoId ?? 'none'],
+    enabled: !!veiculoId,
+    queryFn: async () => (await jget<{ atendimentos: AtendimentosRow[] }>(`/api/v1/sac/atendimento?veiculo_id=${veiculoId}`)).atendimentos,
+  });
+}
+
+// Abre um atendimento sempre vinculado ao veiculo especifico.
+export interface AbrirAtendimentoInput {
+  veiculo_id: string;
+  tipo: TipoAtendimento;
+  canal?: CanalAtendimento;
+  assunto?: string;
+  descricao?: string;
+  dados?: Json;
+}
+export function useAbrirAtendimento() {
+  const qc = useQueryClient();
+  return useMutation<{ atendimento: AtendimentosRow }, Error, AbrirAtendimentoInput>({
+    mutationFn: (v) => jpost('/api/v1/sac/atendimento', v),
+    onSuccess: (_d, v) => qc.invalidateQueries({ queryKey: ['sac', 'atendimentos', v.veiculo_id] }),
   });
 }

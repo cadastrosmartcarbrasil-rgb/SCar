@@ -98,12 +98,23 @@ idempotente; (C) opcionais com limite por JANELA FLUTUANTE -- `produtos.tem_limi
 quantidade_limite/janela_dias_limite(365)` + `opcionais_elegibilidade(veiculo)` que
 conta eventos do mesmo `tipo_evento_id` nos ultimos N dias. Logica pura espelhada em
 `src/lib/sac.ts` (testada com Vitest). APIs REST em `/api/v1/sac/*` e painel `/sac`).
+· `0022_atendimentos_sac` (nucleo de ATENDIMENTOS/solicitacoes sempre vinculadas ao
+`veiculo_id`: enums `tipo_atendimento`(SINISTRO/ASSISTENCIA_24H/UPGRADE_COBERTURA/
+SEGUNDA_VIA_BOLETO/VISTORIA_ACESSORIOS/ALTERACAO_CADASTRAL/CANCELAMENTO),
+`canal_atendimento`(SAC_INTERNO/PORTAL), `status_atendimento`; tabela `atendimentos`
+com protocolo ATD-YYYYMMDD-XXXX; `abrir_atendimento()` SECURITY DEFINER com TRAVA DE
+PROPRIEDADE -- so staff-na-regional ou o proprio dono (auth_cliente_id); RLS pronta
+p/ Portal. Menu modular em `src/lib/sac-servicos.ts` (SERVICOS_SAC), API
+`/api/v1/sac/atendimento`, SAC refeito veiculo-first (seleciona 1 veiculo -> isola)).
 
 ## Módulos (status: todos funcionais)
-SAC / Visão 360° (`/sac`: busca global por Nome/CPF/Placa, painel do associado + veículos com
-toggle de faturamento Agrupado↔Individual, status financeiro e 2ª via de boleto, elegibilidade
-de opcionais por janela flutuante de 12 meses. APIs REST versionadas em `/api/v1/sac/*` —
-`busca`, `visao-360`, `faturamento`, `boleto` — reutilizáveis por Assistência 24h/Chatbot).
+SAC / Atendimento (`/sac`: **veículo-first** — busca por Nome/CPF/Placa → seleciona 1 veículo →
+isola o item e abre o **menu modular de serviços** (`SERVICOS_SAC`): Sinistro, Assistência 24h,
+Upgrade/Cobertura, 2ª via de Boleto, Vistoria/Acessórios, Cadastro/Cancelamento — cada um cria
+um `atendimento` vinculado ao `veiculo_id` (trava de propriedade no banco). Também: toggle de
+faturamento Agrupado↔Individual, status financeiro, elegibilidade de opcionais (janela flutuante
+12m). APIs REST em `/api/v1/sac/*` — `busca`, `visao-360`, `faturamento`, `boleto`, `atendimento`
+— reutilizáveis por Portal do Associado/Assistência 24h/Chatbot).
 Vendas/CRM (`/vendas` mobile-first: captura de lead + FIPE por placa/cascata, cotação com
 link público `/cotacao/[token]` detalhada/consolidada + print-PDF, esteira com trava de
 Auditoria — só papel `auditoria`/`admin` clica "Autorizar Entrada" e efetiva cliente+veículo)

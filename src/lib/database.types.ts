@@ -22,6 +22,11 @@ export type StatusVeiculo =
   | 'vistoria_pendente' | 'em_evento';
 export type TipoFaturamento = 'AGRUPADO_ASSOCIADO' | 'INDIVIDUAL_VEICULO';
 export type StatusFatura = 'ABERTA' | 'PAGA' | 'CANCELADA';
+export type TipoAtendimento =
+  | 'SINISTRO' | 'ASSISTENCIA_24H' | 'UPGRADE_COBERTURA'
+  | 'SEGUNDA_VIA_BOLETO' | 'VISTORIA_ACESSORIOS' | 'ALTERACAO_CADASTRAL' | 'CANCELAMENTO';
+export type CanalAtendimento = 'SAC_INTERNO' | 'PORTAL';
+export type StatusAtendimento = 'ABERTO' | 'EM_ANDAMENTO' | 'CONCLUIDO' | 'CANCELADO';
 export type TipoNegociacao =
   | 'venda' | 'substituicao' | 'reativacao' | 'troca_titularidade' | 'renovacao';
 export type TipoCambio = 'manual' | 'automatico' | 'automatizado';
@@ -173,6 +178,22 @@ export type FaturaItensRow = {
   descricao: string;
   valor: number;
   created_at: string;
+};
+
+export type AtendimentosRow = Timestamps & {
+  id: string;
+  numero_protocolo: string | null;
+  cliente_id: string;
+  veiculo_id: string;
+  tipo: TipoAtendimento;
+  canal: CanalAtendimento;
+  status: StatusAtendimento;
+  assunto: string | null;
+  descricao: string | null;
+  dados: Json;
+  regional_id: string | null;
+  aberto_por: string | null;
+  evento_id: string | null;
 };
 
 // Retorno de opcionais_elegibilidade (janela flutuante de N dias)
@@ -783,6 +804,10 @@ export type Database = {
         [Rel<'cliente_id', 'clientes'>, Rel<'veiculo_id', 'veiculos'>, Rel<'titulo_id', 'titulos_financeiros'>]
       >;
       fatura_itens: TableDef<FaturaItensRow, [Rel<'fatura_id', 'faturas'>, Rel<'veiculo_id', 'veiculos'>]>;
+      atendimentos: TableDef<
+        AtendimentosRow,
+        [Rel<'cliente_id', 'clientes'>, Rel<'veiculo_id', 'veiculos'>, Rel<'aberto_por', 'usuarios'>, Rel<'evento_id', 'eventos_sinistro'>]
+      >;
       comunicacoes: TableDef<ComunicacoesRow, [Rel<'cliente_id', 'clientes'>]>;
       tipos_veiculo: TableDef<TiposVeiculoRow>;
       produtos: TableDef<ProdutosRow, [Rel<'tipo_evento_id', 'tipos_evento'>]>;
@@ -864,6 +889,17 @@ export type Database = {
       gerar_faturas_cliente: {
         Args: { p_cliente_id: string; p_competencia: string; p_vencimento?: string | null };
         Returns: FaturasRow[];
+      };
+      abrir_atendimento: {
+        Args: {
+          p_veiculo_id: string;
+          p_tipo: TipoAtendimento;
+          p_canal?: CanalAtendimento;
+          p_assunto?: string | null;
+          p_descricao?: string | null;
+          p_dados?: Json;
+        };
+        Returns: AtendimentosRow;
       };
       autorizar_entrada_lead: {
         Args: { p_lead_id: string; p_cpf_cnpj?: string | null };
