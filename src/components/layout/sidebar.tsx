@@ -14,6 +14,7 @@ import {
   Settings,
   LogOut,
   Target,
+  Headset,
   Menu,
   X,
 } from 'lucide-react';
@@ -25,6 +26,7 @@ type Item = { href: string; label: string; icon: React.ElementType };
 
 const OPERACAO: Item[] = [
   { href: '/dashboard', label: 'Visao Geral', icon: LayoutDashboard },
+  { href: '/sac', label: 'SAC / Atendimento', icon: Headset },
   { href: '/vendas', label: 'Vendas / CRM', icon: Target },
   { href: '/associados', label: 'Associados', icon: Users },
   { href: '/veiculos', label: 'Veiculos', icon: Car },

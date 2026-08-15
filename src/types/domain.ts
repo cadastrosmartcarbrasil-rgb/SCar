@@ -32,4 +32,6 @@ export const STATUS_VEICULO_LABEL: Record<StatusVeiculo, string> = {
   baixado: 'Baixado',
   inativo: 'Inativo',
   excluido: 'Excluido',
+  vistoria_pendente: 'Vistoria Pendente',
+  em_evento: 'Em Evento',
 };

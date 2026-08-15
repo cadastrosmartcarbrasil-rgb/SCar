@@ -17,7 +17,11 @@ export type TipoPessoa = 'PF' | 'PJ';
 export type StatusCliente =
   | 'ativo' | 'inadimplente' | 'cancelado' | 'inativo' | 'suspenso' | 'excluido';
 export type UsoVeiculo = 'passeio' | 'app' | 'comercial';
-export type StatusVeiculo = 'ativo' | 'suspenso' | 'baixado' | 'inativo' | 'excluido';
+export type StatusVeiculo =
+  | 'ativo' | 'suspenso' | 'baixado' | 'inativo' | 'excluido'
+  | 'vistoria_pendente' | 'em_evento';
+export type TipoFaturamento = 'AGRUPADO_ASSOCIADO' | 'INDIVIDUAL_VEICULO';
+export type StatusFatura = 'ABERTA' | 'PAGA' | 'CANCELADA';
 export type TipoNegociacao =
   | 'venda' | 'substituicao' | 'reativacao' | 'troca_titularidade' | 'renovacao';
 export type TipoCambio = 'manual' | 'automatico' | 'automatizado';
@@ -144,6 +148,42 @@ export type VeiculosRow = Timestamps & {
   tipo_veiculo_id: string | null;
   cota_participacao_id: string | null;
   modelo_id: string | null;
+  categoria: string | null;
+  data_ativacao: string | null;
+  tipo_faturamento: TipoFaturamento;
+};
+
+export type FaturasRow = Timestamps & {
+  id: string;
+  cliente_id: string;
+  regional_id: string | null;
+  tipo_faturamento: TipoFaturamento;
+  veiculo_id: string | null;
+  competencia: string;
+  valor_total: number;
+  vencimento: string | null;
+  status: StatusFatura;
+  titulo_id: string | null;
+};
+
+export type FaturaItensRow = {
+  id: string;
+  fatura_id: string;
+  veiculo_id: string | null;
+  descricao: string;
+  valor: number;
+  created_at: string;
+};
+
+// Retorno de opcionais_elegibilidade (janela flutuante de N dias)
+export type OpcionalElegibilidade = {
+  produto_id: string;
+  nome: string;
+  quantidade_limite: number;
+  janela_dias: number;
+  usados: number;
+  elegivel: boolean;
+  ultimo_uso: string | null;
 };
 
 export type ComunicacoesRow = {
@@ -369,6 +409,9 @@ export type ProdutosRow = Timestamps & {
   categoria: string;
   dados_adicionais: Json;
   status: boolean;
+  tem_limite_uso: boolean;
+  quantidade_limite: number;
+  janela_dias_limite: number;
 };
 
 export type TabelaPrecosFaixaRow = {
@@ -735,6 +778,11 @@ export type Database = {
       cotacoes: TableDef<CotacoesRow, [Rel<'lead_id', 'leads'>]>;
       lead_historico: TableDef<LeadHistoricoRow, [Rel<'lead_id', 'leads'>, Rel<'usuario_id', 'usuarios'>]>;
       fipe_precos_local: TableDef<FipePrecosLocalRow>;
+      faturas: TableDef<
+        FaturasRow,
+        [Rel<'cliente_id', 'clientes'>, Rel<'veiculo_id', 'veiculos'>, Rel<'titulo_id', 'titulos_financeiros'>]
+      >;
+      fatura_itens: TableDef<FaturaItensRow, [Rel<'fatura_id', 'faturas'>, Rel<'veiculo_id', 'veiculos'>]>;
       comunicacoes: TableDef<ComunicacoesRow, [Rel<'cliente_id', 'clientes'>]>;
       tipos_veiculo: TableDef<TiposVeiculoRow>;
       produtos: TableDef<ProdutosRow, [Rel<'tipo_evento_id', 'tipos_evento'>]>;
@@ -804,6 +852,18 @@ export type Database = {
           p_avulsos_ids?: string[];
         };
         Returns: CotacaoPlano;
+      };
+      opcionais_elegibilidade: {
+        Args: { p_veiculo_id: string };
+        Returns: OpcionalElegibilidade[];
+      };
+      definir_faturamento_veiculo: {
+        Args: { p_veiculo_id: string; p_tipo: TipoFaturamento };
+        Returns: VeiculosRow;
+      };
+      gerar_faturas_cliente: {
+        Args: { p_cliente_id: string; p_competencia: string; p_vencimento?: string | null };
+        Returns: FaturasRow[];
       };
       autorizar_entrada_lead: {
         Args: { p_lead_id: string; p_cpf_cnpj?: string | null };

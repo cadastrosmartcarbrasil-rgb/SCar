@@ -88,8 +88,22 @@ categoria CASCO) + Taxa Administrativa (ADMIN); RCF sempre FIXO/opcional/categor
 RCF; Assist 24h FIXO/obrig; Rastreador aposentado; limpa faixas indevidas de
 RCF/Rastreador/nao-FAIXA. O editor tambem passa a montar colunas so por
 `FAIXA_FIPE && status && obrigatorio`).
+· `0021_sac_faturamento_opcionais` (core unificado SAC/Assistencia/Vendas/Chatbot:
+(A) veiculo ganha `categoria`, `data_ativacao` e status novos (inativo/
+vistoria_pendente/em_evento via ADD VALUE); (B) FATURAMENTO flexivel por veiculo
+`tipo_faturamento` (AGRUPADO_ASSOCIADO x INDIVIDUAL_VEICULO) + tabelas `faturas`/
+`fatura_itens` (snapshot imutavel: trocar o modo so afeta competencias futuras) +
+`definir_faturamento_veiculo()` e `gerar_faturas_cliente(cliente,competencia)`
+idempotente; (C) opcionais com limite por JANELA FLUTUANTE -- `produtos.tem_limite_uso/
+quantidade_limite/janela_dias_limite(365)` + `opcionais_elegibilidade(veiculo)` que
+conta eventos do mesmo `tipo_evento_id` nos ultimos N dias. Logica pura espelhada em
+`src/lib/sac.ts` (testada com Vitest). APIs REST em `/api/v1/sac/*` e painel `/sac`).
 
 ## Módulos (status: todos funcionais)
+SAC / Visão 360° (`/sac`: busca global por Nome/CPF/Placa, painel do associado + veículos com
+toggle de faturamento Agrupado↔Individual, status financeiro e 2ª via de boleto, elegibilidade
+de opcionais por janela flutuante de 12 meses. APIs REST versionadas em `/api/v1/sac/*` —
+`busca`, `visao-360`, `faturamento`, `boleto` — reutilizáveis por Assistência 24h/Chatbot).
 Vendas/CRM (`/vendas` mobile-first: captura de lead + FIPE por placa/cascata, cotação com
 link público `/cotacao/[token]` detalhada/consolidada + print-PDF, esteira com trava de
 Auditoria — só papel `auditoria`/`admin` clica "Autorizar Entrada" e efetiva cliente+veículo)
@@ -148,6 +162,7 @@ Padrão usado nas sessões:
 2. Aplicar `bootstrap.sql` (stubs de `auth.users`, `auth.uid()`, `storage.*`) e depois todas as migrations em ordem com `ON_ERROR_STOP`.
 3. Rodar testes funcionais (ex.: triggers, baixa financeira, motor de preço) — validar valores esperados.
 4. `npx tsc --noEmit` (0 erros) e `npm run build` (com env dummy) — 0 erros.
+5. Testes unitarios de logica pura: `npm test` (Vitest; ex.: `src/lib/sac.test.ts`).
 Só então: commit + push. (Docker build da imagem NÃO builda aqui: proxy bloqueia Docker Hub — validar só schema+tsc+build.)
 
 ## Commit / deploy
