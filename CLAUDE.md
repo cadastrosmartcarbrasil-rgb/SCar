@@ -3,6 +3,26 @@
 > Memória do projeto. Leia isto no início de cada sessão em vez de varrer o repositório inteiro.
 > Mantenha este arquivo atualizado ao adicionar módulos/migrations (é barato e faz o projeto andar rápido).
 
+## Estado atual (retomar aqui) — atualizado nesta sessão
+- **Branch:** `claude/scar-project-btasdf` · **último commit:** `6efa280` (migration 0023, ficha do veículo).
+- **Migrations no repo:** `0001`..`0023` (todas validadas no harness pg local). **Deploy:** rodar as
+  novas no Supabase SQL Editor (na ordem) + no VPS `cd /opt/scar && git pull && sudo docker compose up -d --build`.
+- **Design system "cockpit"** aplicado (navy `#1E2B4D` + ciano `#139AD6`); sidebar usa a logo de
+  `Configurações → Empresa` (placa branca). Dashboard com KPIs de instrumento + tacômetro (inadimplência real).
+- **SAC** (`/sac`) veículo-first + lazy: lista resumida → clica → detalhe sob demanda → menu de serviços;
+  aba **Eventos**; banner de **alertas** do associado; marcadores (evento/assist 24h/alerta) na lista.
+- **Vitest** ativo (`npm test`, 13/13) — `src/lib/sac.ts`/`sac.test.ts`.
+- **Próximos passos oferecidos** (o usuário vai escolher no novo chat):
+  1. **Cobranças** usando `dia_vencimento` + `valor_mensalidade` por veículo (ligar no `gerar_faturas_cliente`).
+  2. **Termo de adesão**: gerar documento + página pública de **aceite eletrônico** (`contratos_adesao.token`,
+     nos moldes da cotação pública `/cotacao/[token]`).
+  3. **Módulo de Vistoria**: captura com upload de fotos (bucket) + status (tabelas `vistorias`/`vistoria_anexos` já existem).
+  4. **Portal do Associado**: login CPF + autosserviço reusando `SERVICOS_SAC` + `abrir_atendimento` + RLS por dono.
+  5. **Fila de atendimentos** p/ a equipe tramitar chamados (Assist 24h, Upgrade, etc.).
+- **Pendências técnicas conhecidas:** gateway bancário ainda MOCKADO (`/api/boletos/emitir-lote` e
+  `/api/v1/sac/boleto`); preços dos opcionais novos (RCF 50/75/100mil, Carro Reserva 10/30d, Vidros III/
+  Completa, Assist VIP) começam em R$0 — cadastrar em Configurações → Produtos.
+
 ## O que é
 Sistema de gestão para **associação de proteção veicular** (associados, frota, eventos/sinistros,
 financeiro, precificação por FIPE). Escala esperada: grande (maior que o "Smartvida").
