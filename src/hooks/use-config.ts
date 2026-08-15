@@ -39,6 +39,9 @@ export function useSaveRegional() {
         cnpj: r.cnpj || null,
         endereco: r.endereco ?? {},
         responsavel_id: r.responsavel_id || null,
+        // Politica de desconto de venda da franquia (0028)
+        percentual_maximo_desconto_venda: r.percentual_maximo_desconto_venda ?? 0,
+        desconto_observacao: r.desconto_observacao || null,
       };
       if (r.id) {
         const { error } = await supabase.from('regionais').update(payload).eq('id', r.id);

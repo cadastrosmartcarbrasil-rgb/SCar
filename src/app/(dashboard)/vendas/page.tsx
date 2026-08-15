@@ -1,9 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Plus, Phone, Car, ChevronRight } from 'lucide-react';
+import { Plus, Phone, Car, ChevronRight, LayoutGrid, List } from 'lucide-react';
 import { useLeads } from '@/hooks/use-vendas';
+import { KanbanVendas } from '@/components/vendas/kanban-vendas';
 import { ESTEIRA, STATUS_LEAD } from '@/lib/crm';
 import { formatCurrency } from '@/lib/utils';
 import type { StatusLead } from '@/lib/database.types';
@@ -12,9 +13,20 @@ type Filtro = StatusLead | 'TODOS';
 
 export default function VendasPage() {
   const [filtro, setFiltro] = useState<Filtro>('TODOS');
+  const [visao, setVisao] = useState<'lista' | 'kanban'>('kanban');
   const { data: leads, isLoading } = useLeads(filtro);
 
   const chips: Filtro[] = useMemo(() => ['TODOS', ...ESTEIRA, 'PERDIDO'], []);
+
+  // Lembra a preferencia de visualizacao do usuario.
+  useEffect(() => {
+    const salvo = window.localStorage.getItem('scar:vendas-visao');
+    if (salvo === 'lista' || salvo === 'kanban') setVisao(salvo);
+  }, []);
+  function trocarVisao(v: 'lista' | 'kanban') {
+    setVisao(v);
+    window.localStorage.setItem('scar:vendas-visao', v);
+  }
 
   return (
     <div className="space-y-4">
@@ -23,15 +35,38 @@ export default function VendasPage() {
           <h1 className="text-xl font-semibold text-slate-900 md:text-2xl">Vendas / CRM</h1>
           <p className="text-sm text-slate-500">Leads, cotacoes e esteira de aprovacao.</p>
         </div>
-        <Link
-          href="/vendas/novo"
-          className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-3 py-2 text-sm font-medium text-white shadow-sm"
-        >
-          <Plus className="h-4 w-4" /> <span className="hidden sm:inline">Novo lead</span>
-        </Link>
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-xl border border-slate-200 bg-white p-0.5">
+            <button
+              onClick={() => trocarVisao('kanban')}
+              className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
+                visao === 'kanban' ? 'bg-brand-600 text-white' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" /> Kanban
+            </button>
+            <button
+              onClick={() => trocarVisao('lista')}
+              className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
+                visao === 'lista' ? 'bg-brand-600 text-white' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <List className="h-3.5 w-3.5" /> Lista
+            </button>
+          </div>
+          <Link
+            href="/vendas/novo"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-3 py-2 text-sm font-medium text-white shadow-sm"
+          >
+            <Plus className="h-4 w-4" /> <span className="hidden sm:inline">Novo lead</span>
+          </Link>
+        </div>
       </div>
 
+      {visao === 'kanban' && <KanbanVendas />}
+
       {/* Filtro por status (rolagem horizontal no mobile) */}
+      {visao === 'lista' && (
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-wrap md:px-0">
         {chips.map((c) => {
           const label = c === 'TODOS' ? 'Todos' : STATUS_LEAD[c].curto;
@@ -49,9 +84,10 @@ export default function VendasPage() {
           );
         })}
       </div>
+      )}
 
       {/* Lista de leads */}
-      {isLoading ? (
+      {visao === 'lista' && (isLoading ? (
         <p className="py-10 text-center text-sm text-slate-400">Carregando...</p>
       ) : (leads ?? []).length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-200 py-12 text-center">
@@ -91,7 +127,7 @@ export default function VendasPage() {
             );
           })}
         </ul>
-      )}
+      ))}
     </div>
   );
 }

@@ -61,7 +61,10 @@ export type FormaPagamento = 'PIX' | 'BOLETO' | 'TRANSFERENCIA' | 'CARTAO' | 'DI
 export type StatusConciliacao = 'NAO_CONCILIADO' | 'CONCILIADO_MANUAL' | 'CONCILIADO_API';
 export type StatusCadastro = 'ATIVO' | 'INATIVO' | 'SUSPENSO';
 export type StatusLead =
-  | 'NOVO' | 'ORCAMENTO_GERADO' | 'PROPOSTA_ENVIADA' | 'APROVADO' | 'EM_AUDITORIA' | 'ATIVO' | 'PERDIDO';
+  | 'NOVO' | 'ORCAMENTO_GERADO' | 'PROPOSTA_ENVIADA' | 'EM_NEGOCIACAO'
+  | 'APROVADO' | 'EM_AUDITORIA' | 'ATIVO' | 'PERDIDO';
+// Status que o Kanban pode aplicar via drag-and-drop (0028)
+export type StatusKanban = Exclude<StatusLead, 'EM_AUDITORIA' | 'ATIVO'>;
 export type OrigemFipe = 'API' | 'MANUAL' | 'CONTINGENCIA';
 // 0026 :: Assistencia 24h
 export type StatusAcionamento =
@@ -83,6 +86,9 @@ export type RegionaisRow = Timestamps & {
   cnpj: string | null;
   endereco: Json;
   responsavel_id: string | null;
+  // 0028: politica de desconto da franquia/regional
+  percentual_maximo_desconto_venda: number;
+  desconto_observacao: string | null;
 };
 
 export type UsuariosRow = Timestamps & {
@@ -368,6 +374,59 @@ export type CotacoesRow = {
   enviada_em: string | null;
   created_by: string | null;
   created_at: string;
+  // 0028: cotacao editavel + desconto
+  plano_id: string | null;
+  opcionais_ids: string[];
+  desconto_percentual: number;
+  desconto_valor_mensalidade: number;
+  desconto_valor_adesao: number;
+  total_com_desconto: number | null;
+  adesao_com_desconto: number | null;
+  desconto_aprovado_por: string | null;
+  desconto_aprovado_em: string | null;
+  desconto_justificativa: string | null;
+  atualizada_em: string | null;
+  atualizada_por: string | null;
+};
+
+// Card do Kanban (RPC leads_kanban)
+export type LeadKanban = {
+  id: string;
+  nome: string;
+  celular: string;
+  status: StatusLead;
+  marca: string | null;
+  modelo: string | null;
+  placa: string | null;
+  valor_fipe: number | null;
+  consultor: string | null;
+  regional_id: string | null;
+  cotacao_id: string | null;
+  total_mensalidade: number | null;
+  total_com_desconto: number | null;
+  desconto_percentual: number | null;
+  desconto_aprovado: boolean | null;
+  atualizado_em: string;
+};
+
+// Simulacao do desconto (RPC simular_desconto_cotacao)
+export type SimulacaoDesconto = {
+  limite_regional: number;
+  dentro_do_limite: boolean;
+  exige_aprovacao: boolean;
+  mensalidade_original: number;
+  mensalidade_final: number;
+  adesao_original: number;
+  adesao_final: number;
+  desconto_mensalidade: number;
+  desconto_adesao: number;
+};
+
+// Item obrigatorio do plano (RPC produtos_obrigatorios_cotacao)
+export type ProdutoObrigatorio = {
+  produto_id: string;
+  nome: string;
+  valor: number;
 };
 
 export type CotacaoItem = {
@@ -1498,6 +1557,43 @@ export type Database = {
         };
         Returns: AtendimentosRow;
       };
+      mover_lead_status: {
+        Args: { p_lead_id: string; p_status: StatusKanban; p_obs?: string | null };
+        Returns: LeadsRow;
+      };
+      leads_kanban: {
+        Args: { p_regional_id?: string | null; p_consultor_id?: string | null; p_limite?: number };
+        Returns: LeadKanban[];
+      };
+      atualizar_cotacao: {
+        Args: {
+          p_cotacao_id: string;
+          p_fipe?: number | null;
+          p_tipo_veiculo_id?: string | null;
+          p_cota_id?: string | null;
+          p_plano_id?: string | null;
+          p_opcionais_ids?: string[] | null;
+          p_modo_envio?: string | null;
+          p_desconto_percentual?: number | null;
+          p_desconto_justificativa?: string | null;
+        };
+        Returns: CotacoesRow;
+      };
+      aplicar_desconto_cotacao: {
+        Args: { p_cotacao_id: string; p_percentual: number; p_justificativa?: string | null };
+        Returns: CotacoesRow;
+      };
+      simular_desconto_cotacao: {
+        Args: { p_cotacao_id: string; p_percentual: number };
+        Returns: SimulacaoDesconto[];
+      };
+      produtos_obrigatorios_cotacao: {
+        Args: { p_tipo_veiculo_id: string; p_plano_id?: string | null; p_fipe?: number };
+        Returns: ProdutoObrigatorio[];
+      };
+      limite_desconto_regional: { Args: { p_regional_id: string }; Returns: number };
+      pode_aprovar_desconto: { Args: Record<string, never>; Returns: boolean };
+      lead_em_negociacao: { Args: { p_lead_id: string }; Returns: boolean };
       autorizar_entrada_lead: {
         Args: { p_lead_id: string; p_cpf_cnpj?: string | null };
         Returns: string;

@@ -10,14 +10,16 @@
   remessas); (2) módulo **Assistência 24h** (`0026`, `/assistencia`): parametrização de serviços,
   trava financeira com alçada de liberação, cotação → OS → voucher e lançamento em Contas a Pagar;
   (3) refino financeiro/operacional da 24h (`0027`): centro de custo obrigatório, OS editável com
-  auditoria e sincronia automática com o Contas a Pagar + filtro de centro de custo no DRE.
-- **Migrations no repo:** `0001`..`0027` (todas validadas no harness pg local). **Deploy:** rodar as
+  auditoria e sincronia automática com o Contas a Pagar + filtro de centro de custo no DRE;
+  (4) refino do **CRM de Vendas** (`0028`): Kanban com drag-and-drop, status **Em Negociação**,
+  cotação editável com trava dos itens do plano e **política de desconto por franquia** com alçada.
+- **Migrations no repo:** `0001`..`0028` (todas validadas no harness pg local). **Deploy:** rodar as
   novas no Supabase SQL Editor (na ordem) + no VPS `cd /opt/scar && git pull && sudo docker compose up -d --build`.
 - **Design system "cockpit"** aplicado (navy `#1E2B4D` + ciano `#139AD6`); sidebar usa a logo de
   `Configurações → Empresa` (placa branca). Dashboard com KPIs de instrumento + tacômetro (inadimplência real).
 - **SAC** (`/sac`) veículo-first + lazy: lista resumida → clica → detalhe sob demanda → menu de serviços;
   aba **Eventos**; banner de **alertas** do associado; marcadores (evento/assist 24h/alerta) na lista.
-- **Vitest** ativo (`npm test`, 61/61) — `sac.ts`, `cobranca.ts`, `pagamentos/` (mock + Asaas + fábrica) e `assistencia.ts` (KM excedente, trava, voucher).
+- **Vitest** ativo (`npm test`, 76/76) — `sac.ts`, `cobranca.ts`, `pagamentos/`, `assistencia.ts` e `crm.ts` (Kanban, itens obrigatórios, desconto).
 - **Próximos passos oferecidos** (o usuário escolhe no próximo chat):
   1. **Ligar o gateway real** (Asaas): implementar `AsaasGateway.emitir` (esqueleto pronto, endpoints
      e mapeamento documentados) + webhook chamando `registrar_retorno_cobranca`/baixa do título.
@@ -72,6 +74,7 @@ src/
     cobranca.ts                 # regras de mensalidade/vencimento (espelha o SQL) + testes
     pagamentos/                 # service pattern do gateway (types/mock/asaas/index) + testes
     assistencia.ts              # KM excedente, trava do acionamento e voucher do prestador + testes
+    crm.ts                      # esteira/Kanban, itens obrigatorios e politica de desconto + testes
   hooks/                        # um arquivo por dominio (use-*.ts), TanStack Query
   components/                   # ui/ (Button,Input,Modal,Card,field), + por dominio
   app/(dashboard)/              # telas internas (layout gateia staff + mostra logo)
@@ -79,6 +82,7 @@ src/
   app/api/                      # route handlers (cnpj, placa, fipe, usuarios, portal/login, boletos)
   app/api/v1/cobrancas/         # gerar (lote por periodo) e remessa (envio ao banco)
   app/api/v1/assistencia/       # acionamento (com alcada de liberacao) e voucher do prestador
+  app/api/v1/vendas/desconto/   # alcada de excecao do desconto (sessao do gestor)
 middleware.ts                   # refresh de sessao + guard de rotas
 ```
 
@@ -204,6 +208,18 @@ nao tem baixa; com baixa, NAO altera e registra a divergencia; (D) AUDITORIA —
 transacao) e `historico_edicoes_acionamento()`; (E) RELATORIOS — `gerar_dre`/`gerar_dre_resumo`
 ganham 4o argumento `p_centro_custo_id` e passam a considerar as BAIXAS de contas a pagar/receber
 (as versoes de 3 args delegam); novo `resumo_por_centro_custo(inicio,fim,regional?)`).
+· `0028_crm_vendas_refino` (CRM DE VENDAS: (A) PIPELINE — novo status `EM_NEGOCIACAO` (comparado
+como TEXTO, gotcha do 0017) + `mover_lead_status(lead,status_texto,obs)` (valida a transicao, exige
+motivo na perda, bloqueia ATIVO/EM_AUDITORIA pelo funil) e `leads_kanban(regional?,consultor?)`
+(card com a ultima cotacao); `fn_lead_historico` passa a gravar a obs via `set_config('scar.obs_lead')`;
+(B) COTACAO EDITAVEL — `cotacoes` ganha `plano_id`/`opcionais_ids` (agora persistidos) +
+`atualizar_cotacao(...)` que recalcula o snapshot pelo `cotar_plano` enquanto `lead_em_negociacao()`,
+recusando qualquer edicao que remova item de `produtos_obrigatorios_cotacao(tipo,plano,fipe)`;
+(C) DESCONTO — `regionais.percentual_maximo_desconto_venda` (+`desconto_observacao`) e
+`limite_desconto_regional()`; `cotacoes.desconto_percentual/valores/total_com_desconto/
+adesao_com_desconto/aprovado_por/justificativa`; trigger `fn_cotacao_valida_desconto` (trava valendo
+para QUALQUER caminho, inclusive insert direto) + `pode_aprovar_desconto()` (admin/gestor_regional),
+`aplicar_desconto_cotacao()` e `simular_desconto_cotacao()` p/ a UI).
 
 ## Módulos (status: todos funcionais)
 Assistência 24h (`/assistencia`: painel de acionamento com trava + limites em tempo real, cotação,
@@ -241,6 +257,21 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
   `cotar_plano(fipe, tipo, plano_id?, avulsos[]?)` → mensalidade + adesão + franquia + detalhamento.
   Precedência: base(obrigatórios+regra rastreador) + produtos do plano + avulsos. Usado por Simulador,
   Vendas/novo e snapshot da cotação. Preços dos opcionais novos: cadastrar em Configurações→Produtos.
+
+## CRM de Vendas (0028) — Kanban, cotação editável e desconto
+- **Visualização:** `/vendas` alterna **Kanban ↔ Lista** (a escolha fica no `localStorage`). Colunas:
+  Novo Lead → Cotação Criada → Proposta Enviada → **Em Negociação** → Aprovado (Auditoria) → Perdido.
+  Arrastar o card chama `mover_lead_status`; soltar em "Perdido" abre o modal de motivo (obrigatório).
+  Cards em `EM_AUDITORIA`/`ATIVO` ficam **travados** (cadeado) — quem decide ali é a Auditoria.
+- **Cotação editável** (`/vendas/[id]` → botão *Editar* na cotação): troca FIPE, plano/combo e
+  opcionais enquanto o lead **não** foi para a auditoria. Os itens **obrigatórios** (base + plano)
+  aparecem marcados e desabilitados; o banco recusa qualquer snapshot que os remova.
+- **Desconto por franquia:** limite em `Configurações → Regionais` (campo *Desconto máximo de
+  venda*). Na cotação, o campo de % mostra o limite e o valor final em tempo real; **dentro do
+  limite** grava direto, **acima** o botão vira "Salvar e pedir aprovação" e abre o modal de alçada
+  (e-mail + senha do **Gestor/Diretor** + justificativa). A rota `/api/v1/vendas/desconto` autentica
+  o gestor numa sessão efêmera e aplica o desconto com ela, gravando `desconto_aprovado_por`.
+  Voltar para dentro do limite limpa a aprovação. Uma trigger garante a regra mesmo fora da UI.
 
 ## Módulo Assistência 24h (0026) — fluxo, trava e integrações
 - **Entradas:** menu lateral → **Assistência 24h** (`/assistencia`) e o card **Assistência 24h** do

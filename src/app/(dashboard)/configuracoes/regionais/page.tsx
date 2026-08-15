@@ -26,7 +26,7 @@ export default function RegionaisPage() {
   );
 
   function novo() {
-    setEditando({ nome: '', cnpj: '', endereco: {}, responsavel_id: null });
+    setEditando({ nome: '', cnpj: '', endereco: {}, responsavel_id: null, percentual_maximo_desconto_venda: 0 });
     setAberto(true);
   }
   function editar(r: RegionaisRow) {
@@ -70,13 +70,14 @@ export default function RegionaisPage() {
               <th className="px-4 py-2">CNPJ</th>
               <th className="px-4 py-2">Cidade/UF</th>
               <th className="px-4 py-2">Responsavel</th>
+              <th className="px-4 py-2">Desc. max.</th>
               <th className="px-4 py-2 text-right">Acoes</th>
             </tr>
           </thead>
           <tbody>
             {isLoading && (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={6} className="px-4 py-6 text-center text-slate-400">
                   Carregando...
                 </td>
               </tr>
@@ -96,6 +97,15 @@ export default function RegionaisPage() {
                   </td>
                   <td className="px-4 py-2 text-slate-600">
                     {r.responsavel_id ? nomesUsuarios.get(r.responsavel_id) ?? '-' : '-'}
+                  </td>
+                  <td className="px-4 py-2">
+                    <span className={`tnum rounded px-2 py-0.5 text-xs ${
+                      Number(r.percentual_maximo_desconto_venda) > 0
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : 'bg-slate-100 text-slate-500'
+                    }`}>
+                      {Number(r.percentual_maximo_desconto_venda ?? 0).toFixed(2).replace('.', ',')}%
+                    </span>
                   </td>
                   <td className="px-4 py-2">
                     <div className="flex justify-end gap-1">
@@ -121,7 +131,7 @@ export default function RegionaisPage() {
             })}
             {!isLoading && (regionais ?? []).length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={6} className="px-4 py-6 text-center text-slate-400">
                   Nenhuma regional cadastrada.
                 </td>
               </tr>
@@ -161,6 +171,24 @@ export default function RegionaisPage() {
               />
             </FormField>
           </div>
+          <FormField label="Desconto maximo de venda (%)">
+            <Input
+              type="number" min={0} max={100} step="0.5"
+              value={editando?.percentual_maximo_desconto_venda ?? 0}
+              onChange={(e) => setEditando((p) => ({ ...p, percentual_maximo_desconto_venda: Number(e.target.value) }))}
+            />
+            <p className="mt-1 text-xs text-slate-500">
+              Limite que o vendedor desta franquia pode conceder sozinho na cotacao (mensalidade e
+              adesao). Acima disso, a cotacao trava e exige aprovacao de Gestor/Diretor.
+            </p>
+          </FormField>
+          <FormField label="Observacao da politica de desconto">
+            <Input
+              value={editando?.desconto_observacao ?? ''}
+              onChange={(e) => setEditando((p) => ({ ...p, desconto_observacao: e.target.value }))}
+              placeholder="Ex.: ate 10% em campanhas de fim de ano"
+            />
+          </FormField>
           <FormField label="Responsavel">
             <Select
               value={editando?.responsavel_id ?? ''}

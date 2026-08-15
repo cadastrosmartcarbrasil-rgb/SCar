@@ -3,7 +3,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import type {
-  LeadsRow, CotacoesRow, LeadHistoricoRow, CotacaoItem, StatusLead, CotacaoPlano,
+  LeadsRow, CotacoesRow, LeadHistoricoRow, CotacaoItem, StatusLead, StatusKanban,
+  CotacaoPlano, LeadKanban, SimulacaoDesconto, ProdutoObrigatorio,
 } from '@/lib/database.types';
 
 // Papel do usuario logado (para gate da Auditoria).
@@ -143,6 +144,8 @@ export function useSalvarCotacao() {
         fipe,
         tipo_veiculo_id: tipoVeiculoId,
         cota_participacao_id: cotaId ?? null,
+        plano_id: planoId ?? null,
+        opcionais_ids: produtosIds,
         itens,
         total_mensalidade: calc.valor_total_mensalidade,
         participacao: Number(part.data ?? calc.franquia_participacao ?? 0),
@@ -176,5 +179,143 @@ export function useAutorizarEntrada() {
       qc.invalidateQueries({ queryKey: ['vendas'] });
       qc.invalidateQueries({ queryKey: ['vendas', 'lead', leadId] });
     },
+  });
+}
+
+
+// ---------------------------------------------------------------------------
+// Kanban do funil (0028)
+// ---------------------------------------------------------------------------
+export function useLeadsKanban(filtro?: { regionalId?: string | null; consultorId?: string | null }) {
+  const supabase = createClient();
+  return useQuery<LeadKanban[]>({
+    queryKey: ['vendas', 'kanban', filtro?.regionalId ?? 'all', filtro?.consultorId ?? 'all'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('leads_kanban', {
+        p_regional_id: filtro?.regionalId ?? null,
+        p_consultor_id: filtro?.consultorId ?? null,
+        p_limite: 500,
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+// Drag-and-drop: move o lead de fase (o banco valida a transicao).
+export function useMoverLead() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<LeadsRow, Error, { id: string; status: StatusKanban; obs?: string | null }>({
+    mutationFn: async ({ id, status, obs }) => {
+      const { data, error } = await supabase.rpc('mover_lead_status', {
+        p_lead_id: id,
+        p_status: status,
+        p_obs: obs ?? null,
+      });
+      if (error) throw error;
+      return data as LeadsRow;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['vendas'] }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Cotacao editavel + desconto (0028)
+// ---------------------------------------------------------------------------
+export interface AtualizarCotacaoInput {
+  cotacaoId: string;
+  fipe?: number | null;
+  tipoVeiculoId?: string | null;
+  cotaId?: string | null;
+  planoId?: string | null;
+  opcionaisIds?: string[] | null;
+  modoEnvio?: string | null;
+  descontoPercentual?: number | null;
+  descontoJustificativa?: string | null;
+}
+
+export function useAtualizarCotacao() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<CotacoesRow, Error, AtualizarCotacaoInput>({
+    mutationFn: async (i) => {
+      const { data, error } = await supabase.rpc('atualizar_cotacao', {
+        p_cotacao_id: i.cotacaoId,
+        p_fipe: i.fipe ?? null,
+        p_tipo_veiculo_id: i.tipoVeiculoId ?? null,
+        p_cota_id: i.cotaId ?? null,
+        p_plano_id: i.planoId ?? null,
+        p_opcionais_ids: i.opcionaisIds ?? null,
+        p_modo_envio: i.modoEnvio ?? null,
+        p_desconto_percentual: i.descontoPercentual ?? null,
+        p_desconto_justificativa: i.descontoJustificativa ?? null,
+      });
+      if (error) throw error;
+      return data as CotacoesRow;
+    },
+    onSuccess: (c) => {
+      qc.invalidateQueries({ queryKey: ['vendas', 'cotacoes', c.lead_id] });
+      qc.invalidateQueries({ queryKey: ['vendas'] });
+    },
+  });
+}
+
+// Itens que nao podem ser desmarcados (base + plano).
+export function useProdutosObrigatorios(tipoVeiculoId?: string | null, planoId?: string | null, fipe?: number) {
+  const supabase = createClient();
+  return useQuery<ProdutoObrigatorio[]>({
+    queryKey: ['vendas', 'obrigatorios', tipoVeiculoId ?? '', planoId ?? '', fipe ?? 0],
+    enabled: !!tipoVeiculoId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('produtos_obrigatorios_cotacao', {
+        p_tipo_veiculo_id: tipoVeiculoId as string,
+        p_plano_id: planoId ?? null,
+        p_fipe: fipe ?? 0,
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+// Simulacao do desconto (limite da franquia + efeito nos valores).
+export function useSimularDesconto(cotacaoId: string | null, percentual: number) {
+  const supabase = createClient();
+  return useQuery<SimulacaoDesconto | null>({
+    queryKey: ['vendas', 'simular-desconto', cotacaoId ?? '', percentual],
+    enabled: !!cotacaoId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('simular_desconto_cotacao', {
+        p_cotacao_id: cotacaoId as string,
+        p_percentual: percentual,
+      });
+      if (error) throw error;
+      return data?.[0] ?? null;
+    },
+  });
+}
+
+// Desconto acima do limite: roda na sessao do gestor (alcada de excecao).
+export function useAprovarDesconto() {
+  const qc = useQueryClient();
+  return useMutation<{ cotacao: CotacoesRow; aprovado_por: string }, Error, {
+    cotacao_id: string;
+    percentual: number;
+    justificativa: string;
+    email: string;
+    senha: string;
+  }>({
+    mutationFn: async (input) => {
+      const res = await fetch('/api/v1/vendas/desconto', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? 'Falha ao aprovar o desconto');
+      return json;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['vendas'] }),
   });
 }
