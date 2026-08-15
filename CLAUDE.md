@@ -4,24 +4,27 @@
 > Mantenha este arquivo atualizado ao adicionar módulos/migrations (é barato e faz o projeto andar rápido).
 
 ## Estado atual (retomar aqui) — atualizado nesta sessão
-- **Branch:** `claude/scar-project-btasdf` · **último commit:** `6efa280` (migration 0023, ficha do veículo).
-- **Migrations no repo:** `0001`..`0023` (todas validadas no harness pg local). **Deploy:** rodar as
+- **Branch:** `claude/claude-md-opcao-x-98kfj5` (a partir do `6efa280`) · **entrega da sessão:**
+  migration `0024_cobrancas` + módulo **Cobranças** (Financeiro → aba "Cobranças").
+- **Migrations no repo:** `0001`..`0024` (todas validadas no harness pg local). **Deploy:** rodar as
   novas no Supabase SQL Editor (na ordem) + no VPS `cd /opt/scar && git pull && sudo docker compose up -d --build`.
 - **Design system "cockpit"** aplicado (navy `#1E2B4D` + ciano `#139AD6`); sidebar usa a logo de
   `Configurações → Empresa` (placa branca). Dashboard com KPIs de instrumento + tacômetro (inadimplência real).
 - **SAC** (`/sac`) veículo-first + lazy: lista resumida → clica → detalhe sob demanda → menu de serviços;
   aba **Eventos**; banner de **alertas** do associado; marcadores (evento/assist 24h/alerta) na lista.
-- **Vitest** ativo (`npm test`, 13/13) — `src/lib/sac.ts`/`sac.test.ts`.
-- **Próximos passos oferecidos** (o usuário vai escolher no novo chat):
-  1. **Cobranças** usando `dia_vencimento` + `valor_mensalidade` por veículo (ligar no `gerar_faturas_cliente`).
-  2. **Termo de adesão**: gerar documento + página pública de **aceite eletrônico** (`contratos_adesao.token`,
+- **Vitest** ativo (`npm test`, 31/31) — `src/lib/sac.ts`/`sac.test.ts` + `src/lib/cobranca.ts`/`cobranca.test.ts`.
+- **Próximos passos oferecidos** (o usuário escolhe no próximo chat):
+  1. **Termo de adesão**: gerar documento + página pública de **aceite eletrônico** (`contratos_adesao.token`,
      nos moldes da cotação pública `/cotacao/[token]`).
-  3. **Módulo de Vistoria**: captura com upload de fotos (bucket) + status (tabelas `vistorias`/`vistoria_anexos` já existem).
-  4. **Portal do Associado**: login CPF + autosserviço reusando `SERVICOS_SAC` + `abrir_atendimento` + RLS por dono.
-  5. **Fila de atendimentos** p/ a equipe tramitar chamados (Assist 24h, Upgrade, etc.).
-- **Pendências técnicas conhecidas:** gateway bancário ainda MOCKADO (`/api/boletos/emitir-lote` e
-  `/api/v1/sac/boleto`); preços dos opcionais novos (RCF 50/75/100mil, Carro Reserva 10/30d, Vidros III/
-  Completa, Assist VIP) começam em R$0 — cadastrar em Configurações → Produtos.
+  2. **Módulo de Vistoria**: captura com upload de fotos (bucket) + status (tabelas `vistorias`/`vistoria_anexos` já existem).
+  3. **Portal do Associado**: login CPF + autosserviço reusando `SERVICOS_SAC` + `abrir_atendimento` + RLS por dono.
+  4. **Fila de atendimentos** p/ a equipe tramitar chamados (Assist 24h, Upgrade, etc.).
+  5. **Gateway bancário real** (trocar o mock por Asaas/PJBank): a fatura já vira `titulos_financeiros`;
+     falta só a emissão do boleto/PIX e o webhook marcando `pago` (o trigger já fecha a fatura).
+- **Pendências técnicas conhecidas:** gateway bancário ainda MOCKADO (`/api/boletos/emitir-lote`; o
+  `/api/v1/sac/boleto` já emite o título real, mas sem linha digitável); preços dos opcionais novos
+  (RCF 50/75/100mil, Carro Reserva 10/30d, Vidros III/Completa, Assist VIP) começam em R$0 —
+  cadastrar em Configurações → Produtos.
 
 ## O que é
 Sistema de gestão para **associação de proteção veicular** (associados, frota, eventos/sinistros,
@@ -134,6 +137,20 @@ pos-venda + token de aceite eletronico -- estrutura, termo depois); `vistorias`+
 (modulo proprio depois, mas ja aparecem na ficha). RLS por veiculo (staff-regional ou dono);
 seed de 5 alertas. Form de veiculo ganhou Plano+Opcionais+Calcular mensalidade (cotar_plano)+
 dia de vencimento+alienado+portas+alertas; nova tela Configuracoes->Alertas).
+· `0024_cobrancas` (COBRANCA RECORRENTE — liga a ficha do veiculo (0023) ao faturamento
+(0021) e ao financeiro: helpers `calcular_vencimento(competencia,dia)` (clampa dia 31 ao
+ultimo dia do mes; sem dia = padrao legado dia 10 do mes seguinte),
+`valor_mensalidade_veiculo(veic)` (precedencia `veiculos.valor_mensalidade` >
+`cotar_plano(fipe,tipo,plano,opcionais de veiculo_produtos)` > 0),
+`veiculo_faturavel(veic,competencia)` (so ativo/em_evento/vistoria_pendente e ja ativado ate
+o fim do mes — suspenso/inativo/baixado NAO geram mensalidade) e
+`dia_vencimento_agrupado(cliente,competencia)` (dia mais usado, desempate menor).
+`gerar_faturas_cliente` reescrita usando os helpers (nao cria mais fatura zerada);
+`gerar_faturas_competencia(competencia,regional?)` = lote do mes; `emitir_titulo_fatura(fatura)`
+e `emitir_titulos_competencia(...)` criam o `titulos_financeiros` (base de boleto/2a via/
+inadimplencia) de forma idempotente; trigger `titulo -> fatura` (pago=PAGA, cancelado=CANCELADA)
+fecha o ciclo com o webhook bancario; `cancelar_fatura(fatura)`. Logica pura espelhada em
+`src/lib/cobranca.ts` (Vitest)).
 
 ## Módulos (status: todos funcionais)
 SAC / Atendimento (`/sac`: **veículo-first + lazy** — busca por Nome/CPF/Placa → `visao-360` traz
@@ -153,7 +170,8 @@ Auditoria — só papel `auditoria`/`admin` clica "Autorizar Entrada" e efetiva 
 · Associados (painel `/associados/[id]` com abas) · Veículos/Contratos · Eventos/Sinistros
 (protocolo, reparo próprio/terceiro, financeiro do evento) · Precificação (simulador + editor de
 tabela FIPE com reajuste %) · Empresa (logo/diretoria/mandatos/documentos) · Fornecedores (auto
-CNPJ/CEP) · Financeiro (contas a pagar/receber + baixas + DRE) · Configurações (regionais, usuários,
+CNPJ/CEP) · Financeiro (**Cobranças/mensalidades** + contas a pagar/receber + baixas + DRE)
+· Configurações (regionais, usuários,
 vendedores, marcas/modelos, tipos de veículo, cotas de participação (V5..V15), tipos de evento,
 produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações bancárias, plano de contas).
 
@@ -168,6 +186,25 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
   `cotar_plano(fipe, tipo, plano_id?, avulsos[]?)` → mensalidade + adesão + franquia + detalhamento.
   Precedência: base(obrigatórios+regra rastreador) + produtos do plano + avulsos. Usado por Simulador,
   Vendas/novo e snapshot da cotação. Preços dos opcionais novos: cadastrar em Configurações→Produtos.
+
+## Cobranças / mensalidade (0024) — arquitetura
+- **Fluxo:** veículo (ficha) → `gerar_faturas_cliente`/`gerar_faturas_competencia` → **fatura**
+  (snapshot com itens) → `emitir_titulo_fatura` → **`titulos_financeiros`** (o que vira boleto,
+  aparece na 2ª via do SAC e alimenta a inadimplência) → webhook bancário marca `pago` → trigger
+  fecha a **fatura** como `PAGA`. Cancelamento: `cancelar_fatura` (bloqueia se já paga).
+- **Valor do veículo:** `veiculos.valor_mensalidade` (override negociado na ficha) → senão
+  `cotar_plano(fipe, tipo, plano, opcionais de veiculo_produtos)`. Sem tipo/plano = R$0 e **não gera**
+  fatura (fatura zerada nunca é emitida).
+- **Vencimento:** `veiculos.dia_vencimento` no mês da competência (dia 31 cai no último dia do mês).
+  Fatura **agrupada** usa o dia mais frequente entre os veículos do associado. Sem dia definido, cai no
+  padrão histórico (dia 10 do mês seguinte).
+- **Quem é cobrado:** `veiculo_faturavel` = status `ativo`/`em_evento`/`vistoria_pendente` **e**
+  `data_ativacao <= fim do mês`. Suspenso/inativo/baixado/excluído não geram mensalidade.
+- **Idempotência:** rodar o lote de novo na mesma competência não recria nem altera fatura existente
+  (histórico imutável; trocar Agrupado↔Individual só afeta competências futuras).
+- **UI:** `/financeiro` → aba **Cobranças** (competência/regional/status, KPIs, "Gerar cobranças",
+  "Emitir títulos", expandir itens da agrupada, cancelar). Hook `use-cobrancas.ts`; lógica pura
+  espelhada em `src/lib/cobranca.ts` (com testes).
 
 ## Cota de participação (rateio no evento) — arquitetura
 - **Desacoplada do Plano.** O Plano define a mensalidade (produtos); a cota (% da FIPE no rateio)

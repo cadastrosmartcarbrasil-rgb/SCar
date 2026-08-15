@@ -26,9 +26,22 @@ export async function POST(request: Request) {
   });
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
+  const { data: abertas } = await supabase
+    .from('faturas')
+    .select('id, titulo_id, status')
+    .eq('cliente_id', body.cliente_id)
+    .eq('competencia', competencia);
+
+  // Garante o titulo financeiro de cada fatura aberta (base do boleto/2a via).
+  for (const f of abertas ?? []) {
+    if (f.status === 'ABERTA' && !f.titulo_id) {
+      await supabase.rpc('emitir_titulo_fatura', { p_fatura_id: f.id });
+    }
+  }
+
   const { data: faturas } = await supabase
     .from('faturas')
-    .select('*, fatura_itens(descricao, valor)')
+    .select('*, fatura_itens(descricao, valor), titulos_financeiros(id, status, data_vencimento, linha_digitavel, url_boleto)')
     .eq('cliente_id', body.cliente_id)
     .eq('competencia', competencia)
     .order('tipo_faturamento');

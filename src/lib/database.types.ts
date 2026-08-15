@@ -252,6 +252,17 @@ export type AtendimentosRow = Timestamps & {
 };
 
 // Retorno de opcionais_elegibilidade (janela flutuante de N dias)
+// Resumo do lote de cobrancas (gerar_faturas_competencia / emitir_titulos_competencia)
+export type ResumoGeracaoFaturas = {
+  associados: number;
+  faturas_geradas: number;
+  valor_total: number;
+};
+export type ResumoEmissaoTitulos = {
+  titulos_emitidos: number;
+  valor_total: number;
+};
+
 export type OpcionalElegibilidade = {
   produto_id: string;
   nome: string;
@@ -950,6 +961,30 @@ export type Database = {
       gerar_faturas_cliente: {
         Args: { p_cliente_id: string; p_competencia: string; p_vencimento?: string | null };
         Returns: FaturasRow[];
+      };
+      gerar_faturas_competencia: {
+        Args: { p_competencia: string; p_regional_id?: string | null };
+        Returns: ResumoGeracaoFaturas[];
+      };
+      emitir_titulos_competencia: {
+        Args: { p_competencia: string; p_regional_id?: string | null };
+        Returns: ResumoEmissaoTitulos[];
+      };
+      emitir_titulo_fatura: {
+        Args: { p_fatura_id: string };
+        Returns: TitulosFinanceirosRow;
+      };
+      cancelar_fatura: {
+        Args: { p_fatura_id: string };
+        Returns: FaturasRow;
+      };
+      valor_mensalidade_veiculo: {
+        Args: { p_veiculo_id: string };
+        Returns: number;
+      };
+      calcular_vencimento: {
+        Args: { p_competencia: string; p_dia: number | null };
+        Returns: string;
       };
       abrir_atendimento: {
         Args: {
