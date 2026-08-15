@@ -5,26 +5,29 @@
 
 ## Estado atual (retomar aqui) — atualizado nesta sessão
 - **Branch:** `claude/claude-md-opcao-x-98kfj5` (a partir do `6efa280`) · **entrega da sessão:**
-  migration `0024_cobrancas` + módulo **Cobranças** (Financeiro → aba "Cobranças").
-- **Migrations no repo:** `0001`..`0024` (todas validadas no harness pg local). **Deploy:** rodar as
+  migrations `0024_cobrancas` + `0025_cobranca_modulo` e o **módulo Cobrança** (`/cobrancas`, menu lateral):
+  dashboard com KPIs/filtros, geração automática na ativação, boletagem em lote (6 meses) e
+  camada de integração bancária (service pattern + remessas).
+- **Migrations no repo:** `0001`..`0025` (todas validadas no harness pg local). **Deploy:** rodar as
   novas no Supabase SQL Editor (na ordem) + no VPS `cd /opt/scar && git pull && sudo docker compose up -d --build`.
 - **Design system "cockpit"** aplicado (navy `#1E2B4D` + ciano `#139AD6`); sidebar usa a logo de
   `Configurações → Empresa` (placa branca). Dashboard com KPIs de instrumento + tacômetro (inadimplência real).
 - **SAC** (`/sac`) veículo-first + lazy: lista resumida → clica → detalhe sob demanda → menu de serviços;
   aba **Eventos**; banner de **alertas** do associado; marcadores (evento/assist 24h/alerta) na lista.
-- **Vitest** ativo (`npm test`, 31/31) — `src/lib/sac.ts`/`sac.test.ts` + `src/lib/cobranca.ts`/`cobranca.test.ts`.
+- **Vitest** ativo (`npm test`, 43/43) — `sac.ts`, `cobranca.ts` e `pagamentos/` (mock + Asaas + fábrica).
 - **Próximos passos oferecidos** (o usuário escolhe no próximo chat):
-  1. **Termo de adesão**: gerar documento + página pública de **aceite eletrônico** (`contratos_adesao.token`,
+  1. **Ligar o gateway real** (Asaas): implementar `AsaasGateway.emitir` (esqueleto pronto, endpoints
+     e mapeamento documentados) + webhook chamando `registrar_retorno_cobranca`/baixa do título.
+  2. **Termo de adesão**: gerar documento + página pública de **aceite eletrônico** (`contratos_adesao.token`,
      nos moldes da cotação pública `/cotacao/[token]`).
-  2. **Módulo de Vistoria**: captura com upload de fotos (bucket) + status (tabelas `vistorias`/`vistoria_anexos` já existem).
-  3. **Portal do Associado**: login CPF + autosserviço reusando `SERVICOS_SAC` + `abrir_atendimento` + RLS por dono.
-  4. **Fila de atendimentos** p/ a equipe tramitar chamados (Assist 24h, Upgrade, etc.).
-  5. **Gateway bancário real** (trocar o mock por Asaas/PJBank): a fatura já vira `titulos_financeiros`;
-     falta só a emissão do boleto/PIX e o webhook marcando `pago` (o trigger já fecha a fatura).
-- **Pendências técnicas conhecidas:** gateway bancário ainda MOCKADO (`/api/boletos/emitir-lote`; o
-  `/api/v1/sac/boleto` já emite o título real, mas sem linha digitável); preços dos opcionais novos
-  (RCF 50/75/100mil, Carro Reserva 10/30d, Vidros III/Completa, Assist VIP) começam em R$0 —
-  cadastrar em Configurações → Produtos.
+  3. **Módulo de Vistoria**: captura com upload de fotos (bucket) + status (tabelas `vistorias`/`vistoria_anexos` já existem).
+  4. **Portal do Associado**: login CPF + autosserviço reusando `SERVICOS_SAC` + `abrir_atendimento` + RLS por dono.
+  5. **Fila de atendimentos** p/ a equipe tramitar chamados (Assist 24h, Upgrade, etc.).
+- **Pendências técnicas conhecidas:** o envio ao banco usa o **MockGateway** (linha digitável/PIX
+  fictícios, determinísticos) até cadastrar a integração real em Configurações → Integrações bancárias;
+  `/api/boletos/emitir-lote` é a rotina ANTIGA (mock, cobra taxa_administrativa) — usar
+  `/api/v1/cobrancas/*`; preços dos opcionais novos (RCF 50/75/100mil, Carro Reserva 10/30d,
+  Vidros III/Completa, Assist VIP) começam em R$0 — cadastrar em Configurações → Produtos.
 
 ## O que é
 Sistema de gestão para **associação de proteção veicular** (associados, frota, eventos/sinistros,
@@ -63,11 +66,14 @@ src/
     cep.ts / cnpj.ts / placa.ts # integracoes externas (ViaCEP, BrasilAPI, placa)
     fipe.ts                     # Tabela FIPE (placafipe.com.br) - proxy server-side /api/fipe
     utils.ts                    # cn, formatCurrency, formatDate, monthRange
+    cobranca.ts                 # regras de mensalidade/vencimento (espelha o SQL) + testes
+    pagamentos/                 # service pattern do gateway (types/mock/asaas/index) + testes
   hooks/                        # um arquivo por dominio (use-*.ts), TanStack Query
   components/                   # ui/ (Button,Input,Modal,Card,field), + por dominio
   app/(dashboard)/              # telas internas (layout gateia staff + mostra logo)
   app/(auth)/login, app/portal  # login staff e portal do associado
   app/api/                      # route handlers (cnpj, placa, fipe, usuarios, portal/login, boletos)
+  app/api/v1/cobrancas/         # gerar (lote por periodo) e remessa (envio ao banco)
 middleware.ts                   # refresh de sessao + guard de rotas
 ```
 
@@ -151,6 +157,20 @@ e `emitir_titulos_competencia(...)` criam o `titulos_financeiros` (base de bolet
 inadimplencia) de forma idempotente; trigger `titulo -> fatura` (pago=PAGA, cancelado=CANCELADA)
 fecha o ciclo com o webhook bancario; `cancelar_fatura(fatura)`. Logica pura espelhada em
 `src/lib/cobranca.ts` (Vitest)).
+· `0025_cobranca_modulo` (MODULO COBRANCA: (A) GERACAO AUTOMATICA na entrada na base — trigger
+BEFORE carimba `veiculos.data_ativacao` e AFTER dispara `gerar_primeira_cobranca_veiculo()` quando
+o veiculo nasce/vira `ativo` (inclui o fluxo de auditoria de Vendas); agrupado entra como item na
+fatura do mes se ela ainda estiver ABERTA e sem titulo, senao ganha fatura propria; nunca duplica;
+(B) BOLETAGEM RECORRENTE — `gerar_faturas_cliente_veiculos(cliente,comp,veiculo_ids?,venc?)` vira o
+nucleo (o `gerar_faturas_cliente` passa a delegar) e `gerar_faturas_periodo(comp_inicial,meses,
+cliente?,veiculo_ids?,regional?)` gera N competencias (ex.: 6 meses) por associado/grupo/regional;
+(C) INTEGRACAO BANCARIA — `titulos_financeiros` ganha `pix_copia_cola/pix_qrcode_url/integracao_id/
+gateway_status/gateway_erro/enviado_em`; novas tabelas `cobranca_remessas` + `cobranca_remessa_itens`
+(fila de envio) com `criar_remessa_cobranca`, `marcar_remessa_enviada`, `registrar_retorno_cobranca`
+(grava linha digitavel/PDF/PIX ou erro) e `finalizar_remessa` (CONCLUIDA/PARCIAL/ERRO);
+(D) DASHBOARD — `listar_cobrancas(...)` (filtros: placa, associado/CPF, vencimento de/ate, faixa de
+valor, status, regional) + `resumo_cobrancas(...)` (emitido x recebido, inadimplencia %/valor,
+a vencer 7/15/30) + `titulos_para_remessa(...)` e `status_cobranca_efetivo()` (pendente vencido = vencido)).
 
 ## Módulos (status: todos funcionais)
 SAC / Atendimento (`/sac`: **veículo-first + lazy** — busca por Nome/CPF/Placa → `visao-360` traz
@@ -170,7 +190,8 @@ Auditoria — só papel `auditoria`/`admin` clica "Autorizar Entrada" e efetiva 
 · Associados (painel `/associados/[id]` com abas) · Veículos/Contratos · Eventos/Sinistros
 (protocolo, reparo próprio/terceiro, financeiro do evento) · Precificação (simulador + editor de
 tabela FIPE com reajuste %) · Empresa (logo/diretoria/mandatos/documentos) · Fornecedores (auto
-CNPJ/CEP) · Financeiro (**Cobranças/mensalidades** + contas a pagar/receber + baixas + DRE)
+CNPJ/CEP) · **Cobrança** (`/cobrancas`: dashboard + faturas por competência + boletagem em lote +
+remessas bancárias) · Financeiro (contas a pagar/receber + baixas + DRE)
 · Configurações (regionais, usuários,
 vendedores, marcas/modelos, tipos de veículo, cotas de participação (V5..V15), tipos de evento,
 produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações bancárias, plano de contas).
@@ -186,6 +207,28 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
   `cotar_plano(fipe, tipo, plano_id?, avulsos[]?)` → mensalidade + adesão + franquia + detalhamento.
   Precedência: base(obrigatórios+regra rastreador) + produtos do plano + avulsos. Usado por Simulador,
   Vendas/novo e snapshot da cotação. Preços dos opcionais novos: cadastrar em Configurações→Produtos.
+
+## Módulo Cobrança (0025) — navegação, dashboard, lote e banco
+- **Menu lateral → "Cobrança" (`/cobrancas`)**, com 3 abas: **Visão Geral** (dashboard),
+  **Faturas por Competência** (gerar/emitir/cancelar do 0024) e **Boletagem em Lote**.
+- **Dashboard** (`resumo_cobrancas` + `listar_cobrancas`): Total Emitido × Recebido, Inadimplência
+  (% e valor em atraso), Boletos a vencer em 7/15/30 dias; filtros por **placa, associado (nome ou
+  CPF/CNPJ), vencimento de/até, faixa de valor, status** (Em aberto/Pago/Vencido/Cancelado) e regional.
+  Status é **efetivo**: pendente com vencimento passado já conta como vencido.
+- **Geração automática:** ao ativar o veículo (insert já `ativo` ou mudança para `ativo` — inclusive
+  pela auditoria de Vendas) o banco carimba `data_ativacao` e gera a **primeira cobrança**. Reativar
+  não duplica. Falha na geração não bloqueia o cadastro (vira `warning`).
+- **Boletagem em lote:** `/api/v1/cobrancas/gerar` → `gerar_faturas_periodo` (padrão 6 meses) com
+  escopo Toda a base / Um associado / Grupo de veículos + regional, e emissão dos títulos junto.
+- **Envio ao banco:** `/api/v1/cobrancas/remessa` monta a fila (`titulos_para_remessa`), cria a
+  **remessa**, marca enviada, chama o **gateway** e grava o retorno por título
+  (`registrar_retorno_cobranca`), fechando com `finalizar_remessa`.
+- **Service pattern** (`src/lib/pagamentos/`): `PaymentGateway` (emitir, emitirLote, consultar,
+  cancelar, parseWebhook) + `BasePaymentGateway` (lote tolerante a erro por item);
+  `MockGateway` (padrão hoje, retorno determinístico) e `AsaasGateway` (esqueleto com endpoints e
+  mapeamento documentados). `getPaymentGateway(integracao)` resolve pelo cadastro em
+  **Configurações → Integrações bancárias**; sem credencial cai no mock. Trocar de banco = novo
+  adaptador, sem tocar nas rotinas de cobrança.
 
 ## Cobranças / mensalidade (0024) — arquitetura
 - **Fluxo:** veículo (ficha) → `gerar_faturas_cliente`/`gerar_faturas_competencia` → **fatura**

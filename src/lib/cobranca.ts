@@ -22,6 +22,17 @@ export function rotuloCompetencia(competencia: string): string {
   return `${MESES[m - 1]}/${ano}`;
 }
 
+/** Competencias de um lote por periodo (espelha `gerar_faturas_periodo`):
+ *  N meses consecutivos a partir da competencia inicial. */
+export function competenciasDoPeriodo(competenciaInicial: string, meses: number): string[] {
+  const [ano, m] = competenciaInicial.split('-').map(Number);
+  const total = Math.min(Math.max(Math.trunc(meses), 1), 24);
+  return Array.from({ length: total }, (_, i) => {
+    const d = new Date(Date.UTC(ano, m - 1 + i, 1));
+    return iso(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
+  });
+}
+
 /** Ultimo dia do mes da competencia. */
 export function ultimoDiaDoMes(competencia: string): number {
   const [ano, m] = competencia.split('-').map(Number);

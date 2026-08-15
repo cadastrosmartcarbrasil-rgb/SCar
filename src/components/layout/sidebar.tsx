@@ -15,6 +15,7 @@ import {
   LogOut,
   Target,
   Headset,
+  Receipt,
   Menu,
   X,
 } from 'lucide-react';
@@ -33,6 +34,7 @@ const OPERACAO: Item[] = [
   { href: '/sinistros', label: 'Sinistros', icon: AlertTriangle },
 ];
 const GESTAO: Item[] = [
+  { href: '/cobrancas', label: 'Cobranca', icon: Receipt },
   { href: '/precificacao', label: 'Precificacao', icon: Calculator },
   { href: '/fornecedores', label: 'Fornecedores', icon: Store },
   { href: '/financeiro', label: 'Financeiro / DRE', icon: DollarSign },

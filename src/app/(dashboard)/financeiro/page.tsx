@@ -1,17 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { Wallet, BarChart3, Receipt } from 'lucide-react';
+import { Wallet, BarChart3 } from 'lucide-react';
 import { DreReport } from '@/components/financeiro/dre-report';
 import { ContasFinanceiro } from '@/components/financeiro/contas-financeiro';
-import { Cobrancas } from '@/components/financeiro/cobrancas';
 
-type Aba = 'cobrancas' | 'contas' | 'dre';
+type Aba = 'contas' | 'dre';
 
+// Mensalidades/boletos ficam no modulo proprio (menu Cobranca -> /cobrancas).
 export default function FinanceiroPage() {
-  const [aba, setAba] = useState<Aba>('cobrancas');
+  const [aba, setAba] = useState<Aba>('contas');
   const abas: { id: Aba; label: string; icon: React.ElementType }[] = [
-    { id: 'cobrancas', label: 'Cobrancas (Mensalidades)', icon: Receipt },
     { id: 'contas', label: 'Contas a Pagar / Receber', icon: Wallet },
     { id: 'dre', label: 'DRE', icon: BarChart3 },
   ];
@@ -33,7 +32,6 @@ export default function FinanceiroPage() {
           </button>
         ))}
       </div>
-      {aba === 'cobrancas' && <Cobrancas />}
       {aba === 'contas' && <ContasFinanceiro />}
       {aba === 'dre' && <DreReport />}
     </div>

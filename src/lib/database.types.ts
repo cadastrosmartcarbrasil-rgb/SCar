@@ -417,6 +417,90 @@ export type TitulosFinanceirosRow = Timestamps & {
   nosso_numero: string | null;
   url_boleto: string | null;
   gateway_transacao_id: string | null;
+  // 0025: retorno da API bancaria (PIX/PDF) e rastreio do envio ao gateway
+  pix_copia_cola: string | null;
+  pix_qrcode_url: string | null;
+  integracao_id: string | null;
+  gateway_status: string | null;
+  gateway_erro: string | null;
+  enviado_em: string | null;
+};
+
+// 0025: fila de envio ao banco (remessa de cobranca)
+export type StatusRemessa = 'PENDENTE' | 'PROCESSANDO' | 'CONCLUIDA' | 'PARCIAL' | 'ERRO';
+export type StatusRemessaItem = 'PENDENTE' | 'ENVIADO' | 'CONFIRMADO' | 'ERRO';
+
+export type CobrancaRemessasRow = Timestamps & {
+  id: string;
+  integracao_id: string | null;
+  regional_id: string | null;
+  referencia: string | null;
+  status: StatusRemessa;
+  total_titulos: number;
+  total_valor: number;
+  enviado_em: string | null;
+  retorno_em: string | null;
+  erro: string | null;
+  created_by: string | null;
+};
+
+export type CobrancaRemessaItensRow = Timestamps & {
+  id: string;
+  remessa_id: string;
+  titulo_id: string;
+  status: StatusRemessaItem;
+  erro: string | null;
+  payload: Json | null;
+  retorno: Json | null;
+};
+
+// Linha da listagem do modulo Cobranca (RPC listar_cobrancas)
+export type StatusCobranca = 'aberto' | 'pago' | 'vencido' | 'cancelado';
+export type CobrancaLinha = {
+  titulo_id: string;
+  fatura_id: string | null;
+  cliente_id: string;
+  associado: string;
+  cpf_cnpj: string;
+  placas: string | null;
+  competencia: string | null;
+  data_vencimento: string;
+  valor: number;
+  valor_pago: number | null;
+  data_pagamento: string | null;
+  status: StatusCobranca;
+  dias_atraso: number;
+  linha_digitavel: string | null;
+  url_boleto: string | null;
+  pix_copia_cola: string | null;
+  regional_id: string | null;
+};
+
+// KPIs do dashboard de cobranca (RPC resumo_cobrancas)
+export type ResumoCobrancas = {
+  emitido_qtd: number;
+  emitido_valor: number;
+  recebido_qtd: number;
+  recebido_valor: number;
+  aberto_qtd: number;
+  aberto_valor: number;
+  vencido_qtd: number;
+  vencido_valor: number;
+  inadimplencia_pct: number | null;
+  vencer_7_qtd: number;
+  vencer_7_valor: number;
+  vencer_15_qtd: number;
+  vencer_15_valor: number;
+  vencer_30_qtd: number;
+  vencer_30_valor: number;
+};
+
+// Uma linha por competencia gerada (RPC gerar_faturas_periodo)
+export type ResumoPeriodoFaturas = {
+  competencia: string;
+  associados: number;
+  faturas_geradas: number;
+  valor_total: number;
 };
 
 export type MovimentacoesCaixaRow = Timestamps & {
@@ -870,6 +954,14 @@ export type Database = {
         [Rel<'cliente_id', 'clientes'>, Rel<'veiculo_id', 'veiculos'>, Rel<'titulo_id', 'titulos_financeiros'>]
       >;
       fatura_itens: TableDef<FaturaItensRow, [Rel<'fatura_id', 'faturas'>, Rel<'veiculo_id', 'veiculos'>]>;
+      cobranca_remessas: TableDef<
+        CobrancaRemessasRow,
+        [Rel<'integracao_id', 'integracoes_bancarias'>, Rel<'regional_id', 'regionais'>, Rel<'created_by', 'usuarios'>]
+      >;
+      cobranca_remessa_itens: TableDef<
+        CobrancaRemessaItensRow,
+        [Rel<'remessa_id', 'cobranca_remessas'>, Rel<'titulo_id', 'titulos_financeiros'>]
+      >;
       atendimentos: TableDef<
         AtendimentosRow,
         [Rel<'cliente_id', 'clientes'>, Rel<'veiculo_id', 'veiculos'>, Rel<'aberto_por', 'usuarios'>, Rel<'evento_id', 'eventos_sinistro'>]
@@ -977,6 +1069,77 @@ export type Database = {
       cancelar_fatura: {
         Args: { p_fatura_id: string };
         Returns: FaturasRow;
+      };
+      gerar_primeira_cobranca_veiculo: {
+        Args: { p_veiculo_id: string; p_competencia?: string | null };
+        Returns: FaturasRow[];
+      };
+      gerar_faturas_cliente_veiculos: {
+        Args: {
+          p_cliente_id: string;
+          p_competencia: string;
+          p_veiculo_ids?: string[] | null;
+          p_vencimento?: string | null;
+        };
+        Returns: FaturasRow[];
+      };
+      gerar_faturas_periodo: {
+        Args: {
+          p_competencia_inicial: string;
+          p_meses?: number;
+          p_cliente_id?: string | null;
+          p_veiculo_ids?: string[] | null;
+          p_regional_id?: string | null;
+        };
+        Returns: ResumoPeriodoFaturas[];
+      };
+      listar_cobrancas: {
+        Args: {
+          p_inicio?: string | null;
+          p_fim?: string | null;
+          p_placa?: string | null;
+          p_associado?: string | null;
+          p_valor_min?: number | null;
+          p_valor_max?: number | null;
+          p_status?: StatusCobranca | null;
+          p_regional_id?: string | null;
+          p_limite?: number | null;
+        };
+        Returns: CobrancaLinha[];
+      };
+      resumo_cobrancas: {
+        Args: { p_inicio?: string | null; p_fim?: string | null; p_regional_id?: string | null };
+        Returns: ResumoCobrancas[];
+      };
+      titulos_para_remessa: {
+        Args: { p_competencia?: string | null; p_regional_id?: string | null; p_limite?: number | null };
+        Returns: TitulosFinanceirosRow[];
+      };
+      criar_remessa_cobranca: {
+        Args: { p_titulo_ids: string[]; p_integracao_id?: string | null; p_referencia?: string | null };
+        Returns: CobrancaRemessasRow;
+      };
+      marcar_remessa_enviada: {
+        Args: { p_remessa_id: string };
+        Returns: CobrancaRemessasRow;
+      };
+      registrar_retorno_cobranca: {
+        Args: {
+          p_titulo_id: string;
+          p_gateway_id?: string | null;
+          p_nosso_numero?: string | null;
+          p_linha_digitavel?: string | null;
+          p_url_boleto?: string | null;
+          p_pix_copia_cola?: string | null;
+          p_pix_qrcode_url?: string | null;
+          p_erro?: string | null;
+          p_retorno?: Json | null;
+        };
+        Returns: TitulosFinanceirosRow;
+      };
+      finalizar_remessa: {
+        Args: { p_remessa_id: string };
+        Returns: CobrancaRemessasRow;
       };
       valor_mensalidade_veiculo: {
         Args: { p_veiculo_id: string };

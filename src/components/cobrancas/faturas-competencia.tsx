@@ -26,7 +26,7 @@ const STATUS_LABEL: Record<StatusFatura, string> = {
 
 const mesAtual = () => new Date().toISOString().slice(0, 7);
 
-export function Cobrancas() {
+export function FaturasCompetencia() {
   const [mes, setMes] = useState(mesAtual);
   const [regionalId, setRegionalId] = useState('');
   const [statusFiltro, setStatusFiltro] = useState<StatusFatura | ''>('');

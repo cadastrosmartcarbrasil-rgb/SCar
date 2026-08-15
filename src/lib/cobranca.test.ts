@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   calcularVencimento,
   competenciaDe,
+  competenciasDoPeriodo,
   rotuloCompetencia,
   ultimoDiaDoMes,
   veiculoFaturavel,
@@ -29,6 +30,19 @@ describe('competencia', () => {
     expect(ultimoDiaDoMes('2026-02-01')).toBe(28);
     expect(ultimoDiaDoMes('2028-02-01')).toBe(29);
     expect(ultimoDiaDoMes('2026-04-01')).toBe(30);
+  });
+});
+
+describe('competenciasDoPeriodo — boletagem recorrente (6 meses)', () => {
+  it('gera N competencias consecutivas', () => {
+    expect(competenciasDoPeriodo('2026-08-01', 6)).toEqual([
+      '2026-08-01', '2026-09-01', '2026-10-01', '2026-11-01', '2026-12-01', '2027-01-01',
+    ]);
+  });
+  it('vira o ano corretamente e respeita os limites (1..24)', () => {
+    expect(competenciasDoPeriodo('2026-12-01', 2)).toEqual(['2026-12-01', '2027-01-01']);
+    expect(competenciasDoPeriodo('2026-01-01', 0)).toHaveLength(1);
+    expect(competenciasDoPeriodo('2026-01-01', 99)).toHaveLength(24);
   });
 });
 
