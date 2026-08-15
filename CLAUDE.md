@@ -291,11 +291,18 @@ Só então: commit + push. (Docker build da imagem NÃO builda aqui: proxy bloqu
 ## Commit / deploy
 - Commits em PT, com footer:
   `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>` + linha `Claude-Session:`.
-- Push sempre para `origin claude/scar-project-btasdf`.
-- **Atualizar produção:** (A) rodar a migration nova no Supabase SQL Editor; (B) no VPS:
-  `cd /opt/scar && git pull && docker compose up -d --build`.
+- **ATENÇÃO — branch de deploy:** o VPS (`/opt/scar`) hoje acompanha
+  **`claude/claude-md-opcao-x-98kfj5`** (branch desta sessão, que contém todo o histórico do
+  `claude/scar-project-btasdf` + o módulo Cobrança). O `claude/scar-project-btasdf` segue como
+  branch padrão do repo, parado em `953c53c`. **Mesmo repositório, dois branches** — não são
+  projetos diferentes. Se uma sessão futura for configurada para outro branch, avise o usuário
+  logo no início: senão o `git pull` do VPS não traz o código novo e a tela "some" (foi o que
+  aconteceu com o menu Cobrança).
+- Push para o branch da sessão; consolidar os branches só com autorização do usuário.
+- **Atualizar produção:** (A) rodar as migrations novas no Supabase SQL Editor, na ordem;
+  (B) no VPS: `cd /opt/scar && git pull origin <branch-da-sessao> && docker compose up -d --build`.
 - Raw URL de arquivo (branch tem `/`, use `refs/heads/`):
-  `https://raw.githubusercontent.com/cadastrosmartcarbrasil-rgb/scar/refs/heads/claude/scar-project-btasdf/<path>`
+  `https://raw.githubusercontent.com/cadastrosmartcarbrasil-rgb/scar/refs/heads/<branch>/<path>`
 
 ## Integração FIPE (placafipe.com.br)
 - Contrato: **POST JSON, token NO CORPO**, base `https://api.placafipe.com.br`, envelope
