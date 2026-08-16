@@ -1,7 +1,7 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, Car, Search, Loader2, Calculator, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -66,6 +66,7 @@ export default function VeiculosPage() {
 
 function VeiculosConteudo() {
   const params = useSearchParams();
+  const router = useRouter();
   const { data: veiculos, isLoading } = useVeiculos();
   const { data: associados } = useAssociados();
   const { data: regionais } = useRegionais();
@@ -94,12 +95,20 @@ function VeiculosConteudo() {
   useEffect(() => { if (vAlertas.data) setAlertas(new Set(vAlertas.data)); }, [vAlertas.data]);
 
   // Atalho do SAC: /veiculos?editar=<id> abre direto a ficha daquele veiculo.
+  // O parametro e CONSUMIDO na abertura (ref + router.replace): enquanto ele
+  // continuasse na URL, salvar reabria o modal — o efeito rodava de novo a cada
+  // refetch da lista (o save invalida ['veiculos']) e no proprio setAberto(false).
+  const editarId = params.get('editar');
+  const deepLinkTratado = useRef<string | null>(null);
   useEffect(() => {
-    const id = params.get('editar');
-    if (!id || aberto) return;
-    const v = (veiculos ?? []).find((x) => x.id === id);
-    if (v) { setForm(v); setAberto(true); }
-  }, [params, veiculos, aberto]);
+    if (!editarId || deepLinkTratado.current === editarId) return;
+    const v = (veiculos ?? []).find((x) => x.id === editarId);
+    if (!v) return;
+    deepLinkTratado.current = editarId;
+    setForm(v);
+    setAberto(true);
+    router.replace('/veiculos', { scroll: false });
+  }, [editarId, veiculos, router]);
 
   const opcionaisDisp = useMemo(() => (produtos ?? []).filter((p) => !p.obrigatorio && p.status), [produtos]);
   const toggleSet = (setter: React.Dispatch<React.SetStateAction<Set<string>>>, id: string) =>
