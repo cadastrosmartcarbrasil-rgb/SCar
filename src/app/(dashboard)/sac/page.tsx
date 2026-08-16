@@ -15,12 +15,13 @@ import { Modal } from '@/components/ui/modal';
 import { Input, Select, Textarea, FormField } from '@/components/ui/field';
 import {
   useSacBusca, useVisao360, useVeiculoDetalhe, useToggleFaturamento, useGerarBoleto,
-  useAbrirAtendimento, useAtendimentosVeiculo, type Visao360, type VeiculoDetalhe,
+  useAbrirAtendimento, useAtendimentosVeiculo, type BuscaHit, type Visao360, type VeiculoDetalhe,
 } from '@/hooks/use-sac';
 import { SERVICOS_SAC, STATUS_ATENDIMENTO_LABEL, STATUS_EVENTO_LABEL, type ServicoSac } from '@/lib/sac-servicos';
 import { useContratosVeiculo, useVistoriasVeiculo } from '@/hooks/use-veiculo-ficha';
 import { useHistoricoAssistenciaVeiculo } from '@/hooks/use-assistencia';
 import { ModalHistoricoFinanceiro, ModalWhatsApp, ModalEmail } from '@/components/sac/acoes-veiculo';
+import { AlertasVeiculo } from '@/components/veiculos/alertas-veiculo';
 import { useAbrirProtocolo } from '@/hooks/use-protocolos';
 import { CATEGORIAS_PROTOCOLO, PRIORIDADES } from '@/lib/protocolos';
 import { CentralProtocolos } from '@/components/protocolos/central-protocolos';
@@ -39,15 +40,17 @@ export default function SacPage() {
   const [veiculoId, setVeiculoId] = useState<string | undefined>();
   const [aba, setAba] = useState<Aba>('veiculos');
   const busca = useSacBusca(q);
-  const { data: v360, isLoading } = useVisao360(clienteId);
+  const { data: v360, isLoading, error: erro360 } = useVisao360(clienteId);
 
   useEffect(() => {
     if (v360 && !veiculoId && v360.veiculos.length === 1) setVeiculoId(v360.veiculos[0].id);
   }, [v360, veiculoId]);
 
-  function abrirAssociado(id: string) {
-    setClienteId(id);
-    setVeiculoId(undefined);
+  // Busca por PLACA vai direto ao atendimento daquele veiculo; por Nome ou
+  // CPF/CNPJ continua abrindo a ficha do associado com a lista de veiculos.
+  function abrirHit(h: BuscaHit) {
+    setClienteId(h.cliente_id);
+    setVeiculoId(h.veiculo_id ?? undefined);
     setAba('veiculos');
     setQ('');
   }
@@ -69,11 +72,12 @@ export default function SacPage() {
         {q.trim().length >= 2 && (busca.data?.length ?? 0) > 0 && (
           <ul className="absolute z-20 mt-1 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
             {busca.data!.map((h) => (
-              <li key={h.cliente_id}>
-                <button onClick={() => abrirAssociado(h.cliente_id)} className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-slate-50">
-                  <User className="h-4 w-4 text-slate-400" />
+              <li key={h.veiculo_id ?? h.cliente_id}>
+                <button onClick={() => abrirHit(h)} className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-slate-50">
+                  {h.veiculo_id ? <Car className="h-4 w-4 text-cyan-500" /> : <User className="h-4 w-4 text-slate-400" />}
                   <span className="flex-1"><b className="text-slate-800">{h.nome}</b> <span className="text-slate-400">· {h.cpf_cnpj}</span></span>
                   {h.via && <span className="rounded bg-cyan-50 px-2 py-0.5 text-[11px] text-cyan-700">{h.via}</span>}
+                  {h.veiculo_id && <span className="text-[11px] font-medium text-cyan-700">Atender →</span>}
                 </button>
               </li>
             ))}
@@ -83,6 +87,16 @@ export default function SacPage() {
 
       {!clienteId && <p className="text-sm text-slate-400">Busque um associado para iniciar o atendimento.</p>}
       {clienteId && isLoading && <p className="py-10 text-center text-sm text-slate-400">Carregando dados...</p>}
+      {busca.error && (
+        <p className="text-sm text-rose-600">Falha na busca: {(busca.error as Error).message}</p>
+      )}
+      {erro360 && (
+        // Erro visivel em vez de tela vazia: dado que nao carregou nao pode
+        // passar a impressao de "associado sem veiculo/sem pendencia".
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+          Nao foi possivel carregar o atendimento: {(erro360 as Error).message}
+        </div>
+      )}
 
       {v360 && (
         <div className="space-y-5">
@@ -545,6 +559,12 @@ function VeiculoDetalheCard({ clienteId, veiculo }: { clienteId: string; veiculo
               {veiculo.opcionais.map((o) => <OpcionalRow key={o.produto_id} o={o} />)}
             </ul>
           )}
+        </div>
+
+        {/* Pendencias do veiculo: o mesmo alerta que aparece no card da lista,
+            aqui com o botao de resolver (0030). */}
+        <div className="mt-4">
+          <AlertasVeiculo veiculoId={veiculo.id} titulo="Alertas / pendencias deste veiculo" />
         </div>
 
         <FichaExtras veiculoId={veiculo.id} />

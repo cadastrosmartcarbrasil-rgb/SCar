@@ -14,6 +14,7 @@ import { useVeiculos, useSaveVeiculo, useExcluirVeiculo } from '@/hooks/use-veic
 import {
   useTiposAlerta, useVeiculoProdutos, useVeiculoAlertas, useCalcularMensalidadeVeiculo,
 } from '@/hooks/use-veiculo-ficha';
+import { AlertasVeiculo } from '@/components/veiculos/alertas-veiculo';
 import { consultarPlaca, normalizarPlaca, placaValida } from '@/lib/placa';
 import { FipeConsulta } from '@/components/fipe/fipe-consulta';
 import { useFipePorPlaca } from '@/hooks/use-fipe';
@@ -192,7 +193,10 @@ function VeiculosConteudo() {
     e.preventDefault();
     if (!form.cliente_id) return toast.error('Selecione o associado');
     if (!placaValida(form.placa ?? '')) return toast.error('Placa invalida');
-    salvar.mutate({ ...form, opcionaisIds: [...opcionais], alertasIds: [...alertas] }, {
+    // Em veiculo ja cadastrado os alertas sao mantidos pelo painel proprio
+    // (abrir/resolver com historico) — salvar NAO pode reescrever o conjunto,
+    // senao apaga mensagem, autor e resolucao de cada pendencia.
+    salvar.mutate({ ...form, opcionaisIds: [...opcionais], alertasIds: form.id ? undefined : [...alertas] }, {
       onSuccess: () => {
         toast.success('Veiculo salvo');
         setAberto(false);
@@ -517,20 +521,26 @@ function VeiculosConteudo() {
             </FormField>
           </div>
 
-          {/* Alertas do veiculo */}
-          <div className="rounded-lg border border-slate-200 p-3">
-            <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-slate-700"><Bell className="h-4 w-4 text-amber-500" /> Alertas ativos</p>
-            <div className="grid grid-cols-2 gap-1">
-              {(tiposAlerta ?? []).map((a) => (
-                <label key={a.id} className="flex items-center gap-2 text-sm text-slate-700">
-                  <input type="checkbox" checked={alertas.has(a.id)} onChange={() => toggleSet(setAlertas, a.id)} className="h-4 w-4 rounded border-slate-300" />
-                  {a.nome}
-                </label>
-              ))}
-              {(tiposAlerta ?? []).length === 0 && <span className="text-xs text-slate-400">Cadastre alertas em Configuracoes &gt; Alertas.</span>}
+          {/* Alertas do veiculo — no veiculo JA CADASTRADO usa o painel que le as
+              linhas reais (mesma fonte do card do SAC) e permite resolver; no
+              cadastro novo, so a marcacao inicial (o veiculo ainda nao tem id). */}
+          {form.id ? (
+            <AlertasVeiculo veiculoId={form.id} />
+          ) : (
+            <div className="rounded-lg border border-slate-200 p-3">
+              <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-slate-700"><Bell className="h-4 w-4 text-amber-500" /> Alertas iniciais</p>
+              <div className="grid grid-cols-2 gap-1">
+                {(tiposAlerta ?? []).map((a) => (
+                  <label key={a.id} className="flex items-center gap-2 text-sm text-slate-700">
+                    <input type="checkbox" checked={alertas.has(a.id)} onChange={() => toggleSet(setAlertas, a.id)} className="h-4 w-4 rounded border-slate-300" />
+                    {a.nome}
+                  </label>
+                ))}
+                {(tiposAlerta ?? []).length === 0 && <span className="text-xs text-slate-400">Cadastre alertas em Configuracoes &gt; Alertas.</span>}
+              </div>
+              <p className="mt-1 text-xs text-slate-400">Alertas ativos abrem automaticamente no SAC ao localizar o associado.</p>
             </div>
-            <p className="mt-1 text-xs text-slate-400">Alertas ativos abrem automaticamente no SAC ao localizar o associado.</p>
-          </div>
+          )}
 
           {/* Dados do contrato */}
           <div className="grid grid-cols-2 gap-3">

@@ -219,6 +219,27 @@ export type VeiculoAlertasRow = {
   created_by: string | null;
   created_at: string;
   resolvido_em: string | null;
+  resolvido_por: string | null;
+  resolucao_observacao: string | null;
+};
+// Alerta do veiculo com o tipo ja resolvido (RPC alertas_veiculo). `tipo_ativo`
+// diz se o tipo ainda existe no catalogo — alerta de tipo desativado tambem
+// aparece, senao o atendente nao tem como resolver a pendencia.
+export type AlertaVeiculo = {
+  id: string;
+  veiculo_id: string;
+  tipo_alerta_id: string;
+  nome: string;
+  descricao: string | null;
+  severidade: SeveridadeAlerta;
+  tipo_ativo: boolean;
+  mensagem: string | null;
+  ativo: boolean;
+  created_at: string;
+  criado_por: string | null;
+  resolvido_em: string | null;
+  resolvido_por_nome: string | null;
+  resolucao_observacao: string | null;
 };
 export type ContratosAdesaoRow = Timestamps & {
   id: string;
@@ -331,6 +352,23 @@ export type ResumoProtocolos = {
   meus: number;
   sem_responsavel: number;
   mais_7_dias: number;
+};
+
+// Linha da listagem de veiculos do associado (RPC veiculos_do_cliente): ja vem
+// ordenada (ativos primeiro) e com os contadores resolvidos no banco.
+export type VeiculoDoCliente = {
+  id: string;
+  placa: string;
+  marca: string | null;
+  modelo: string | null;
+  ano_modelo: number | null;
+  status: StatusVeiculo;
+  tipo_faturamento: TipoFaturamento;
+  data_ativacao: string | null;
+  plano_nome: string | null;
+  alertas_qtd: number;
+  eventos_qtd: number;
+  tem_assistencia: boolean;
 };
 
 // Item contratado do veiculo (RPC opcionais_veiculo) — so o que esta no pacote
@@ -1668,6 +1706,22 @@ export type Database = {
       opcionais_veiculo: {
         Args: { p_veiculo_id: string };
         Returns: OpcionalVeiculo[];
+      };
+      alertas_veiculo: {
+        Args: { p_veiculo_id: string; p_incluir_resolvidos?: boolean };
+        Returns: AlertaVeiculo[];
+      };
+      abrir_alerta_veiculo: {
+        Args: { p_veiculo_id: string; p_tipo_alerta_id: string; p_mensagem?: string | null };
+        Returns: VeiculoAlertasRow;
+      };
+      resolver_alerta_veiculo: {
+        Args: { p_alerta_id: string; p_observacao?: string | null };
+        Returns: VeiculoAlertasRow;
+      };
+      veiculos_do_cliente: {
+        Args: { p_cliente_id: string };
+        Returns: VeiculoDoCliente[];
       };
       titulos_do_cliente: {
         Args: { p_cliente_id: string; p_veiculo_id?: string | null; p_limite?: number };

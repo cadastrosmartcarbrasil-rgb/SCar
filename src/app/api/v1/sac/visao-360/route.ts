@@ -20,67 +20,66 @@ export async function GET(request: Request) {
   const placa = url.searchParams.get('placa');
   const cpf = url.searchParams.get('cpf');
   if (!clienteId && placa) {
-    const { data } = await supabase.from('veiculos').select('cliente_id').ilike('placa', placa.toUpperCase()).maybeSingle();
-    clienteId = data?.cliente_id ?? null;
+    // limit(1): placa repetida (historico/importacao) nao pode derrubar o SAC
+    // com o erro de "mais de uma linha" do maybeSingle().
+    const { data } = await supabase.from('veiculos')
+      .select('cliente_id').ilike('placa', placa.toUpperCase()).limit(1);
+    clienteId = data?.[0]?.cliente_id ?? null;
   }
   if (!clienteId && cpf) {
-    const { data } = await supabase.from('clientes').select('id').eq('cpf_cnpj', cpf.replace(/\D/g, '')).maybeSingle();
-    clienteId = data?.id ?? null;
+    const { data } = await supabase.from('clientes')
+      .select('id').eq('cpf_cnpj', cpf.replace(/\D/g, '')).limit(1);
+    clienteId = data?.[0]?.id ?? null;
   }
   if (!clienteId) return NextResponse.json({ error: 'Associado nao encontrado' }, { status: 404 });
 
-  const { data: associado } = await supabase.from('clientes').select('*').eq('id', clienteId).maybeSingle();
+  const { data: associado, error: erroAssociado } = await supabase
+    .from('clientes').select('*').eq('id', clienteId).maybeSingle();
+  if (erroAssociado) return NextResponse.json({ error: erroAssociado.message }, { status: 500 });
   if (!associado) return NextResponse.json({ error: 'Associado nao encontrado' }, { status: 404 });
 
-  // Lista resumida (uma unica query, sem RPC por veiculo).
-  const { data: veiculos } = await supabase
-    .from('veiculos')
-    .select('id, placa, marca, modelo, ano_modelo, status, tipo_faturamento, planos_protecao(nome)')
-    .eq('cliente_id', clienteId)
-    .order('placa');
+  // Lista resumida: um RPC so, ja ORDENADO (ativos primeiro, desempate por data
+  // de ativacao/modelo/placa) e com plano, alertas, eventos e assistencia
+  // resolvidos no banco — antes eram 4 consultas separadas aqui.
+  const { data: veiculos, error: erroVeiculos } = await supabase
+    .rpc('veiculos_do_cliente', { p_cliente_id: clienteId });
+  if (erroVeiculos) return NextResponse.json({ error: erroVeiculos.message }, { status: 500 });
 
   // Titulos do cliente (uma query) -> resumo financeiro + inadimplencia por veiculo.
-  const { data: titulos } = await supabase
+  const { data: titulos, error: erroTitulos } = await supabase
     .from('titulos_financeiros')
     .select('veiculo_id, status, data_vencimento, valor')
     .eq('cliente_id', clienteId)
     .limit(300);
+  // Titulo que nao carrega mostraria o associado como adimplente por engano.
+  if (erroTitulos) return NextResponse.json({ error: erroTitulos.message }, { status: 500 });
 
   // Eventos (sinistros) do associado (uma query) -> aba Eventos + marcador no veiculo.
-  const { data: eventos } = await supabase
+  const { data: eventos, error: erroEventos } = await supabase
     .from('eventos_sinistro')
     .select('id, veiculo_id, numero_protocolo, status, data_ocorrencia, tipos_evento(nome), veiculos(placa)')
     .eq('cliente_id', clienteId)
     .order('data_ocorrencia', { ascending: false })
     .limit(100);
-
-  // Acionamentos de Assistencia 24h (atendimentos) -> marcador no veiculo.
-  const { data: assist } = await supabase
-    .from('atendimentos')
-    .select('veiculo_id')
-    .eq('cliente_id', clienteId)
-    .eq('tipo', 'ASSISTENCIA_24H')
-    .limit(300);
+  if (erroEventos) return NextResponse.json({ error: erroEventos.message }, { status: 500 });
 
   // Alertas ativos dos veiculos do associado -> abrem no SAC no mesmo instante.
+  // (a CONTAGEM por veiculo ja vem do RPC; aqui e o detalhe do banner)
   const veicIds = (veiculos ?? []).map((v) => v.id);
-  const { data: alertas } = veicIds.length
+  const { data: alertas, error: erroAlertas } = veicIds.length
     ? await supabase
         .from('veiculo_alertas')
         .select('id, veiculo_id, mensagem, tipos_alerta(nome, severidade), veiculos(placa)')
         .in('veiculo_id', veicIds)
         .eq('ativo', true)
-    : { data: [] };
+    : { data: [], error: null };
+  if (erroAlertas) return NextResponse.json({ error: erroAlertas.message }, { status: 500 });
 
   const titulosVeic: TituloVeiculo[] = (titulos ?? []).map((t) => ({
     veiculo_id: t.veiculo_id, status: t.status, data_vencimento: t.data_vencimento,
   }));
-  const eventosPorVeiculo = new Map<string, number>();
-  for (const e of eventos ?? []) eventosPorVeiculo.set(e.veiculo_id, (eventosPorVeiculo.get(e.veiculo_id) ?? 0) + 1);
-  const assistVeiculos = new Set((assist ?? []).map((a) => a.veiculo_id).filter(Boolean));
-  const alertasPorVeiculo = new Map<string, number>();
-  for (const a of alertas ?? []) alertasPorVeiculo.set(a.veiculo_id, (alertasPorVeiculo.get(a.veiculo_id) ?? 0) + 1);
-
+  // A ordem vem do RPC (ativos primeiro); aqui so entra a inadimplencia, que e
+  // calculada a partir dos titulos ja carregados (regra unica em src/lib/sac.ts).
   const veiculosOut = (veiculos ?? []).map((v) => ({
     id: v.id,
     placa: v.placa,
@@ -89,11 +88,12 @@ export async function GET(request: Request) {
     ano_modelo: v.ano_modelo,
     status: v.status,
     tipo_faturamento: v.tipo_faturamento,
-    plano_nome: (v.planos_protecao as unknown as { nome: string } | null)?.nome ?? null,
+    data_ativacao: v.data_ativacao,
+    plano_nome: v.plano_nome,
     inadimplente: veiculoInadimplente({ id: v.id, tipo_faturamento: v.tipo_faturamento }, titulosVeic),
-    eventos_qtd: eventosPorVeiculo.get(v.id) ?? 0,
-    tem_assistencia: assistVeiculos.has(v.id),
-    alertas_qtd: alertasPorVeiculo.get(v.id) ?? 0,
+    eventos_qtd: v.eventos_qtd,
+    tem_assistencia: v.tem_assistencia,
+    alertas_qtd: v.alertas_qtd,
   }));
 
   const alertasOut = (alertas ?? []).map((a) => ({

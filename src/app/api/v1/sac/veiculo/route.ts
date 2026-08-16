@@ -16,7 +16,9 @@ export async function GET(request: Request) {
   const veiculoId = new URL(request.url).searchParams.get('veiculo_id');
   if (!veiculoId) return NextResponse.json({ error: 'veiculo_id obrigatorio' }, { status: 400 });
 
-  const { data: veiculo } = await supabase.from('veiculos').select('*').eq('id', veiculoId).maybeSingle();
+  const { data: veiculo, error: erroVeiculo } = await supabase
+    .from('veiculos').select('*').eq('id', veiculoId).maybeSingle();
+  if (erroVeiculo) return NextResponse.json({ error: erroVeiculo.message }, { status: 500 });
   if (!veiculo) return NextResponse.json({ error: 'Veiculo nao encontrado' }, { status: 404 });
 
   const { data: plano } = veiculo.plano_protecao_id
@@ -26,7 +28,10 @@ export async function GET(request: Request) {
   // SO os itens contratados deste veiculo (plano + avulsos). Antes usava
   // opcionais_elegibilidade, que lista o catalogo inteiro de produtos com
   // limite — poluia a ficha com item que o associado nao tem.
-  const { data: opcionais } = await supabase.rpc('opcionais_veiculo', { p_veiculo_id: veiculoId });
+  const { data: opcionais, error: erroOpcionais } = await supabase
+    .rpc('opcionais_veiculo', { p_veiculo_id: veiculoId });
+  // Falha aqui nao pode virar "sem cobertura" silencioso na ficha do atendente.
+  if (erroOpcionais) return NextResponse.json({ error: erroOpcionais.message }, { status: 500 });
 
   return NextResponse.json({ veiculo, plano_nome: plano?.nome ?? null, opcionais: opcionais ?? [] });
 }

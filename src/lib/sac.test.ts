@@ -5,6 +5,8 @@ import {
   resumoFinanceiro,
   veiculoInadimplente,
   statusVeiculoResumo,
+  ordemStatusVeiculo,
+  ordenarVeiculos,
   type OpcionalCfg,
   type EventoUso,
   type VeiculoFaturavel,
@@ -133,5 +135,42 @@ describe('resumoFinanceiro', () => {
     expect(r.vencidos).toBe(1);
     expect(r.valorEmAberto).toBe(400);
     expect(r.adimplente).toBe(false);
+  });
+});
+
+describe('ordenacao padrao das listagens de veiculo', () => {
+  it('ativo vem antes de suspenso, inativo e cancelado', () => {
+    expect(ordemStatusVeiculo('ativo')).toBeLessThan(ordemStatusVeiculo('suspenso'));
+    expect(ordemStatusVeiculo('suspenso')).toBeLessThan(ordemStatusVeiculo('inativo'));
+    expect(ordemStatusVeiculo('inativo')).toBeLessThan(ordemStatusVeiculo('baixado'));
+    expect(ordemStatusVeiculo('baixado')).toBeLessThan(ordemStatusVeiculo('excluido'));
+  });
+
+  it('agrupa por status e desempata pela ativacao mais recente', () => {
+    const lista = [
+      { placa: 'CAN0C00', status: 'baixado', data_ativacao: '2026-01-01', modelo: 'Ka' },
+      { placa: 'ANT1A11', status: 'ativo', data_ativacao: '2025-05-01', modelo: 'Onix' },
+      { placa: 'NOV2B22', status: 'ativo', data_ativacao: '2026-06-01', modelo: 'HB20' },
+      { placa: 'INA3C33', status: 'inativo', data_ativacao: '2026-07-01', modelo: 'Argo' },
+    ];
+    expect(ordenarVeiculos(lista).map((v) => v.placa)).toEqual(['NOV2B22', 'ANT1A11', 'INA3C33', 'CAN0C00']);
+  });
+
+  it('sem data de ativacao cai no fim do proprio grupo e desempata por modelo/placa', () => {
+    const lista = [
+      { placa: 'SEM2B22', status: 'ativo', data_ativacao: null, modelo: 'Uno' },
+      { placa: 'SEM1A11', status: 'ativo', data_ativacao: null, modelo: 'Gol' },
+      { placa: 'COM3C33', status: 'ativo', data_ativacao: '2026-02-01', modelo: 'Palio' },
+    ];
+    expect(ordenarVeiculos(lista).map((v) => v.placa)).toEqual(['COM3C33', 'SEM1A11', 'SEM2B22']);
+  });
+
+  it('nao altera a lista original', () => {
+    const lista = [
+      { placa: 'AAA1A11', status: 'inativo' },
+      { placa: 'BBB2B22', status: 'ativo' },
+    ];
+    ordenarVeiculos(lista);
+    expect(lista.map((v) => v.placa)).toEqual(['AAA1A11', 'BBB2B22']);
   });
 });

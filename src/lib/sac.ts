@@ -145,6 +145,48 @@ export function statusVeiculoResumo(status: string, inadimplente: boolean): { la
   return { label: 'Ativo', cor: 'bg-emerald-50 text-emerald-700' };
 }
 
+// ---------------------------------------------------------------------------
+// Ordenacao padrao das listagens de veiculo (espelha ordem_status_veiculo do SQL)
+// ---------------------------------------------------------------------------
+/** Peso do status: ATIVOS primeiro, INATIVOS/CANCELADOS por ultimo. */
+export function ordemStatusVeiculo(status: string): number {
+  switch (status) {
+    case 'ativo': return 0;
+    case 'em_evento': return 1;
+    case 'vistoria_pendente': return 2;
+    case 'suspenso': return 3;
+    case 'inativo': return 4;
+    case 'baixado': return 5;
+    default: return 6; // excluido / desconhecido
+  }
+}
+
+export interface VeiculoOrdenavel {
+  status: string;
+  data_ativacao?: string | null;
+  modelo?: string | null;
+  placa?: string | null;
+}
+/**
+ * Ordem unica de exibicao usada em todas as listagens de veiculo (SAC, ficha do
+ * associado e tabela de Veiculos): status (ativo -> cancelado), depois data de
+ * ativacao mais recente e, por fim, modelo/placa em A-Z.
+ */
+export function ordenarVeiculos<T extends VeiculoOrdenavel>(veiculos: T[]): T[] {
+  return [...veiculos].sort((a, b) => {
+    const st = ordemStatusVeiculo(a.status) - ordemStatusVeiculo(b.status);
+    if (st !== 0) return st;
+    // sem data de ativacao vai para o fim do proprio grupo
+    const da = a.data_ativacao ?? '';
+    const db = b.data_ativacao ?? '';
+    if (da !== db) return db.localeCompare(da);
+    const ma = (a.modelo ?? '').toLocaleUpperCase();
+    const mb = (b.modelo ?? '').toLocaleUpperCase();
+    if (ma !== mb) return ma.localeCompare(mb);
+    return (a.placa ?? '').localeCompare(b.placa ?? '');
+  });
+}
+
 export function resumoFinanceiro(titulos: TituloResumo[], hoje: Date = new Date()): StatusFinanceiro {
   let abertos = 0, pagos = 0, vencidos = 0, valorEmAberto = 0;
   const hojeStr = hoje.toISOString().slice(0, 10);

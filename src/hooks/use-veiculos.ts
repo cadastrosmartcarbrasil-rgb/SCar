@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
+import { ordenarVeiculos } from '@/lib/sac';
 import type { VeiculosRow } from '@/lib/database.types';
 
 export interface VeiculoComAssociado extends VeiculosRow {
@@ -17,11 +18,14 @@ export function useVeiculos(associadoId?: string) {
         .from('veiculos')
         .select('*, clientes(nome_razao_social, matricula)')
         .neq('status', 'excluido')
+        .order('data_ativacao', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false });
       if (associadoId) q = q.eq('cliente_id', associadoId);
       const { data, error } = await q;
       if (error) throw error;
-      return (data ?? []) as unknown as VeiculoComAssociado[];
+      // Ordem padrao do sistema: ativos primeiro, inativos/cancelados no fim
+      // (mesma regra do SQL ordem_status_veiculo, em src/lib/sac.ts).
+      return ordenarVeiculos((data ?? []) as unknown as VeiculoComAssociado[]);
     },
   });
 }

@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import { ordenarVeiculos } from '@/lib/sac';
 import { STATUS_TITULO_LABEL, STATUS_VEICULO_LABEL } from '@/types/domain';
 
 // Portal do Associado: frota protegida + boletos pendentes.
@@ -25,7 +26,8 @@ export default async function PortalPage() {
   }
 
   const [{ data: veiculos }, { data: titulos }] = await Promise.all([
-    supabase.from('veiculos').select('id, placa, marca, modelo, status').eq('cliente_id', cliente.id),
+    supabase.from('veiculos').select('id, placa, marca, modelo, status, data_ativacao')
+      .eq('cliente_id', cliente.id).neq('status', 'excluido'),
     supabase
       .from('titulos_financeiros')
       .select('id, valor, data_vencimento, status, url_boleto')
@@ -54,7 +56,7 @@ export default async function PortalPage() {
           <CardTitle>Minha Frota Protegida</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
-          {(veiculos ?? []).map((v) => (
+          {ordenarVeiculos(veiculos ?? []).map((v) => (
             <div key={v.id} className="flex items-center justify-between border-b border-slate-100 py-2 text-sm last:border-0">
               <span className="font-mono font-medium text-slate-800">{v.placa}</span>
               <span className="text-slate-500">

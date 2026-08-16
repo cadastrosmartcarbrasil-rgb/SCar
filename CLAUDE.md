@@ -43,10 +43,15 @@ CI no GitHub Actions (`.github/workflows/ci.yml`) roda a mesma validação a cad
    **Central de Protocolos** (fila, histórico de interações, transferência entre
    atendentes, encerramento) com contador em tempo real no Dashboard.
 
+6. **Correções do SAC** (`0030`): alerta/pendência do veículo agora é **editável e
+   resolvível** na ficha e no cadastro (mesma fonte do card), busca por **placa vai
+   direto ao atendimento** do veículo e todas as listagens usam a **ordenação padrão**
+   (ativos primeiro).
+
 ### Estado de validação
-- **Migrations `0001`..`0029`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **Testes de banco:** 6 suites em `supabase/tests/*.test.sql` (0024, 0025, 0026, 0027, 0028, 0029) — todas passando.
-- **Vitest:** 89/89 (`sac.ts`, `cobranca.ts`, `pagamentos/`, `assistencia.ts`, `crm.ts`, `protocolos.ts`).
+- **Migrations `0001`..`0030`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **Testes de banco:** 7 suites em `supabase/tests/*.test.sql` (0024→0030) — todas passando.
+- **Vitest:** 93/93 (`sac.ts`, `cobranca.ts`, `pagamentos/`, `assistencia.ts`, `crm.ts`, `protocolos.ts`).
 - `npx tsc --noEmit` limpo e `npm run build:check` OK (44 rotas).
 
 ### Pendências conhecidas (não são bugs, são decisões pendentes)
@@ -286,6 +291,18 @@ encerrado_em/encerrado_por/solucao` e `veiculo_id` AGORA NULAVEL (protocolo da p
 `alterar_status_protocolo(...)`, `encerrar_protocolo(id,solucao)` (solucao obrigatoria),
 `listar_protocolos(status,responsavel,busca,prioridade,regional,limite)`, `interacoes_protocolo(id)`
 e `resumo_protocolos(regional)` p/ o card do dashboard).
+· `0030_sac_alertas_ordenacao` (CORRECOES DO SAC: (A) ALERTAS — o card do SAC lia as LINHAS de
+`veiculo_alertas` e o form do veiculo montava checkbox pelo CATALOGO `tipos_alerta` filtrando
+`ativo` — alerta de tipo desativado (ou duplicado) sumia da tela e ninguem resolvia (caso da placa
+EWG9B46). Agora: dedup dos ativos + indice unico parcial `uq_veiculo_alerta_ativo (veiculo_id,
+tipo_alerta_id) where ativo`, colunas `resolvido_por`/`resolucao_observacao`, e as funcoes
+`alertas_veiculo(veiculo, incluir_resolvidos)` (traz o tipo junto, INCLUSIVE desativado, com
+`tipo_ativo`), `abrir_alerta_veiculo(veiculo,tipo,msg)` (idempotente por tipo — nunca duplica a
+contagem) e `resolver_alerta_veiculo(alerta,obs)` (baixa com autor/data); (B) ORDENACAO —
+`ordem_status_veiculo(status)` (ativo 0 · em_evento 1 · vistoria_pendente 2 · suspenso 3 · inativo 4
+· baixado 5 · excluido 6) e `veiculos_do_cliente(cliente)`, que devolve a lista do SAC ja ordenada
+(status → data_ativacao desc → modelo → placa) e com plano/alertas/eventos/assistencia resolvidos
+no banco — a rota `/visao-360` deixou de fazer 4 consultas separadas).
 
 ## Módulos (status: todos funcionais)
 Assistência 24h (`/assistencia`: painel de acionamento com trava + limites em tempo real, cotação,
@@ -326,6 +343,24 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
   `cotar_plano(fipe, tipo, plano_id?, avulsos[]?)` → mensalidade + adesão + franquia + detalhamento.
   Precedência: base(obrigatórios+regra rastreador) + produtos do plano + avulsos. Usado por Simulador,
   Vendas/novo e snapshot da cotação. Preços dos opcionais novos: cadastrar em Configurações→Produtos.
+
+## SAC — alertas, busca e ordenação (0030)
+- **Alerta do veículo tem UMA fonte:** `alertas_veiculo` (linhas de `veiculo_alertas` + o tipo).
+  O componente `<AlertasVeiculo veiculoId>` (`src/components/veiculos/alertas-veiculo.tsx`) é o
+  mesmo na **ficha do SAC** e no **formulário do veículo** — lista, adiciona e **resolve**
+  (com observação, autor e histórico). Nunca voltar a montar a lista pelo catálogo `tipos_alerta`:
+  alerta de tipo desativado sumia da tela e o atendente não tinha como resolver.
+- **Salvar o veículo NÃO reescreve os alertas** de um veículo já cadastrado (`alertasIds` só é
+  enviado no cadastro novo) — senão apagaria mensagem, autor e resolução de cada pendência.
+- **Um alerta ativo por tipo por veículo** (índice único parcial). Reabrir o mesmo tipo atualiza a
+  mensagem em vez de duplicar o contador.
+- **Busca por placa vai direto ao atendimento:** `/api/v1/sac/busca` devolve `veiculo_id`+`placa`
+  nos acertos por placa (uma linha por veículo) e o SAC já abre o item. Nome e CPF/CNPJ continuam
+  abrindo a ficha do associado com a lista.
+- **Ordenação padrão de veículo em todo o sistema:** ativos primeiro, inativos/cancelados no fim;
+  desempate por data de ativação (recentes primeiro) e modelo/placa. No banco é
+  `ordem_status_veiculo` (usada por `veiculos_do_cliente`); na UI é `ordenarVeiculos`
+  (`src/lib/sac.ts`, com testes) aplicada em `/veiculos`, ficha do associado e Portal.
 
 ## SAC + Central de Protocolos (0029) — ficha, VCards e fila
 - **Protocolo NÃO é tabela nova.** É a `atendimentos` evoluída (prioridade, responsável,

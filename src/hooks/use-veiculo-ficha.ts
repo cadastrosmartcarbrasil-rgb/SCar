@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import type {
-  TiposAlertaRow, ContratosAdesaoRow, VistoriasRow, CotacaoPlano,
+  TiposAlertaRow, ContratosAdesaoRow, VistoriasRow, CotacaoPlano, AlertaVeiculo,
 } from '@/lib/database.types';
 
 // --- Catalogo de alertas reutilizaveis (Configuracoes) ---
@@ -61,6 +61,61 @@ export function useVeiculoAlertas(veiculoId?: string) {
       if (error) throw error;
       return (data ?? []).map((r) => r.tipo_alerta_id);
     },
+  });
+}
+
+// --- Alertas/pendencias do veiculo (0030): MESMA fonte do card do SAC ---
+// Le as linhas de veiculo_alertas (nao o catalogo), entao alerta de tipo
+// desativado tambem aparece — era o que sumia da tela de edicao.
+export function useAlertasVeiculo(veiculoId?: string, incluirResolvidos = false) {
+  const supabase = createClient();
+  return useQuery<AlertaVeiculo[]>({
+    queryKey: ['ficha', 'alertas-veiculo', veiculoId ?? 'none', incluirResolvidos],
+    enabled: !!veiculoId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('alertas_veiculo', {
+        p_veiculo_id: veiculoId!, p_incluir_resolvidos: incluirResolvidos,
+      });
+      if (error) throw error;
+      return (data ?? []) as AlertaVeiculo[];
+    },
+  });
+}
+
+// Invalida tudo que exibe alerta: ficha, contador do card e visao 360 do SAC.
+function invalidarAlertas(qc: ReturnType<typeof useQueryClient>, veiculoId: string) {
+  qc.invalidateQueries({ queryKey: ['ficha', 'alertas-veiculo', veiculoId] });
+  qc.invalidateQueries({ queryKey: ['ficha', 'veiculo-alertas', veiculoId] });
+  qc.invalidateQueries({ queryKey: ['sac'] });
+}
+
+export function useAbrirAlertaVeiculo() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<unknown, Error, { veiculo_id: string; tipo_alerta_id: string; mensagem?: string | null }>({
+    mutationFn: async (i) => {
+      const { data, error } = await supabase.rpc('abrir_alerta_veiculo', {
+        p_veiculo_id: i.veiculo_id, p_tipo_alerta_id: i.tipo_alerta_id, p_mensagem: i.mensagem ?? null,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_d, i) => invalidarAlertas(qc, i.veiculo_id),
+  });
+}
+
+export function useResolverAlertaVeiculo() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<unknown, Error, { alerta_id: string; veiculo_id: string; observacao?: string | null }>({
+    mutationFn: async (i) => {
+      const { data, error } = await supabase.rpc('resolver_alerta_veiculo', {
+        p_alerta_id: i.alerta_id, p_observacao: i.observacao ?? null,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_d, i) => invalidarAlertas(qc, i.veiculo_id),
   });
 }
 

@@ -18,7 +18,8 @@ select proname from pg_proc where proname in (
   'abrir_acionamento',                -- 0026 (Assistência 24h)
   'sincronizar_lancamento_acionamento',-- 0027 (centro de custo / OS editável)
   'mover_lead_status',                -- 0028 (CRM Kanban / desconto)
-  'abrir_protocolo'                   -- 0029 (SAC / Central de Protocolos)
+  'abrir_protocolo',                  -- 0029 (SAC / Central de Protocolos)
+  'alertas_veiculo'                   -- 0030 (alertas do veiculo + ordenacao)
 );
 ```
 

@@ -16,6 +16,7 @@ export interface VeiculoResumo {
   ano_modelo: number | null;
   status: StatusVeiculo;
   tipo_faturamento: TipoFaturamento;
+  data_ativacao: string | null;
   plano_nome: string | null;
   inadimplente: boolean;
   eventos_qtd: number;
@@ -59,6 +60,9 @@ export interface BuscaHit {
   nome: string;
   cpf_cnpj: string;
   via: string | null;
+  /** Preenchido so quando o acerto foi por PLACA — abre o atendimento direto. */
+  veiculo_id: string | null;
+  placa: string | null;
 }
 
 async function jget<T>(url: string): Promise<T> {
