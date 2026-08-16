@@ -7,6 +7,7 @@ import type {
   SituacaoAssistencia,
   StatusAcionamento,
 } from '@/lib/database.types';
+import { linksNavegacao, rotuloRota, type EnderecoGeo } from '@/lib/geo';
 
 // ---------------------------------------------------------------------------
 // Calculo da OS (valor do servico + KM excedente)
@@ -103,6 +104,12 @@ export interface DadosVoucher {
   origem?: string | null;
   destino?: string | null;
   km_previsto?: number | null;
+  /** Rota autorizada (0031): distancia calculada, tempo e links de navegacao. */
+  distancia_km?: number | null;
+  duracao_min?: number | null;
+  link_rota?: string | null;
+  link_navegacao_origem?: string | null;
+  link_navegacao_destino?: string | null;
   valor_servico: number;
   valor_km_excedente: number;
   valor_total: number;
@@ -130,14 +137,22 @@ export function montarVoucherTexto(d: DadosVoucher): string {
     '',
     d.origem ? `Local de origem: ${d.origem}` : null,
     d.destino ? `Destino: ${d.destino}` : null,
-    d.km_previsto ? `KM previsto: ${d.km_previsto} km` : null,
+    d.distancia_km != null
+      ? `Rota autorizada: ${rotuloRota(d.distancia_km, d.duracao_min)}`
+      : d.km_previsto ? `KM previsto: ${d.km_previsto} km` : null,
     d.prazo_estimado_min ? `Prazo combinado: ${d.prazo_estimado_min} min` : null,
     '',
+    d.link_navegacao_origem ? `Navegar ate o resgate: ${d.link_navegacao_origem}` : null,
+    d.link_rota ? `Rota completa (Google Maps): ${d.link_rota}` : null,
+    d.link_navegacao_destino ? `Navegar ate o destino: ${d.link_navegacao_destino}` : null,
+    d.link_rota || d.link_navegacao_origem ? '' : null,
     `Valor do servico: ${brl(d.valor_servico)}`,
     d.valor_km_excedente > 0 ? `KM excedente: ${brl(d.valor_km_excedente)}` : null,
     `*Valor total autorizado: ${brl(d.valor_total)}*`,
     '',
     d.observacoes ? `Observacoes: ${d.observacoes}` : null,
+    '*A rota e a quilometragem autorizadas sao estritamente as cadastradas nesta OS.*',
+    'Qualquer alteracao de trajeto, destino ou KM precisa de nova autorizacao da central ANTES da execucao — trecho nao autorizado nao e pago.',
     'Ao finalizar, informe a central para liberacao do pagamento.',
     d.contato_central ? `Central 24h: ${d.contato_central}` : null,
   ];
@@ -157,6 +172,21 @@ export function montarVoucherHtml(d: DadosVoucher): string {
     })
     .join('');
   return `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#1e2b4d">${corpo}</div>`;
+}
+
+/** Campos de rota/navegacao do voucher a partir do jsonb origem/destino da OS.
+ *  Mesma regra do `links_navegacao_acionamento` no banco: coordenada tem
+ *  precedencia sobre o texto do endereco. */
+export function rotaDoVoucher(
+  origem: EnderecoGeo | null | undefined,
+  destino: EnderecoGeo | null | undefined,
+): Pick<DadosVoucher, 'link_rota' | 'link_navegacao_origem' | 'link_navegacao_destino'> {
+  const l = linksNavegacao(origem, destino);
+  return {
+    link_rota: l.googleRota,
+    link_navegacao_origem: l.wazeOrigem,
+    link_navegacao_destino: l.wazeDestino,
+  };
 }
 
 /** Link do WhatsApp com o comunicado ja preenchido (wa.me). */

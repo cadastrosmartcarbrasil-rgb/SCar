@@ -8,6 +8,7 @@ import {
   montarVoucherHtml,
   linkWhatsApp,
   enderecoTexto,
+  rotaDoVoucher,
   type DadosVoucher,
 } from './assistencia';
 import type { ElegibilidadeAssistencia, SituacaoAssistencia } from '@/lib/database.types';
@@ -162,5 +163,49 @@ describe('enderecoTexto', () => {
   it('vazio vira null', () => {
     expect(enderecoTexto({})).toBeNull();
     expect(enderecoTexto(null)).toBeNull();
+  });
+});
+
+describe('rota e navegacao no voucher (0031)', () => {
+  const origem = { logradouro: 'Avenida Mato Grosso', numero: '240', cidade: 'Cuiaba', uf: 'MT', lat: -15.5989, lng: -56.0949 };
+  const destino = { logradouro: 'Rua Mirassol', numero: '54', cidade: 'Cuiaba', uf: 'MT', lat: -15.5801, lng: -56.0712 };
+
+  const base: DadosVoucher = {
+    codigo_os: 'OS-20260816-0007', protocolo: 'ASS-20260816-0007', servico: 'Reboque Passeio',
+    prestador: 'Guincho Geo', associado: 'Joana', veiculo: { placa: 'GEO1A11' },
+    origem: 'Avenida Mato Grosso, 240', destino: 'Rua Mirassol, 54',
+    valor_servico: 200, valor_km_excedente: 67.2, valor_total: 267.2,
+    distancia_km: 72.4, duracao_min: 95,
+    ...rotaDoVoucher(origem, destino),
+  };
+
+  it('monta os links a partir das coordenadas da OS', () => {
+    const l = rotaDoVoucher(origem, destino);
+    expect(l.link_rota).toContain('google.com/maps/dir/?api=1&origin=-15.5989');
+    expect(l.link_navegacao_origem).toBe('https://waze.com/ul?ll=-15.5989,-56.0949&navigate=yes');
+    expect(l.link_navegacao_destino).toContain('waze.com/ul?ll=-15.5801');
+  });
+
+  it('o comunicado leva rota, navegacao e o aviso de trajeto autorizado', () => {
+    const txt = montarVoucherTexto(base);
+    expect(txt).toContain('Rota autorizada: 72,4 km · 1h35');
+    expect(txt).toContain('Navegar ate o resgate: https://waze.com/ul?ll=');
+    expect(txt).toContain('Rota completa (Google Maps): https://www.google.com/maps/dir/');
+    expect(txt).toContain('estritamente as cadastradas nesta OS');
+    expect(txt).toContain('trecho nao autorizado nao e pago');
+  });
+
+  it('sem coordenada nem endereco, o voucher nao inventa link', () => {
+    const txt = montarVoucherTexto({ ...base, ...rotaDoVoucher({}, {}), distancia_km: null, duracao_min: null });
+    expect(txt).not.toContain('Navegar ate o resgate');
+    expect(txt).not.toContain('Rota completa');
+    // o aviso do trajeto autorizado continua valendo
+    expect(txt).toContain('estritamente as cadastradas nesta OS');
+  });
+
+  it('o HTML do e-mail carrega os mesmos links', () => {
+    const html = montarVoucherHtml(base);
+    expect(html).toContain('google.com/maps/dir/');
+    expect(html).toContain('waze.com/ul');
   });
 });

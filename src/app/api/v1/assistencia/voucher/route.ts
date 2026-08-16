@@ -5,8 +5,10 @@ import {
   montarVoucherHtml,
   linkWhatsApp,
   enderecoTexto,
+  rotaDoVoucher,
   type DadosVoucher,
 } from '@/lib/assistencia';
+import type { EnderecoGeo } from '@/lib/geo';
 
 // POST /api/v1/assistencia/voucher { acionamento_id, enviar_email? }
 // Monta o comunicado da OS para o prestador, envia por e-mail (quando ha
@@ -72,6 +74,11 @@ export async function POST(request: Request) {
     origem: enderecoTexto(rel.origem),
     destino: enderecoTexto(rel.destino),
     km_previsto: rel.km_previsto,
+    // Rota autorizada + links de navegacao (0031): o guincho abre no app com
+    // um toque e o texto deixa claro que so o trajeto da OS esta autorizado.
+    distancia_km: rel.distancia_km_calculada != null ? Number(rel.distancia_km_calculada) : null,
+    duracao_min: rel.duracao_minutos,
+    ...rotaDoVoucher(rel.origem as EnderecoGeo | null, rel.destino as EnderecoGeo | null),
     valor_servico: Number(rel.valor_servico ?? 0),
     valor_km_excedente: Number(rel.valor_km_excedente ?? 0),
     valor_total: Number(rel.valor_total ?? 0),

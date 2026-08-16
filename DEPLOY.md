@@ -19,7 +19,8 @@ select proname from pg_proc where proname in (
   'sincronizar_lancamento_acionamento',-- 0027 (centro de custo / OS editável)
   'mover_lead_status',                -- 0028 (CRM Kanban / desconto)
   'abrir_protocolo',                  -- 0029 (SAC / Central de Protocolos)
-  'alertas_veiculo'                   -- 0030 (alertas do veiculo + ordenacao)
+  'alertas_veiculo',                  -- 0030 (alertas do veiculo + ordenacao)
+  'definir_trajeto_acionamento'       -- 0031 (geolocalizacao da OS 24h)
 );
 ```
 
@@ -57,6 +58,18 @@ O projeto está em outro caminho no servidor. Descubra pelo próprio Docker:
 ```
 
 e repita passando o caminho: `.\scripts\deploy.ps1 -Caminho /caminho/que/apareceu`.
+
+### Variáveis de ambiente novas (opcionais)
+
+O mapa da Assistência 24h funciona **sem configurar nada** (usa OpenStreetMap +
+OSRM, públicos). Para usar o Google Maps, adicione no `.env` do servidor e
+reconstrua o container:
+
+```
+GOOGLE_MAPS_API_KEY=sua_chave
+```
+
+Sem a chave, o proxy `/api/v1/geo` cai no provedor público automaticamente.
 
 ## 3. Conferência
 

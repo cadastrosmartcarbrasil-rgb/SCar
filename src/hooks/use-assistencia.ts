@@ -322,6 +322,39 @@ export function useAtualizarAcionamento() {
   });
 }
 
+// Trajeto da OS (0031): grava origem/destino/rota, recalcula o KM excedente
+// pela distancia e re-sincroniza o titulo em Contas a Pagar.
+export function useDefinirTrajeto() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<AcionamentosAssistenciaRow, Error, {
+    acionamento_id: string;
+    origem?: Json | null;
+    destino?: Json | null;
+    distancia_km?: number | null;
+    duracao_min?: number | null;
+    polyline?: string | null;
+    km_excedente?: number | null;
+    motivo?: string | null;
+  }>({
+    mutationFn: async (c) => {
+      const { data, error } = await supabase.rpc('definir_trajeto_acionamento', {
+        p_acionamento_id: c.acionamento_id,
+        p_origem: c.origem ?? null,
+        p_destino: c.destino ?? null,
+        p_distancia_km: c.distancia_km ?? null,
+        p_duracao_min: c.duracao_min ?? null,
+        p_polyline: c.polyline ?? null,
+        p_km_excedente: c.km_excedente ?? null,
+        p_motivo: c.motivo ?? null,
+      });
+      if (error) throw error;
+      return data as AcionamentosAssistenciaRow;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['assistencia'] }),
+  });
+}
+
 // Troca de prestador: cancela o lancamento anterior (se em aberto) e gera o
 // novo para o substituto. Justificativa obrigatoria.
 export function useTrocarPrestador() {

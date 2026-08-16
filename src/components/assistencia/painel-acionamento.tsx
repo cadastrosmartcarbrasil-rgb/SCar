@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import {
   Search, ShieldCheck, ShieldAlert, LifeBuoy, Loader2, Lock, Send, CheckCircle2, Ban,
   Copy, MessageCircle, FileText, Truck, History, Pencil, Repeat, ClipboardList,
+  Route, MapPin, Navigation, ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
@@ -14,15 +15,22 @@ import {
   useServicosAssistencia, useAbrirAcionamento, usePrestadoresDoServico, useCotacoes,
   useRegistrarCotacao, useConfirmarPrestador, useConcluirAcionamento, useCancelarAcionamento,
   useEnviarVoucher, useAcionamento, useHistoricoAssistenciaVeiculo,
-  useAtualizarAcionamento, useTrocarPrestador, useEdicoesAcionamento,
+  useAtualizarAcionamento, useTrocarPrestador, useEdicoesAcionamento, useDefinirTrajeto,
   type VeiculoAssistencia, type AbrirAcionamentoInput, type AcionamentoComRel,
 } from '@/hooks/use-assistencia';
+import { MapaRota } from '@/components/mapa/mapa-rota';
+import {
+  TrajetoAcionamento, type RotaCalculada,
+} from '@/components/assistencia/trajeto-acionamento';
+import {
+  coordenadaDe, enderecoLinha, linksNavegacao, rotuloRota, type EnderecoGeo,
+} from '@/lib/geo';
 import {
   avaliarBloqueio, rotuloLimite, calcularKmExcedente, calcularTotalOS,
   STATUS_ACIONAMENTO_LABEL,
 } from '@/lib/assistencia';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
-import type { ServicosAssistenciaRow } from '@/lib/database.types';
+import type { Json, ServicosAssistenciaRow } from '@/lib/database.types';
 
 export function PainelAcionamento({ placaInicial }: { placaInicial?: string | null }) {
   const [termo, setTermo] = useState(placaInicial ?? '');
@@ -221,17 +229,17 @@ function ModalAcionar({
   onAberto: (id: string) => void;
 }) {
   const abrir = useAbrirAcionamento();
+  const definirTrajeto = useDefinirTrajeto();
   const [form, setForm] = useState({
     solicitante: veiculo.associado,
     telefone: veiculo.telefone ?? '',
-    origem: '',
-    cidade: '',
-    uf: '',
-    referencia: '',
-    destino: '',
     km_previsto: '' as string,
     observacoes: '',
   });
+  // Trajeto (0031): origem/destino com geocodificacao + rota calculada.
+  const [origem, setOrigem] = useState<EnderecoGeo>({});
+  const [destino, setDestino] = useState<EnderecoGeo>({});
+  const [rota, setRota] = useState<RotaCalculada | null>(null);
   const [liberacao, setLiberacao] = useState<{ email: string; senha: string; justificativa: string } | null>(
     bloqueio.bloqueado ? { email: '', senha: '', justificativa: '' } : null,
   );
@@ -248,19 +256,31 @@ function ModalAcionar({
       servico_id: servico.id,
       solicitante: form.solicitante || null,
       telefone: form.telefone || null,
-      origem: {
-        logradouro: form.origem || undefined,
-        cidade: form.cidade || undefined,
-        uf: form.uf || undefined,
-        referencia: form.referencia || undefined,
-      },
-      destino: form.destino ? { logradouro: form.destino } : {},
-      km_previsto: form.km_previsto ? Number(form.km_previsto) : null,
+      origem: origem as Json,
+      destino: destino as Json,
+      // KM previsto: o da rota calculada; o campo manual continua valendo
+      // quando o provedor de mapas nao respondeu.
+      km_previsto: rota?.distancia_km ?? (form.km_previsto ? Number(form.km_previsto) : null),
       observacoes: form.observacoes || null,
       liberacao: bloqueio.bloqueado ? liberacao : null,
     };
     abrir.mutate(payload, {
-      onSuccess: (r) => {
+      onSuccess: async (r) => {
+        // Rota calculada entra na OS (distancia, duracao e tracado) pela funcao
+        // que tambem recalcula o KM excedente.
+        if (rota) {
+          try {
+            await definirTrajeto.mutateAsync({
+              acionamento_id: r.acionamento.id,
+              distancia_km: rota.distancia_km,
+              duracao_min: rota.duracao_min,
+              polyline: rota.polyline,
+              motivo: 'Rota calculada na abertura',
+            });
+          } catch {
+            toast.message('Acionamento aberto, mas a rota nao foi gravada — recalcule na OS.');
+          }
+        }
         toast.success(
           r.liberado_por
             ? `Acionamento ${r.acionamento.protocolo} aberto com liberacao de ${r.liberado_por}`
@@ -273,7 +293,7 @@ function ModalAcionar({
   }
 
   return (
-    <Modal open onClose={onClose} title={`Acionar ${servico.descricao} — ${veiculo.placa}`}>
+    <Modal open onClose={onClose} title={`Acionar ${servico.descricao} — ${veiculo.placa}`} tamanho="xl">
       <form onSubmit={enviar} className="space-y-3">
         {bloqueio.bloqueado && (
           <div className="rounded-lg border border-rose-200 bg-rose-50 p-3">
@@ -320,28 +340,25 @@ function ModalAcionar({
           <FormField label="Telefone de contato">
             <Input value={form.telefone} onChange={(e) => setForm({ ...form, telefone: e.target.value })} />
           </FormField>
-          <FormField label="Local (endereco)" className="sm:col-span-2">
-            <Input value={form.origem} onChange={(e) => setForm({ ...form, origem: e.target.value })} placeholder="Rua/avenida, numero" />
-          </FormField>
-          <FormField label="Cidade">
-            <Input value={form.cidade} onChange={(e) => setForm({ ...form, cidade: e.target.value })} />
-          </FormField>
-          <FormField label="UF">
-            <Input maxLength={2} value={form.uf} onChange={(e) => setForm({ ...form, uf: e.target.value.toUpperCase() })} />
-          </FormField>
-          <FormField label="Ponto de referencia" className="sm:col-span-2">
-            <Input value={form.referencia} onChange={(e) => setForm({ ...form, referencia: e.target.value })} />
-          </FormField>
-          <FormField label="Destino (quando houver)" className="sm:col-span-2">
-            <Input value={form.destino} onChange={(e) => setForm({ ...form, destino: e.target.value })} placeholder="Oficina, residencia..." />
-          </FormField>
-          <FormField label="KM previsto">
-            <Input type="number" min={0} value={form.km_previsto} onChange={(e) => setForm({ ...form, km_previsto: e.target.value })} />
+          <FormField label="KM previsto (manual)">
+            <Input type="number" min={0} value={rota ? String(rota.distancia_km) : form.km_previsto}
+              disabled={!!rota}
+              onChange={(e) => setForm({ ...form, km_previsto: e.target.value })}
+              placeholder="preenchido pela rota" />
           </FormField>
           <FormField label="Observacoes">
             <Input value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} />
           </FormField>
         </div>
+
+        {/* Origem, destino, mapa da rota e simulacao do KM excedente */}
+        <TrajetoAcionamento
+          origem={origem}
+          destino={destino}
+          rota={rota}
+          servico={servico}
+          onChange={(v) => { setOrigem(v.origem); setDestino(v.destino); setRota(v.rota); }}
+        />
 
         <div className="flex justify-end gap-2 pt-1">
           <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>
@@ -384,7 +401,9 @@ export function OrdemServico({ acionamentoId, onVoltar }: { acionamentoId: strin
   if (!a) return <p className="text-sm text-slate-400">Carregando acionamento...</p>;
 
   const finalizado = a.status === 'CONCLUIDO' || a.status === 'CANCELADO';
-  const kmExc = servico ? calcularKmExcedente(Number(kmReal || a.km_previsto || 0), Number(servico.km_franquia)) : 0;
+  // Base do KM excedente: o KM informado > a rota calculada > o previsto.
+  const kmBase = Number(kmReal || a.distancia_km_calculada || a.km_previsto || 0);
+  const kmExc = servico ? calcularKmExcedente(kmBase, Number(servico.km_franquia)) : 0;
 
   function escolher(fornecedorId: string, valor: number, valorKm: number | null, prazo: number | null) {
     if (!servico) return;
@@ -450,6 +469,9 @@ export function OrdemServico({ acionamentoId, onVoltar }: { acionamentoId: strin
           </p>
         )}
       </div>
+
+      {/* Trajeto: mapa da rota, distancia e navegacao do prestador */}
+      <CardTrajeto acionamento={a} servico={servico} editavel={!finalizado} />
 
       {/* Cotacao */}
       {!finalizado && (
@@ -656,6 +678,150 @@ export function OrdemServico({ acionamentoId, onVoltar }: { acionamentoId: strin
         />
       )}
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Trajeto da OS: mapa, distancia calculada e links de navegacao (0031)
+// ---------------------------------------------------------------------------
+function CardTrajeto({ acionamento, servico, editavel }: {
+  acionamento: AcionamentoComRel;
+  servico?: ServicosAssistenciaRow | null;
+  editavel: boolean;
+}) {
+  const [editando, setEditando] = useState(false);
+  const origem = (acionamento.origem ?? {}) as EnderecoGeo;
+  const destino = (acionamento.destino ?? {}) as EnderecoGeo;
+  const links = linksNavegacao(origem, destino);
+  const km = acionamento.distancia_km_calculada != null ? Number(acionamento.distancia_km_calculada) : null;
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+          <Route className="h-4 w-4 text-cyan-600" /> Trajeto do atendimento
+        </h3>
+        {editavel && (
+          <Button variant="secondary" onClick={() => setEditando(true)}>
+            <MapPin className="h-4 w-4" /> Editar trajeto
+          </Button>
+        )}
+      </div>
+
+      <div className="mt-3 grid gap-3 lg:grid-cols-2">
+        <MapaRota origem={coordenadaDe(origem)} destino={coordenadaDe(destino)} altura={220} />
+        <div className="space-y-2 text-sm">
+          <div>
+            <p className="text-[11px] uppercase tracking-wide text-slate-400">Origem (resgate)</p>
+            <p className="font-medium text-slate-700">{enderecoLinha(origem) || '—'}</p>
+            {origem.referencia && <p className="text-xs text-slate-500">Ref.: {origem.referencia}</p>}
+          </div>
+          <div>
+            <p className="text-[11px] uppercase tracking-wide text-slate-400">Destino</p>
+            <p className="font-medium text-slate-700">{enderecoLinha(destino) || '—'}</p>
+          </div>
+          <div>
+            <p className="text-[11px] uppercase tracking-wide text-slate-400">Distancia autorizada</p>
+            <p className="tnum text-lg font-semibold text-slate-900">
+              {rotuloRota(km, acionamento.duracao_minutos)}
+            </p>
+            {servico?.cobra_km_excedente && km != null && (
+              <p className="text-xs text-slate-500">
+                Franquia {servico.km_franquia} km · excedente {calcularKmExcedente(km, Number(servico.km_franquia))} km
+              </p>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2 pt-1">
+            {links.googleRota && (
+              <a href={links.googleRota} target="_blank" rel="noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">
+                <ExternalLink className="h-3.5 w-3.5" /> Rota (Google Maps)
+              </a>
+            )}
+            {links.wazeOrigem && (
+              <a href={links.wazeOrigem} target="_blank" rel="noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">
+                <Navigation className="h-3.5 w-3.5" /> Navegar (Waze)
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {editando && (
+        <ModalEditarTrajeto acionamento={acionamento} servico={servico} onClose={() => setEditando(false)} />
+      )}
+    </div>
+  );
+}
+
+// Edicao do trajeto: recalcula rota, KM excedente e sincroniza Contas a Pagar.
+function ModalEditarTrajeto({ acionamento, servico, onClose }: {
+  acionamento: AcionamentoComRel;
+  servico?: ServicosAssistenciaRow | null;
+  onClose: () => void;
+}) {
+  const definir = useDefinirTrajeto();
+  const [origem, setOrigem] = useState<EnderecoGeo>((acionamento.origem ?? {}) as EnderecoGeo);
+  const [destino, setDestino] = useState<EnderecoGeo>((acionamento.destino ?? {}) as EnderecoGeo);
+  const [rota, setRota] = useState<RotaCalculada | null>(
+    acionamento.distancia_km_calculada != null
+      ? {
+          distancia_km: Number(acionamento.distancia_km_calculada),
+          duracao_min: Number(acionamento.duracao_minutos ?? 0),
+          polyline: acionamento.rota_polyline, pontos: [],
+        }
+      : null,
+  );
+  const [motivo, setMotivo] = useState('');
+
+  function salvar(e: React.FormEvent) {
+    e.preventDefault();
+    if (!motivo.trim()) return toast.error('Informe o motivo da alteracao do trajeto (fica na auditoria)');
+    definir.mutate(
+      {
+        acionamento_id: acionamento.id,
+        origem: origem as Json,
+        destino: destino as Json,
+        distancia_km: rota?.distancia_km ?? null,
+        duracao_min: rota?.duracao_min ?? null,
+        polyline: rota?.polyline ?? null,
+        motivo,
+      },
+      {
+        onSuccess: (os) => {
+          toast.success(`Trajeto atualizado — total ${formatCurrency(Number(os.valor_total))}`);
+          onClose();
+        },
+        onError: (err) => toast.error(err.message),
+      },
+    );
+  }
+
+  return (
+    <Modal open onClose={onClose} title={`Trajeto da OS ${acionamento.codigo_os ?? acionamento.protocolo ?? ''}`} tamanho="xl">
+      <form onSubmit={salvar} className="space-y-3">
+        <TrajetoAcionamento
+          origem={origem} destino={destino} rota={rota} servico={servico}
+          onChange={(v) => { setOrigem(v.origem); setDestino(v.destino); setRota(v.rota); }}
+        />
+        <p className="rounded-lg bg-slate-50 p-3 text-xs text-slate-600">
+          Ao salvar, o KM excedente e o valor da OS sao recalculados pela distancia da rota e o
+          titulo em Contas a Pagar e sincronizado (se ja houver baixa, o valor pago nao e alterado).
+        </p>
+        <FormField label="Motivo da alteracao *">
+          <Input value={motivo} onChange={(e) => setMotivo(e.target.value)}
+            placeholder="Ex.: associado pediu para levar a outra oficina" />
+        </FormField>
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>
+          <Button type="submit" disabled={definir.isPending}>
+            {definir.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Route className="h-4 w-4" />}
+            Salvar trajeto
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 

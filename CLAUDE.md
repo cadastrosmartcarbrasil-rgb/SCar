@@ -22,7 +22,7 @@ branch padrão do GitHub e está parado em `953c53c` — não é outro projeto.
 O passo a passo do deploy (incluindo as migrations no Supabase) está em **`DEPLOY.md`**.
 CI no GitHub Actions (`.github/workflows/ci.yml`) roda a mesma validação a cada push.
 
-### O que foi entregue nesta fase (migrations 0024→0029)
+### O que foi entregue nesta fase (migrations 0024→0031)
 1. **Cobrança** (`0024`+`0025`, menu → `/cobrancas`): mensalidade por veículo
    (`dia_vencimento` + `valor_mensalidade`), faturas → títulos, dashboard com KPIs e
    filtros, geração automática na ativação do veículo, boletagem em lote (6 meses) e
@@ -47,11 +47,15 @@ CI no GitHub Actions (`.github/workflows/ci.yml`) roda a mesma validação a cad
    resolvível** na ficha e no cadastro (mesma fonte do card), busca por **placa vai
    direto ao atendimento** do veículo e todas as listagens usam a **ordenação padrão**
    (ativos primeiro).
+7. **Geolocalização da 24h** (`0031`): origem/destino geocodificados, mapa interativo da
+   rota na tela do acionamento, distância em KM validando o KM excedente e links de
+   navegação (Google Maps/Waze) no voucher do prestador.
 
 ### Estado de validação
-- **Migrations `0001`..`0030`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **Testes de banco:** 7 suites em `supabase/tests/*.test.sql` (0024→0030) — todas passando.
-- **Vitest:** 93/93 (`sac.ts`, `cobranca.ts`, `pagamentos/`, `assistencia.ts`, `crm.ts`, `protocolos.ts`).
+- **Migrations `0001`..`0031`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **Testes de banco:** 8 suites em `supabase/tests/*.test.sql` (0024→0031) — todas passando.
+- **Vitest:** 106/106 (`sac.ts`, `cobranca.ts`, `pagamentos/`, `assistencia.ts`, `crm.ts`,
+  `protocolos.ts`, `geo.ts`).
 - `npx tsc --noEmit` limpo e `npm run build:check` OK (44 rotas).
 
 ### Pendências conhecidas (não são bugs, são decisões pendentes)
@@ -126,6 +130,7 @@ src/
     assistencia.ts              # KM excedente, trava do acionamento e voucher do prestador + testes
     crm.ts                      # esteira/Kanban, itens obrigatorios e politica de desconto + testes
     protocolos.ts               # categorias/prioridade/status, WhatsApp-email e ajuste de boleto + testes
+    geo.ts                      # endereco/coordenada, links Google-Waze e rotulo da rota + testes
     sac-servicos.ts             # menu modular de VCards do SAC (SERVICOS_SAC + modo)
   hooks/                        # um arquivo por dominio (use-*.ts), TanStack Query
   components/                   # ui/ (Button,Input,Modal,Card,field), + por dominio
@@ -135,6 +140,7 @@ src/
   app/api/                      # route handlers (cnpj, placa, fipe, usuarios, portal/login, boletos)
   app/api/v1/cobrancas/         # gerar (lote por periodo) e remessa (envio ao banco)
   app/api/v1/assistencia/       # acionamento (com alcada de liberacao) e voucher do prestador
+  app/api/v1/geo/               # proxy de mapas (geocode + rota): Google ou OSM/OSRM
   app/api/v1/vendas/desconto/   # alcada de excecao do desconto (sessao do gestor)
   app/(dashboard)/protocolos/   # Central de Protocolos (fila + KPIs); aba espelhada no /sac
 middleware.ts                   # refresh de sessao + guard de rotas
@@ -303,6 +309,16 @@ contagem) e `resolver_alerta_veiculo(alerta,obs)` (baixa com autor/data); (B) OR
 · baixado 5 · excluido 6) e `veiculos_do_cliente(cliente)`, que devolve a lista do SAC ja ordenada
 (status → data_ativacao desc → modelo → placa) e com plano/alertas/eventos/assistencia resolvidos
 no banco — a rota `/visao-360` deixou de fazer 4 consultas separadas).
+· `0031_assistencia_geolocalizacao` (GEO DA OS 24H — a "ordem de servico" e a propria
+`acionamentos_assistencia` (nada de `ordens_servico_24h` paralela): colunas `endereco_origem/
+latitude_origem/longitude_origem`, `endereco_destino/latitude_destino/longitude_destino`,
+`distancia_km_calculada`, `duracao_minutos`, `rota_polyline` e `rota_calculada_em`; o jsonb
+`origem`/`destino` segue sendo a digitacao e o trigger `trg_acionamento_geo` espelha nas colunas
+planas por QUALQUER caminho; `km_excedente_servico(servico,distancia)` (espelho do
+`calcularKmExcedente`); `definir_trajeto_acionamento(...)` grava rota, RECALCULA KM excedente e
+valores e chama `sincronizar_lancamento_acionamento` (auditoria do 0027 pega sozinha);
+`links_navegacao_acionamento(...)` + `ponto_navegacao`/`urlencode` devolvem Google (rota e pin) e
+Waze (`ll` p/ coordenada, `q` p/ endereco)).
 
 ## Módulos (status: todos funcionais)
 Assistência 24h (`/assistencia`: painel de acionamento com trava + limites em tempo real, cotação,
@@ -343,6 +359,25 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
   `cotar_plano(fipe, tipo, plano_id?, avulsos[]?)` → mensalidade + adesão + franquia + detalhamento.
   Precedência: base(obrigatórios+regra rastreador) + produtos do plano + avulsos. Usado por Simulador,
   Vendas/novo e snapshot da cotação. Preços dos opcionais novos: cadastrar em Configurações→Produtos.
+
+## Assistência 24h — geolocalização e rota (0031)
+- **Provedor de mapas com fallback:** proxy server-side `/api/v1/geo` (`action: geocode | rota`),
+  no mesmo padrão do `/api/fipe` — a chave nunca vai ao navegador. Com `GOOGLE_MAPS_API_KEY`
+  usa Google (Geocoding + Directions); **sem chave** cai em OpenStreetMap/Nominatim + OSRM,
+  que são públicos. Trocar de provedor é só preencher a env.
+- **Mapa:** `<MapaRota>` (`src/components/mapa/mapa-rota.tsx`) usa **Leaflet** com tiles do OSM,
+  import dinâmico dentro do efeito (o Leaflet não roda no SSR). Pinos A (resgate) / B (destino)
+  e o traçado em ciano. `invalidateSize()` no fim — sem isso o mapa em modal nasce cinza.
+- **`<TrajetoAcionamento>`:** origem + destino (CEP → ViaCEP, "Localizar no mapa" → geocode),
+  botão **Calcular rota**, distância/tempo e a **simulação do KM excedente** em tempo real
+  (rota − franquia × valor do KM). Usado na abertura do acionamento e na edição do trajeto da OS.
+- **Editar o trajeto recalcula tudo:** `definir_trajeto_acionamento` refaz KM excedente, valor
+  total e sincroniza o Contas a Pagar (título já baixado não é alterado — regra do 0027);
+  a mudança entra na trilha de auditoria da OS e exige motivo na tela.
+- **Voucher do prestador** leva *Rota autorizada: X km · Y min*, **link do Google Maps** (rota
+  completa), **links do Waze** (resgate e destino) e o aviso de que rota e KM autorizados são
+  estritamente os da OS — trecho não autorizado não é pago. Espelho puro em
+  `src/lib/geo.ts` + `rotaDoVoucher` (`src/lib/assistencia.ts`), com testes.
 
 ## SAC — alertas, busca e ordenação (0030)
 - **Alerta do veículo tem UMA fonte:** `alertas_veiculo` (linhas de `veiculo_alertas` + o tipo).

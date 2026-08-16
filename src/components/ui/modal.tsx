@@ -4,16 +4,22 @@ import { useEffect } from 'react';
 import { X } from 'lucide-react';
 
 // Modal simples (dialog) para formularios de cadastro/edicao.
+// `tamanho`: formularios normais ficam em 'md'; telas com mapa/tabela pedem
+// 'lg' ou 'xl' para nao espremer o conteudo.
+const LARGURA = { md: 'max-w-lg', lg: 'max-w-3xl', xl: 'max-w-5xl' } as const;
+
 export function Modal({
   open,
   onClose,
   title,
   children,
+  tamanho = 'md',
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  tamanho?: keyof typeof LARGURA;
 }) {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -31,7 +37,7 @@ export function Modal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-xl bg-white shadow-xl"
+        className={`w-full ${LARGURA[tamanho]} rounded-xl bg-white shadow-xl`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">

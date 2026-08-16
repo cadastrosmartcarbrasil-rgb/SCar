@@ -911,6 +911,28 @@ export type AcionamentosAssistenciaRow = Timestamps & {
   concluido_em: string | null;
   cancelado_motivo: string | null;
   regional_id: string | null;
+  // Geolocalizacao da OS (0031) — espelho plano do jsonb origem/destino,
+  // mantido por trigger, mais a rota calculada pelo provedor de mapas.
+  endereco_origem: string | null;
+  latitude_origem: number | null;
+  longitude_origem: number | null;
+  endereco_destino: string | null;
+  latitude_destino: number | null;
+  longitude_destino: number | null;
+  distancia_km_calculada: number | null;
+  duracao_minutos: number | null;
+  rota_polyline: string | null;
+  rota_calculada_em: string | null;
+};
+
+// Links de navegacao da OS (RPC links_navegacao_acionamento)
+export type LinksNavegacaoOS = {
+  origem_texto: string | null;
+  destino_texto: string | null;
+  google_rota: string | null;
+  google_origem: string | null;
+  waze_origem: string | null;
+  waze_destino: string | null;
 };
 
 export type AcionamentoCotacoesRow = {
@@ -1664,6 +1686,27 @@ export type Database = {
           p_observacao?: string | null;
         };
         Returns: AcionamentoCotacoesRow;
+      };
+      definir_trajeto_acionamento: {
+        Args: {
+          p_acionamento_id: string;
+          p_origem?: Json | null;
+          p_destino?: Json | null;
+          p_distancia_km?: number | null;
+          p_duracao_min?: number | null;
+          p_polyline?: string | null;
+          p_km_excedente?: number | null;
+          p_motivo?: string | null;
+        };
+        Returns: AcionamentosAssistenciaRow;
+      };
+      links_navegacao_acionamento: {
+        Args: { p_acionamento_id: string };
+        Returns: LinksNavegacaoOS[];
+      };
+      km_excedente_servico: {
+        Args: { p_servico_id: string; p_distancia_km: number | null };
+        Returns: number;
       };
       confirmar_prestador_assistencia: {
         Args: {
