@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
-  ClientesRow, VeiculosRow, FaturasRow, OpcionalElegibilidade, TipoFaturamento,
+  ClientesRow, VeiculosRow, FaturasRow, OpcionalVeiculo, TipoFaturamento,
   AtendimentosRow, TipoAtendimento, CanalAtendimento, Json, StatusVeiculo, StatusEvento,
 } from '@/lib/database.types';
 import type { StatusFinanceiro } from '@/lib/sac';
@@ -44,7 +44,8 @@ export interface EventoResumo {
 // DETALHE completo (carregado sob demanda ao clicar no veiculo).
 export interface VeiculoDetalhe extends VeiculosRow {
   plano_nome: string | null;
-  opcionais: OpcionalElegibilidade[];
+  /** SO os itens contratados do veiculo (plano + avulsos) — 0029. */
+  opcionais: OpcionalVeiculo[];
 }
 export interface Visao360 {
   associado: ClientesRow;
@@ -93,7 +94,7 @@ export function useVeiculoDetalhe(veiculoId?: string) {
     queryKey: ['sac', 'veiculo', veiculoId ?? 'none'],
     enabled: !!veiculoId,
     queryFn: async () => {
-      const r = await jget<{ veiculo: VeiculosRow; plano_nome: string | null; opcionais: OpcionalElegibilidade[] }>(
+      const r = await jget<{ veiculo: VeiculosRow; plano_nome: string | null; opcionais: OpcionalVeiculo[] }>(
         `/api/v1/sac/veiculo?veiculo_id=${veiculoId}`,
       );
       return { ...r.veiculo, plano_nome: r.plano_nome, opcionais: r.opcionais };

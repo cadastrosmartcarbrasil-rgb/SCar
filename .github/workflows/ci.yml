@@ -59,4 +59,4 @@ jobs:
           PGTEST_EXTERNO: '1'
 
       - name: Build de producao
-        run: npm run build
+        run: npm run build:check

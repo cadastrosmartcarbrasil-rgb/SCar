@@ -17,6 +17,7 @@ import {
   Headset,
   Receipt,
   LifeBuoy,
+  Ticket,
   Menu,
   X,
 } from 'lucide-react';
@@ -29,6 +30,7 @@ type Item = { href: string; label: string; icon: React.ElementType };
 const OPERACAO: Item[] = [
   { href: '/dashboard', label: 'Visao Geral', icon: LayoutDashboard },
   { href: '/sac', label: 'SAC / Atendimento', icon: Headset },
+  { href: '/protocolos', label: 'Protocolos', icon: Ticket },
   { href: '/assistencia', label: 'Assistencia 24h', icon: LifeBuoy },
   { href: '/vendas', label: 'Vendas / CRM', icon: Target },
   { href: '/associados', label: 'Associados', icon: Users },

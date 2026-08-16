@@ -22,7 +22,7 @@ branch padrão do GitHub e está parado em `953c53c` — não é outro projeto.
 O passo a passo do deploy (incluindo as migrations no Supabase) está em **`DEPLOY.md`**.
 CI no GitHub Actions (`.github/workflows/ci.yml`) roda a mesma validação a cada push.
 
-### O que foi entregue nesta fase (migrations 0024→0028)
+### O que foi entregue nesta fase (migrations 0024→0029)
 1. **Cobrança** (`0024`+`0025`, menu → `/cobrancas`): mensalidade por veículo
    (`dia_vencimento` + `valor_mensalidade`), faturas → títulos, dashboard com KPIs e
    filtros, geração automática na ativação do veículo, boletagem em lote (6 meses) e
@@ -37,12 +37,17 @@ CI no GitHub Actions (`.github/workflows/ci.yml`) roda a mesma validação a cad
 4. **CRM de Vendas** (`0028`): Kanban com drag-and-drop, status **Em Negociação**,
    cotação editável com trava dos itens obrigatórios do plano e política de desconto
    por franquia com alçada de Gestor/Diretor.
+5. **SAC + Protocolos** (`0029`, menu → `/protocolos` e aba no `/sac`): ficha do veículo
+   passou a listar **só o que foi contratado**, VCards unificados (Editar Veículo/Item,
+   Histórico Financeiro com edição do boleto em aberto, WhatsApp e E-mail) e a
+   **Central de Protocolos** (fila, histórico de interações, transferência entre
+   atendentes, encerramento) com contador em tempo real no Dashboard.
 
 ### Estado de validação
-- **Migrations `0001`..`0028`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **Testes de banco:** 5 suites em `supabase/tests/*.test.sql` (0024, 0025, 0026, 0027, 0028) — todas passando.
-- **Vitest:** 76/76 (`sac.ts`, `cobranca.ts`, `pagamentos/`, `assistencia.ts`, `crm.ts`).
-- `npx tsc --noEmit` limpo e `npm run build` OK (43 rotas).
+- **Migrations `0001`..`0029`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **Testes de banco:** 6 suites em `supabase/tests/*.test.sql` (0024, 0025, 0026, 0027, 0028, 0029) — todas passando.
+- **Vitest:** 89/89 (`sac.ts`, `cobranca.ts`, `pagamentos/`, `assistencia.ts`, `crm.ts`, `protocolos.ts`).
+- `npx tsc --noEmit` limpo e `npm run build:check` OK (44 rotas).
 
 ### Pendências conhecidas (não são bugs, são decisões pendentes)
 - **Gateway bancário mockado:** `MockGateway` gera linha digitável/PIX fictícios e
@@ -62,8 +67,9 @@ CI no GitHub Actions (`.github/workflows/ci.yml`) roda a mesma validação a cad
 1. **Ligar o gateway real** (Asaas) — emissão + webhook + baixa automática.
 2. **Termo de adesão** com aceite eletrônico (`contratos_adesao.token`, nos moldes de `/cotacao/[token]`).
 3. **Módulo de Vistoria** (tabelas `vistorias`/`vistoria_anexos` já existem; falta upload + status).
-4. **Portal do Associado** (login CPF, autosserviço reusando `SERVICOS_SAC` + RLS por dono).
-5. **Fila de atendimentos** para a equipe tramitar chamados.
+4. **Portal do Associado** (login CPF, autosserviço reusando `SERVICOS_SAC` + RLS por dono —
+   o protocolo já nasce pronto para o canal `PORTAL`).
+5. **SLA / notificações do protocolo** (prazo por prioridade, aviso ao responsável, e-mail ao associado).
 
 ## O que é
 Sistema de gestão para **associação de proteção veicular** (associados, frota, eventos/sinistros,
@@ -98,6 +104,7 @@ supabase/
 scripts/
   db-test.sh                    # sobe pg, aplica migrations e roda supabase/tests em bancos isolados
   schema-build.sh               # regenera supabase/schema.sql
+  build-check.sh                # next build da validacao/CI (env dummy quando nao ha env)
   deploy.ps1 / deploy.sh        # publica no VPS (roda o git pull DENTRO do servidor)
 DEPLOY.md                       # runbook de deploy (migrations + VPS + diagnostico)
 .github/workflows/ci.yml        # CI: tipos, Vitest, migrations+testes de banco, build
@@ -113,14 +120,18 @@ src/
     pagamentos/                 # service pattern do gateway (types/mock/asaas/index) + testes
     assistencia.ts              # KM excedente, trava do acionamento e voucher do prestador + testes
     crm.ts                      # esteira/Kanban, itens obrigatorios e politica de desconto + testes
+    protocolos.ts               # categorias/prioridade/status, WhatsApp-email e ajuste de boleto + testes
+    sac-servicos.ts             # menu modular de VCards do SAC (SERVICOS_SAC + modo)
   hooks/                        # um arquivo por dominio (use-*.ts), TanStack Query
   components/                   # ui/ (Button,Input,Modal,Card,field), + por dominio
+                                # protocolos/central-protocolos.tsx, sac/acoes-veiculo.tsx
   app/(dashboard)/              # telas internas (layout gateia staff + mostra logo)
   app/(auth)/login, app/portal  # login staff e portal do associado
   app/api/                      # route handlers (cnpj, placa, fipe, usuarios, portal/login, boletos)
   app/api/v1/cobrancas/         # gerar (lote por periodo) e remessa (envio ao banco)
   app/api/v1/assistencia/       # acionamento (com alcada de liberacao) e voucher do prestador
   app/api/v1/vendas/desconto/   # alcada de excecao do desconto (sessao do gestor)
+  app/(dashboard)/protocolos/   # Central de Protocolos (fila + KPIs); aba espelhada no /sac
 middleware.ts                   # refresh de sessao + guard de rotas
 ```
 
@@ -258,6 +269,23 @@ recusando qualquer edicao que remova item de `produtos_obrigatorios_cotacao(tipo
 adesao_com_desconto/aprovado_por/justificativa`; trigger `fn_cotacao_valida_desconto` (trava valendo
 para QUALQUER caminho, inclusive insert direto) + `pode_aprovar_desconto()` (admin/gestor_regional),
 `aplicar_desconto_cotacao()` e `simular_desconto_cotacao()` p/ a UI).
+· `0029_protocolos_sac` (SAC + CENTRAL DE PROTOCOLOS: (A) FICHA — `opcionais_veiculo(veiculo)`
+devolve SO o que o veiculo contratou (plano via `cotar_plano` + avulsos de `veiculo_produtos`), com
+`origem` PLANO/AVULSO e o consumo por janela; substitui o `opcionais_elegibilidade` na ficha do SAC
+(que lista o catalogo inteiro); (B) BOLETO EDITAVEL — `titulos_financeiros` ganha `valor_original/
+desconto/acrescimo/observacao/alterado_por/alterado_em`; `ajustar_titulo(titulo,vencimento,desconto,
+acrescimo,obs)` recalcula SEMPRE a partir do original (nao acumula) e recusa pago/cancelado;
+`reemitir_titulo(titulo)` limpa o gateway p/ 2a via; `titulos_do_cliente(cliente,veiculo?,limite)`;
+(C) PROTOCOLO = a tabela `atendimentos` EVOLUIDA (nada de tabela paralela): novos valores de
+`tipo_atendimento` (`FINANCEIRO`/`DUVIDAS`/`RECLAMACAO`/`OUTROS`, comparados como TEXTO), enums
+`prioridade_atendimento` e `tipo_interacao_protocolo`, colunas `prioridade/responsavel_id/
+encerrado_em/encerrado_por/solucao` e `veiculo_id` AGORA NULAVEL (protocolo da pessoa); nova
+`protocolo_interacoes` (`created_at` = `clock_timestamp()`); (D) FUNCOES — `abrir_protocolo(...)`,
+`registrar_interacao_protocolo(...)` (1o retorno move ABERTO->EM_ANDAMENTO),
+**`transferir_atendimento(...)`** (nome escolhido porque `transferir_protocolo` JA EXISTE p/ eventos),
+`alterar_status_protocolo(...)`, `encerrar_protocolo(id,solucao)` (solucao obrigatoria),
+`listar_protocolos(status,responsavel,busca,prioridade,regional,limite)`, `interacoes_protocolo(id)`
+e `resumo_protocolos(regional)` p/ o card do dashboard).
 
 ## Módulos (status: todos funcionais)
 Assistência 24h (`/assistencia`: painel de acionamento com trava + limites em tempo real, cotação,
@@ -265,13 +293,16 @@ OS, voucher ao prestador e Contas a Pagar) · SAC / Atendimento (`/sac`: **veíc
 uma **lista resumida leve** (Placa/Marca-Modelo/Ano/Status, sem opcionais); ao clicar, `/api/v1/sac/veiculo`
 carrega o **detalhe sob demanda** e isola o item, abrindo o **menu modular de serviços**
 (`SERVICOS_SAC`): **Evento** (redireciona direto p/ `/sinistros/novo?placa=` — chamamos sinistro
-de EVENTO), Assistência 24h, Upgrade/Cobertura, 2ª via de Boleto, Vistoria/Acessórios,
-Cadastro/Cancelamento — os demais criam um `atendimento` vinculado ao `veiculo_id` (trava de
-propriedade no banco). Abas **Veículos | Eventos** (eventos do associado c/ atalho "Gerenciar" →
-`/sinistros/[id]`); a lista de veículos marca quem já teve **evento** ou acionou **Assist 24h**.
-Também: toggle de faturamento Agrupado↔Individual, status financeiro, elegibilidade de opcionais
-(janela flutuante 12m). APIs REST em `/api/v1/sac/*` — `busca`, `visao-360`, `faturamento`, `boleto`, `atendimento`
-— reutilizáveis por Portal do Associado/Assistência 24h/Chatbot).
+de EVENTO), Assistência 24h, **Editar Veículo/Item**, **Histórico Financeiro**, **WhatsApp**,
+**E-mail**, **Abrir Protocolo**, 2ª via de Boleto, Vistoria/Acessórios, Cancelamento — os que geram
+chamado criam um `atendimento` (protocolo) vinculado ao `veiculo_id` (trava de propriedade no banco).
+Abas **Veículos | Eventos | Protocolos** (a 3ª é a Central filtrada pelo associado);
+a lista de veículos marca quem já teve **evento** ou acionou **Assist 24h**.
+Também: toggle de faturamento Agrupado↔Individual, status financeiro e os opcionais
+**efetivamente contratados** (`opcionais_veiculo`, com o consumo da janela flutuante).
+APIs REST em `/api/v1/sac/*` — `busca`, `visao-360`, `veiculo`, `faturamento`, `boleto`, `atendimento`
+— reutilizáveis por Portal do Associado/Assistência 24h/Chatbot)
+· **Protocolos** (`/protocolos`: Central com fila, filtros, histórico, transferência e encerramento)
 Vendas/CRM (`/vendas` mobile-first: captura de lead + FIPE por placa/cascata, cotação com
 link público `/cotacao/[token]` detalhada/consolidada + print-PDF, esteira com trava de
 Auditoria — só papel `auditoria`/`admin` clica "Autorizar Entrada" e efetiva cliente+veículo)
@@ -295,6 +326,32 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
   `cotar_plano(fipe, tipo, plano_id?, avulsos[]?)` → mensalidade + adesão + franquia + detalhamento.
   Precedência: base(obrigatórios+regra rastreador) + produtos do plano + avulsos. Usado por Simulador,
   Vendas/novo e snapshot da cotação. Preços dos opcionais novos: cadastrar em Configurações→Produtos.
+
+## SAC + Central de Protocolos (0029) — ficha, VCards e fila
+- **Protocolo NÃO é tabela nova.** É a `atendimentos` evoluída (prioridade, responsável,
+  encerramento, `veiculo_id` nulável) + `protocolo_interacoes` para a tramitação. Mesma regra
+  do módulo 24h: nada de estrutura paralela ao que já existe.
+- **Ficha do veículo só mostra o contratado:** `/api/v1/sac/veiculo` usa `opcionais_veiculo`
+  (plano + avulsos de `veiculo_produtos`), com badge de origem (plano/opcional) e o consumo
+  `usados/limite` **apenas** para quem tem regra de limite. O antigo `opcionais_elegibilidade`
+  (catálogo inteiro) continua existindo para a tela de elegibilidade, não para a ficha.
+- **VCards do atendimento** (`src/lib/sac-servicos.ts`, campo `modo`): `evento` → `/sinistros/novo?placa=`,
+  `assistencia` → `/assistencia?placa=`, **`editar`** (fundiu Cadastro+Upgrade → `/veiculos?editar=<id>`),
+  **`financeiro`** (histórico de títulos com edição do boleto em aberto e 2ª via), **`whatsapp`**,
+  **`email`**, `protocolo`/`boleto`/`vistoria`/`cancelamento` (abrem chamado).
+- **Boleto editável:** só `pendente`/`vencido`. `ajustar_titulo` altera vencimento, desconto e
+  acréscimo recalculando **a partir do `valor_original`** (aplicar duas vezes não acumula) e
+  `reemitir_titulo` limpa os campos do gateway para a 2ª via. Espelho puro em `src/lib/protocolos.ts`
+  (`valorAjustado`, `tituloEditavel`, `validarAjuste`) com testes.
+- **Abertura:** pela ficha do **veículo** (VCards) ou pela ficha do **associado** (botão
+  "Abrir protocolo" no cabeçalho do SAC — `veiculo_id` nulo). Campos: categoria, assunto,
+  descrição, prioridade; número `ATD-YYYYMMDD-XXXX`.
+- **Central** (`/protocolos` e aba **Protocolos** do SAC, filtrada pelo associado): fila com filtros
+  (status/responsável/prioridade/busca), detalhe com **histórico de interações**, comentário
+  (interno ou visível), **transferência entre atendentes** (`transferir_atendimento`) e
+  **encerramento com solução obrigatória**.
+- **Dashboard:** banner clicável "Protocolos em aberto" (abertos, em atendimento, alta/urgente,
+  meus, parados +7 dias) via `resumo_protocolos`, com `refetchInterval` de 60s.
 
 ## CRM de Vendas (0028) — Kanban, cotação editável e desconto
 - **Visualização:** `/vendas` alterna **Kanban ↔ Lista** (a escolha fica no `localStorage`). Colunas:
@@ -432,11 +489,14 @@ npm run validate      # tsc --noEmit -> vitest -> migrations+testes de banco+sch
 
 Por trás dele:
 1. `npm run typecheck` — 0 erros (a convenção de tipos abaixo evita o bug de `never`).
-2. `npm test` — lógica pura espelhada do SQL (`sac`, `cobranca`, `pagamentos`, `assistencia`, `crm`).
+2. `npm test` — lógica pura espelhada do SQL (`sac`, `cobranca`, `pagamentos`, `assistencia`,
+   `crm`, `protocolos`).
 3. `npm run test:db -- --schema` — sobe um Postgres 16 local, aplica **todas** as
    migrations em ordem, valida o `schema.sql` consolidado e roda cada suite de
    `supabase/tests/` num banco isolado (clone por template, para um teste não sujar o outro).
-4. `npm run build` — build de produção com env dummy.
+4. `npm run build:check` (`scripts/build-check.sh`) — `next build` com **env dummy** quando as
+   variáveis não existem. O build real (Docker/VPS) segue usando `npm run build` com as de verdade;
+   sem isso o prerender de `/portal/sinistros/novo` quebra com "URL and API key are required".
 
 **Ao criar uma migration nova:** escreva também a suite `supabase/tests/00NN_*.test.sql`
 (padrão: um bloco `do $$ ... $$` com `assert` e um `raise notice '=== ... PASSARAM ==='`
@@ -480,7 +540,10 @@ no fim — o runner procura por "PASSARAM") e rode `npm run schema`.
   SQL Editor). Padrão adotado: `alter type ... add value if not exists` + comparar como
   TEXTO no resto do arquivo (`auth_papel()::text in ('assistencia_24h')`, `p_status not in
   ('EM_NEGOCIACAO', ...)`, `status::text`). Vale para `auditoria` (0017), `assistencia_24h`
-  (0026) e `EM_NEGOCIACAO` (0028).
+  (0026), `EM_NEGOCIACAO` (0028) e `FINANCEIRO`/`DUVIDAS`/`RECLAMACAO`/`OUTROS` (0029).
+- **Nome de função já usado em outro domínio dá `function ... is not unique`**: `transferir_protocolo`
+  já existia para EVENTOS (`evento_id, usuario_destino, parecer, status`) — a da Central de
+  Protocolos virou **`transferir_atendimento`**. Antes de criar função nova, `grep` o schema.
 - **Função que devolve uma linha após efeitos colaterais** precisa re-selecionar o registro
   antes do `return` — senão devolve o estado velho (mordeu em `trocar_prestador_acionamento`,
   que só preenche `lancamento_id` depois da sincronia).

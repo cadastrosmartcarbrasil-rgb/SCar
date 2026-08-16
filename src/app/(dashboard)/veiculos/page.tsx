@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, Car, Search, Loader2, Calculator, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -56,6 +57,15 @@ const statusMeta = (s: StatusVeiculo) => STATUS.find((x) => x.v === s) ?? STATUS
 const anoAtual = 2026;
 
 export default function VeiculosPage() {
+  return (
+    <Suspense fallback={<p className="py-10 text-center text-sm text-slate-400">Carregando...</p>}>
+      <VeiculosConteudo />
+    </Suspense>
+  );
+}
+
+function VeiculosConteudo() {
+  const params = useSearchParams();
   const { data: veiculos, isLoading } = useVeiculos();
   const { data: associados } = useAssociados();
   const { data: regionais } = useRegionais();
@@ -82,6 +92,14 @@ export default function VeiculosPage() {
   const vAlertas = useVeiculoAlertas(form.id);
   useEffect(() => { if (vProdutos.data) setOpcionais(new Set(vProdutos.data)); }, [vProdutos.data]);
   useEffect(() => { if (vAlertas.data) setAlertas(new Set(vAlertas.data)); }, [vAlertas.data]);
+
+  // Atalho do SAC: /veiculos?editar=<id> abre direto a ficha daquele veiculo.
+  useEffect(() => {
+    const id = params.get('editar');
+    if (!id || aberto) return;
+    const v = (veiculos ?? []).find((x) => x.id === id);
+    if (v) { setForm(v); setAberto(true); }
+  }, [params, veiculos, aberto]);
 
   const opcionaisDisp = useMemo(() => (produtos ?? []).filter((p) => !p.obrigatorio && p.status), [produtos]);
   const toggleSet = (setter: React.Dispatch<React.SetStateAction<Set<string>>>, id: string) =>

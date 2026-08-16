@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import {
   Search, User, Phone, Mail, Loader2, CheckCircle2, XCircle, ShieldCheck,
   Layers, SplitSquareHorizontal, ChevronLeft, Send,
-  Car, AlertTriangle, LifeBuoy, Settings2, Bell, FileSignature, ClipboardCheck, X,
+  Car, AlertTriangle, LifeBuoy, Settings2, Bell, FileSignature, ClipboardCheck, X, Ticket,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -20,12 +20,18 @@ import {
 import { SERVICOS_SAC, STATUS_ATENDIMENTO_LABEL, STATUS_EVENTO_LABEL, type ServicoSac } from '@/lib/sac-servicos';
 import { useContratosVeiculo, useVistoriasVeiculo } from '@/hooks/use-veiculo-ficha';
 import { useHistoricoAssistenciaVeiculo } from '@/hooks/use-assistencia';
+import { ModalHistoricoFinanceiro, ModalWhatsApp, ModalEmail } from '@/components/sac/acoes-veiculo';
+import { useAbrirProtocolo } from '@/hooks/use-protocolos';
+import { CATEGORIAS_PROTOCOLO, PRIORIDADES } from '@/lib/protocolos';
+import { CentralProtocolos } from '@/components/protocolos/central-protocolos';
 import { STATUS_ACIONAMENTO_LABEL } from '@/lib/assistencia';
 import { statusVeiculoResumo } from '@/lib/sac';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import type { OpcionalElegibilidade, TipoAtendimento, TipoFaturamento } from '@/lib/database.types';
+import type {
+  ClientesRow, OpcionalVeiculo, PrioridadeAtendimento, TipoAtendimento, TipoFaturamento,
+} from '@/lib/database.types';
 
-type Aba = 'veiculos' | 'eventos';
+type Aba = 'veiculos' | 'eventos' | 'protocolos';
 
 export default function SacPage() {
   const [q, setQ] = useState('');
@@ -85,22 +91,29 @@ export default function SacPage() {
 
           {/* Abas: Veiculos | Eventos do associado */}
           <div className="flex gap-1 border-b border-slate-200">
-            {([['veiculos', 'Veiculos', Car, v360.veiculos.length], ['eventos', 'Eventos', AlertTriangle, v360.eventos.length]] as const).map(([id, label, Icon, n]) => (
+            {([['veiculos', 'Veiculos', Car, v360.veiculos.length], ['eventos', 'Eventos', AlertTriangle, v360.eventos.length], ['protocolos', 'Protocolos', Ticket, null]] as const).map(([id, label, Icon, n]) => (
               <button key={id} onClick={() => setAba(id)}
                 className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm transition ${aba === id ? 'border-brand-600 font-medium text-brand-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
                 <Icon className="h-4 w-4" /> {label}
-                <span className={`tnum rounded-full px-1.5 text-[11px] ${aba === id ? 'bg-brand-50 text-brand-700' : 'bg-slate-100 text-slate-500'}`}>{n}</span>
+                {n !== null && (
+                  <span className={`tnum rounded-full px-1.5 text-[11px] ${aba === id ? 'bg-brand-50 text-brand-700' : 'bg-slate-100 text-slate-500'}`}>{n}</span>
+                )}
               </button>
             ))}
           </div>
 
-          {aba === 'eventos' ? (
+          {aba === 'protocolos' ? (
+            // Central filtrada pelo associado em atendimento (a fila completa
+            // fica em /protocolos, com o atalho do dashboard).
+            <CentralProtocolos filtroInicial={{ status: null, busca: v360.associado.nome_razao_social }} />
+          ) : aba === 'eventos' ? (
             <ListaEventos v360={v360} />
           ) : !veiculoId ? (
             <ListaVeiculos v360={v360} onSelect={setVeiculoId} />
           ) : (
             <AtendimentoVeiculo
               clienteId={v360.associado.id}
+              associado={v360.associado}
               veiculoId={veiculoId}
               podeTrocar={v360.veiculos.length > 1}
               onTrocar={() => setVeiculoId(undefined)}
@@ -183,8 +196,12 @@ function AlertasBanner({ alertas }: { alertas: Visao360['alertas'] }) {
 function AssociadoHeader({ v360 }: { v360: Visao360 }) {
   const a = v360.associado;
   const r = v360.financeiro.resumo;
+  // Protocolo da PESSOA (sem veiculo): assunto geral, cadastro, financeiro do
+  // associado. O banco aceita p_veiculo_id nulo em abrir_protocolo.
+  const [abrindo, setAbrindo] = useState(false);
   return (
     <Card>
+      {abrindo && <ModalProtocoloAssociado associado={a} onClose={() => setAbrindo(false)} />}
       <CardContent className="flex flex-wrap items-center justify-between gap-4 pt-5">
         <div className="flex items-center gap-3">
           <span className="grid h-11 w-11 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-brand-800 text-sm font-bold text-white">
@@ -199,11 +216,75 @@ function AssociadoHeader({ v360 }: { v360: Visao360 }) {
             </p>
           </div>
         </div>
-        {r.adimplente
-          ? <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700"><CheckCircle2 className="h-3.5 w-3.5" /> Adimplente</span>
-          : <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700"><XCircle className="h-3.5 w-3.5" /> {r.vencidos} vencido(s) · {formatCurrency(r.valorEmAberto)}</span>}
+        <div className="flex flex-wrap items-center gap-2">
+          {r.adimplente
+            ? <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700"><CheckCircle2 className="h-3.5 w-3.5" /> Adimplente</span>
+            : <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700"><XCircle className="h-3.5 w-3.5" /> {r.vencidos} vencido(s) · {formatCurrency(r.valorEmAberto)}</span>}
+          <Button type="button" variant="secondary" onClick={() => setAbrindo(true)}>
+            <Ticket className="h-4 w-4" /> Abrir protocolo
+          </Button>
+        </div>
       </CardContent>
     </Card>
+  );
+}
+
+// Abertura de protocolo pela ficha do ASSOCIADO (sem veiculo vinculado).
+function ModalProtocoloAssociado({ associado, onClose }: { associado: ClientesRow; onClose: () => void }) {
+  const abrir = useAbrirProtocolo();
+  const [tipo, setTipo] = useState<TipoAtendimento>('DUVIDAS');
+  const [assunto, setAssunto] = useState('');
+  const [descricao, setDescricao] = useState('');
+  const [prioridade, setPrioridade] = useState<PrioridadeAtendimento>('NORMAL');
+
+  function enviar(e: React.FormEvent) {
+    e.preventDefault();
+    if (!assunto.trim()) { toast.error('Informe o assunto do protocolo.'); return; }
+    abrir.mutate(
+      { cliente_id: associado.id, tipo, assunto: assunto.trim(), descricao, prioridade },
+      {
+        onSuccess: (a) => { toast.success(`Protocolo aberto: ${a.numero_protocolo}`); onClose(); },
+        onError: (err) => toast.error(err.message),
+      },
+    );
+  }
+
+  return (
+    <Modal open onClose={onClose} title="Abrir protocolo do associado">
+      <form onSubmit={enviar} className="space-y-3">
+        <div className="rounded-lg bg-slate-50 p-3 text-sm">
+          <p className="text-[11px] font-semibold uppercase text-slate-400">Associado</p>
+          <p className="mt-0.5 font-medium text-slate-700">{associado.nome_razao_social}</p>
+          <p className="text-xs text-slate-400">
+            {associado.cpf_cnpj} · protocolo sem veiculo vinculado (assunto geral)
+          </p>
+        </div>
+
+        <FormField label="Categoria">
+          <Select value={tipo} onChange={(e) => setTipo(e.target.value as TipoAtendimento)}>
+            {CATEGORIAS_PROTOCOLO.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+          </Select>
+        </FormField>
+        <FormField label="Prioridade">
+          <Select value={prioridade} onChange={(e) => setPrioridade(e.target.value as PrioridadeAtendimento)}>
+            {PRIORIDADES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+          </Select>
+        </FormField>
+        <FormField label="Assunto">
+          <Input value={assunto} onChange={(e) => setAssunto(e.target.value)} placeholder="Resumo da solicitacao" />
+        </FormField>
+        <FormField label="Descricao">
+          <Textarea rows={3} value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Detalhe a solicitacao..." />
+        </FormField>
+
+        <div className="flex justify-end gap-2 pt-1">
+          <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>
+          <Button type="submit" disabled={abrir.isPending}>
+            {abrir.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Abrir protocolo
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 
@@ -264,12 +345,16 @@ function ListaVeiculos({ v360, onSelect }: { v360: Visao360; onSelect: (id: stri
 }
 
 // Passo 2: detalhe do veiculo carregado SOB DEMANDA + menu modular de servicos.
-function AtendimentoVeiculo({ clienteId, veiculoId, podeTrocar, onTrocar }: {
-  clienteId: string; veiculoId: string; podeTrocar: boolean; onTrocar: () => void;
+function AtendimentoVeiculo({ clienteId, associado, veiculoId, podeTrocar, onTrocar }: {
+  clienteId: string; associado: ClientesRow; veiculoId: string; podeTrocar: boolean; onTrocar: () => void;
 }) {
   const router = useRouter();
   const { data: veiculo, isLoading } = useVeiculoDetalhe(veiculoId);
   const [servico, setServico] = useState<ServicoSac | null>(null);
+  // VCards de acao rapida (0029)
+  const [financeiro, setFinanceiro] = useState(false);
+  const [whats, setWhats] = useState(false);
+  const [email, setEmail] = useState(false);
   const gerarBoleto = useGerarBoleto();
   const { data: atendimentos } = useAtendimentosVeiculo(veiculoId);
   // Historico da Assistencia 24h na propria ficha do veiculo.
@@ -286,6 +371,14 @@ function AtendimentoVeiculo({ clienteId, veiculoId, podeTrocar, onTrocar }: {
       router.push(`/assistencia?placa=${encodeURIComponent(veiculo?.placa ?? '')}`);
       return;
     }
+    // Editar Veiculo/Item: unifica os antigos cards Cadastro e Upgrade.
+    if (s.modo === 'editar') {
+      router.push(`/veiculos?editar=${veiculoId}`);
+      return;
+    }
+    if (s.modo === 'financeiro') { setFinanceiro(true); return; }
+    if (s.modo === 'whatsapp') { setWhats(true); return; }
+    if (s.modo === 'email') { setEmail(true); return; }
     if (s.modo === 'boleto') {
       gerarBoleto.mutate({ cliente_id: clienteId }, {
         onSuccess: (d) => toast.success(`Faturas da competencia ${d.competencia} prontas (${d.faturas.length})`),
@@ -380,7 +473,19 @@ function AtendimentoVeiculo({ clienteId, veiculoId, podeTrocar, onTrocar }: {
             </Card>
           )}
 
-          {servico && <ServicoModal servico={servico} veiculo={veiculo} onClose={() => setServico(null)} />}
+          {servico && (
+            <ServicoModal servico={servico} veiculo={veiculo} clienteId={clienteId} onClose={() => setServico(null)} />
+          )}
+          {financeiro && (
+            <ModalHistoricoFinanceiro
+              clienteId={clienteId}
+              veiculoId={veiculo.id}
+              placa={veiculo.placa}
+              onClose={() => setFinanceiro(false)}
+            />
+          )}
+          {whats && <ModalWhatsApp associado={associado} placa={veiculo.placa} onClose={() => setWhats(false)} />}
+          {email && <ModalEmail associado={associado} placa={veiculo.placa} onClose={() => setEmail(false)} />}
         </>
       )}
     </div>
@@ -431,10 +536,10 @@ function VeiculoDetalheCard({ clienteId, veiculo }: { clienteId: string; veiculo
 
         <div className="mt-4">
           <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
-            <ShieldCheck className="h-3.5 w-3.5" /> Opcionais — uso nos ultimos 12 meses
+            <ShieldCheck className="h-3.5 w-3.5" /> Cobertura contratada deste veiculo
           </p>
           {veiculo.opcionais.length === 0 ? (
-            <p className="text-sm text-slate-400">Nenhum opcional com limite configurado.</p>
+            <p className="text-sm text-slate-400">Nenhum item contratado (defina o plano na ficha do veiculo).</p>
           ) : (
             <ul className="divide-y divide-slate-100">
               {veiculo.opcionais.map((o) => <OpcionalRow key={o.produto_id} o={o} />)}
@@ -492,35 +597,59 @@ function FichaExtras({ veiculoId }: { veiculoId: string }) {
   );
 }
 
-function OpcionalRow({ o }: { o: OpcionalElegibilidade }) {
+// Item do pacote do veiculo. Produto com limite mostra o consumo; os demais
+// mostram so a origem (plano ou opcional avulso) e o valor.
+function OpcionalRow({ o }: { o: OpcionalVeiculo }) {
   return (
     <li className="flex items-center justify-between gap-3 py-2 text-sm">
-      <span className="text-slate-700">{o.nome}</span>
+      <span className="flex items-center gap-2 text-slate-700">
+        {o.nome}
+        <span className={`rounded px-1.5 py-0.5 text-[10px] ${
+          o.origem === 'AVULSO' ? 'bg-cyan-50 text-cyan-700' : 'bg-slate-100 text-slate-500'
+        }`}>
+          {o.origem === 'AVULSO' ? 'opcional' : 'plano'}
+        </span>
+      </span>
       <div className="flex items-center gap-3">
-        <span className="tnum text-xs text-slate-500">{o.usados}/{o.quantidade_limite} usados</span>
-        {o.elegivel ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"><CheckCircle2 className="h-3.5 w-3.5" /> DISPONIVEL</span>
-        ) : (
-          <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-semibold text-rose-700" title={o.ultimo_uso ? `Ultimo uso em ${formatDate(o.ultimo_uso)}` : undefined}><XCircle className="h-3.5 w-3.5" /> LIMITE EXCEDIDO</span>
+        <span className="tnum text-xs text-slate-500">{formatCurrency(Number(o.valor))}</span>
+        {o.tem_limite && (
+          <>
+            <span className="tnum text-xs text-slate-500">{o.usados}/{o.quantidade_limite} usados</span>
+            {o.elegivel ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"><CheckCircle2 className="h-3.5 w-3.5" /> DISPONIVEL</span>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-semibold text-rose-700" title={o.ultimo_uso ? `Ultimo uso em ${formatDate(o.ultimo_uso)}` : undefined}><XCircle className="h-3.5 w-3.5" /> LIMITE EXCEDIDO</span>
+            )}
+          </>
         )}
       </div>
     </li>
   );
 }
 
-function ServicoModal({ servico, veiculo, onClose }: { servico: ServicoSac; veiculo: VeiculoDetalhe; onClose: () => void }) {
-  const abrir = useAbrirAtendimento();
+function ServicoModal({ servico, veiculo, clienteId, onClose }: {
+  servico: ServicoSac; veiculo: VeiculoDetalhe; clienteId: string; onClose: () => void;
+}) {
+  const abrir = useAbrirProtocolo();
   const [tipo, setTipo] = useState<TipoAtendimento>(servico.tipos[0].value);
   const [subtipo, setSubtipo] = useState(servico.subtipos?.[0] ?? '');
   const [assunto, setAssunto] = useState(servico.titulo);
   const [descricao, setDescricao] = useState('');
+  const [prioridade, setPrioridade] = useState<PrioridadeAtendimento>('NORMAL');
 
   function enviar(e: React.FormEvent) {
     e.preventDefault();
     abrir.mutate(
-      { veiculo_id: veiculo.id, tipo, canal: 'SAC_INTERNO', assunto, descricao, dados: subtipo ? { subtipo } : {} },
       {
-        onSuccess: (d) => { toast.success(`Solicitacao aberta: ${d.atendimento.numero_protocolo}`); onClose(); },
+        cliente_id: clienteId,
+        veiculo_id: veiculo.id,
+        tipo,
+        assunto: subtipo ? `${assunto} — ${subtipo}` : assunto,
+        descricao,
+        prioridade,
+      },
+      {
+        onSuccess: (a) => { toast.success(`Protocolo aberto: ${a.numero_protocolo}`); onClose(); },
         onError: (err) => toast.error(err.message),
       },
     );
@@ -551,6 +680,11 @@ function ServicoModal({ servico, veiculo, onClose }: { servico: ServicoSac; veic
             </Select>
           </FormField>
         )}
+        <FormField label="Prioridade">
+          <Select value={prioridade} onChange={(e) => setPrioridade(e.target.value as PrioridadeAtendimento)}>
+            {PRIORIDADES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+          </Select>
+        </FormField>
         <FormField label="Assunto">
           <Input value={assunto} onChange={(e) => setAssunto(e.target.value)} />
         </FormField>

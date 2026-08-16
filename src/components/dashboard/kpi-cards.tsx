@@ -1,6 +1,7 @@
 'use client';
 
-import { Car, AlertTriangle, TrendingUp, PercentDiamond } from 'lucide-react';
+import Link from 'next/link';
+import { Car, AlertTriangle, TrendingUp, PercentDiamond, Ticket, ArrowRight } from 'lucide-react';
 import {
   ResponsiveContainer,
   BarChart,
@@ -13,6 +14,7 @@ import {
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useDashboardKpis, useReceitaSerie } from '@/hooks/use-dashboard';
+import { useResumoProtocolos } from '@/hooks/use-protocolos';
 import { formatCurrency, formatPercent } from '@/lib/utils';
 
 type Tom = 'cyan' | 'amber' | 'green' | 'rose';
@@ -78,9 +80,41 @@ function GaugeInadimplencia({ fracao }: { fracao: number | null | undefined }) {
 export function DashboardKpis() {
   const { data: kpis, isLoading } = useDashboardKpis();
   const { data: serie } = useReceitaSerie();
+  const { data: protocolos } = useResumoProtocolos();
 
   return (
     <div className="space-y-5">
+      {/* Fila de atendimento: contador em tempo real + atalho para a Central. */}
+      <Link
+        href="/protocolos"
+        className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(20,33,61,0.04),0_10px_26px_-16px_rgba(20,33,61,0.18)] transition hover:-translate-y-0.5 hover:border-cyan-300"
+      >
+        <div className="flex items-center gap-3">
+          <span className="grid h-11 w-11 place-items-center rounded-xl bg-violet-50 text-violet-600">
+            <Ticket className="h-5 w-5" strokeWidth={2} />
+          </span>
+          <div>
+            <p className="text-[11.5px] font-semibold uppercase tracking-wide text-slate-500">
+              Protocolos em aberto
+            </p>
+            <p className="tnum text-[28px] font-bold leading-none text-slate-900">
+              {protocolos?.abertos ?? 0}
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-right text-xs text-slate-500">
+          <span>Em atendimento <b className="tnum text-slate-700">{protocolos?.em_andamento ?? 0}</b></span>
+          <span className={Number(protocolos?.urgentes ?? 0) > 0 ? 'text-rose-600' : ''}>
+            Alta/urgente <b className="tnum">{protocolos?.urgentes ?? 0}</b>
+          </span>
+          <span>Meus <b className="tnum text-slate-700">{protocolos?.meus ?? 0}</b></span>
+          <span className={Number(protocolos?.mais_7_dias ?? 0) > 0 ? 'text-amber-600' : ''}>
+            +7 dias <b className="tnum">{protocolos?.mais_7_dias ?? 0}</b>
+          </span>
+          <ArrowRight className="h-4 w-4 text-slate-400" />
+        </div>
+      </Link>
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiTile titulo="Veiculos Ativos" valor={isLoading ? '...' : String(kpis?.veiculosAtivos ?? 0)} icon={Car} tom="cyan" />
         <KpiTile titulo="Sinistros em Aberto" valor={isLoading ? '...' : String(kpis?.sinistrosAbertos ?? 0)} icon={AlertTriangle} tom="amber" />

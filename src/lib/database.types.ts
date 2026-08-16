@@ -25,7 +25,11 @@ export type TipoFaturamento = 'AGRUPADO_ASSOCIADO' | 'INDIVIDUAL_VEICULO';
 export type StatusFatura = 'ABERTA' | 'PAGA' | 'CANCELADA';
 export type TipoAtendimento =
   | 'SINISTRO' | 'ASSISTENCIA_24H' | 'UPGRADE_COBERTURA'
-  | 'SEGUNDA_VIA_BOLETO' | 'VISTORIA_ACESSORIOS' | 'ALTERACAO_CADASTRAL' | 'CANCELAMENTO';
+  | 'SEGUNDA_VIA_BOLETO' | 'VISTORIA_ACESSORIOS' | 'ALTERACAO_CADASTRAL' | 'CANCELAMENTO'
+  // 0029: categorias da Central de Protocolos
+  | 'FINANCEIRO' | 'DUVIDAS' | 'RECLAMACAO' | 'OUTROS';
+export type PrioridadeAtendimento = 'BAIXA' | 'NORMAL' | 'ALTA' | 'URGENTE';
+export type TipoInteracaoProtocolo = 'COMENTARIO' | 'STATUS' | 'TRANSFERENCIA' | 'ENCERRAMENTO';
 export type CanalAtendimento = 'SAC_INTERNO' | 'PORTAL';
 export type StatusAtendimento = 'ABERTO' | 'EM_ANDAMENTO' | 'CONCLUIDO' | 'CANCELADO';
 export type SeveridadeAlerta = 'BAIXA' | 'MEDIA' | 'ALTA';
@@ -249,7 +253,8 @@ export type AtendimentosRow = Timestamps & {
   id: string;
   numero_protocolo: string | null;
   cliente_id: string;
-  veiculo_id: string;
+  /** 0029: protocolo aberto pela ficha do associado nao tem veiculo. */
+  veiculo_id: string | null;
   tipo: TipoAtendimento;
   canal: CanalAtendimento;
   status: StatusAtendimento;
@@ -259,6 +264,109 @@ export type AtendimentosRow = Timestamps & {
   regional_id: string | null;
   aberto_por: string | null;
   evento_id: string | null;
+  // 0029: Central de Protocolos
+  prioridade: PrioridadeAtendimento;
+  responsavel_id: string | null;
+  encerrado_em: string | null;
+  encerrado_por: string | null;
+  solucao: string | null;
+};
+
+export type ProtocoloInteracoesRow = {
+  id: string;
+  atendimento_id: string;
+  tipo: TipoInteracaoProtocolo;
+  mensagem: string | null;
+  de_status: StatusAtendimento | null;
+  para_status: StatusAtendimento | null;
+  de_usuario: string | null;
+  para_usuario: string | null;
+  interno: boolean;
+  usuario_id: string | null;
+  created_at: string;
+};
+
+// Linha da Central de Protocolos (RPC listar_protocolos)
+export type ProtocoloLinha = {
+  id: string;
+  protocolo: string | null;
+  cliente_id: string;
+  associado: string;
+  veiculo_id: string | null;
+  placa: string | null;
+  tipo: TipoAtendimento;
+  assunto: string | null;
+  descricao: string | null;
+  status: StatusAtendimento;
+  prioridade: PrioridadeAtendimento;
+  responsavel_id: string | null;
+  responsavel: string | null;
+  canal: CanalAtendimento;
+  interacoes: number;
+  aberto_em: string;
+  atualizado_em: string;
+  encerrado_em: string | null;
+  dias_aberto: number;
+};
+
+// Interacao formatada (RPC interacoes_protocolo)
+export type InteracaoProtocolo = {
+  id: string;
+  tipo: TipoInteracaoProtocolo;
+  mensagem: string | null;
+  de_status: StatusAtendimento | null;
+  para_status: StatusAtendimento | null;
+  de_usuario: string | null;
+  para_usuario: string | null;
+  interno: boolean;
+  operador: string;
+  created_at: string;
+};
+
+// Contador do dashboard (RPC resumo_protocolos)
+export type ResumoProtocolos = {
+  abertos: number;
+  em_andamento: number;
+  urgentes: number;
+  meus: number;
+  sem_responsavel: number;
+  mais_7_dias: number;
+};
+
+// Item contratado do veiculo (RPC opcionais_veiculo) — so o que esta no pacote
+export type OpcionalVeiculo = {
+  produto_id: string;
+  nome: string;
+  valor: number;
+  obrigatorio: boolean;
+  origem: 'PLANO' | 'AVULSO';
+  tem_limite: boolean;
+  quantidade_limite: number | null;
+  janela_dias: number | null;
+  usados: number;
+  elegivel: boolean;
+  ultimo_uso: string | null;
+};
+
+// Linha do historico financeiro do SAC (RPC titulos_do_cliente)
+export type TituloCliente = {
+  id: string;
+  veiculo_id: string | null;
+  placa: string | null;
+  competencia: string | null;
+  data_vencimento: string;
+  valor: number;
+  valor_original: number;
+  desconto: number;
+  acrescimo: number;
+  valor_pago: number | null;
+  data_pagamento: string | null;
+  status: StatusCobranca;
+  dias_atraso: number;
+  linha_digitavel: string | null;
+  url_boleto: string | null;
+  pix_copia_cola: string | null;
+  observacao: string | null;
 };
 
 // Retorno de opcionais_elegibilidade (janela flutuante de N dias)
@@ -487,6 +595,13 @@ export type TitulosFinanceirosRow = Timestamps & {
   gateway_status: string | null;
   gateway_erro: string | null;
   enviado_em: string | null;
+  // 0029: ajuste do boleto em aberto (SAC)
+  valor_original: number | null;
+  desconto: number;
+  acrescimo: number;
+  observacao: string | null;
+  alterado_por: string | null;
+  alterado_em: string | null;
 };
 
 // 0025: fila de envio ao banco (remessa de cobranca)
@@ -1211,6 +1326,10 @@ export type Database = {
         AtendimentosRow,
         [Rel<'cliente_id', 'clientes'>, Rel<'veiculo_id', 'veiculos'>, Rel<'aberto_por', 'usuarios'>, Rel<'evento_id', 'eventos_sinistro'>]
       >;
+      protocolo_interacoes: TableDef<
+        ProtocoloInteracoesRow,
+        [Rel<'atendimento_id', 'atendimentos'>, Rel<'usuario_id', 'usuarios'>]
+      >;
       veiculo_produtos: TableDef<{ veiculo_id: string; produto_id: string }, [Rel<'veiculo_id', 'veiculos'>, Rel<'produto_id', 'produtos'>]>;
       tipos_alerta: TableDef<TiposAlertaRow>;
       veiculo_alertas: TableDef<VeiculoAlertasRow, [Rel<'veiculo_id', 'veiculos'>, Rel<'tipo_alerta_id', 'tipos_alerta'>]>;
@@ -1545,6 +1664,76 @@ export type Database = {
       calcular_vencimento: {
         Args: { p_competencia: string; p_dia: number | null };
         Returns: string;
+      };
+      opcionais_veiculo: {
+        Args: { p_veiculo_id: string };
+        Returns: OpcionalVeiculo[];
+      };
+      titulos_do_cliente: {
+        Args: { p_cliente_id: string; p_veiculo_id?: string | null; p_limite?: number };
+        Returns: TituloCliente[];
+      };
+      ajustar_titulo: {
+        Args: {
+          p_titulo_id: string;
+          p_vencimento?: string | null;
+          p_desconto?: number | null;
+          p_acrescimo?: number | null;
+          p_observacao?: string | null;
+        };
+        Returns: TitulosFinanceirosRow;
+      };
+      reemitir_titulo: {
+        Args: { p_titulo_id: string };
+        Returns: TitulosFinanceirosRow;
+      };
+      abrir_protocolo: {
+        Args: {
+          p_cliente_id: string;
+          p_tipo: TipoAtendimento;
+          p_assunto?: string | null;
+          p_descricao?: string | null;
+          p_veiculo_id?: string | null;
+          p_prioridade?: PrioridadeAtendimento;
+          p_responsavel_id?: string | null;
+          p_canal?: CanalAtendimento;
+        };
+        Returns: AtendimentosRow;
+      };
+      registrar_interacao_protocolo: {
+        Args: { p_atendimento_id: string; p_mensagem: string; p_interno?: boolean };
+        Returns: ProtocoloInteracoesRow;
+      };
+      transferir_atendimento: {
+        Args: { p_atendimento_id: string; p_para_usuario: string; p_motivo?: string | null };
+        Returns: AtendimentosRow;
+      };
+      alterar_status_protocolo: {
+        Args: { p_atendimento_id: string; p_status: StatusAtendimento; p_mensagem?: string | null };
+        Returns: AtendimentosRow;
+      };
+      encerrar_protocolo: {
+        Args: { p_atendimento_id: string; p_solucao: string };
+        Returns: AtendimentosRow;
+      };
+      listar_protocolos: {
+        Args: {
+          p_status?: string | null;
+          p_responsavel?: string | null;
+          p_busca?: string | null;
+          p_prioridade?: PrioridadeAtendimento | null;
+          p_regional_id?: string | null;
+          p_limite?: number;
+        };
+        Returns: ProtocoloLinha[];
+      };
+      interacoes_protocolo: {
+        Args: { p_atendimento_id: string };
+        Returns: InteracaoProtocolo[];
+      };
+      resumo_protocolos: {
+        Args: { p_regional_id?: string | null };
+        Returns: ResumoProtocolos[];
       };
       abrir_atendimento: {
         Args: {

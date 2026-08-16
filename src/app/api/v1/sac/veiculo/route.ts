@@ -23,7 +23,10 @@ export async function GET(request: Request) {
     ? await supabase.from('planos_protecao').select('nome').eq('id', veiculo.plano_protecao_id).maybeSingle()
     : { data: null };
 
-  const { data: opcionais } = await supabase.rpc('opcionais_elegibilidade', { p_veiculo_id: veiculoId });
+  // SO os itens contratados deste veiculo (plano + avulsos). Antes usava
+  // opcionais_elegibilidade, que lista o catalogo inteiro de produtos com
+  // limite — poluia a ficha com item que o associado nao tem.
+  const { data: opcionais } = await supabase.rpc('opcionais_veiculo', { p_veiculo_id: veiculoId });
 
   return NextResponse.json({ veiculo, plano_nome: plano?.nome ?? null, opcionais: opcionais ?? [] });
 }
