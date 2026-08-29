@@ -319,6 +319,21 @@ planas por QUALQUER caminho; `km_excedente_servico(servico,distancia)` (espelho 
 valores e chama `sincronizar_lancamento_acionamento` (auditoria do 0027 pega sozinha);
 `links_navegacao_acionamento(...)` + `ponto_navegacao`/`urlencode` devolvem Google (rota e pin) e
 Waze (`ll` p/ coordenada, `q` p/ endereco)).
+· `0032_financeiro_dre_pro` (financeiro nivel gestao: (A) `lancamentos_financeiros` ganha
+`numero_documento`/`competencia`/`observacoes`/`parcela_numero`/`parcela_total`/`grupo_parcelas`
+e os CACHES `valor_pago`/`valor_saldo` mantidos pelo trigger BEFORE `fn_lanc_calcular_saldo()`
+(fim do calculo de saldo linha a linha na tela); `movimentacoes_caixa.lancamento_id` liga a
+movimentacao avulsa ao titulo p/ o DRE nao contar duas vezes; (B) DRE ganha **REGIME**:
+`dre_movimentos(inicio,fim,regional,regime)` e a fonte unica (CAIXA = baixas; COMPETENCIA =
+competencia do titulo) + movimentacoes avulsas, titulos de mensalidade e NF de evento, com
+`gerar_dre_completo`/`gerar_dre_resumo_completo`/`gerar_dre_mensal` por cima. As versoes do 0027
+(`gerar_dre` 3 e 4 args, `gerar_dre_resumo`, `resumo_por_centro_custo`) seguem INTACTAS; valor sem
+categoria vira linha "nao classificadas" (1.9.99/4.9.99) em vez de sumir; (C) indicadores:
+`financeiro_resumo`, `financeiro_fluxo_mensal` (previsto x realizado) e `financeiro_aging`
+(faixas de atraso); `quitar_lancamento(id,data,conta)` baixa o saldo remanescente; +9 categorias
+no plano de contas. **SEGURANCA:** as RPCs novas sao SECURITY DEFINER, entao `escopo_regional(uuid)`
+forca a regional de quem chama — so admin/financeiro (`tem_acesso_global`) leem consolidado e
+usuario sem regional nao le nada.)
 
 ## Módulos (status: todos funcionais)
 Assistência 24h (`/assistencia`: painel de acionamento com trava + limites em tempo real, cotação,
@@ -520,6 +535,45 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
 - **UI:** `/financeiro` → aba **Cobranças** (competência/regional/status, KPIs, "Gerar cobranças",
   "Emitir títulos", expandir itens da agrupada, cancelar). Hook `use-cobrancas.ts`; lógica pura
   espelhada em `src/lib/cobranca.ts` (com testes).
+
+## Financeiro e DRE (0032) — arquitetura
+- **`/financeiro` tem 3 abas:**
+  - **Contas a Pagar / Receber** — 4 indicadores do periodo (a receber, a pagar, resultado de caixa,
+    inadimplencia com % da carteira e "vence em 7 dias"), filtro de periodo com atalhos
+    (mes/mes anterior/trimestre/semestre/ano) + **escolha do campo de data** (vencimento, competencia
+    ou emissao), filtros de tipo/situacao/categoria/centro de custo, busca livre e export CSV.
+    A tabela mostra documento, parcela, classificacao contabil, **saldo devedor** e situacao REAL
+    (`situacaoTitulo` marca atrasado pela data de hoje, sem depender da rotina do banco); acoes por
+    linha: baixar, **quitar saldo** (1 clique, RPC), editar e cancelar. Rodape soma o que esta em tela.
+  - **Fluxo de Caixa** — previsto x realizado por mes (barras acima/abaixo do eixo), saldo acumulado
+    projetado e **aging** da carteira (a vencer / 1-30 / 31-60 / 61-90 / +90).
+  - **DRE** — seletor de **REGIME** (Caixa x Competencia) e de centro de custo, comparativo com o
+    periodo anterior (mes fechado compara com o mes anterior inteiro), **AV%** (analise vertical sobre
+    a receita bruta), subtotais por grupo, linha de **Margem de Contribuicao**, **ponto de equilibrio**,
+    grafico de 12 meses, export CSV e impressao.
+- **Regra de ouro do DRE:** ele le `dre_movimentos()`. Titulo cancelado nunca entra; movimentacao de
+  caixa com `lancamento_id` preenchido nao entra (evita dupla contagem); titulo de mensalidade so
+  entra se nao houver `movimentacoes_caixa` espelhando. A despesa da Assistencia 24h entra pelo
+  lancamento que o `sincronizar_lancamento_acionamento` (0027) cria.
+- **Nada de excluir dinheiro:** cancelar um titulo muda o status (historico imutavel); a baixa a maior
+  continua barrada pelo trigger de 0012.
+- **Logica pura testada (Vitest):** `src/lib/money.ts` (mascara/parse/aritmetica de centavos) e
+  `src/lib/financeiro.ts` (situacao do titulo, aging, parcelamento com ajuste de centavos na ultima
+  parcela, estruturacao do DRE, indicadores, periodo anterior).
+- **Componentes:** `src/components/financeiro/` — `ui-financeiro.tsx` (Indicador, Selo, FiltroPeriodo,
+  Vazio, baixarCsv), `lancamento-modal.tsx` (form em secoes + previa do parcelamento),
+  `baixa-modal.tsx`, `contas-financeiro.tsx`, `fluxo-caixa.tsx`, `dre-report.tsx`.
+
+## Convenção de moeda (UI)
+- **Todo campo de dinheiro usa `<MoneyInput>` de `@/components/ui/field`** — nunca `<input type="number">`
+  (ele nasce com "0", obriga manobra de cursor e aceita "0012").
+- `MoneyInput` recebe `value: number | null` e `onChange: (v: number | null) => void`; mostra prefixo
+  R$, alinha a direita, usa `.tnum` e seleciona tudo ao focar. Campo vazio = `null` (placeholder `0,00`).
+- Regra de digitacao (`src/lib/money.ts`, testada): so digitos -> mascara por centavos
+  (`150000` -> `1.500,00`); com virgula/ponto -> respeita o texto (`1.234,56`, `1234.56`).
+- Somas de dinheiro usam `somarMoeda()` (centavos inteiros) para nao acumular erro de ponto flutuante.
+- Ainda em `type="number"` (nao sao moeda pura): o % de reajuste e as celulas da grade em
+  `precificacao/tabela-precos-editor.tsx`.
 
 ## Cota de participação (rateio no evento) — arquitetura
 - **Desacoplada do Plano.** O Plano define a mensalidade (produtos); a cota (% da FIPE no rateio)

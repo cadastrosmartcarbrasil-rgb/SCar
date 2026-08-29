@@ -732,6 +732,7 @@ export type MovimentacoesCaixaRow = Timestamps & {
   comprovante_url: string | null;
   titulo_id: string | null;
   evento_id: string | null;
+  lancamento_id: string | null;
 };
 
 export type ComissoesVendasRow = Timestamps & {
@@ -1083,6 +1084,15 @@ export type LancamentosFinanceirosRow = Timestamps & {
   data_vencimento: string;
   status: StatusLancamento;
   forma_pagamento_prevista: FormaPagamento | null;
+  // 0032 — controle contabil e saldo mantido pelo banco
+  numero_documento: string | null;
+  competencia: string;
+  observacoes: string | null;
+  parcela_numero: number;
+  parcela_total: number;
+  grupo_parcelas: string | null;
+  valor_pago: number;
+  valor_saldo: number;
 };
 
 export type BaixasFinanceirasRow = {
@@ -1287,6 +1297,49 @@ export type DreResumo = {
   margem_percentual: number;
 };
 
+/** Regime de reconhecimento do resultado no DRE (0032). */
+export type RegimeDre = 'CAIXA' | 'COMPETENCIA';
+
+export type DreMes = {
+  mes: string;
+  receita: number;
+  custo_variavel: number;
+  despesa_fixa: number;
+  resultado_liquido: number;
+};
+
+export type FinanceiroResumo = {
+  previsto_receber: number;
+  previsto_pagar: number;
+  recebido: number;
+  pago: number;
+  saldo_realizado: number;
+  aberto_receber: number;
+  aberto_pagar: number;
+  vencido_receber: number;
+  vencido_pagar: number;
+  titulos_vencidos: number;
+  vence_em_7_dias: number;
+};
+
+export type FluxoMes = {
+  mes: string;
+  previsto_entrada: number;
+  previsto_saida: number;
+  realizado_entrada: number;
+  realizado_saida: number;
+  saldo_previsto: number;
+  saldo_realizado: number;
+};
+
+export type AgingLinha = {
+  tipo: TipoMovimentacao;
+  faixa: string;
+  ordem: number;
+  titulos: number;
+  total: number;
+};
+
 // ---- Database (formato esperado pelo supabase-js) --------------------------
 // Cada tabela precisa de Row/Insert/Update/Relationships; o schema precisa de
 // Views/Functions/Enums/CompositeTypes com o formato exato.
@@ -1471,6 +1524,53 @@ export type Database = {
           | { p_data_inicio: string; p_data_fim: string; p_regional_id?: string | null }
           | { p_data_inicio: string; p_data_fim: string; p_regional_id: string | null; p_centro_custo_id: string | null };
         Returns: DreResumo[];
+      };
+      // ---- 0032: DRE por regime + indicadores do contas a pagar/receber ----
+      gerar_dre_completo: {
+        Args: {
+          p_data_inicio: string;
+          p_data_fim: string;
+          p_regional_id?: string | null;
+          p_regime?: RegimeDre;
+          p_centro_custo_id?: string | null;
+        };
+        Returns: DreLinha[];
+      };
+      gerar_dre_resumo_completo: {
+        Args: {
+          p_data_inicio: string;
+          p_data_fim: string;
+          p_regional_id?: string | null;
+          p_regime?: RegimeDre;
+          p_centro_custo_id?: string | null;
+        };
+        Returns: DreResumo[];
+      };
+      gerar_dre_mensal: {
+        Args: {
+          p_data_inicio: string;
+          p_data_fim: string;
+          p_regional_id?: string | null;
+          p_regime?: RegimeDre;
+          p_centro_custo_id?: string | null;
+        };
+        Returns: DreMes[];
+      };
+      financeiro_resumo: {
+        Args: { p_data_inicio: string; p_data_fim: string; p_regional_id?: string | null };
+        Returns: FinanceiroResumo[];
+      };
+      financeiro_fluxo_mensal: {
+        Args: { p_data_inicio: string; p_data_fim: string; p_regional_id?: string | null };
+        Returns: FluxoMes[];
+      };
+      financeiro_aging: {
+        Args: { p_regional_id?: string | null };
+        Returns: AgingLinha[];
+      };
+      quitar_lancamento: {
+        Args: { p_lancamento_id: string; p_data_pagamento?: string; p_conta_bancaria_id?: string | null };
+        Returns: BaixasFinanceirasRow;
       };
       resumo_por_centro_custo: {
         Args: { p_data_inicio: string; p_data_fim: string; p_regional_id?: string | null };

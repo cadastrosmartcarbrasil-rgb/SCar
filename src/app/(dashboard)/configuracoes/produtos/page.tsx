@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { Plus, Pencil, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
-import { FormField, Input, Select } from '@/components/ui/field';
+import { FormField, Input, MoneyInput, Select } from '@/components/ui/field';
 import { useProdutos, useSaveProduto } from '@/hooks/use-precificacao';
 import { formatCurrency } from '@/lib/utils';
 import type { ProdutosRow, MetodoPreco } from '@/lib/database.types';
@@ -148,7 +148,7 @@ export default function ProdutosPage() {
           </FormField>
           {ed?.metodo_preco === 'FIXO' && (
             <FormField label="Valor fixo (R$)">
-              <Input type="number" step="0.01" value={ed?.valor_fixo ?? ''} onChange={(e) => setEd((p) => ({ ...p, valor_fixo: Number(e.target.value) || null }))} />
+              <MoneyInput value={ed?.valor_fixo ?? null} onChange={(v) => setEd((p) => ({ ...p, valor_fixo: v }))} />
             </FormField>
           )}
           {ed?.metodo_preco === 'PERCENTUAL_FIPE' && (

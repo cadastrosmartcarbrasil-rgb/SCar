@@ -1,4 +1,8 @@
+'use client';
+
+import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { digitarMoeda, formatarMoedaBR } from '@/lib/money';
 
 const base =
   'mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm transition focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 disabled:bg-slate-50';
@@ -15,31 +19,61 @@ export function Select({ className, ...props }: React.SelectHTMLAttributes<HTMLS
   return <select className={cn(base, 'bg-white', className)} {...props} />;
 }
 
-// Campo de moeda (R$) com mascara BR: exibe "22.159,00" e guarda o numero.
-// Mascara por centavos: digitar 2215900 -> 22.159,00 (funciona tambem com
-// preenchimento automatico, ex.: valor vindo da FIPE).
-const NUM_BR = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+// ---------------------------------------------------------------------------
+// Campo de moeda (R$)
+// O input nasce VAZIO exibindo o placeholder "0,00" — nada de "0" preso na
+// frente obrigando o operador a apagar ou posicionar o cursor. Digitando so
+// numeros a mascara preenche por centavos (150000 -> 1.500,00); digitando ou
+// colando com virgula/ponto o texto e respeitado (1.234,56 / 1234.56).
+// A normalizacao final acontece ao sair do campo.
+// ---------------------------------------------------------------------------
 export function MoneyInput({
   value,
   onChange,
   className,
+  prefixo = 'R$',
+  onBlur,
+  onFocus,
   ...props
 }: {
   value: number | null | undefined;
   onChange: (v: number | null) => void;
+  prefixo?: string | null;
 } & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange'>) {
-  const display = value == null || Number.isNaN(value) ? '' : NUM_BR.format(value);
+  // Enquanto o campo esta em edicao o texto digitado manda; fora dela, o
+  // valor do formulario (ex.: preenchido pela FIPE) manda.
+  const [rascunho, setRascunho] = useState<string | null>(null);
+  const texto = rascunho ?? formatarMoedaBR(value ?? null);
+
   return (
-    <input
-      {...props}
-      inputMode="decimal"
-      value={display}
-      onChange={(e) => {
-        const digits = e.target.value.replace(/\D/g, '');
-        onChange(digits ? Number(digits) / 100 : null);
-      }}
-      className={cn(base, className)}
-    />
+    <div className="relative">
+      {prefixo && (
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">
+          {prefixo}
+        </span>
+      )}
+      <input
+        {...props}
+        inputMode="decimal"
+        autoComplete="off"
+        placeholder={props.placeholder ?? '0,00'}
+        value={texto}
+        onFocus={(e) => {
+          e.target.select();
+          onFocus?.(e);
+        }}
+        onChange={(e) => {
+          const { valor, texto: novo } = digitarMoeda(e.target.value);
+          setRascunho(novo);
+          onChange(valor);
+        }}
+        onBlur={(e) => {
+          setRascunho(null); // volta a exibir o valor formatado
+          onBlur?.(e);
+        }}
+        className={cn(base, 'tnum text-right', prefixo && 'pl-10', className)}
+      />
+    </div>
   );
 }
 

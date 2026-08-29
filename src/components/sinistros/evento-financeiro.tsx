@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { FormField, Input, Select } from '@/components/ui/field';
+import { FormField, Input, MoneyInput, Select } from '@/components/ui/field';
 import { usePlanoContas } from '@/hooks/use-config';
 import { useMovimentacoesEvento, useAddMovimentacaoEvento } from '@/hooks/use-evento-cadastro';
 import { formatCurrency, formatDate } from '@/lib/utils';
@@ -66,7 +66,7 @@ export function EventoFinanceiro({ eventoId, regionalId }: { eventoId: string; r
           </Select>
         </FormField>
         <FormField label="Valor (R$)">
-          <Input type="number" step="0.01" min={0} value={form.valor ?? 0} onChange={(e) => setForm({ ...form, valor: Number(e.target.value) })} />
+          <MoneyInput value={form.valor ?? null} onChange={(v) => setForm({ ...form, valor: v ?? 0 })} />
         </FormField>
         <FormField label="Competencia">
           <Input type="date" value={form.data_competencia ?? hoje} onChange={(e) => setForm({ ...form, data_competencia: e.target.value })} />

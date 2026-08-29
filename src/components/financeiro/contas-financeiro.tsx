@@ -2,234 +2,389 @@
 
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, HandCoins } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Modal } from '@/components/ui/modal';
-import { FormField, Input, Select } from '@/components/ui/field';
-import { useFornecedores } from '@/hooks/use-fornecedores';
-import { usePlanoContas } from '@/hooks/use-config';
 import {
-  useLancamentos, useSaveLancamento, useBaixas, useAddBaixa, useContasBancarias, useCentrosCusto,
-  type LancamentoComRel,
+  AlertTriangle, ArrowDownCircle, ArrowUpCircle, Ban, Download, FileSpreadsheet,
+  HandCoins, Pencil, Plus, Scale, Search, Wallet, Zap,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Select } from '@/components/ui/field';
+import {
+  useCancelarLancamento, useCentrosCusto, useFinanceiroResumo, useLancamentos,
+  useQuitarLancamento, type FiltroLancamentos, type LancamentoComRel,
 } from '@/hooks/use-financeiro';
+import { usePlanoContas } from '@/hooks/use-config';
+import { diasAtraso, saldoTitulo, situacaoTitulo } from '@/lib/financeiro';
+import { somarMoeda } from '@/lib/money';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import type { LancamentosFinanceirosRow, BaixasFinanceirasRow, TipoMovimentacao, StatusLancamento, FormaPagamento } from '@/lib/database.types';
+import type { StatusLancamento, TipoMovimentacao } from '@/lib/database.types';
+import { BaixaModal } from './baixa-modal';
+import { LancamentoModal } from './lancamento-modal';
+import { FiltroPeriodo, Indicador, Selo, Vazio, baixarCsv, periodoPreset, type Periodo } from './ui-financeiro';
 
-const STATUS_COR: Record<StatusLancamento, string> = {
-  pendente: 'bg-amber-50 text-amber-700',
-  pago_parcial: 'bg-sky-50 text-sky-700',
-  quitado: 'bg-emerald-50 text-emerald-700',
-  cancelado: 'bg-slate-100 text-slate-500',
-  atrasado: 'bg-rose-50 text-rose-700',
-};
-const STATUS_LABEL: Record<StatusLancamento, string> = {
-  pendente: 'Pendente', pago_parcial: 'Pago Parcial', quitado: 'Quitado', cancelado: 'Cancelado', atrasado: 'Atrasado',
-};
-const FORMAS: FormaPagamento[] = ['PIX', 'BOLETO', 'TRANSFERENCIA', 'CARTAO', 'DINHEIRO'];
+const CAMPOS_DATA = [
+  { valor: 'data_vencimento', rotulo: 'Vencimento' },
+  { valor: 'competencia', rotulo: 'Competencia' },
+  { valor: 'data_emissao', rotulo: 'Emissao' },
+] as const;
 
+const STATUS_FILTRO: { valor: StatusLancamento | ''; rotulo: string }[] = [
+  { valor: '', rotulo: 'Todas as situacoes' },
+  { valor: 'pendente', rotulo: 'Pendente' },
+  { valor: 'atrasado', rotulo: 'Em atraso' },
+  { valor: 'pago_parcial', rotulo: 'Pago parcial' },
+  { valor: 'quitado', rotulo: 'Quitado' },
+  { valor: 'cancelado', rotulo: 'Cancelado' },
+];
+
+/**
+ * Contas a pagar / a receber.
+ * A tela abre com o painel do periodo (previsto x realizado x inadimplencia),
+ * a carteira filtrada e o rodape somando o que esta em tela.
+ */
 export function ContasFinanceiro() {
-  const [tipoFiltro, setTipoFiltro] = useState<TipoMovimentacao | ''>('');
-  const [centroFiltro, setCentroFiltro] = useState('');
-  const { data: lancamentos, isLoading } = useLancamentos({
-    tipo: tipoFiltro || undefined,
-    centroCustoId: centroFiltro || null,
-  });
-  const { data: fornecedores } = useFornecedores();
-  const { data: categorias } = usePlanoContas();
-  const { data: centros } = useCentrosCusto();
-  const salvar = useSaveLancamento();
+  const [periodo, setPeriodo] = useState<Periodo>(() => periodoPreset('mes'));
+  const [tipo, setTipo] = useState<TipoMovimentacao | ''>('');
+  const [status, setStatus] = useState<StatusLancamento | ''>('');
+  const [campoData, setCampoData] = useState<FiltroLancamentos['campoData']>('data_vencimento');
+  const [categoriaId, setCategoriaId] = useState('');
+  const [centroCustoId, setCentroCustoId] = useState('');
+  const [busca, setBusca] = useState('');
 
-  const [novo, setNovo] = useState<Partial<LancamentosFinanceirosRow> | null>(null);
+  const [editando, setEditando] = useState<Partial<LancamentoComRel> | null>(null);
   const [baixando, setBaixando] = useState<LancamentoComRel | null>(null);
 
-  const hoje = new Date().toISOString().slice(0, 10);
+  const filtro: FiltroLancamentos = {
+    tipo: tipo || undefined,
+    status: status || undefined,
+    inicio: periodo.inicio,
+    fim: periodo.fim,
+    campoData,
+    categoriaId: categoriaId || undefined,
+    centroCustoId: centroCustoId || undefined,
+  };
 
-  function abrirNovo() {
-    setNovo({ tipo: 'DESPESA', data_emissao: hoje, data_vencimento: hoje, valor_original: 0 });
-  }
-  function submitNovo(e: React.FormEvent) {
-    e.preventDefault();
-    if (!novo?.descricao) return toast.error('Informe a descricao');
-    if (!novo?.valor_original || novo.valor_original <= 0) return toast.error('Informe o valor');
-    salvar.mutate(novo, {
-      onSuccess: () => { toast.success('Lancamento criado'); setNovo(null); },
-      onError: (err) => toast.error(err.message),
-    });
+  const { data: lancamentos, isLoading } = useLancamentos(filtro);
+  const { data: resumo, isLoading: carregandoResumo } = useFinanceiroResumo(periodo);
+  const { data: categorias } = usePlanoContas();
+  const { data: centros } = useCentrosCusto();
+  const quitar = useQuitarLancamento();
+  const cancelar = useCancelarLancamento();
+
+  const lista = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
+    if (!termo) return lancamentos ?? [];
+    return (lancamentos ?? []).filter((l) =>
+      [l.descricao, l.numero_documento, l.fornecedores?.razao_social, l.clientes?.nome_razao_social, l.centros_custo?.nome]
+        .filter(Boolean)
+        .some((campo) => String(campo).toLowerCase().includes(termo)),
+    );
+  }, [lancamentos, busca]);
+
+  const totais = useMemo(() => {
+    const receber = lista.filter((l) => l.tipo === 'RECEITA' && l.status !== 'cancelado');
+    const pagar = lista.filter((l) => l.tipo === 'DESPESA' && l.status !== 'cancelado');
+    return {
+      receber: somarMoeda(...receber.map((l) => Number(l.valor_original))),
+      pagar: somarMoeda(...pagar.map((l) => Number(l.valor_original))),
+      saldoAberto: somarMoeda(
+        ...receber.map(saldoTitulo),
+        ...pagar.map((l) => -saldoTitulo(l)),
+      ),
+    };
+  }, [lista]);
+
+  const inadimplencia =
+    resumo && resumo.aberto_receber > 0
+      ? (Number(resumo.vencido_receber) / Number(resumo.aberto_receber)) * 100
+      : 0;
+
+  function exportar() {
+    baixarCsv(`contas-${periodo.inicio}-a-${periodo.fim}.csv`, [
+      ['Tipo', 'Documento', 'Descricao', 'Favorecido/Pagador', 'Categoria', 'Centro de custo',
+       'Emissao', 'Vencimento', 'Competencia', 'Valor', 'Pago', 'Saldo', 'Situacao'],
+      ...lista.map((l) => [
+        l.tipo === 'RECEITA' ? 'A Receber' : 'A Pagar',
+        l.numero_documento ?? '',
+        l.descricao,
+        l.fornecedores?.razao_social ?? l.clientes?.nome_razao_social ?? '',
+        l.categorias_dre ? `${l.categorias_dre.codigo_estruturado} ${l.categorias_dre.nome}` : '',
+        l.centros_custo?.nome ?? '',
+        l.data_emissao, l.data_vencimento, l.competencia,
+        Number(l.valor_original), Number(l.valor_pago ?? 0), saldoTitulo(l),
+        l.status,
+      ]),
+    ]);
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex gap-2">
-          {(['', 'DESPESA', 'RECEITA'] as const).map((t) => (
-            <button key={t} onClick={() => setTipoFiltro(t)}
-              className={`rounded-md px-3 py-1.5 text-sm ${tipoFiltro === t ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-              {t === '' ? 'Todos' : t === 'DESPESA' ? 'A Pagar' : 'A Receber'}
+    <div className="space-y-5">
+      {/* Painel do periodo */}
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <Indicador
+          titulo="A receber no periodo" valor={resumo?.previsto_receber} icon={ArrowUpCircle} tom="receita"
+          carregando={carregandoResumo}
+          detalhe={`Recebido ${formatCurrency(resumo?.recebido)} · ${formatCurrency(resumo?.aberto_receber)} em aberto na carteira`}
+        />
+        <Indicador
+          titulo="A pagar no periodo" valor={resumo?.previsto_pagar} icon={ArrowDownCircle} tom="despesa"
+          carregando={carregandoResumo}
+          detalhe={`Pago ${formatCurrency(resumo?.pago)} · ${formatCurrency(resumo?.aberto_pagar)} em aberto na carteira`}
+        />
+        <Indicador
+          titulo="Resultado de caixa" valor={resumo?.saldo_realizado} icon={Scale}
+          tom={(resumo?.saldo_realizado ?? 0) >= 0 ? 'receita' : 'despesa'}
+          carregando={carregandoResumo}
+          detalhe="Entradas menos saidas efetivamente liquidadas no periodo"
+        />
+        <Indicador
+          titulo="Inadimplencia" valor={resumo?.vencido_receber} icon={AlertTriangle} tom="alerta"
+          carregando={carregandoResumo}
+          detalhe={`${resumo?.titulos_vencidos ?? 0} titulo(s) vencido(s) · ${inadimplencia.toFixed(1)}% da carteira a receber · ${formatCurrency(resumo?.vence_em_7_dias)} vence em 7 dias`}
+        />
+      </div>
+
+      {/* Filtros */}
+      <FiltroPeriodo periodo={periodo} onChange={setPeriodo}>
+        <label className="block">
+          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Filtrar pela data de</span>
+          <Select className="mt-1 w-40 py-1.5" value={campoData} onChange={(e) => setCampoData(e.target.value as FiltroLancamentos['campoData'])}>
+            {CAMPOS_DATA.map((c) => <option key={c.valor} value={c.valor}>{c.rotulo}</option>)}
+          </Select>
+        </label>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <Button variant="secondary" onClick={exportar} disabled={lista.length === 0}>
+            <Download className="h-4 w-4" /> Exportar
+          </Button>
+          <Button onClick={() => setEditando({ tipo: 'DESPESA' })}>
+            <Plus className="h-4 w-4" /> Novo lancamento
+          </Button>
+        </div>
+      </FiltroPeriodo>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex gap-1 rounded-lg bg-slate-100 p-1">
+          {([
+            { v: '', r: 'Todos' },
+            { v: 'RECEITA', r: 'A Receber' },
+            { v: 'DESPESA', r: 'A Pagar' },
+          ] as const).map((t) => (
+            <button
+              key={t.v}
+              onClick={() => setTipo(t.v)}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                tipo === t.v ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              {t.r}
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2">
-          <Select value={centroFiltro} onChange={(e) => setCentroFiltro(e.target.value)} className="mt-0 w-56">
-            <option value="">Todos os centros de custo</option>
-            {(centros ?? []).map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
-          </Select>
-          <Button onClick={abrirNovo}><Plus className="h-4 w-4" /> Novo Lancamento</Button>
+        <Select className="mt-0 w-44 py-1.5" value={status} onChange={(e) => setStatus(e.target.value as StatusLancamento | '')}>
+          {STATUS_FILTRO.map((s) => <option key={s.valor} value={s.valor}>{s.rotulo}</option>)}
+        </Select>
+        <Select className="mt-0 w-56 py-1.5" value={categoriaId} onChange={(e) => setCategoriaId(e.target.value)}>
+          <option value="">Todas as categorias</option>
+          {(categorias ?? []).map((c) => <option key={c.id} value={c.id}>{c.codigo_estruturado} · {c.nome}</option>)}
+        </Select>
+        <Select className="mt-0 w-48 py-1.5" value={centroCustoId} onChange={(e) => setCentroCustoId(e.target.value)}>
+          <option value="">Todos os centros de custo</option>
+          {(centros ?? []).map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+        </Select>
+        <div className="relative ml-auto">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar descricao, documento ou favorecido"
+            className="w-72 rounded-lg border border-slate-300 py-1.5 pl-8 pr-3 text-sm focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+          />
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-        <table className="w-full text-sm">
+      {/* Carteira */}
+      <div className="overflow-x-auto rounded-2xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(20,33,61,0.04)]">
+        <table className="w-full min-w-[1000px] text-sm">
           <thead>
-            <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
-              <th className="px-4 py-2">Tipo</th>
-              <th className="px-4 py-2">Descricao</th>
-              <th className="px-4 py-2">Favorecido / Pagador</th>
-              <th className="px-4 py-2">Centro de custo</th>
-              <th className="px-4 py-2">Vencimento</th>
-              <th className="px-4 py-2 text-right">Valor</th>
-              <th className="px-4 py-2">Status</th>
-              <th className="px-4 py-2 text-right">Acoes</th>
+            <tr className="border-b border-slate-200 text-left text-[11px] uppercase tracking-wide text-slate-400">
+              <th className="px-4 py-2.5 font-semibold">Titulo</th>
+              <th className="px-4 py-2.5 font-semibold">Favorecido / Pagador</th>
+              <th className="px-4 py-2.5 font-semibold">Classificacao</th>
+              <th className="px-4 py-2.5 font-semibold">Vencimento</th>
+              <th className="px-4 py-2.5 text-right font-semibold">Valor</th>
+              <th className="px-4 py-2.5 text-right font-semibold">Saldo</th>
+              <th className="px-4 py-2.5 font-semibold">Situacao</th>
+              <th className="px-4 py-2.5 text-right font-semibold">Acoes</th>
             </tr>
           </thead>
           <tbody>
-            {isLoading && <tr><td colSpan={8} className="px-4 py-6 text-center text-slate-400">Carregando...</td></tr>}
-            {(lancamentos ?? []).map((l) => (
-              <tr key={l.id} className="border-b border-slate-50 last:border-0">
-                <td className="px-4 py-2">
-                  <span className={`rounded px-2 py-0.5 text-xs ${l.tipo === 'RECEITA' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
-                    {l.tipo === 'RECEITA' ? 'Receber' : 'Pagar'}
-                  </span>
-                </td>
-                <td className="px-4 py-2 font-medium text-slate-800">{l.descricao}</td>
-                <td className="px-4 py-2 text-slate-600">{l.fornecedores?.razao_social ?? l.clientes?.nome_razao_social ?? '-'}</td>
-                <td className="px-4 py-2 text-xs text-slate-500">{l.centros_custo?.nome ?? '-'}</td>
-                <td className="px-4 py-2 text-slate-600">{formatDate(l.data_vencimento)}</td>
-                <td className="px-4 py-2 text-right font-medium">{formatCurrency(l.valor_original)}</td>
-                <td className="px-4 py-2"><span className={`rounded px-2 py-0.5 text-xs ${STATUS_COR[l.status]}`}>{STATUS_LABEL[l.status]}</span></td>
-                <td className="px-4 py-2 text-right">
-                  {l.status !== 'quitado' && l.status !== 'cancelado' && (
-                    <button onClick={() => setBaixando(l)} className="inline-flex items-center gap-1 rounded border border-emerald-200 px-2 py-1 text-xs text-emerald-700 hover:bg-emerald-50">
-                      <HandCoins className="h-3.5 w-3.5" /> Baixar
-                    </button>
-                  )}
+            {isLoading &&
+              Array.from({ length: 4 }).map((_, i) => (
+                <tr key={i} className="border-b border-slate-50">
+                  <td colSpan={8} className="px-4 py-3"><div className="h-4 w-full animate-pulse rounded bg-slate-100" /></td>
+                </tr>
+              ))}
+
+            {!isLoading && lista.map((l) => {
+              const situacao = situacaoTitulo(l);
+              const saldo = saldoTitulo(l);
+              const atraso = diasAtraso(l.data_vencimento);
+              const aberto = l.status !== 'quitado' && l.status !== 'cancelado';
+              return (
+                <tr key={l.id} className="border-b border-slate-50 transition last:border-0 hover:bg-slate-50/60">
+                  <td className="px-4 py-2.5">
+                    <div className="flex items-center gap-2">
+                      <span className={`h-6 w-1 shrink-0 rounded-full ${l.tipo === 'RECEITA' ? 'bg-emerald-400' : 'bg-rose-400'}`} />
+                      <div>
+                        <p className="font-medium text-slate-800">{l.descricao}</p>
+                        <p className="text-[11px] text-slate-400">
+                          {l.tipo === 'RECEITA' ? 'A receber' : 'A pagar'}
+                          {l.numero_documento && ` · doc. ${l.numero_documento}`}
+                          {l.parcela_total > 1 && ` · parcela ${l.parcela_numero}/${l.parcela_total}`}
+                        </p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-2.5 text-slate-600">
+                    {l.fornecedores?.razao_social ?? l.clientes?.nome_razao_social ?? <span className="text-slate-300">—</span>}
+                  </td>
+                  <td className="px-4 py-2.5">
+                    {l.categorias_dre ? (
+                      <p className="text-xs text-slate-600">
+                        <span className="font-mono text-slate-400">{l.categorias_dre.codigo_estruturado}</span> {l.categorias_dre.nome}
+                      </p>
+                    ) : (
+                      <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[11px] text-amber-700">Sem categoria</span>
+                    )}
+                    {l.centros_custo?.nome && <p className="text-[11px] text-slate-400">{l.centros_custo.nome}</p>}
+                  </td>
+                  <td className="tnum px-4 py-2.5 text-slate-600">
+                    {formatDate(l.data_vencimento)}
+                    {l.competencia !== l.data_vencimento && (
+                      <p className="text-[11px] text-slate-400">comp. {formatDate(l.competencia)}</p>
+                    )}
+                  </td>
+                  <td className="tnum px-4 py-2.5 text-right font-medium text-slate-800">{formatCurrency(l.valor_original)}</td>
+                  <td className={`tnum px-4 py-2.5 text-right font-semibold ${saldo > 0 ? 'text-slate-800' : 'text-emerald-600'}`}>
+                    {formatCurrency(saldo)}
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <Selo situacao={situacao} detalhe={situacao === 'atrasado' ? `${atraso}d` : undefined} />
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <div className="flex items-center justify-end gap-1">
+                      {aberto && (
+                        <>
+                          <IconeAcao titulo="Registrar baixa" onClick={() => setBaixando(l)} classe="text-emerald-700 hover:bg-emerald-50">
+                            <HandCoins className="h-3.5 w-3.5" />
+                          </IconeAcao>
+                          <IconeAcao
+                            titulo={`Quitar saldo (${formatCurrency(saldo)})`}
+                            classe="text-cyan-700 hover:bg-cyan-50"
+                            onClick={() => {
+                              if (!confirm(`Quitar o saldo de ${formatCurrency(saldo)} de "${l.descricao}" com a data de hoje?`)) return;
+                              quitar.mutate({ id: l.id }, {
+                                onSuccess: () => toast.success('Titulo quitado'),
+                                onError: (err) => toast.error(err.message),
+                              });
+                            }}
+                          >
+                            <Zap className="h-3.5 w-3.5" />
+                          </IconeAcao>
+                        </>
+                      )}
+                      <IconeAcao titulo="Editar" onClick={() => setEditando(l)} classe="text-slate-600 hover:bg-slate-100">
+                        <Pencil className="h-3.5 w-3.5" />
+                      </IconeAcao>
+                      {l.status !== 'cancelado' && Number(l.valor_pago ?? 0) === 0 && (
+                        <IconeAcao
+                          titulo="Cancelar titulo"
+                          classe="text-rose-600 hover:bg-rose-50"
+                          onClick={() => {
+                            if (!confirm(`Cancelar o titulo "${l.descricao}"? Ele deixa de contar no DRE e no fluxo de caixa.`)) return;
+                            cancelar.mutate(l.id, {
+                              onSuccess: () => toast.success('Titulo cancelado'),
+                              onError: (err) => toast.error(err.message),
+                            });
+                          }}
+                        >
+                          <Ban className="h-3.5 w-3.5" />
+                        </IconeAcao>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+
+            {!isLoading && lista.length === 0 && (
+              <tr>
+                <td colSpan={8}>
+                  <Vazio
+                    icon={busca ? Search : FileSpreadsheet}
+                    titulo={busca ? 'Nenhum titulo para essa busca' : 'Nenhum titulo neste periodo'}
+                    descricao={
+                      busca
+                        ? 'Revise o termo pesquisado ou limpe os filtros de situacao, categoria e centro de custo.'
+                        : 'Amplie o periodo nos atalhos acima ou registre a primeira conta a pagar/receber deste mes.'
+                    }
+                    acao={
+                      !busca && (
+                        <Button onClick={() => setEditando({ tipo: 'DESPESA' })}>
+                          <Plus className="h-4 w-4" /> Novo lancamento
+                        </Button>
+                      )
+                    }
+                  />
                 </td>
               </tr>
-            ))}
-            {!isLoading && (lancamentos ?? []).length === 0 && <tr><td colSpan={8} className="px-4 py-6 text-center text-slate-400">Nenhum lancamento.</td></tr>}
+            )}
           </tbody>
+
+          {lista.length > 0 && (
+            <tfoot>
+              <tr className="border-t-2 border-slate-200 bg-slate-50/70 text-xs">
+                <td colSpan={4} className="px-4 py-3 font-semibold text-slate-600">
+                  <Wallet className="mr-1.5 inline h-3.5 w-3.5 text-slate-400" />
+                  {lista.length} titulo(s) em tela
+                </td>
+                <td className="tnum px-4 py-3 text-right">
+                  <span className="block text-emerald-700">+{formatCurrency(totais.receber)}</span>
+                  <span className="block text-rose-700">-{formatCurrency(totais.pagar)}</span>
+                </td>
+                <td className={`tnum px-4 py-3 text-right font-bold ${totais.saldoAberto >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                  {formatCurrency(totais.saldoAberto)}
+                </td>
+                <td colSpan={2} className="px-4 py-3 text-right text-slate-400">saldo em aberto</td>
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
 
-      {/* Novo lancamento */}
-      <Modal open={!!novo} onClose={() => setNovo(null)} title="Novo Lancamento">
-        <form onSubmit={submitNovo} className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <FormField label="Tipo">
-              <Select value={novo?.tipo ?? 'DESPESA'} onChange={(e) => setNovo((p) => ({ ...p, tipo: e.target.value as TipoMovimentacao }))}>
-                <option value="DESPESA">Conta a Pagar</option>
-                <option value="RECEITA">Conta a Receber</option>
-              </Select>
-            </FormField>
-            <FormField label="Fornecedor">
-              <Select value={novo?.fornecedor_id ?? ''} onChange={(e) => setNovo((p) => ({ ...p, fornecedor_id: e.target.value || null }))}>
-                <option value="">-- Nenhum --</option>
-                {(fornecedores ?? []).map((f) => <option key={f.id} value={f.id}>{f.razao_social}</option>)}
-              </Select>
-            </FormField>
-          </div>
-          <FormField label="Descricao *"><Input value={novo?.descricao ?? ''} onChange={(e) => setNovo((p) => ({ ...p, descricao: e.target.value }))} /></FormField>
-          <div className="grid grid-cols-2 gap-3">
-            <FormField label="Categoria (DRE)">
-              <Select value={novo?.categoria_dre_id ?? ''} onChange={(e) => setNovo((p) => ({ ...p, categoria_dre_id: e.target.value || null }))}>
-                <option value="">--</option>
-                {(categorias ?? []).map((c) => <option key={c.id} value={c.id}>{c.codigo_estruturado} - {c.nome}</option>)}
-              </Select>
-            </FormField>
-            <FormField label="Centro de custo">
-              <Select value={novo?.centro_custo_id ?? ''} onChange={(e) => setNovo((p) => ({ ...p, centro_custo_id: e.target.value || null }))}>
-                <option value="">--</option>
-                {(centros ?? []).map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
-              </Select>
-            </FormField>
-          </div>
-          <div className="grid grid-cols-4 gap-3">
-            <FormField label="Valor (R$) *"><Input type="number" step="0.01" value={novo?.valor_original ?? 0} onChange={(e) => setNovo((p) => ({ ...p, valor_original: Number(e.target.value) }))} /></FormField>
-            <FormField label="Emissao"><Input type="date" value={novo?.data_emissao ?? hoje} onChange={(e) => setNovo((p) => ({ ...p, data_emissao: e.target.value }))} /></FormField>
-            <FormField label="Vencimento *"><Input type="date" value={novo?.data_vencimento ?? hoje} onChange={(e) => setNovo((p) => ({ ...p, data_vencimento: e.target.value }))} /></FormField>
-            <FormField label="Forma prevista">
-              <Select value={novo?.forma_pagamento_prevista ?? ''} onChange={(e) => setNovo((p) => ({ ...p, forma_pagamento_prevista: (e.target.value || null) as FormaPagamento }))}>
-                <option value="">--</option>
-                {FORMAS.map((f) => <option key={f} value={f}>{f}</option>)}
-              </Select>
-            </FormField>
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="secondary" onClick={() => setNovo(null)}>Cancelar</Button>
-            <Button type="submit" disabled={salvar.isPending}>{salvar.isPending ? 'Salvando...' : 'Criar'}</Button>
-          </div>
-        </form>
-      </Modal>
-
+      {editando && (
+        <LancamentoModal
+          aberto
+          inicial={editando}
+          onClose={() => setEditando(null)}
+        />
+      )}
       {baixando && <BaixaModal lancamento={baixando} onClose={() => setBaixando(null)} />}
     </div>
   );
 }
 
-function BaixaModal({ lancamento, onClose }: { lancamento: LancamentoComRel; onClose: () => void }) {
-  const { data: baixas } = useBaixas(lancamento.id);
-  const { data: contas } = useContasBancarias();
-  const add = useAddBaixa();
-  const hoje = new Date().toISOString().slice(0, 10);
-
-  const saldo = useMemo(() => {
-    const b = baixas ?? [];
-    const pago = b.reduce((s, x) => s + Number(x.valor_pago), 0);
-    const desc = b.reduce((s, x) => s + Number(x.desconto), 0);
-    const juros = b.reduce((s, x) => s + Number(x.juros_multa), 0);
-    return Number(lancamento.valor_original) + juros - pago - desc;
-  }, [baixas, lancamento]);
-
-  const [form, setForm] = useState<Partial<BaixasFinanceirasRow>>({ data_pagamento: hoje, valor_pago: 0, desconto: 0, juros_multa: 0 });
-
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!form.valor_pago || form.valor_pago <= 0) return toast.error('Informe o valor pago');
-    add.mutate({ ...form, lancamento_id: lancamento.id }, {
-      onSuccess: () => { toast.success('Baixa registrada'); onClose(); },
-      onError: (err) => toast.error(err.message.includes('excede') ? 'Valor excede o saldo devedor' : err.message),
-    });
-  }
-
+function IconeAcao({
+  titulo, onClick, classe, children,
+}: { titulo: string; onClick: () => void; classe: string; children: React.ReactNode }) {
   return (
-    <Modal open onClose={onClose} title={`Baixa - ${lancamento.descricao}`}>
-      <div className="mb-3 rounded-lg bg-slate-50 p-3 text-sm">
-        <div className="flex justify-between"><span className="text-slate-500">Valor original</span><span>{formatCurrency(lancamento.valor_original)}</span></div>
-        <div className="flex justify-between font-semibold text-brand-700"><span>Saldo devedor</span><span>{formatCurrency(saldo)}</span></div>
-      </div>
-      <form onSubmit={submit} className="space-y-3">
-        <div className="grid grid-cols-4 gap-3">
-          <FormField label="Data"><Input type="date" value={form.data_pagamento ?? hoje} onChange={(e) => setForm({ ...form, data_pagamento: e.target.value })} /></FormField>
-          <FormField label="Valor pago"><Input type="number" step="0.01" value={form.valor_pago ?? 0} onChange={(e) => setForm({ ...form, valor_pago: Number(e.target.value) })} /></FormField>
-          <FormField label="Desconto"><Input type="number" step="0.01" value={form.desconto ?? 0} onChange={(e) => setForm({ ...form, desconto: Number(e.target.value) })} /></FormField>
-          <FormField label="Juros/Multa"><Input type="number" step="0.01" value={form.juros_multa ?? 0} onChange={(e) => setForm({ ...form, juros_multa: Number(e.target.value) })} /></FormField>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <FormField label="Conta bancaria">
-            <Select value={form.conta_bancaria_id ?? ''} onChange={(e) => setForm({ ...form, conta_bancaria_id: e.target.value || null })}>
-              <option value="">--</option>
-              {(contas ?? []).map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
-            </Select>
-          </FormField>
-          <FormField label="ID transacao / PIX (E2E)"><Input value={form.end_to_end_id_pix ?? ''} onChange={(e) => setForm({ ...form, end_to_end_id_pix: e.target.value })} placeholder="Reconciliacao futura" /></FormField>
-        </div>
-        <p className="text-xs text-slate-400">
-          Liquido: {formatCurrency((form.valor_pago ?? 0) - (form.desconto ?? 0) + (form.juros_multa ?? 0))}. Baixas parciais mantem o saldo pendente.
-        </p>
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>
-          <Button type="submit" disabled={add.isPending}>{add.isPending ? 'Registrando...' : 'Registrar baixa'}</Button>
-        </div>
-      </form>
-    </Modal>
+    <button
+      type="button"
+      title={titulo}
+      aria-label={titulo}
+      onClick={onClick}
+      className={`grid h-7 w-7 place-items-center rounded-lg border border-transparent transition ${classe}`}
+    >
+      {children}
+    </button>
   );
 }
