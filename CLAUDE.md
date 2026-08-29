@@ -4,21 +4,23 @@
 > Mantenha este arquivo atualizado ao adicionar módulos/migrations (é barato e faz o projeto andar rápido).
 
 ## Estado atual (retomar aqui) — atualizado nesta sessão
-- **Branch:** `claude/scar-project-btasdf` · **último commit:** `6efa280` (migration 0023, ficha do veículo).
-- **Migrations no repo:** `0001`..`0023` (todas validadas no harness pg local). **Deploy:** rodar as
-  novas no Supabase SQL Editor (na ordem) + no VPS `cd /opt/scar && git pull && sudo docker compose up -d --build`.
-- **Design system "cockpit"** aplicado (navy `#1E2B4D` + ciano `#139AD6`); sidebar usa a logo de
-  `Configurações → Empresa` (placa branca). Dashboard com KPIs de instrumento + tacômetro (inadimplência real).
-- **SAC** (`/sac`) veículo-first + lazy: lista resumida → clica → detalhe sob demanda → menu de serviços;
-  aba **Eventos**; banner de **alertas** do associado; marcadores (evento/assist 24h/alerta) na lista.
-- **Vitest** ativo (`npm test`, 13/13) — `src/lib/sac.ts`/`sac.test.ts`.
-- **Próximos passos oferecidos** (o usuário vai escolher no novo chat):
-  1. **Cobranças** usando `dia_vencimento` + `valor_mensalidade` por veículo (ligar no `gerar_faturas_cliente`).
-  2. **Termo de adesão**: gerar documento + página pública de **aceite eletrônico** (`contratos_adesao.token`,
-     nos moldes da cotação pública `/cotacao/[token]`).
-  3. **Módulo de Vistoria**: captura com upload de fotos (bucket) + status (tabelas `vistorias`/`vistoria_anexos` já existem).
-  4. **Portal do Associado**: login CPF + autosserviço reusando `SERVICOS_SAC` + `abrir_atendimento` + RLS por dono.
-  5. **Fila de atendimentos** p/ a equipe tramitar chamados (Assist 24h, Upgrade, etc.).
+- **Branch:** `claude/financial-dre-improvements-6zfj3k` · migration nova: **`0024_financeiro_dre_pro`**.
+- **Migrations no repo:** `0001`..`0024` (todas validadas no harness pg local). **Deploy:** rodar a nova no
+  Supabase SQL Editor + no VPS `cd /opt/scar && git pull && sudo docker compose up -d --build`.
+- **Financeiro repaginado** (`/financeiro`, 3 abas): Contas a Pagar/Receber · Fluxo de Caixa · DRE.
+  Detalhes na seção "Financeiro e DRE" abaixo.
+- **Campo de moeda corrigido em todo o sistema** (`MoneyInput`): nasce vazio com placeholder `0,00`
+  (fim do "0" preso na frente), máscara por centavos ao digitar só números e respeito à vírgula/ponto
+  quando o operador digita ou cola (`1.234,56` / `1234.56`). Lógica pura em `src/lib/money.ts`.
+- **Vitest:** 47 testes (`npm test`) — `sac.test.ts`, `money.test.ts`, `financeiro.test.ts`.
+- **Próximos passos oferecidos** (o usuário escolhe):
+  1. **Cobranças** usando `dia_vencimento` + `valor_mensalidade` por veículo (ligar no `gerar_faturas_cliente`)
+     e **espelhar as faturas em `lancamentos_financeiros`** para o DRE ver a receita recorrente.
+  2. **Termo de adesão**: documento + página pública de aceite eletrônico (`contratos_adesao.token`).
+  3. **Módulo de Vistoria** (tabelas `vistorias`/`vistoria_anexos` já existem).
+  4. **Portal do Associado**: login CPF + autosserviço reusando `SERVICOS_SAC`.
+  5. **Fila de atendimentos** p/ a equipe tramitar chamados.
+  6. **Conciliação bancária** (as baixas já guardam `end_to_end_id_pix`/`id_transacao_bancaria_externa`).
 - **Pendências técnicas conhecidas:** gateway bancário ainda MOCKADO (`/api/boletos/emitir-lote` e
   `/api/v1/sac/boleto`); preços dos opcionais novos (RCF 50/75/100mil, Carro Reserva 10/30d, Vidros III/
   Completa, Assist VIP) começam em R$0 — cadastrar em Configurações → Produtos.
@@ -134,6 +136,21 @@ pos-venda + token de aceite eletronico -- estrutura, termo depois); `vistorias`+
 (modulo proprio depois, mas ja aparecem na ficha). RLS por veiculo (staff-regional ou dono);
 seed de 5 alertas. Form de veiculo ganhou Plano+Opcionais+Calcular mensalidade (cotar_plano)+
 dia de vencimento+alienado+portas+alertas; nova tela Configuracoes->Alertas).
+· `0024_financeiro_dre_pro` (financeiro nivel gestao: (A) `lancamentos_financeiros` ganha
+`numero_documento`/`competencia`/`observacoes`/`parcela_numero`/`parcela_total`/`grupo_parcelas`
+e os CACHES `valor_pago`/`valor_saldo` mantidos pelo trigger BEFORE `fn_lanc_calcular_saldo()`
+(fim do N+1 de saldo na tela); `movimentacoes_caixa.lancamento_id` liga a movimentacao avulsa ao
+titulo p/ o DRE nao contar duas vezes; (B) **o DRE passa a enxergar o Contas a Pagar/Receber**:
+`dre_movimentos(inicio,fim,regional,regime)` e a fonte unica (baixas no regime CAIXA, competencia
+do titulo no regime COMPETENCIA, + movimentacoes avulsas, titulos de mensalidade e NF de evento),
+com `gerar_dre_completo` / `gerar_dre_resumo_completo` / `gerar_dre_mensal` por cima (as versoes
+antigas `gerar_dre`/`gerar_dre_resumo` seguem INTACTAS); valor sem categoria vira linha
+"nao classificadas" (1.9.99/4.9.99) em vez de sumir; (C) indicadores: `financeiro_resumo`,
+`financeiro_fluxo_mensal` (previsto x realizado) e `financeiro_aging` (faixas de atraso);
+`quitar_lancamento(id,data,conta)` baixa o saldo remanescente; +9 categorias no plano de contas.
+**SEGURANCA:** as RPCs de relatorio sao SECURITY DEFINER, entao `escopo_regional(uuid)` forca a
+regional de quem chama — so admin/financeiro (`tem_acesso_global`) leem consolidado; usuario sem
+regional nao le nada).
 
 ## Módulos (status: todos funcionais)
 SAC / Atendimento (`/sac`: **veículo-first + lazy** — busca por Nome/CPF/Placa → `visao-360` traz
@@ -153,7 +170,7 @@ Auditoria — só papel `auditoria`/`admin` clica "Autorizar Entrada" e efetiva 
 · Associados (painel `/associados/[id]` com abas) · Veículos/Contratos · Eventos/Sinistros
 (protocolo, reparo próprio/terceiro, financeiro do evento) · Precificação (simulador + editor de
 tabela FIPE com reajuste %) · Empresa (logo/diretoria/mandatos/documentos) · Fornecedores (auto
-CNPJ/CEP) · Financeiro (contas a pagar/receber + baixas + DRE) · Configurações (regionais, usuários,
+CNPJ/CEP) · Financeiro (ver secao propria) · Configurações (regionais, usuários,
 vendedores, marcas/modelos, tipos de veículo, cotas de participação (V5..V15), tipos de evento,
 produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações bancárias, plano de contas).
 
@@ -168,6 +185,33 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
   `cotar_plano(fipe, tipo, plano_id?, avulsos[]?)` → mensalidade + adesão + franquia + detalhamento.
   Precedência: base(obrigatórios+regra rastreador) + produtos do plano + avulsos. Usado por Simulador,
   Vendas/novo e snapshot da cotação. Preços dos opcionais novos: cadastrar em Configurações→Produtos.
+
+## Financeiro e DRE (0024) — arquitetura
+- **`/financeiro` tem 3 abas:**
+  - **Contas a Pagar / Receber** — 4 indicadores do periodo (a receber, a pagar, resultado de caixa,
+    inadimplencia com % da carteira e "vence em 7 dias"), filtro de periodo com atalhos
+    (mes/mes anterior/trimestre/semestre/ano) + **escolha do campo de data** (vencimento, competencia
+    ou emissao), filtros de tipo/situacao/categoria/centro de custo, busca livre, exportacao CSV.
+    A tabela mostra documento, parcela, classificacao contabil, **saldo devedor** e situacao REAL
+    (`situacaoTitulo` marca atrasado pela data de hoje, sem depender da rotina do banco); acoes por
+    linha: baixar, **quitar saldo** (1 clique, RPC), editar e cancelar. Rodape soma o que esta em tela.
+  - **Fluxo de Caixa** — previsto x realizado por mes (barras acima/abaixo do eixo), saldo acumulado
+    projetado e **aging** da carteira (a vencer / 1-30 / 31-60 / 61-90 / +90).
+  - **DRE** — seletor de **REGIME** (Caixa x Competencia) e de **centro de custo**, comparativo com o
+    periodo anterior (mes fechado compara com o mes anterior inteiro), **AV%** (analise vertical sobre
+    a receita bruta), subtotais por grupo, linha de **Margem de Contribuicao**, **ponto de equilibrio**,
+    grafico de 12 meses, export CSV e impressao.
+- **Regra de ouro do DRE:** ele le `dre_movimentos()`. Titulo cancelado nunca entra; movimentacao de
+  caixa com `lancamento_id` preenchido nao entra (evita dupla contagem); titulo de mensalidade so
+  entra se nao houver `movimentacoes_caixa` espelhando.
+- **Nada de excluir dinheiro:** cancelar um titulo muda o status (historico imutavel); a baixa a maior
+  continua barrada pelo trigger de 0012.
+- **Logica pura testada (Vitest):** `src/lib/money.ts` (mascara/parse/aritmetica de centavos) e
+  `src/lib/financeiro.ts` (situacao do titulo, aging, parcelamento com ajuste de centavos na ultima
+  parcela, estruturacao do DRE, indicadores, periodo anterior).
+- **Componentes:** `src/components/financeiro/` — `ui-financeiro.tsx` (Indicador, Selo, FiltroPeriodo,
+  Vazio, baixarCsv), `lancamento-modal.tsx` (form em secoes + previa do parcelamento),
+  `baixa-modal.tsx`, `contas-financeiro.tsx`, `fluxo-caixa.tsx`, `dre-report.tsx`.
 
 ## Cota de participação (rateio no evento) — arquitetura
 - **Desacoplada do Plano.** O Plano define a mensalidade (produtos); a cota (% da FIPE no rateio)
@@ -197,6 +241,15 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
   (`select('*, outra(campo)')`) viram `SelectQueryError`.
 - Para JSONB tipado em formulário, adicione `[key: string]: string | undefined` na interface do endereço/local.
 - Versões: `@supabase/ssr@^0.7`, `@supabase/supabase-js@2.111`. Não voltar o ssr para 0.5 (arity incompatível).
+
+## Convenção de moeda (UI)
+- **Todo campo de dinheiro usa `<MoneyInput>` de `@/components/ui/field`** — nunca `<input type="number">`
+  (ele nasce com "0", obriga manobra de cursor e aceita "0012").
+- `MoneyInput` recebe `value: number | null` e `onChange: (v: number | null) => void`; mostra prefixo
+  R$, alinha a direita, usa `.tnum` e seleciona tudo ao focar. Campo vazio = `null` (placeholder `0,00`).
+- Regra de digitacao (`src/lib/money.ts`, testada): so digitos -> mascara por centavos
+  (`150000` -> `1.500,00`); com virgula/ponto -> respeita o texto (`1.234,56`, `1234.56`).
+- Somas de dinheiro usam `somarMoeda()` (centavos inteiros) para nao acumular erro de ponto flutuante.
 
 ## Fluxo de validação (fazer SEMPRE antes de commitar)
 Há um Postgres 16 local para testar migrations de verdade (usuário `pgtest`, porta 5433, socket/host 127.0.0.1).
