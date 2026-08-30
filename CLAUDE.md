@@ -361,7 +361,7 @@ link público `/cotacao/[token]` detalhada/consolidada + print-PDF, esteira com 
 Auditoria — só papel `auditoria`/`admin` clica "Autorizar Entrada" e efetiva cliente+veículo)
 · Associados (painel `/associados/[id]` com abas) · Veículos/Contratos · Eventos/Sinistros
 (protocolo, reparo próprio/terceiro, financeiro do evento) · Precificação (simulador + editor de
-tabela FIPE com reajuste %) · Empresa (logo/diretoria/mandatos/documentos) · Fornecedores (auto
+tabela FIPE com reajuste % + importação por planilha, uma por tipo de veículo) · Empresa (logo/diretoria/mandatos/documentos) · Fornecedores (auto
 CNPJ/CEP) · **Cobrança** (`/cobrancas`: dashboard + faturas por competência + boletagem em lote +
 remessas bancárias) · Financeiro (contas a pagar/receber + baixas + DRE)
 · Configurações (regionais, usuários,
@@ -594,6 +594,29 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
 - Somas de dinheiro usam `somarMoeda()` (centavos inteiros) para nao acumular erro de ponto flutuante.
 - Ainda em `type="number"` (nao sao moeda pura): o % de reajuste e as celulas da grade em
   `precificacao/tabela-precos-editor.tsx`.
+
+## Precificação — importação por planilha (uma por tipo de veículo)
+- **O campo já existia:** `tabela_precos_faixa`, `participacao_faixa` e `adesao_faixa` sao TODAS
+  chaveadas por `tipo_veiculo_id`, e o RPC `substituir_tabela_precos(tipo, faixas, participacoes,
+  adesoes)` (0018) troca de forma atomica SO o tipo escolhido. Uma planilha por tipo de veiculo e o
+  desenho natural do banco — **nao foi preciso migration** para a importacao.
+- **`/precificacao` tem 3 abas:** Simulador · Tabela de Precos (editor celula a celula) ·
+  **Importar Planilha**.
+- **Fluxo:** escolher o tipo → *Baixar modelo* (CSV ja preenchido com a tabela em vigor daquele
+  tipo) → editar no Excel → subir (.xlsx ou .csv) → **previa com diff** (novas / alteradas /
+  removidas, com o valor antigo riscado ao lado do novo) → Confirmar.
+- **Layout da planilha:** `FIPE_MINIMO`, `FIPE_MAXIMO`, `PARTICIPACAO`, `PARTICIPACAO_TIPO`
+  (VALOR ou PERCENTUAL), `ADESAO` + **uma coluna por produto obrigatorio de FAIXA_FIPE**
+  (mesma regra do editor: `metodo_preco === 'FAIXA_FIPE' && status && obrigatorio`). A ordem das
+  colunas nao importa e o nome do produto casa sem acento/caixa. Valores em formato BR.
+- **Validacao (`src/lib/precificacao-import.ts`, testada):** faixa sobreposta **bloqueia** (a cotacao
+  acharia dois precos para o mesmo FIPE); buraco entre faixas so **avisa**; maximo < minimo bloqueia
+  apontando a linha como o operador ve no Excel; coluna desconhecida e produto sem coluna viram
+  aviso, nao erro.
+- **A importacao SUBSTITUI a tabela inteira do tipo** (e o que o RPC faz). Por isso a previa mostra
+  em destaque as faixas em vigor que sumiriam. Os demais tipos nunca sao tocados.
+- **.xlsx** e lido com `exceljs` em **import dinamico** (nao pesa no bundle da pagina); `.csv` e
+  parseado sem dependencia (detecta `;` ou `,`, respeita aspas e BOM).
 
 ## Cota de participação (rateio no evento) — arquitetura
 - **Desacoplada do Plano.** O Plano define a mensalidade (produtos); a cota (% da FIPE no rateio)
