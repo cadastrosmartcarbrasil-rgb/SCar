@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { CheckCheck, History } from 'lucide-react';
+import { History, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { FormField, Input, MoneyInput, Select } from '@/components/ui/field';
@@ -24,6 +24,9 @@ export function BaixaModal({ lancamento, onClose }: { lancamento: LancamentoComR
   const receita = lancamento.tipo === 'RECEITA';
 
   const [form, setForm] = useState<Partial<BaixasFinanceirasRow>>({ data_pagamento: hoje });
+  // A baixa quase sempre e do valor cheio, entao o campo ja nasce preenchido
+  // com o saldo devedor — quem paga parcial edita, quem paga tudo so confirma.
+  const preenchido = useRef(false);
 
   const atraso = diasAtraso(lancamento.data_vencimento);
 
@@ -39,6 +42,12 @@ export function BaixaModal({ lancamento, onClose }: { lancamento: LancamentoComR
   const saldoComEncargos = somarMoeda(saldoAtual, form.juros_multa ?? 0, -(form.desconto ?? 0));
   const liquido = somarMoeda(form.valor_pago ?? 0, -(form.desconto ?? 0), form.juros_multa ?? 0);
   const restante = somarMoeda(saldoComEncargos, -(form.valor_pago ?? 0));
+
+  useEffect(() => {
+    if (preenchido.current || !baixas || saldoAtual <= 0) return;
+    preenchido.current = true;
+    setForm((p) => ({ ...p, valor_pago: saldoAtual }));
+  }, [baixas, saldoAtual]);
 
   function preencherTotal() {
     setForm((p) => ({ ...p, valor_pago: somarMoeda(saldoAtual, p.juros_multa ?? 0, -(p.desconto ?? 0)) }));
@@ -93,18 +102,20 @@ export function BaixaModal({ lancamento, onClose }: { lancamento: LancamentoComR
           </FormField>
         </div>
 
-        <button
-          type="button"
-          onClick={preencherTotal}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-medium text-emerald-700 transition hover:bg-emerald-100"
-        >
-          <CheckCheck className="h-3.5 w-3.5" /> Preencher com o saldo total ({formatCurrency(saldoComEncargos)})
-        </button>
+        {Math.abs((form.valor_pago ?? 0) - saldoComEncargos) > 0.004 && (
+          <button
+            type="button"
+            onClick={preencherTotal}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-medium text-emerald-700 transition hover:bg-emerald-100"
+          >
+            <RotateCcw className="h-3.5 w-3.5" /> Usar o saldo total ({formatCurrency(saldoComEncargos)})
+          </button>
+        )}
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <FormField label="Conta bancaria">
+          <FormField label={receita ? 'Conta que recebeu' : 'Conta que pagou'}>
             <Select value={form.conta_bancaria_id ?? ''} onChange={(e) => setForm({ ...form, conta_bancaria_id: e.target.value || null })}>
-              <option value="">-- Nao informada --</option>
+              <option value="">-- Selecione a conta --</option>
               {(contas ?? []).map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
             </Select>
           </FormField>

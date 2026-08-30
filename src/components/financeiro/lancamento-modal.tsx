@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { CalendarDays, Info, Layers } from 'lucide-react';
+import { CalendarDays, CheckCircle2, Info, Layers, Paperclip } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { FormField, Input, MoneyInput, Select, Textarea } from '@/components/ui/field';
@@ -13,6 +13,7 @@ import { useCentrosCusto, useSaveLancamento } from '@/hooks/use-financeiro';
 import { gerarParcelas, type Periodicidade } from '@/lib/financeiro';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { FormaPagamento, LancamentosFinanceirosRow, TipoMovimentacao } from '@/lib/database.types';
+import { AnexosLancamento } from './anexos-lancamento';
 
 const FORMAS: FormaPagamento[] = ['PIX', 'BOLETO', 'TRANSFERENCIA', 'CARTAO', 'DINHEIRO'];
 const PERIODICIDADES: { valor: Periodicidade; rotulo: string }[] = [
@@ -58,6 +59,10 @@ export function LancamentoModal({
   const [form, setForm] = useState<Form>(
     inicial ?? { tipo: 'DESPESA', data_emissao: hoje, data_vencimento: hoje, competencia: hoje },
   );
+  // Id do titulo ja gravado. So com ele os anexos sao liberados: nada sobe
+  // para o storage antes do lancamento existir no banco.
+  const [salvoId, setSalvoId] = useState<string | null>(inicial?.id ?? null);
+  const [recemCriado, setRecemCriado] = useState(false);
   const [parcelas, setParcelas] = useState(1);
   const [periodicidade, setPeriodicidade] = useState<Periodicidade>('MENSAL');
   const [repetirValor, setRepetirValor] = useState(false);
@@ -101,11 +106,22 @@ export function LancamentoModal({
     salvar.mutate(
       { ...form, parcelas: previa.length > 1 ? previa : undefined },
       {
-        onSuccess: () => {
-          toast.success(
-            edicao ? 'Lancamento atualizado' : previa.length > 1 ? `${previa.length} parcelas geradas` : 'Lancamento criado',
-          );
-          onClose();
+        onSuccess: (ids) => {
+          if (edicao) {
+            toast.success('Lancamento atualizado');
+            onClose();
+            return;
+          }
+          if (previa.length > 1) {
+            // Carne de parcelas: cada parcela e um titulo proprio, entao o
+            // anexo entra pela edicao da parcela a que o documento pertence.
+            toast.success(`${previa.length} parcelas geradas`);
+            onClose();
+            return;
+          }
+          toast.success('Lancamento criado — agora voce pode anexar documentos');
+          setSalvoId(ids[0] ?? null);
+          setRecemCriado(true);
         },
         onError: (err) => toast.error(err.message),
       },
@@ -241,7 +257,28 @@ export function LancamentoModal({
           </div>
         </Secao>
 
-        {!edicao && (
+        <Secao titulo="Anexos">
+          {salvoId ? (
+            <>
+              {recemCriado && (
+                <p className="flex items-start gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-[11.5px] leading-relaxed text-emerald-800">
+                  <CheckCircle2 className="mt-px h-3.5 w-3.5 shrink-0" />
+                  Lancamento gravado. Anexe os documentos e clique em Concluir — ou feche, os anexos
+                  podem ser adicionados depois pela edicao do titulo.
+                </p>
+              )}
+              <AnexosLancamento lancamentoId={salvoId} />
+            </>
+          ) : (
+            <p className="flex items-start gap-1.5 rounded-lg bg-slate-50 px-3 py-2.5 text-[11.5px] leading-relaxed text-slate-500">
+              <Paperclip className="mt-px h-3.5 w-3.5 shrink-0" />
+              Disponivel depois de gravar o lancamento — o arquivo precisa de um titulo existente
+              para ficar vinculado, e assim um cadastro abandonado nao deixa arquivo solto no banco.
+            </p>
+          )}
+        </Secao>
+
+        {!edicao && !salvoId && (
           <Secao titulo="Parcelamento / recorrencia">
             <div className="grid gap-3 sm:grid-cols-4">
               <FormField label="Parcelas">
@@ -305,10 +342,16 @@ export function LancamentoModal({
             </b>
           </p>
           <div className="flex gap-2">
-            <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>
-            <Button type="submit" disabled={salvar.isPending}>
-              {salvar.isPending ? 'Salvando...' : edicao ? 'Salvar alteracoes' : 'Lancar'}
-            </Button>
+            {recemCriado ? (
+              <Button type="button" onClick={onClose}>Concluir</Button>
+            ) : (
+              <>
+                <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>
+                <Button type="submit" disabled={salvar.isPending}>
+                  {salvar.isPending ? 'Salvando...' : edicao ? 'Salvar alteracoes' : 'Lancar'}
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </form>

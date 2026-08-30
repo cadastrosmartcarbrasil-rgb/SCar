@@ -1568,10 +1568,6 @@ export type Database = {
         Args: { p_regional_id?: string | null };
         Returns: AgingLinha[];
       };
-      quitar_lancamento: {
-        Args: { p_lancamento_id: string; p_data_pagamento?: string; p_conta_bancaria_id?: string | null };
-        Returns: BaixasFinanceirasRow;
-      };
       resumo_por_centro_custo: {
         Args: { p_data_inicio: string; p_data_fim: string; p_regional_id?: string | null };
         Returns: ResumoCentroCusto[];

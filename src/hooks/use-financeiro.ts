@@ -8,6 +8,7 @@ import type {
   BaixasFinanceirasRow,
   ContasBancariasRow,
   CentrosCustoRow,
+  AnexosFinanceirosRow,
   TipoMovimentacao,
   StatusLancamento,
   FinanceiroResumo,
@@ -136,7 +137,8 @@ export interface SalvarLancamento extends Partial<LancamentosFinanceirosRow> {
 export function useSaveLancamento() {
   const supabase = createClient();
   const qc = useQueryClient();
-  return useMutation<void, Error, SalvarLancamento>({
+  // Devolve os ids gravados: a tela usa o id para liberar os anexos.
+  return useMutation<string[], Error, SalvarLancamento>({
     mutationFn: async (l) => {
       if (l.id) {
         const { error } = await supabase
@@ -144,7 +146,7 @@ export function useSaveLancamento() {
           .update(payloadLancamento(l))
           .eq('id', l.id);
         if (error) throw error;
-        return;
+        return [l.id];
       }
 
       // Parcelado: um unico insert em lote (atomico) com o grupo em comum.
@@ -161,13 +163,16 @@ export function useSaveLancamento() {
           parcela_total: p.parcela_total,
           grupo_parcelas: grupo,
         }));
-        const { error } = await supabase.from('lancamentos_financeiros').insert(linhas);
+        const { data, error } = await supabase
+          .from('lancamentos_financeiros').insert(linhas).select('id');
         if (error) throw error;
-        return;
+        return (data ?? []).map((r) => r.id);
       }
 
-      const { error } = await supabase.from('lancamentos_financeiros').insert(payloadLancamento(l));
+      const { data, error } = await supabase
+        .from('lancamentos_financeiros').insert(payloadLancamento(l)).select('id');
       if (error) throw error;
+      return (data ?? []).map((r) => r.id);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['lancamentos'] });
@@ -191,28 +196,6 @@ export function useCancelarLancamento() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['lancamentos'] });
-      qc.invalidateQueries({ queryKey: ['financeiro'] });
-      qc.invalidateQueries({ queryKey: ['dre'] });
-    },
-  });
-}
-
-/** Baixa o saldo remanescente em uma unica operacao (RPC quitar_lancamento). */
-export function useQuitarLancamento() {
-  const supabase = createClient();
-  const qc = useQueryClient();
-  return useMutation<void, Error, { id: string; data?: string; contaBancariaId?: string | null }>({
-    mutationFn: async ({ id, data, contaBancariaId }) => {
-      const { error } = await supabase.rpc('quitar_lancamento', {
-        p_lancamento_id: id,
-        p_data_pagamento: data ?? new Date().toISOString().slice(0, 10),
-        p_conta_bancaria_id: contaBancariaId ?? null,
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['lancamentos'] });
-      qc.invalidateQueries({ queryKey: ['baixas'] });
       qc.invalidateQueries({ queryKey: ['financeiro'] });
       qc.invalidateQueries({ queryKey: ['dre'] });
     },
@@ -322,6 +305,90 @@ export function useCentrosCusto() {
       const { data, error } = await supabase.from('centros_custo').select('*').order('nome');
       if (error) throw error;
       return data ?? [];
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Anexos do lancamento (nota fiscal, contrato, comprovante).
+// Bucket privado 'financeiro' + tabela anexos_financeiros (0012). O arquivo so
+// pode ser enviado DEPOIS que o lancamento existe: o caminho no storage e a
+// linha do anexo dependem do id, e assim nada e gravado por um lancamento que
+// o operador acabe abandonando.
+// ---------------------------------------------------------------------------
+const BUCKET_FINANCEIRO = 'financeiro';
+
+export function useAnexosLancamento(lancamentoId?: string | null) {
+  const supabase = createClient();
+  return useQuery<AnexosFinanceirosRow[]>({
+    queryKey: ['anexos-financeiros', lancamentoId ?? '-'],
+    enabled: !!lancamentoId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('anexos_financeiros')
+        .select('*')
+        .eq('lancamento_id', lancamentoId!)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function useUploadAnexoLancamento(lancamentoId: string) {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<void, Error, File>({
+    mutationFn: async (file) => {
+      const ext = file.name.includes('.') ? `.${file.name.split('.').pop()}` : '';
+      // Prefixo com o id do lancamento: mantem o arquivo rastreavel ao titulo.
+      const path = `lancamentos/${lancamentoId}/${Date.now()}-${Math.round(Math.random() * 1e6)}${ext}`;
+
+      const { error: upErr } = await supabase.storage
+        .from(BUCKET_FINANCEIRO)
+        .upload(path, file, { cacheControl: '3600', upsert: false });
+      if (upErr) throw upErr;
+
+      const { error: insErr } = await supabase.from('anexos_financeiros').insert({
+        lancamento_id: lancamentoId,
+        nome_arquivo: file.name,
+        mime_type: file.type || null,
+        tamanho_bytes: file.size,
+        url_storage: path,
+      });
+      // Se a linha nao gravou, o arquivo orfao sai do storage.
+      if (insErr) {
+        await supabase.storage.from(BUCKET_FINANCEIRO).remove([path]);
+        throw insErr;
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['anexos-financeiros', lancamentoId] }),
+  });
+}
+
+export function useRemoverAnexoLancamento(lancamentoId: string) {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<void, Error, AnexosFinanceirosRow>({
+    mutationFn: async (anexo) => {
+      const { error } = await supabase.from('anexos_financeiros').delete().eq('id', anexo.id);
+      if (error) throw error;
+      await supabase.storage.from(BUCKET_FINANCEIRO).remove([anexo.url_storage]);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['anexos-financeiros', lancamentoId] }),
+  });
+}
+
+/** URL assinada temporaria para abrir o anexo (o bucket e privado). */
+export function useAbrirAnexoLancamento() {
+  const supabase = createClient();
+  return useMutation<string, Error, string>({
+    mutationFn: async (path) => {
+      const { data, error } = await supabase.storage
+        .from(BUCKET_FINANCEIRO)
+        .createSignedUrl(path, 60 * 10);
+      if (error) throw error;
+      return data.signedUrl;
     },
   });
 }

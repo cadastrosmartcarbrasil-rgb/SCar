@@ -334,6 +334,11 @@ categoria vira linha "nao classificadas" (1.9.99/4.9.99) em vez de sumir; (C) in
 no plano de contas. **SEGURANCA:** as RPCs novas sao SECURITY DEFINER, entao `escopo_regional(uuid)`
 forca a regional de quem chama — so admin/financeiro (`tem_acesso_global`) leem consolidado e
 usuario sem regional nao le nada.)
+· `0033_baixa_sem_atalho` (remove o `quitar_lancamento` criado no 0032: ele gravava baixa "de um
+clique" com a data de hoje e SEM conta bancaria nem comprovante. Toda liquidacao passa pelo registro
+de baixa completo — e ele que sustenta a conciliacao bancaria. Nada mais dependia da funcao: a baixa
+e um insert em `baixas_financeiras` e os triggers `fn_recalcular_lancamento` (0012) e
+`fn_lanc_calcular_saldo` (0032) cuidam de status e saldo).
 
 ## Módulos (status: todos funcionais)
 Assistência 24h (`/assistencia`: painel de acionamento com trava + limites em tempo real, cotação,
@@ -557,6 +562,17 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
   lancamento que o `sincronizar_lancamento_acionamento` (0027) cria.
 - **Nada de excluir dinheiro:** cancelar um titulo muda o status (historico imutavel); a baixa a maior
   continua barrada pelo trigger de 0012.
+- **Baixa sem atalho (0033):** NAO existe botao de "quitar saldo". Toda liquidacao abre o modal de
+  baixa, que ja nasce com o **valor pago pre-preenchido com o saldo devedor** (o caso comum e pagar
+  o valor cheio; quem paga parcial edita) e pede a **conta que pagou/recebeu** — sem isso a
+  conciliacao bancaria nao fecha. O link "Usar o saldo total" so aparece quando o valor digitado
+  diverge do saldo (ex.: depois de lancar juros ou desconto).
+- **Anexos do titulo:** `<AnexosLancamento lancamentoId>` (bucket privado `financeiro` +
+  `anexos_financeiros` do 0012). O campo **so e liberado depois que o lancamento existe** — no
+  cadastro novo o modal grava primeiro e so entao mostra a area de upload (botao vira "Concluir").
+  Assim um cadastro abandonado nunca deixa arquivo orfao no storage. Se a linha do anexo falhar, o
+  arquivo recem-enviado e removido do bucket. Carne de parcelas: cada parcela e um titulo proprio,
+  entao o anexo entra pela edicao da parcela a que o documento pertence.
 - **Logica pura testada (Vitest):** `src/lib/money.ts` (mascara/parse/aritmetica de centavos) e
   `src/lib/financeiro.ts` (situacao do titulo, aging, parcelamento com ajuste de centavos na ultima
   parcela, estruturacao do DRE, indicadores, periodo anterior).

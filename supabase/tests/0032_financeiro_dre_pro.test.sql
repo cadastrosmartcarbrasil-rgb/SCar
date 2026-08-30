@@ -7,6 +7,7 @@ declare
   r_id     uuid;
   r_rj_id  uuid;
   cc_id    uuid;
+  cb_id    uuid;
   cat_rec  uuid; cat_desp uuid;
   l_rec    uuid; l_desp uuid; l_sem_cat uuid;
   v_num    numeric; n int;
@@ -21,6 +22,7 @@ begin
   assert tem_acesso_global(), 'admin precisa ter acesso global';
 
   insert into centros_custo (nome) values ('Matriz CC') returning id into cc_id;
+  insert into contas_bancarias (nome, banco) values ('Conta Movimento', '341') returning id into cb_id;
   select id into cat_rec  from categorias_dre where codigo_estruturado = '1.2.01';
   select id into cat_desp from categorias_dre where codigo_estruturado = '4.1.01';
 
@@ -61,12 +63,19 @@ begin
   assert (select valor_pago from lancamentos_financeiros where id = l_rec) = 300.00, 'valor_pago cacheado';
   raise notice 'OK baixa parcial atualiza saldo e status';
 
-  -- ------------------------------------------------------- quitacao
-  perform quitar_lancamento(l_rec);
+  -- ------------------------------------------------------- quitacao pela baixa
+  -- Nao existe atalho de "quitar": toda liquidacao e uma baixa completa,
+  -- com a conta que pagou/recebeu (o 0033 removeu quitar_lancamento).
+  insert into baixas_financeiras (lancamento_id, data_pagamento, valor_pago, valor_liquido, conta_bancaria_id)
+  values (l_rec, current_date, 700.00, 700.00, cb_id);
+
   select valor_saldo into v_num from lancamentos_financeiros where id = l_rec;
-  assert v_num = 0, 'quitar_lancamento deve zerar o saldo, veio ' || v_num;
+  assert v_num = 0, 'baixa do saldo restante deve zerar, veio ' || v_num;
   assert (select status from lancamentos_financeiros where id = l_rec) = 'quitado', 'status quitado';
-  raise notice 'OK quitar_lancamento';
+  assert (select count(*) from baixas_financeiras
+           where lancamento_id = l_rec and conta_bancaria_id = cb_id) = 1,
+         'a baixa precisa registrar a conta bancaria';
+  raise notice 'OK quitacao via baixa completa (com conta bancaria)';
 
   -- ------------------------------------------------------- DRE regime CAIXA
   select total into v_num

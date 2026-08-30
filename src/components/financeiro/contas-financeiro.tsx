@@ -4,13 +4,13 @@ import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
   AlertTriangle, ArrowDownCircle, ArrowUpCircle, Ban, Download, FileSpreadsheet,
-  HandCoins, Pencil, Plus, Scale, Search, Wallet, Zap,
+  HandCoins, Pencil, Plus, Scale, Search, Wallet,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/field';
 import {
   useCancelarLancamento, useCentrosCusto, useFinanceiroResumo, useLancamentos,
-  useQuitarLancamento, type FiltroLancamentos, type LancamentoComRel,
+  type FiltroLancamentos, type LancamentoComRel,
 } from '@/hooks/use-financeiro';
 import { usePlanoContas } from '@/hooks/use-config';
 import { diasAtraso, saldoTitulo, situacaoTitulo } from '@/lib/financeiro';
@@ -67,7 +67,6 @@ export function ContasFinanceiro() {
   const { data: resumo, isLoading: carregandoResumo } = useFinanceiroResumo(periodo);
   const { data: categorias } = usePlanoContas();
   const { data: centros } = useCentrosCusto();
-  const quitar = useQuitarLancamento();
   const cancelar = useCancelarLancamento();
 
   const lista = useMemo(() => {
@@ -273,24 +272,13 @@ export function ContasFinanceiro() {
                   <td className="px-4 py-2.5">
                     <div className="flex items-center justify-end gap-1">
                       {aberto && (
-                        <>
-                          <IconeAcao titulo="Registrar baixa" onClick={() => setBaixando(l)} classe="text-emerald-700 hover:bg-emerald-50">
-                            <HandCoins className="h-3.5 w-3.5" />
-                          </IconeAcao>
-                          <IconeAcao
-                            titulo={`Quitar saldo (${formatCurrency(saldo)})`}
-                            classe="text-cyan-700 hover:bg-cyan-50"
-                            onClick={() => {
-                              if (!confirm(`Quitar o saldo de ${formatCurrency(saldo)} de "${l.descricao}" com a data de hoje?`)) return;
-                              quitar.mutate({ id: l.id }, {
-                                onSuccess: () => toast.success('Titulo quitado'),
-                                onError: (err) => toast.error(err.message),
-                              });
-                            }}
-                          >
-                            <Zap className="h-3.5 w-3.5" />
-                          </IconeAcao>
-                        </>
+                        <IconeAcao
+                          titulo={`Registrar baixa (saldo ${formatCurrency(saldo)})`}
+                          onClick={() => setBaixando(l)}
+                          classe="text-emerald-700 hover:bg-emerald-50"
+                        >
+                          <HandCoins className="h-3.5 w-3.5" />
+                        </IconeAcao>
                       )}
                       <IconeAcao titulo="Editar" onClick={() => setEditando(l)} classe="text-slate-600 hover:bg-slate-100">
                         <Pencil className="h-3.5 w-3.5" />
