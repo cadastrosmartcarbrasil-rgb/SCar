@@ -22,10 +22,11 @@ export function Select({ className, ...props }: React.SelectHTMLAttributes<HTMLS
 // ---------------------------------------------------------------------------
 // Campo de moeda (R$)
 // O input nasce VAZIO exibindo o placeholder "0,00" — nada de "0" preso na
-// frente obrigando o operador a apagar ou posicionar o cursor. Digitando so
-// numeros a mascara preenche por centavos (150000 -> 1.500,00); digitando ou
-// colando com virgula/ponto o texto e respeitado (1.234,56 / 1234.56).
-// A normalizacao final acontece ao sair do campo.
+// frente obrigando o operador a apagar ou posicionar o cursor. A digitacao e
+// LIVRE: enquanto o campo esta em foco aparece exatamente o que foi digitado
+// ("352,00", "1.234,56", "1234.56"); ao sair, o valor e formatado no padrao BR.
+// Nada de mascara viva por centavos — ela empurra o cursor e, para quem digita
+// o separador, produzia "0,0352,00".
 // ---------------------------------------------------------------------------
 export function MoneyInput({
   value,

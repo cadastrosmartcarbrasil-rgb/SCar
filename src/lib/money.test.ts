@@ -33,28 +33,46 @@ describe('parseMoedaBR', () => {
   });
 });
 
-describe('digitarMoeda (mascara por centavos)', () => {
-  it('preenche da direita para a esquerda, sem zero preso na frente', () => {
-    expect(digitarMoeda('1')).toEqual({ valor: 0.01, texto: '0,01' });
-    expect(digitarMoeda('15')).toEqual({ valor: 0.15, texto: '0,15' });
-    expect(digitarMoeda('150')).toEqual({ valor: 1.5, texto: '1,50' });
-    expect(digitarMoeda('150000')).toEqual({ valor: 1500, texto: '1.500,00' });
+describe('digitarMoeda (digitacao livre)', () => {
+  it('mostra exatamente o que foi digitado, sem mascara empurrando o cursor', () => {
+    expect(digitarMoeda('3')).toEqual({ valor: 3, texto: '3' });
+    expect(digitarMoeda('352')).toEqual({ valor: 352, texto: '352' });
+    expect(digitarMoeda('352,00')).toEqual({ valor: 352, texto: '352,00' });
   });
-  it('ignora zeros a esquerda digitados por engano', () => {
-    expect(digitarMoeda('00150')).toEqual({ valor: 1.5, texto: '1,50' });
+
+  it('REGRESSAO: digitar "352,00" tecla a tecla nunca vira "0,0352,00"', () => {
+    let texto = '';
+    const passos: string[] = [];
+    for (const tecla of ['3', '5', '2', ',', '0', '0']) {
+      const r = digitarMoeda(texto + tecla);
+      texto = r.texto;
+      passos.push(r.texto);
+    }
+    expect(passos).toEqual(['3', '35', '352', '352,', '352,0', '352,00']);
+    expect(digitarMoeda(texto).valor).toBe(352);
   });
-  it('campo vazio devolve null (nao 0) para o placeholder aparecer', () => {
+
+  it('aceita o separador decimal no meio da digitacao', () => {
+    expect(digitarMoeda('1500,')).toEqual({ valor: 1500, texto: '1500,' });
+    expect(digitarMoeda('1500,5')).toEqual({ valor: 1500.5, texto: '1500,5' });
+  });
+
+  it('aceita valor colado de boleto (BR) e de CSV/FIPE (ponto decimal)', () => {
+    expect(digitarMoeda('1.234,56')).toEqual({ valor: 1234.56, texto: '1.234,56' });
+    expect(digitarMoeda('1234.56')).toEqual({ valor: 1234.56, texto: '1234.56' });
+  });
+
+  it('campo vazio devolve null (nao 0) para o placeholder 0,00 aparecer', () => {
     expect(digitarMoeda('')).toEqual({ valor: null, texto: '' });
   });
-  it('respeita a virgula quando o operador digita ou cola o separador', () => {
-    expect(digitarMoeda('1234,56')).toEqual({ valor: 1234.56, texto: '1234,56' });
-    expect(digitarMoeda('1.234,56')).toEqual({ valor: 1234.56, texto: '1.234,56' });
-  });
-  it('mantem o texto intermediario enquanto a casa decimal e digitada', () => {
-    expect(digitarMoeda('1234,')).toEqual({ valor: 1234, texto: '1234,' });
-  });
+
   it('descarta letras e simbolos colados junto', () => {
-    expect(digitarMoeda('R$ 250')).toEqual({ valor: 2.5, texto: '2,50' });
+    expect(digitarMoeda('R$ 250')).toEqual({ valor: 250, texto: '250' });
+    expect(digitarMoeda('abc')).toEqual({ valor: null, texto: '' });
+  });
+
+  it('separador sozinho nao vira valor', () => {
+    expect(digitarMoeda(',')).toEqual({ valor: null, texto: '' });
   });
 });
 

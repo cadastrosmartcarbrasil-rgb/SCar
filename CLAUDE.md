@@ -569,8 +569,12 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
   (ele nasce com "0", obriga manobra de cursor e aceita "0012").
 - `MoneyInput` recebe `value: number | null` e `onChange: (v: number | null) => void`; mostra prefixo
   R$, alinha a direita, usa `.tnum` e seleciona tudo ao focar. Campo vazio = `null` (placeholder `0,00`).
-- Regra de digitacao (`src/lib/money.ts`, testada): so digitos -> mascara por centavos
-  (`150000` -> `1.500,00`); com virgula/ponto -> respeita o texto (`1.234,56`, `1234.56`).
+- Regra de digitacao (`src/lib/money.ts`, testada): **digitacao LIVRE**. Em foco o campo mostra
+  exatamente o que foi digitado (`352,00`, `1500`, `1.234,56`, `1234.56`); ao sair, formata em BR
+  com 2 casas (`352,00`, `1.500,00`). `352` = trezentos e cinquenta e dois reais.
+- **NUNCA voltar a mascara por centavos** no `MoneyInput`: ela injeta uma virgula ja na primeira
+  tecla e quem digita o separador em seguida termina com `0,0352,00` (bug real em producao).
+  Ha teste de regressao em `money.test.ts` digitando "352,00" tecla a tecla.
 - Somas de dinheiro usam `somarMoeda()` (centavos inteiros) para nao acumular erro de ponto flutuante.
 - Ainda em `type="number"` (nao sao moeda pura): o % de reajuste e as celulas da grade em
   `precificacao/tabela-precos-editor.tsx`.

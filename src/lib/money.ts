@@ -3,15 +3,20 @@
 //
 // Problema que isto resolve: <input type="number"> comeca preenchido com "0",
 // obriga o operador a apagar/posicionar o cursor e ainda aceita "0012".
-// Aqui o campo nasce vazio (placeholder 0,00) e o operador simplesmente digita:
 //
-//   - So digitos  -> mascara por centavos, da direita para a esquerda:
-//       1 -> 0,01 | 15 -> 0,15 | 150 -> 1,50 | 150000 -> 1.500,00
-//   - Com virgula/ponto -> respeita o que foi digitado ou colado:
-//       "1234,56" -> 1234.56 | "1.234,56" -> 1234.56 | "1234.56" -> 1234.56
+// Regra: DIGITACAO LIVRE. O campo nasce vazio (placeholder 0,00) e enquanto
+// esta em foco mostra exatamente o que foi digitado — nada de mascara viva
+// reposicionando o cursor. Ao sair do campo o valor e normalizado para o
+// padrao BR com 2 casas.
 //
-// Assim funciona tanto para quem digita corrido quanto para quem cola valor
-// vindo de boleto/planilha.
+//   "352"      -> 352,00        (trezentos e cinquenta e dois reais)
+//   "352,00"   -> 352,00
+//   "1500,5"   -> 1.500,50
+//   "1.234,56" -> 1.234,56      (colado de boleto)
+//   "1234.56"  -> 1.234,56      (colado de CSV/FIPE)
+//
+// NAO usar mascara por centavos aqui: ela insere uma virgula ja na primeira
+// tecla e, quem digita o separador em seguida, acaba com "0,0352,00".
 // ============================================================================
 
 const NUM_BR = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -66,21 +71,15 @@ export interface Digitacao {
 }
 
 /**
- * Interpreta uma tecla/colagem no campo de moeda.
- * Sem separador -> mascara viva por centavos. Com separador -> preserva o
- * que esta sendo digitado (senao o cursor "pularia" a cada tecla).
+ * Interpreta o que foi digitado/colado no campo de moeda.
+ * O texto e apenas higienizado (fora digito, virgula e ponto, nada passa) e
+ * devolvido como esta: reformatar a cada tecla faria o cursor pular.
+ * A formatacao final acontece no blur, com `formatarMoedaBR`.
  */
 export function digitarMoeda(entrada: string): Digitacao {
   const limpo = (entrada ?? '').replace(/[^\d.,]/g, '');
-  if (limpo === '') return { valor: null, texto: '' };
-
-  if (limpo.includes(',') || limpo.includes('.')) {
-    return { valor: parseMoedaBR(limpo), texto: limpo };
-  }
-
-  const digitos = limpo.replace(/^0+(?=\d)/, ''); // "007" -> "7"
-  const valor = Number(digitos) / 100;
-  return { valor, texto: formatarMoedaBR(valor) };
+  if (!/\d/.test(limpo)) return { valor: null, texto: limpo.replace(/[.,]/g, '') };
+  return { valor: parseMoedaBR(limpo), texto: limpo };
 }
 
 /** Soma centavos com seguranca (evita 0.1 + 0.2 = 0.30000000000000004). */
