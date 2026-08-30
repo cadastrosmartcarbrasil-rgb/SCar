@@ -19,6 +19,7 @@
 // ============================================================================
 
 import { parseMoedaBR } from './money';
+import { formatCurrency } from './utils';
 
 export interface ProdutoColuna {
   id: string;
@@ -26,6 +27,8 @@ export interface ProdutoColuna {
 }
 
 export interface BandaImportada {
+  /** Linha na planilha, como o operador ve no Excel (o cabecalho e a 1). */
+  linha?: number;
   fipe_minimo: number;
   fipe_maximo: number;
   participacao_tipo: 'VALOR' | 'PERCENTUAL';
@@ -95,11 +98,24 @@ export function matrizDeCsv(texto: string): string[][] {
   return linhas.filter((l) => l.some((cel) => (cel ?? '').trim() !== ''));
 }
 
+/**
+ * Celula com erro de formula do Excel (#VALOR!, #N/D, #REF!, #DIV/0! ...).
+ * Nunca pode virar "vazio": vazio grava R$ 0,00 e o preco sai errado calado.
+ */
+const ERRO_EXCEL = /^#\s*(VALOR|VALUE|N\/D|N\/A|REF|DIV\/0|NOME|NAME|NUM|NUM|NULO|NULL)\s*[!?]?$/i;
+
+export function ehErroExcel(valor: string | undefined): boolean {
+  const v = (valor ?? '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return ERRO_EXCEL.test(v);
+}
+
 function numero(valor: string | undefined): number | null {
   const v = (valor ?? '').trim();
   if (v === '') return null;
   return parseMoedaBR(v);
 }
+
+const faixaTexto = (min: number, max: number) => `${formatCurrency(min)} a ${formatCurrency(max)}`;
 
 /**
  * Le a matriz da planilha e devolve as bandas prontas para o editor/RPC.
@@ -150,6 +166,20 @@ export function interpretarPlanilha(matriz: string[][], produtos: ProdutoColuna[
   for (let l = 1; l < matriz.length; l++) {
     const linha = matriz[l];
     const nLinha = l + 1; // como o operador ve no Excel
+    // Erro de formula do Excel nao pode passar como zero.
+    const comErro = [
+      { i: iMin, nome: COLUNAS_FIXAS.min }, { i: iMax, nome: COLUNAS_FIXAS.max },
+      { i: iPart, nome: COLUNAS_FIXAS.participacao }, { i: iAdesao, nome: COLUNAS_FIXAS.adesao },
+      ...colunasProduto.map(({ indice, produto }) => ({ i: indice, nome: produto.nome })),
+    ].filter(({ i }) => i >= 0 && ehErroExcel(linha[i]));
+
+    if (comErro.length > 0) {
+      comErro.forEach(({ i, nome }) =>
+        erros.push(`Linha ${nLinha}, coluna "${nome}": a planilha traz "${(linha[i] ?? '').trim()}" (erro de formula do Excel). Corrija a celula — importar assim gravaria R$ 0,00.`),
+      );
+      continue;
+    }
+
     const min = numero(linha[iMin]);
     const max = numero(linha[iMax]);
 
@@ -182,6 +212,7 @@ export function interpretarPlanilha(matriz: string[][], produtos: ProdutoColuna[
     });
 
     bandas.push({
+      linha: nLinha,
       fipe_minimo: min,
       fipe_maximo: max,
       participacao_tipo,
@@ -191,22 +222,36 @@ export function interpretarPlanilha(matriz: string[][], produtos: ProdutoColuna[
     });
   }
 
-  bandas.sort((a, b) => a.fipe_minimo - b.fipe_minimo);
+  bandas.sort((a, b) => a.fipe_minimo - b.fipe_minimo || (a.linha ?? 0) - (b.linha ?? 0));
 
-  // Sobreposicao BLOQUEIA (a cotacao acharia duas faixas para o mesmo FIPE);
+  // Varredura por FIPE minimo guardando o maior fim ja visto: pega tanto a
+  // sobreposicao entre vizinhas quanto uma faixa contida dentro de outra.
+  // Sobreposicao BLOQUEIA (a cotacao acharia dois precos para o mesmo FIPE);
   // buraco entre faixas so avisa (pode ser intencional).
-  for (let i = 1; i < bandas.length; i++) {
-    const ant = bandas[i - 1];
-    const at = bandas[i];
-    if (at.fipe_minimo <= ant.fipe_maximo) {
-      erros.push(
-        `Faixas sobrepostas: ${ant.fipe_minimo}–${ant.fipe_maximo} e ${at.fipe_minimo}–${at.fipe_maximo}.`,
-      );
-    } else if (at.fipe_minimo - ant.fipe_maximo > 1) {
+  let maiorFim = -Infinity;
+  let dona: BandaImportada | null = null;
+
+  for (const at of bandas) {
+    if (dona && at.fipe_minimo <= maiorFim) {
+      const onde = `linha ${at.linha} (${faixaTexto(at.fipe_minimo, at.fipe_maximo)})`;
+      const contra = `linha ${dona.linha} (${faixaTexto(dona.fipe_minimo, dona.fipe_maximo)})`;
+      if (at.fipe_minimo === dona.fipe_maximo) {
+        // Caso classico: a faixa seguinte comeca no MESMO valor em que a
+        // anterior termina, entao esse valor fica com dois precos.
+        erros.push(
+          `A ${onde} comeca em ${formatCurrency(at.fipe_minimo)}, valor que ja pertence a ${contra}. ` +
+          `Comece em ${formatCurrency(at.fipe_minimo + 0.01)}.`,
+        );
+      } else {
+        erros.push(`Faixas sobrepostas: ${onde} invade a ${contra}.`);
+      }
+    } else if (dona && at.fipe_minimo - maiorFim > 1) {
       avisos.push(
-        `Buraco entre ${ant.fipe_maximo} e ${at.fipe_minimo}: veiculo nessa faixa fica sem preco.`,
+        `Buraco entre ${formatCurrency(maiorFim)} e ${formatCurrency(at.fipe_minimo)} ` +
+        `(linhas ${dona.linha} e ${at.linha}): veiculo nessa faixa fica sem preco.`,
       );
     }
+    if (at.fipe_maximo > maiorFim) { maiorFim = at.fipe_maximo; dona = at; }
   }
 
   if (bandas.length === 0 && erros.length === 0) erros.push('Nenhuma faixa valida encontrada.');

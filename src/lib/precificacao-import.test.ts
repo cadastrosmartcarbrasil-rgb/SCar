@@ -61,12 +61,50 @@ describe('interpretarPlanilha', () => {
     expect(r.bandas[0].valores['p-casco']).toBe(50);
   });
 
-  it('BLOQUEIA faixas sobrepostas (a cotacao acharia dois precos)', () => {
+  it('BLOQUEIA faixas sobrepostas apontando as linhas do Excel', () => {
     const csv = `${CABECALHO}
 0;40000;1500;VALOR;250;89,90;35,00
 35000;60000;1800;VALOR;250;99,90;35,00`;
     const r = interpretarPlanilha(matrizDeCsv(csv), PRODUTOS);
-    expect(r.erros.some((e) => e.includes('sobrepostas'))).toBe(true);
+    expect(r.erros).toHaveLength(1);
+    expect(r.erros[0]).toContain('linha 3');
+    expect(r.erros[0]).toContain('linha 2');
+  });
+
+  it('explica o limite compartilhado e sugere o centavo seguinte', () => {
+    const csv = `${CABECALHO}
+190000,01;200000;6;PERCENTUAL;500;45,00;465,00
+200000;210000;6;PERCENTUAL;500;45,00;500,00`;
+    const r = interpretarPlanilha(matrizDeCsv(csv), PRODUTOS);
+    expect(r.erros).toHaveLength(1);
+    expect(r.erros[0]).toContain('linha 3');
+    expect(r.erros[0]).toContain('200.000,01');
+  });
+
+  it('pega faixa contida dentro de outra, mesmo nao sendo vizinhas na ordem', () => {
+    const csv = `${CABECALHO}
+0;100000;1500;VALOR;250;89,90;35,00
+120000,01;130000;1500;VALOR;250;89,90;35,00
+50000;60000;1800;VALOR;250;99,90;35,00`;
+    const r = interpretarPlanilha(matrizDeCsv(csv), PRODUTOS);
+    expect(r.erros.some((e) => e.includes('invade'))).toBe(true);
+  });
+
+  it('BLOQUEIA celula com erro de formula do Excel em vez de gravar R$ 0,00', () => {
+    // CABECALHO = ...;Protecao Casco;Taxa Administrativa
+    const csv = `${CABECALHO}\n0;60000;6;PERCENTUAL;500;#VALOR!;35,00`;
+    const r = interpretarPlanilha(matrizDeCsv(csv), PRODUTOS);
+    expect(r.bandas).toHaveLength(0);
+    expect(r.erros[0]).toContain('Linha 2');
+    expect(r.erros[0]).toContain('Protecao Casco');
+    expect(r.erros[0]).toContain('#VALOR!');
+  });
+
+  it('reconhece as variacoes de erro do Excel (PT e EN)', () => {
+    ['#N/D', '#REF!', '#DIV/0!', '#VALUE!', '#NOME?', '#NÚM!'].forEach((err) => {
+      const r = interpretarPlanilha(matrizDeCsv(`${CABECALHO}\n0;60000;6;PERCENTUAL;500;${err};35,00`), PRODUTOS);
+      expect(r.erros.length, `deveria bloquear ${err}`).toBeGreaterThan(0);
+    });
   });
 
   it('AVISA (nao bloqueia) buraco entre faixas', () => {
@@ -125,7 +163,7 @@ describe('gerarModeloCsv', () => {
     }];
     const r = interpretarPlanilha(matrizDeCsv(gerarModeloCsv(PRODUTOS, bandas)), PRODUTOS);
     expect(r.erros).toEqual([]);
-    expect(r.bandas[0]).toEqual(bandas[0]);
+    expect(r.bandas[0]).toEqual({ ...bandas[0], linha: 2 });
   });
 });
 

@@ -610,9 +610,16 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
   (mesma regra do editor: `metodo_preco === 'FAIXA_FIPE' && status && obrigatorio`). A ordem das
   colunas nao importa e o nome do produto casa sem acento/caixa. Valores em formato BR.
 - **Validacao (`src/lib/precificacao-import.ts`, testada):** faixa sobreposta **bloqueia** (a cotacao
-  acharia dois precos para o mesmo FIPE); buraco entre faixas so **avisa**; maximo < minimo bloqueia
-  apontando a linha como o operador ve no Excel; coluna desconhecida e produto sem coluna viram
-  aviso, nao erro.
+  acharia dois precos para o mesmo FIPE) e o erro aponta **as duas linhas do Excel**; o caso mais
+  comum — faixa que comeca no MESMO valor em que a anterior termina (`200.000,00` depois de
+  `...a 200.000,00`) — vem com a correcao sugerida (`comece em 200.000,01`). A varredura guarda o
+  maior fim ja visto, entao pega tambem faixa **contida** dentro de outra, nao so vizinhas.
+  Buraco entre faixas so **avisa**; maximo < minimo bloqueia apontando a linha; coluna desconhecida
+  e produto sem coluna viram aviso, nao erro.
+- **Celula com erro de formula do Excel** (`#VALOR!`, `#N/D`, `#REF!`, `#DIV/0!`, `#NOME?`, `#NUM!`,
+  e os equivalentes em ingles) **bloqueia a importacao**, dizendo linha e coluna. Antes ela passava
+  como celula vazia e gravava **R$ 0,00 em silencio** — o pior desfecho possivel numa tabela de
+  preco.
 - **A importacao SUBSTITUI a tabela inteira do tipo** (e o que o RPC faz). Por isso a previa mostra
   em destaque as faixas em vigor que sumiriam. Os demais tipos nunca sao tocados.
 - **.xlsx** e lido com `exceljs` em **import dinamico** (nao pesa no bundle da pagina); `.csv` e
