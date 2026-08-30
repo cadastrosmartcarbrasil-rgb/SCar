@@ -17,6 +17,10 @@ import { Button } from '@/components/ui/button';
 import { ESTEIRA, STATUS_LEAD, proximoStatus, podeEditarCotacao } from '@/lib/crm';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { CotacoesRow, StatusLead } from '@/lib/database.types';
+import { FechamentoVenda } from '@/components/vendas/fechamento-venda';
+import { ChecklistEntrada } from '@/components/vendas/checklist-entrada';
+import { useChecklistLead } from '@/hooks/use-vendas';
+import { pendencias } from '@/lib/vendas';
 
 export default function LeadDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -26,6 +30,8 @@ export default function LeadDetailPage() {
   const { data: papel } = useMeuPapel();
   const avancar = useAvancarStatus();
   const autorizar = useAutorizarEntrada();
+  const { data: checklist } = useChecklistLead(id);
+  const faltando = pendencias((checklist ?? []).map((c) => ({ ...c, detalhe: c.detalhe ?? null })));
 
   const [cpf, setCpf] = useState('');
   const [editando, setEditando] = useState<CotacoesRow | null>(null);
@@ -132,9 +138,21 @@ export default function LeadDetailPage() {
           </p>
           {podeAuditar ? (
             <div className="mt-3 space-y-2">
+              {faltando.length > 0 && (
+                <p className="rounded-lg bg-white/70 px-3 py-2 text-[11.5px] leading-relaxed text-amber-900">
+                  <b>Faltam {faltando.length} item(ns)</b> para o veiculo poder entrar na base:{' '}
+                  {faltando.slice(0, 6).join(', ')}
+                  {faltando.length > 6 && ` e mais ${faltando.length - 6}`}.
+                </p>
+              )}
               <label className="text-xs text-amber-800">CPF/CNPJ do titular (confirme antes de autorizar)</label>
               <Input value={cpf} onChange={(e) => setCpf(e.target.value)} placeholder={lead.cpf_cnpj ?? 'Somente numeros'} className="mt-0" />
-              <Button onClick={autorizarEntrada} disabled={autorizar.isPending} className="w-full">
+              <Button
+                onClick={autorizarEntrada}
+                disabled={autorizar.isPending || faltando.length > 0}
+                className="w-full"
+                title={faltando.length > 0 ? 'Complete a ficha da venda antes de autorizar' : undefined}
+              >
                 {autorizar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
                 Autorizar entrada na base
               </Button>
@@ -150,6 +168,21 @@ export default function LeadDetailPage() {
           <CheckCircle2 className="h-4 w-4" /> Ativo na base.
           {lead.veiculo_id && <Link href="/veiculos" className="ml-auto font-medium underline">Ver veiculo</Link>}
         </div>
+      )}
+
+      {/* Fechamento da venda: a ficha que o veiculo precisa para entrar na base */}
+      {lead.status !== 'ATIVO' && (
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold text-slate-800">Fechamento da venda</h2>
+          <FechamentoVenda lead={lead} />
+        </section>
+      )}
+
+      {lead.status === 'ATIVO' && (checklist ?? []).length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold text-slate-800">Ficha conferida na entrada</h2>
+          <ChecklistEntrada itens={checklist ?? []} />
+        </section>
       )}
 
       {/* Cotacoes */}

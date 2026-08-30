@@ -34,6 +34,7 @@ export type CanalAtendimento = 'SAC_INTERNO' | 'PORTAL';
 export type StatusAtendimento = 'ABERTO' | 'EM_ANDAMENTO' | 'CONCLUIDO' | 'CANCELADO';
 export type SeveridadeAlerta = 'BAIXA' | 'MEDIA' | 'ALTA';
 export type StatusContratoAdesao = 'PENDENTE' | 'ENVIADO' | 'ACEITO' | 'RECUSADO' | 'CANCELADO';
+export type FormaRecebimentoAdesao = 'VENDEDOR_NA_HORA' | 'BOLETO' | 'PIX' | 'CARTAO';
 export type StatusVistoria = 'AGENDADA' | 'PENDENTE' | 'APROVADA' | 'REPROVADA';
 export type TipoNegociacao =
   | 'venda' | 'substituicao' | 'reativacao' | 'troca_titularidade' | 'renovacao';
@@ -93,6 +94,8 @@ export type RegionaisRow = Timestamps & {
   // 0028: politica de desconto da franquia/regional
   percentual_maximo_desconto_venda: number;
   desconto_observacao: string | null;
+  taxa_comissao_adesao: number;
+  taxa_comissao_recorrente: number;
 };
 
 export type UsuariosRow = Timestamps & {
@@ -254,12 +257,13 @@ export type ContratosAdesaoRow = Timestamps & {
 };
 export type VistoriasRow = Timestamps & {
   id: string;
-  veiculo_id: string;
+  veiculo_id: string | null;
   tipo: string | null;
   status: StatusVistoria;
   data_vistoria: string | null;
   observacoes: string | null;
   created_by: string | null;
+  lead_id: string | null;
 };
 export type VistoriaAnexosRow = {
   id: string;
@@ -503,6 +507,24 @@ export type LeadsRow = Timestamps & {
   auditado_em: string | null;
   auditado_por: string | null;
   created_by: string | null;
+  // 0034 — ficha completa antes de entrar na base
+  tipo_pessoa: TipoPessoa | null;
+  rg_ie: string | null;
+  data_nascimento: string | null;
+  endereco: Json;
+  cliente_existente_id: string | null;
+  chassi: string | null;
+  renavam: string | null;
+  cor: string | null;
+  ano_fabricacao: number | null;
+  crlv_qrcode: string | null;
+  crlv_url: string | null;
+  vendedor_id: string | null;
+  plano_id: string | null;
+  adesao_forma: FormaRecebimentoAdesao | null;
+  adesao_valor: number | null;
+  adesao_recebida_em: string | null;
+  adesao_comprovante_url: string | null;
 };
 
 export type CotacoesRow = {
@@ -1340,6 +1362,15 @@ export type AgingLinha = {
   total: number;
 };
 
+export type ItemChecklistLead = {
+  item: string;
+  grupo: string;
+  ok: boolean;
+  detalhe: string | null;
+};
+
+export type LimiteComissao = { adesao: number; recorrente: number };
+
 // ---- Database (formato esperado pelo supabase-js) --------------------------
 // Cada tabela precisa de Row/Insert/Update/Relationships; o schema precisa de
 // Views/Functions/Enums/CompositeTypes com o formato exato.
@@ -1976,6 +2007,23 @@ export type Database = {
       limite_desconto_regional: { Args: { p_regional_id: string }; Returns: number };
       pode_aprovar_desconto: { Args: Record<string, never>; Returns: boolean };
       lead_em_negociacao: { Args: { p_lead_id: string }; Returns: boolean };
+      // ---- 0034: rota de venda completa ----
+      checklist_lead: {
+        Args: { p_lead_id: string };
+        Returns: ItemChecklistLead[];
+      };
+      lead_pronto_para_base: {
+        Args: { p_lead_id: string };
+        Returns: boolean;
+      };
+      limite_comissao_regional: {
+        Args: { p_regional_id: string };
+        Returns: LimiteComissao[];
+      };
+      repassar_comissao_vendedor: {
+        Args: { p_comissao_id: string };
+        Returns: string;
+      };
       autorizar_entrada_lead: {
         Args: { p_lead_id: string; p_cpf_cnpj?: string | null };
         Returns: string;

@@ -26,7 +26,8 @@ export default function RegionaisPage() {
   );
 
   function novo() {
-    setEditando({ nome: '', cnpj: '', endereco: {}, responsavel_id: null, percentual_maximo_desconto_venda: 0 });
+    setEditando({ nome: '', cnpj: '', endereco: {}, responsavel_id: null, percentual_maximo_desconto_venda: 0,
+      taxa_comissao_adesao: 0, taxa_comissao_recorrente: 0 });
     setAberto(true);
   }
   function editar(r: RegionaisRow) {
@@ -171,6 +172,32 @@ export default function RegionaisPage() {
               />
             </FormField>
           </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+            <p className="text-[11.5px] font-semibold uppercase tracking-wide text-slate-500">
+              Comissao da franquia
+            </p>
+            <p className="mb-2 mt-0.5 text-[11.5px] leading-relaxed text-slate-500">
+              Quanto esta regional recebe da associacao. E o <b>teto</b> do que ela pode ceder aos
+              seus vendedores — nenhum vendedor pode ter percentual maior que este.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <FormField label="Adesao (%)">
+                <Input
+                  type="number" min={0} max={100} step="0.5" className="tnum"
+                  value={Number(editando?.taxa_comissao_adesao ?? 0) * 100}
+                  onChange={(e) => setEditando((p) => ({ ...p, taxa_comissao_adesao: (Number(e.target.value) || 0) / 100 }))}
+                />
+              </FormField>
+              <FormField label="Recorrencia (%)">
+                <Input
+                  type="number" min={0} max={100} step="0.5" className="tnum"
+                  value={Number(editando?.taxa_comissao_recorrente ?? 0) * 100}
+                  onChange={(e) => setEditando((p) => ({ ...p, taxa_comissao_recorrente: (Number(e.target.value) || 0) / 100 }))}
+                />
+              </FormField>
+            </div>
+          </div>
+
           <FormField label="Desconto maximo de venda (%)">
             <Input
               type="number" min={0} max={100} step="0.5"

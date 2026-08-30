@@ -155,6 +155,7 @@ export default function VendedoresPage() {
               ))}
             </Select>
           </FormField>
+          <TetoDaRegional regionalId={form.regional_id ?? null} />
           <div className="grid grid-cols-2 gap-3">
             <FormField label="Comissao adesao (%)">
               <Input
@@ -190,5 +191,35 @@ export default function VendedoresPage() {
         </form>
       </Modal>
     </div>
+  );
+}
+
+/**
+ * Teto herdado da franquia. A comissao do vendedor nunca pode passar a da sua
+ * regional — a trava vale no banco (0034), aqui e so para o operador ver antes
+ * de tentar salvar.
+ */
+function TetoDaRegional({ regionalId }: { regionalId: string | null }) {
+  const { data: regionais } = useRegionais();
+  const reg = (regionais ?? []).find((r) => r.id === regionalId);
+
+  if (!regionalId) {
+    return (
+      <p className="rounded-lg bg-amber-50 px-3 py-2 text-[11.5px] text-amber-800">
+        Escolha a regional primeiro: a comissao do vendedor sai do que a franquia recebe.
+      </p>
+    );
+  }
+  if (!reg) return null;
+
+  const ad = Number(reg.taxa_comissao_adesao ?? 0) * 100;
+  const rec = Number(reg.taxa_comissao_recorrente ?? 0) * 100;
+
+  return (
+    <p className="rounded-lg bg-slate-50 px-3 py-2 text-[11.5px] leading-relaxed text-slate-600">
+      Teto de <b>{reg.nome}</b>: adesao ate <b className="tnum">{ad.toFixed(2).replace('.', ',')}%</b>{' '}
+      e recorrencia ate <b className="tnum">{rec.toFixed(2).replace('.', ',')}%</b>.
+      {ad === 0 && rec === 0 && ' Configure a comissao da franquia em Configuracoes -> Regionais.'}
+    </p>
   );
 }

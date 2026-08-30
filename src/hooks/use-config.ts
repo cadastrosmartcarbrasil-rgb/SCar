@@ -42,6 +42,9 @@ export function useSaveRegional() {
         // Politica de desconto de venda da franquia (0028)
         percentual_maximo_desconto_venda: r.percentual_maximo_desconto_venda ?? 0,
         desconto_observacao: r.desconto_observacao || null,
+        // Comissao da franquia (0034) — teto do que ela cede aos vendedores.
+        taxa_comissao_adesao: r.taxa_comissao_adesao ?? 0,
+        taxa_comissao_recorrente: r.taxa_comissao_recorrente ?? 0,
       };
       if (r.id) {
         const { error } = await supabase.from('regionais').update(payload).eq('id', r.id);

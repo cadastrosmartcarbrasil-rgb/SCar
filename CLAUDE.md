@@ -339,6 +339,22 @@ clique" com a data de hoje e SEM conta bancaria nem comprovante. Toda liquidacao
 de baixa completo — e ele que sustenta a conciliacao bancaria. Nada mais dependia da funcao: a baixa
 e um insert em `baixas_financeiras` e os triggers `fn_recalcular_lancamento` (0012) e
 `fn_lanc_calcular_saldo` (0032) cuidam de status e saldo).
+· `0034_vendas_rota_completa` (a rota da venda para de terminar no CPF: (A) COMISSAO EM DOIS NIVEIS —
+`regionais.taxa_comissao_adesao/recorrente` (fracao, mesma unidade de `vendedores`) e o TETO da
+franquia; triggers `fn_vendedor_valida_comissao` (vendedor nunca passa a regional) e
+`fn_regional_valida_comissao` (nao da para baixar a regional deixando vendedor acima) +
+`limite_comissao_regional()`; (B) FICHA COMPLETA no lead — `tipo_pessoa`, `rg_ie`,
+`data_nascimento`, `endereco` jsonb, `cliente_existente_id`, `chassi`, `renavam`, `cor`,
+`ano_fabricacao`, `crlv_qrcode`, `crlv_url`, `vendedor_id`, `plano_id`, `adesao_forma`
+(enum `forma_recebimento_adesao`), `adesao_valor`; (C) VISTORIA ANTES DA BASE — `vistorias.veiculo_id`
+vira NULAVEL e ganha `lead_id` (check exige um dos dois); as policies `vist_*`/`vanx_*` foram
+reescritas para enxergar tambem por lead — sem isso a vistoria da venda ficaria invisivel;
+(D) CHECKLIST — `checklist_lead(lead)` devolve item/grupo/ok/detalhe e `lead_pronto_para_base()`;
+`autorizar_entrada_lead` REESCRITA: recusa com `check_violation` listando o que falta, cria/atualiza
+o associado com a ficha inteira, cria o veiculo completo e converte a vistoria do lead em vistoria
+do veiculo; (E) ADESAO — `VENDEDOR_NA_HORA` nao gera NADA no financeiro (so a comissao ja `pago`);
+boleto/PIX/cartao geram titulo a receber + comissao `pendente`, e `repassar_comissao_vendedor()`
+cria o contas a pagar do repasse; (F) bucket privado `vendas` para fotos da vistoria e CRLV.)
 
 ## Módulos (status: todos funcionais)
 Assistência 24h (`/assistencia`: painel de acionamento com trava + limites em tempo real, cotação,
@@ -624,6 +640,44 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
   em destaque as faixas em vigor que sumiriam. Os demais tipos nunca sao tocados.
 - **.xlsx** e lido com `exceljs` em **import dinamico** (nao pesa no bundle da pagina); `.csv` e
   parseado sem dependencia (detecta `;` ou `,`, respeita aspas e BOM).
+
+## Rota de venda (0034) — do lead à entrada na base
+- **A rota tem 4 etapas e o veículo só entra na base no fim:** cotação → **Fechamento da venda**
+  (`<FechamentoVenda>` em `/vendas/[id]`) → Auditoria → base.
+- **Fechamento da venda** (`src/components/vendas/fechamento-venda.tsx`) tem 4 secoes:
+  **Associado** (o botao *Conferir* busca o CPF/CNPJ em `clientes` e reaproveita a ficha em vez de
+  duplicar; endereco por CEP/ViaCEP), **Veiculo** (chassi, Renavam, cor e anos passam a ser
+  obrigatorios), **Documentos e vistoria** (CRLV + minimo de 4 fotos) e **Adesao e vendedor**.
+- **Checklist ao vivo** (`<ChecklistEntrada>`) na lateral: le a MESMA `checklist_lead()` que a
+  autorizacao usa no banco, entao nao existe "passou na tela e o banco recusou". O botao
+  *Autorizar entrada na base* fica **desabilitado** enquanto houver pendencia, e a trava real
+  esta no `autorizar_entrada_lead`.
+- **CRLV por QR Code** (`<LeitorCrlv>` + `src/lib/crlv.ts`, com testes): camera (`getUserMedia`) ou
+  imagem, decodificado com **jsqr** em import dinamico. **Limite real, documentado na propria tela:**
+  o QR do CRLV-e aponta para a validacao no gov.br e NAO carrega a ficha do veiculo — extrair marca/
+  modelo/ano exigiria API paga (SERPRO/Senatran). O que fazemos: guardar o conteudo como prova,
+  pescar placa/Renavam/chassi quando vierem, e completar a ficha pela consulta da placa (FIPE) que
+  ja existe.
+- **Fotos da vistoria** nascem no LEAD (bucket privado `vendas`); ao autorizar, a vistoria passa a
+  apontar para o veiculo criado e vira `APROVADA`.
+
+## Comissão em dois níveis (0034) — franquia → vendedor
+- **A regional é a franquia.** Ela recebe um percentual da associacao (`Configuracoes → Regionais`:
+  *Comissao da franquia* — adesao e recorrencia) e distribui parte dele aos seus vendedores.
+- **Regra dura: o vendedor NUNCA passa a regional.** Ex.: regional com 15% de recorrencia pode ceder
+  de 0% a 15%; 16% e recusado. Vale nos dois sentidos — tambem nao da para BAIXAR a comissao da
+  regional deixando um vendedor acima do novo teto (a mensagem nomeia quem ficaria).
+  Trava no banco por trigger; a tela de Vendedores mostra o teto herdado antes de salvar.
+- Espelho puro em `src/lib/vendas.ts` (`validarComissaoVendedor`, `margemRegional`) com testes.
+  **Atencao:** comissao e `numeric(6,4)` — arredondar em 2 casas transformaria 15,5% em 16%.
+
+## Adesão (1ª mensalidade do vendedor) — quando entra no DRE
+- **Recebida pelo vendedor na hora** (`VENDEDOR_NA_HORA`): o dinheiro nunca passou pela associacao,
+  entao **nada** entra no financeiro. Fica so o registro em `comissoes_vendas` como `pago`.
+- **Recebida pelo nosso sistema** (boleto/PIX/cartao): vira **titulo a receber** (categoria 1.1.01) e
+  a comissao do vendedor nasce **pendente**; `repassar_comissao_vendedor()` gera o **contas a pagar**
+  do repasse (categoria 3.2.01) e marca a comissao como paga.
+- Espelho puro em `ratearAdesao`/`adesaoEntraNoCaixa` (`src/lib/vendas.ts`), com testes.
 
 ## Cota de participação (rateio no evento) — arquitetura
 - **Desacoplada do Plano.** O Plano define a mensalidade (produtos); a cota (% da FIPE no rateio)

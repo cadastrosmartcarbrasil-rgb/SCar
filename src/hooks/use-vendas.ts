@@ -3,8 +3,21 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import type {
-  LeadsRow, CotacoesRow, LeadHistoricoRow, CotacaoItem, StatusLead, StatusKanban,
-  CotacaoPlano, LeadKanban, SimulacaoDesconto, ProdutoObrigatorio,
+  ClientesRow,
+  CotacaoItem,
+  CotacaoPlano,
+  CotacoesRow,
+  ItemChecklistLead,
+  LeadHistoricoRow,
+  LeadKanban,
+  LeadsRow,
+  ProdutoObrigatorio,
+  SimulacaoDesconto,
+  StatusKanban,
+  StatusLead,
+  VendedoresRow,
+  VistoriaAnexosRow,
+  VistoriasRow,
 } from '@/lib/database.types';
 
 // Papel do usuario logado (para gate da Auditoria).
@@ -317,5 +330,189 @@ export function useAprovarDesconto() {
       return json;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['vendas'] }),
+  });
+}
+
+// ============================================================================
+// 0034 — rota de venda completa (ficha, vistoria, CRLV e checklist)
+// ============================================================================
+const BUCKET_VENDAS = 'vendas';
+
+/** O que ainda falta para o lead poder entrar na base (mesma fonte do banco). */
+export function useChecklistLead(leadId?: string) {
+  const supabase = createClient();
+  return useQuery<ItemChecklistLead[]>({
+    queryKey: ['vendas', 'checklist', leadId ?? '-'],
+    enabled: !!leadId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('checklist_lead', { p_lead_id: leadId! });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+/** Grava a ficha do lead (associado + veiculo + adesao) em um unico patch. */
+export function useSalvarFichaLead() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<void, Error, { id: string } & Partial<LeadsRow>>({
+    mutationFn: async ({ id, ...patch }) => {
+      const { error } = await supabase.from('leads').update(patch).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: ['vendas'] });
+      qc.invalidateQueries({ queryKey: ['vendas', 'checklist', v.id] });
+    },
+  });
+}
+
+/** Associado ja cadastrado? Busca pelo CPF/CNPJ para reaproveitar a ficha. */
+export function useBuscarAssociadoPorDocumento() {
+  const supabase = createClient();
+  return useMutation<ClientesRow | null, Error, string>({
+    mutationFn: async (documento) => {
+      const doc = (documento ?? '').replace(/\D/g, '');
+      if (doc.length < 11) return null;
+      const { data, error } = await supabase
+        .from('clientes').select('*').eq('cpf_cnpj', doc).maybeSingle();
+      if (error) throw error;
+      return data ?? null;
+    },
+  });
+}
+
+/** Vistoria do lead (nasce antes do veiculo existir) + suas fotos. */
+export function useVistoriaLead(leadId?: string) {
+  const supabase = createClient();
+  return useQuery<{ vistoria: VistoriasRow | null; anexos: VistoriaAnexosRow[] }>({
+    queryKey: ['vendas', 'vistoria', leadId ?? '-'],
+    enabled: !!leadId,
+    queryFn: async () => {
+      const { data: vist, error } = await supabase
+        .from('vistorias').select('*').eq('lead_id', leadId!)
+        .order('created_at', { ascending: false }).limit(1).maybeSingle();
+      if (error) throw error;
+      if (!vist) return { vistoria: null, anexos: [] };
+
+      const { data: anexos, error: e2 } = await supabase
+        .from('vistoria_anexos').select('*').eq('vistoria_id', vist.id)
+        .order('created_at');
+      if (e2) throw e2;
+      return { vistoria: vist, anexos: anexos ?? [] };
+    },
+  });
+}
+
+/** Sobe uma foto da vistoria, criando a vistoria do lead na primeira. */
+export function useAddFotoVistoria(leadId: string) {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<void, Error, { file: File; tipo?: string }>({
+    mutationFn: async ({ file, tipo }) => {
+      let vistoriaId: string;
+      const { data: existente } = await supabase
+        .from('vistorias').select('id').eq('lead_id', leadId).limit(1).maybeSingle();
+
+      if (existente) {
+        vistoriaId = existente.id;
+      } else {
+        const { data: nova, error } = await supabase
+          .from('vistorias')
+          .insert({ lead_id: leadId, tipo: 'inicial', status: 'PENDENTE', data_vistoria: new Date().toISOString().slice(0, 10) })
+          .select('id').single();
+        if (error) throw error;
+        vistoriaId = nova.id;
+      }
+
+      const ext = file.name.includes('.') ? `.${file.name.split('.').pop()}` : '';
+      const path = `vistorias/${leadId}/${Date.now()}-${Math.round(Math.random() * 1e6)}${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from(BUCKET_VENDAS).upload(path, file, { cacheControl: '3600', upsert: false });
+      if (upErr) throw upErr;
+
+      const { error: insErr } = await supabase.from('vistoria_anexos')
+        .insert({ vistoria_id: vistoriaId, url: path, tipo: tipo ?? null, descricao: file.name });
+      if (insErr) {
+        await supabase.storage.from(BUCKET_VENDAS).remove([path]);
+        throw insErr;
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['vendas', 'vistoria', leadId] });
+      qc.invalidateQueries({ queryKey: ['vendas', 'checklist', leadId] });
+    },
+  });
+}
+
+export function useRemoverFotoVistoria(leadId: string) {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<void, Error, VistoriaAnexosRow>({
+    mutationFn: async (anexo) => {
+      const { error } = await supabase.from('vistoria_anexos').delete().eq('id', anexo.id);
+      if (error) throw error;
+      await supabase.storage.from(BUCKET_VENDAS).remove([anexo.url]);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['vendas', 'vistoria', leadId] });
+      qc.invalidateQueries({ queryKey: ['vendas', 'checklist', leadId] });
+    },
+  });
+}
+
+/** Sobe o PDF/imagem do CRLV e grava o caminho no lead. */
+export function useUploadCrlv(leadId: string) {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<void, Error, File>({
+    mutationFn: async (file) => {
+      const ext = file.name.includes('.') ? `.${file.name.split('.').pop()}` : '';
+      const path = `crlv/${leadId}/${Date.now()}${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from(BUCKET_VENDAS).upload(path, file, { cacheControl: '3600', upsert: true });
+      if (upErr) throw upErr;
+      const { error } = await supabase.from('leads').update({ crlv_url: path }).eq('id', leadId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['vendas'] });
+      qc.invalidateQueries({ queryKey: ['vendas', 'checklist', leadId] });
+    },
+  });
+}
+
+/** URL assinada para ver foto/CRLV (o bucket e privado). */
+export function useUrlAssinadaVendas() {
+  const supabase = createClient();
+  return useMutation<string, Error, string>({
+    mutationFn: async (path) => {
+      const { data, error } = await supabase.storage
+        .from(BUCKET_VENDAS).createSignedUrl(path, 60 * 10);
+      if (error) throw error;
+      return data.signedUrl;
+    },
+  });
+}
+
+/** Vendedores da regional, com o teto de comissao herdado dela. */
+export function useVendedoresDaRegional(regionalId?: string | null) {
+  const supabase = createClient();
+  return useQuery({
+    queryKey: ['vendas', 'vendedores', regionalId ?? 'todos'],
+    queryFn: async () => {
+      let q = supabase
+        .from('vendedores')
+        .select('*, usuarios(nome), regionais(nome, taxa_comissao_adesao, taxa_comissao_recorrente)')
+        .eq('ativo', true);
+      if (regionalId) q = q.eq('regional_id', regionalId);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []) as unknown as (VendedoresRow & {
+        usuarios?: { nome: string } | null;
+        regionais?: { nome: string; taxa_comissao_adesao: number; taxa_comissao_recorrente: number } | null;
+      })[];
+    },
   });
 }
