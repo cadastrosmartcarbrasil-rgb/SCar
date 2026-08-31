@@ -1,19 +1,52 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Copy, Plus, TrendingUp, Users } from 'lucide-react';
+import { Copy, Pencil, Plus, TrendingUp, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { FiltroPeriodo, Vazio, periodoPreset, type Periodo } from '@/components/financeiro/ui-financeiro';
-import { useDesempenhoEquipe } from '@/hooks/use-regional';
+import { ModalVendedor } from '@/components/vendedores/modal-vendedor';
+import { useDesempenhoEquipe, useMinhaRegional } from '@/hooks/use-regional';
+import { useVendedoresLista } from '@/hooks/use-vendedores';
 import { formatCurrency } from '@/lib/utils';
+import type { VendedoresRow } from '@/lib/database.types';
 
 const pct = (v: number) => `${(Number(v) * 100).toFixed(2).replace('.00', '').replace('.', ',')}%`;
 
 export default function EquipeRegionalPage() {
   const [periodo, setPeriodo] = useState<Periodo>(() => periodoPreset('mes'));
   const { data: equipe, isLoading } = useDesempenhoEquipe({ regionalId: null, ...periodo });
+
+  // A franquia cadastra a propria equipe aqui dentro — sem voltar ao sistema
+  // de gestao. `listar_vendedores` ja limita a unidade de quem chama, e a RLS
+  // de `vendedores` so deixa o gestor escrever na propria regional.
+  const { data: minha } = useMinhaRegional();
+  const regionalId = minha?.perfil?.regional_id ?? null;
+  const { data: cadastros } = useVendedoresLista({ regionalId });
+  const [editando, setEditando] = useState<Partial<VendedoresRow> | null>(null);
+
+  const porId = useMemo(
+    () => new Map((cadastros ?? []).map((v) => [v.id, v])),
+    [cadastros],
+  );
+
+  function novo() {
+    setEditando({ regional_id: regionalId, ativo: true });
+  }
+
+  function editar(vendedorId: string) {
+    const v = porId.get(vendedorId);
+    if (!v) return toast.error('Nao consegui carregar o cadastro deste vendedor');
+    setEditando({
+      id: v.id, nome: v.nome, email: v.email, telefone: v.telefone, documento: v.documento,
+      codigo: v.codigo, regional_id: v.regional_id, usuario_id: v.usuario_id,
+      taxa_comissao_adesao: v.taxa_comissao_adesao, taxa_comissao_recorrente: v.taxa_comissao_recorrente,
+      dia_pagto_entrada: v.dia_pagto_entrada, dia_pagto_recorrencia: v.dia_pagto_recorrencia,
+      banco: v.banco, agencia: v.agencia, conta: v.conta, chave_pix: v.chave_pix,
+      observacoes: v.observacoes, ativo: v.ativo,
+    });
+  }
 
   function copiar(codigo: string, nome: string) {
     const url = `${window.location.origin}/v/${codigo}`;
@@ -32,7 +65,7 @@ export default function EquipeRegionalPage() {
             Desempenho por vendedor no periodo, com o hotlink de cada um.
           </p>
         </div>
-        <Button onClick={() => { window.location.href = '/configuracoes/vendedores'; }}>
+        <Button onClick={novo}>
           <Plus className="h-4 w-4" /> Cadastrar vendedor
         </Button>
       </header>
@@ -48,9 +81,7 @@ export default function EquipeRegionalPage() {
               icon={Users}
               titulo="Nenhum vendedor na unidade"
               descricao="Cadastre a sua equipe para acompanhar o desempenho e distribuir os hotlinks de venda."
-              acao={<Button onClick={() => { window.location.href = '/configuracoes/vendedores'; }}>
-                <Plus className="h-4 w-4" /> Cadastrar vendedor
-              </Button>}
+              acao={<Button onClick={novo}><Plus className="h-4 w-4" /> Cadastrar vendedor</Button>}
             />
           ) : (
             <table className="w-full min-w-[840px] text-sm">
@@ -62,7 +93,7 @@ export default function EquipeRegionalPage() {
                   <th className="py-2.5 text-right font-semibold">Conversao</th>
                   <th className="py-2.5 text-right font-semibold">Comissao</th>
                   <th className="py-2.5 text-right font-semibold">A pagar</th>
-                  <th className="py-2.5 text-right font-semibold">Hotlink</th>
+                  <th className="py-2.5 text-right font-semibold">Acoes</th>
                 </tr>
               </thead>
               <tbody>
@@ -96,13 +127,22 @@ export default function EquipeRegionalPage() {
                       {formatCurrency(v.comissao_pendente)}
                     </td>
                     <td className="py-2.5 text-right">
-                      <button
-                        onClick={() => copiar(v.codigo, v.nome)}
-                        title={`Copiar hotlink de ${v.nome}`}
-                        className="inline-grid h-7 w-7 place-items-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-100"
-                      >
-                        <Copy className="h-3.5 w-3.5" />
-                      </button>
+                      <div className="inline-flex gap-1">
+                        <button
+                          onClick={() => editar(v.vendedor_id)}
+                          title={`Editar ${v.nome}`}
+                          className="inline-grid h-7 w-7 place-items-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-100"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => copiar(v.codigo, v.nome)}
+                          title={`Copiar hotlink de ${v.nome}`}
+                          className="inline-grid h-7 w-7 place-items-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-100"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -127,6 +167,14 @@ export default function EquipeRegionalPage() {
           )}
         </CardContent>
       </Card>
+
+      {editando && (
+        <ModalVendedor
+          inicial={editando}
+          regionalFixa={regionalId}
+          onClose={() => setEditando(null)}
+        />
+      )}
     </div>
   );
 }

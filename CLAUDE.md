@@ -409,6 +409,12 @@ ultimo e o que faz o lead do HOTLINK, criado pelo service_role, aparecer para o 
 status NAO sao parametros, entao nao ha como o vendedor aumentar a propria comissao; a RLS de
 `vendedores` ja barra o caminho direto). Ha teste cobrindo os dois bloqueios.)
 
+· `0039_vendedor_sem_teto` (o portal do vendedor deixa de expor o TETO de comissao da franquia:
+`vendedor_perfil()` e derrubada e recriada sem `teto_adesao`/`teto_recorrente` — teto e a negociacao
+matriz-franquia, o vendedor precisa saber o percentual DELE. `listar_vendedores` (0035) fica como
+esta: ela ja limita por `tem_acesso_global() or pode_regional(v.regional_id)`, e e justamente isso
+que permite o gestor cadastrar a equipe de dentro do portal.)
+
 ## Módulos (status: todos funcionais)
 Assistência 24h (`/assistencia`: painel de acionamento com trava + limites em tempo real, cotação,
 OS, voucher ao prestador e Contas a Pagar) · SAC / Atendimento (`/sac`: **veículo-first + lazy** — busca por Nome/CPF/Placa → `visao-360` traz
@@ -764,8 +770,9 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
 - **Quem entra:** papel `gestor_regional` COM regional no cadastro (admin/financeiro entram para dar
   suporte, mas o banco continua limitando o que veem). Layout proprio em `src/app/regional/layout.tsx`,
   sidebar cockpit com o hotlink da unidade no topo. Atalho "Portal da Franquia" no menu principal.
-- **5 telas:** Painel (indicadores + ranking da equipe) · Minha Equipe (desempenho por vendedor com
-  o hotlink de cada um) · Leads (tudo da unidade, com filtro "somente hotlink" e a origem marcada) ·
+- **5 telas:** Painel (indicadores + ranking da equipe) · Minha Equipe (desempenho por vendedor,
+  hotlink de cada um e o **cadastro da equipe ali dentro** — o mesmo `<ModalVendedor>` da matriz,
+  com `regionalFixa`: a unidade ja vem travada e o gestor nunca sai do portal) · Leads (tudo da unidade, com filtro "somente hotlink" e a origem marcada) ·
   Comissoes (extrato + export CSV) · Financeiro (contas a pagar/receber da unidade).
 - **O isolamento nao e visual, e do banco.** As RPCs usam `escopo_regional()`: um gestor que passe o
   id de outra franquia recebe os proprios numeros. No financeiro, a RLS `pode_regional(regional_id)`
@@ -798,7 +805,10 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
   `validarLancamentoRegional`) com testes; UI em `src/components/regional/financeiro-regional.tsx`.
 - **Login e saida:** `/regional` exige sessao (o layout redireciona para `/login`); o gestor
   regional cai direto no portal ao entrar, e o **Sair** fica no cartao da unidade na sidebar e
-  tambem na barra do mobile.
+  tambem na barra do mobile. O atalho **"Sistema da matriz" so aparece para o admin** — o gestor
+  da franquia nao tem o que fazer no painel da matriz.
+- **Formulario de vendedor unico:** `src/components/vendedores/modal-vendedor.tsx` serve a matriz
+  (Configuracoes -> Vendedores) e o portal. Nao ha duas telas de cadastro para manter em sincronia.
 
 ## Portal do Vendedor (0038) — `/vendedor`
 - **Quem entra:** quem tem cadastro ATIVO em `vendedores` ligado ao proprio login (o acesso e
@@ -820,6 +830,8 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
 - **Vocabulario proprio:** `APROVADO` e `EM_AUDITORIA` viram "Em analise" para o vendedor —
   sao etapas nossas, ele so precisa saber que esta com a empresa. Mapa em
   `src/lib/vendedor.ts` (`etapaDoVendedor`, `SELO_STATUS_LEAD`, `FILTROS_LEAD`), com testes.
+- **O vendedor nao ve o teto da franquia** (0039): no perfil aparecem so os percentuais dele. O
+  teto e a negociacao entre matriz e franquia — quem precisa dele e o gestor, na hora de cadastrar.
 - **Compartilhar o link** usa a Web Share API no celular (abre o menu nativo) e cai no WhatsApp
   Web no desktop.
 - **PWA:** `src/app/manifest.ts` + `viewport.themeColor` no layout raiz. O portal instala na tela

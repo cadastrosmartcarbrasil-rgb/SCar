@@ -138,14 +138,8 @@ export default function PerfilVendedorPage() {
           </p>
         </CardHeader>
         <CardContent className="grid gap-3 text-[13px] sm:grid-cols-2">
-          <Campo
-            rotulo="Comissao de adesao"
-            valor={`${percent(p?.taxa_adesao)}${p?.teto_adesao != null ? ` (teto da franquia: ${percent(p.teto_adesao)})` : ''}`}
-          />
-          <Campo
-            rotulo="Comissao recorrente"
-            valor={`${percent(p?.taxa_recorrente)}${p?.teto_recorrente != null ? ` (teto da franquia: ${percent(p.teto_recorrente)})` : ''}`}
-          />
+          <Campo rotulo="Comissao de adesao" valor={percent(p?.taxa_adesao)} />
+          <Campo rotulo="Comissao recorrente" valor={percent(p?.taxa_recorrente)} />
           <Campo
             rotulo="Pagamento da adesao"
             valor={p?.dia_entrada ? `toda ${rotuloDiaSemana(p.dia_entrada)}${p.entrada_herdada ? ' (padrao da franquia)' : ''}` : 'a combinar'}

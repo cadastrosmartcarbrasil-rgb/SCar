@@ -131,7 +131,7 @@ begin
   -- ========================================================== perfil
   select * into rec from vendedor_perfil();
   assert rec.id = v2, 'perfil do proprio vendedor';
-  assert rec.teto_recorrente = 0.15, 'teto herdado da franquia, veio ' || rec.teto_recorrente;
+  -- o teto da franquia saiu do perfil no 0039 (ver a suite daquela migration)
   assert rec.taxa_recorrente = 0.03, 'a propria comissao, veio ' || rec.taxa_recorrente;
   assert rec.dia_recorrencia = 28, 'dia proprio vence o padrao, veio ' || rec.dia_recorrencia;
   assert rec.recorrencia_herdada = false, 'dia proprio nao e herdado';

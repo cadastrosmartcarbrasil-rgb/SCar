@@ -17,8 +17,10 @@ const ITENS = [
   { href: '/regional/financeiro', label: 'Financeiro', icon: Wallet },
 ];
 
-export function SidebarRegional({ nome, unidade, codigo }: {
+export function SidebarRegional({ nome, unidade, codigo, papel }: {
   nome: string; unidade: string; codigo: string | null;
+  /** O atalho para o sistema de gestao so faz sentido para o admin. */
+  papel?: string;
 }) {
   const pathname = usePathname();
   const [aberto, setAberto] = useState(false);
@@ -102,13 +104,15 @@ export function SidebarRegional({ nome, unidade, codigo }: {
               </Link>
             );
           })}
-          <Link
-            href="/dashboard"
-            onClick={() => setAberto(false)}
-            className="mt-2 flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-white/50 transition hover:bg-white/5 hover:text-white"
-          >
-            <Building2 className="h-4 w-4" /> Sistema da matriz
-          </Link>
+          {papel === 'admin' && (
+            <Link
+              href="/dashboard"
+              onClick={() => setAberto(false)}
+              className="mt-2 flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-white/50 transition hover:bg-white/5 hover:text-white"
+            >
+              <Building2 className="h-4 w-4" /> Sistema da matriz
+            </Link>
+          )}
         </nav>
       </aside>
     </>

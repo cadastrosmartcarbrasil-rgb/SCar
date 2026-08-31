@@ -1528,8 +1528,6 @@ export type PerfilVendedor = {
   chave_pix: string | null;
   taxa_adesao: number;
   taxa_recorrente: number;
-  teto_adesao: number | null;
-  teto_recorrente: number | null;
   dia_entrada: number | null;
   dia_recorrencia: number | null;
   entrada_herdada: boolean;

@@ -43,6 +43,7 @@ export default async function RegionalLayout({ children }: { children: React.Rea
         nome={perfil.nome}
         unidade={regional?.nome ?? 'Matriz'}
         codigo={regional?.codigo ?? null}
+        papel={perfil.papel}
       />
       <div className="min-w-0 flex-1 bg-[#eef2f8]">
         <div className="mx-auto max-w-6xl p-4 md:p-8">{children}</div>
