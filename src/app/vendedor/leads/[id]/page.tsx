@@ -92,6 +92,16 @@ export default function LeadVendedorPage({ params }: { params: Promise<{ id: str
         </CardContent>
       </Card>
 
+      {lead.aceite_em && (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+          <p className="text-[13px] font-bold text-emerald-800">Cliente aceitou a proposta</p>
+          <p className="mt-1 text-[12px] leading-relaxed text-emerald-900/80">
+            {lead.aceite_nome} aceitou em {formatDate(lead.aceite_em)}. Agora e completar a ficha
+            e a vistoria — depois disso a franquia manda para a analise.
+          </p>
+        </div>
+      )}
+
       {/* A proposta com link proprio: o vendedor manda no WhatsApp e o cliente
           abre na hora, sem depender de e-mail. */}
       {(cotacoes ?? []).length > 0 && (

@@ -68,13 +68,9 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
         '/api/v1/hotlink', { ...contato, codigo },
       );
       setToken(r.token);
-      // Quem ja e associado (ou ja esta em atendimento) recebe o retorno certo
-      // em vez de uma promessa de cotacao nova.
-      if (r.tipo === 'CARTEIRA' || r.tipo === 'DUPLICADO') {
-        setAvisoCaptura(r.mensagem);
-        setEtapa('fim');
-        return;
-      }
+      // Ser da base ou ja estar em atendimento NAO interrompe a cotacao: e
+      // informacao para a equipe, e a intencao de compra existe agora.
+      setAvisoCaptura(r.tipo === 'NOVO' ? null : r.mensagem);
       setAceite((a) => ({ ...a, nome: contato.nome }));
       setEtapa('veiculo');
     } catch (err) {
@@ -131,35 +127,26 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
   }
 
   // ------------------------------------------------------------------ fim
-  if (etapa === 'fim') {
+  if (etapa === 'fim' && contratado) {
     return (
       <Cartao>
         <div className="px-6 py-10 text-center">
           <CheckCircle2 className="mx-auto h-14 w-14 text-emerald-500" />
-          {contratado ? (
-            <>
-              <h2 className="mt-3 text-xl font-semibold text-brand-800">Proposta aceita!</h2>
-              <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
-                Sua adesao entrou na nossa fila de aprovacao. O proximo passo e a
-                <b> vistoria do veiculo</b> — {vendedor ?? 'seu consultor'} vai combinar com voce.
-              </p>
-              <div className="mx-auto mt-5 max-w-xs rounded-xl bg-brand-50 px-4 py-3 text-left">
-                <Linha rotulo="Mensalidade" valor={dinheiro(contratado.mensalidade)} destaque />
-                {contratado.adesao > 0 && (
-                  <Linha rotulo="Adesao (unica)" valor={dinheiro(contratado.adesao)} />
-                )}
-              </div>
+          <h2 className="mt-3 text-xl font-semibold text-brand-800">Proposta aceita!</h2>
+          <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
+            Recebemos o seu aceite. {vendedor ?? 'Seu consultor'} vai confirmar os ultimos
+            detalhes e combinar a <b>vistoria do veiculo</b>.
+          </p>
+          <div className="mx-auto mt-5 max-w-xs rounded-xl bg-brand-50 px-4 py-3 text-left">
+            <Linha rotulo="Mensalidade" valor={dinheiro(contratado.mensalidade)} destaque />
+            {contratado.adesao > 0 && (
+              <Linha rotulo="Adesao (unica)" valor={dinheiro(contratado.adesao)} />
+            )}
+          </div>
 
-              {/* A proposta fica disponivel na hora, num link proprio: o cliente
-                  abre, guarda e reabre quando quiser. */}
-              <LinkDaProposta token={contratado.proposta} />
-            </>
-          ) : (
-            <>
-              <h2 className="mt-3 text-xl font-semibold text-brand-800">Recebemos seus dados</h2>
-              <p className="mt-1 text-[13px] leading-relaxed text-slate-500">{avisoCaptura}</p>
-            </>
-          )}
+          {/* A proposta fica disponivel na hora, num link proprio: o cliente
+              abre, guarda e reabre quando quiser. */}
+          <LinkDaProposta token={contratado.proposta} />
         </div>
       </Cartao>
     );
@@ -169,6 +156,12 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
     <Cartao>
       <Passos atual={etapa} />
 
+      {avisoCaptura && (
+        <p className="mx-6 mt-4 flex items-start gap-1.5 rounded-lg bg-cyan-50 px-3 py-2 text-[12px] leading-relaxed text-cyan-900">
+          <BadgeCheck className="mt-px h-3.5 w-3.5 shrink-0" />
+          {avisoCaptura}
+        </p>
+      )}
       {erro && (
         <p className="mx-6 mt-4 rounded-lg bg-rose-50 px-3 py-2 text-[12.5px] text-rose-700">{erro}</p>
       )}

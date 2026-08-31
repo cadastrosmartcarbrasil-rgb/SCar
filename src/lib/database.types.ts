@@ -555,6 +555,15 @@ export type LeadsRow = Timestamps & {
   recapturas: number;
   carteira: boolean;
   cliente_carteira_id: string | null;
+  // 0042/0043 — sessao publica do hotlink e aceite do cliente
+  token_publico: string;
+  aceite_em: string | null;
+  aceite_por: string | null;
+  aceite_nome: string | null;
+  aceite_documento: string | null;
+  aceite_ip: string | null;
+  aceite_user_agent: string | null;
+  aceite_cotacao_id: string | null;
 };
 
 export type CotacoesRow = {
@@ -2330,7 +2339,8 @@ export type Database = {
         Args: { p_token: string };
         Returns: {
           lead_id: string; nome: string; celular: string; email: string | null;
-          placa: string | null; regional_id: string | null; status: string;
+          cpf_cnpj: string | null; placa: string | null; regional_id: string | null;
+          tipo_veiculo_id: string | null; valor_fipe: number | null; status: string;
           carteira: boolean; aceito: boolean; em_negociacao: boolean;
         }[];
       };

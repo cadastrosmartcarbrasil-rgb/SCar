@@ -82,11 +82,11 @@ begin
   assert l.cpf_cnpj = '11144477735', 'o CPF do aceite completa a ficha';
   assert l.plano_id = plano, 'o plano da cotacao aceita vai para o lead';
 
-  -- o aceite empurra para a esteira de aprovacao (trigger de 0017)
-  assert l.status::text = 'EM_AUDITORIA',
-    'aceite -> APROVADO -> EM_AUDITORIA, veio ' || l.status::text;
-  assert l.aprovado_em is not null, 'carimba a aprovacao';
-  raise notice 'OK o aceite move o lead para a auditoria';
+  -- Desde o 0043 o aceite NAO pula para a auditoria: ele marca o lead e o
+  -- deixa em EM_NEGOCIACAO, para o vendedor ainda ajustar a cotacao.
+  assert l.status::text = 'EM_NEGOCIACAO',
+    'aceite mantem o lead trabalhavel, veio ' || l.status::text;
+  raise notice 'OK o aceite registra e mantem o lead na mao do vendedor';
 
   -- fica no historico de atribuicao
   select count(*) into n from lead_atribuicoes where lead_id = l_id and motivo = 'ACEITE_CLIENTE';
@@ -100,7 +100,6 @@ begin
 
   select aceito, em_negociacao into rec from lead_por_token_publico(tok);
   assert rec.aceito, 'a pagina publica ve que ja foi aceito';
-  assert not rec.em_negociacao, 'e que saiu da fase de venda';
   raise notice 'OK proposta aceita nao pode ser aceita de novo';
 
   -- ------------------------------------------------- aceite pelo vendedor
@@ -116,7 +115,7 @@ begin
 
     l3r := registrar_aceite_venda(l3, cot3, 'VENDEDOR', 'Maria Souza', '11144477735');
     assert l3r.aceite_por = 'VENDEDOR', 'aceite presencial pelo vendedor';
-    assert l3r.status::text = 'EM_AUDITORIA', 'segue a mesma esteira';
+    assert l3r.status::text = 'EM_NEGOCIACAO', 'segue a mesma regra do 0043';
   end;
   raise notice 'OK o vendedor pode colher o aceite presencialmente';
 

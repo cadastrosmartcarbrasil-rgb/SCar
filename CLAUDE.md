@@ -453,6 +453,18 @@ em negociacao), grava a prova do consentimento e poe `status = 'APROVADO'` — o
 `fn_lead_aprovacao` (0017) leva a EM_AUDITORIA, a Auditoria efetiva com `autorizar_entrada_lead` e o
 0025 gera a primeira cobranca. `lead_por_token_publico(token)` e o unico caminho das rotas publicas.)
 
+· `0043_cotacao_sem_interrupcao` (dois erros de desenho do 0041/0042: (A) **a captura parava a
+cotacao** em CARTEIRA (ja e associado) e DUPLICADO (ja havia lead aberto), mandando o visitante
+esperar um humano — joga fora a intencao de compra no momento em que ela existe. Agora os dois
+seguem cotando: o DUPLICADO continua **no lead que ja existe** (devolve o token dele, sem criar
+outro nem trocar o dono) e o da CARTEIRA nasce com a **ficha do associado copiada** (CPF/CNPJ,
+e-mail, endereco, tipo de pessoa, `cliente_existente_id`) — e o CPF que faz `autorizar_entrada_lead`
+reaproveitar o cadastro em vez de duplicar; (B) **o aceite ia direto para EM_AUDITORIA**, onde
+`lead_em_negociacao()` e falso e a cotacao CONGELA — o vendedor nao ajustava mais opcional nenhum.
+`registrar_aceite_venda` passa a deixar o lead em **EM_NEGOCIACAO**, marcado como aceito; quem
+manda para a Auditoria continua sendo a equipe, quando a ficha esta completa.
+`lead_por_token_publico` ganhou `cpf_cnpj`, `tipo_veiculo_id` e `valor_fipe`.)
+
 ## Módulos (status: todos funcionais)
 Assistência 24h (`/assistencia`: painel de acionamento com trava + limites em tempo real, cotação,
 OS, voucher ao prestador e Contas a Pagar) · SAC / Atendimento (`/sac`: **veículo-first + lazy** — busca por Nome/CPF/Placa → `visao-360` traz
@@ -951,14 +963,20 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
   trocar a marca é subir o arquivo, não fazer deploy.
 - **Três passos numa página** (`<CotacaoPublica>`): Contato → Veículo → Planos → Confirmação.
   O contato é gravado **no primeiro passo** (`registrar_captura_hotlink`): se a pessoa desistir
-  no meio, o lead já existe. Quem cai em CARTEIRA ou DUPLICADO para ali, com a mensagem certa.
+  no meio, o lead já existe.
+- **A cotação nunca é interrompida (0043).** Ser da base ou já estar em atendimento é informação
+  para a equipe, não motivo para travar a tela — vira um aviso discreto no topo e o fluxo segue.
+  O associado ganha a ficha já preenchida; a recaptura continua no atendimento existente.
 - **A cotação é server-side.** `/api/v1/hotlink/cotar` consulta a FIPE pela placa
   (`src/lib/fipe-server.ts` — o proxy `/api/fipe` exige sessão e não serve para o visitante) e
   devolve **um preço por plano ativo** via `cotar_plano`. Sem placa ou sem token da FIPE, o
   visitante informa o valor de mercado.
-- **O aceite é o gatilho da esteira.** `/api/v1/hotlink/contratar` grava o snapshot da cotação
-  escolhida e chama `registrar_aceite_venda`, que move o lead para EM_AUDITORIA. Daí em diante é o
-  fluxo que já existia: Auditoria → `autorizar_entrada_lead` → veículo ativo → primeira cobrança.
+- **O aceite fecha a venda, não a cotação (0043).** `/api/v1/hotlink/contratar` grava o snapshot
+  e chama `registrar_aceite_venda`, que marca o aceite e deixa o lead em **EM_NEGOCIACAO** — o
+  vendedor ainda ajusta opcionais, completa a ficha do associado, o CRLV e a vistoria. Só quando
+  isso fecha é que a equipe manda para a Auditoria, e daí segue o fluxo de sempre:
+  `autorizar_entrada_lead` → veículo ativo → primeira cobrança. O aceite aparece como faixa verde
+  em `/vendas/[id]` e na ficha do portal do vendedor.
 - **Quem aceita fica registrado:** `CLIENTE` (no próprio celular) ou `VENDEDOR` (aceite presencial),
   com nome, CPF/CNPJ, data/hora, **IP e user-agent** — é a prova do consentimento.
 - **O link da proposta sai na hora.** Fechada a negociação, a tela de sucesso mostra

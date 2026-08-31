@@ -103,6 +103,27 @@ export default function LeadDetailPage() {
         </ol>
       </div>
 
+      {/* Aceite do cliente: a venda ja foi fechada, mas o lead SEGUE
+          trabalhavel — opcionais, ficha do associado, CRLV e vistoria ainda
+          passam pelo vendedor antes da Auditoria. */}
+      {lead.aceite_em && (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+          <p className="flex items-center gap-1.5 text-[13px] font-bold text-emerald-800">
+            <CheckCircle2 className="h-4 w-4" /> Proposta aceita pelo cliente
+          </p>
+          <p className="mt-1 text-[12px] leading-relaxed text-emerald-900/80">
+            {lead.aceite_nome} ({lead.aceite_documento}) aceitou em{' '}
+            {formatDate(lead.aceite_em)}
+            {lead.aceite_por === 'VENDEDOR' ? ', com aceite colhido pelo vendedor' : ', pelo proprio celular'}.
+            {lead.aceite_ip && <span className="text-emerald-900/50"> IP {lead.aceite_ip}.</span>}
+          </p>
+          <p className="mt-1.5 text-[11.5px] text-emerald-900/70">
+            Ajuste os opcionais e complete a ficha abaixo. Quando estiver tudo certo, mande para a
+            Auditoria.
+          </p>
+        </div>
+      )}
+
       {/* Acoes de status */}
       {lead.status !== 'ATIVO' && lead.status !== 'PERDIDO' && (
         <div className="flex flex-wrap gap-2">
