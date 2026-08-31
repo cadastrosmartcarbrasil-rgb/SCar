@@ -98,6 +98,7 @@ export type RegionaisRow = Timestamps & {
   taxa_comissao_recorrente: number;
   dia_pagto_entrada_padrao: number | null;
   dia_pagto_recorrencia_padrao: number | null;
+  codigo: string | null;
 };
 
 export type UsuariosRow = Timestamps & {
@@ -542,6 +543,7 @@ export type LeadsRow = Timestamps & {
   adesao_valor: number | null;
   adesao_recebida_em: string | null;
   adesao_comprovante_url: string | null;
+  origem_hotlink: string | null;
 };
 
 export type CotacoesRow = {
@@ -1417,6 +1419,62 @@ export type VendedorLista = {
   comissao_pendente: number;
 };
 
+export type RegionalPainel = {
+  leads_periodo: number;
+  leads_hotlink: number;
+  leads_convertidos: number;
+  taxa_conversao: number;
+  veiculos_ativos: number;
+  vendedores_ativos: number;
+  comissao_franquia_adesao: number;
+  comissao_vendedores_paga: number;
+  comissao_vendedores_pend: number;
+  contas_receber_aberto: number;
+  contas_pagar_aberto: number;
+  resultado_periodo: number;
+};
+
+export type DesempenhoVendedor = {
+  vendedor_id: string;
+  nome: string;
+  codigo: string;
+  ativo: boolean;
+  leads: number;
+  leads_hotlink: number;
+  convertidos: number;
+  taxa_conversao: number;
+  veiculos_ativos: number;
+  comissao_total: number;
+  comissao_pendente: number;
+  taxa_adesao: number;
+  taxa_recorrente: number;
+};
+
+export type ComissaoRegional = {
+  id: string;
+  vendedor_id: string;
+  vendedor_nome: string;
+  veiculo_id: string | null;
+  placa: string | null;
+  is_adesao: boolean;
+  valor_comissao: number;
+  status_pagamento: string;
+  created_at: string;
+};
+
+export type LeadRegional = {
+  id: string;
+  nome: string;
+  celular: string;
+  email: string | null;
+  placa: string | null;
+  status: string;
+  origem_hotlink: string | null;
+  vendedor_nome: string | null;
+  veiculo_id: string | null;
+  created_at: string;
+};
+
 // ---- Database (formato esperado pelo supabase-js) --------------------------
 // Cada tabela precisa de Row/Insert/Update/Relationships; o schema precisa de
 // Views/Functions/Enums/CompositeTypes com o formato exato.
@@ -2061,6 +2119,26 @@ export type Database = {
       lead_pronto_para_base: {
         Args: { p_lead_id: string };
         Returns: boolean;
+      };
+      regional_painel: {
+        Args: { p_regional_id: string | null; p_inicio: string; p_fim: string };
+        Returns: RegionalPainel[];
+      };
+      regional_desempenho_vendedores: {
+        Args: { p_regional_id: string | null; p_inicio: string; p_fim: string };
+        Returns: DesempenhoVendedor[];
+      };
+      regional_comissoes: {
+        Args: { p_regional_id: string | null; p_status?: string | null; p_inicio?: string | null; p_fim?: string | null };
+        Returns: ComissaoRegional[];
+      };
+      regional_leads: {
+        Args: { p_regional_id: string | null; p_inicio?: string | null; p_fim?: string | null; p_somente_hotlink?: boolean };
+        Returns: LeadRegional[];
+      };
+      resolver_hotlink: {
+        Args: { p_codigo: string };
+        Returns: { tipo: string; vendedor_id: string | null; regional_id: string | null; nome: string; consultor_id: string | null }[];
       };
       listar_vendedores: {
         Args: { p_regional_id?: string | null; p_busca?: string | null };

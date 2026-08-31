@@ -22,13 +22,11 @@ export async function POST(req: Request) {
 
   const admin = createAdminClient();
 
-  const { data: vend } = await admin
-    .from('vendedores')
-    .select('id, nome, regional_id, usuario_id, ativo')
-    .eq('codigo', codigo)
-    .maybeSingle();
+  // O codigo pode ser de um vendedor OU da propria franquia.
+  const { data: destinos } = await admin.rpc('resolver_hotlink', { p_codigo: codigo });
+  const destino = destinos?.[0];
 
-  if (!vend || !vend.ativo) {
+  if (!destino) {
     return NextResponse.json({ error: 'Este link de vendas nao esta ativo.' }, { status: 404 });
   }
 
@@ -37,13 +35,14 @@ export async function POST(req: Request) {
     celular,
     email: email || null,
     placa: placa || null,
-    vendedor_id: vend.id,
-    consultor_id: vend.usuario_id,
-    regional_id: vend.regional_id,
+    vendedor_id: destino.vendedor_id,
+    consultor_id: destino.consultor_id,
+    regional_id: destino.regional_id,
+    origem_hotlink: codigo,
     status: 'NOVO',
-    observacoes: `Captado pelo hotlink do vendedor ${vend.nome} (${codigo}).`,
+    observacoes: `Captado pelo hotlink ${destino.tipo === 'REGIONAL' ? 'da unidade' : 'do vendedor'} ${destino.nome} (${codigo}).`,
   });
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
-  return NextResponse.json({ ok: true, vendedor: vend.nome });
+  return NextResponse.json({ ok: true, vendedor: destino.nome });
 }

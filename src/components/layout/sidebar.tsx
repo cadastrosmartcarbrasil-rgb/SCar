@@ -20,6 +20,7 @@ import {
   Ticket,
   Menu,
   X,
+  Building2,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
@@ -88,6 +89,11 @@ export function Sidebar({ papel, logoUrl }: { papel?: PapelUsuario; logoUrl?: st
     ? [...GESTAO, { href: '/configuracoes', label: 'Configuracoes', icon: Settings }]
     : GESTAO;
 
+  // O Portal da Franquia so aparece para quem gerencia uma unidade.
+  const menuGestao = ['gestor_regional', 'admin', 'financeiro'].includes(papel ?? '')
+    ? [{ href: '/regional', label: 'Portal da Franquia', icon: Building2 }, ...gestao]
+    : gestao;
+
   async function sair() {
     await supabase.auth.signOut();
     router.push('/login');
@@ -118,7 +124,7 @@ export function Sidebar({ papel, logoUrl }: { papel?: PapelUsuario; logoUrl?: st
       <p className="px-3 pb-1.5 pt-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Operacao</p>
       {OPERACAO.map((i) => <NavLink key={i.href} item={i} onNav={onNav} />)}
       <p className="px-3 pb-1.5 pt-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Gestao</p>
-      {gestao.map((i) => <NavLink key={i.href} item={i} onNav={onNav} />)}
+      {menuGestao.map((i) => <NavLink key={i.href} item={i} onNav={onNav} />)}
     </nav>
   );
 

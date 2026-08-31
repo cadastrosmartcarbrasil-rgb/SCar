@@ -41,7 +41,7 @@ const STATUS_FILTRO: { valor: StatusLancamento | ''; rotulo: string }[] = [
  * A tela abre com o painel do periodo (previsto x realizado x inadimplencia),
  * a carteira filtrada e o rodape somando o que esta em tela.
  */
-export function ContasFinanceiro() {
+export function ContasFinanceiro({ regionalFixa }: { regionalFixa?: string | null } = {}) {
   const [periodo, setPeriodo] = useState<Periodo>(() => periodoPreset('mes'));
   const [tipo, setTipo] = useState<TipoMovimentacao | ''>('');
   const [status, setStatus] = useState<StatusLancamento | ''>('');
@@ -353,6 +353,7 @@ export function ContasFinanceiro() {
         <LancamentoModal
           aberto
           inicial={editando}
+          regionalFixa={regionalFixa}
           onClose={() => setEditando(null)}
         />
       )}

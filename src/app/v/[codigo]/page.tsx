@@ -21,9 +21,9 @@ export default function HotlinkPage({ params }: { params: Promise<{ codigo: stri
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.rpc('vendedor_por_codigo', { p_codigo: codigo }).then(({ data }) => {
-      const v = data?.[0];
-      if (v) setVendedor(v.nome);
+    supabase.rpc('resolver_hotlink', { p_codigo: codigo }).then(({ data }) => {
+      const d = data?.[0];
+      if (d) setVendedor(d.nome);
       else setInvalido(true);
     });
   }, [codigo]);

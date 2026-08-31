@@ -365,6 +365,15 @@ nome sem acento, desambigua com sufixo), trigger `fn_vendedor_preencher` (herda 
 quando em branco e garante o codigo), `prazo_pagamento_vendedor()` (proprio x padrao da franquia),
 `listar_vendedores(regional, busca)` (franquia, teto herdado, portal, vendas e comissao pendente) e
 `vendedor_por_codigo()` (hotlink; concedida tambem ao `anon` e ignora vendedor inativo).)
+· `0036_portal_regional` (PORTAL DA FRANQUIA: (A) `regionais.codigo` UNICO — a unidade tambem tem
+hotlink; `gerar_codigo_regional` + trigger `fn_regional_codigo` (o codigo nao pode colidir com o de
+vendedor); `leads.origem_hotlink` guarda QUAL link trouxe o lead; `resolver_hotlink(codigo)` devolve
+vendedor OU regional; (B) RPCs do portal — `regional_painel` (leads, hotlink, convertidos, taxa de
+conversao, veiculos, equipe, comissao paga/pendente, a receber/a pagar da unidade e resultado),
+`regional_desempenho_vendedores`, `regional_comissoes` e `regional_leads`. **ISOLAMENTO:** todas sao
+SECURITY DEFINER usando `escopo_regional()` (0032) — passar o id de outra franquia NAO muda o que
+volta, e lancamento da matriz (`regional_id` nulo) nunca aparece para um gestor. Ha teste cobrindo
+exatamente isso.)
 
 ## Módulos (status: todos funcionais)
 Assistência 24h (`/assistencia`: painel de acionamento com trava + limites em tempo real, cotação,
@@ -715,6 +724,22 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
   (`contratos/<vendedor>/`) e envia por Resend com o PDF anexado (max ~5 MB). **Sem `RESEND_API_KEY`
   nao finge que enviou:** guarda o contrato, devolve o texto pronto e avisa que o envio e manual.
   So marca `boas_vindas_enviada_em` quando o e-mail realmente saiu.
+
+## Portal da Franquia (0036) — `/regional`
+- **Quem entra:** papel `gestor_regional` COM regional no cadastro (admin/financeiro entram para dar
+  suporte, mas o banco continua limitando o que veem). Layout proprio em `src/app/regional/layout.tsx`,
+  sidebar cockpit com o hotlink da unidade no topo. Atalho "Portal da Franquia" no menu principal.
+- **5 telas:** Painel (indicadores + ranking da equipe) · Minha Equipe (desempenho por vendedor com
+  o hotlink de cada um) · Leads (tudo da unidade, com filtro "somente hotlink" e a origem marcada) ·
+  Comissoes (extrato + export CSV) · Financeiro (contas a pagar/receber da unidade).
+- **O isolamento nao e visual, e do banco.** As RPCs usam `escopo_regional()`: um gestor que passe o
+  id de outra franquia recebe os proprios numeros. No financeiro, a RLS `pode_regional(regional_id)`
+  ja impede ver a matriz (`regional_id` nulo) — por isso "nao se mistura" vale mesmo se alguem
+  chamar a API direto.
+- **Lancamento no portal nasce na unidade:** `<ContasFinanceiro regionalFixa>` passa a regional ao
+  modal, que trava o campo. Sem isso o gestor lancaria com regional nula e a RLS recusaria.
+- **Hotlink da unidade:** `/v/<CODIGO_DA_REGIONAL>` funciona igual ao do vendedor, mas o lead entra
+  sem vendedor (fica para a unidade distribuir). `leads.origem_hotlink` permite medir cada link.
 
 ## Cota de participação (rateio no evento) — arquitetura
 - **Desacoplada do Plano.** O Plano define a mensalidade (produtos); a cota (% da FIPE no rateio)

@@ -48,16 +48,22 @@ export function LancamentoModal({
   aberto,
   onClose,
   inicial,
+  regionalFixa,
 }: {
   aberto: boolean;
   onClose: () => void;
   inicial?: Form | null;
+  /** No portal da franquia o titulo nasce na unidade e o campo fica travado. */
+  regionalFixa?: string | null;
 }) {
   const hoje = new Date().toISOString().slice(0, 10);
   const edicao = !!inicial?.id;
 
   const [form, setForm] = useState<Form>(
-    inicial ?? { tipo: 'DESPESA', data_emissao: hoje, data_vencimento: hoje, competencia: hoje },
+    inicial ?? {
+      tipo: 'DESPESA', data_emissao: hoje, data_vencimento: hoje, competencia: hoje,
+      regional_id: regionalFixa ?? null,
+    },
   );
   // Id do titulo ja gravado. So com ele os anexos sao liberados: nada sobe
   // para o storage antes do lancamento existir no banco.
@@ -185,7 +191,11 @@ export function LancamentoModal({
               </FormField>
             )}
             <FormField label="Regional (rateio e permissao de acesso)">
-              <Select value={form.regional_id ?? ''} onChange={(e) => set({ regional_id: e.target.value || null })}>
+              <Select
+                value={form.regional_id ?? ''}
+                disabled={!!regionalFixa}
+                onChange={(e) => set({ regional_id: e.target.value || null })}
+              >
                 <option value="">-- Matriz (visivel so p/ admin e financeiro) --</option>
                 {(regionais ?? []).map((r) => (
                   <option key={r.id} value={r.id}>{r.nome}</option>
