@@ -17581,3 +17581,1641 @@ grant execute on function quitar_lancamento(uuid, date, uuid) to authenticated;
 -- ============================================================================
 
 drop function if exists quitar_lancamento(uuid, date, uuid);
+
+-- >>>>>>>>>>>>>>>>>>>>>>>> migrations/0034_vendas_rota_completa.sql >>>>>>>>>>>>>>>>>>>>>>>>
+
+-- ============================================================================
+-- SCar :: 0034_vendas_rota_completa.sql
+--
+-- (A) COMISSAO EM DOIS NIVEIS (regional = franquia -> vendedor)
+--     A regional recebe um percentual da associacao (ex.: adesao 100%,
+--     recorrencia 15%) e distribui parte dele entre os seus vendedores.
+--     REGRA DURA: a comissao do vendedor NUNCA passa a da sua regional.
+--
+-- (B) ROTA DA VENDA COMPLETA
+--     O lead deixa de virar veiculo com apenas o CPF: passa a carregar a ficha
+--     cadastral do associado, a ficha completa do veiculo, a vistoria com
+--     fotos e o CRLV. `autorizar_entrada_lead` so efetiva com tudo presente.
+--
+-- (C) ADESAO (1a mensalidade, do vendedor)
+--     Recebida PELO VENDEDOR na hora  -> nada entra no financeiro; fica so o
+--       registro e a comissao ja quitada (o dinheiro nunca passou na conta).
+--     Recebida PELO NOSSO SISTEMA (boleto/PIX/cartao) -> vira titulo a receber
+--       e a comissao do vendedor nasce PENDENTE, para ser repassada depois.
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- (A) Comissao da regional (mesma unidade dos vendedores: fracao, 0.15 = 15%)
+-- ----------------------------------------------------------------------------
+alter table regionais
+  add column if not exists taxa_comissao_adesao     numeric(6,4) not null default 0,
+  add column if not exists taxa_comissao_recorrente numeric(6,4) not null default 0;
+
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'chk_regional_comissao') then
+    alter table regionais add constraint chk_regional_comissao check (
+      taxa_comissao_adesao between 0 and 1 and taxa_comissao_recorrente between 0 and 1
+    );
+  end if;
+end $$;
+
+comment on column regionais.taxa_comissao_adesao is
+  'Fracao da taxa de adesao que fica com a regional (1.0 = 100%). Teto do vendedor.';
+comment on column regionais.taxa_comissao_recorrente is
+  'Fracao da mensalidade recorrente que fica com a regional. Teto do vendedor.';
+
+-- Teto que a regional pode ceder ao vendedor.
+create or replace function limite_comissao_regional(p_regional_id uuid)
+returns table (adesao numeric, recorrente numeric)
+language sql stable security definer set search_path = public as $$
+  select coalesce(taxa_comissao_adesao, 0), coalesce(taxa_comissao_recorrente, 0)
+    from regionais where id = p_regional_id;
+$$;
+
+-- A comissao do vendedor nunca pode passar a da regional a que ele pertence.
+create or replace function fn_vendedor_valida_comissao()
+returns trigger language plpgsql as $$
+declare
+  v_lim record;
+begin
+  if new.regional_id is null then
+    if new.taxa_comissao_adesao > 0 or new.taxa_comissao_recorrente > 0 then
+      raise exception 'Vendedor sem regional nao pode ter comissao: defina a regional primeiro'
+        using errcode = 'check_violation';
+    end if;
+    return new;
+  end if;
+
+  select * into v_lim from limite_comissao_regional(new.regional_id);
+
+  if new.taxa_comissao_adesao > v_lim.adesao + 0.00005 then
+    raise exception 'Comissao de adesao do vendedor (%) nao pode passar a da regional (%)',
+      round(new.taxa_comissao_adesao * 100, 2)::text || '%',
+      round(v_lim.adesao * 100, 2)::text || '%'
+      using errcode = 'check_violation';
+  end if;
+  if new.taxa_comissao_recorrente > v_lim.recorrente + 0.00005 then
+    raise exception 'Comissao recorrente do vendedor (%) nao pode passar a da regional (%)',
+      round(new.taxa_comissao_recorrente * 100, 2)::text || '%',
+      round(v_lim.recorrente * 100, 2)::text || '%'
+      using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_vendedor_comissao on vendedores;
+create trigger trg_vendedor_comissao
+  before insert or update on vendedores
+  for each row execute function fn_vendedor_valida_comissao();
+
+-- Baixar a comissao da regional nao pode deixar vendedor acima do novo teto.
+create or replace function fn_regional_valida_comissao()
+returns trigger language plpgsql as $$
+declare
+  v_acima text;
+begin
+  select string_agg(u.nome, ', ') into v_acima
+    from vendedores v
+    join usuarios u on u.id = v.usuario_id
+   where v.regional_id = new.id
+     and (v.taxa_comissao_adesao > new.taxa_comissao_adesao + 0.00005
+       or v.taxa_comissao_recorrente > new.taxa_comissao_recorrente + 0.00005);
+
+  if v_acima is not null then
+    raise exception 'Nao da para reduzir a comissao da regional: % ficaria(m) acima do novo teto. Ajuste o(s) vendedor(es) primeiro.', v_acima
+      using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_regional_comissao on regionais;
+create trigger trg_regional_comissao
+  before update of taxa_comissao_adesao, taxa_comissao_recorrente on regionais
+  for each row execute function fn_regional_valida_comissao();
+
+-- ----------------------------------------------------------------------------
+-- (B) Ficha completa no lead (staging da venda, antes de virar base)
+-- ----------------------------------------------------------------------------
+do $$ begin
+  if not exists (select 1 from pg_type where typname = 'forma_recebimento_adesao') then
+    create type forma_recebimento_adesao as enum ('VENDEDOR_NA_HORA', 'BOLETO', 'PIX', 'CARTAO');
+  end if;
+end $$;
+
+alter table leads
+  -- associado
+  add column if not exists tipo_pessoa          tipo_pessoa,
+  add column if not exists rg_ie                text,
+  add column if not exists data_nascimento      date,
+  add column if not exists endereco             jsonb not null default '{}'::jsonb,
+  add column if not exists cliente_existente_id uuid references clientes(id) on delete set null,
+  -- veiculo
+  add column if not exists chassi               text,
+  add column if not exists renavam              text,
+  add column if not exists cor                  text,
+  add column if not exists ano_fabricacao       smallint,
+  add column if not exists crlv_qrcode          text,
+  add column if not exists crlv_url             text,
+  -- venda
+  add column if not exists vendedor_id          uuid references vendedores(id) on delete set null,
+  add column if not exists plano_id             uuid references planos_protecao(id) on delete set null,
+  add column if not exists adesao_forma         forma_recebimento_adesao,
+  add column if not exists adesao_valor         numeric(12,2),
+  add column if not exists adesao_recebida_em   date,
+  add column if not exists adesao_comprovante_url text;
+
+create index if not exists idx_leads_vendedor on leads (vendedor_id);
+create index if not exists idx_leads_cliente_existente on leads (cliente_existente_id);
+
+-- ----------------------------------------------------------------------------
+-- (C) Vistoria pode nascer no LEAD (antes do veiculo existir)
+-- ----------------------------------------------------------------------------
+alter table vistorias alter column veiculo_id drop not null;
+alter table vistorias add column if not exists lead_id uuid references leads(id) on delete cascade;
+
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'chk_vistoria_origem') then
+    alter table vistorias add constraint chk_vistoria_origem
+      check (veiculo_id is not null or lead_id is not null);
+  end if;
+end $$;
+create index if not exists idx_vistorias_lead on vistorias (lead_id);
+
+-- ----------------------------------------------------------------------------
+-- (D) Checklist de entrada na base
+--     Uma fonte unica: a tela mostra o que falta e a autorizacao usa o mesmo
+--     criterio, entao nao existe "passou na tela e o banco recusou".
+-- ----------------------------------------------------------------------------
+create or replace function checklist_lead(p_lead_id uuid)
+returns table (
+  item     text,
+  grupo    text,
+  ok       boolean,
+  detalhe  text
+)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  l        leads;
+  v_doc    text;
+  v_tipo   tipo_pessoa;
+  v_fotos  int;
+  v_vist   int;
+begin
+  select * into l from leads where id = p_lead_id;
+  if not found then
+    return query select 'Lead'::text, 'Geral'::text, false, 'Lead nao encontrado'::text;
+    return;
+  end if;
+
+  v_doc  := regexp_replace(coalesce(l.cpf_cnpj, ''), '[^0-9]', '', 'g');
+  v_tipo := coalesce(l.tipo_pessoa, (case when length(v_doc) > 11 then 'PJ' else 'PF' end)::tipo_pessoa);
+
+  select count(*) into v_vist from vistorias where lead_id = p_lead_id;
+  select count(*) into v_fotos
+    from vistoria_anexos a join vistorias vi on vi.id = a.vistoria_id
+   where vi.lead_id = p_lead_id;
+
+  -- Associado -------------------------------------------------------------
+  return query select 'CPF/CNPJ valido', 'Associado',
+    (v_doc <> '' and validar_documento(v_doc, v_tipo)),
+    coalesce(nullif(v_doc, ''), 'nao informado');
+
+  return query select 'Nome completo', 'Associado',
+    (coalesce(trim(l.nome), '') <> '' and position(' ' in trim(l.nome)) > 0),
+    coalesce(nullif(l.nome, ''), 'nao informado');
+
+  return query select 'Celular', 'Associado',
+    (length(regexp_replace(coalesce(l.celular, ''), '[^0-9]', '', 'g')) >= 10),
+    coalesce(nullif(l.celular, ''), 'nao informado');
+
+  return query select 'E-mail', 'Associado',
+    (coalesce(l.email, '') ~* '^[^@\s]+@[^@\s]+\.[a-z]{2,}$'),
+    coalesce(nullif(l.email, ''), 'nao informado');
+
+  return query select 'Endereco completo', 'Associado',
+    (coalesce(l.endereco->>'cep', '') <> '' and coalesce(l.endereco->>'logradouro', '') <> ''
+     and coalesce(l.endereco->>'numero', '') <> '' and coalesce(l.endereco->>'cidade', '') <> ''
+     and coalesce(l.endereco->>'uf', '') <> ''),
+    coalesce(nullif(concat_ws(', ', l.endereco->>'logradouro', l.endereco->>'numero',
+                              l.endereco->>'cidade', l.endereco->>'uf'), ''), 'nao informado');
+
+  return query select
+    (case when v_tipo = 'PJ' then 'Inscricao estadual / RG' else 'RG' end), 'Associado',
+    (coalesce(l.rg_ie, '') <> ''), coalesce(nullif(l.rg_ie, ''), 'nao informado');
+
+  return query select 'Data de nascimento / fundacao', 'Associado',
+    (l.data_nascimento is not null),
+    coalesce(to_char(l.data_nascimento, 'DD/MM/YYYY'), 'nao informada');
+
+  -- Veiculo ---------------------------------------------------------------
+  return query select 'Placa', 'Veiculo',
+    (coalesce(l.placa, '') <> ''), coalesce(nullif(l.placa, ''), 'nao informada');
+
+  return query select 'Chassi', 'Veiculo',
+    (length(regexp_replace(coalesce(l.chassi, ''), '[^0-9A-Za-z]', '', 'g')) = 17),
+    coalesce(nullif(l.chassi, ''), 'nao informado');
+
+  return query select 'Renavam', 'Veiculo',
+    (length(regexp_replace(coalesce(l.renavam, ''), '[^0-9]', '', 'g')) between 9 and 11),
+    coalesce(nullif(l.renavam, ''), 'nao informado');
+
+  return query select 'Marca e modelo', 'Veiculo',
+    (coalesce(l.marca, '') <> '' and coalesce(l.modelo, '') <> ''),
+    coalesce(nullif(concat_ws(' ', l.marca, l.modelo), ''), 'nao informado');
+
+  return query select 'Ano fabricacao / modelo', 'Veiculo',
+    (l.ano_fabricacao is not null and l.ano_modelo is not null),
+    coalesce(concat_ws('/', l.ano_fabricacao::text, l.ano_modelo::text), 'nao informado');
+
+  return query select 'Cor', 'Veiculo',
+    (coalesce(l.cor, '') <> ''), coalesce(nullif(l.cor, ''), 'nao informada');
+
+  return query select 'Valor FIPE', 'Veiculo',
+    (coalesce(l.valor_fipe, 0) > 0),
+    coalesce(to_char(l.valor_fipe, 'FM999G999D00'), 'nao informado');
+
+  return query select 'Tipo de veiculo (precificacao)', 'Veiculo',
+    (l.tipo_veiculo_id is not null),
+    coalesce((select nome from tipos_veiculo where id = l.tipo_veiculo_id), 'nao informado');
+
+  -- Documentos ------------------------------------------------------------
+  return query select 'CRLV do veiculo', 'Documentos',
+    (coalesce(l.crlv_url, '') <> '' or coalesce(l.crlv_qrcode, '') <> ''),
+    (case when coalesce(l.crlv_qrcode, '') <> '' then 'QR Code lido'
+          when coalesce(l.crlv_url, '') <> '' then 'arquivo anexado'
+          else 'nao anexado' end);
+
+  return query select 'Vistoria registrada', 'Documentos',
+    (v_vist > 0), (v_vist || ' vistoria(s)')::text;
+
+  return query select 'Fotos da vistoria (min. 4)', 'Documentos',
+    (v_fotos >= 4), (v_fotos || ' foto(s))')::text;
+
+  -- Venda -----------------------------------------------------------------
+  return query select 'Plano contratado', 'Venda',
+    (l.plano_id is not null),
+    coalesce((select nome from planos_protecao where id = l.plano_id), 'nao informado');
+
+  return query select 'Vendedor responsavel', 'Venda',
+    (l.vendedor_id is not null),
+    coalesce((select u.nome from vendedores v join usuarios u on u.id = v.usuario_id
+               where v.id = l.vendedor_id), 'nao informado');
+
+  return query select 'Forma de recebimento da adesao', 'Venda',
+    (l.adesao_forma is not null and coalesce(l.adesao_valor, 0) > 0),
+    coalesce(l.adesao_forma::text, 'nao informada');
+end;
+$$;
+
+/** true quando o lead pode entrar na base. */
+create or replace function lead_pronto_para_base(p_lead_id uuid)
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select coalesce(bool_and(ok), false) from checklist_lead(p_lead_id);
+$$;
+
+-- ----------------------------------------------------------------------------
+-- (E) Entrada na base: agora exige a ficha inteira e trata a adesao
+-- ----------------------------------------------------------------------------
+create or replace function autorizar_entrada_lead(p_lead_id uuid, p_cpf_cnpj text default null)
+returns uuid language plpgsql security definer set search_path = public as $$
+declare
+  l           leads;
+  v_doc       text;
+  v_tipo      tipo_pessoa;
+  v_cliente   uuid;
+  v_veiculo   uuid;
+  v_pendente  text;
+  v_vend      vendedores;
+  v_comissao  numeric := 0;
+  v_lanc      uuid;
+  v_cat       uuid;
+begin
+  if not pode_auditar() then
+    raise exception 'Sem permissao: apenas a Auditoria pode autorizar a entrada na base';
+  end if;
+
+  select * into l from leads where id = p_lead_id for update;
+  if not found then raise exception 'Lead nao encontrado'; end if;
+  if l.status <> 'EM_AUDITORIA' then
+    raise exception 'Lead nao esta Em Auditoria (status atual: %)', l.status;
+  end if;
+  if l.veiculo_id is not null then raise exception 'Lead ja foi convertido'; end if;
+
+  if p_cpf_cnpj is not null then
+    update leads set cpf_cnpj = regexp_replace(p_cpf_cnpj, '[^0-9]', '', 'g')
+     where id = p_lead_id;
+    select * into l from leads where id = p_lead_id;
+  end if;
+
+  -- TRAVA: o veiculo so entra na base com a ficha completa.
+  select string_agg(item, '; ') into v_pendente
+    from checklist_lead(p_lead_id) where not ok;
+  if v_pendente is not null then
+    raise exception 'Cadastro incompleto - falta: %', v_pendente
+      using errcode = 'check_violation';
+  end if;
+
+  v_doc  := regexp_replace(coalesce(l.cpf_cnpj, ''), '[^0-9]', '', 'g');
+  v_tipo := coalesce(l.tipo_pessoa, (case when length(v_doc) > 11 then 'PJ' else 'PF' end)::tipo_pessoa);
+
+  -- Associado: reaproveita pelo documento (atualizando a ficha) ou cria.
+  select id into v_cliente from clientes where cpf_cnpj = v_doc;
+  if v_cliente is null then
+    insert into clientes (tipo_pessoa, nome_razao_social, cpf_cnpj, rg_ie, email, telefone,
+                          endereco, regional_id)
+    values (v_tipo, l.nome, v_doc, l.rg_ie, l.email, l.celular, l.endereco, l.regional_id)
+    returning id into v_cliente;
+  else
+    update clientes set
+      nome_razao_social = coalesce(nullif(l.nome, ''), nome_razao_social),
+      rg_ie             = coalesce(nullif(l.rg_ie, ''), rg_ie),
+      email             = coalesce(nullif(l.email, ''), email),
+      telefone          = coalesce(nullif(l.celular, ''), telefone),
+      endereco          = case when l.endereco = '{}'::jsonb then endereco else l.endereco end
+    where id = v_cliente;
+  end if;
+
+  -- Veiculo oficial, agora com a ficha completa.
+  insert into veiculos (cliente_id, placa, chassi, renavam, marca, modelo, ano_fabricacao,
+                        ano_modelo, cor, valor_fipe, codigo_fipe, combustivel, uso,
+                        tipo_veiculo_id, cota_participacao_id, modelo_id, regional_id,
+                        vendedor_id, plano_protecao_id, status)
+  values (v_cliente, upper(l.placa),
+          nullif(upper(regexp_replace(coalesce(l.chassi, ''), '[^0-9A-Za-z]', '', 'g')), ''),
+          nullif(regexp_replace(coalesce(l.renavam, ''), '[^0-9]', '', 'g'), ''),
+          l.marca, l.modelo, l.ano_fabricacao, l.ano_modelo, l.cor, l.valor_fipe, l.codigo_fipe,
+          l.combustivel, l.uso, l.tipo_veiculo_id, l.cota_participacao_id, l.modelo_id,
+          l.regional_id, l.vendedor_id, l.plano_id, 'ativo')
+  returning id into v_veiculo;
+
+  -- A vistoria feita na venda passa a ser a vistoria do veiculo.
+  update vistorias set veiculo_id = v_veiculo, status = 'APROVADA'
+   where lead_id = p_lead_id and veiculo_id is null;
+
+  -- ---------------------------------------------------------------- adesao
+  select * into v_vend from vendedores where id = l.vendedor_id;
+  v_comissao := round(coalesce(l.adesao_valor, 0) * coalesce(v_vend.taxa_comissao_adesao, 0), 2);
+
+  if l.adesao_forma::text = 'VENDEDOR_NA_HORA' then
+    -- O dinheiro nunca passou pela associacao: NADA entra no financeiro.
+    -- Fica so o registro da comissao, ja quitada na origem.
+    insert into comissoes_vendas (vendedor_id, veiculo_id, valor_comissao, is_adesao, status_pagamento)
+    values (l.vendedor_id, v_veiculo, coalesce(l.adesao_valor, 0), true, 'pago');
+  else
+    -- Recebido pelo nosso sistema: vira titulo a receber e a comissao do
+    -- vendedor nasce PENDENTE (sai depois, no repasse).
+    select id into v_cat from categorias_dre where codigo_estruturado = '1.1.01';
+    insert into lancamentos_financeiros
+      (tipo, cliente_id, descricao, categoria_dre_id, regional_id, valor_original,
+       data_emissao, data_vencimento, competencia, forma_pagamento_prevista, observacoes)
+    values ('RECEITA', v_cliente,
+            'Taxa de adesao - ' || upper(l.placa),
+            v_cat, l.regional_id, l.adesao_valor,
+            current_date, coalesce(l.adesao_recebida_em, current_date), current_date,
+            (case l.adesao_forma::text when 'BOLETO' then 'BOLETO'
+                                       when 'PIX' then 'PIX'
+                                       else 'CARTAO' end)::forma_pagamento,
+            'Adesao da venda ' || p_lead_id::text)
+    returning id into v_lanc;
+
+    insert into comissoes_vendas (vendedor_id, veiculo_id, valor_comissao, is_adesao, status_pagamento)
+    values (l.vendedor_id, v_veiculo, v_comissao, true, 'pendente');
+  end if;
+
+  update leads set
+    status = 'ATIVO', cliente_id = v_cliente, veiculo_id = v_veiculo,
+    cpf_cnpj = v_doc, auditado_em = now(), auditado_por = auth.uid()
+  where id = p_lead_id;
+
+  return v_veiculo;
+end;
+$$;
+
+-- Repasse da comissao ao vendedor: vira contas a pagar (o dinheiro sai daqui).
+create or replace function repassar_comissao_vendedor(p_comissao_id uuid)
+returns uuid language plpgsql security invoker set search_path = public as $$
+declare
+  c        comissoes_vendas;
+  v_nome   text;
+  v_reg    uuid;
+  v_cat    uuid;
+  v_lanc   uuid;
+begin
+  select * into c from comissoes_vendas where id = p_comissao_id for update;
+  if not found then raise exception 'Comissao nao encontrada'; end if;
+  if c.status_pagamento = 'pago' then
+    raise exception 'Comissao ja repassada' using errcode = 'check_violation';
+  end if;
+  if coalesce(c.valor_comissao, 0) <= 0 then
+    raise exception 'Comissao sem valor a repassar' using errcode = 'check_violation';
+  end if;
+
+  select u.nome, v.regional_id into v_nome, v_reg
+    from vendedores v join usuarios u on u.id = v.usuario_id
+   where v.id = c.vendedor_id;
+
+  select id into v_cat from categorias_dre where codigo_estruturado = '3.2.01';
+
+  insert into lancamentos_financeiros
+    (tipo, descricao, categoria_dre_id, regional_id, valor_original,
+     data_emissao, data_vencimento, competencia, observacoes)
+  values ('DESPESA',
+          'Repasse de comissao - ' || coalesce(v_nome, 'vendedor'),
+          v_cat, v_reg, c.valor_comissao,
+          current_date, current_date, current_date,
+          'Comissao ' || p_comissao_id::text)
+  returning id into v_lanc;
+
+  update comissoes_vendas set status_pagamento = 'pago' where id = p_comissao_id;
+  return v_lanc;
+end;
+$$;
+
+grant execute on function limite_comissao_regional(uuid) to authenticated;
+grant execute on function checklist_lead(uuid) to authenticated;
+grant execute on function lead_pronto_para_base(uuid) to authenticated;
+grant execute on function repassar_comissao_vendedor(uuid) to authenticated;
+
+-- ----------------------------------------------------------------------------
+-- (F) RLS da vistoria: agora ela tambem pode pertencer a um LEAD.
+--     Sem isto a vistoria feita na venda (ainda sem veiculo) ficaria invisivel
+--     e ninguem conseguiria anexar as fotos.
+-- ----------------------------------------------------------------------------
+drop policy if exists vist_select on vistorias;
+drop policy if exists vist_write  on vistorias;
+
+create policy vist_select on vistorias for select to authenticated using (
+  exists (select 1 from veiculos v where v.id = veiculo_id
+           and (pode_regional(v.regional_id) or v.cliente_id = auth_cliente_id()))
+  or exists (select 1 from leads l where l.id = lead_id
+           and (tem_acesso_global() or pode_auditar() or pode_regional(l.regional_id)
+                or l.consultor_id = auth.uid() or l.created_by = auth.uid()))
+);
+create policy vist_write on vistorias for all to authenticated using (
+  exists (select 1 from veiculos v where v.id = veiculo_id and pode_regional(v.regional_id))
+  or exists (select 1 from leads l where l.id = lead_id
+           and (tem_acesso_global() or pode_auditar() or pode_regional(l.regional_id)
+                or l.consultor_id = auth.uid() or l.created_by = auth.uid()))
+) with check (
+  exists (select 1 from veiculos v where v.id = veiculo_id and pode_regional(v.regional_id))
+  or exists (select 1 from leads l where l.id = lead_id
+           and (tem_acesso_global() or pode_auditar() or pode_regional(l.regional_id)
+                or l.consultor_id = auth.uid() or l.created_by = auth.uid()))
+);
+
+drop policy if exists vanx_select on vistoria_anexos;
+drop policy if exists vanx_write  on vistoria_anexos;
+
+create policy vanx_select on vistoria_anexos for select to authenticated using (
+  exists (select 1 from vistorias vs where vs.id = vistoria_id)
+);
+create policy vanx_write on vistoria_anexos for all to authenticated using (
+  exists (select 1 from vistorias vs where vs.id = vistoria_id)
+) with check (
+  exists (select 1 from vistorias vs where vs.id = vistoria_id)
+);
+
+-- ----------------------------------------------------------------------------
+-- (G) Bucket das fotos da vistoria e do CRLV (privado)
+-- ----------------------------------------------------------------------------
+insert into storage.buckets (id, name, public) values ('vendas', 'vendas', false)
+on conflict (id) do nothing;
+
+drop policy if exists storage_vendas_all on storage.objects;
+create policy storage_vendas_all on storage.objects for all to authenticated
+  using (bucket_id = 'vendas' and is_staff())
+  with check (bucket_id = 'vendas' and is_staff());
+
+-- >>>>>>>>>>>>>>>>>>>>>>>> migrations/0035_vendedor_completo.sql >>>>>>>>>>>>>>>>>>>>>>>>
+
+-- ============================================================================
+-- SCar :: 0035_vendedor_completo.sql
+-- O vendedor deixa de ser um apendice do usuario e vira cadastro proprio:
+-- contato, codigo (hotlink), dados bancarios, prazo de pagamento da comissao,
+-- acesso ao portal e trilha de boas-vindas/contrato.
+--
+-- `usuario_id` passa a ser OPCIONAL: cadastra-se o vendedor primeiro e o acesso
+-- ao portal e criado depois (ou nunca, para quem so recebe comissao).
+-- ============================================================================
+
+alter table vendedores
+  add column if not exists nome                    text,
+  add column if not exists email                   text,
+  add column if not exists telefone                text,
+  add column if not exists codigo                  text,
+  add column if not exists documento               text,
+  -- dados bancarios do repasse
+  add column if not exists banco                   text,
+  add column if not exists agencia                 text,
+  add column if not exists conta                   text,
+  add column if not exists chave_pix               text,
+  -- prazo de pagamento (null = usa o padrao da franquia)
+  add column if not exists dia_pagto_entrada       smallint,
+  add column if not exists dia_pagto_recorrencia   smallint,
+  add column if not exists observacoes             text,
+  -- trilha de onboarding
+  add column if not exists contrato_url            text,
+  add column if not exists boas_vindas_enviada_em  timestamptz;
+
+-- O acesso ao portal pode vir depois do cadastro.
+alter table vendedores alter column usuario_id drop not null;
+
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'chk_vendedor_dias_pagto') then
+    alter table vendedores add constraint chk_vendedor_dias_pagto check (
+      (dia_pagto_entrada is null or dia_pagto_entrada between 1 and 7)
+      and (dia_pagto_recorrencia is null or dia_pagto_recorrencia between 1 and 31)
+    );
+  end if;
+end $$;
+
+comment on column vendedores.dia_pagto_entrada is
+  'Dia da SEMANA (1=segunda .. 7=domingo) do pagamento da comissao de adesao. Null = padrao da franquia.';
+comment on column vendedores.dia_pagto_recorrencia is
+  'Dia do MES do pagamento da comissao recorrente. Null = padrao da franquia.';
+
+-- Padrao da franquia, herdado por quem nao definir o proprio dia.
+alter table regionais
+  add column if not exists dia_pagto_entrada_padrao     smallint,
+  add column if not exists dia_pagto_recorrencia_padrao smallint;
+
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'chk_regional_dias_pagto') then
+    alter table regionais add constraint chk_regional_dias_pagto check (
+      (dia_pagto_entrada_padrao is null or dia_pagto_entrada_padrao between 1 and 7)
+      and (dia_pagto_recorrencia_padrao is null or dia_pagto_recorrencia_padrao between 1 and 31)
+    );
+  end if;
+end $$;
+
+-- ----------------------------------------------------------------------------
+-- Codigo do vendedor: identidade curta usada no hotlink de vendas.
+-- ----------------------------------------------------------------------------
+create or replace function gerar_codigo_vendedor(p_nome text, p_ignorar uuid default null)
+returns text
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_base   text;
+  v_tenta  text;
+  i        int := 1;
+begin
+  -- Primeiro nome, sem acento, so letras e numeros.
+  v_base := upper(regexp_replace(
+    translate(coalesce(split_part(trim(p_nome), ' ', 1), ''),
+              'áàâãäéèêëíìîïóòôõöúùûüçÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇ',
+              'aaaaaeeeeiiiiooooouuuucAAAAAEEEEIIIIOOOOOUUUUC'),
+    '[^A-Za-z0-9]', '', 'g'));
+
+  if v_base = '' then v_base := 'VENDEDOR'; end if;
+  v_base := left(v_base, 20);
+  v_tenta := v_base;
+
+  while exists (
+    select 1 from vendedores
+     where codigo = v_tenta and (p_ignorar is null or id <> p_ignorar)
+  ) loop
+    i := i + 1;
+    v_tenta := left(v_base, 18) || i::text;
+  end loop;
+
+  return v_tenta;
+end;
+$$;
+
+-- Preenche nome/codigo automaticamente e mantem o codigo unico.
+create or replace function fn_vendedor_preencher()
+returns trigger language plpgsql as $$
+begin
+  -- Sem nome proprio, herda o do usuario vinculado.
+  if coalesce(trim(new.nome), '') = '' and new.usuario_id is not null then
+    select u.nome, coalesce(new.email, u.email) into new.nome, new.email
+      from usuarios u where u.id = new.usuario_id;
+  end if;
+
+  if coalesce(trim(new.nome), '') = '' then
+    raise exception 'Informe o nome do vendedor' using errcode = 'check_violation';
+  end if;
+
+  new.codigo := upper(regexp_replace(coalesce(new.codigo, ''), '[^A-Za-z0-9]', '', 'g'));
+  if new.codigo = '' then
+    new.codigo := gerar_codigo_vendedor(new.nome, new.id);
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_vendedor_preencher on vendedores;
+create trigger trg_vendedor_preencher
+  before insert or update on vendedores
+  for each row execute function fn_vendedor_preencher();
+
+-- Backfill dos vendedores ja cadastrados (dispara o trigger acima).
+update vendedores set updated_at = updated_at;
+
+create unique index if not exists uq_vendedor_codigo on vendedores (codigo);
+create index if not exists idx_vendedores_regional on vendedores (regional_id);
+
+-- ----------------------------------------------------------------------------
+-- Prazo efetivo: o do vendedor, senao o padrao da franquia.
+-- ----------------------------------------------------------------------------
+create or replace function prazo_pagamento_vendedor(p_vendedor_id uuid)
+returns table (
+  dia_entrada       smallint,
+  dia_recorrencia   smallint,
+  entrada_herdada   boolean,
+  recorrencia_herdada boolean
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    coalesce(v.dia_pagto_entrada, r.dia_pagto_entrada_padrao),
+    coalesce(v.dia_pagto_recorrencia, r.dia_pagto_recorrencia_padrao),
+    v.dia_pagto_entrada is null,
+    v.dia_pagto_recorrencia is null
+  from vendedores v
+  left join regionais r on r.id = v.regional_id
+  where v.id = p_vendedor_id;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Lista da tela de vendedores, ja com a franquia e o teto herdado.
+-- ----------------------------------------------------------------------------
+create or replace function listar_vendedores(p_regional_id uuid default null, p_busca text default null)
+returns table (
+  id                       uuid,
+  nome                     text,
+  email                    text,
+  telefone                 text,
+  codigo                   text,
+  documento                text,
+  regional_id              uuid,
+  regional_nome            text,
+  usuario_id               uuid,
+  tem_portal               boolean,
+  taxa_comissao_adesao     numeric,
+  taxa_comissao_recorrente numeric,
+  teto_adesao              numeric,
+  teto_recorrente          numeric,
+  dia_pagto_entrada        smallint,
+  dia_pagto_recorrencia    smallint,
+  banco                    text,
+  agencia                  text,
+  conta                    text,
+  chave_pix                text,
+  contrato_url             text,
+  boas_vindas_enviada_em   timestamptz,
+  observacoes              text,
+  ativo                    boolean,
+  vendas_total             integer,
+  comissao_pendente        numeric
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    v.id, v.nome, v.email, v.telefone, v.codigo, v.documento,
+    v.regional_id, r.nome,
+    v.usuario_id, v.usuario_id is not null,
+    v.taxa_comissao_adesao, v.taxa_comissao_recorrente,
+    coalesce(r.taxa_comissao_adesao, 0), coalesce(r.taxa_comissao_recorrente, 0),
+    coalesce(v.dia_pagto_entrada, r.dia_pagto_entrada_padrao),
+    coalesce(v.dia_pagto_recorrencia, r.dia_pagto_recorrencia_padrao),
+    v.banco, v.agencia, v.conta, v.chave_pix,
+    v.contrato_url, v.boas_vindas_enviada_em, v.observacoes, v.ativo,
+    (select count(*)::int from veiculos ve where ve.vendedor_id = v.id),
+    (select coalesce(sum(c.valor_comissao), 0) from comissoes_vendas c
+      where c.vendedor_id = v.id and c.status_pagamento = 'pendente')
+  from vendedores v
+  left join regionais r on r.id = v.regional_id
+  where (p_regional_id is null or v.regional_id = p_regional_id)
+    and (
+      coalesce(p_busca, '') = ''
+      or v.nome   ilike '%' || p_busca || '%'
+      or v.codigo ilike '%' || p_busca || '%'
+      or coalesce(v.email, '') ilike '%' || p_busca || '%'
+    )
+    and (tem_acesso_global() or pode_regional(v.regional_id))
+  order by v.ativo desc, v.nome;
+$$;
+
+/** Vendedor pelo codigo do hotlink (usado na captura publica de lead). */
+create or replace function vendedor_por_codigo(p_codigo text)
+returns table (id uuid, nome text, regional_id uuid, ativo boolean)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select id, nome, regional_id, ativo
+    from vendedores
+   where codigo = upper(regexp_replace(coalesce(p_codigo, ''), '[^A-Za-z0-9]', '', 'g'))
+     and ativo;
+$$;
+
+grant execute on function gerar_codigo_vendedor(text, uuid) to authenticated;
+grant execute on function prazo_pagamento_vendedor(uuid) to authenticated;
+grant execute on function listar_vendedores(uuid, text) to authenticated;
+grant execute on function vendedor_por_codigo(text) to authenticated, anon;
+
+-- >>>>>>>>>>>>>>>>>>>>>>>> migrations/0036_portal_regional.sql >>>>>>>>>>>>>>>>>>>>>>>>
+
+-- ============================================================================
+-- SCar :: 0036_portal_regional.sql
+-- Portal da Regional (franquia): a unidade passa a ter area propria para
+-- cadastrar a equipe, acompanhar os leads dos hotlinks, ver o desempenho, o
+-- extrato de comissoes e o SEU contas a pagar/receber.
+--
+-- Isolamento: tudo aqui e SECURITY DEFINER com `escopo_regional()` (0032), que
+-- FORCA a regional de quem chama. Um gestor nunca ve outra franquia nem a
+-- matriz (lancamentos com regional_id nulo), e nao existe parametro que
+-- contorne isso.
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- (A) A regional tambem tem hotlink de vendas
+-- ----------------------------------------------------------------------------
+alter table regionais add column if not exists codigo text;
+
+create or replace function gerar_codigo_regional(p_nome text, p_ignorar uuid default null)
+returns text
+language plpgsql stable security definer set search_path = public as $$
+declare
+  v_base text; v_tenta text; i int := 1;
+begin
+  v_base := upper(regexp_replace(
+    translate(coalesce(trim(p_nome), ''),
+      'áàâãäéèêëíìîïóòôõöúùûüçÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇ',
+      'aaaaaeeeeiiiiooooouuuucAAAAAEEEEIIIIOOOOOUUUUC'),
+    '[^A-Za-z0-9]', '', 'g'));
+  if v_base = '' then v_base := 'UNIDADE'; end if;
+  v_base := left(v_base, 20);
+  v_tenta := v_base;
+  while exists (select 1 from regionais where codigo = v_tenta and (p_ignorar is null or id <> p_ignorar))
+     or exists (select 1 from vendedores where codigo = v_tenta) loop
+    i := i + 1;
+    v_tenta := left(v_base, 18) || i::text;
+  end loop;
+  return v_tenta;
+end;
+$$;
+
+create or replace function fn_regional_codigo()
+returns trigger language plpgsql as $$
+begin
+  new.codigo := upper(regexp_replace(coalesce(new.codigo, ''), '[^A-Za-z0-9]', '', 'g'));
+  if new.codigo = '' then new.codigo := gerar_codigo_regional(new.nome, new.id); end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_regional_codigo on regionais;
+create trigger trg_regional_codigo
+  before insert or update on regionais
+  for each row execute function fn_regional_codigo();
+
+update regionais set updated_at = updated_at;  -- backfill do codigo
+create unique index if not exists uq_regional_codigo on regionais (codigo);
+
+-- De onde o lead veio (qual hotlink), para medir o desempenho por link.
+alter table leads add column if not exists origem_hotlink text;
+create index if not exists idx_leads_origem_hotlink on leads (origem_hotlink);
+
+/** Resolve um codigo de hotlink: pode ser de vendedor OU da propria regional. */
+create or replace function resolver_hotlink(p_codigo text)
+returns table (tipo text, vendedor_id uuid, regional_id uuid, nome text, consultor_id uuid)
+language sql stable security definer set search_path = public as $$
+  select 'VENDEDOR', v.id, v.regional_id, v.nome, v.usuario_id
+    from vendedores v
+   where v.codigo = upper(regexp_replace(coalesce(p_codigo, ''), '[^A-Za-z0-9]', '', 'g'))
+     and v.ativo
+  union all
+  select 'REGIONAL', null::uuid, r.id, r.nome, r.responsavel_id
+    from regionais r
+   where r.codigo = upper(regexp_replace(coalesce(p_codigo, ''), '[^A-Za-z0-9]', '', 'g'))
+     and not exists (
+       select 1 from vendedores v
+        where v.codigo = upper(regexp_replace(coalesce(p_codigo, ''), '[^A-Za-z0-9]', '', 'g')) and v.ativo
+     );
+$$;
+
+-- ----------------------------------------------------------------------------
+-- (B) Painel da franquia
+-- ----------------------------------------------------------------------------
+create or replace function regional_painel(
+  p_regional_id uuid,
+  p_inicio      date,
+  p_fim         date
+)
+returns table (
+  leads_periodo            integer,
+  leads_hotlink            integer,
+  leads_convertidos        integer,
+  taxa_conversao           numeric,
+  veiculos_ativos          integer,
+  vendedores_ativos        integer,
+  comissao_franquia_adesao numeric,
+  comissao_vendedores_paga numeric,
+  comissao_vendedores_pend numeric,
+  contas_receber_aberto    numeric,
+  contas_pagar_aberto      numeric,
+  resultado_periodo        numeric
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with reg as (select escopo_regional(p_regional_id) as id),
+  l as (
+    select * from leads
+     where regional_id = (select id from reg)
+       and created_at::date between p_inicio and p_fim
+  ),
+  com as (
+    select c.*, ve.regional_id
+      from comissoes_vendas c
+      join vendedores ve on ve.id = c.vendedor_id
+     where ve.regional_id = (select id from reg)
+  ),
+  fin as (
+    select * from lancamentos_financeiros
+     where regional_id = (select id from reg) and status <> 'cancelado'
+  )
+  select
+    (select count(*)::int from l),
+    (select count(*)::int from l where origem_hotlink is not null),
+    (select count(*)::int from l where veiculo_id is not null),
+    case when (select count(*) from l) > 0
+         then round((select count(*) filter (where veiculo_id is not null) from l)::numeric
+                    / (select count(*) from l) * 100, 1)
+         else 0 end,
+    (select count(*)::int from veiculos v where v.regional_id = (select id from reg) and v.status = 'ativo'),
+    (select count(*)::int from vendedores ve where ve.regional_id = (select id from reg) and ve.ativo),
+    coalesce((select sum(valor_comissao) from com where is_adesao), 0),
+    coalesce((select sum(valor_comissao) from com where status_pagamento = 'pago'), 0),
+    coalesce((select sum(valor_comissao) from com where status_pagamento = 'pendente'), 0),
+    coalesce((select sum(valor_saldo) from fin where tipo = 'RECEITA' and status <> 'quitado'), 0),
+    coalesce((select sum(valor_saldo) from fin where tipo = 'DESPESA' and status <> 'quitado'), 0),
+    coalesce((select sum(case when tipo = 'RECEITA' then valor_pago else -valor_pago end) from fin), 0);
+$$;
+
+-- ----------------------------------------------------------------------------
+-- (C) Desempenho da equipe
+-- ----------------------------------------------------------------------------
+create or replace function regional_desempenho_vendedores(
+  p_regional_id uuid,
+  p_inicio      date,
+  p_fim         date
+)
+returns table (
+  vendedor_id        uuid,
+  nome               text,
+  codigo             text,
+  ativo              boolean,
+  leads              integer,
+  leads_hotlink      integer,
+  convertidos        integer,
+  taxa_conversao     numeric,
+  veiculos_ativos    integer,
+  comissao_total     numeric,
+  comissao_pendente  numeric,
+  taxa_adesao        numeric,
+  taxa_recorrente    numeric
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with reg as (select escopo_regional(p_regional_id) as id)
+  select
+    v.id, v.nome, v.codigo, v.ativo,
+    (select count(*)::int from leads l
+      where l.vendedor_id = v.id and l.created_at::date between p_inicio and p_fim),
+    (select count(*)::int from leads l
+      where l.vendedor_id = v.id and l.origem_hotlink is not null
+        and l.created_at::date between p_inicio and p_fim),
+    (select count(*)::int from leads l
+      where l.vendedor_id = v.id and l.veiculo_id is not null
+        and l.created_at::date between p_inicio and p_fim),
+    case when (select count(*) from leads l
+                where l.vendedor_id = v.id and l.created_at::date between p_inicio and p_fim) > 0
+         then round(
+           (select count(*) filter (where l.veiculo_id is not null) from leads l
+             where l.vendedor_id = v.id and l.created_at::date between p_inicio and p_fim)::numeric
+           / (select count(*) from leads l
+               where l.vendedor_id = v.id and l.created_at::date between p_inicio and p_fim) * 100, 1)
+         else 0 end,
+    (select count(*)::int from veiculos ve where ve.vendedor_id = v.id and ve.status = 'ativo'),
+    coalesce((select sum(c.valor_comissao) from comissoes_vendas c where c.vendedor_id = v.id), 0),
+    coalesce((select sum(c.valor_comissao) from comissoes_vendas c
+               where c.vendedor_id = v.id and c.status_pagamento = 'pendente'), 0),
+    v.taxa_comissao_adesao, v.taxa_comissao_recorrente
+  from vendedores v
+  where v.regional_id = (select id from reg)
+  order by 10 desc, v.nome;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- (D) Extrato de comissoes da franquia
+-- ----------------------------------------------------------------------------
+create or replace function regional_comissoes(
+  p_regional_id uuid,
+  p_status      text default null,
+  p_inicio      date default null,
+  p_fim         date default null
+)
+returns table (
+  id             uuid,
+  vendedor_id    uuid,
+  vendedor_nome  text,
+  veiculo_id     uuid,
+  placa          text,
+  is_adesao      boolean,
+  valor_comissao numeric,
+  status_pagamento text,
+  created_at     timestamptz
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with reg as (select escopo_regional(p_regional_id) as id)
+  select c.id, c.vendedor_id, v.nome, c.veiculo_id, ve.placa,
+         c.is_adesao, c.valor_comissao, c.status_pagamento::text, c.created_at
+    from comissoes_vendas c
+    join vendedores v on v.id = c.vendedor_id
+    left join veiculos ve on ve.id = c.veiculo_id
+   where v.regional_id = (select id from reg)
+     and (p_status is null or c.status_pagamento::text = p_status)
+     and (p_inicio is null or c.created_at::date >= p_inicio)
+     and (p_fim is null or c.created_at::date <= p_fim)
+   order by c.created_at desc;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- (E) Leads captados pelos hotlinks da unidade
+-- ----------------------------------------------------------------------------
+create or replace function regional_leads(
+  p_regional_id uuid,
+  p_inicio      date default null,
+  p_fim         date default null,
+  p_somente_hotlink boolean default false
+)
+returns table (
+  id             uuid,
+  nome           text,
+  celular        text,
+  email          text,
+  placa          text,
+  status         text,
+  origem_hotlink text,
+  vendedor_nome  text,
+  veiculo_id     uuid,
+  created_at     timestamptz
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with reg as (select escopo_regional(p_regional_id) as id)
+  select l.id, l.nome, l.celular, l.email, l.placa, l.status::text,
+         l.origem_hotlink, v.nome, l.veiculo_id, l.created_at
+    from leads l
+    left join vendedores v on v.id = l.vendedor_id
+   where l.regional_id = (select id from reg)
+     and (p_inicio is null or l.created_at::date >= p_inicio)
+     and (p_fim is null or l.created_at::date <= p_fim)
+     and (not p_somente_hotlink or l.origem_hotlink is not null)
+   order by l.created_at desc;
+$$;
+
+grant execute on function gerar_codigo_regional(text, uuid) to authenticated;
+grant execute on function resolver_hotlink(text) to authenticated, anon;
+grant execute on function regional_painel(uuid, date, date) to authenticated;
+grant execute on function regional_desempenho_vendedores(uuid, date, date) to authenticated;
+grant execute on function regional_comissoes(uuid, text, date, date) to authenticated;
+grant execute on function regional_leads(uuid, date, date, boolean) to authenticated;
+
+-- >>>>>>>>>>>>>>>>>>>>>>>> migrations/0037_financeiro_regional.sql >>>>>>>>>>>>>>>>>>>>>>>>
+
+-- ============================================================================
+-- SCar :: 0037_financeiro_regional.sql
+-- FINANCEIRO COMPACTO DA FRANQUIA + correcoes do vendedor sem usuario.
+--
+-- Por que este arquivo existe
+-- ---------------------------
+-- O portal da franquia (0036) reusava a tela do financeiro da matriz. A tela e
+-- boa, mas e a tela ERRADA para uma unidade: ela pede plano de contas, centro
+-- de custo e conta bancaria — cadastros que sao da matriz e que a franquia nao
+-- deve criar. A operacao toda e da matriz; o financeiro da unidade existe para
+-- UMA coisa: receber a comissao da matriz e repassar a comissao dos vendedores.
+--
+-- Entao o financeiro da unidade passa a ter dois movimentos, so:
+--   COMISSAO_RECEBER -> receita, categoria 1.3.01 (repasse que a matriz nos deve)
+--   COMISSAO_PAGAR   -> despesa, categoria 3.2.01 (repasse ao vendedor)
+-- A classificacao contabil e resolvida pelo BANCO, nao escolhida na tela. Nao
+-- ha centro de custo (a dimensao da franquia ja e o proprio `regional_id`) e a
+-- baixa registra FORMA DE PAGAMENTO em vez de exigir conta bancaria da matriz.
+--
+-- (A) `lancamentos_financeiros.vendedor_id` — quem e o favorecido do repasse.
+-- (B) `baixas_financeiras.forma_pagamento` + `observacao` — a baixa da unidade
+--     nao passa por conciliacao bancaria; ela registra COMO pagou/recebeu.
+-- (C) categoria 1.3.01 no plano de contas.
+-- (D) CORRECAO: tres funcoes de 0034 usavam `join usuarios` para achar o nome
+--     do vendedor. Depois que o 0035 tornou `vendedores.usuario_id` OPCIONAL,
+--     o join interno passou a DESCARTAR o vendedor sem acesso ao portal:
+--       . `repassar_comissao_vendedor` gerava o titulo com `regional_id` NULO
+--         — ou seja, o repasse da franquia caia no financeiro da MATRIZ;
+--       . `fn_regional_valida_comissao` deixava de enxergar esse vendedor, e a
+--         regra dura "vendedor nunca passa a regional" podia ser furada
+--         baixando a comissao da regional;
+--       . `checklist_lead` mostrava "nao informado" com o vendedor preenchido.
+--     Todas passam a `left join` + `coalesce(v.nome, u.nome)`.
+-- (E) RPCs do financeiro da unidade, todas SECURITY DEFINER com
+--     `escopo_regional()`: passar o id de outra franquia nao muda nada, e
+--     titulo da matriz (`regional_id` nulo) nunca e tocado por um gestor.
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- (A) Favorecido do titulo
+-- ----------------------------------------------------------------------------
+alter table lancamentos_financeiros
+  add column if not exists vendedor_id uuid references vendedores(id) on delete set null;
+
+create index if not exists idx_lanc_vendedor on lancamentos_financeiros (vendedor_id);
+
+comment on column lancamentos_financeiros.vendedor_id is
+  'Favorecido quando o titulo e repasse de comissao (financeiro da franquia).';
+
+-- ----------------------------------------------------------------------------
+-- (B) Baixa da unidade: como o dinheiro entrou/saiu
+-- ----------------------------------------------------------------------------
+alter table baixas_financeiras
+  add column if not exists forma_pagamento forma_pagamento,
+  add column if not exists observacao      text;
+
+comment on column baixas_financeiras.forma_pagamento is
+  'Como foi pago/recebido. A franquia nao concilia banco: registra a forma.';
+
+-- ----------------------------------------------------------------------------
+-- (C) Plano de contas: a comissao que a matriz repassa a franquia
+-- ----------------------------------------------------------------------------
+insert into categorias_dre (codigo_estruturado, nome, tipo) values
+  ('1.3.01', 'Comissao de Franquia (repasse da matriz)', 'RECEITA')
+on conflict (codigo_estruturado) do nothing;
+
+-- ----------------------------------------------------------------------------
+-- (D) Correcoes do vendedor sem usuario de portal (regressao do 0035)
+-- ----------------------------------------------------------------------------
+create or replace function fn_regional_valida_comissao()
+returns trigger language plpgsql as $$
+declare
+  v_acima text;
+begin
+  -- left join: o vendedor sem acesso ao portal TAMBEM conta para o teto.
+  select string_agg(coalesce(v.nome, u.nome, 'vendedor'), ', ') into v_acima
+    from vendedores v
+    left join usuarios u on u.id = v.usuario_id
+   where v.regional_id = new.id
+     and (v.taxa_comissao_adesao > new.taxa_comissao_adesao + 0.00005
+       or v.taxa_comissao_recorrente > new.taxa_comissao_recorrente + 0.00005);
+
+  if v_acima is not null then
+    raise exception 'Nao da para reduzir a comissao da regional: % ficaria(m) acima do novo teto. Ajuste o(s) vendedor(es) primeiro.', v_acima
+      using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function repassar_comissao_vendedor(p_comissao_id uuid)
+returns uuid language plpgsql security invoker set search_path = public as $$
+declare
+  c        comissoes_vendas;
+  v_nome   text;
+  v_reg    uuid;
+  v_cat    uuid;
+  v_lanc   uuid;
+begin
+  select * into c from comissoes_vendas where id = p_comissao_id for update;
+  if not found then raise exception 'Comissao nao encontrada'; end if;
+  if c.status_pagamento = 'pago' then
+    raise exception 'Comissao ja repassada' using errcode = 'check_violation';
+  end if;
+  if coalesce(c.valor_comissao, 0) <= 0 then
+    raise exception 'Comissao sem valor a repassar' using errcode = 'check_violation';
+  end if;
+
+  -- left join: sem isto o vendedor sem usuario de portal nao era encontrado e
+  -- o titulo nascia com regional NULA, caindo no financeiro da matriz.
+  select coalesce(v.nome, u.nome), v.regional_id into v_nome, v_reg
+    from vendedores v
+    left join usuarios u on u.id = v.usuario_id
+   where v.id = c.vendedor_id;
+
+  select id into v_cat from categorias_dre where codigo_estruturado = '3.2.01';
+
+  insert into lancamentos_financeiros
+    (tipo, descricao, categoria_dre_id, regional_id, vendedor_id, valor_original,
+     data_emissao, data_vencimento, competencia, observacoes)
+  values ('DESPESA',
+          'Repasse de comissao - ' || coalesce(v_nome, 'vendedor'),
+          v_cat, v_reg, c.vendedor_id, c.valor_comissao,
+          current_date, current_date, current_date,
+          'Comissao ' || p_comissao_id::text)
+  returning id into v_lanc;
+
+  update comissoes_vendas set status_pagamento = 'pago' where id = p_comissao_id;
+  return v_lanc;
+end;
+$$;
+
+create or replace function checklist_lead(p_lead_id uuid)
+returns table (
+  item     text,
+  grupo    text,
+  ok       boolean,
+  detalhe  text
+)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  l        leads;
+  v_doc    text;
+  v_tipo   tipo_pessoa;
+  v_fotos  int;
+  v_vist   int;
+begin
+  select * into l from leads where id = p_lead_id;
+  if not found then
+    return query select 'Lead'::text, 'Geral'::text, false, 'Lead nao encontrado'::text;
+    return;
+  end if;
+
+  v_doc  := regexp_replace(coalesce(l.cpf_cnpj, ''), '[^0-9]', '', 'g');
+  v_tipo := coalesce(l.tipo_pessoa, (case when length(v_doc) > 11 then 'PJ' else 'PF' end)::tipo_pessoa);
+
+  select count(*) into v_vist from vistorias where lead_id = p_lead_id;
+  select count(*) into v_fotos
+    from vistoria_anexos a join vistorias vi on vi.id = a.vistoria_id
+   where vi.lead_id = p_lead_id;
+
+  -- Associado -------------------------------------------------------------
+  return query select 'CPF/CNPJ valido', 'Associado',
+    (v_doc <> '' and validar_documento(v_doc, v_tipo)),
+    coalesce(nullif(v_doc, ''), 'nao informado');
+
+  return query select 'Nome completo', 'Associado',
+    (coalesce(trim(l.nome), '') <> '' and position(' ' in trim(l.nome)) > 0),
+    coalesce(nullif(l.nome, ''), 'nao informado');
+
+  return query select 'Celular', 'Associado',
+    (length(regexp_replace(coalesce(l.celular, ''), '[^0-9]', '', 'g')) >= 10),
+    coalesce(nullif(l.celular, ''), 'nao informado');
+
+  return query select 'E-mail', 'Associado',
+    (coalesce(l.email, '') ~* '^[^@\s]+@[^@\s]+\.[a-z]{2,}$'),
+    coalesce(nullif(l.email, ''), 'nao informado');
+
+  return query select 'Endereco completo', 'Associado',
+    (coalesce(l.endereco->>'cep', '') <> '' and coalesce(l.endereco->>'logradouro', '') <> ''
+     and coalesce(l.endereco->>'numero', '') <> '' and coalesce(l.endereco->>'cidade', '') <> ''
+     and coalesce(l.endereco->>'uf', '') <> ''),
+    coalesce(nullif(concat_ws(', ', l.endereco->>'logradouro', l.endereco->>'numero',
+                              l.endereco->>'cidade', l.endereco->>'uf'), ''), 'nao informado');
+
+  return query select
+    (case when v_tipo = 'PJ' then 'Inscricao estadual / RG' else 'RG' end), 'Associado',
+    (coalesce(l.rg_ie, '') <> ''), coalesce(nullif(l.rg_ie, ''), 'nao informado');
+
+  return query select 'Data de nascimento / fundacao', 'Associado',
+    (l.data_nascimento is not null),
+    coalesce(to_char(l.data_nascimento, 'DD/MM/YYYY'), 'nao informada');
+
+  -- Veiculo ---------------------------------------------------------------
+  return query select 'Placa', 'Veiculo',
+    (coalesce(l.placa, '') <> ''), coalesce(nullif(l.placa, ''), 'nao informada');
+
+  return query select 'Chassi', 'Veiculo',
+    (length(regexp_replace(coalesce(l.chassi, ''), '[^0-9A-Za-z]', '', 'g')) = 17),
+    coalesce(nullif(l.chassi, ''), 'nao informado');
+
+  return query select 'Renavam', 'Veiculo',
+    (length(regexp_replace(coalesce(l.renavam, ''), '[^0-9]', '', 'g')) between 9 and 11),
+    coalesce(nullif(l.renavam, ''), 'nao informado');
+
+  return query select 'Marca e modelo', 'Veiculo',
+    (coalesce(l.marca, '') <> '' and coalesce(l.modelo, '') <> ''),
+    coalesce(nullif(concat_ws(' ', l.marca, l.modelo), ''), 'nao informado');
+
+  return query select 'Ano fabricacao / modelo', 'Veiculo',
+    (l.ano_fabricacao is not null and l.ano_modelo is not null),
+    coalesce(concat_ws('/', l.ano_fabricacao::text, l.ano_modelo::text), 'nao informado');
+
+  return query select 'Cor', 'Veiculo',
+    (coalesce(l.cor, '') <> ''), coalesce(nullif(l.cor, ''), 'nao informada');
+
+  return query select 'Valor FIPE', 'Veiculo',
+    (coalesce(l.valor_fipe, 0) > 0),
+    coalesce(to_char(l.valor_fipe, 'FM999G999D00'), 'nao informado');
+
+  return query select 'Tipo de veiculo (precificacao)', 'Veiculo',
+    (l.tipo_veiculo_id is not null),
+    coalesce((select nome from tipos_veiculo where id = l.tipo_veiculo_id), 'nao informado');
+
+  -- Documentos ------------------------------------------------------------
+  return query select 'CRLV do veiculo', 'Documentos',
+    (coalesce(l.crlv_url, '') <> '' or coalesce(l.crlv_qrcode, '') <> ''),
+    (case when coalesce(l.crlv_qrcode, '') <> '' then 'QR Code lido'
+          when coalesce(l.crlv_url, '') <> '' then 'arquivo anexado'
+          else 'nao anexado' end);
+
+  return query select 'Vistoria registrada', 'Documentos',
+    (v_vist > 0), (v_vist || ' vistoria(s)')::text;
+
+  return query select 'Fotos da vistoria (min. 4)', 'Documentos',
+    (v_fotos >= 4), (v_fotos || ' foto(s))')::text;
+
+  -- Venda -----------------------------------------------------------------
+  return query select 'Plano contratado', 'Venda',
+    (l.plano_id is not null),
+    coalesce((select nome from planos_protecao where id = l.plano_id), 'nao informado');
+
+  return query select 'Vendedor responsavel', 'Venda',
+    (l.vendedor_id is not null),
+    -- left join + v.nome: o vendedor sem usuario de portal (0035) continua
+    -- sendo vendedor valido; o join interno o descartava.
+    coalesce((select coalesce(v.nome, u.nome) from vendedores v
+               left join usuarios u on u.id = v.usuario_id
+               where v.id = l.vendedor_id), 'nao informado');
+
+  return query select 'Forma de recebimento da adesao', 'Venda',
+    (l.adesao_forma is not null and coalesce(l.adesao_valor, 0) > 0),
+    coalesce(l.adesao_forma::text, 'nao informada');
+end;
+$$;
+
+-- ============================================================================
+-- (E) FINANCEIRO DA UNIDADE
+-- ============================================================================
+
+-- Classificacao contabil resolvida pelo banco: a franquia nao escolhe conta.
+create or replace function regional_categoria_movimento(p_tipo text)
+returns uuid
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select id from categorias_dre
+   where codigo_estruturado = case upper(p_tipo)
+                                when 'COMISSAO_RECEBER' then '1.3.01'
+                                when 'COMISSAO_PAGAR'   then '3.2.01'
+                              end;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Guarda comum das escritas: o titulo tem de ser DESTA unidade.
+-- `escopo_regional(x)` devolve x para admin/financeiro e a propria regional
+-- para o gestor — entao a comparacao abaixo barra tanto a franquia vizinha
+-- quanto o titulo da matriz (regional nula).
+-- ----------------------------------------------------------------------------
+create or replace function regional_titulo_no_escopo(p_lancamento_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from lancamentos_financeiros l
+     where l.id = p_lancamento_id
+       and l.regional_id is not distinct from escopo_regional(l.regional_id)
+  );
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Indicadores da unidade (compactos: a receber, a pagar e o que ja liquidou)
+-- ----------------------------------------------------------------------------
+create or replace function regional_financeiro_resumo(
+  p_regional_id uuid,
+  p_inicio      date,
+  p_fim         date
+)
+returns table (
+  a_receber_aberto  numeric,
+  a_receber_vencido numeric,
+  a_pagar_aberto    numeric,
+  a_pagar_vencido   numeric,
+  recebido_periodo  numeric,
+  pago_periodo      numeric,
+  saldo_periodo     numeric
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with reg as (select escopo_regional(p_regional_id) as id),
+  aberto as (
+    select l.tipo,
+           coalesce(l.valor_saldo, l.valor_original) as saldo,
+           l.data_vencimento
+      from lancamentos_financeiros l
+     where l.regional_id = (select id from reg)
+       and l.status not in ('quitado', 'cancelado')
+  ),
+  baixado as (
+    select l.tipo, b.valor_pago
+      from baixas_financeiras b
+      join lancamentos_financeiros l on l.id = b.lancamento_id
+     where l.regional_id = (select id from reg)
+       and l.status <> 'cancelado'
+       and b.data_pagamento between p_inicio and p_fim
+  )
+  select
+    coalesce((select sum(saldo) from aberto where tipo = 'RECEITA'), 0),
+    coalesce((select sum(saldo) from aberto where tipo = 'RECEITA' and data_vencimento < current_date), 0),
+    coalesce((select sum(saldo) from aberto where tipo = 'DESPESA'), 0),
+    coalesce((select sum(saldo) from aberto where tipo = 'DESPESA' and data_vencimento < current_date), 0),
+    coalesce((select sum(valor_pago) from baixado where tipo = 'RECEITA'), 0),
+    coalesce((select sum(valor_pago) from baixado where tipo = 'DESPESA'), 0),
+    coalesce((select sum(valor_pago) from baixado where tipo = 'RECEITA'), 0)
+      - coalesce((select sum(valor_pago) from baixado where tipo = 'DESPESA'), 0);
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Fila de titulos da unidade. `situacao` ja vem efetiva (vencido pela data).
+-- ----------------------------------------------------------------------------
+create or replace function regional_financeiro_titulos(
+  p_regional_id uuid,
+  p_inicio      date default null,
+  p_fim         date default null,
+  p_tipo        text default null,   -- RECEITA | DESPESA
+  p_situacao    text default null    -- aberto | vencido | quitado | cancelado
+)
+returns table (
+  id              uuid,
+  tipo            text,
+  descricao       text,
+  favorecido      text,
+  categoria       text,
+  data_vencimento date,
+  valor_original  numeric,
+  valor_pago      numeric,
+  valor_saldo     numeric,
+  status          text,
+  situacao        text,
+  observacoes     text
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with reg as (select escopo_regional(p_regional_id) as id)
+  select l.id,
+         l.tipo::text,
+         l.descricao,
+         coalesce(ve.nome, u.nome, f.razao_social, c.nome_razao_social),
+         cat.nome,
+         l.data_vencimento,
+         l.valor_original,
+         coalesce(l.valor_pago, 0),
+         coalesce(l.valor_saldo, l.valor_original),
+         l.status::text,
+         case
+           when l.status = 'cancelado' then 'cancelado'
+           when l.status = 'quitado'   then 'quitado'
+           when l.data_vencimento < current_date then 'vencido'
+           when coalesce(l.valor_pago, 0) > 0 then 'parcial'
+           else 'aberto'
+         end,
+         l.observacoes
+    from lancamentos_financeiros l
+    left join vendedores    ve  on ve.id  = l.vendedor_id
+    left join usuarios      u   on u.id   = ve.usuario_id
+    left join fornecedores  f   on f.id   = l.fornecedor_id
+    left join clientes      c   on c.id   = l.cliente_id
+    left join categorias_dre cat on cat.id = l.categoria_dre_id
+   where l.regional_id = (select id from reg)
+     and (p_inicio is null or l.data_vencimento >= p_inicio)
+     and (p_fim    is null or l.data_vencimento <= p_fim)
+     and (p_tipo   is null or l.tipo::text = upper(p_tipo))
+     and (p_situacao is null or p_situacao = case
+           when l.status = 'cancelado' then 'cancelado'
+           when l.status = 'quitado'   then 'quitado'
+           when l.data_vencimento < current_date then 'vencido'
+           when coalesce(l.valor_pago, 0) > 0 then 'parcial'
+           else 'aberto'
+         end)
+   order by l.data_vencimento, l.created_at;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Lancar um titulo da unidade. So os dois movimentos de comissao.
+-- A regional gravada e SEMPRE a de quem chama (escopo_regional).
+-- ----------------------------------------------------------------------------
+create or replace function regional_lancar_titulo(
+  p_regional_id uuid,
+  p_tipo        text,           -- COMISSAO_RECEBER | COMISSAO_PAGAR
+  p_descricao   text,
+  p_valor       numeric,
+  p_vencimento  date,
+  p_vendedor_id uuid default null,
+  p_observacoes text default null
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_reg  uuid := escopo_regional(p_regional_id);
+  v_tipo text := upper(coalesce(p_tipo, ''));
+  v_cat  uuid;
+  v_id   uuid;
+begin
+  if not is_staff() then
+    raise exception 'Sem permissao para lancar no financeiro da unidade'
+      using errcode = 'insufficient_privilege';
+  end if;
+  if v_reg is null then
+    raise exception 'Informe a unidade do lancamento' using errcode = 'check_violation';
+  end if;
+  if v_tipo not in ('COMISSAO_RECEBER', 'COMISSAO_PAGAR') then
+    raise exception 'Movimento invalido: o financeiro da franquia trata comissao a receber e a pagar'
+      using errcode = 'check_violation';
+  end if;
+  if coalesce(trim(p_descricao), '') = '' then
+    raise exception 'Descreva o lancamento' using errcode = 'check_violation';
+  end if;
+  if coalesce(p_valor, 0) <= 0 then
+    raise exception 'Informe um valor maior que zero' using errcode = 'check_violation';
+  end if;
+  if p_vencimento is null then
+    raise exception 'Informe o vencimento' using errcode = 'check_violation';
+  end if;
+
+  -- O vendedor tem de ser da propria unidade.
+  if p_vendedor_id is not null
+     and not exists (select 1 from vendedores where id = p_vendedor_id and regional_id = v_reg) then
+    raise exception 'Este vendedor nao pertence a sua unidade' using errcode = 'check_violation';
+  end if;
+
+  v_cat := regional_categoria_movimento(v_tipo);
+
+  insert into lancamentos_financeiros
+    (tipo, descricao, categoria_dre_id, regional_id, vendedor_id, valor_original,
+     data_emissao, data_vencimento, competencia, observacoes)
+  values (case when v_tipo = 'COMISSAO_RECEBER' then 'RECEITA' else 'DESPESA' end::tipo_movimentacao,
+          trim(p_descricao), v_cat, v_reg, p_vendedor_id, round(p_valor, 2),
+          current_date, p_vencimento, date_trunc('month', p_vencimento)::date,
+          nullif(trim(coalesce(p_observacoes, '')), ''))
+  returning id into v_id;
+
+  return v_id;
+end;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Baixa da unidade: data, valor e COMO pagou/recebeu (sem conta da matriz).
+-- ----------------------------------------------------------------------------
+create or replace function regional_baixar_titulo(
+  p_lancamento_id uuid,
+  p_data          date,
+  p_valor         numeric,
+  p_forma         text default null,
+  p_observacao    text default null
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_id uuid;
+begin
+  if not is_staff() then
+    raise exception 'Sem permissao para baixar titulo da unidade'
+      using errcode = 'insufficient_privilege';
+  end if;
+  if not regional_titulo_no_escopo(p_lancamento_id) then
+    raise exception 'Titulo nao encontrado nesta unidade' using errcode = 'check_violation';
+  end if;
+  if coalesce(p_valor, 0) <= 0 then
+    raise exception 'Informe o valor pago' using errcode = 'check_violation';
+  end if;
+
+  -- O trigger fn_recalcular_lancamento (0012) barra baixa a maior e atualiza
+  -- status; o fn_lanc_calcular_saldo (0032) atualiza o saldo em cache.
+  insert into baixas_financeiras
+    (lancamento_id, data_pagamento, valor_pago, valor_liquido, forma_pagamento, observacao)
+  values (p_lancamento_id, coalesce(p_data, current_date), round(p_valor, 2), round(p_valor, 2),
+          case when coalesce(trim(p_forma), '') = '' then null
+               else upper(trim(p_forma))::forma_pagamento end,
+          nullif(trim(coalesce(p_observacao, '')), ''))
+  returning id into v_id;
+
+  return v_id;
+end;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Cancelar (o historico e imutavel: muda o status, nao apaga)
+-- ----------------------------------------------------------------------------
+create or replace function regional_cancelar_titulo(
+  p_lancamento_id uuid,
+  p_motivo        text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_pago numeric;
+begin
+  if not is_staff() then
+    raise exception 'Sem permissao' using errcode = 'insufficient_privilege';
+  end if;
+  if not regional_titulo_no_escopo(p_lancamento_id) then
+    raise exception 'Titulo nao encontrado nesta unidade' using errcode = 'check_violation';
+  end if;
+  if coalesce(trim(p_motivo), '') = '' then
+    raise exception 'Informe o motivo do cancelamento' using errcode = 'check_violation';
+  end if;
+
+  select coalesce(valor_pago, 0) into v_pago
+    from lancamentos_financeiros where id = p_lancamento_id;
+  if v_pago > 0 then
+    raise exception 'Titulo com baixa registrada nao pode ser cancelado' using errcode = 'check_violation';
+  end if;
+
+  update lancamentos_financeiros
+     set status = 'cancelado',
+         observacoes = trim(coalesce(observacoes || ' | ', '') || 'Cancelado: ' || trim(p_motivo))
+   where id = p_lancamento_id;
+end;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Repassar a comissao do vendedor pelo portal da franquia.
+-- Wrapper com escopo: o gestor so repassa comissao de vendedor da SUA unidade.
+-- ----------------------------------------------------------------------------
+create or replace function regional_repassar_comissao(p_comissao_id uuid)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_reg uuid;
+begin
+  if not is_staff() then
+    raise exception 'Sem permissao' using errcode = 'insufficient_privilege';
+  end if;
+
+  select v.regional_id into v_reg
+    from comissoes_vendas c join vendedores v on v.id = c.vendedor_id
+   where c.id = p_comissao_id;
+
+  if v_reg is null or v_reg is distinct from escopo_regional(v_reg) then
+    raise exception 'Comissao nao encontrada nesta unidade' using errcode = 'check_violation';
+  end if;
+
+  return repassar_comissao_vendedor(p_comissao_id);
+end;
+$$;
+
+grant execute on function regional_categoria_movimento(text) to authenticated;
+grant execute on function regional_titulo_no_escopo(uuid) to authenticated;
+grant execute on function regional_financeiro_resumo(uuid, date, date) to authenticated;
+grant execute on function regional_financeiro_titulos(uuid, date, date, text, text) to authenticated;
+grant execute on function regional_lancar_titulo(uuid, text, text, numeric, date, uuid, text) to authenticated;
+grant execute on function regional_baixar_titulo(uuid, date, numeric, text, text) to authenticated;
+grant execute on function regional_cancelar_titulo(uuid, text) to authenticated;
+grant execute on function regional_repassar_comissao(uuid) to authenticated;

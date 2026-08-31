@@ -375,6 +375,25 @@ SECURITY DEFINER usando `escopo_regional()` (0032) — passar o id de outra fran
 volta, e lancamento da matriz (`regional_id` nulo) nunca aparece para um gestor. Ha teste cobrindo
 exatamente isso.)
 
+· `0037_financeiro_regional` (FINANCEIRO COMPACTO DA FRANQUIA: o portal (0036) reusava a tela do
+financeiro da matriz — boa tela, errada para a unidade: pedia plano de contas, centro de custo e
+conta bancaria, cadastros que sao da matriz. A operacao toda e da matriz; a franquia so movimenta
+COMISSAO. Entao: (A) `lancamentos_financeiros.vendedor_id` (favorecido do repasse) e
+`baixas_financeiras.forma_pagamento`/`observacao` (a unidade nao concilia banco: registra COMO
+pagou); (B) categoria `1.3.01` "Comissao de Franquia (repasse da matriz)"; (C) **CORRECAO de 3
+funcoes de 0034** que usavam `join usuarios` para achar o nome do vendedor — depois que o 0035
+tornou `vendedores.usuario_id` OPCIONAL o join interno DESCARTAVA o vendedor sem portal:
+`repassar_comissao_vendedor` gerava o titulo com `regional_id` NULO (o repasse da franquia caia na
+MATRIZ), `fn_regional_valida_comissao` deixava furar o teto "vendedor nunca passa a regional" e
+`checklist_lead` dizia "nao informado" com vendedor preenchido — todas passaram a `left join` +
+`coalesce(v.nome, u.nome)`; (D) RPCs `regional_categoria_movimento`, `regional_titulo_no_escopo`,
+`regional_financeiro_resumo`, `regional_financeiro_titulos` (situacao ja efetiva),
+`regional_lancar_titulo` (so `COMISSAO_RECEBER`/`COMISSAO_PAGAR`; a regional gravada e SEMPRE a de
+quem chama e o vendedor tem de ser da casa), `regional_baixar_titulo`, `regional_cancelar_titulo`
+(pede motivo, recusa titulo com baixa) e `regional_repassar_comissao` — todas SECURITY DEFINER com
+`escopo_regional()`, de modo que titulo da matriz (`regional_id` nulo) ou de franquia vizinha nao e
+lido NEM baixado por um gestor.)
+
 ## Módulos (status: todos funcionais)
 Assistência 24h (`/assistencia`: painel de acionamento com trava + limites em tempo real, cotação,
 OS, voucher ao prestador e Contas a Pagar) · SAC / Atendimento (`/sac`: **veículo-first + lazy** — busca por Nome/CPF/Placa → `visao-360` traz
@@ -736,10 +755,34 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
   id de outra franquia recebe os proprios numeros. No financeiro, a RLS `pode_regional(regional_id)`
   ja impede ver a matriz (`regional_id` nulo) — por isso "nao se mistura" vale mesmo se alguem
   chamar a API direto.
-- **Lancamento no portal nasce na unidade:** `<ContasFinanceiro regionalFixa>` passa a regional ao
-  modal, que trava o campo. Sem isso o gestor lancaria com regional nula e a RLS recusaria.
+- **O financeiro da unidade e OUTRO** (0037), nao a tela da matriz — ver a secao abaixo.
 - **Hotlink da unidade:** `/v/<CODIGO_DA_REGIONAL>` funciona igual ao do vendedor, mas o lead entra
   sem vendedor (fica para a unidade distribuir). `leads.origem_hotlink` permite medir cada link.
+
+## Financeiro da franquia (0037) — compacto de proposito
+- **Ele nao e o financeiro da matriz reduzido; e outro financeiro.** A operacao (mensalidade,
+  evento, assistencia, fornecedor) e toda da matriz. A unidade movimenta **so comissao**: a que
+  RECEBE da matriz e a que PAGA aos seus vendedores. Dois movimentos, so:
+  `COMISSAO_RECEBER` (receita, categoria `1.3.01`) e `COMISSAO_PAGAR` (despesa, `3.2.01`).
+- **A franquia nao cria cadastro nenhum.** Sem plano de contas, sem centro de custo, sem conta
+  bancaria — sao estruturas da matriz. A classificacao contabil vem pronta no movimento
+  (`regional_categoria_movimento` resolve no banco) e a **baixa registra a FORMA** (PIX,
+  transferencia, boleto, cartao, dinheiro) em vez de exigir a conta bancaria da matriz: a unidade
+  nao faz conciliacao bancaria.
+- **Isolamento e do banco, nao da tela.** Toda escrita passa por `regional_titulo_no_escopo`, que
+  compara `regional_id` com `escopo_regional(regional_id)`. Efeito: o gestor nao le nem baixa
+  titulo da franquia vizinha, e **titulo da matriz (`regional_id` nulo) fica fora do alcance dele**.
+  Ha teste cobrindo os dois casos.
+- **Do extrato ao caixa:** em `/regional/comissoes` o botao **Repassar** chama
+  `regional_repassar_comissao` -> `repassar_comissao_vendedor`, que cria o contas a pagar da
+  unidade. A baixa acontece em `/regional/financeiro`.
+- **Cancelar nao apaga:** muda a situacao e guarda o motivo na observacao; titulo com baixa
+  registrada nao pode ser cancelado.
+- Espelho puro em `src/lib/regional-financeiro.ts` (`MOVIMENTOS_REGIONAIS`, `totaisDaFila`,
+  `validarLancamentoRegional`) com testes; UI em `src/components/regional/financeiro-regional.tsx`.
+- **Login e saida:** `/regional` exige sessao (o layout redireciona para `/login`); o gestor
+  regional cai direto no portal ao entrar, e o **Sair** fica no cartao da unidade na sidebar e
+  tambem na barra do mobile.
 
 ## Cota de participação (rateio no evento) — arquitetura
 - **Desacoplada do Plano.** O Plano define a mensalidade (produtos); a cota (% da FIPE no rateio)

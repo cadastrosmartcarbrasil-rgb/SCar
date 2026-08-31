@@ -1134,6 +1134,8 @@ export type LancamentosFinanceirosRow = Timestamps & {
   grupo_parcelas: string | null;
   valor_pago: number;
   valor_saldo: number;
+  // 0037 — favorecido do repasse de comissao (financeiro da franquia)
+  vendedor_id: string | null;
 };
 
 export type BaixasFinanceirasRow = {
@@ -1150,6 +1152,9 @@ export type BaixasFinanceirasRow = {
   end_to_end_id_pix: string | null;
   status_conciliacao: StatusConciliacao;
   created_at: string;
+  // 0037 — a franquia registra COMO pagou/recebeu (nao concilia banco)
+  forma_pagamento: FormaPagamento | null;
+  observacao: string | null;
 };
 
 export type AnexosFinanceirosRow = {
@@ -1462,6 +1467,31 @@ export type ComissaoRegional = {
   created_at: string;
 };
 
+export type ResumoFinanceiroRegional = {
+  a_receber_aberto: number;
+  a_receber_vencido: number;
+  a_pagar_aberto: number;
+  a_pagar_vencido: number;
+  recebido_periodo: number;
+  pago_periodo: number;
+  saldo_periodo: number;
+};
+
+export type TituloRegionalRow = {
+  id: string;
+  tipo: string;
+  descricao: string;
+  favorecido: string | null;
+  categoria: string | null;
+  data_vencimento: string;
+  valor_original: number;
+  valor_pago: number;
+  valor_saldo: number;
+  status: string;
+  situacao: string;
+  observacoes: string | null;
+};
+
 export type LeadRegional = {
   id: string;
   nome: string;
@@ -1641,6 +1671,7 @@ export type Database = {
           Rel<'cliente_id', 'clientes'>,
           Rel<'categoria_dre_id', 'categorias_dre'>,
           Rel<'centro_custo_id', 'centros_custo'>,
+          Rel<'vendedor_id', 'vendedores'>,
         ]
       >;
       baixas_financeiras: TableDef<BaixasFinanceirasRow, [Rel<'lancamento_id', 'lancamentos_financeiros'>]>;
@@ -2135,6 +2166,40 @@ export type Database = {
       regional_leads: {
         Args: { p_regional_id: string | null; p_inicio?: string | null; p_fim?: string | null; p_somente_hotlink?: boolean };
         Returns: LeadRegional[];
+      };
+      regional_financeiro_resumo: {
+        Args: { p_regional_id: string | null; p_inicio: string; p_fim: string };
+        Returns: ResumoFinanceiroRegional[];
+      };
+      regional_financeiro_titulos: {
+        Args: {
+          p_regional_id: string | null; p_inicio?: string | null; p_fim?: string | null;
+          p_tipo?: string | null; p_situacao?: string | null;
+        };
+        Returns: TituloRegionalRow[];
+      };
+      regional_lancar_titulo: {
+        Args: {
+          p_regional_id: string | null; p_tipo: string; p_descricao: string;
+          p_valor: number; p_vencimento: string;
+          p_vendedor_id?: string | null; p_observacoes?: string | null;
+        };
+        Returns: string;
+      };
+      regional_baixar_titulo: {
+        Args: {
+          p_lancamento_id: string; p_data: string; p_valor: number;
+          p_forma?: string | null; p_observacao?: string | null;
+        };
+        Returns: string;
+      };
+      regional_cancelar_titulo: {
+        Args: { p_lancamento_id: string; p_motivo: string };
+        Returns: undefined;
+      };
+      regional_repassar_comissao: {
+        Args: { p_comissao_id: string };
+        Returns: string;
       };
       resolver_hotlink: {
         Args: { p_codigo: string };

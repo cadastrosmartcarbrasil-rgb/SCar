@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import { BarChart3, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -8,7 +9,7 @@ import { Select } from '@/components/ui/field';
 import {
   FiltroPeriodo, Indicador, Vazio, baixarCsv, periodoPreset, type Periodo,
 } from '@/components/financeiro/ui-financeiro';
-import { useComissoesRegional } from '@/hooks/use-regional';
+import { useComissoesRegional, useRepassarComissao } from '@/hooks/use-regional';
 import { somarMoeda } from '@/lib/money';
 import { formatCurrency, formatDate } from '@/lib/utils';
 
@@ -16,6 +17,16 @@ export default function ComissoesRegionalPage() {
   const [periodo, setPeriodo] = useState<Periodo>(() => periodoPreset('mes'));
   const [status, setStatus] = useState('');
   const { data: comissoes, isLoading } = useComissoesRegional({ regionalId: null, ...periodo, status });
+  const repassar = useRepassarComissao();
+
+  // Repassar = virar contas a pagar da unidade. O titulo nasce no financeiro
+  // da franquia (categoria 3.2.01) e a baixa e feita la.
+  function repassarComissao(id: string, vendedor: string) {
+    repassar.mutate(id, {
+      onSuccess: () => toast.success(`Repasse de ${vendedor} lancado no financeiro da unidade`),
+      onError: (e: unknown) => toast.error((e as Error).message),
+    });
+  }
 
   const totais = useMemo(() => {
     const lista = comissoes ?? [];
@@ -85,6 +96,7 @@ export default function ComissoesRegionalPage() {
                   <th className="py-2.5 font-semibold">Tipo</th>
                   <th className="py-2.5 text-right font-semibold">Valor</th>
                   <th className="py-2.5 font-semibold">Situacao</th>
+                  <th className="py-2.5" />
                 </tr>
               </thead>
               <tbody>
@@ -109,6 +121,17 @@ export default function ComissoesRegionalPage() {
                       }`}>
                         {c.status_pagamento === 'pago' ? 'Pago' : 'A repassar'}
                       </span>
+                    </td>
+                    <td className="py-2.5 text-right">
+                      {c.status_pagamento !== 'pago' && (
+                        <button
+                          onClick={() => repassarComissao(c.id, c.vendedor_nome)}
+                          disabled={repassar.isPending}
+                          className="rounded-lg px-2 py-1 text-[12px] font-semibold text-brand-700 hover:bg-brand-50 disabled:opacity-50"
+                        >
+                          Repassar
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}

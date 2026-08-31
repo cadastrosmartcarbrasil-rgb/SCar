@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import {
-  BarChart3, Copy, LayoutDashboard, LogOut, Menu, Users, Wallet, X, Zap,
+  BarChart3, Building2, Copy, LayoutDashboard, LogOut, Menu, Users, Wallet, X, Zap,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
@@ -41,9 +41,17 @@ export function SidebarRegional({ nome, unidade, codigo }: {
     <>
       <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden">
         <span className="text-sm font-bold text-brand-700">{unidade}</span>
-        <button onClick={() => setAberto((a) => !a)} aria-label="Menu" className="rounded-lg p-1.5 text-slate-600">
-          {aberto ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={sair}
+            className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[12px] font-semibold text-slate-500 hover:bg-slate-100 hover:text-rose-600"
+          >
+            <LogOut className="h-4 w-4" /> Sair
+          </button>
+          <button onClick={() => setAberto((a) => !a)} aria-label="Menu" className="rounded-lg p-1.5 text-slate-600">
+            {aberto ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
       </div>
 
       <aside className={`cockpit w-full shrink-0 md:block md:w-60 ${aberto ? 'block' : 'hidden'}`}>
@@ -67,6 +75,12 @@ export function SidebarRegional({ nome, unidade, codigo }: {
               <Copy className="h-3 w-3" /> Meu hotlink de vendas
             </button>
           )}
+          <button
+            onClick={sair}
+            className="mt-1.5 flex w-full items-center justify-center gap-1.5 rounded-lg border border-white/15 px-2 py-1.5 text-[11px] font-semibold text-white/80 transition hover:border-rose-400/40 hover:bg-rose-500/15 hover:text-white"
+          >
+            <LogOut className="h-3 w-3" /> Sair da conta
+          </button>
         </div>
 
         <nav className="space-y-0.5 px-3 pb-4">
@@ -88,12 +102,13 @@ export function SidebarRegional({ nome, unidade, codigo }: {
               </Link>
             );
           })}
-          <button
-            onClick={sair}
-            className="mt-2 flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-white/50 transition hover:bg-white/5 hover:text-white"
+          <Link
+            href="/dashboard"
+            onClick={() => setAberto(false)}
+            className="mt-2 flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-white/50 transition hover:bg-white/5 hover:text-white"
           >
-            <LogOut className="h-4 w-4" /> Sair
-          </button>
+            <Building2 className="h-4 w-4" /> Sistema da matriz
+          </Link>
         </nav>
       </aside>
     </>
