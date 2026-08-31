@@ -21,6 +21,7 @@ import {
   Menu,
   X,
   Building2,
+  UserRound,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
@@ -89,10 +90,15 @@ export function Sidebar({ papel, logoUrl }: { papel?: PapelUsuario; logoUrl?: st
     ? [...GESTAO, { href: '/configuracoes', label: 'Configuracoes', icon: Settings }]
     : GESTAO;
 
-  // O Portal da Franquia so aparece para quem gerencia uma unidade.
-  const menuGestao = ['gestor_regional', 'admin', 'financeiro'].includes(papel ?? '')
-    ? [{ href: '/regional', label: 'Portal da Franquia', icon: Building2 }, ...gestao]
-    : gestao;
+  // Portais: o da Franquia para quem gerencia uma unidade; o do Vendedor para
+  // o consultor de vendas (o layout de /vendedor confere o cadastro no banco).
+  const portais = [
+    ...(['gestor_regional', 'admin', 'financeiro'].includes(papel ?? '')
+      ? [{ href: '/regional', label: 'Portal da Franquia', icon: Building2 }] : []),
+    ...(['consultor_vendas', 'admin'].includes(papel ?? '')
+      ? [{ href: '/vendedor', label: 'Meu Portal de Vendas', icon: UserRound }] : []),
+  ];
+  const menuGestao = [...portais, ...gestao];
 
   async function sair() {
     await supabase.auth.signOut();

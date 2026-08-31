@@ -1467,6 +1467,77 @@ export type ComissaoRegional = {
   created_at: string;
 };
 
+export type VendedorPainel = {
+  vendedor_id: string;
+  nome: string;
+  codigo: string | null;
+  regional_nome: string | null;
+  leads_periodo: number;
+  leads_hotlink: number;
+  leads_convertidos: number;
+  leads_abertos: number;
+  taxa_conversao: number;
+  veiculos_ativos: number;
+  comissao_periodo: number;
+  comissao_pendente: number;
+  comissao_paga: number;
+  taxa_adesao: number;
+  taxa_recorrente: number;
+  dia_entrada: number | null;
+  dia_recorrencia: number | null;
+};
+
+export type LeadDoVendedor = {
+  id: string;
+  nome: string;
+  celular: string;
+  email: string | null;
+  placa: string | null;
+  marca: string | null;
+  modelo: string | null;
+  valor_fipe: number | null;
+  status: string;
+  origem_hotlink: string | null;
+  perdido_motivo: string | null;
+  veiculo_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ComissaoDoVendedor = {
+  id: string;
+  placa: string | null;
+  associado: string | null;
+  is_adesao: boolean;
+  valor_comissao: number;
+  status_pagamento: string;
+  created_at: string;
+};
+
+export type PerfilVendedor = {
+  id: string;
+  nome: string | null;
+  email: string | null;
+  telefone: string | null;
+  documento: string | null;
+  codigo: string | null;
+  regional_nome: string | null;
+  banco: string | null;
+  agencia: string | null;
+  conta: string | null;
+  chave_pix: string | null;
+  taxa_adesao: number;
+  taxa_recorrente: number;
+  teto_adesao: number | null;
+  teto_recorrente: number | null;
+  dia_entrada: number | null;
+  dia_recorrencia: number | null;
+  entrada_herdada: boolean;
+  recorrencia_herdada: boolean;
+  contrato_url: string | null;
+  boas_vindas_enviada_em: string | null;
+};
+
 export type ResumoFinanceiroRegional = {
   a_receber_aberto: number;
   a_receber_vencido: number;
@@ -2166,6 +2237,40 @@ export type Database = {
       regional_leads: {
         Args: { p_regional_id: string | null; p_inicio?: string | null; p_fim?: string | null; p_somente_hotlink?: boolean };
         Returns: LeadRegional[];
+      };
+      vendedor_atual: {
+        Args: Record<string, never>;
+        Returns: string | null;
+      };
+      vendedor_painel: {
+        Args: { p_inicio: string; p_fim: string };
+        Returns: VendedorPainel[];
+      };
+      vendedor_leads: {
+        Args: { p_status?: string | null; p_busca?: string | null; p_limite?: number };
+        Returns: LeadDoVendedor[];
+      };
+      vendedor_comissoes: {
+        Args: { p_status?: string | null; p_inicio?: string | null; p_fim?: string | null };
+        Returns: ComissaoDoVendedor[];
+      };
+      vendedor_perfil: {
+        Args: Record<string, never>;
+        Returns: PerfilVendedor[];
+      };
+      vendedor_criar_lead: {
+        Args: {
+          p_nome: string; p_celular: string;
+          p_email?: string | null; p_placa?: string | null; p_observacao?: string | null;
+        };
+        Returns: string;
+      };
+      vendedor_atualizar_perfil: {
+        Args: {
+          p_telefone?: string | null; p_banco?: string | null; p_agencia?: string | null;
+          p_conta?: string | null; p_chave_pix?: string | null;
+        };
+        Returns: undefined;
       };
       regional_financeiro_resumo: {
         Args: { p_regional_id: string | null; p_inicio: string; p_fim: string };

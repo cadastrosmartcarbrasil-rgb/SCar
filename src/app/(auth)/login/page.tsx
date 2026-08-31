@@ -34,13 +34,19 @@ function LoginForm() {
       return;
     }
 
-    // O gestor de franquia entra direto no portal da unidade — o painel da
-    // matriz nao e a casa dele. Um `redirect` explicito na URL sempre vence.
+    // Cada perfil entra na sua casa: o gestor de franquia no portal da
+    // unidade, o vendedor no portal dele. Um `redirect` explicito na URL
+    // sempre vence.
     let destino = params.get('redirect');
     if (!destino && data.user) {
       const { data: perfil } = await supabase
         .from('usuarios').select('papel, regional_id').eq('id', data.user.id).maybeSingle();
-      destino = perfil?.papel === 'gestor_regional' && perfil.regional_id ? '/regional' : '/dashboard';
+      if (perfil?.papel === 'gestor_regional' && perfil.regional_id) {
+        destino = '/regional';
+      } else {
+        const { data: vendedorId } = await supabase.rpc('vendedor_atual', {});
+        destino = vendedorId ? '/vendedor' : '/dashboard';
+      }
     }
     setLoading(false);
     router.push(destino ?? '/dashboard');

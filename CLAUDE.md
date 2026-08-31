@@ -394,6 +394,21 @@ quem chama e o vendedor tem de ser da casa), `regional_baixar_titulo`, `regional
 `escopo_regional()`, de modo que titulo da matriz (`regional_id` nulo) ou de franquia vizinha nao e
 lido NEM baixado por um gestor.)
 
+· `0038_portal_vendedor` (PORTAL DO VENDEDOR `/vendedor`: (A) `vendedor_atual()` resolve o vendedor
+pelo `auth.uid()` e **nenhuma RPC do portal recebe id de vendedor** — nao existe parametro para
+pedir os dados de outra pessoa (um passo alem do `escopo_regional`, que aceita o id e ignora);
+(B) **RLS de `leads` revista**: ate aqui o vendedor nao tinha login, entao `pode_regional(regional_id)`
+dava a QUALQUER staff da franquia — inclusive um `consultor_vendas` — a carteira inteira da unidade;
+com o vendedor logando isso viraria vazamento. Agora `pode_ver_carteira_regional()`
+(admin/financeiro/gestor_regional/auditoria) mantem a visao da unidade e o `consultor_vendas` fica
+com o que e dele (`consultor_id`, `created_by` ou `vendedor_id` apontando para o seu cadastro — este
+ultimo e o que faz o lead do HOTLINK, criado pelo service_role, aparecer para o dono do link);
+(C) RPCs `vendedor_painel`, `vendedor_leads`, `vendedor_comissoes`, `vendedor_perfil`,
+`vendedor_criar_lead` (nasce amarrado a quem cadastrou, na regional dele) e
+`vendedor_atualizar_perfil` (subconjunto seguro: telefone e dados bancarios — comissao, regional e
+status NAO sao parametros, entao nao ha como o vendedor aumentar a propria comissao; a RLS de
+`vendedores` ja barra o caminho direto). Ha teste cobrindo os dois bloqueios.)
+
 ## Módulos (status: todos funcionais)
 Assistência 24h (`/assistencia`: painel de acionamento com trava + limites em tempo real, cotação,
 OS, voucher ao prestador e Contas a Pagar) · SAC / Atendimento (`/sac`: **veículo-first + lazy** — busca por Nome/CPF/Placa → `visao-360` traz
@@ -410,6 +425,7 @@ Também: toggle de faturamento Agrupado↔Individual, status financeiro e os opc
 APIs REST em `/api/v1/sac/*` — `busca`, `visao-360`, `veiculo`, `faturamento`, `boleto`, `atendimento`
 — reutilizáveis por Portal do Associado/Assistência 24h/Chatbot)
 · **Protocolos** (`/protocolos`: Central com fila, filtros, histórico, transferência e encerramento)
+· **Portal do Vendedor** (`/vendedor`: painel, leads, comissões e perfil do próprio vendedor — PWA)
 Vendas/CRM (`/vendas` mobile-first: captura de lead + FIPE por placa/cascata, cotação com
 link público `/cotacao/[token]` detalhada/consolidada + print-PDF, esteira com trava de
 Auditoria — só papel `auditoria`/`admin` clica "Autorizar Entrada" e efetiva cliente+veículo)
@@ -783,6 +799,34 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
 - **Login e saida:** `/regional` exige sessao (o layout redireciona para `/login`); o gestor
   regional cai direto no portal ao entrar, e o **Sair** fica no cartao da unidade na sidebar e
   tambem na barra do mobile.
+
+## Portal do Vendedor (0038) — `/vendedor`
+- **Quem entra:** quem tem cadastro ATIVO em `vendedores` ligado ao proprio login (o acesso e
+  criado em `Configuracoes → Vendedores`, secao *Criar acesso*). O layout confere pelo banco
+  (`vendedor_perfil`), nao pelo papel — vendedor sem cadastro ve um aviso, nao um erro.
+- **A isolacao aqui e mais forte que no portal da franquia.** La o gestor pode passar o id de
+  outra unidade e recebe o proprio; aqui **as RPCs nao tem parametro de vendedor**. A identidade
+  sai de `vendedor_atual()`. Nao existe o que forjar.
+- **A RLS de `leads` mudou junto (0038) e isso e uma mudanca de comportamento:** o
+  `consultor_vendas` passou a ver **so a propria carteira**, nao mais a da regional inteira.
+  Antes o vendedor nao tinha login e a policy generosa nao doia; com o portal, doeria. Gestor,
+  admin, financeiro e auditoria continuam vendo a unidade toda.
+- **4 telas, mobile-first** (barra inferior no celular, sidebar cockpit no desktop): Painel
+  (hotlink no topo, leads/conversao/comissao/carteira, ultimos leads e o cartao "Meu pagamento"
+  com o proximo pagamento calculado) · Meus Leads (filtro por etapa, busca, **WhatsApp e ligar**
+  direto do card, e *Novo lead*) · Minhas Comissoes (extrato + CSV) · Meu Perfil (identificacao,
+  hotlink, **contato e dados bancarios editaveis** e comissao/prazo em leitura — quem muda e a
+  franquia).
+- **Vocabulario proprio:** `APROVADO` e `EM_AUDITORIA` viram "Em analise" para o vendedor —
+  sao etapas nossas, ele so precisa saber que esta com a empresa. Mapa em
+  `src/lib/vendedor.ts` (`etapaDoVendedor`, `SELO_STATUS_LEAD`, `FILTROS_LEAD`), com testes.
+- **Compartilhar o link** usa a Web Share API no celular (abre o menu nativo) e cai no WhatsApp
+  Web no desktop.
+- **PWA:** `src/app/manifest.ts` + `viewport.themeColor` no layout raiz. O portal instala na tela
+  inicial e abre em tela cheia. Icone hoje e o `logo-smartcar.svg`; para um icone melhor no
+  Android/iOS, gerar PNGs 192/512 e apontar no manifesto.
+- **Adesao recebida na hora nao aparece no extrato** (nao passou pelo nosso financeiro) — o texto
+  esta na propria tela para nao virar duvida recorrente.
 
 ## Cota de participação (rateio no evento) — arquitetura
 - **Desacoplada do Plano.** O Plano define a mensalidade (produtos); a cota (% da FIPE no rateio)
