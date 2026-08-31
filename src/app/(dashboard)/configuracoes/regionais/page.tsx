@@ -27,7 +27,8 @@ export default function RegionaisPage() {
 
   function novo() {
     setEditando({ nome: '', cnpj: '', endereco: {}, responsavel_id: null, percentual_maximo_desconto_venda: 0,
-      taxa_comissao_adesao: 0, taxa_comissao_recorrente: 0 });
+      taxa_comissao_adesao: 0, taxa_comissao_recorrente: 0,
+      dias_protecao_lead: 30, dias_sem_contato_lead: 7, distribuicao_lead: 'MANUAL' });
     setAberto(true);
   }
   function editar(r: RegionaisRow) {
@@ -213,6 +214,49 @@ export default function RegionaisPage() {
               placeholder="Ex.: ate 10% em campanhas de fim de ano"
             />
           </FormField>
+          {/* Regras de atribuicao do lead (0041) — sao da franquia, nao do codigo. */}
+          <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+            <h4 className="mb-2.5 text-[11.5px] font-bold uppercase tracking-wide text-slate-600">
+              Atribuicao de leads
+            </h4>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <FormField label="Protecao do lead (dias)">
+                <Input
+                  type="number" min={0} max={365} className="tnum"
+                  value={editando?.dias_protecao_lead ?? 30}
+                  onChange={(e) => setEditando((p) => ({ ...p, dias_protecao_lead: Number(e.target.value || 0) }))}
+                />
+                <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+                  Enquanto durar, o lead e de quem captou primeiro: um clique em outro hotlink nao
+                  troca o dono, so registra a nova passagem. <b>0 desliga</b> (o ultimo clique leva).
+                </p>
+              </FormField>
+              <FormField label="Devolver ao pool sem contato (dias)">
+                <Input
+                  type="number" min={0} max={365} className="tnum"
+                  value={editando?.dias_sem_contato_lead ?? 7}
+                  onChange={(e) => setEditando((p) => ({ ...p, dias_sem_contato_lead: Number(e.target.value || 0) }))}
+                />
+                <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+                  Lead sem interacao volta para a unidade redistribuir. <b>0 = nunca volta.</b>
+                </p>
+              </FormField>
+            </div>
+            <FormField label="Lead do hotlink DA UNIDADE" className="mt-3">
+              <Select
+                value={editando?.distribuicao_lead ?? 'MANUAL'}
+                onChange={(e) => setEditando((p) => ({ ...p, distribuicao_lead: e.target.value }))}
+              >
+                <option value="MANUAL">Manual — o gestor distribui</option>
+                <option value="RODIZIO">Rodizio — vai para o proximo da fila</option>
+              </Select>
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+                Vale so para o link da propria franquia (o do vendedor sempre fica com ele).
+                No rodizio entra quem esta ha mais tempo sem receber lead.
+              </p>
+            </FormField>
+          </div>
+
           <FormField label="Responsavel">
             <Select
               value={editando?.responsavel_id ?? ''}

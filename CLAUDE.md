@@ -428,6 +428,20 @@ cotacao oferecia como AVULSO um item que ja vinha no plano; (D) RLS de `vistoria
 do `vendedor_id` (mesma correcao que o 0038 fez em `leads`): sem ela o dono do HOTLINK — cujo lead
 nasce pelo service_role, sem `consultor_id` — nao conseguiria abrir a propria vistoria.)
 
+· `0041_atribuicao_lead` (REGRAS DE ATRIBUICAO DO LEAD: o hotlink fazia um INSERT cru — cada clique
+virava lead novo. Agora `registrar_captura_hotlink` decide, e as regras sao PARAMETRO da franquia:
+`regionais.dias_protecao_lead` (30), `dias_sem_contato_lead` (7) e `distribuicao_lead`
+(MANUAL|RODIZIO). Classificacao em `classificar_captura(regional, celular, cpf, placa)`:
+**CARTEIRA** (ja e associado — nasce marcado `leads.carteira`, nao vira venda nova),
+**DUPLICADO** (ha lead aberto dentro da protecao — NAO cria outro lead, so incrementa
+`recapturas` e registra a passagem; fica com quem captou PRIMEIRO), **REATIVACAO** (lead antigo
+sem protecao: quem trouxe agora leva) e **NOVO**. `leads` ganha `atribuido_em`,
+`atribuicao_motivo`, `ultima_interacao_em`, `recapturas`, `carteira`, `cliente_carteira_id`; nova
+`lead_atribuicoes` guarda cada troca de dono. `atribuir_lead` (recusa vendedor de outra unidade),
+`proximo_vendedor_rodizio`, `liberar_leads_sem_contato` (devolve os parados ao pool),
+`registrar_contato_lead` (renova a protecao) e `leads_sem_vendedor` (o pool da unidade).
+`fn_lead_historico` passa a carimbar `ultima_interacao_em` a cada mudanca de etapa.)
+
 ## Módulos (status: todos funcionais)
 Assistência 24h (`/assistencia`: painel de acionamento com trava + limites em tempo real, cotação,
 OS, voucher ao prestador e Contas a Pagar) · SAC / Atendimento (`/sac`: **veículo-first + lazy** — busca por Nome/CPF/Placa → `visao-360` traz
@@ -887,6 +901,33 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
   regional dele — e so depois a ficha do veiculo entra por update (a RLS do 0038 ja reconhece o dono).
 - No portal, `/vendedor/leads/[id]` e a ficha de campo: WhatsApp/ligar, dados do veiculo, **a
   vistoria guiada** e o envio do CRLV. O resto do fechamento (associado, adesao) segue com a franquia.
+
+## Atribuição do lead pelo hotlink (0041)
+- **Quem captou primeiro fica com o lead.** E a escolha registrada: e a norma do mercado e a unica
+  que protege a prospeccao. O contrario ("ultimo clique leva") premiaria quem manda link para a
+  base do colega. Quem discordar muda por parametro, nao por codigo.
+- **Nada disso esta no codigo:** `regionais.dias_protecao_lead` (padrao 30),
+  `dias_sem_contato_lead` (7) e `distribuicao_lead` (MANUAL|RODIZIO) ficam em
+  `Configuracoes → Regionais`. `0` desliga a regra correspondente.
+- **Quatro desfechos** (`classificar_captura`), decididos por celular, CPF/CNPJ **ou placa**:
+  | Situacao | O que acontece |
+  |---|---|
+  | **CARTEIRA** — ja e associado | Nasce com `carteira = true` e aponta o cliente. Nao e venda nova. |
+  | **DUPLICADO** — lead aberto e protegido | **Nao cria outro lead.** Incrementa `recapturas`, anota a passagem e devolve o dono original. |
+  | **REATIVACAO** — lead antigo sem protecao | Quem trouxe agora assume (motivo `HOTLINK_REATIVACAO`). |
+  | **NOVO** | Nasce com o dono do link; se o link e da UNIDADE, entra no pool ou no rodizio. |
+- **O hotlink do vendedor sempre fica com ele**; a distribuicao (manual/rodizio) vale so para o
+  link da propria franquia. No rodizio entra quem esta ha mais tempo sem receber lead.
+- **Trabalhar o lead renova a protecao:** mudar de etapa (trigger `fn_lead_historico`) ou
+  `registrar_contato_lead` carimbam `ultima_interacao_em`. Parar de trabalhar e o que derruba.
+- **Pool da unidade** (`/regional/leads`): lista os leads sem dono, com o botao **Devolver parados**
+  (`liberar_leads_sem_contato`) e a distribuicao por vendedor. `atribuir_lead` recusa vendedor de
+  outra franquia.
+- **A rota `/api/v1/hotlink` nao tem regra nenhuma:** ela chama a RPC e devolve ao visitante a
+  mensagem que o banco montou — quem ja e associado ouve "voce ja e nosso associado", nao uma
+  promessa de cotacao nova.
+- Espelho puro em `src/lib/atribuicao.ts` (`protecaoAtiva`, `deveVoltarAoPool`,
+  `diasDeProtecaoRestantes`, `ROTULO_CAPTURA`) com testes.
 
 ## Cota de participação (rateio no evento) — arquitetura
 - **Desacoplada do Plano.** O Plano define a mensalidade (produtos); a cota (% da FIPE no rateio)

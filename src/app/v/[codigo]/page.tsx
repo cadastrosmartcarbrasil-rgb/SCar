@@ -17,6 +17,7 @@ export default function HotlinkPage({ params }: { params: Promise<{ codigo: stri
   const [form, setForm] = useState({ nome: '', celular: '', email: '', placa: '' });
   const [enviando, setEnviando] = useState(false);
   const [pronto, setPronto] = useState(false);
+  const [mensagem, setMensagem] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
@@ -40,6 +41,9 @@ export default function HotlinkPage({ params }: { params: Promise<{ codigo: stri
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? 'Nao consegui enviar');
+      // A mensagem vem do banco: quem ja e associado ou ja esta em atendimento
+      // recebe o retorno certo, sem que a pagina precise conhecer a regra.
+      setMensagem(json.mensagem ?? null);
       setPronto(true);
     } catch (err) {
       setErro((err as Error).message);
@@ -70,7 +74,7 @@ export default function HotlinkPage({ params }: { params: Promise<{ codigo: stri
             <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-500" />
             <p className="mt-2 text-sm font-semibold text-slate-800">Recebemos seus dados!</p>
             <p className="mt-1 text-xs text-slate-500">
-              {vendedor ?? 'Seu consultor'} vai entrar em contato com a sua cotacao.
+              {mensagem ?? `${vendedor ?? 'Seu consultor'} vai entrar em contato com a sua cotacao.`}
             </p>
           </div>
         ) : (

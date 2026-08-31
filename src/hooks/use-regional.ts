@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import type {
-  ComissaoRegional, DesempenhoVendedor, LeadRegional, RegionalPainel,
+  ComissaoRegional, DesempenhoVendedor, LeadRegional, LeadSemVendedor, RegionalPainel,
   ResumoFinanceiroRegional, TituloRegionalRow,
 } from '@/lib/database.types';
 
@@ -215,5 +215,55 @@ export function useRepassarComissao() {
       return data;
     },
     onSuccess: () => invalidarFinanceiro(qc),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Atribuicao do lead (0041): pool da unidade e distribuicao.
+// ---------------------------------------------------------------------------
+export function useLeadsSemVendedor(regionalId: string | null) {
+  const supabase = createClient();
+  return useQuery<LeadSemVendedor[]>({
+    queryKey: ['regional', 'pool-leads', regionalId ?? 'minha'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('leads_sem_vendedor', {
+        p_regional_id: regionalId,
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function useAtribuirLead() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: {
+      leadId: string; vendedorId: string | null; motivo: string; observacao?: string | null;
+    }) => {
+      const { error } = await supabase.rpc('atribuir_lead', {
+        p_lead_id: v.leadId, p_vendedor_id: v.vendedorId,
+        p_motivo: v.motivo, p_observacao: v.observacao ?? null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['regional'] }),
+  });
+}
+
+/** Devolve ao pool os leads parados alem da janela da unidade. */
+export function useLiberarLeadsParados() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (regionalId: string | null) => {
+      const { data, error } = await supabase.rpc('liberar_leads_sem_contato', {
+        p_regional_id: regionalId,
+      });
+      if (error) throw error;
+      return data ?? 0;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['regional'] }),
   });
 }

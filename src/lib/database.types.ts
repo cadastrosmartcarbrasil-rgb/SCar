@@ -99,6 +99,10 @@ export type RegionaisRow = Timestamps & {
   dia_pagto_entrada_padrao: number | null;
   dia_pagto_recorrencia_padrao: number | null;
   codigo: string | null;
+  // 0041 — regras de atribuicao do lead
+  dias_protecao_lead: number;
+  dias_sem_contato_lead: number;
+  distribuicao_lead: string;
 };
 
 export type UsuariosRow = Timestamps & {
@@ -544,6 +548,13 @@ export type LeadsRow = Timestamps & {
   adesao_recebida_em: string | null;
   adesao_comprovante_url: string | null;
   origem_hotlink: string | null;
+  // 0041 — atribuicao
+  atribuido_em: string | null;
+  atribuicao_motivo: string | null;
+  ultima_interacao_em: string | null;
+  recapturas: number;
+  carteira: boolean;
+  cliente_carteira_id: string | null;
 };
 
 export type CotacoesRow = {
@@ -1467,6 +1478,33 @@ export type ComissaoRegional = {
   created_at: string;
 };
 
+export type ClassificacaoCaptura = {
+  tipo: string;
+  lead_id: string | null;
+  vendedor_id: string | null;
+  vendedor_nome: string | null;
+  cliente_id: string | null;
+  detalhe: string;
+};
+
+export type LeadSemVendedor = {
+  id: string;
+  nome: string;
+  celular: string;
+  placa: string | null;
+  status: string;
+  origem_hotlink: string | null;
+  carteira: boolean;
+  parado_dias: number;
+  created_at: string;
+};
+
+export type ParametrosAtribuicaoRow = {
+  dias_protecao: number;
+  dias_sem_contato: number;
+  distribuicao: string;
+};
+
 export type FotoVistoriaModelo = {
   codigo: string;
   nome: string;
@@ -2253,6 +2291,47 @@ export type Database = {
       regional_leads: {
         Args: { p_regional_id: string | null; p_inicio?: string | null; p_fim?: string | null; p_somente_hotlink?: boolean };
         Returns: LeadRegional[];
+      };
+      classificar_captura: {
+        Args: {
+          p_regional_id: string | null; p_celular?: string | null;
+          p_cpf_cnpj?: string | null; p_placa?: string | null;
+        };
+        Returns: ClassificacaoCaptura[];
+      };
+      parametros_atribuicao: {
+        Args: { p_regional_id: string | null };
+        Returns: ParametrosAtribuicaoRow[];
+      };
+      protecao_lead_ativa: {
+        Args: { p_lead_id: string };
+        Returns: boolean;
+      };
+      atribuir_lead: {
+        Args: {
+          p_lead_id: string; p_vendedor_id: string | null;
+          p_motivo: string; p_observacao?: string | null;
+        };
+        Returns: LeadsRow;
+      };
+      liberar_leads_sem_contato: {
+        Args: { p_regional_id?: string | null };
+        Returns: number;
+      };
+      registrar_contato_lead: {
+        Args: { p_lead_id: string; p_obs?: string | null };
+        Returns: undefined;
+      };
+      leads_sem_vendedor: {
+        Args: { p_regional_id?: string | null };
+        Returns: LeadSemVendedor[];
+      };
+      registrar_captura_hotlink: {
+        Args: {
+          p_codigo: string; p_nome: string; p_celular: string;
+          p_email?: string | null; p_placa?: string | null; p_cpf_cnpj?: string | null;
+        };
+        Returns: { lead_id: string; tipo: string; vendedor_nome: string | null; mensagem: string }[];
       };
       fotos_vistoria_lead: {
         Args: { p_lead_id: string };

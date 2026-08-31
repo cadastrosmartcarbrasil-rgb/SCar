@@ -2,10 +2,16 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ExternalLink, Link2, Zap } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { toast } from 'sonner';
+import { ExternalLink, Inbox, Link2, RotateCcw, Zap } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select } from '@/components/ui/field';
 import { FiltroPeriodo, Vazio, periodoPreset, type Periodo } from '@/components/financeiro/ui-financeiro';
-import { useLeadsRegional } from '@/hooks/use-regional';
+import {
+  useAtribuirLead, useDesempenhoEquipe, useLeadsRegional, useLeadsSemVendedor,
+  useLiberarLeadsParados, useMinhaRegional,
+} from '@/hooks/use-regional';
 import { formatDate } from '@/lib/utils';
 
 const COR_STATUS: Record<string, string> = {
@@ -23,6 +29,34 @@ export default function LeadsRegionalPage() {
   const [somenteHotlink, setSomenteHotlink] = useState(false);
   const { data: leads, isLoading } = useLeadsRegional({ regionalId: null, ...periodo, somenteHotlink });
 
+  const { data: minha } = useMinhaRegional();
+  const regionalId = minha?.perfil?.regional_id ?? null;
+  const { data: pool } = useLeadsSemVendedor(regionalId);
+  const { data: equipe } = useDesempenhoEquipe({ regionalId: null, ...periodo });
+  const atribuir = useAtribuirLead();
+  const liberar = useLiberarLeadsParados();
+  const [destino, setDestino] = useState<Record<string, string>>({});
+
+  function distribuir(leadId: string) {
+    const vendedorId = destino[leadId];
+    if (!vendedorId) return toast.error('Escolha o vendedor');
+    atribuir.mutate(
+      { leadId, vendedorId, motivo: 'MANUAL', observacao: 'Distribuido pelo gestor da unidade' },
+      {
+        onSuccess: () => toast.success('Lead distribuido'),
+        onError: (e: unknown) => toast.error((e as Error).message),
+      },
+    );
+  }
+
+  function devolverParados() {
+    liberar.mutate(regionalId, {
+      onSuccess: (n) => toast.success(
+        n === 0 ? 'Nenhum lead parado alem do prazo' : `${n} lead(s) devolvido(s) ao pool`),
+      onError: (e: unknown) => toast.error((e as Error).message),
+    });
+  }
+
   return (
     <div className="space-y-5">
       <header>
@@ -31,6 +65,71 @@ export default function LeadsRegionalPage() {
           Tudo que a sua equipe captou — inclusive o que entrou sozinho pelos hotlinks.
         </p>
       </header>
+
+      {/* Pool: o que chegou sem dono (hotlink da unidade ou devolvido por
+          inatividade) e espera distribuicao. */}
+      <Card>
+        <CardHeader className="flex-row items-start justify-between gap-3">
+          <div>
+            <CardTitle className="flex items-center gap-1.5">
+              <Inbox className="h-4 w-4 text-slate-400" />
+              Sem dono ({(pool ?? []).length})
+            </CardTitle>
+            <p className="text-xs text-slate-500">
+              Leads do link da unidade e os devolvidos por falta de contato.
+            </p>
+          </div>
+          <Button variant="secondary" onClick={devolverParados} disabled={liberar.isPending}>
+            <RotateCcw className="mr-1.5 h-4 w-4" />
+            {liberar.isPending ? 'Verificando…' : 'Devolver parados'}
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {(pool ?? []).length === 0 ? (
+            <p className="py-2 text-center text-[12.5px] text-slate-400">
+              Nenhum lead esperando distribuicao.
+            </p>
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {(pool ?? []).map((l) => (
+                <li key={l.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
+                  <div className="min-w-0">
+                    <p className="truncate text-[13px] font-medium text-slate-800">
+                      {l.nome}
+                      {l.carteira && (
+                        <span className="ml-2 rounded-full bg-violet-50 px-2 py-0.5 text-[10.5px] font-semibold text-violet-700 ring-1 ring-inset ring-violet-200">
+                          ja e associado
+                        </span>
+                      )}
+                    </p>
+                    <p className="truncate text-[11px] text-slate-400">
+                      {l.celular}
+                      {l.placa && <span className="ml-1.5 font-mono uppercase">{l.placa}</span>}
+                      {l.origem_hotlink && <span className="ml-1.5 text-cyan-600">via /v/{l.origem_hotlink}</span>}
+                      {l.parado_dias > 0 && <span className="ml-1.5">· parado ha {l.parado_dias} dia(s)</span>}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    <Select
+                      className="w-44 py-1.5"
+                      value={destino[l.id] ?? ''}
+                      onChange={(e) => setDestino((d) => ({ ...d, [l.id]: e.target.value }))}
+                    >
+                      <option value="">Escolher vendedor…</option>
+                      {(equipe ?? []).filter((v) => v.ativo).map((v) => (
+                        <option key={v.vendedor_id} value={v.vendedor_id}>{v.nome}</option>
+                      ))}
+                    </Select>
+                    <Button onClick={() => distribuir(l.id)} disabled={atribuir.isPending}>
+                      Distribuir
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
 
       <FiltroPeriodo periodo={periodo} onChange={setPeriodo}>
         <label className="flex items-center gap-2 pb-1.5 text-xs font-medium text-slate-600">
