@@ -19,6 +19,7 @@ import { maskCelular, formatCurrency } from '@/lib/utils';
 import { FORMA_ADESAO_ROTULO, ratearAdesao, type FormaAdesao } from '@/lib/vendas';
 import type { DadosCrlv } from '@/lib/crlv';
 import type { LeadsRow } from '@/lib/database.types';
+import { FotosVistoria } from '@/components/vistoria/fotos-vistoria';
 import { ChecklistEntrada } from './checklist-entrada';
 import { LeitorCrlv } from './leitor-crlv';
 
@@ -268,7 +269,7 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
         </Secao>
 
         {/* ---------------------------------------------------- Documentos */}
-        <Secao icone={Camera} titulo="Documentos e vistoria" descricao="CRLV do veiculo e no minimo 4 fotos da vistoria.">
+        <Secao icone={Camera} titulo="Documentos e vistoria" descricao="CRLV do veiculo e as fotos obrigatorias da vistoria.">
           <LeitorCrlv onLido={aplicarCrlv} valorAtual={form.crlv_qrcode} />
 
           <div className="flex flex-wrap items-center gap-2">
@@ -293,49 +294,9 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
             )}
           </div>
 
-          <div
-            {...getRootProps()}
-            className={`cursor-pointer rounded-xl border-2 border-dashed px-4 py-5 text-center transition ${
-              isDragActive ? 'border-cyan-500 bg-cyan-50/60' : 'border-slate-300 bg-slate-50/60 hover:border-cyan-400'
-            }`}
-          >
-            <input {...getInputProps()} />
-            {enviandoFotos > 0 ? (
-              <p className="flex items-center justify-center gap-1.5 text-xs text-slate-600">
-                <Loader2 className="h-4 w-4 animate-spin" /> Enviando {enviandoFotos} foto(s)...
-              </p>
-            ) : (
-              <>
-                <p className="text-xs font-medium text-slate-600">
-                  Arraste as fotos da vistoria ou <span className="text-cyan-700 underline">selecione</span>
-                </p>
-                <p className="text-[11px] text-slate-400">
-                  Minimo 4: frente, traseira, laterais, painel/hodometro e chassi
-                </p>
-              </>
-            )}
-          </div>
-
-          {fotos.length > 0 && (
-            <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
-              {fotos.map((a) => (
-                <div key={a.id} className="group relative aspect-square overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
-                  <button type="button" onClick={() => abrir(a.url)} className="grid h-full w-full place-items-center text-slate-400" title={a.descricao ?? 'Foto'}>
-                    <ImgIcon className="h-5 w-5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => removerFoto.mutate(a, { onError: (e) => toast.error(e.message) })}
-                    className="absolute right-1 top-1 hidden rounded-md bg-white/90 p-1 text-rose-600 group-hover:block"
-                    aria-label="Remover foto"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-          <p className="text-[11px] text-slate-400">{fotos.length} foto(s) enviada(s)</p>
+          {/* A vistoria e guiada pelo modelo de poses (0040): mesma lista que o
+              vendedor ve no celular, e a mesma que o checklist cobra. */}
+          <FotosVistoria leadId={lead.id} />
         </Secao>
 
         {/* ---------------------------------------------------- Adesao */}

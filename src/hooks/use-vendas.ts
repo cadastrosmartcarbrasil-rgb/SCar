@@ -7,10 +7,12 @@ import type {
   CotacaoItem,
   CotacaoPlano,
   CotacoesRow,
+  FotoVistoriaModelo,
   ItemChecklistLead,
   LeadHistoricoRow,
   LeadKanban,
   LeadsRow,
+  ProdutoDoPlano,
   ProdutoObrigatorio,
   SimulacaoDesconto,
   StatusKanban,
@@ -513,6 +515,41 @@ export function useVendedoresDaRegional(regionalId?: string | null) {
         usuarios?: { nome: string } | null;
         regionais?: { nome: string; taxa_comissao_adesao: number; taxa_comissao_recorrente: number } | null;
       })[];
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Vistoria por MODELO DE FOTOS (0040) e itens que ja vem no plano.
+// ---------------------------------------------------------------------------
+
+/** Poses que a vistoria deste lead exige, ja marcando o que foi enviado. */
+export function useFotosVistoriaLead(leadId?: string) {
+  const supabase = createClient();
+  return useQuery<FotoVistoriaModelo[]>({
+    queryKey: ['vendas', 'fotos-modelo', leadId ?? '-'],
+    enabled: !!leadId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('fotos_vistoria_lead', { p_lead_id: leadId! });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+/**
+ * Itens amarrados ao plano/combo. Sem esta lista a tela oferecia como adicional
+ * avulso um produto que ja vinha dentro do combo.
+ */
+export function useProdutosDoPlano(planoId?: string | null) {
+  const supabase = createClient();
+  return useQuery<ProdutoDoPlano[]>({
+    queryKey: ['vendas', 'produtos-plano', planoId ?? '-'],
+    enabled: !!planoId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('produtos_do_plano', { p_plano_id: planoId! });
+      if (error) throw error;
+      return data ?? [];
     },
   });
 }

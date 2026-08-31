@@ -1467,6 +1467,24 @@ export type ComissaoRegional = {
   created_at: string;
 };
 
+export type FotoVistoriaModelo = {
+  codigo: string;
+  nome: string;
+  instrucao: string | null;
+  obrigatorio: boolean;
+  ordem: number;
+  anexo_id: string | null;
+  url: string | null;
+  enviada: boolean;
+};
+
+export type ProdutoDoPlano = {
+  produto_id: string;
+  nome: string;
+  valor_fixo: number | null;
+  categoria: string;
+};
+
 export type VendedorPainel = {
   vendedor_id: string;
   nome: string;
@@ -2235,6 +2253,14 @@ export type Database = {
       regional_leads: {
         Args: { p_regional_id: string | null; p_inicio?: string | null; p_fim?: string | null; p_somente_hotlink?: boolean };
         Returns: LeadRegional[];
+      };
+      fotos_vistoria_lead: {
+        Args: { p_lead_id: string };
+        Returns: FotoVistoriaModelo[];
+      };
+      produtos_do_plano: {
+        Args: { p_plano_id: string };
+        Returns: ProdutoDoPlano[];
       };
       vendedor_atual: {
         Args: Record<string, never>;

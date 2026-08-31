@@ -76,16 +76,20 @@ begin
   -- vistoria com fotos (ainda sem veiculo: nasce no lead)
   insert into vistorias (lead_id, tipo, status, data_vistoria)
     values (l_id, 'inicial', 'PENDENTE', current_date) returning id into vist_id;
+  -- desde o 0040 o que conta e a POSE (vistoria_fotos_modelo), nao o numero
+  -- de arquivos: faltando o hodometro, o checklist tem de barrar.
   insert into vistoria_anexos (vistoria_id, url, tipo) values
-    (vist_id, 'f1.jpg', 'frente'), (vist_id, 'f2.jpg', 'traseira'), (vist_id, 'f3.jpg', 'lateral');
+    (vist_id, 'f1.jpg', 'FRENTE'), (vist_id, 'f2.jpg', 'TRASEIRA'),
+    (vist_id, 'f3.jpg', 'LATERAL_ESQUERDA'), (vist_id, 'f4.jpg', 'LATERAL_DIREITA'),
+    (vist_id, 'f5.jpg', 'CHASSI');
 
   select count(*) into n from checklist_lead(l_id) where not ok;
   assert n = 1, 'so as fotos deveriam faltar, faltam ' || n;
   select item into v_txt from checklist_lead(l_id) where not ok;
   assert v_txt like 'Fotos%', 'o pendente deveria ser as fotos, veio ' || v_txt;
-  raise notice 'OK checklist exige o minimo de fotos da vistoria';
+  raise notice 'OK checklist exige as poses obrigatorias da vistoria';
 
-  insert into vistoria_anexos (vistoria_id, url, tipo) values (vist_id, 'f4.jpg', 'motor');
+  insert into vistoria_anexos (vistoria_id, url, tipo) values (vist_id, 'f6.jpg', 'HODOMETRO');
   assert lead_pronto_para_base(l_id), 'com tudo preenchido deveria estar pronto';
 
   -- ------------------------------------------------- (C) adesao na mao do vendedor
@@ -132,8 +136,10 @@ begin
   returning id into l_id;
 
   insert into vistorias (lead_id, tipo, status) values (l_id, 'inicial', 'PENDENTE') returning id into vist_id;
-  insert into vistoria_anexos (vistoria_id, url) values
-    (vist_id, 'a.jpg'), (vist_id, 'b.jpg'), (vist_id, 'c.jpg'), (vist_id, 'd.jpg');
+  insert into vistoria_anexos (vistoria_id, url, tipo) values
+    (vist_id, 'a.jpg', 'FRENTE'), (vist_id, 'b.jpg', 'TRASEIRA'),
+    (vist_id, 'c.jpg', 'LATERAL_ESQUERDA'), (vist_id, 'd.jpg', 'LATERAL_DIREITA'),
+    (vist_id, 'e.jpg', 'CHASSI'), (vist_id, 'f.jpg', 'HODOMETRO');
 
   veic := autorizar_entrada_lead(l_id);
 

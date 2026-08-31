@@ -1,17 +1,16 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { toast } from 'sonner';
-import { MessageCircle, Phone, Plus, Search, Zap } from 'lucide-react';
+import Link from 'next/link';
+import { ChevronRight, MessageCircle, Phone, Plus, Search, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Modal } from '@/components/ui/modal';
-import { FormField, Input, Textarea } from '@/components/ui/field';
+import { Input } from '@/components/ui/field';
 import { Vazio } from '@/components/financeiro/ui-financeiro';
 import { BotoesHotlink } from '@/components/vendedor/shell-vendedor';
-import { useCriarLeadVendedor, useLeadsDoVendedor, usePerfilVendedor } from '@/hooks/use-vendedor';
+import { useLeadsDoVendedor, usePerfilVendedor } from '@/hooks/use-vendedor';
 import { FILTROS_LEAD, SELO_STATUS_LEAD, filtrarPorEtapa } from '@/lib/vendedor';
-import { formatCurrency, formatDate, maskCelular } from '@/lib/utils';
+import { formatCurrency, formatDate } from '@/lib/utils';
 
 function soNumeros(v: string) {
   return (v ?? '').replace(/\D/g, '');
@@ -20,7 +19,6 @@ function soNumeros(v: string) {
 export default function LeadsVendedorPage() {
   const [etapa, setEtapa] = useState('');
   const [busca, setBusca] = useState('');
-  const [novo, setNovo] = useState(false);
   const { data: leads, isLoading } = useLeadsDoVendedor({ busca });
   const { data: perfil } = usePerfilVendedor();
 
@@ -35,9 +33,9 @@ export default function LeadsVendedorPage() {
             Tudo que chegou pelo seu link ou que voce cadastrou.
           </p>
         </div>
-        <Button onClick={() => setNovo(true)}>
-          <Plus className="mr-1.5 h-4 w-4" /> Novo lead
-        </Button>
+        <Link href="/vendedor/leads/novo">
+          <Button><Plus className="mr-1.5 h-4 w-4" /> Novo lead</Button>
+        </Link>
       </header>
 
       <Card>
@@ -83,7 +81,11 @@ export default function LeadsVendedorPage() {
               icon={Zap}
               titulo="Nenhum lead aqui"
               descricao="Compartilhe seu link de vendas ou cadastre um interessado agora."
-              acao={<Button onClick={() => setNovo(true)}><Plus className="mr-1.5 h-4 w-4" /> Novo lead</Button>}
+              acao={(
+                <Link href="/vendedor/leads/novo">
+                  <Button><Plus className="mr-1.5 h-4 w-4" /> Novo lead</Button>
+                </Link>
+              )}
             />
           </CardContent>
         </Card>
@@ -137,6 +139,12 @@ export default function LeadsVendedorPage() {
                   >
                     <Phone className="h-3.5 w-3.5" /> Ligar
                   </a>
+                  <Link
+                    href={`/vendedor/leads/${l.id}`}
+                    className="flex items-center justify-center gap-1 rounded-lg bg-brand-600 px-3 py-1.5 text-[12px] font-semibold text-white transition hover:bg-brand-700"
+                  >
+                    Abrir <ChevronRight className="h-3.5 w-3.5" />
+                  </Link>
                 </div>
               </li>
             );
@@ -144,73 +152,6 @@ export default function LeadsVendedorPage() {
         </ul>
       )}
 
-      {novo && <ModalNovoLead onClose={() => setNovo(false)} />}
     </div>
-  );
-}
-
-function ModalNovoLead({ onClose }: { onClose: () => void }) {
-  const [form, setForm] = useState({ nome: '', celular: '', email: '', placa: '', observacao: '' });
-  const criar = useCriarLeadVendedor();
-
-  function set(campo: string, valor: string) {
-    setForm((f) => ({ ...f, [campo]: valor }));
-  }
-
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    criar.mutate(
-      {
-        nome: form.nome, celular: form.celular, email: form.email || null,
-        placa: form.placa || null, observacao: form.observacao || null,
-      },
-      {
-        onSuccess: () => { toast.success('Lead cadastrado na sua carteira'); onClose(); },
-        onError: (e: unknown) => toast.error((e as Error).message),
-      },
-    );
-  }
-
-  return (
-    <Modal open onClose={onClose} title="Novo lead"
-      subtitulo="Ele nasce vinculado a voce — a comissao fica rastreada.">
-      <form onSubmit={submit} className="space-y-3">
-        <FormField label="Nome do interessado">
-          <Input value={form.nome} onChange={(e) => set('nome', e.target.value)} autoFocus />
-        </FormField>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <FormField label="Celular (com DDD)">
-            <Input
-              value={form.celular}
-              onChange={(e) => set('celular', maskCelular(e.target.value))}
-              inputMode="tel"
-              placeholder="(11) 90000-0000"
-            />
-          </FormField>
-          <FormField label="Placa (se ja souber)">
-            <Input
-              value={form.placa}
-              onChange={(e) => set('placa', e.target.value.toUpperCase())}
-              placeholder="ABC1D23"
-              className="font-mono uppercase"
-            />
-          </FormField>
-        </div>
-        <FormField label="E-mail">
-          <Input type="email" value={form.email} onChange={(e) => set('email', e.target.value)} />
-        </FormField>
-        <FormField label="Observacao">
-          <Textarea rows={2} value={form.observacao} onChange={(e) => set('observacao', e.target.value)}
-            placeholder="onde conheceu, o que procura…" />
-        </FormField>
-
-        <div className="flex justify-end gap-2 pt-1">
-          <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>
-          <Button type="submit" disabled={criar.isPending}>
-            {criar.isPending ? 'Salvando…' : 'Cadastrar lead'}
-          </Button>
-        </div>
-      </form>
-    </Modal>
   );
 }

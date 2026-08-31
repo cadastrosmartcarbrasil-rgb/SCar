@@ -415,6 +415,19 @@ matriz-franquia, o vendedor precisa saber o percentual DELE. `listar_vendedores`
 esta: ela ja limita por `tem_acesso_global() or pode_regional(v.regional_id)`, e e justamente isso
 que permite o gestor cadastrar a equipe de dentro do portal.)
 
+· `0040_vistoria_modelo_fotos` (VISTORIA GUIADA + itens do combo: (A) `vistoria_fotos_modelo`
+(codigo, nome, **instrucao de enquadramento**, obrigatorio, ordem, `tipo_veiculo_id` nulo = todos)
+com seed de 10 poses — 6 OBRIGATORIAS (frente, traseira, duas laterais, chassi, hodometro) e 4
+opcionais (motor, interior, pneus, acessorios). O codigo da pose vai em `vistoria_anexos.tipo`
+(coluna que ja existia) e `fotos_vistoria_lead(lead)` devolve a lista pronta para o app, marcando o
+que ja foi enviado (uma foto por pose: repetiu, vale a mais recente); (B) **`checklist_lead` deixa
+de contar ARQUIVOS e passa a exigir POSES** — a regra antiga era "min. 4 fotos" e quatro fotos da
+frente passavam; (C) `produtos_do_plano(plano)` — `produtos_obrigatorios_cotacao` (0028) so devolve
+o que e obrigatorio no cadastro do produto, nunca os opcionais amarrados ao combo, entao a tela de
+cotacao oferecia como AVULSO um item que ja vinha no plano; (D) RLS de `vistorias` ganha o caminho
+do `vendedor_id` (mesma correcao que o 0038 fez em `leads`): sem ela o dono do HOTLINK — cujo lead
+nasce pelo service_role, sem `consultor_id` — nao conseguiria abrir a propria vistoria.)
+
 ## Módulos (status: todos funcionais)
 Assistência 24h (`/assistencia`: painel de acionamento com trava + limites em tempo real, cotação,
 OS, voucher ao prestador e Contas a Pagar) · SAC / Atendimento (`/sac`: **veículo-first + lazy** — busca por Nome/CPF/Placa → `visao-360` traz
@@ -839,6 +852,41 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
   Android/iOS, gerar PNGs 192/512 e apontar no manifesto.
 - **Adesao recebida na hora nao aparece no extrato** (nao passou pelo nosso financeiro) — o texto
   esta na propria tela para nao virar duvida recorrente.
+
+## Vistoria por modelo de fotos (0040)
+- **A vistoria nao e "mande 4 fotos".** `vistoria_fotos_modelo` define as POSES: cada uma com nome
+  e **instrucao de enquadramento** ("de frente, a uns 3 metros, com a placa legivel"). O padrao tem
+  6 obrigatorias (frente, traseira, lateral esquerda, lateral direita, chassi, hodometro) e 4
+  opcionais (motor, interior, pneus, acessorios). Pose com `tipo_veiculo_id` vale so para aquele
+  tipo — e assim que a moto ganha "numero do motor" sem afetar o carro.
+- **`checklist_lead` cobra as poses**, nao a quantidade. Quatro fotos da frente nao passam mais.
+  Consequencia pratica: foto antiga sem `tipo` nao conta — a vistoria precisa ser refeita pelo app.
+- **Um componente para os dois caminhos:** `<FotosVistoria leadId>`
+  (`src/components/vistoria/fotos-vistoria.tsx`) e usado no fechamento pelo CRM e no portal do
+  vendedor. Barra de progresso pelas obrigatorias, instrucao em cada item e
+  `capture="environment"` no input — no celular abre a camera traseira direto.
+- **RLS:** `vistorias`/`vistoria_anexos` enxergam o lead tambem por `vendedor_id` (0040). Sem isso o
+  lead do hotlink (criado pelo service_role, sem `consultor_id`) tinha dono mas nao tinha vistoria.
+- Espelho puro em `src/lib/vistoria.ts` (`progressoVistoria`, `proximaPose`, `separarOpcionais`,
+  `avulsosParaCotacao`) com testes.
+
+## Cotação: o que ja vem no combo (0040)
+- **O bug:** a tela listava TODO produto nao-obrigatorio como "adicional avulso", inclusive os que o
+  plano ja carrega (`plano_produtos`). O vendedor podia oferecer — e cobrar — algo que o cliente ja
+  estava levando dentro do combo.
+- **A correcao:** `produtos_do_plano(plano)` alimenta a tela; os itens do combo aparecem
+  **marcados, travados e com o selo "no plano"**, e `avulsosParaCotacao()` os remove do payload —
+  o snapshot da cotacao passa a dizer a verdade sobre o que foi vendido a parte.
+- `produtos_obrigatorios_cotacao` (0028) NAO servia para isso: ela le `obrigatorio` do cadastro do
+  produto, e um opcional dentro de um combo continua sendo opcional no cadastro.
+
+## Novo lead + cotação: uma tela, dois lugares (0040)
+- `<NovoLeadCotacao>` (`src/components/vendas/novo-lead-cotacao.tsx`) serve `/vendas/novo` (CRM) e
+  `/vendedor/leads/novo` (portal). O que muda entre os dois e **como o lead nasce**: no CRM e insert
+  direto (staff); no portal passa por `vendedor_criar_lead`, que amarra o lead a quem cadastrou e a
+  regional dele — e so depois a ficha do veiculo entra por update (a RLS do 0038 ja reconhece o dono).
+- No portal, `/vendedor/leads/[id]` e a ficha de campo: WhatsApp/ligar, dados do veiculo, **a
+  vistoria guiada** e o envio do CRLV. O resto do fechamento (associado, adesao) segue com a franquia.
 
 ## Cota de participação (rateio no evento) — arquitetura
 - **Desacoplada do Plano.** O Plano define a mensalidade (produtos); a cota (% da FIPE no rateio)
