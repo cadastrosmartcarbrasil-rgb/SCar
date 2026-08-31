@@ -20882,6 +20882,34 @@ grant execute on function lead_por_token_publico(uuid) to authenticated;
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
+-- (0) Garantias de dependencia.
+--
+-- Este arquivo mexe em funcoes criadas no 0042. Se aquela migration nao tiver
+-- rodado (ou tiver parado no meio), as colunas abaixo nao existiriam e o
+-- hotlink quebraria em tempo de execucao — o corpo de uma funcao plpgsql so e
+-- validado quando ela e CHAMADA. Como tudo aqui e `if not exists`, repetir nao
+-- custa nada e o 0043 passa a funcionar sozinho.
+-- ----------------------------------------------------------------------------
+alter table leads
+  add column if not exists token_publico     uuid not null default gen_random_uuid(),
+  add column if not exists aceite_em         timestamptz,
+  add column if not exists aceite_por        text,
+  add column if not exists aceite_nome       text,
+  add column if not exists aceite_documento  text,
+  add column if not exists aceite_ip         text,
+  add column if not exists aceite_user_agent text,
+  add column if not exists aceite_cotacao_id uuid references cotacoes(id) on delete set null;
+
+create unique index if not exists uq_leads_token_publico on leads (token_publico);
+
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'chk_lead_aceite_por') then
+    alter table leads add constraint chk_lead_aceite_por
+      check (aceite_por is null or aceite_por in ('CLIENTE', 'VENDEDOR'));
+  end if;
+end $$;
+
+-- ----------------------------------------------------------------------------
 -- (B) O aceite marca o lead e o mantem trabalhavel
 -- ----------------------------------------------------------------------------
 create or replace function registrar_aceite_venda(
@@ -20961,7 +20989,13 @@ $$;
 
 -- ----------------------------------------------------------------------------
 -- (A) A captura nunca mais interrompe a cotacao
+--
+-- O drop e obrigatorio: a versao instalada pode ser a do 0041, que devolve 4
+-- colunas (sem `token_publico`). `create or replace` recusa qualquer mudanca
+-- nas colunas de OUT com "cannot change return type of existing function".
 -- ----------------------------------------------------------------------------
+drop function if exists registrar_captura_hotlink(text, text, text, text, text, text);
+
 create or replace function registrar_captura_hotlink(
   p_codigo   text,
   p_nome     text,
