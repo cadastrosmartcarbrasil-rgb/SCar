@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { mensagemDeErro, ordenarPlanos, planoSugerido, podeAvancar } from './venda-publica';
+import {
+  inferirTipoFipe, mensagemDeErro, ordenarPlanos, placaCompleta, planoSugerido,
+  podeAvancar, tipoVeiculoSugerido,
+} from './venda-publica';
 
 const plano = (id: string, nivel: number | null, mensalidade: number) => ({
   plano_id: id, nome: id, descricao: null, nivel, mensalidade,
@@ -76,5 +79,59 @@ describe('ordem e sugestao dos planos', () => {
   it('com um plano so, sugere ele mesmo', () => {
     expect(planoSugerido([plano('Unico', 1, 100)])?.plano_id).toBe('Unico');
     expect(planoSugerido([])).toBeNull();
+  });
+});
+
+describe('o tipo do veiculo sai dos dados da placa', () => {
+  const tipos = [
+    { id: 'passeio', nome: 'Passeio' },
+    { id: 'moto', nome: 'Moto' },
+    { id: 'pickup', nome: 'Pick-up / Van' },
+    { id: 'caminhao', nome: 'Caminhao Pesado' },
+  ];
+
+  it('reconhece moto pelo registro da FIPE', () => {
+    expect(inferirTipoFipe({ tipo_veiculo: 'MOTOCICLETA' })).toBe('MOTO');
+    expect(tipoVeiculoSugerido({ tipo_veiculo: 'MOTOCICLETA' }, tipos)).toBe('moto');
+  });
+
+  it('reconhece caminhao', () => {
+    expect(inferirTipoFipe({ segmento: 'Caminhoes' })).toBe('CAMINHAO');
+    expect(tipoVeiculoSugerido({ segmento: 'Caminhoes' }, tipos)).toBe('caminhao');
+  });
+
+  it('aceita o codigo numerico do tipo', () => {
+    expect(inferirTipoFipe({ codigo_tipo_veiculo: 2 })).toBe('MOTO');
+    expect(inferirTipoFipe({ codigo_tipo_veiculo: 3 })).toBe('CAMINHAO');
+    expect(inferirTipoFipe({ codigo_tipo_veiculo: 1 })).toBe('CARRO');
+  });
+
+  it('sem indicacao nenhuma, assume carro de passeio', () => {
+    expect(inferirTipoFipe({ marca: 'FIAT', modelo: 'ARGO' })).toBe('CARRO');
+    expect(tipoVeiculoSugerido({ marca: 'FIAT' }, tipos)).toBe('passeio');
+    expect(inferirTipoFipe(null)).toBe('CARRO');
+  });
+
+  it('nao inventa tipo quando o cadastro esta vazio', () => {
+    expect(tipoVeiculoSugerido({ tipo: 'moto' }, [])).toBeNull();
+  });
+
+  it('cai no primeiro tipo quando o cadastro nao tem o nome esperado', () => {
+    expect(tipoVeiculoSugerido({ tipo: 'moto' }, [{ id: 'x', nome: 'Outro' }])).toBe('x');
+  });
+});
+
+describe('placaCompleta', () => {
+  it('aceita os dois padroes de placa', () => {
+    expect(placaCompleta('ABC1234')).toBe(true);
+    expect(placaCompleta('ABC1D23')).toBe(true);
+    expect(placaCompleta('abc1d23')).toBe(true);
+    expect(placaCompleta('ABC-1234')).toBe(true);
+  });
+
+  it('recusa placa incompleta — e o que evita consultar a cada tecla', () => {
+    expect(placaCompleta('ABC12')).toBe(false);
+    expect(placaCompleta('')).toBe(false);
+    expect(placaCompleta('ABCD123')).toBe(false);
   });
 });

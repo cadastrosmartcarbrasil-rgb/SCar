@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { consultarPlacaNoServidor } from '@/lib/fipe-server';
-import { normalizarPlaca, placaValida } from '@/lib/placa';
+import { normalizarPlaca } from '@/lib/placa';
 import type { CotacaoPlano } from '@/lib/database.types';
 
 /**
@@ -32,36 +31,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Este atendimento ja foi concluido' }, { status: 400 });
   }
 
-  // 1) Valor do veiculo: FIPE pela placa, ou o que o visitante informou.
-  let veiculo: { marca?: string | null; modelo?: string | null; anoModelo?: number | null;
-                 valor?: number | null; codigoFipe?: string | null; combustivel?: string | null } = {};
+  // A identificacao pela placa ja rodou em /hotlink/veiculo e gravou o que
+  // achou no lead. Aqui so precisamos do VALOR: o da FIPE (ja no lead) ou o
+  // que o visitante informou quando a placa nao foi encontrada.
   const placa = placaBruta ? normalizarPlaca(placaBruta) : '';
-
-  if (placa && placaValida(placa)) {
-    // Sem token da FIPE, fora do ar ou placa desconhecida: segue com o valor
-    // que o visitante informou (a funcao ja devolve null nesses casos).
-    const r = await consultarPlacaNoServidor(placa);
-    if (r) veiculo = r;
-  }
-
-  const valorFipe = Number(veiculo.valor ?? 0) || fipeInformada;
+  const valorFipe = fipeInformada || Number(lead.valor_fipe ?? 0);
   if (!valorFipe || valorFipe <= 0) {
     return NextResponse.json(
-      { error: 'Nao consegui o valor do veiculo. Informe o valor de mercado para cotar.', veiculo },
+      { error: 'Nao consegui o valor do veiculo. Informe o valor de mercado para cotar.' },
       { status: 422 },
     );
   }
 
-  // 2) Guarda o que ja sabemos do veiculo no atendimento.
+  // O tipo confirmado (ou corrigido) pelo visitante prevalece.
   await admin.from('leads').update({
     placa: placa || null,
     tipo_veiculo_id: tipoVeiculoId,
-    marca: veiculo.marca ?? null,
-    modelo: veiculo.modelo ?? null,
-    ano_modelo: veiculo.anoModelo ?? null,
     valor_fipe: valorFipe,
-    codigo_fipe: veiculo.codigoFipe ?? null,
-    origem_fipe: veiculo.valor ? 'API' : 'MANUAL',
+    origem_fipe: fipeInformada ? 'MANUAL' : 'API',
     ultima_interacao_em: new Date().toISOString(),
   }).eq('id', lead.lead_id);
 
@@ -95,16 +82,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Nao ha planos disponiveis para este veiculo agora.' }, { status: 422 });
   }
 
-  return NextResponse.json({
-    ok: true,
-    veiculo: {
-      placa: placa || null,
-      marca: veiculo.marca ?? null,
-      modelo: veiculo.modelo ?? null,
-      ano: veiculo.anoModelo ?? null,
-      valor_fipe: valorFipe,
-      origem: veiculo.valor ? 'FIPE' : 'INFORMADO',
-    },
-    planos: cotados,
-  });
+  return NextResponse.json({ ok: true, valor_fipe: valorFipe, planos: cotados });
 }

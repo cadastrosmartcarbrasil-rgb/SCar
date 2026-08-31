@@ -10,21 +10,32 @@ export const dynamic = 'force-dynamic';
 
 export default async function CotacaoPublicaPage({ params }: { params: { token: string } }) {
   const supabase = createAdminClient();
+
+  // Duas consultas em vez de um embed `cotacoes -> leads`. Desde que
+  // `leads.aceite_cotacao_id` (0042) passou a apontar de volta para `cotacoes`,
+  // existem DUAS relacoes entre as tabelas e o embed vira ambiguo: o PostgREST
+  // devolve erro, `data` fica nulo e a pagina caia em 404. Sem embed, nenhuma
+  // chave estrangeira futura quebra este link publico de novo.
   const { data: cot } = await supabase
     .from('cotacoes')
-    .select('*, leads(nome, placa, marca, modelo, ano_modelo, valor_fipe)')
+    .select('*')
     .eq('token', params.token)
     .maybeSingle();
 
   if (!cot) notFound();
 
-  const { data: empresa } = await supabase
-    .from('empresa')
-    .select('razao_social, nome_fantasia, logo_url, whatsapp_principal')
-    .limit(1)
-    .maybeSingle();
-
-  const lead = (cot as unknown as { leads: { nome: string; placa: string | null; marca: string | null; modelo: string | null; ano_modelo: number | null; valor_fipe: number | null } }).leads;
+  const [{ data: lead }, { data: empresa }] = await Promise.all([
+    supabase
+      .from('leads')
+      .select('nome, placa, marca, modelo, ano_modelo, valor_fipe')
+      .eq('id', cot.lead_id)
+      .maybeSingle(),
+    supabase
+      .from('empresa')
+      .select('razao_social, nome_fantasia, logo_url, whatsapp_principal')
+      .limit(1)
+      .maybeSingle(),
+  ]);
   const detalhada = cot.modo_envio !== 'CONSOLIDADA';
   const itens = Array.isArray(cot.itens) ? cot.itens : [];
   const nomeEmpresa = empresa?.nome_fantasia || empresa?.razao_social || 'Protecao Veicular';

@@ -967,10 +967,14 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
 - **A cotação nunca é interrompida (0043).** Ser da base ou já estar em atendimento é informação
   para a equipe, não motivo para travar a tela — vira um aviso discreto no topo e o fluxo segue.
   O associado ganha a ficha já preenchida; a recaptura continua no atendimento existente.
-- **A cotação é server-side.** `/api/v1/hotlink/cotar` consulta a FIPE pela placa
-  (`src/lib/fipe-server.ts` — o proxy `/api/fipe` exige sessão e não serve para o visitante) e
-  devolve **um preço por plano ativo** via `cotar_plano`. Sem placa ou sem token da FIPE, o
-  visitante informa o valor de mercado.
+- **Quem manda é a PLACA, e o tipo do veículo sai dela.** `/api/v1/hotlink/veiculo` consulta a
+  FIPE assim que a placa fica completa (`placaCompleta`), mostra marca/modelo/ano/valor e
+  **deduz o tipo** (`tipoVeiculoSugerido` lê o registro bruto da FIPE) já casado com
+  `tipos_veiculo`. O visitante confirma ou corrige — não escolhe antes de a gente saber o que é.
+  Placa não encontrada não é erro: ele informa o valor de mercado e a cotação segue.
+- **A cotação é server-side.** `/api/v1/hotlink/cotar` usa o valor já identificado e devolve
+  **um preço por plano ativo** via `cotar_plano`. A consulta à FIPE roda em
+  `src/lib/fipe-server.ts` — o proxy `/api/fipe` exige sessão e não serve para o visitante.
 - **O aceite fecha a venda, não a cotação (0043).** `/api/v1/hotlink/contratar` grava o snapshot
   e chama `registrar_aceite_venda`, que marca o aceite e deixa o lead em **EM_NEGOCIACAO** — o
   vendedor ainda ajusta opcionais, completa a ficha do associado, o CRLV e a vistoria. Só quando
@@ -1069,6 +1073,20 @@ no fim — o runner procura por "PASSARAM") e rode `npm run schema`.
   `codigo_fipe` — se a API esperar o código FIPE textual, ajustar em `/api/fipe` (um ponto só).
 
 ## Gotchas já resolvidos (não repetir)
+- **Chave estrangeira nova pode quebrar um `select` com embed.** `leads.aceite_cotacao_id` (0042)
+  criou a SEGUNDA relação entre `cotacoes` e `leads`; o embed `from('cotacoes').select('*, leads(...)')`
+  virou ambíguo, o PostgREST passou a devolver erro, `data` ficou nulo e `/cotacao/<token>` caía em
+  **404 silencioso**. Em link público, prefira duas consultas a um embed — nenhuma FK futura o quebra.
+  Se usar embed, desambigue pelo nome da constraint (`leads!cotacoes_lead_id_fkey(...)`).
+- **`create or replace function` recusa mudança nas colunas de OUT** ("cannot change return type of
+  existing function"): quando a assinatura de retorno muda, `drop function if exists <nome>(<tipos>)`
+  ANTES. Aconteceu com `registrar_captura_hotlink` (0041→0042→0043).
+- **`create policy` não tem `if not exists`:** sempre `drop policy if exists` antes, senão a migration
+  não é re-executável (0040/0041).
+- **Migration que depende de coluna criada em outra** deve garanti-la com `add column if not exists`:
+  o corpo de uma função plpgsql só é validado na CHAMADA, então a falta da coluna não aparece na
+  aplicação — aparece com o cliente na tela (0043).
+
 - Erro `syntax error near "//"` no SQL Editor = arquivo TypeScript colado por engano; SQL começa com `--`.
 - Trigger com CASE retornando enum: fazer cast `(case ... end)::meu_enum`.
 - Comparar `old.status` (enum) com `''` quebra; usar `is [not] distinct from`.

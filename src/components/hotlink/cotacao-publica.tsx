@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   BadgeCheck, Car, CheckCircle2, ChevronRight, Copy, FileText, Loader2, Lock,
   MessageCircle, ShieldCheck, User,
@@ -10,7 +10,7 @@ import { formatarMoedaBR } from '@/lib/money';
 import { formatarDocumento } from '@/lib/documento';
 import { normalizarPlaca } from '@/lib/placa';
 import type { PlanoCotado, TipoVeiculoPublico } from '@/lib/venda-publica';
-import { ORDEM_ETAPAS, mensagemDeErro, podeAvancar } from '@/lib/venda-publica';
+import { ORDEM_ETAPAS, mensagemDeErro, placaCompleta, podeAvancar } from '@/lib/venda-publica';
 
 const dinheiro = (v: number) => `R$ ${formatarMoedaBR(v)}`;
 
@@ -35,9 +35,13 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
   const [token, setToken] = useState<string | null>(null);
   const [avisoCaptura, setAvisoCaptura] = useState<string | null>(null);
 
-  const [tipoVeiculoId, setTipoVeiculoId] = useState(tipos[0]?.id ?? '');
+  const [tipoVeiculoId, setTipoVeiculoId] = useState('');
   const [valorInformado, setValorInformado] = useState('');
-  const [veiculo, setVeiculo] = useState<{ marca: string | null; modelo: string | null; ano: number | null; valor_fipe: number; origem: string } | null>(null);
+  const [identificando, setIdentificando] = useState(false);
+  const [buscou, setBuscou] = useState(false);
+  const [veiculo, setVeiculo] = useState<
+    { marca: string | null; modelo: string | null; ano: number | null; valor_fipe: number } | null
+  >(null);
   const [planos, setPlanos] = useState<PlanoCotado[]>([]);
   const [planoId, setPlanoId] = useState('');
 
@@ -80,19 +84,55 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
     }
   }
 
+  /**
+   * Placa -> FIPE, na hora. E daqui que sai o TIPO do veiculo: quem define e o
+   * registro da FIPE, nao uma escolha previa do visitante — ele so confirma
+   * (ou corrige, se a leitura errar).
+   */
+  const identificar = useCallback(async (placa: string, tk: string | null) => {
+    if (!tk || !placaCompleta(placa)) return;
+    setErro(null);
+    setIdentificando(true);
+    try {
+      const r = await chamar<{
+        encontrado: boolean; marca: string | null; modelo: string | null; ano: number | null;
+        valor_fipe: number; tipo_sugerido: string | null;
+      }>('/api/v1/hotlink/veiculo', { token: tk, placa });
+
+      setBuscou(true);
+      setVeiculo(r.encontrado
+        ? { marca: r.marca, modelo: r.modelo, ano: r.ano, valor_fipe: Number(r.valor_fipe) }
+        : null);
+      if (r.tipo_sugerido) setTipoVeiculoId(r.tipo_sugerido);
+    } catch (err) {
+      setErro((err as Error).message);
+    } finally {
+      setIdentificando(false);
+    }
+    // `chamar` nao depende de estado, entao nao entra nas dependencias
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Ao chegar no passo do veiculo com a placa ja digitada, busca sozinho.
+  useEffect(() => {
+    if (etapa === 'veiculo' && !buscou && placaCompleta(contato.placa)) {
+      identificar(contato.placa, token);
+    }
+  }, [etapa, buscou, contato.placa, token, identificar]);
+
   async function cotar(e: React.FormEvent) {
     e.preventDefault();
     setErro(null);
     setEnviando(true);
     try {
-      const r = await chamar<{ veiculo: typeof veiculo; planos: PlanoCotado[] }>(
+      const r = await chamar<{ valor_fipe: number; planos: PlanoCotado[] }>(
         '/api/v1/hotlink/cotar',
         {
           token, tipo_veiculo_id: tipoVeiculoId, placa: contato.placa,
           valor_fipe: Number(valorInformado.replace(/\./g, '').replace(',', '.')) || 0,
         },
       );
-      setVeiculo(r.veiculo);
+      if (!veiculo) setVeiculo({ marca: null, modelo: null, ano: null, valor_fipe: Number(r.valor_fipe) });
       setPlanos(r.planos);
       setPlanoId(r.planos[Math.min(1, r.planos.length - 1)]?.plano_id ?? '');
       setEtapa('planos');
@@ -175,7 +215,7 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
           <div className="grid gap-3 sm:grid-cols-2">
             <Campo rotulo="Celular / WhatsApp" valor={contato.celular} inputMode="tel"
               onChange={(v) => setContato({ ...contato, celular: maskCelular(v) })} />
-            <Campo rotulo="Placa do veiculo" valor={contato.placa} mono
+            <Campo rotulo="Placa (opcional)" valor={contato.placa} mono
               onChange={(v) => setContato({ ...contato, placa: normalizarPlaca(v) })} />
           </div>
           <Campo rotulo="E-mail (opcional)" valor={contato.email} type="email"
@@ -189,31 +229,91 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
       {/* -------------------------------------------------------- veiculo */}
       {etapa === 'veiculo' && (
         <form onSubmit={cotar} className="space-y-3 px-6 py-6">
-          <Titulo icone={Car} texto="Seu veiculo" ajuda="Buscamos o valor na tabela FIPE pela placa." />
-          <div>
-            <Rotulo>Tipo do veiculo</Rotulo>
-            <div className="mt-1.5 grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {tipos.map((t) => (
-                <button
-                  key={t.id} type="button" onClick={() => setTipoVeiculoId(t.id)}
-                  className={`rounded-xl border px-3 py-2.5 text-[12.5px] font-semibold transition ${
-                    tipoVeiculoId === t.id
-                      ? 'border-cyan-500 bg-cyan-50 text-brand-800 ring-1 ring-cyan-400'
-                      : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}
-                >
-                  {t.nome}
-                </button>
-              ))}
+          <Titulo icone={Car} texto="Seu veiculo"
+            ajuda="Digite a placa: buscamos o veiculo e o valor na tabela FIPE na hora." />
+
+          {/* A PLACA e o campo principal — e dela que sai tudo. */}
+          <label className="block">
+            <Rotulo>Placa</Rotulo>
+            <div className="relative mt-1">
+              <input
+                value={contato.placa}
+                autoFocus
+                onChange={(e) => {
+                  const p = normalizarPlaca(e.target.value);
+                  setContato({ ...contato, placa: p });
+                  setBuscou(false);
+                  setVeiculo(null);
+                  if (placaCompleta(p)) identificar(p, token);
+                }}
+                placeholder="ABC1D23"
+                className="w-full rounded-xl border border-slate-300 px-3 py-3 text-center font-mono text-[20px] font-bold uppercase tracking-[0.2em] text-brand-800 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
+              />
+              {identificando && (
+                <Loader2 className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 animate-spin text-cyan-600" />
+              )}
             </div>
-          </div>
-          <Campo rotulo="Placa" valor={contato.placa} mono
-            onChange={(v) => setContato({ ...contato, placa: normalizarPlaca(v) })} />
-          <Campo
-            rotulo="Valor de mercado (se nao acharmos pela placa)"
-            valor={valorInformado} inputMode="decimal" prefixo="R$"
-            onChange={setValorInformado}
-          />
-          <Botao carregando={enviando} disabled={!tipoVeiculoId}>Ver meus planos</Botao>
+          </label>
+
+          {/* Achou: mostra o veiculo identificado e o valor. */}
+          {veiculo && (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+              <p className="flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-wide text-emerald-700">
+                <BadgeCheck className="h-3.5 w-3.5" /> Veiculo identificado
+              </p>
+              <p className="mt-1 text-[15px] font-bold text-brand-800">
+                {[veiculo.marca, veiculo.modelo].filter(Boolean).join(' ') || 'Veiculo'}
+                {veiculo.ano ? <span className="font-normal text-slate-500"> · {veiculo.ano}</span> : null}
+              </p>
+              <p className="text-[12px] text-slate-600">
+                Valor de referencia (FIPE): <b className="tnum">{dinheiro(veiculo.valor_fipe)}</b>
+              </p>
+            </div>
+          )}
+
+          {/* Nao achou: nao e erro — o visitante informa o valor de mercado. */}
+          {buscou && !veiculo && (
+            <>
+              <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[12px] leading-relaxed text-amber-900">
+                Nao localizamos esta placa na tabela FIPE. Informe o valor de mercado do veiculo
+                que a gente cota do mesmo jeito.
+              </p>
+              <Campo
+                rotulo="Valor de mercado do veiculo" valor={valorInformado}
+                inputMode="decimal" prefixo="R$" onChange={setValorInformado}
+              />
+            </>
+          )}
+
+          {/* O tipo vem dos dados da placa; fica visivel para o visitante conferir. */}
+          {(veiculo || buscou) && (
+            <div>
+              <Rotulo>Tipo do veiculo {veiculo && <span className="font-normal normal-case text-slate-400">(identificado — ajuste se precisar)</span>}</Rotulo>
+              <div className="mt-1.5 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {tipos.map((t) => (
+                  <button
+                    key={t.id} type="button" onClick={() => setTipoVeiculoId(t.id)}
+                    className={`rounded-xl border px-3 py-2.5 text-[12.5px] font-semibold transition ${
+                      tipoVeiculoId === t.id
+                        ? 'border-cyan-500 bg-cyan-50 text-brand-800 ring-1 ring-cyan-400'
+                        : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}
+                  >
+                    {t.nome}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!buscou && !identificando && (
+            <p className="pt-1 text-center text-[12px] text-slate-400">
+              Assim que a placa estiver completa, buscamos os dados automaticamente.
+            </p>
+          )}
+
+          <Botao carregando={enviando} disabled={!tipoVeiculoId || identificando || (!veiculo && !valorInformado)}>
+            Ver meus planos
+          </Botao>
         </form>
       )}
 
