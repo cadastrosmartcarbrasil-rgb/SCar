@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
-import { FormField, Input, Select } from '@/components/ui/field';
+import { FormField, Input, PercentInput, Select } from '@/components/ui/field';
 import { useRegionais, useSaveRegional, useDeleteRegional, useUsuarios } from '@/hooks/use-config';
 import type { RegionaisRow } from '@/lib/database.types';
 
@@ -181,28 +181,25 @@ export default function RegionaisPage() {
               seus vendedores — nenhum vendedor pode ter percentual maior que este.
             </p>
             <div className="grid grid-cols-2 gap-3">
-              <FormField label="Adesao (%)">
-                <Input
-                  type="number" min={0} max={100} step="0.5" className="tnum"
-                  value={Number(editando?.taxa_comissao_adesao ?? 0) * 100}
-                  onChange={(e) => setEditando((p) => ({ ...p, taxa_comissao_adesao: (Number(e.target.value) || 0) / 100 }))}
+              <FormField label="Adesao">
+                <PercentInput
+                  value={editando?.taxa_comissao_adesao == null ? null : Number(editando.taxa_comissao_adesao) * 100}
+                  onChange={(v) => setEditando((p) => ({ ...p, taxa_comissao_adesao: (v ?? 0) / 100 }))}
                 />
               </FormField>
-              <FormField label="Recorrencia (%)">
-                <Input
-                  type="number" min={0} max={100} step="0.5" className="tnum"
-                  value={Number(editando?.taxa_comissao_recorrente ?? 0) * 100}
-                  onChange={(e) => setEditando((p) => ({ ...p, taxa_comissao_recorrente: (Number(e.target.value) || 0) / 100 }))}
+              <FormField label="Recorrencia">
+                <PercentInput
+                  value={editando?.taxa_comissao_recorrente == null ? null : Number(editando.taxa_comissao_recorrente) * 100}
+                  onChange={(v) => setEditando((p) => ({ ...p, taxa_comissao_recorrente: (v ?? 0) / 100 }))}
                 />
               </FormField>
             </div>
           </div>
 
-          <FormField label="Desconto maximo de venda (%)">
-            <Input
-              type="number" min={0} max={100} step="0.5"
-              value={editando?.percentual_maximo_desconto_venda ?? 0}
-              onChange={(e) => setEditando((p) => ({ ...p, percentual_maximo_desconto_venda: Number(e.target.value) }))}
+          <FormField label="Desconto maximo de venda">
+            <PercentInput
+              value={editando?.percentual_maximo_desconto_venda ?? null}
+              onChange={(v) => setEditando((p) => ({ ...p, percentual_maximo_desconto_venda: v ?? 0 }))}
             />
             <p className="mt-1 text-xs text-slate-500">
               Limite que o vendedor desta franquia pode conceder sozinho na cotacao (mensalidade e

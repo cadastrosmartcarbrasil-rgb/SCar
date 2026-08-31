@@ -608,8 +608,12 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
   tecla e quem digita o separador em seguida termina com `0,0352,00` (bug real em producao).
   Ha teste de regressao em `money.test.ts` digitando "352,00" tecla a tecla.
 - Somas de dinheiro usam `somarMoeda()` (centavos inteiros) para nao acumular erro de ponto flutuante.
-- Ainda em `type="number"` (nao sao moeda pura): o % de reajuste e as celulas da grade em
-  `precificacao/tabela-precos-editor.tsx`.
+- **Percentual usa `<PercentInput>`** (mesmo arquivo, mesma regra de digitacao livre, sufixo `%` e
+  teto opcional via `max`). O valor trafega em PERCENTUAL (15,5 = 15,5%); quem guarda fracao no
+  banco divide por 100 ao salvar — e o caso da comissao de Regionais e Vendedores, que e
+  `numeric(6,4)`. Ha teste de regressao em `money.test.ts` (digitar "15,5" nao pode virar 16).
+- Ainda em `type="number"` (nao sao moeda nem percentual de cadastro): o % de reajuste e as celulas
+  da grade em `precificacao/tabela-precos-editor.tsx`.
 
 ## Precificação — importação por planilha (uma por tipo de veículo)
 - **O campo já existia:** `tabela_precos_faixa`, `participacao_faixa` e `adesao_faixa` sao TODAS
@@ -668,6 +672,8 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
   de 0% a 15%; 16% e recusado. Vale nos dois sentidos — tambem nao da para BAIXAR a comissao da
   regional deixando um vendedor acima do novo teto (a mensagem nomeia quem ficaria).
   Trava no banco por trigger; a tela de Vendedores mostra o teto herdado antes de salvar.
+- **Vendedor e editavel** (`Configuracoes → Vendedores`, botao de lapis). Na edicao o **usuario nao
+  muda** — o vinculo e um por vendedor (unique no banco), entao o campo fica travado.
 - Espelho puro em `src/lib/vendas.ts` (`validarComissaoVendedor`, `margemRegional`) com testes.
   **Atencao:** comissao e `numeric(6,4)` — arredondar em 2 casas transformaria 15,5% em 16%.
 

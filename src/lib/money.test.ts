@@ -86,3 +86,24 @@ describe('aritmetica de centavos', () => {
     expect(arredondarMoeda(1234.5678)).toBe(1234.57);
   });
 });
+
+// O <PercentInput> usa a MESMA regra de digitacao do <MoneyInput>. Estes casos
+// travam o comportamento para o campo de comissao (vendedores/regionais), onde
+// o "0" preso na frente era o mesmo incomodo do financeiro.
+describe('digitacao de percentual (mesma regra do dinheiro)', () => {
+  it('digitar "15" da 15, nao 0,15', () => {
+    expect(digitarMoeda('15').valor).toBe(15);
+  });
+  it('digitar "15,5" preserva a meia casa (nao arredonda para 16)', () => {
+    expect(digitarMoeda('15,5').valor).toBe(15.5);
+  });
+  it('campo limpo volta a null para o placeholder 0,00 aparecer', () => {
+    expect(digitarMoeda('').valor).toBeNull();
+  });
+  it('digitar "100" tecla a tecla nunca produz texto quebrado', () => {
+    let texto = '';
+    for (const t of ['1', '0', '0']) texto = digitarMoeda(texto + t).texto;
+    expect(texto).toBe('100');
+    expect(digitarMoeda(texto).valor).toBe(100);
+  });
+});

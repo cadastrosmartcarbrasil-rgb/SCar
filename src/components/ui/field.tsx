@@ -78,6 +78,65 @@ export function MoneyInput({
   );
 }
 
+// ---------------------------------------------------------------------------
+// Campo de percentual (%)
+// Mesma regra do <MoneyInput>: nasce VAZIO com placeholder "0,00" e a digitacao
+// e livre — nada de "0" preso na frente obrigando o operador a apagar ou
+// posicionar o cursor. O valor trafega em PERCENTUAL (15,5 = 15,5%); quem
+// guarda fracao no banco divide por 100 na hora de salvar.
+// ---------------------------------------------------------------------------
+export function PercentInput({
+  value,
+  onChange,
+  className,
+  max = 100,
+  onBlur,
+  onFocus,
+  ...props
+}: {
+  value: number | null | undefined;
+  onChange: (v: number | null) => void;
+  max?: number;
+} & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'max'>) {
+  const [rascunho, setRascunho] = useState<string | null>(null);
+  const texto = rascunho ?? formatarMoedaBR(value ?? null);
+
+  return (
+    <div className="relative">
+      <input
+        {...props}
+        inputMode="decimal"
+        autoComplete="off"
+        placeholder={props.placeholder ?? '0,00'}
+        value={texto}
+        onFocus={(e) => {
+          e.target.select();
+          onFocus?.(e);
+        }}
+        onChange={(e) => {
+          const { valor } = digitarMoeda(e.target.value);
+          // Trava no teto (ex.: 100%) sem atrapalhar quem esta digitando.
+          if (valor != null && valor > max) {
+            setRascunho(formatarMoedaBR(max));
+            onChange(max);
+            return;
+          }
+          setRascunho(e.target.value.replace(/[^\d.,]/g, ''));
+          onChange(valor);
+        }}
+        onBlur={(e) => {
+          setRascunho(null);
+          onBlur?.(e);
+        }}
+        className={cn(base, 'tnum pr-8 text-right', className)}
+      />
+      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">
+        %
+      </span>
+    </div>
+  );
+}
+
 export function Textarea({ className, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return <textarea className={cn(base, className)} {...props} />;
 }

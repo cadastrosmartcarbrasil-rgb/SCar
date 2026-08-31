@@ -2,10 +2,10 @@
 
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Trash2, BadgeDollarSign } from 'lucide-react';
+import { Plus, Pencil, Trash2, BadgeDollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
-import { FormField, Input, Select } from '@/components/ui/field';
+import { FormField, Input, PercentInput, Select } from '@/components/ui/field';
 import {
   useVendedores,
   useSaveVendedor,
@@ -30,6 +30,11 @@ export default function VendedoresPage() {
 
   function novo() {
     setForm({ taxa_comissao_adesao: 0, taxa_comissao_recorrente: 0, ativo: true });
+    setAberto(true);
+  }
+
+  function editar(v: VendedoresRow) {
+    setForm(v);
     setAberto(true);
   }
 
@@ -102,12 +107,22 @@ export default function VendedoresPage() {
                   </span>
                 </td>
                 <td className="px-4 py-2">
-                  <div className="flex justify-end">
+                  <div className="flex justify-end gap-1">
+                    <button
+                      onClick={() => editar(v)}
+                      title="Editar vendedor"
+                      aria-label={`Editar ${nomeUsuario.get(v.usuario_id) ?? 'vendedor'}`}
+                      className="rounded p-1.5 text-slate-500 hover:bg-slate-100"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
                     <button
                       onClick={() => {
                         if (confirm('Remover este vendedor?'))
                           excluir.mutate(v.id, { onError: (e) => toast.error((e as Error).message) });
                       }}
+                      title="Remover vendedor"
+                      aria-label={`Remover ${nomeUsuario.get(v.usuario_id) ?? 'vendedor'}`}
                       className="rounded p-1.5 text-rose-500 hover:bg-rose-50"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -127,10 +142,15 @@ export default function VendedoresPage() {
         </table>
       </div>
 
-      <Modal open={aberto} onClose={() => setAberto(false)} title="Novo Vendedor">
+      <Modal
+        open={aberto}
+        onClose={() => setAberto(false)}
+        title={form.id ? 'Editar Vendedor' : 'Novo Vendedor'}
+        subtitulo={form.id ? nomeUsuario.get(form.usuario_id ?? '') ?? undefined : undefined}
+      >
         <form onSubmit={submit} className="space-y-3">
           <FormField label="Usuario *">
-            <Select
+            <Select disabled={!!form.id}
               value={form.usuario_id ?? ''}
               onChange={(e) => setForm({ ...form, usuario_id: e.target.value })}
             >
@@ -141,6 +161,11 @@ export default function VendedoresPage() {
                 </option>
               ))}
             </Select>
+            {form.id && (
+              <p className="mt-1 text-[11px] text-slate-400">
+                O usuario nao muda na edicao — o vinculo e um por vendedor.
+              </p>
+            )}
           </FormField>
           <FormField label="Regional">
             <Select
@@ -157,26 +182,16 @@ export default function VendedoresPage() {
           </FormField>
           <TetoDaRegional regionalId={form.regional_id ?? null} />
           <div className="grid grid-cols-2 gap-3">
-            <FormField label="Comissao adesao (%)">
-              <Input
-                type="number"
-                step="0.01"
-                min={0}
-                value={(form.taxa_comissao_adesao ?? 0) * 100}
-                onChange={(e) =>
-                  setForm({ ...form, taxa_comissao_adesao: (Number(e.target.value) || 0) / 100 })
-                }
+            <FormField label="Comissao adesao">
+              <PercentInput
+                value={form.taxa_comissao_adesao == null ? null : form.taxa_comissao_adesao * 100}
+                onChange={(v) => setForm({ ...form, taxa_comissao_adesao: (v ?? 0) / 100 })}
               />
             </FormField>
-            <FormField label="Comissao recorrente (%)">
-              <Input
-                type="number"
-                step="0.01"
-                min={0}
-                value={(form.taxa_comissao_recorrente ?? 0) * 100}
-                onChange={(e) =>
-                  setForm({ ...form, taxa_comissao_recorrente: (Number(e.target.value) || 0) / 100 })
-                }
+            <FormField label="Comissao recorrente">
+              <PercentInput
+                value={form.taxa_comissao_recorrente == null ? null : form.taxa_comissao_recorrente * 100}
+                onChange={(v) => setForm({ ...form, taxa_comissao_recorrente: (v ?? 0) / 100 })}
               />
             </FormField>
           </div>
