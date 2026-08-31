@@ -6,7 +6,8 @@ import type { Database } from '@/lib/database.types';
 
 // Rotas publicas (nao exigem sessao).
 // /cotacao/<token> e a cotacao publica compartilhavel (link enviado ao cliente).
-const PUBLIC_PATHS = ['/login', '/portal/login', '/auth/callback', '/cotacao'];
+// /v/<codigo> e o hotlink de vendas do vendedor (link publico compartilhavel).
+const PUBLIC_PATHS = ['/login', '/portal/login', '/auth/callback', '/cotacao', '/v'];
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });

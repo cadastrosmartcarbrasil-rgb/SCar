@@ -96,6 +96,8 @@ export type RegionaisRow = Timestamps & {
   desconto_observacao: string | null;
   taxa_comissao_adesao: number;
   taxa_comissao_recorrente: number;
+  dia_pagto_entrada_padrao: number | null;
+  dia_pagto_recorrencia_padrao: number | null;
 };
 
 export type UsuariosRow = Timestamps & {
@@ -109,11 +111,26 @@ export type UsuariosRow = Timestamps & {
 
 export type VendedoresRow = Timestamps & {
   id: string;
-  usuario_id: string;
+  usuario_id: string | null;
   regional_id: string | null;
   taxa_comissao_adesao: number;
   taxa_comissao_recorrente: number;
   ativo: boolean;
+  // 0035 — cadastro proprio do vendedor
+  nome: string | null;
+  email: string | null;
+  telefone: string | null;
+  codigo: string | null;
+  documento: string | null;
+  banco: string | null;
+  agencia: string | null;
+  conta: string | null;
+  chave_pix: string | null;
+  dia_pagto_entrada: number | null;
+  dia_pagto_recorrencia: number | null;
+  observacoes: string | null;
+  contrato_url: string | null;
+  boas_vindas_enviada_em: string | null;
 };
 
 export type ClientesRow = Timestamps & {
@@ -1371,6 +1388,35 @@ export type ItemChecklistLead = {
 
 export type LimiteComissao = { adesao: number; recorrente: number };
 
+export type VendedorLista = {
+  id: string;
+  nome: string;
+  email: string | null;
+  telefone: string | null;
+  codigo: string;
+  documento: string | null;
+  regional_id: string | null;
+  regional_nome: string | null;
+  usuario_id: string | null;
+  tem_portal: boolean;
+  taxa_comissao_adesao: number;
+  taxa_comissao_recorrente: number;
+  teto_adesao: number;
+  teto_recorrente: number;
+  dia_pagto_entrada: number | null;
+  dia_pagto_recorrencia: number | null;
+  banco: string | null;
+  agencia: string | null;
+  conta: string | null;
+  chave_pix: string | null;
+  contrato_url: string | null;
+  boas_vindas_enviada_em: string | null;
+  observacoes: string | null;
+  ativo: boolean;
+  vendas_total: number;
+  comissao_pendente: number;
+};
+
 // ---- Database (formato esperado pelo supabase-js) --------------------------
 // Cada tabela precisa de Row/Insert/Update/Relationships; o schema precisa de
 // Views/Functions/Enums/CompositeTypes com o formato exato.
@@ -2015,6 +2061,18 @@ export type Database = {
       lead_pronto_para_base: {
         Args: { p_lead_id: string };
         Returns: boolean;
+      };
+      listar_vendedores: {
+        Args: { p_regional_id?: string | null; p_busca?: string | null };
+        Returns: VendedorLista[];
+      };
+      gerar_codigo_vendedor: {
+        Args: { p_nome: string; p_ignorar?: string | null };
+        Returns: string;
+      };
+      vendedor_por_codigo: {
+        Args: { p_codigo: string };
+        Returns: { id: string; nome: string; regional_id: string | null; ativo: boolean }[];
       };
       limite_comissao_regional: {
         Args: { p_regional_id: string };

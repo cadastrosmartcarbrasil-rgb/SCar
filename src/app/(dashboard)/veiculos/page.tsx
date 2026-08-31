@@ -559,7 +559,7 @@ function VeiculosConteudo() {
                 <option value="">-- Selecione --</option>
                 {(vendedores ?? []).map((v) => (
                   <option key={v.id} value={v.id}>
-                    {nomeUsuario.get(v.usuario_id) ?? '(vendedor)'}
+                    {v.nome ?? (v.usuario_id ? nomeUsuario.get(v.usuario_id) : null) ?? '(vendedor)'}
                   </option>
                 ))}
               </Select>

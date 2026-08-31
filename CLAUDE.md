@@ -355,6 +355,16 @@ o associado com a ficha inteira, cria o veiculo completo e converte a vistoria d
 do veiculo; (E) ADESAO — `VENDEDOR_NA_HORA` nao gera NADA no financeiro (so a comissao ja `pago`);
 boleto/PIX/cartao geram titulo a receber + comissao `pendente`, e `repassar_comissao_vendedor()`
 cria o contas a pagar do repasse; (F) bucket privado `vendas` para fotos da vistoria e CRLV.)
+· `0035_vendedor_completo` (o vendedor vira cadastro proprio: `nome`/`email`/`telefone`/`documento`,
+`codigo` UNICO (hotlink), dados bancarios (`banco`/`agencia`/`conta`/`chave_pix`), prazo de pagamento
+(`dia_pagto_entrada` 1..7 na SEMANA e `dia_pagto_recorrencia` 1..31 no MES) e trilha de onboarding
+(`contrato_url`, `boas_vindas_enviada_em`). **`usuario_id` vira NULAVEL** — cadastra-se o vendedor e o
+acesso ao portal vem depois. `regionais` ganha `dia_pagto_entrada_padrao`/`dia_pagto_recorrencia_padrao`
+(herdados por quem nao definir o proprio). Funcoes: `gerar_codigo_vendedor(nome, ignorar)` (primeiro
+nome sem acento, desambigua com sufixo), trigger `fn_vendedor_preencher` (herda o nome do usuario
+quando em branco e garante o codigo), `prazo_pagamento_vendedor()` (proprio x padrao da franquia),
+`listar_vendedores(regional, busca)` (franquia, teto herdado, portal, vendas e comissao pendente) e
+`vendedor_por_codigo()` (hotlink; concedida tambem ao `anon` e ignora vendedor inativo).)
 
 ## Módulos (status: todos funcionais)
 Assistência 24h (`/assistencia`: painel de acionamento com trava + limites em tempo real, cotação,
@@ -684,6 +694,27 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
   a comissao do vendedor nasce **pendente**; `repassar_comissao_vendedor()` gera o **contas a pagar**
   do repasse (categoria 3.2.01) e marca a comissao como paga.
 - Espelho puro em `ratearAdesao`/`adesaoEntraNoCaixa` (`src/lib/vendas.ts`), com testes.
+
+## Cadastro do vendedor (0035) — ficha, portal e hotlink
+- **`Configuracoes → Vendedores`** tem lista + 5 acoes por linha: **Ver** (ficha), **Editar**,
+  **Hotlink** (copia o link), **Boas-vindas** (e-mail + contrato) e Remover.
+- **O cadastro nao depende mais de um usuario existir.** `usuario_id` e opcional: cadastra-se o
+  vendedor com nome/contato/comissao e o **acesso ao portal** e criado depois, pelo proprio modal
+  (secao *Criar acesso / Redefinir senha*). A senha passa por `/api/v1/vendedores/acesso`, que usa a
+  **admin API no servidor** (nunca no cliente) e so aceita admin/financeiro/gestor da regional.
+- **Codigo** e a identidade curta do vendedor (AMANDA, CLEIDE26): sai do primeiro nome, sem acento,
+  e o banco desambigua com sufixo. E o que forma o **hotlink** `https://<host>/v/<CODIGO>`.
+- **Hotlink** (`/v/[codigo]`, publico — entrou em `PUBLIC_PATHS` no middleware): pagina de captura
+  que cria o lead **ja vinculado ao vendedor**. Como o visitante nao tem sessao, o insert vai por
+  `/api/v1/hotlink` com service_role, aceitando SO os campos do formulario e sempre amarrando ao
+  vendedor do codigo. Vendedor inativo -> link nao resolve.
+- **Prazo de pagamento:** o dia do vendedor vence; em branco, herda o padrao da franquia
+  (`prazo_pagamento_vendedor`). Entrada e por dia da SEMANA (comissao de adesao, paga semanalmente);
+  recorrencia e por dia do MES.
+- **Boas-vindas** (`/api/v1/vendedores/boas-vindas`): guarda o contrato no bucket privado `vendas`
+  (`contratos/<vendedor>/`) e envia por Resend com o PDF anexado (max ~5 MB). **Sem `RESEND_API_KEY`
+  nao finge que enviou:** guarda o contrato, devolve o texto pronto e avisa que o envio e manual.
+  So marca `boas_vindas_enviada_em` quando o e-mail realmente saiu.
 
 ## Cota de participação (rateio no evento) — arquitetura
 - **Desacoplada do Plano.** O Plano define a mensalidade (produtos); a cota (% da FIPE no rateio)
