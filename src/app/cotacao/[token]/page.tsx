@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { formatCurrency } from '@/lib/utils';
+import { LogoSmartCar } from '@/components/hotlink/marca';
 import { PrintButton } from './print-button';
 
 // Cotacao publica (link compartilhavel enviado ao cliente). Sem login.
@@ -32,13 +33,12 @@ export default async function CotacaoPublicaPage({ params }: { params: { token: 
     <main className="mx-auto min-h-screen max-w-md bg-slate-50 px-4 py-6 text-slate-800">
       <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
         {/* Cabecalho */}
-        <div className="flex items-center gap-3 border-b border-slate-100 bg-brand-600 px-5 py-4 text-white">
-          {empresa?.logo_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={empresa.logo_url} alt="" className="max-h-10 max-w-[140px] object-contain" />
-          ) : (
-            <span className="text-lg font-semibold">{nomeEmpresa}</span>
-          )}
+        {/* A marca vem de Configuracoes -> Empresa; o SVG e so o fallback. */}
+        <div className="flex items-center justify-center border-b border-slate-100 bg-white px-5 py-4">
+          <LogoSmartCar url={empresa?.logo_url} className="max-h-14 w-auto object-contain" />
+        </div>
+        <div className="bg-brand-700 px-5 py-2 text-center text-[10.5px] font-semibold uppercase tracking-[0.2em] text-white/90">
+          {nomeEmpresa}
         </div>
 
         <div className="px-5 py-5">

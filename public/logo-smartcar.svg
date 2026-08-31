@@ -1,13 +1,29 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 70" width="300" height="70" role="img" aria-label="SmartCar Brasil - Protecao Veicular">
-  <!-- Marca (swoosh estilizado) -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 152" width="340" height="152"
+     role="img" aria-label="Smart Car Brasil - Protecao Veicular">
+  <!--
+    Lockup empilhado da marca (marca acima, wordmark abaixo), como no site.
+    Este arquivo e o FALLBACK: quando ha logo cadastrada em Configuracoes ->
+    Empresa, os portais usam a oficial (ver <LogoSmartCar>).
+  -->
   <g>
-    <path d="M12 34 C 24 14, 52 12, 64 22 C 52 20, 34 24, 26 38 C 34 30, 48 28, 58 32 C 46 34, 34 40, 30 52 C 28 44, 18 40, 12 34 Z" fill="#0e2a4d"/>
-    <path d="M40 30 C 52 22, 70 24, 76 34 C 66 30, 52 32, 46 42 C 44 36, 44 32, 40 30 Z" fill="#29abe2"/>
-    <circle cx="35" cy="33" r="4.2" fill="#29abe2"/>
+    <!-- swoosh superior (navy) -->
+    <path d="M214 14 C 176 10, 132 26, 118 48 C 132 34, 156 26, 176 28
+             C 152 34, 128 50, 122 70 C 138 50, 164 40, 186 42
+             C 168 50, 152 62, 146 76 C 164 58, 194 46, 214 46
+             C 200 40, 196 26, 214 14 Z" fill="#1F2E52"/>
+    <!-- swoosh inferior (azul da marca) -->
+    <path d="M118 92 C 150 96, 190 84, 208 62 C 194 76, 170 84, 148 82
+             C 172 76, 196 60, 204 42 C 188 62, 160 74, 138 72
+             C 152 80, 148 86, 118 92 Z" fill="#7CB0DA"/>
+    <circle cx="150" cy="55" r="8" fill="#1F2E52"/>
+    <circle cx="150" cy="55" r="3.4" fill="#7CB0DA"/>
   </g>
-  <!-- Wordmark -->
-  <text x="92" y="38" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="800" letter-spacing="0.5">
-    <tspan fill="#0e2a4d">SMART</tspan><tspan fill="#29abe2">CAR</tspan><tspan fill="#0e2a4d">BRASIL</tspan>
+
+  <text x="170" y="122" text-anchor="middle"
+        font-family="Arial, Helvetica, sans-serif" font-size="34" letter-spacing="0.5">
+    <tspan fill="#1A1A1A" font-weight="400">SMART</tspan><tspan fill="#4E9CD6" font-weight="700">CAR</tspan><tspan fill="#1A1A1A" font-weight="700">BRASIL</tspan>
   </text>
-  <text x="93" y="54" font-family="Arial, Helvetica, sans-serif" font-size="9" font-weight="500" letter-spacing="3" fill="#5b6b7d">PROTECAO VEICULAR</text>
+  <text x="170" y="144" text-anchor="middle"
+        font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="400"
+        letter-spacing="6.2" fill="#1A1A1A">PROTEÇÃO VEICULAR</text>
 </svg>

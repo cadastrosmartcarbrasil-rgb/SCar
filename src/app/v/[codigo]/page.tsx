@@ -31,17 +31,16 @@ export default async function HotlinkPage({ params }: { params: { codigo: string
   const destino = destinos?.[0];
   if (!destino) notFound();
 
-  const { data: tipos } = await supabase
-    .from('tipos_veiculo')
-    .select('id, nome')
-    .eq('status', true)
-    .order('nome');
+  const [{ data: tipos }, { data: empresa }] = await Promise.all([
+    supabase.from('tipos_veiculo').select('id, nome').eq('status', true).order('nome'),
+    supabase.from('empresa').select('logo_url').limit(1).maybeSingle(),
+  ]);
 
   const ehVendedor = destino.tipo === 'VENDEDOR';
 
   return (
     <main className="min-h-screen bg-white">
-      <CabecalhoMarca />
+      <CabecalhoMarca logoUrl={empresa?.logo_url} />
 
       {/* Hero com o corte diagonal da marca */}
       <section className="relative overflow-hidden bg-brand-700">

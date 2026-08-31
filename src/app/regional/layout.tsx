@@ -19,6 +19,9 @@ export default async function RegionalLayout({ children }: { children: React.Rea
   if (!perfil) redirect('/login');
   if (!['gestor_regional', 'admin', 'financeiro'].includes(perfil.papel)) redirect('/dashboard');
 
+  const { data: empresa } = await supabase
+    .from('empresa').select('logo_url').limit(1).maybeSingle();
+
   const { data: regional } = perfil.regional_id
     ? await supabase.from('regionais').select('nome, codigo').eq('id', perfil.regional_id).maybeSingle()
     : { data: null };
@@ -44,6 +47,7 @@ export default async function RegionalLayout({ children }: { children: React.Rea
         unidade={regional?.nome ?? 'Matriz'}
         codigo={regional?.codigo ?? null}
         papel={perfil.papel}
+        logoUrl={empresa?.logo_url ?? null}
       />
       <div className="min-w-0 flex-1 bg-[#eef2f8]">
         <div className="mx-auto max-w-6xl p-4 md:p-8">{children}</div>

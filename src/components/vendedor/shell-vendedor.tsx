@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import {
   Copy, HandCoins, LayoutDashboard, LogOut, Share2, UserRound, Zap,
 } from 'lucide-react';
+import { LogoNaCabine } from '@/components/hotlink/marca';
 import { createClient } from '@/lib/supabase/client';
 
 const ITENS = [
@@ -72,8 +73,9 @@ export function BotoesHotlink({ codigo, compacto }: { codigo: string | null; com
  * Mobile-first de proposito: o vendedor trabalha no celular, entao a navegacao
  * vira barra inferior no telefone e sidebar cockpit no desktop.
  */
-export function ShellVendedor({ nome, unidade, codigo, children }: {
-  nome: string; unidade: string | null; codigo: string | null; children: React.ReactNode;
+export function ShellVendedor({ nome, unidade, codigo, logoUrl, children }: {
+  nome: string; unidade: string | null; codigo: string | null;
+  logoUrl?: string | null; children: React.ReactNode;
 }) {
   const pathname = usePathname();
 
@@ -103,11 +105,9 @@ export function ShellVendedor({ nome, unidade, codigo, children }: {
 
       {/* sidebar desktop */}
       <aside className="cockpit hidden w-60 shrink-0 md:block">
-        <div className="cockpit-stripe px-5 py-5">
-          <p className="text-base font-bold tracking-tight text-white">
-            SMART<span className="text-cyan-400">CAR</span>BRASIL
-          </p>
-          <p className="mt-0.5 text-[11px] font-medium uppercase tracking-wide text-cyan-300">
+        <div className="cockpit-stripe px-4 py-5">
+          <LogoNaCabine url={logoUrl} />
+          <p className="mt-2.5 text-center text-[11px] font-medium uppercase tracking-wide text-cyan-300">
             Portal do Vendedor
           </p>
         </div>

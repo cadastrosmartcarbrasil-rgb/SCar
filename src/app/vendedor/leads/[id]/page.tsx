@@ -4,12 +4,13 @@ import { use, useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import {
-  ArrowLeft, Camera, FileText, Loader2, MessageCircle, Phone,
+  ArrowLeft, Camera, FileText, Loader2, MessageCircle, Phone, Receipt,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FotosVistoria } from '@/components/vistoria/fotos-vistoria';
-import { useLead, useUploadCrlv } from '@/hooks/use-vendas';
+import { LinkDaProposta } from '@/components/hotlink/cotacao-publica';
+import { useCotacoes, useLead, useUploadCrlv } from '@/hooks/use-vendas';
 import { SELO_STATUS_LEAD } from '@/lib/vendedor';
 import { formatCurrency, formatDate } from '@/lib/utils';
 
@@ -23,6 +24,7 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 export default function LeadVendedorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { data: lead, isLoading } = useLead(id);
+  const { data: cotacoes } = useCotacoes(id);
   const uploadCrlv = useUploadCrlv(id);
   const [vistoriaAberta, setVistoriaAberta] = useState(false);
 
@@ -89,6 +91,34 @@ export default function LeadVendedorPage({ params }: { params: Promise<{ id: str
           {lead.perdido_motivo && <Campo rotulo="Motivo da perda" valor={lead.perdido_motivo} />}
         </CardContent>
       </Card>
+
+      {/* A proposta com link proprio: o vendedor manda no WhatsApp e o cliente
+          abre na hora, sem depender de e-mail. */}
+      {(cotacoes ?? []).length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-1.5">
+              <Receipt className="h-4 w-4 text-slate-400" /> Proposta do cliente
+            </CardTitle>
+            <p className="text-xs text-slate-500">
+              Link pronto para enviar — o cliente abre, ve os valores e guarda.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {(cotacoes ?? []).slice(0, 1).map((c) => (
+              <div key={c.id} className="space-y-3">
+                <div className="flex items-baseline justify-between gap-3 rounded-xl bg-brand-50 px-3 py-2.5">
+                  <span className="text-[12px] text-slate-500">Mensalidade</span>
+                  <span className="tnum text-[17px] font-bold text-brand-700">
+                    {formatCurrency(Number(c.total_com_desconto ?? c.total_mensalidade))}
+                  </span>
+                </div>
+                <LinkDaProposta token={c.token} compacto />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Vistoria: o trabalho de campo do vendedor. */}
       <Card>

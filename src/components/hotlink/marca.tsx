@@ -1,18 +1,32 @@
 /**
- * Marca Smart Car Brasil para as paginas publicas.
- * Logo centralizada sobre fundo branco e a faixa navy logo abaixo — o mesmo
- * arranjo do site (www.smartcarbrasil.com.br).
+ * Marca Smart Car Brasil para paginas publicas e portais.
+ *
+ * A logo OFICIAL e a cadastrada em Configuracoes -> Empresa (`empresa.logo_url`).
+ * O SVG em `public/logo-smartcar.svg` e so o fallback de quando ainda nao ha
+ * arquivo cadastrado — assim a marca se atualiza em todo o sistema de um lugar
+ * so, sem passar por deploy.
  */
-export function CabecalhoMarca({ subtitulo }: { subtitulo?: string }) {
+export function LogoSmartCar({ url, className, alt = 'Smart Car Brasil - Protecao Veicular' }: {
+  url?: string | null;
+  className?: string;
+  alt?: string;
+}) {
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={url || '/logo-smartcar.svg'} alt={alt} className={className} />;
+}
+
+/**
+ * Cabecalho das paginas publicas: logo centralizada no branco e a faixa navy
+ * logo abaixo — o mesmo arranjo do site.
+ */
+export function CabecalhoMarca({ logoUrl, subtitulo }: {
+  logoUrl?: string | null;
+  subtitulo?: string;
+}) {
   return (
     <header className="bg-white">
       <div className="mx-auto flex max-w-5xl items-center justify-center px-4 py-5">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/logo-smartcar.svg"
-          alt="Smart Car Brasil - Protecao Veicular"
-          className="h-14 w-auto"
-        />
+        <LogoSmartCar url={logoUrl} className="h-16 w-auto object-contain sm:h-20" />
       </div>
       <div className="bg-brand-700">
         <p className="mx-auto max-w-5xl px-4 py-2.5 text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-white/90">
@@ -23,7 +37,18 @@ export function CabecalhoMarca({ subtitulo }: { subtitulo?: string }) {
   );
 }
 
-/** Rodape institucional discreto. */
+/**
+ * A logo tem tinta escura: sobre o navy dos portais ela vai numa placa branca,
+ * mesmo tratamento da sidebar do sistema de gestao.
+ */
+export function LogoNaCabine({ url }: { url?: string | null }) {
+  return (
+    <div className="rounded-xl bg-white px-3 py-2.5 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.35)]">
+      <LogoSmartCar url={url} className="mx-auto max-h-14 w-auto object-contain" />
+    </div>
+  );
+}
+
 export function RodapeMarca() {
   return (
     <footer className="mt-10 bg-brand-800 py-6 text-center">

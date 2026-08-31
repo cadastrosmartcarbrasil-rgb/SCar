@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import {
-  BadgeCheck, Car, CheckCircle2, ChevronRight, Loader2, Lock, ShieldCheck, User,
+  BadgeCheck, Car, CheckCircle2, ChevronRight, Copy, FileText, Loader2, Lock,
+  MessageCircle, ShieldCheck, User,
 } from 'lucide-react';
 import { maskCelular } from '@/lib/utils';
 import { formatarMoedaBR } from '@/lib/money';
@@ -41,7 +42,9 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
   const [planoId, setPlanoId] = useState('');
 
   const [aceite, setAceite] = useState({ nome: '', documento: '', por: 'CLIENTE', marcado: false });
-  const [contratado, setContratado] = useState<{ mensalidade: number; adesao: number } | null>(null);
+  const [contratado, setContratado] = useState<
+    { mensalidade: number; adesao: number; proposta: string } | null
+  >(null);
 
   const planoEscolhido = planos.find((p) => p.plano_id === planoId) ?? null;
 
@@ -109,14 +112,16 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
     setErro(null);
     setEnviando(true);
     try {
-      const r = await chamar<{ mensalidade: number; adesao: number }>(
+      const r = await chamar<{ mensalidade: number; adesao: number; proposta: string }>(
         '/api/v1/hotlink/contratar',
         {
           token, plano_id: planoId, nome: aceite.nome,
           documento: aceite.documento, por: aceite.por,
         },
       );
-      setContratado({ mensalidade: Number(r.mensalidade), adesao: Number(r.adesao) });
+      setContratado({
+        mensalidade: Number(r.mensalidade), adesao: Number(r.adesao), proposta: r.proposta,
+      });
       setEtapa('fim');
     } catch (err) {
       setErro((err as Error).message);
@@ -144,6 +149,10 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
                   <Linha rotulo="Adesao (unica)" valor={dinheiro(contratado.adesao)} />
                 )}
               </div>
+
+              {/* A proposta fica disponivel na hora, num link proprio: o cliente
+                  abre, guarda e reabre quando quiser. */}
+              <LinkDaProposta token={contratado.proposta} />
             </>
           ) : (
             <>
@@ -443,6 +452,55 @@ function Linha({ rotulo, valor, destaque }: { rotulo: string; valor: string; des
       <span className={`tnum font-semibold ${destaque ? 'text-[15px] text-brand-700' : 'text-[13px] text-slate-700'}`}>
         {valor}
       </span>
+    </div>
+  );
+}
+
+
+/**
+ * Link publico da proposta. Sai pronto no fim da negociacao — o cliente abre
+ * na hora, salva no celular e reabre quando quiser, sem depender de e-mail.
+ */
+export function LinkDaProposta({ token, compacto }: { token: string; compacto?: boolean }) {
+  const [copiado, setCopiado] = useState(false);
+  const url = typeof window === 'undefined' ? '' : `${window.location.origin}/cotacao/${token}`;
+
+  async function copiar() {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2500);
+    } catch {
+      window.prompt('Copie o link da proposta:', url);
+    }
+  }
+
+  return (
+    <div className={compacto ? 'space-y-2' : 'mx-auto mt-5 max-w-xs space-y-2'}>
+      <a
+        href={`/cotacao/${token}`}
+        target="_blank"
+        rel="noreferrer"
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-500 px-4 py-3 text-[14px] font-bold text-brand-800 transition hover:bg-cyan-400"
+      >
+        <FileText className="h-4 w-4" /> Ver minha proposta
+      </a>
+      <div className="flex gap-2">
+        <button
+          type="button" onClick={copiar}
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-300 px-3 py-2 text-[12px] font-semibold text-slate-600 transition hover:bg-slate-50"
+        >
+          <Copy className="h-3.5 w-3.5" /> {copiado ? 'Link copiado!' : 'Copiar link'}
+        </button>
+        <a
+          href={`https://wa.me/?text=${encodeURIComponent(`Minha proposta Smart Car Brasil: ${url}`)}`}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[12px] font-semibold text-emerald-700 transition hover:bg-emerald-100"
+        >
+          <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+        </a>
+      </div>
     </div>
   );
 }

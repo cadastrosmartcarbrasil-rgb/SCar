@@ -944,6 +944,11 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
 - **É a tela que o possível associado vê**, então segue o site (www.smartcarbrasil.com.br): logo
   centralizada no branco, faixa navy, hero com o **corte diagonal** da marca, ciano como acento e
   os títulos em caixa-alta leve. Peças em `src/components/hotlink/marca.tsx`.
+- **A logo oficial é a cadastrada em `Configurações → Empresa`** (`empresa.logo_url`).
+  `<LogoSmartCar url>` é usada na página do hotlink, na cotação pública e na cabine dos dois
+  portais (`<LogoNaCabine>` põe a logo numa placa branca, porque a tinta dela é escura).
+  `public/logo-smartcar.svg` é só o **fallback** de quando ainda não há arquivo cadastrado —
+  trocar a marca é subir o arquivo, não fazer deploy.
 - **Três passos numa página** (`<CotacaoPublica>`): Contato → Veículo → Planos → Confirmação.
   O contato é gravado **no primeiro passo** (`registrar_captura_hotlink`): se a pessoa desistir
   no meio, o lead já existe. Quem cai em CARTEIRA ou DUPLICADO para ali, com a mensagem certa.
@@ -956,6 +961,10 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
   fluxo que já existia: Auditoria → `autorizar_entrada_lead` → veículo ativo → primeira cobrança.
 - **Quem aceita fica registrado:** `CLIENTE` (no próprio celular) ou `VENDEDOR` (aceite presencial),
   com nome, CPF/CNPJ, data/hora, **IP e user-agent** — é a prova do consentimento.
+- **O link da proposta sai na hora.** Fechada a negociação, a tela de sucesso mostra
+  `<LinkDaProposta>`: abre `/cotacao/<token>` (a mesma página pública que o CRM já usava), copia o
+  link e manda no WhatsApp. O mesmo componente aparece em `/vendedor/leads/[id]`, para o vendedor
+  reenviar. O cliente não depende de e-mail para ver o que contratou.
 - **Vistoria não aparece aqui.** Ela só faz sentido com a venda fechada: a tela de sucesso avisa que
   o próximo passo é a vistoria, e ela acontece no portal do vendedor (0040).
 - **Segurança:** as rotas públicas rodam com service_role e só acham o atendimento por

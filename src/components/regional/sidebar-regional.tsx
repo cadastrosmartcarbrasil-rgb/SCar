@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import {
   BarChart3, Building2, Copy, LayoutDashboard, LogOut, Menu, Users, Wallet, X, Zap,
 } from 'lucide-react';
+import { LogoNaCabine } from '@/components/hotlink/marca';
 import { createClient } from '@/lib/supabase/client';
 
 const ITENS = [
@@ -17,10 +18,11 @@ const ITENS = [
   { href: '/regional/financeiro', label: 'Financeiro', icon: Wallet },
 ];
 
-export function SidebarRegional({ nome, unidade, codigo, papel }: {
+export function SidebarRegional({ nome, unidade, codigo, papel, logoUrl }: {
   nome: string; unidade: string; codigo: string | null;
   /** O atalho para o sistema de gestao so faz sentido para o admin. */
   papel?: string;
+  logoUrl?: string | null;
 }) {
   const pathname = usePathname();
   const [aberto, setAberto] = useState(false);
@@ -57,11 +59,9 @@ export function SidebarRegional({ nome, unidade, codigo, papel }: {
       </div>
 
       <aside className={`cockpit w-full shrink-0 md:block md:w-60 ${aberto ? 'block' : 'hidden'}`}>
-        <div className="cockpit-stripe px-5 py-5">
-          <p className="text-base font-bold tracking-tight text-white">
-            SMART<span className="text-cyan-400">CAR</span>BRASIL
-          </p>
-          <p className="mt-0.5 text-[11px] font-medium uppercase tracking-wide text-cyan-300">
+        <div className="cockpit-stripe px-4 py-5">
+          <LogoNaCabine url={logoUrl} />
+          <p className="mt-2.5 text-center text-[11px] font-medium uppercase tracking-wide text-cyan-300">
             Portal da Franquia
           </p>
         </div>
