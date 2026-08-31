@@ -2326,12 +2326,31 @@ export type Database = {
         Args: { p_regional_id?: string | null };
         Returns: LeadSemVendedor[];
       };
+      lead_por_token_publico: {
+        Args: { p_token: string };
+        Returns: {
+          lead_id: string; nome: string; celular: string; email: string | null;
+          placa: string | null; regional_id: string | null; status: string;
+          carteira: boolean; aceito: boolean; em_negociacao: boolean;
+        }[];
+      };
+      registrar_aceite_venda: {
+        Args: {
+          p_lead_id: string; p_cotacao_id: string | null; p_por: string;
+          p_nome: string; p_documento: string;
+          p_ip?: string | null; p_user_agent?: string | null;
+        };
+        Returns: LeadsRow;
+      };
       registrar_captura_hotlink: {
         Args: {
           p_codigo: string; p_nome: string; p_celular: string;
           p_email?: string | null; p_placa?: string | null; p_cpf_cnpj?: string | null;
         };
-        Returns: { lead_id: string; tipo: string; vendedor_nome: string | null; mensagem: string }[];
+        Returns: {
+          lead_id: string; tipo: string; vendedor_nome: string | null;
+          mensagem: string; token_publico: string;
+        }[];
       };
       fotos_vistoria_lead: {
         Args: { p_lead_id: string };

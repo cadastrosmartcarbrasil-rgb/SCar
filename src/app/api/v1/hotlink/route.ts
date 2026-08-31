@@ -42,5 +42,14 @@ export async function POST(req: Request) {
 
   // O visitante nao precisa saber que foi classificado como duplicado ou
   // carteira: recebe uma mensagem honesta, sem expor a regra interna.
-  return NextResponse.json({ ok: true, vendedor: r.vendedor_nome, mensagem: r.mensagem });
+  // `token` e a capacidade das chamadas seguintes (cotar/contratar): sem ele
+  // um `lead_id` adivinhavel deixaria qualquer um pendurar proposta no
+  // atendimento de outra pessoa.
+  return NextResponse.json({
+    ok: true,
+    tipo: r.tipo,
+    vendedor: r.vendedor_nome,
+    mensagem: r.mensagem,
+    token: r.token_publico,
+  });
 }

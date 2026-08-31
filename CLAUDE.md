@@ -442,6 +442,17 @@ sem protecao: quem trouxe agora leva) e **NOVO**. `leads` ganha `atribuido_em`,
 `registrar_contato_lead` (renova a protecao) e `leads_sem_vendedor` (o pool da unidade).
 `fn_lead_historico` passa a carimbar `ultima_interacao_em` a cada mudanca de etapa.)
 
+· `0042_aceite_venda` (ACEITE NA PAGINA PUBLICA: o hotlink parava na captura — agora a mesma pagina
+cota e FECHA. `leads.token_publico` (unico) e a capacidade das chamadas publicas seguintes: sem ele
+`/cotar` e `/contratar` receberiam um `lead_id` adivinhavel e qualquer um penduraria proposta no
+atendimento alheio; por isso `registrar_captura_hotlink` foi recriada devolvendo o token (drop+create,
+a coluna de OUT muda a assinatura). Colunas do aceite em `leads` (`aceite_em/por/nome/documento/ip/
+user_agent/cotacao_id`) — `aceite_por` so aceita CLIENTE ou VENDEDOR. `registrar_aceite_venda(...)`
+valida (nome completo, `validar_documento`, cotacao do proprio lead, sem aceite repetido, lead ainda
+em negociacao), grava a prova do consentimento e poe `status = 'APROVADO'` — o trigger
+`fn_lead_aprovacao` (0017) leva a EM_AUDITORIA, a Auditoria efetiva com `autorizar_entrada_lead` e o
+0025 gera a primeira cobranca. `lead_por_token_publico(token)` e o unico caminho das rotas publicas.)
+
 ## Módulos (status: todos funcionais)
 Assistência 24h (`/assistencia`: painel de acionamento com trava + limites em tempo real, cotação,
 OS, voucher ao prestador e Contas a Pagar) · SAC / Atendimento (`/sac`: **veículo-first + lazy** — busca por Nome/CPF/Placa → `visao-360` traz
@@ -928,6 +939,28 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
   promessa de cotacao nova.
 - Espelho puro em `src/lib/atribuicao.ts` (`protecaoAtiva`, `deveVoltarAoPool`,
   `diasDeProtecaoRestantes`, `ROTULO_CAPTURA`) com testes.
+
+## Página pública do hotlink (0042) — a vitrine da venda
+- **É a tela que o possível associado vê**, então segue o site (www.smartcarbrasil.com.br): logo
+  centralizada no branco, faixa navy, hero com o **corte diagonal** da marca, ciano como acento e
+  os títulos em caixa-alta leve. Peças em `src/components/hotlink/marca.tsx`.
+- **Três passos numa página** (`<CotacaoPublica>`): Contato → Veículo → Planos → Confirmação.
+  O contato é gravado **no primeiro passo** (`registrar_captura_hotlink`): se a pessoa desistir
+  no meio, o lead já existe. Quem cai em CARTEIRA ou DUPLICADO para ali, com a mensagem certa.
+- **A cotação é server-side.** `/api/v1/hotlink/cotar` consulta a FIPE pela placa
+  (`src/lib/fipe-server.ts` — o proxy `/api/fipe` exige sessão e não serve para o visitante) e
+  devolve **um preço por plano ativo** via `cotar_plano`. Sem placa ou sem token da FIPE, o
+  visitante informa o valor de mercado.
+- **O aceite é o gatilho da esteira.** `/api/v1/hotlink/contratar` grava o snapshot da cotação
+  escolhida e chama `registrar_aceite_venda`, que move o lead para EM_AUDITORIA. Daí em diante é o
+  fluxo que já existia: Auditoria → `autorizar_entrada_lead` → veículo ativo → primeira cobrança.
+- **Quem aceita fica registrado:** `CLIENTE` (no próprio celular) ou `VENDEDOR` (aceite presencial),
+  com nome, CPF/CNPJ, data/hora, **IP e user-agent** — é a prova do consentimento.
+- **Vistoria não aparece aqui.** Ela só faz sentido com a venda fechada: a tela de sucesso avisa que
+  o próximo passo é a vistoria, e ela acontece no portal do vendedor (0040).
+- **Segurança:** as rotas públicas rodam com service_role e só acham o atendimento por
+  `token_publico`. Erro de banco não vai cru para o cliente — `mensagemDeErro`
+  (`src/lib/venda-publica.ts`, testado) deixa passar o texto das nossas regras e esconde o técnico.
 
 ## Cota de participação (rateio no evento) — arquitetura
 - **Desacoplada do Plano.** O Plano define a mensalidade (produtos); a cota (% da FIPE no rateio)
