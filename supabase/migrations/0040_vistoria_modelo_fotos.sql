@@ -67,6 +67,8 @@ on conflict (codigo) do nothing;
 
 alter table vistoria_fotos_modelo enable row level security;
 
+drop policy if exists vfm_select on vistoria_fotos_modelo;
+drop policy if exists vfm_write on vistoria_fotos_modelo;
 create policy vfm_select on vistoria_fotos_modelo for select to authenticated using (is_staff());
 create policy vfm_write  on vistoria_fotos_modelo for all to authenticated
   using (tem_acesso_global()) with check (tem_acesso_global());

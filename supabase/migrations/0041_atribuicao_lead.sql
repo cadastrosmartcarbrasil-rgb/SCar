@@ -85,6 +85,8 @@ create index if not exists idx_lead_atrib_lead on lead_atribuicoes (lead_id, cre
 
 alter table lead_atribuicoes enable row level security;
 
+drop policy if exists latrib_select on lead_atribuicoes;
+drop policy if exists latrib_insert on lead_atribuicoes;
 create policy latrib_select on lead_atribuicoes for select to authenticated using (
   exists (select 1 from leads l where l.id = lead_id)
 );
