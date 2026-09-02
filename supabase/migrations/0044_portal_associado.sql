@@ -70,6 +70,7 @@ create index if not exists idx_cartoes_cliente on cartoes_cobranca (cliente_id) 
 create unique index if not exists uq_cartao_principal
   on cartoes_cobranca (cliente_id) where principal and ativo;
 
+drop trigger if exists trg_cartoes_updated on cartoes_cobranca;
 create trigger trg_cartoes_updated before update on cartoes_cobranca
   for each row execute function set_updated_at();
 
