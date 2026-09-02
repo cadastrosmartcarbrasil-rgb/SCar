@@ -3,7 +3,7 @@
 > Memória do projeto. Leia isto no início de cada sessão em vez de varrer o repositório inteiro.
 > Mantenha este arquivo atualizado ao adicionar módulos/migrations (é barato e faz o projeto andar rápido).
 
-## Estado atual (retomar aqui) — atualizado ao fim da fase 0032→0043
+## Estado atual (retomar aqui) — atualizado ao fim da fase 0032→0044
 
 **Um único projeto, um único repositório: `cadastrosmartcarbrasil-rgb/scar`** (no GitHub o nome
 aparece como `SCar`). Trabalho e deploy acontecem no branch **`claude/claude-md-opcao-x-98kfj5`**;
@@ -14,7 +14,25 @@ o de trabalho; esse default morto já causou um dia inteiro de trabalho no branc
 
 - **Produção:** `https://app.smartvidanet.com.br` — VPS KingHost, Docker + Caddy (HTTPS auto),
   pasta `/opt/scar`.
-- **Último commit desta fase:** `1093c51`.
+- **Último commit desta fase:** `ad3028b`.
+- **A migration `0044` JÁ FOI APLICADA em produção** e o Portal do Associado está no ar,
+  conferido pelo usuário. As migrations `0001`..`0044` estão todas aplicadas.
+
+### Os 4 portais (e as 2 páginas públicas)
+| Portal | Link | Login | Quem entra |
+|---|---|---|---|
+| **Matriz** | `/dashboard` | `/login` | staff com cadastro em `usuarios` |
+| **Franquia** | `/regional` | `/login` | `gestor_regional` COM regional definida (admin/financeiro p/ suporte) |
+| **Vendedor** (PWA) | `/vendedor` | `/login` | cadastro ATIVO em `vendedores` ligado ao login |
+| **Associado** | `/portal` | **`/portal/login`** | cadastro em `clientes` (login = CPF/CNPJ) |
+
+Três dos quatro entram pela MESMA porta `/login`: o destino não é escolhido, é decidido pelo
+cadastro (`src/app/(auth)/login/page.tsx` — gestor com regional → `/regional`; `vendedor_atual()`
+→ `/vendedor`; senão `/dashboard`). Só o associado tem login próprio, porque a chave é o CPF.
+Públicas, sem sessão: **`/v/<CODIGO>`** (hotlink de venda, vendedor ou franquia) e
+**`/cotacao/<token>`** (a proposta).
+**Todos os portais dividem a sessão do navegador** — logar como associado derruba a de staff;
+para testar, aba anônima.
 
 ### Comandos que resolvem 90% da sessão
 | Objetivo | Comando |
@@ -99,7 +117,10 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 1. **Ligar o gateway real** (Asaas) — emissão + webhook + baixa automática.
 2. **Termo de adesão** com aceite jurídico no fluxo (`contratos_adesao` já existe; hoje o aceite
    da página pública guarda a prova, mas o texto é o mínimo honesto).
-3. **Portal do Associado** (login CPF, autosserviço reusando `SERVICOS_SAC` + RLS por dono).
+3. **Endurecer o primeiro acesso do associado** — hoje a senha inicial é o próprio CPF, então
+   quem souber o documento entra até a troca obrigatória. Pedir também a data de nascimento
+   (já existe em `clientes`) ou um código por WhatsApp resolveria; é mudança localizada na
+   rota `/api/portal/login`.
 4. **SLA / notificações do protocolo** (prazo por prioridade, aviso ao responsável).
 5. **Aviso de duplicidade no CRM interno** — `classificar_captura` já existe, falta ligar em
    `/vendas/novo` ("este CPF já tem lead com o Fulano").
@@ -1034,6 +1055,16 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
   (`src/lib/venda-publica.ts`, testado) deixa passar o texto das nossas regras e esconde o técnico.
 
 ## Portal do Associado (0044) — `/portal`
+- **Estrutura de pastas (não quebrar):** o guard fica em `src/app/portal/(associado)/layout.tsx`
+  e as telas protegidas dentro desse route group; **`/portal/login` fica FORA dele**, em
+  `src/app/portal/login/`. Ver o gotcha "Tela de login NUNCA pode ficar sob o layout que exige
+  sessão" — foi bug real, com o login inalcançável para todo mundo.
+- **Não existe "criar acesso" para o associado** (diferente do vendedor): a rota de login cria o
+  usuário de auth na hora, e SÓ quando a senha digitada é o documento. O e-mail do auth é interno
+  (`<doc>@portal.smartcarbrasil.com.br`), nada é enviado para lá — o contato real é `clientes.email`.
+- **"Credenciais inválidas" é a mesma resposta para CPF inexistente e senha errada**, de propósito:
+  não confirmamos a quem pergunta se um CPF é associado da casa. Cadastro `cancelado` é o único
+  caso com mensagem própria. Depende de `SUPABASE_SERVICE_ROLE_KEY` no VPS (usa o admin client).
 - **Quem entra:** quem tem cadastro em `clientes` ligado ao próprio login. Login por **CPF/CNPJ**;
   no primeiro acesso a senha é o próprio documento, e o portal **não mostra nada** antes da troca
   (`<TrocaSenhaObrigatoria>` ocupa a tela inteira).
@@ -1136,6 +1167,18 @@ no fim — o runner procura por "PASSARAM") e rode `npm run schema`.
   `codigo_fipe` — se a API esperar o código FIPE textual, ajustar em `/api/fipe` (um ponto só).
 
 ## Gotchas já resolvidos (não repetir)
+- **Tela de login NUNCA pode ficar sob o layout que exige sessão.** `/portal/login` nasceu em
+  `src/app/portal/login/`, herdando o `layout.tsx` do portal — e ficou inalcançável nos DOIS
+  sentidos: sem sessão o layout redirecionava para `/portal/login` (a própria página: loop) e
+  com sessão de staff o `portal_perfil()` voltava vazio e jogava para `/dashboard`. Solução:
+  o guard vive em `src/app/portal/(associado)/` — route group **não entra na URL** — e o login
+  fica em `src/app/portal/`. **Tela nova do portal vai dentro de `(associado)`; o que for
+  público fica fora.** Sintoma no build: a página pública sai como `ƒ` (dinâmica) em vez de
+  `○` (estática), porque o layout pai chama `getUser()` a cada request.
+- **`create trigger` não aceita `if not exists`** — sempre `drop trigger if exists <nome> on
+  <tabela>;` antes, senão a migration não é re-executável e re-rodá-la no SQL Editor para com
+  `42710: trigger already exists` (mordeu na 0044; padrão já usado em 0024/0028/0031/0032/0034).
+  Vale o mesmo raciocínio de `create policy` (logo abaixo).
 - **Chave estrangeira nova pode quebrar um `select` com embed.** `leads.aceite_cotacao_id` (0042)
   criou a SEGUNDA relação entre `cotacoes` e `leads`; o embed `from('cotacoes').select('*, leads(...)')`
   virou ambíguo, o PostgREST passou a devolver erro, `data` ficou nulo e `/cotacao/<token>` caía em
