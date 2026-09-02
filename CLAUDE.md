@@ -22,9 +22,13 @@ o de trabalho; esse default morto já causou um dia inteiro de trabalho no branc
 | Validar tudo antes de commitar | `npm run validate` (tipos → Vitest → migrations+testes de banco+schema → build) |
 | Só os testes de banco | `npm run test:db` · um módulo: `npm run test:db -- 0043` |
 | Regerar o `supabase/schema.sql` | `npm run schema` (rodar SEMPRE após criar/editar migration) |
-| Publicar no VPS | `ssh root@app.smartvidanet.com.br "cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 && docker compose up -d --build"` |
+| Publicar — **de dentro do VPS** (prompt `root@smartvida:~#`) | `cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 && docker compose up -d --build` |
+| Publicar — **do seu computador** (PowerShell/terminal local) | `ssh root@app.smartvidanet.com.br "cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 && docker compose up -d --build"` |
 
-**O `git pull` roda DENTRO do VPS** — rodar no PowerShell do Windows dá `fatal: not a git repository`.
+**O `git pull` roda DENTRO do VPS.** Os dois comandos acima fazem a mesma coisa; o que muda e de
+onde voce digita. **Nao misture:** a versao com `ssh root@...` rodada DE DENTRO do servidor faz a
+maquina tentar conectar nela mesma e falha; a versao sem `ssh` no PowerShell da
+`fatal: not a git repository`, porque o projeto nao esta no seu computador.
 As **migrations novas vão antes**, na ordem, pelo SQL Editor do Supabase. Runbook em `DEPLOY.md`;
 o CI (`.github/workflows/ci.yml`) roda a mesma validação a cada push.
 

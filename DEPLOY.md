@@ -29,23 +29,38 @@ todas as migrations) em vez de rodar uma a uma.
 
 ## 2. Aplicação (VPS)
 
-**Windows / PowerShell** — de qualquer pasta:
+O comando muda conforme **de onde você digita**. Confira o prompt antes:
+
+### (a) Você JÁ está dentro do servidor
+Prompt parecido com `root@smartvida:~#`. É o caso mais comum quando a janela do
+SSH já está aberta:
+
+```bash
+cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 && docker compose up -d --build
+```
+
+### (b) Você está no SEU computador
+Prompt do PowerShell (`PS C:\...>`) ou do terminal local. Aí o `ssh` faz parte
+do comando — ele é quem entra no servidor:
 
 ```powershell
 .\scripts\deploy.ps1
 ```
 
-**Linux / macOS / WSL:**
-
 ```bash
 npm run deploy
 ```
 
-Sem o script, o comando equivalente é:
+Sem os scripts, o equivalente em uma linha:
 
 ```powershell
 ssh root@app.smartvidanet.com.br "cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 && docker compose up -d --build"
 ```
+
+> **Não misture os dois.** Rodar a versão com `ssh root@...` **de dentro do
+> servidor** faz a máquina tentar conectar nela mesma e falha. E rodar a versão
+> sem `ssh` no PowerShell dá `fatal: not a git repository`, porque o projeto não
+> está no seu computador — está em `/opt/scar`, no VPS.
 
 Terminado o build, atualize a página com **Ctrl+F5**.
 
