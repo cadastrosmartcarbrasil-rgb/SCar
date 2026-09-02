@@ -9,6 +9,13 @@ import { TrocaSenhaObrigatoria } from '@/components/portal/troca-senha';
  * Entra quem tem cadastro em `clientes` ligado ao proprio login. Enquanto a
  * senha for a PROVISORIA (o CPF do primeiro acesso), a troca ocupa a tela
  * inteira — nenhum dado aparece antes disso.
+ *
+ * Este guard vive no grupo (associado) — que NAO entra na URL — e por isso
+ * `/portal/login` fica de fora dele. Quando a tela de login estava sob este
+ * layout, ela era inalcancavel nos dois sentidos: sem sessao o layout mandava
+ * para /portal/login, que era a propria pagina (loop), e com sessao de staff
+ * o redirect abaixo jogava para /dashboard. Ao criar tela nova do portal,
+ * coloque-a AQUI DENTRO; o que for publico fica em src/app/portal/.
  */
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
