@@ -3,82 +3,103 @@
 > Memória do projeto. Leia isto no início de cada sessão em vez de varrer o repositório inteiro.
 > Mantenha este arquivo atualizado ao adicionar módulos/migrations (é barato e faz o projeto andar rápido).
 
-## Estado atual (retomar aqui) — revisão consolidada
+## Estado atual (retomar aqui) — atualizado ao fim da fase 0032→0043
 
-**Um único projeto, um único repositório:** `cadastrosmartcarbrasil-rgb/scar`.
-O trabalho e o deploy acontecem no branch **`claude/claude-md-opcao-x-98kfj5`**
-(contém todo o histórico + os módulos novos). O `claude/scar-project-btasdf` é o
-branch padrão do GitHub e está parado em `953c53c` — não é outro projeto.
+**Um único projeto, um único repositório: `cadastrosmartcarbrasil-rgb/scar`** (no GitHub o nome
+aparece como `SCar`). Trabalho e deploy acontecem no branch **`claude/claude-md-opcao-x-98kfj5`**;
+o mesmo commit é espelhado em `claude/financial-dre-improvements-6zfj3k` (branch da sessão).
+O `claude/scar-project-btasdf` é o branch padrão do GitHub e está **parado em `953c53c`** — não é
+outro projeto, é um default morto. *Sugestão pendente: trocar o branch padrão do repositório para
+o de trabalho; esse default morto já causou um dia inteiro de trabalho no branch errado.*
+
+- **Produção:** `https://app.smartvidanet.com.br` — VPS KingHost, Docker + Caddy (HTTPS auto),
+  pasta `/opt/scar`.
+- **Último commit desta fase:** `1093c51`.
 
 ### Comandos que resolvem 90% da sessão
 | Objetivo | Comando |
 |---|---|
 | Validar tudo antes de commitar | `npm run validate` (tipos → Vitest → migrations+testes de banco+schema → build) |
-| Só os testes de banco | `npm run test:db` · um módulo: `npm run test:db -- 0028` |
+| Só os testes de banco | `npm run test:db` · um módulo: `npm run test:db -- 0043` |
 | Regerar o `supabase/schema.sql` | `npm run schema` (rodar SEMPRE após criar/editar migration) |
-| Publicar no VPS | Windows: `.\scripts\deploy.ps1` · Linux/WSL: `npm run deploy` |
-| Achar a pasta do projeto no VPS | `.\scripts\deploy.ps1 -Descobrir` |
+| Publicar no VPS | `ssh root@app.smartvidanet.com.br "cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 && docker compose up -d --build"` |
 
-O passo a passo do deploy (incluindo as migrations no Supabase) está em **`DEPLOY.md`**.
-CI no GitHub Actions (`.github/workflows/ci.yml`) roda a mesma validação a cada push.
+**O `git pull` roda DENTRO do VPS** — rodar no PowerShell do Windows dá `fatal: not a git repository`.
+As **migrations novas vão antes**, na ordem, pelo SQL Editor do Supabase. Runbook em `DEPLOY.md`;
+o CI (`.github/workflows/ci.yml`) roda a mesma validação a cada push.
 
-### O que foi entregue nesta fase (migrations 0024→0031)
-1. **Cobrança** (`0024`+`0025`, menu → `/cobrancas`): mensalidade por veículo
-   (`dia_vencimento` + `valor_mensalidade`), faturas → títulos, dashboard com KPIs e
-   filtros, geração automática na ativação do veículo, boletagem em lote (6 meses) e
-   camada de integração bancária (service pattern + remessas).
-2. **Assistência 24h** (`0026`, menu → `/assistencia`): catálogo de serviços com KM
-   excedente e limite por janela, trava financeira/cadastral com alçada de liberação,
-   cotação → OS → voucher (e-mail/WhatsApp) → Contas a Pagar.
-3. **Refino da 24h** (`0027`): centro de custo `ASSIST24` obrigatório, OS editável
-   (valores, trajeto, troca de prestador, cancelamento) com auditoria e sincronia
-   automática do título; DRE ganhou filtro por centro de custo e passou a considerar
-   as baixas de contas a pagar/receber.
-4. **CRM de Vendas** (`0028`): Kanban com drag-and-drop, status **Em Negociação**,
-   cotação editável com trava dos itens obrigatórios do plano e política de desconto
-   por franquia com alçada de Gestor/Diretor.
-5. **SAC + Protocolos** (`0029`, menu → `/protocolos` e aba no `/sac`): ficha do veículo
-   passou a listar **só o que foi contratado**, VCards unificados (Editar Veículo/Item,
-   Histórico Financeiro com edição do boleto em aberto, WhatsApp e E-mail) e a
-   **Central de Protocolos** (fila, histórico de interações, transferência entre
-   atendentes, encerramento) com contador em tempo real no Dashboard.
+### A ROTA DA VENDA, ponta a ponta (é o coração desta fase)
+```
+hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores/regionais)
+   ↓ passo 1: contato          registrar_captura_hotlink -> aplica as REGRAS DE ATRIBUICAO (0041)
+   |                            . CARTEIRA (ja e associado)  -> nasce com a ficha do associado copiada
+   |                            . DUPLICADO (lead protegido) -> continua NO MESMO lead, dono nao muda
+   |                            . REATIVACAO / NOVO          -> quem trouxe leva; link da unidade cai
+   |                                                            no pool ou no rodizio
+   |                            devolve `leads.token_publico` = capacidade das chamadas seguintes
+   ↓ passo 2: veiculo          /api/v1/hotlink/veiculo — a PLACA puxa a FIPE na hora e o TIPO do
+   |                            veiculo sai do registro da FIPE (o visitante so confirma)
+   ↓ passo 3: planos           /api/v1/hotlink/cotar — um preco por plano ativo via `cotar_plano`
+   ↓ passo 4: aceite           /api/v1/hotlink/contratar -> `registrar_aceite_venda` (0042/0043)
+   |                            grava a prova (quem, CPF, data/hora, IP, user-agent, qual cotacao)
+   |                            e deixa o lead em EM_NEGOCIACAO — NAO pula para a auditoria
+   ↓ link da proposta          /cotacao/<token> sai pronto na tela (abrir, copiar, WhatsApp)
+   ↓ trabalho do vendedor      ajusta opcionais, completa a ficha do associado, CRLV e a VISTORIA
+   |                            guiada por poses (0040) — `/vendedor/leads/[id]` ou `<FechamentoVenda>`
+   ↓ equipe manda p/ Auditoria APROVADO -> (trigger 0017) EM_AUDITORIA
+   ↓ Auditoria efetiva         `autorizar_entrada_lead` (0034) — recusa listando o que falta;
+   |                            cria/reaproveita o associado (acha pelo CPF) e cria o veiculo
+   ↓ veiculo ativo             trigger do 0025 gera a PRIMEIRA COBRANCA
+   ↓ comissao                  `fn_calcular_comissao` -> `repassar_comissao_vendedor` (0034/0037)
+```
 
-6. **Correções do SAC** (`0030`): alerta/pendência do veículo agora é **editável e
-   resolvível** na ficha e no cadastro (mesma fonte do card), busca por **placa vai
-   direto ao atendimento** do veículo e todas as listagens usam a **ordenação padrão**
-   (ativos primeiro).
-7. **Geolocalização da 24h** (`0031`): origem/destino geocodificados, mapa interativo da
-   rota na tela do acionamento, distância em KM validando o KM excedente e links de
-   navegação (Google Maps/Waze) no voucher do prestador.
+### O que foi entregue nesta fase (migrations 0032→0043)
+| # | Entrega |
+|---|---|
+| `0032` | Financeiro/DRE nível gestão: regime **Caixa × Competência**, fluxo de caixa, aging, saldo em cache, `escopo_regional()` |
+| `0033` | Removido o atalho `quitar_lancamento` — toda baixa passa pelo registro completo |
+| `0034` | **Rota da venda completa**: comissão em dois níveis (vendedor nunca passa a franquia), ficha do lead, vistoria antes da base, `checklist_lead`, adesão |
+| `0035` | Vendedor vira cadastro próprio (`usuario_id` OPCIONAL), código/hotlink, dados bancários, prazo de pagamento |
+| `0036` | **Portal da Franquia** `/regional` — painel, equipe, leads, comissões (isolamento por `escopo_regional`) |
+| `0037` | **Financeiro compacto da franquia** (só comissão) + correção de 3 funções quebradas pelo `usuario_id` opcional |
+| `0038` | **Portal do Vendedor** `/vendedor` (PWA) — RPCs sem parâmetro de vendedor; RLS de `leads` fechada para o consultor |
+| `0039` | O vendedor deixa de ver o teto de comissão da franquia |
+| `0040` | **Vistoria por modelo de fotos** (6 poses obrigatórias) + `produtos_do_plano` (fim do item do combo vendido de novo) |
+| `0041` | **Regras de atribuição do lead** — proteção, devolução ao pool, rodízio, carteira/duplicado |
+| `0042` | **Aceite na página pública** + `leads.token_publico` |
+| `0043` | A cotação não para para cliente da base nem para recaptura; o aceite não trava o vendedor |
 
-### Estado de validação
-- **Migrations `0001`..`0031`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **Testes de banco:** 8 suites em `supabase/tests/*.test.sql` (0024→0031) — todas passando.
-- **Vitest:** 106/106 (`sac.ts`, `cobranca.ts`, `pagamentos/`, `assistencia.ts`, `crm.ts`,
-  `protocolos.ts`, `geo.ts`).
-- `npx tsc --noEmit` limpo e `npm run build:check` OK (44 rotas).
+### Estado de validação (fim da fase)
+- **Migrations `0001`..`0043`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **20 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 260 testes**, `npx tsc --noEmit` limpo e build OK.
 
-### Pendências conhecidas (não são bugs, são decisões pendentes)
-- **Gateway bancário mockado:** `MockGateway` gera linha digitável/PIX fictícios e
-  determinísticos. Ligar o real = implementar `AsaasGateway.emitir` (esqueleto com
-  endpoints e mapeamento prontos) + webhook chamando `registrar_retorno_cobranca`.
-- **`/api/boletos/emitir-lote` é a rotina ANTIGA** (mock, cobra `taxa_administrativa`) —
-  usar `/api/v1/cobrancas/*`. Pode ser removida quando você autorizar.
-- **Cadastros que precisam de valor:** preços dos opcionais novos (RCF 50/75/100mil,
-  Carro Reserva 10/30d, Vidros III/Completa, Assist VIP) nascem em R$0
-  (Configurações → Produtos); serviços 24h vêm com valores de referência
-  (Assistência 24h → Serviços 24h); **desconto máximo por regional nasce 0%**
-  (Configurações → Regionais) — ou seja, hoje nenhum desconto passa sem alçada.
-- **DRE mudou de comportamento** no `0027`: passou a incluir as baixas de contas a
-  pagar/receber. Os números ficam maiores (e corretos) do que antes.
+### Pendências conhecidas (decisões, não bugs)
+- **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Todos os portais e páginas
+  públicas já leem `empresa.logo_url`; `public/logo-smartcar.svg` é só o fallback desenhado.
+- **Gateway bancário mockado:** `MockGateway` gera linha digitável/PIX fictícios. Ligar o real =
+  `AsaasGateway.emitir` (esqueleto pronto) + webhook chamando `registrar_retorno_cobranca`.
+- **`/api/boletos/emitir-lote` é a rotina ANTIGA** (mock) — usar `/api/v1/cobrancas/*`. Pode sair.
+- **Cadastros que nascem em R$ 0 / 0%:** opcionais novos (Configurações → Produtos), desconto
+  máximo por regional (Configurações → Regionais). Hoje nenhum desconto passa sem alçada.
+- **`RESEND_API_KEY` não configurada no VPS** — boas-vindas ao vendedor e voucher da 24h não
+  enviam e-mail (o sistema avisa e devolve o texto, não finge que enviou).
+- **`PLACAFIPE_TOKEN`:** sem ele a página pública cai no valor informado pelo visitante.
+- **Dedução do tipo de veículo pela FIPE** (`tipoVeiculoSugerido`) foi escrita sem ver um retorno
+  real da API — confirmar com uma placa de moto e ajustar o mapeamento se preciso.
+- **Devolução de lead parado ao pool é MANUAL** (botão em `/regional/leads`); para rodar sozinha
+  precisa de agendamento no Supabase.
+- **Ícone do PWA** é o SVG da marca; para Android/iOS decentes, gerar PNGs 192/512.
 
 ### Próximos passos oferecidos (o usuário escolhe)
 1. **Ligar o gateway real** (Asaas) — emissão + webhook + baixa automática.
-2. **Termo de adesão** com aceite eletrônico (`contratos_adesao.token`, nos moldes de `/cotacao/[token]`).
-3. **Módulo de Vistoria** (tabelas `vistorias`/`vistoria_anexos` já existem; falta upload + status).
-4. **Portal do Associado** (login CPF, autosserviço reusando `SERVICOS_SAC` + RLS por dono —
-   o protocolo já nasce pronto para o canal `PORTAL`).
-5. **SLA / notificações do protocolo** (prazo por prioridade, aviso ao responsável, e-mail ao associado).
+2. **Termo de adesão** com aceite jurídico no fluxo (`contratos_adesao` já existe; hoje o aceite
+   da página pública guarda a prova, mas o texto é o mínimo honesto).
+3. **Portal do Associado** (login CPF, autosserviço reusando `SERVICOS_SAC` + RLS por dono).
+4. **SLA / notificações do protocolo** (prazo por prioridade, aviso ao responsável).
+5. **Aviso de duplicidade no CRM interno** — `classificar_captura` já existe, falta ligar em
+   `/vendas/novo` ("este CPF já tem lead com o Fulano").
+6. **Cotação pelo portal do vendedor** — ele vê o lead, mas monta a cotação só no `/vendas`.
 
 ## O que é
 Sistema de gestão para **associação de proteção veicular** (associados, frota, eventos/sinistros,
@@ -1112,6 +1133,8 @@ no fim — o runner procura por "PASSARAM") e rode `npm run schema`.
 ## Como me manter rápido nas próximas sessões
 - **Leia este arquivo primeiro** e vá direto ao ponto: busca direcionada (grep) no que
   o "Mapa do repositório" e a lista de migrations indicarem. Não varra o repo.
+- **Para qualquer coisa de VENDA**, comece pelo diagrama "A ROTA DA VENDA, ponta a ponta"
+  no topo: ele diz em que arquivo/função cada etapa mora, do hotlink à primeira cobrança.
 - `supabase/schema.sql` responde quase tudo sobre o banco sem abrir 28 migrations.
 - **Nunca reescreva migration já aplicada** — crie a próxima (`ALTER ...`).
 - **Rotina de entrega, sem exceção:** migration + suite em `supabase/tests/` +
