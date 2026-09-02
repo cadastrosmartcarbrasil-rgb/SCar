@@ -59,6 +59,34 @@ export interface EventoPagamento {
   data_pagamento?: string | null;
 }
 
+/**
+ * Cartao enviado para TOKENIZACAO. Este objeto so existe em memoria, no
+ * servidor, durante a chamada ao gateway — o numero e o CVV nunca sao gravados.
+ */
+export interface CartaoInput {
+  numero: string;
+  nome: string;
+  validade_mes: number;
+  validade_ano: number;
+  cvv: string;
+  /** O gateway exige os dados do titular para analise antifraude. */
+  titular: {
+    nome: string;
+    cpf_cnpj: string;
+    email?: string | null;
+    telefone?: string | null;
+    cep?: string | null;
+    numero_endereco?: string | null;
+  };
+}
+
+/** O que VOLTA do gateway e o unico que pode ser guardado. */
+export interface CartaoTokenizado {
+  token: string;
+  bandeira?: string | null;
+  ultimos_digitos?: string | null;
+}
+
 /** Contrato do gateway. Toda integracao bancaria implementa isto. */
 export interface PaymentGateway {
   readonly provedor: ProvedorBanco;
@@ -72,6 +100,11 @@ export interface PaymentGateway {
   cancelar(gatewayTransacaoId: string): Promise<void>;
   /** Traduz o payload do webhook do provedor para um evento do dominio. */
   parseWebhook(payload: unknown): EventoPagamento;
+  /**
+   * Troca os dados do cartao por um TOKEN. E o unico ponto do sistema que ve o
+   * numero do cartao, e ele nao guarda nada: devolve o token e esquece.
+   */
+  tokenizarCartao(cartao: CartaoInput): Promise<CartaoTokenizado>;
 }
 
 /** Gateway configurado mas ainda sem implementacao real (fase de transicao). */
@@ -109,5 +142,9 @@ export abstract class BasePaymentGateway implements PaymentGateway {
 
   parseWebhook(_payload: unknown): EventoPagamento {
     return { tipo: 'DESCONHECIDO' };
+  }
+
+  async tokenizarCartao(_cartao: CartaoInput): Promise<CartaoTokenizado> {
+    throw new GatewayNaoImplementadoError(this.provedor, 'tokenizarCartao');
   }
 }

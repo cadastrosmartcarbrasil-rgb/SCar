@@ -16,6 +16,8 @@ import {
   type EventoPagamento,
   type GatewayConfig,
   type ProvedorBanco,
+  type CartaoInput,
+  type CartaoTokenizado,
 } from './types';
 
 export class AsaasGateway extends BasePaymentGateway {
@@ -74,5 +76,27 @@ export class AsaasGateway extends BasePaymentGateway {
       valor_pago: (pg.value as number) ?? null,
       data_pagamento: (pg.paymentDate as string) ?? null,
     };
+  }
+
+  /**
+   * Tokenizacao do cartao — POST /creditCard/tokenize
+   *
+   * Corpo esperado pela Asaas:
+   *   { customer, creditCard: { holderName, number, expiryMonth, expiryYear, ccv },
+   *     creditCardHolderInfo: { name, email, cpfCnpj, postalCode, addressNumber, phone },
+   *     remoteIp }
+   * Resposta -> CartaoTokenizado:
+   *   creditCardToken  -> token   (e o unico campo que guardamos)
+   *   creditCardBrand  -> bandeira
+   *   creditCardNumber -> ultimos_digitos (a Asaas ja devolve so os 4 finais)
+   *
+   * Depois disso, a cobranca recorrente usa `billingType: 'CREDIT_CARD'` com o
+   * token, sem nunca reenviar o numero.
+   *
+   * NAO IMPLEMENTADO: falta contratar a conta e configurar a chave em
+   * Configuracoes -> Integracoes bancarias. O esqueleto acima e o contrato.
+   */
+  async tokenizarCartao(_cartao: CartaoInput): Promise<CartaoTokenizado> {
+    throw new GatewayNaoImplementadoError(this.provedor, 'tokenizarCartao');
   }
 }

@@ -490,6 +490,21 @@ reaproveitar o cadastro em vez de duplicar; (B) **o aceite ia direto para EM_AUD
 manda para a Auditoria continua sendo a equipe, quando a ficha esta completa.
 `lead_por_token_publico` ganhou `cpf_cnpj`, `tipo_veiculo_id` e `valor_fipe`.)
 
+· `0044_portal_associado` (PORTAL DO ASSOCIADO `/portal`: (A) PRIMEIRO ACESSO — `clientes` ganha
+`portal_senha_provisoria`/`portal_primeiro_acesso_em`/`portal_senha_alterada_em`/
+`portal_ultimo_acesso_em`. O login e CPF/CNPJ e, na primeira vez, a senha e o proprio documento:
+a rota `/api/portal/login` cria o usuario de auth SO quando a senha digitada e o documento, ja
+marcado como provisorio, e o layout troca a tela inteira pela criacao de senha antes de mostrar
+qualquer dado; (B) CARTAO TOKENIZADO — `cartoes_cobranca` guarda **token, bandeira e 4 digitos**;
+nao existe coluna para o numero do cartao nem para o CVV, e `portal_registrar_cartao` nem sequer
+tem parametro para eles. Indice unico parcial garante um cartao principal por associado;
+(C) RPCs sem parametro de cliente (mesma postura do 0038): `portal_perfil`, `portal_veiculos`,
+`portal_titulos` (TODOS os boletos — pagos, a vencer e vencidos), `portal_financeiro`,
+`portal_segunda_via` (so do proprio titulo; diz quando o banco ainda nao gerou em vez de inventar),
+`portal_atualizar_perfil` (contato e endereco — nome, CPF e status NAO sao parametros),
+`portal_cartoes`/`portal_registrar_cartao`/`portal_remover_cartao`, `portal_senha_trocada` e
+`portal_registrar_acesso`.)
+
 ## Módulos (status: todos funcionais)
 Assistência 24h (`/assistencia`: painel de acionamento com trava + limites em tempo real, cotação,
 OS, voucher ao prestador e Contas a Pagar) · SAC / Atendimento (`/sac`: **veículo-first + lazy** — busca por Nome/CPF/Placa → `visao-360` traz
@@ -1017,6 +1032,29 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
 - **Segurança:** as rotas públicas rodam com service_role e só acham o atendimento por
   `token_publico`. Erro de banco não vai cru para o cliente — `mensagemDeErro`
   (`src/lib/venda-publica.ts`, testado) deixa passar o texto das nossas regras e esconde o técnico.
+
+## Portal do Associado (0044) — `/portal`
+- **Quem entra:** quem tem cadastro em `clientes` ligado ao próprio login. Login por **CPF/CNPJ**;
+  no primeiro acesso a senha é o próprio documento, e o portal **não mostra nada** antes da troca
+  (`<TrocaSenhaObrigatoria>` ocupa a tela inteira).
+- **A senha do primeiro acesso é conveniente e fraca ao mesmo tempo** — quem souber o CPF entra.
+  Por isso a troca é obrigatória, a nova senha não pode ser só números, e o acesso fica carimbado
+  (`portal_primeiro_acesso_em`). Se um dia quiser endurecer: pedir também a data de nascimento ou
+  um código por WhatsApp no primeiro acesso.
+- **4 telas, mobile-first** (barra inferior no celular, menu navy no desktop): Meus veículos ·
+  Financeiro · Pagamento · Meu perfil. Mesma marca da página de venda — quem contratou reconhece.
+- **Financeiro mostra TODOS os boletos**, com filtro (a vencer / vencidos / pagos) e a 2ª via
+  com linha digitável, PIX copia-e-cola e PDF. Quando o banco ainda não devolveu nada,
+  `portal_segunda_via` **diz isso** em vez de exibir um boleto vazio.
+- **Cartão de crédito — o número nunca chega ao nosso banco.** O caminho é
+  `navegador → rota (memória) → gateway → token`. `cartoes_cobranca` só tem token, bandeira e os
+  4 últimos dígitos; `portal_registrar_cartao` não tem parâmetro para o PAN nem para o CVV, então
+  não há como gravá-los nem por engano. Guardar PAN exigiria PCI-DSS.
+  `PaymentGateway.tokenizarCartao` é o novo ponto do contrato: o `MockGateway` devolve um token
+  determinístico (dá para testar a tela hoje) e o `AsaasGateway` tem o esqueleto documentado
+  (`POST /creditCard/tokenize` → `creditCardToken`), aguardando a chave.
+- Espelho puro em `src/lib/cartao.ts` (Luhn, bandeira pelo BIN, validade, CVV por bandeira) com
+  testes — o erro de digitação é pego antes de sair da tela.
 
 ## Cota de participação (rateio no evento) — arquitetura
 - **Desacoplada do Plano.** O Plano define a mensalidade (produtos); a cota (% da FIPE no rateio)

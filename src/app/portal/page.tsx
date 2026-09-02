@@ -1,111 +1,126 @@
-import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+'use client';
+
+import Link from 'next/link';
+import { AlertTriangle, Car, CheckCircle2, Receipt, ShieldCheck } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { usePortalFinanceiro, usePortalPerfil, usePortalVeiculos } from '@/hooks/use-portal';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { ordenarVeiculos } from '@/lib/sac';
-import { STATUS_TITULO_LABEL, STATUS_VEICULO_LABEL } from '@/types/domain';
+import { STATUS_VEICULO_LABEL } from '@/types/domain';
 
-// Portal do Associado: frota protegida + boletos pendentes.
-// Todas as consultas sao filtradas pelo RLS (o associado so ve os proprios dados).
-export default async function PortalPage() {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/portal/login');
+const COR_STATUS: Record<string, string> = {
+  ativo: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+  em_evento: 'bg-amber-50 text-amber-800 ring-amber-200',
+  vistoria_pendente: 'bg-sky-50 text-sky-700 ring-sky-200',
+  suspenso: 'bg-rose-50 text-rose-700 ring-rose-200',
+  inativo: 'bg-slate-100 text-slate-500 ring-slate-200',
+  baixado: 'bg-slate-100 text-slate-500 ring-slate-200',
+};
 
-  const { data: cliente } = await supabase
-    .from('clientes')
-    .select('id, nome_razao_social')
-    .eq('auth_user_id', user.id)
-    .maybeSingle();
-
-  if (!cliente) {
-    // Usuario autenticado que nao e associado (provavelmente staff).
-    redirect('/dashboard');
-  }
-
-  const [{ data: veiculos }, { data: titulos }] = await Promise.all([
-    supabase.from('veiculos').select('id, placa, marca, modelo, status, data_ativacao')
-      .eq('cliente_id', cliente.id).neq('status', 'excluido'),
-    supabase
-      .from('titulos_financeiros')
-      .select('id, valor, data_vencimento, status, url_boleto')
-      .eq('cliente_id', cliente.id)
-      .in('status', ['pendente', 'vencido'])
-      .order('data_vencimento'),
-  ]);
+export default function PortalVeiculosPage() {
+  const { data: perfil } = usePortalPerfil();
+  const { data: veiculos, isLoading } = usePortalVeiculos();
+  const { data: fin } = usePortalFinanceiro();
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900">Ola, {cliente.nome_razao_social}</h1>
-          <p className="text-sm text-slate-500">Bem-vindo ao seu portal de protecao veicular.</p>
-        </div>
-        <a
-          href="/portal/sinistros/novo"
-          className="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
-        >
-          Abrir sinistro
-        </a>
-      </div>
+    <div className="space-y-4">
+      <header>
+        <h1 className="text-[22px] font-bold tracking-tight text-brand-800">
+          Ola, {perfil?.nome?.split(' ')[0] ?? 'associado'}
+        </h1>
+        <p className="mt-0.5 text-[13px] text-slate-500">
+          {perfil?.associado_desde
+            ? `Associado desde ${formatDate(perfil.associado_desde)}.`
+            : 'Bem-vindo a sua area.'}
+        </p>
+      </header>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Minha Frota Protegida</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {ordenarVeiculos(veiculos ?? []).map((v) => (
-            <div key={v.id} className="flex items-center justify-between border-b border-slate-100 py-2 text-sm last:border-0">
-              <span className="font-mono font-medium text-slate-800">{v.placa}</span>
-              <span className="text-slate-500">
-                {v.marca} {v.modelo}
+      {/* Situacao: e a primeira coisa que o associado quer saber. */}
+      {fin && (
+        <Link href="/portal/financeiro" className="block">
+          <Card className={fin.em_dia ? '' : 'ring-1 ring-rose-200'}>
+            <CardContent className="flex items-center gap-3 p-4">
+              <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${
+                fin.em_dia ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                {fin.em_dia ? <CheckCircle2 className="h-5 w-5" /> : <AlertTriangle className="h-5 w-5" />}
               </span>
-              <span className="rounded bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">
-                {STATUS_VEICULO_LABEL[v.status]}
-              </span>
-            </div>
-          ))}
-          {(veiculos ?? []).length === 0 && (
-            <p className="text-sm text-slate-400">Nenhum veiculo vinculado.</p>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Boletos Pendentes</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {(titulos ?? []).map((t) => {
-            const st = STATUS_TITULO_LABEL[t.status];
-            return (
-              <div key={t.id} className="flex items-center justify-between border-b border-slate-100 py-2 text-sm last:border-0">
-                <div>
-                  <p className="font-medium text-slate-800">{formatCurrency(t.valor)}</p>
-                  <p className="text-xs text-slate-500">Vence em {formatDate(t.data_vencimento)}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className={`rounded px-2 py-0.5 text-xs ${st.cor}`}>{st.label}</span>
-                  {t.url_boleto && (
-                    <a
-                      href={t.url_boleto}
-                      target="_blank"
-                      className="text-sm text-brand-600 hover:underline"
-                    >
-                      2a via
-                    </a>
-                  )}
-                </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[14px] font-bold text-brand-800">
+                  {fin.em_dia ? 'Voce esta em dia' : `${fin.qtd_vencidos} boleto(s) em atraso`}
+                </p>
+                <p className="text-[12px] text-slate-500">
+                  {fin.em_dia
+                    ? fin.proximo_vencimento
+                      ? `Proximo vencimento em ${formatDate(fin.proximo_vencimento)} · ${formatCurrency(fin.proximo_valor ?? 0)}`
+                      : 'Sem boletos em aberto.'
+                    : `${formatCurrency(fin.vencido)} vencidos · toque para ver e pagar`}
+                </p>
               </div>
-            );
-          })}
-          {(titulos ?? []).length === 0 && (
-            <p className="text-sm text-slate-400">Nenhum boleto pendente. Tudo em dia!</p>
-          )}
-        </CardContent>
-      </Card>
+              <Receipt className="h-4 w-4 shrink-0 text-slate-300" />
+            </CardContent>
+          </Card>
+        </Link>
+      )}
+
+      <div>
+        <h2 className="mb-2 flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-wide text-slate-500">
+          <Car className="h-3.5 w-3.5" /> Veiculos protegidos
+        </h2>
+
+        {isLoading ? (
+          <div className="space-y-2">
+            {[0, 1].map((i) => <div key={i} className="h-24 animate-pulse rounded-2xl bg-white" />)}
+          </div>
+        ) : (veiculos ?? []).length === 0 ? (
+          <Card>
+            <CardContent className="p-6 text-center">
+              <ShieldCheck className="mx-auto h-8 w-8 text-slate-300" />
+              <p className="mt-2 text-[13px] text-slate-500">
+                Nenhum veiculo na sua protecao ainda.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <ul className="space-y-2">
+            {(veiculos ?? []).map((v) => (
+              <li key={v.id} className="rounded-2xl border border-slate-200/80 bg-white p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-mono text-[17px] font-bold uppercase tracking-wider text-brand-800">
+                      {v.placa}
+                    </p>
+                    <p className="text-[13px] text-slate-600">
+                      {[v.marca, v.modelo].filter(Boolean).join(' ') || 'Veiculo'}
+                      {v.ano_modelo ? ` · ${v.ano_modelo}` : ''}
+                    </p>
+                    {v.plano_nome && (
+                      <p className="mt-0.5 text-[11.5px] text-slate-400">{v.plano_nome}</p>
+                    )}
+                  </div>
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset ${
+                    COR_STATUS[v.status] ?? COR_STATUS.inativo}`}>
+                    {STATUS_VEICULO_LABEL[v.status as keyof typeof STATUS_VEICULO_LABEL] ?? v.status}
+                  </span>
+                </div>
+
+                {(v.mensalidade || v.dia_vencimento) && (
+                  <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 border-t border-slate-100 pt-2.5 text-[12px]">
+                    {v.mensalidade ? (
+                      <span className="text-slate-500">
+                        Mensalidade <b className="tnum text-slate-800">{formatCurrency(v.mensalidade)}</b>
+                      </span>
+                    ) : null}
+                    {v.dia_vencimento ? (
+                      <span className="text-slate-500">
+                        Vence todo dia <b className="tnum text-slate-800">{v.dia_vencimento}</b>
+                      </span>
+                    ) : null}
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }

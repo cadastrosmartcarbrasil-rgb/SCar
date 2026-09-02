@@ -156,6 +156,11 @@ export type ClientesRow = Timestamps & {
   endereco: Json;
   status: StatusCliente;
   regional_id: string | null;
+  // 0044 — Portal do Associado
+  portal_senha_provisoria: boolean;
+  portal_primeiro_acesso_em: string | null;
+  portal_senha_alterada_em: string | null;
+  portal_ultimo_acesso_em: string | null;
 };
 
 export type PlanosProtecaoRow = Timestamps & {
@@ -1514,6 +1519,97 @@ export type ParametrosAtribuicaoRow = {
   distribuicao: string;
 };
 
+export type PortalPerfil = {
+  cliente_id: string;
+  nome: string;
+  cpf_cnpj: string;
+  tipo_pessoa: string;
+  email: string | null;
+  telefone: string | null;
+  endereco: Json;
+  status: string;
+  senha_provisoria: boolean;
+  primeiro_acesso_em: string | null;
+  veiculos_ativos: number;
+  associado_desde: string | null;
+};
+
+export type PortalVeiculo = {
+  id: string;
+  placa: string;
+  marca: string | null;
+  modelo: string | null;
+  ano_modelo: number | null;
+  status: string;
+  data_ativacao: string | null;
+  plano_nome: string | null;
+  mensalidade: number | null;
+  dia_vencimento: number | null;
+};
+
+export type PortalTitulo = {
+  id: string;
+  veiculo_id: string | null;
+  placa: string | null;
+  competencia: string | null;
+  data_vencimento: string;
+  valor: number;
+  valor_pago: number | null;
+  data_pagamento: string | null;
+  status: string;
+  situacao: string;
+  dias_atraso: number;
+  linha_digitavel: string | null;
+  url_boleto: string | null;
+  pix_copia_cola: string | null;
+};
+
+export type PortalFinanceiro = {
+  em_aberto: number;
+  vencido: number;
+  qtd_vencidos: number;
+  proximo_vencimento: string | null;
+  proximo_valor: number | null;
+  pago_12_meses: number;
+  em_dia: boolean;
+};
+
+export type PortalSegundaVia = {
+  id: string;
+  data_vencimento: string;
+  valor: number;
+  linha_digitavel: string | null;
+  url_boleto: string | null;
+  pix_copia_cola: string | null;
+  disponivel: boolean;
+  aviso: string | null;
+};
+
+export type PortalCartao = {
+  id: string;
+  bandeira: string | null;
+  ultimos_digitos: string | null;
+  nome_portador: string | null;
+  validade_mes: number | null;
+  validade_ano: number | null;
+  principal: boolean;
+  created_at: string;
+};
+
+export type CartoesCobrancaRow = Timestamps & {
+  id: string;
+  cliente_id: string;
+  gateway: string;
+  token: string;
+  bandeira: string | null;
+  ultimos_digitos: string | null;
+  nome_portador: string | null;
+  validade_mes: number | null;
+  validade_ano: number | null;
+  principal: boolean;
+  ativo: boolean;
+};
+
 export type FotoVistoriaModelo = {
   codigo: string;
   nome: string;
@@ -1809,6 +1905,7 @@ export type Database = {
         ]
       >;
       baixas_financeiras: TableDef<BaixasFinanceirasRow, [Rel<'lancamento_id', 'lancamentos_financeiros'>]>;
+      cartoes_cobranca: TableDef<CartoesCobrancaRow, [Rel<'cliente_id', 'clientes'>]>;
       anexos_financeiros: TableDef<AnexosFinanceirosRow, [Rel<'lancamento_id', 'lancamentos_financeiros'>]>;
     };
     Views: { [_ in never]: never };
@@ -2361,6 +2458,54 @@ export type Database = {
           lead_id: string; tipo: string; vendedor_nome: string | null;
           mensagem: string; token_publico: string;
         }[];
+      };
+      portal_perfil: {
+        Args: Record<string, never>;
+        Returns: PortalPerfil[];
+      };
+      portal_veiculos: {
+        Args: Record<string, never>;
+        Returns: PortalVeiculo[];
+      };
+      portal_titulos: {
+        Args: { p_limite?: number };
+        Returns: PortalTitulo[];
+      };
+      portal_financeiro: {
+        Args: Record<string, never>;
+        Returns: PortalFinanceiro[];
+      };
+      portal_segunda_via: {
+        Args: { p_titulo_id: string };
+        Returns: PortalSegundaVia[];
+      };
+      portal_atualizar_perfil: {
+        Args: { p_email?: string | null; p_telefone?: string | null; p_endereco?: Json | null };
+        Returns: undefined;
+      };
+      portal_senha_trocada: {
+        Args: Record<string, never>;
+        Returns: undefined;
+      };
+      portal_registrar_acesso: {
+        Args: Record<string, never>;
+        Returns: undefined;
+      };
+      portal_cartoes: {
+        Args: Record<string, never>;
+        Returns: PortalCartao[];
+      };
+      portal_registrar_cartao: {
+        Args: {
+          p_token: string; p_bandeira?: string | null; p_ultimos_digitos?: string | null;
+          p_nome_portador?: string | null; p_validade_mes?: number | null;
+          p_validade_ano?: number | null; p_gateway?: string | null;
+        };
+        Returns: string;
+      };
+      portal_remover_cartao: {
+        Args: { p_cartao_id: string };
+        Returns: undefined;
       };
       fotos_vistoria_lead: {
         Args: { p_lead_id: string };

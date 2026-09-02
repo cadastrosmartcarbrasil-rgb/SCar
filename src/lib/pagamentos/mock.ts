@@ -2,8 +2,11 @@
 // Gera linha digitavel/nosso numero/PIX ficticios e DETERMINISTICOS por titulo,
 // para que a rotina de remessa (envio -> retorno -> baixa) possa ser exercitada
 // fim a fim. Nenhuma chamada de rede e feita.
+import { bandeiraDoNumero } from '@/lib/cartao';
 import {
   BasePaymentGateway,
+  type CartaoInput,
+  type CartaoTokenizado,
   type CobrancaEmitida,
   type CobrancaInput,
   type EventoPagamento,
@@ -44,6 +47,20 @@ export class MockGateway extends BasePaymentGateway {
       gateway_transacao_id: (p.gateway_transacao_id as string) ?? null,
       valor_pago: (p.valor_pago as number) ?? null,
       data_pagamento: (p.data_pagamento as string) ?? null,
+    };
+  }
+
+  /**
+   * Tokenizacao de mentira, para a tela poder ser testada antes do Asaas entrar.
+   * Devolve um token deterministico e **nao guarda o numero em lugar nenhum** —
+   * o mock existe justamente para nao haver a tentacao de gravar o cartao.
+   */
+  async tokenizarCartao(c: CartaoInput): Promise<CartaoTokenizado> {
+    const n = (c.numero ?? '').replace(/\D/g, '');
+    return {
+      token: `mock_card_${hash(n.slice(-8) + c.titular.cpf_cnpj)}`,
+      bandeira: bandeiraDoNumero(n),
+      ultimos_digitos: n.slice(-4),
     };
   }
 }
