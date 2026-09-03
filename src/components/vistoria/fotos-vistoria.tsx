@@ -74,7 +74,7 @@ export function FotosVistoria({ leadId, somenteLeitura }: {
             {progresso.percentual}%
           </span>
         </div>
-        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/70">
+        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-superficie/70">
           <div
             className={`h-full rounded-full transition-all ${
               progresso.completa ? 'bg-emerald-500' : 'bg-amber-500'}`}
@@ -123,7 +123,7 @@ function ItemPose({ pose, enviando, somenteLeitura, onEnviar, onAbrir, onRemover
 
   return (
     <li className={`rounded-xl border p-3 transition ${
-      pose.enviada ? 'border-emerald-200 bg-emerald-50/50' : 'border-slate-200 bg-white'}`}>
+      pose.enviada ? 'border-emerald-200 bg-emerald-50/50' : 'border-slate-200 bg-superficie'}`}>
       <div className="flex items-start gap-3">
         <span className={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-lg ${
           pose.enviada ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>
@@ -158,7 +158,7 @@ function ItemPose({ pose, enviando, somenteLeitura, onEnviar, onAbrir, onRemover
                 type="button"
                 onClick={() => input.current?.click()}
                 disabled={enviando}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-[12px] font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-acao px-3 py-1.5 text-[12px] font-semibold text-white transition hover:bg-acao-escura disabled:opacity-60"
               >
                 {enviando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
                 {pose.enviada ? 'Refazer' : 'Tirar foto'}

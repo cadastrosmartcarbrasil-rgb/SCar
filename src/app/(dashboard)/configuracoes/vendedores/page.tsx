@@ -75,7 +75,7 @@ export default function VendedoresPage() {
         </Select>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-slate-200/80 bg-white">
+      <div className="overflow-x-auto rounded-2xl border border-slate-200/80 bg-superficie">
         <table className="w-full min-w-[900px] text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-left text-[11px] uppercase tracking-wide text-slate-400">

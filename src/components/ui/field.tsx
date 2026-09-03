@@ -75,7 +75,7 @@ export function Input({
 }
 
 export function Select({ className, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select className={cn(base, 'bg-white', className)} {...props} />;
+  return <select className={cn(base, 'bg-superficie', className)} {...props} />;
 }
 
 // ---------------------------------------------------------------------------

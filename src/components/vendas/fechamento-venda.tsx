@@ -29,7 +29,7 @@ function Secao({ icone: Icone, titulo, descricao, children }: {
   icone: React.ElementType; titulo: string; descricao?: string; children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-slate-200/80 bg-white p-4">
+    <section className="rounded-2xl border border-slate-200/80 bg-superficie p-4">
       <header className="mb-3 flex items-start gap-2">
         <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-slate-100 text-slate-500">
           <Icone className="h-4 w-4" />
@@ -273,7 +273,7 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
           <LeitorCrlv onLido={aplicarCrlv} valorAtual={form.crlv_qrcode} />
 
           <div className="flex flex-wrap items-center gap-2">
-            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-300 bg-superficie px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
               <input
                 type="file" className="hidden" accept="image/*,application/pdf"
                 onChange={(e) => {

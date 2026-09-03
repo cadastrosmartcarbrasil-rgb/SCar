@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import type { PapelUsuario } from '@/lib/database.types';
 
 type Item = { href: string; label: string; icon: React.ElementType };
@@ -52,7 +53,7 @@ const GESTAO: Item[] = [
 function Brand({ logoUrl }: { logoUrl?: string | null }) {
   if (!logoUrl) return <Wordmark />;
   return (
-    <div className="rounded-xl bg-white px-3 py-2.5 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.35)]">
+    <div className="rounded-xl bg-superficie px-3 py-2.5 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.35)]">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={logoUrl} alt="Smart Car Brasil" className="mx-auto max-h-12 w-auto object-contain" />
     </div>
@@ -116,7 +117,7 @@ export function Sidebar({ papel, logoUrl }: { papel?: PapelUsuario; logoUrl?: st
           'relative flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-[13.5px] transition',
           active
             ? "bg-cyan-500/15 font-semibold text-white before:absolute before:-left-3 before:top-2 before:bottom-2 before:w-[3px] before:rounded-r before:bg-cyan-400 before:shadow-[0_0_10px_#26aeea] before:content-['']"
-            : 'font-medium text-slate-300 hover:bg-white/5 hover:text-white',
+            : 'font-medium text-slate-300 hover:bg-superficie/5 hover:text-white',
         )}
       >
         <item.icon className="h-[18px] w-[18px] shrink-0 opacity-90" />
@@ -144,18 +145,18 @@ export function Sidebar({ papel, logoUrl }: { papel?: PapelUsuario; logoUrl?: st
   return (
     <>
       {/* Topbar mobile (fundo claro) */}
-      <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden">
+      <header className="flex items-center justify-between border-b border-slate-200 bg-superficie px-4 py-3 md:hidden">
         <button onClick={() => setAberto(true)} aria-label="Menu" className="text-slate-600">
           <Menu className="h-6 w-6" />
         </button>
         {mobileLogo}
-        <span className="w-6" />
+        <ThemeToggle />
       </header>
 
       {/* Drawer mobile (cabine) */}
       {aberto && (
         <div className="fixed inset-0 z-40 md:hidden">
-          <div className="absolute inset-0 bg-slate-900/50" onClick={() => setAberto(false)} />
+          <div className="absolute inset-0 bg-black/50" onClick={() => setAberto(false)} />
           <aside className="cockpit absolute left-0 top-0 flex h-full w-72 flex-col shadow-xl">
             <div className="flex items-center justify-between gap-3 px-4 py-4">
               <div className="min-w-0 flex-1"><Brand logoUrl={logoUrl} /></div>

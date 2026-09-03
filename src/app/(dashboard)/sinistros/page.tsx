@@ -14,7 +14,7 @@ export default function SinistrosPage() {
         </div>
         <Link
           href="/sinistros/novo"
-          className="inline-flex items-center gap-1.5 rounded-md bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700"
+          className="inline-flex items-center gap-1.5 rounded-md bg-acao px-3 py-2 text-sm font-medium text-white hover:bg-acao-escura"
         >
           <Plus className="h-4 w-4" /> Novo Evento
         </Link>

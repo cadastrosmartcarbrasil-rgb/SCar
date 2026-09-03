@@ -62,7 +62,7 @@ export function KanbanBoard() {
                   href={`/sinistros/${evento.id}`}
                   draggable
                   onDragStart={() => setDragId(evento.id)}
-                  className="cursor-grab rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition hover:shadow active:cursor-grabbing"
+                  className="cursor-grab rounded-lg border border-slate-200 bg-superficie p-3 shadow-sm transition hover:shadow active:cursor-grabbing"
                 >
                   <p className="text-xs font-mono text-brand-600">{evento.numero_protocolo}</p>
                   <p className="mt-1 text-sm font-medium text-slate-800">

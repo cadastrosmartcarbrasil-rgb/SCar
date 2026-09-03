@@ -52,7 +52,7 @@ export default function ContasBancariasPage() {
         {(contas ?? []).map((c) => {
           const meta = tipoMeta(c.tipo);
           return (
-            <div key={c.id} className="rounded-xl border border-slate-200 bg-white p-4">
+            <div key={c.id} className="rounded-xl border border-slate-200 bg-superficie p-4">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
                   <div className="rounded-lg bg-brand-50 p-2 text-brand-600"><meta.icon className="h-5 w-5" /></div>

@@ -87,7 +87,7 @@ export function GeracaoLote() {
 
   return (
     <div className="space-y-5">
-      <div className="rounded-2xl border border-slate-200 bg-white p-5">
+      <div className="rounded-2xl border border-slate-200 bg-superficie p-5">
         <h2 className="text-base font-semibold text-slate-900">Boletagem recorrente</h2>
         <p className="mt-0.5 text-sm text-slate-500">
           Gera as faturas e os titulos de varias competencias de uma vez (ex.: proximos 6 meses).
@@ -177,7 +177,7 @@ export function GeracaoLote() {
       </div>
 
       {resultado && (
-        <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-superficie">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
@@ -218,7 +218,7 @@ function Remessas() {
   const { data: itens } = useRemessaItens(aberta);
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white">
+    <div className="rounded-2xl border border-slate-200 bg-superficie">
       <div className="flex items-center gap-2 border-b border-slate-200 px-5 py-3">
         <Landmark className="h-4 w-4 text-brand-700" />
         <h2 className="text-base font-semibold text-slate-900">Remessas bancarias</h2>

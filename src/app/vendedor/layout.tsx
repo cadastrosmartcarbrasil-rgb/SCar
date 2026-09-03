@@ -20,8 +20,8 @@ export default async function VendedorLayout({ children }: { children: React.Rea
 
   if (!perfil) {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#eef2f8] px-4">
-        <div className="max-w-md rounded-2xl border border-amber-200 bg-white p-6 text-center">
+      <main className="grid min-h-screen place-items-center bg-fundo px-4">
+        <div className="max-w-md rounded-2xl border border-amber-200 bg-superficie p-6 text-center">
           <p className="text-sm font-semibold text-slate-800">Cadastro de vendedor nao encontrado</p>
           <p className="mt-1 text-xs leading-relaxed text-slate-500">
             Este login ainda nao esta ligado a um cadastro de vendedor ativo. Peca a sua franquia

@@ -125,7 +125,7 @@ export default function NovoSinistroPage() {
               <button
                 onClick={() => abrir.mutate()}
                 disabled={abrir.isPending || !veiculoId}
-                className="w-full rounded-md bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+                className="w-full rounded-md bg-acao py-2 text-sm font-medium text-white hover:bg-acao-escura disabled:opacity-60"
               >
                 {abrir.isPending ? 'Abrindo...' : 'Abrir sinistro'}
               </button>
@@ -138,7 +138,7 @@ export default function NovoSinistroPage() {
               <UploadAnexos eventoId={eventoCriado} />
               <Link
                 href="/portal"
-                className="block rounded-md bg-slate-800 py-2 text-center text-sm text-white"
+                className="block rounded-md bg-acao py-2 text-center text-sm text-white"
               >
                 Concluir
               </Link>

@@ -2,16 +2,242 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ===========================================================================
+   TEMA (claro e escuro)
+
+   As cores do sistema moram AQUI, como triplas "R G B" (sem `rgb()`), porque o
+   tailwind.config as consome via `rgb(var(--x) / <alpha-value>)` — e e isso que
+   mantem funcionando os modificadores de opacidade que o codigo ja usa
+   (`bg-slate-900/50`, `text-white/70`).
+
+   O tema escuro nao repinta tela por tela: ele troca o VALOR dos mesmos tokens.
+   Por isso `text-slate-500` continua sendo "texto secundario" nos dois temas —
+   no claro e um cinza escuro, no escuro e um cinza claro. A escala inteira
+   INVERTE de papel:
+
+     50..300  no claro sao fundo sutil e borda   -> no escuro viram superficies e bordas escuras
+     400..900 no claro sao texto (do apoio ao titulo) -> no escuro viram texto claro
+
+   O que NAO inverte: `--acao` (o navy do botao primario, que carrega texto
+   branco nos dois temas) e o branco puro, reservado a quem precisa mesmo de
+   branco (a placa da logo, cuja tinta e escura).
+
+   Trocar a marca de um cliente (white-label) e mexer so neste bloco.
+   =========================================================================== */
+
 :root {
-  --background: #eef2f8; /* ground levemente frio (viés navy), cards em branco destacam */
+  color-scheme: light;
+
+  --fundo: 238 242 248; /* #EEF2F8 ground levemente frio (vies navy) */
+  --superficie: 255 255 255; /* card */
+  --superficie-alta: 248 250 252; /* card elevado / cabecalho de tabela */
+
+  /* Escala de texto e apoio. 400..700 tem METADE da luminancia do slate do
+     Tailwind, com 15% de navy — o cinza padrao reprovava no WCAG AA. */
+  --slate-50: 248 250 252;
+  --slate-100: 241 245 249;
+  --slate-200: 226 232 240;
+  --slate-300: 203 213 225;
+  --slate-400: 95 108 125; /* #5F6C7D  contraste 5.35 no card */
+  --slate-500: 65 77 97; /* #414D61              8.54 */
+  --slate-600: 47 57 75; /* #2F394B             11.62 */
+  --slate-700: 34 45 63; /* #222D3F             13.86 */
+  --slate-800: 30 41 59;
+  --slate-900: 15 23 42;
+
+  /* Marca: navy. No claro o pe da escala e claro (chip) e a cabeca e escura (texto). */
+  --brand-50: 234 239 247;
+  --brand-100: 213 223 238;
+  --brand-200: 176 192 220;
+  --brand-300: 131 151 190;
+  --brand-400: 79 99 143;
+  --brand-500: 44 62 102;
+  --brand-600: 30 43 77;
+  --brand-700: 22 33 61;
+  --brand-800: 17 26 48;
+  --brand-900: 14 23 48;
+
+  /* Acao primaria: fundo de botao que sempre leva texto branco. */
+  --acao: 30 43 77; /* #1E2B4D — branco por cima da 13.93 */
+  --acao-escura: 22 33 61; /* hover */
+  /* Faixa navy das paginas publicas e do topo do portal. Leva texto branco,
+     entao e ESCURA nos dois temas — nunca inverte. */
+  --faixa: 22 33 61; /* #16213D */
+}
+
+.dark {
+  color-scheme: dark;
+
+  --fundo: 15 20 34; /* #0F1422 */
+  --superficie: 23 30 48; /* #171E30 card */
+  --superficie-alta: 30 39 64; /* #1E2740 */
+
+  /* A escala inverte de papel (ver o bloco acima). */
+  --slate-50: 30 39 64; /* superficie sutil */
+  --slate-100: 38 49 78; /* hover */
+  --slate-200: 44 57 88; /* borda principal */
+  --slate-300: 60 76 116; /* borda de campo */
+  --slate-400: 151 163 184; /* texto de apoio      6.52 no card */
+  --slate-500: 176 187 205; /* texto secundario    8.57 */
+  --slate-600: 199 208 222; /* corpo              10.68 */
+  --slate-700: 217 224 234; /* corpo forte */
+  --slate-800: 233 238 245; /* titulo             14.24 */
+  --slate-900: 246 248 252;
+
+  /* A marca tambem inverte: chip escuro embaixo, texto claro em cima. */
+  --brand-50: 27 36 64;
+  --brand-100: 34 46 82;
+  --brand-200: 42 58 102;
+  --brand-300: 62 84 136;
+  --brand-400: 107 130 180;
+  --brand-500: 144 164 206;
+  --brand-600: 168 186 223;
+  --brand-700: 194 208 236; /* titulo da marca    10.70 */
+  --brand-800: 220 230 247;
+  --brand-900: 238 243 252;
+
+  /* A acao NAO inverte — so sobe para descolar do fundo escuro. */
+  --acao: 47 69 115; /* #2F4573 — branco por cima da 9.46 */
+  --acao-escura: 58 83 137;
+  --faixa: 16 24 48; /* #101830 — mesma profundidade da cabine */
 }
 
 html,
 body {
-  background: var(--background);
-  color: #14213d;
+  background: rgb(var(--fundo));
+  color: rgb(var(--slate-800));
   -webkit-font-smoothing: antialiased;
 }
+
+/* A troca de tema e suave, mas so nas cores: animar `all` faria layout e
+   sombra tremerem a cada re-render. O usuario que pede menos movimento nao
+   recebe transicao nenhuma. */
+@media (prefers-reduced-motion: no-preference) {
+  body * {
+    transition:
+      background-color 180ms ease,
+      border-color 180ms ease,
+      color 180ms ease;
+  }
+}
+
+/* Campo de formulario.
+   Sem isto, o input SEM `bg-` proprio herda o estilo nativo do navegador — e
+   com `color-scheme: dark` o Chrome o pinta de um cinza amarronzado que nao
+   pertence a paleta. Como boa parte dos campos do sistema nunca declarou cor
+   de fundo (nao precisava, no tema claro), a correcao certa e na base: assim
+   vale para os 250 `<Input>` e tambem para o campo cru de tela especifica. */
+@layer base {
+  input,
+  select,
+  textarea {
+    background-color: rgb(var(--superficie));
+    color: rgb(var(--slate-800));
+  }
+
+  /* Checkbox e radio seguem o desenho nativo — pintar o fundo deles some com
+     a marcacao. `color-scheme` ja os adapta ao tema. */
+  input[type='checkbox'],
+  input[type='radio'],
+  input[type='range'],
+  input[type='color'] {
+    background-color: initial;
+  }
+
+  ::placeholder {
+    color: rgb(var(--slate-400));
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   SELOS DE STATUS no tema escuro.
+
+   O sistema marca situacao com ~200 selos no padrao `bg-X-50 text-X-700`
+   (pago/vencido/pendente, etapa do lead, prioridade do protocolo...). Essas
+   paletas sao as do Tailwind e nao passam pelos nossos tokens: no tema escuro
+   ficariam manchas claras espalhadas pela tela.
+
+   Escurecer so o FUNDO deixaria o texto (tom 700, escuro) ilegivel — por isso
+   cada cor e tratada em PAR: fundo translucido da propria cor + texto no tom
+   300. Assim o selo continua verde/vermelho/ambar, que e a informacao que ele
+   carrega, sem clarear a tela.
+
+   Feito aqui, e nao nos ~200 call sites, pela mesma razao do resto do tema.
+   --------------------------------------------------------------------------- */
+.dark .bg-emerald-50, .dark .bg-emerald-100 { background-color: rgb(16 185 129 / 0.15); }
+.dark .text-emerald-500, .dark .text-emerald-600, .dark .text-emerald-700,
+.dark .text-emerald-800, .dark .text-emerald-900 { color: #6ee7b7; }
+.dark .border-emerald-200, .dark .border-emerald-300 { border-color: rgb(16 185 129 / 0.3); }
+
+.dark .bg-green-50, .dark .bg-green-100 { background-color: rgb(34 197 94 / 0.15); }
+.dark .text-green-500, .dark .text-green-600, .dark .text-green-700,
+.dark .text-green-800, .dark .text-green-900 { color: #86efac; }
+.dark .border-green-200, .dark .border-green-300 { border-color: rgb(34 197 94 / 0.3); }
+
+.dark .bg-red-50, .dark .bg-red-100 { background-color: rgb(239 68 68 / 0.15); }
+.dark .text-red-500, .dark .text-red-600, .dark .text-red-700,
+.dark .text-red-800, .dark .text-red-900 { color: #fca5a5; }
+.dark .border-red-200, .dark .border-red-300 { border-color: rgb(239 68 68 / 0.3); }
+
+.dark .bg-rose-50, .dark .bg-rose-100 { background-color: rgb(244 63 94 / 0.15); }
+.dark .text-rose-500, .dark .text-rose-600, .dark .text-rose-700,
+.dark .text-rose-800, .dark .text-rose-900 { color: #fda4af; }
+.dark .border-rose-200, .dark .border-rose-300 { border-color: rgb(244 63 94 / 0.3); }
+
+.dark .bg-amber-50, .dark .bg-amber-100 { background-color: rgb(245 158 11 / 0.15); }
+.dark .text-amber-500, .dark .text-amber-600, .dark .text-amber-700,
+.dark .text-amber-800, .dark .text-amber-900 { color: #fcd34d; }
+.dark .border-amber-200, .dark .border-amber-300 { border-color: rgb(245 158 11 / 0.3); }
+
+.dark .bg-yellow-50, .dark .bg-yellow-100 { background-color: rgb(234 179 8 / 0.15); }
+.dark .text-yellow-500, .dark .text-yellow-600, .dark .text-yellow-700,
+.dark .text-yellow-800, .dark .text-yellow-900 { color: #fde047; }
+.dark .border-yellow-200, .dark .border-yellow-300 { border-color: rgb(234 179 8 / 0.3); }
+
+.dark .bg-orange-50, .dark .bg-orange-100 { background-color: rgb(249 115 22 / 0.15); }
+.dark .text-orange-500, .dark .text-orange-600, .dark .text-orange-700,
+.dark .text-orange-800, .dark .text-orange-900 { color: #fdba74; }
+.dark .border-orange-200, .dark .border-orange-300 { border-color: rgb(249 115 22 / 0.3); }
+
+.dark .bg-blue-50, .dark .bg-blue-100 { background-color: rgb(59 130 246 / 0.15); }
+.dark .text-blue-500, .dark .text-blue-600, .dark .text-blue-700,
+.dark .text-blue-800, .dark .text-blue-900 { color: #93c5fd; }
+.dark .border-blue-200, .dark .border-blue-300 { border-color: rgb(59 130 246 / 0.3); }
+
+.dark .bg-indigo-50, .dark .bg-indigo-100 { background-color: rgb(99 102 241 / 0.15); }
+.dark .text-indigo-500, .dark .text-indigo-600, .dark .text-indigo-700,
+.dark .text-indigo-800, .dark .text-indigo-900 { color: #a5b4fc; }
+.dark .border-indigo-200, .dark .border-indigo-300 { border-color: rgb(99 102 241 / 0.3); }
+
+.dark .bg-violet-50, .dark .bg-violet-100 { background-color: rgb(139 92 246 / 0.15); }
+.dark .text-violet-500, .dark .text-violet-600, .dark .text-violet-700,
+.dark .text-violet-800, .dark .text-violet-900 { color: #c4b5fd; }
+.dark .border-violet-200, .dark .border-violet-300 { border-color: rgb(139 92 246 / 0.3); }
+
+.dark .bg-purple-50, .dark .bg-purple-100 { background-color: rgb(168 85 247 / 0.15); }
+.dark .text-purple-500, .dark .text-purple-600, .dark .text-purple-700,
+.dark .text-purple-800, .dark .text-purple-900 { color: #d8b4fe; }
+.dark .border-purple-200, .dark .border-purple-300 { border-color: rgb(168 85 247 / 0.3); }
+
+.dark .bg-pink-50, .dark .bg-pink-100 { background-color: rgb(236 72 153 / 0.15); }
+.dark .text-pink-500, .dark .text-pink-600, .dark .text-pink-700,
+.dark .text-pink-800, .dark .text-pink-900 { color: #f9a8d4; }
+.dark .border-pink-200, .dark .border-pink-300 { border-color: rgb(236 72 153 / 0.3); }
+
+.dark .bg-sky-50, .dark .bg-sky-100 { background-color: rgb(14 165 233 / 0.15); }
+.dark .text-sky-500, .dark .text-sky-600, .dark .text-sky-700,
+.dark .text-sky-800, .dark .text-sky-900 { color: #7dd3fc; }
+.dark .border-sky-200, .dark .border-sky-300 { border-color: rgb(14 165 233 / 0.3); }
+
+.dark .bg-teal-50, .dark .bg-teal-100 { background-color: rgb(20 184 166 / 0.15); }
+.dark .text-teal-500, .dark .text-teal-600, .dark .text-teal-700,
+.dark .text-teal-800, .dark .text-teal-900 { color: #5eead4; }
+.dark .border-teal-200, .dark .border-teal-300 { border-color: rgb(20 184 166 / 0.3); }
+
+/* Ciano da marca: mesma regra, com os nossos valores. */
+.dark .bg-cyan-50, .dark .bg-cyan-100 { background-color: rgb(34 167 228 / 0.15); }
+.dark .text-cyan-700, .dark .text-cyan-800, .dark .text-cyan-900 { color: #63bee9; }
+.dark .border-cyan-200, .dark .border-cyan-300 { border-color: rgb(34 167 228 / 0.3); }
 
 /* Numeros de "painel de instrumentos": tabulares e alinhados. */
 .tnum {
@@ -21,10 +247,19 @@ body {
 
 /* Cabine (sidebar): fundo navy da marca + pinstripe diagonal do rodape do site.
    Uma unica declaracao de background (cor solida de fallback + duas camadas de
-   imagem) para nao ser sobrescrita por utilitarios de gradiente do Tailwind. */
+   imagem) para nao ser sobrescrita por utilitarios de gradiente do Tailwind.
+   A cabine JA e escura no tema claro; no escuro ela so aprofunda, para nao
+   competir com o conteudo. */
 .cockpit {
   background-color: #1e2b4d;
   background-image:
     repeating-linear-gradient(-45deg, transparent 0 13px, rgba(255, 255, 255, 0.02) 13px 14px),
     linear-gradient(180deg, #1e2b4d 0%, #131d38 100%);
+}
+
+.dark .cockpit {
+  background-color: #101830;
+  background-image:
+    repeating-linear-gradient(-45deg, transparent 0 13px, rgba(255, 255, 255, 0.025) 13px 14px),
+    linear-gradient(180deg, #101830 0%, #0a1226 100%);
 }

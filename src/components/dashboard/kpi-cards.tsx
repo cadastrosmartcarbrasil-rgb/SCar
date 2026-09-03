@@ -37,7 +37,7 @@ function KpiTile({
   tom: Tom;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(20,33,61,0.04),0_10px_26px_-16px_rgba(20,33,61,0.18)] transition hover:-translate-y-0.5">
+    <div className="rounded-2xl border border-slate-200/80 bg-superficie p-4 shadow-[0_1px_2px_rgba(20,33,61,0.04),0_10px_26px_-16px_rgba(20,33,61,0.18)] transition hover:-translate-y-0.5">
       <div className="flex items-start justify-between">
         <p className="text-[11.5px] font-semibold uppercase tracking-wide text-slate-500">{titulo}</p>
         <span className={`grid h-9 w-9 place-items-center rounded-[10px] ${TOM[tom]}`}>
@@ -87,7 +87,7 @@ export function DashboardKpis() {
       {/* Fila de atendimento: contador em tempo real + atalho para a Central. */}
       <Link
         href="/protocolos"
-        className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(20,33,61,0.04),0_10px_26px_-16px_rgba(20,33,61,0.18)] transition hover:-translate-y-0.5 hover:border-cyan-300"
+        className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-superficie p-4 shadow-[0_1px_2px_rgba(20,33,61,0.04),0_10px_26px_-16px_rgba(20,33,61,0.18)] transition hover:-translate-y-0.5 hover:border-cyan-300"
       >
         <div className="flex items-center gap-3">
           <span className="grid h-11 w-11 place-items-center rounded-xl bg-violet-50 text-violet-600">

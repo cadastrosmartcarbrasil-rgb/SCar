@@ -4,8 +4,10 @@ type Variant = 'primary' | 'secondary' | 'accent' | 'danger' | 'ghost';
 
 const styles: Record<Variant, string> = {
   // acao primaria = navy da marca (contraste seguro com texto branco)
-  primary: 'bg-brand-600 text-white hover:bg-brand-700 shadow-sm shadow-brand-900/20',
-  secondary: 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50',
+  // sombra em preto, nao em `brand-900`: essa faixa clareia no tema escuro e a
+  // sombra viraria um brilho branco
+  primary: 'bg-acao text-white hover:bg-acao-escura shadow-sm shadow-black/20',
+  secondary: 'border border-slate-300 bg-superficie text-slate-700 hover:bg-slate-50',
   // destaque = ciano da marca (texto navy p/ contraste)
   accent: 'bg-cyan-500 text-brand-800 hover:bg-cyan-400 shadow-sm',
   danger: 'bg-rose-600 text-white hover:bg-rose-700',

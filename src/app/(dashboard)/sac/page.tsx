@@ -64,13 +64,13 @@ export default function SacPage() {
 
       {/* Busca global */}
       <div className="relative max-w-xl">
-        <div className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 shadow-sm focus-within:ring-2 focus-within:ring-cyan-500/40">
+        <div className="flex items-center gap-2 rounded-xl border border-slate-300 bg-superficie px-3.5 py-2.5 shadow-sm focus-within:ring-2 focus-within:ring-cyan-500/40">
           <Search className="h-4 w-4 text-slate-400" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por Nome, CPF/CNPJ ou Placa..." className="w-full text-sm outline-none" />
           {busca.isFetching && <Loader2 className="h-4 w-4 animate-spin text-slate-300" />}
         </div>
         {q.trim().length >= 2 && (busca.data?.length ?? 0) > 0 && (
-          <ul className="absolute z-20 mt-1 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+          <ul className="absolute z-20 mt-1 w-full overflow-hidden rounded-xl border border-slate-200 bg-superficie shadow-lg">
             {busca.data!.map((h) => (
               <li key={h.veiculo_id ?? h.cliente_id}>
                 <button onClick={() => abrirHit(h)} className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-slate-50">
@@ -145,7 +145,7 @@ function ListaEventos({ v360 }: { v360: Visao360 }) {
     return <p className="text-sm text-slate-400">Nenhum evento registrado para este associado.</p>;
   }
   return (
-    <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-superficie shadow-sm">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
@@ -218,7 +218,7 @@ function AssociadoHeader({ v360 }: { v360: Visao360 }) {
       {abrindo && <ModalProtocoloAssociado associado={a} onClose={() => setAbrindo(false)} />}
       <CardContent className="flex flex-wrap items-center justify-between gap-4 pt-5">
         <div className="flex items-center gap-3">
-          <span className="grid h-11 w-11 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-brand-800 text-sm font-bold text-white">
+          <span className="grid h-11 w-11 place-items-center rounded-full bg-gradient-to-br from-acao to-faixa text-sm font-bold text-white">
             {a.nome_razao_social.slice(0, 2).toUpperCase()}
           </span>
           <div>
@@ -310,7 +310,7 @@ function ListaVeiculos({ v360, onSelect }: { v360: Visao360; onSelect: (id: stri
   return (
     <div>
       <p className="mb-2 text-sm font-semibold text-slate-700">Veiculos ({v360.veiculos.length}) — clique para atender</p>
-      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-superficie shadow-sm">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
@@ -422,7 +422,7 @@ function AtendimentoVeiculo({ clienteId, associado, veiculoId, podeTrocar, onTro
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {SERVICOS_SAC.map((s) => (
                 <button key={s.id} onClick={() => acionar(s)} disabled={s.modo === 'boleto' && gerarBoleto.isPending}
-                  className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-cyan-400 hover:shadow-md disabled:opacity-60">
+                  className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-superficie p-4 text-left shadow-sm transition hover:border-cyan-400 hover:shadow-md disabled:opacity-60">
                   <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${s.cor}`}>
                     {s.modo === 'boleto' && gerarBoleto.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <s.icon className="h-5 w-5" />}
                   </span>
@@ -523,15 +523,15 @@ function VeiculoDetalheCard({ clienteId, veiculo }: { clienteId: string; veiculo
       <CardContent className="pt-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="rounded-md bg-brand-600 px-2.5 py-1 font-mono text-sm font-bold text-white">{veiculo.placa}</span>
+            <span className="rounded-md bg-acao px-2.5 py-1 font-mono text-sm font-bold text-white">{veiculo.placa}</span>
             <span className="text-base font-semibold text-slate-800">{[veiculo.marca, veiculo.modelo].filter(Boolean).join(' ')}</span>
             <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${veiculo.status === 'ativo' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>{veiculo.status}</span>
           </div>
           <div className="inline-flex rounded-lg border border-slate-200 p-0.5 text-xs font-medium">
-            <button onClick={() => setModo('AGRUPADO_ASSOCIADO')} className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 transition ${veiculo.tipo_faturamento === 'AGRUPADO_ASSOCIADO' ? 'bg-brand-600 text-white' : 'text-slate-500 hover:bg-slate-50'}`}>
+            <button onClick={() => setModo('AGRUPADO_ASSOCIADO')} className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 transition ${veiculo.tipo_faturamento === 'AGRUPADO_ASSOCIADO' ? 'bg-acao text-white' : 'text-slate-500 hover:bg-slate-50'}`}>
               <Layers className="h-3.5 w-3.5" /> Agrupado
             </button>
-            <button onClick={() => setModo('INDIVIDUAL_VEICULO')} className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 transition ${veiculo.tipo_faturamento === 'INDIVIDUAL_VEICULO' ? 'bg-brand-600 text-white' : 'text-slate-500 hover:bg-slate-50'}`}>
+            <button onClick={() => setModo('INDIVIDUAL_VEICULO')} className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 transition ${veiculo.tipo_faturamento === 'INDIVIDUAL_VEICULO' ? 'bg-acao text-white' : 'text-slate-500 hover:bg-slate-50'}`}>
               <SplitSquareHorizontal className="h-3.5 w-3.5" /> Individual
             </button>
           </div>

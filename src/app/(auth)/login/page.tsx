@@ -55,9 +55,9 @@ function LoginForm() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
-      <form onSubmit={onSubmit} className="w-full max-w-sm space-y-4 rounded-xl bg-white p-8 shadow-sm">
+      <form onSubmit={onSubmit} className="w-full max-w-sm space-y-4 rounded-xl bg-superficie p-8 shadow-sm">
         <div className="flex flex-col items-center gap-2 pb-2">
-          <div className="rounded-xl bg-brand-600 p-2 text-white">
+          <div className="rounded-xl bg-acao p-2 text-white">
             <ShieldCheck className="h-6 w-6" />
           </div>
           <h1 className="text-lg font-semibold text-slate-900">SCar - Painel de Gestao</h1>
@@ -87,7 +87,7 @@ function LoginForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-md bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+          className="w-full rounded-md bg-acao py-2 text-sm font-medium text-white hover:bg-acao-escura disabled:opacity-60"
         >
           {loading ? 'Entrando...' : 'Entrar'}
         </button>

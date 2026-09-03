@@ -332,7 +332,7 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
                   className={`w-full rounded-2xl border p-4 text-left transition ${
                     ativo
                       ? 'border-cyan-500 bg-cyan-50/50 ring-1 ring-cyan-400'
-                      : 'border-slate-200 bg-white hover:border-slate-300'}`}
+                      : 'border-slate-200 bg-superficie hover:border-slate-300'}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -371,7 +371,7 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
 
           <button
             type="button" onClick={() => setEtapa('aceite')} disabled={!planoId}
-            className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-xl bg-brand-600 px-4 py-3 text-[14px] font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
+            className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-xl bg-acao px-4 py-3 text-[14px] font-semibold text-white transition hover:bg-acao-escura disabled:opacity-50"
           >
             Contratar {planoEscolhido?.nome} <ChevronRight className="h-4 w-4" />
           </button>
@@ -452,7 +452,7 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
 // ---------------------------------------------------------------------------
 function Cartao({ children }: { children: React.ReactNode }) {
   return (
-    <div className="overflow-hidden rounded-2xl bg-white shadow-[0_10px_40px_-12px_rgba(20,33,61,0.25)] ring-1 ring-slate-200/70">
+    <div className="overflow-hidden rounded-2xl bg-superficie shadow-[0_10px_40px_-12px_rgba(20,33,61,0.25)] ring-1 ring-slate-200/70">
       {children}
     </div>
   );
@@ -530,7 +530,7 @@ function Botao({ children, carregando, disabled }: {
   return (
     <button
       type="submit" disabled={carregando || disabled}
-      className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-3 text-[14px] font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
+      className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-acao px-4 py-3 text-[14px] font-semibold text-white transition hover:bg-acao-escura disabled:opacity-50"
     >
       {carregando && <Loader2 className="h-4 w-4 animate-spin" />}
       {children}

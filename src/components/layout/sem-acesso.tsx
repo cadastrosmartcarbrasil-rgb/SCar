@@ -18,7 +18,7 @@ export function SemAcesso({ email }: { email: string }) {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-100 p-4">
-      <div className="w-full max-w-md rounded-xl bg-white p-8 text-center shadow-sm">
+      <div className="w-full max-w-md rounded-xl bg-superficie p-8 text-center shadow-sm">
         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
           <ShieldAlert className="h-6 w-6 text-amber-600" />
         </div>
@@ -30,7 +30,7 @@ export function SemAcesso({ email }: { email: string }) {
         </p>
         <button
           onClick={sair}
-          className="mt-6 rounded-md bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-900"
+          className="mt-6 rounded-md bg-acao px-4 py-2 text-sm font-medium text-white hover:bg-slate-900"
         >
           Sair
         </button>

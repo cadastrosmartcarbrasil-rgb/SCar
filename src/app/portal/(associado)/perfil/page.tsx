@@ -139,7 +139,7 @@ export default function PortalPerfilPage() {
             <div className="flex justify-end">
               <button
                 type="submit" disabled={salvar.isPending}
-                className="flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2.5 text-[13px] font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-xl bg-acao px-4 py-2.5 text-[13px] font-semibold text-white transition hover:bg-acao-escura disabled:opacity-50"
               >
                 {salvar.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                 Salvar

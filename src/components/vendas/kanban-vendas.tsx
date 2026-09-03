@@ -73,7 +73,7 @@ export function KanbanVendas() {
               <div className="px-3 py-2">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-slate-800">{coluna.titulo}</p>
-                  <span className="rounded-full bg-white px-2 py-0.5 text-xs text-slate-500">{itens.length}</span>
+                  <span className="rounded-full bg-superficie px-2 py-0.5 text-xs text-slate-500">{itens.length}</span>
                 </div>
                 <p className="text-[11px] text-slate-400">{coluna.descricao}</p>
                 {total > 0 && (
@@ -96,7 +96,7 @@ export function KanbanVendas() {
                       draggable={!travado}
                       onDragStart={() => setArrastando(l)}
                       onDragEnd={() => { setArrastando(null); setSobre(null); }}
-                      className={`rounded-xl border border-slate-200 bg-white p-2.5 shadow-sm ${
+                      className={`rounded-xl border border-slate-200 bg-superficie p-2.5 shadow-sm ${
                         travado ? 'opacity-80' : 'cursor-grab active:cursor-grabbing'
                       } ${arrastando?.id === l.id ? 'opacity-40' : ''}`}
                     >

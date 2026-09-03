@@ -51,8 +51,8 @@ export default function LeadsVendedorPage() {
             onClick={() => setEtapa(f.chave)}
             className={`rounded-full px-3 py-1.5 text-[12px] font-semibold transition ${
               etapa === f.chave
-                ? 'bg-brand-600 text-white'
-                : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50'
+                ? 'bg-acao text-white'
+                : 'bg-superficie text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50'
             }`}
           >
             {f.rotulo}
@@ -72,7 +72,7 @@ export default function LeadsVendedorPage() {
 
       {isLoading ? (
         <div className="space-y-2">
-          {[0, 1, 2].map((i) => <div key={i} className="h-20 animate-pulse rounded-2xl bg-white" />)}
+          {[0, 1, 2].map((i) => <div key={i} className="h-20 animate-pulse rounded-2xl bg-superficie" />)}
         </div>
       ) : lista.length === 0 ? (
         <Card>
@@ -95,7 +95,7 @@ export default function LeadsVendedorPage() {
             const selo = SELO_STATUS_LEAD[l.status] ?? SELO_STATUS_LEAD.NOVO;
             const fone = soNumeros(l.celular);
             return (
-              <li key={l.id} className="rounded-2xl border border-slate-200/80 bg-white p-3.5">
+              <li key={l.id} className="rounded-2xl border border-slate-200/80 bg-superficie p-3.5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="truncate text-[14px] font-semibold text-slate-900">{l.nome}</p>
@@ -141,7 +141,7 @@ export default function LeadsVendedorPage() {
                   </a>
                   <Link
                     href={`/vendedor/leads/${l.id}`}
-                    className="flex items-center justify-center gap-1 rounded-lg bg-brand-600 px-3 py-1.5 text-[12px] font-semibold text-white transition hover:bg-brand-700"
+                    className="flex items-center justify-center gap-1 rounded-lg bg-acao px-3 py-1.5 text-[12px] font-semibold text-white transition hover:bg-acao-escura"
                   >
                     Abrir <ChevronRight className="h-3.5 w-3.5" />
                   </Link>

@@ -231,7 +231,7 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
             <button
               onClick={tramitar}
               disabled={transferir.isPending}
-              className="w-full rounded-md bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+              className="w-full rounded-md bg-acao py-2 text-sm font-medium text-white hover:bg-acao-escura disabled:opacity-60"
             >
               {transferir.isPending ? 'Registrando...' : 'Registrar tramitacao'}
             </button>

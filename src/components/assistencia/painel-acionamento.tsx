@@ -62,7 +62,7 @@ export function PainelAcionamento({ placaInicial }: { placaInicial?: string | nu
   return (
     <div className="space-y-5">
       {/* Busca do veiculo pela placa */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4">
+      <div className="rounded-2xl border border-slate-200 bg-superficie p-4">
         <FormField label="Placa do veiculo">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -146,7 +146,7 @@ export function PainelAcionamento({ placaInicial }: { placaInicial?: string | nu
                   <button
                     key={s.id}
                     onClick={() => setServicoAcionar(s)}
-                    className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-cyan-400 hover:shadow-md"
+                    className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-superficie p-4 text-left shadow-sm transition hover:border-cyan-400 hover:shadow-md"
                   >
                     <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${esgotado ? 'bg-rose-50 text-rose-600' : 'bg-cyan-50 text-cyan-600'}`}>
                       <LifeBuoy className="h-5 w-5" />
@@ -172,7 +172,7 @@ export function PainelAcionamento({ placaInicial }: { placaInicial?: string | nu
 
           {/* Historico do veiculo */}
           {(historico?.length ?? 0) > 0 && (
-            <div className="rounded-2xl border border-slate-200 bg-white">
+            <div className="rounded-2xl border border-slate-200 bg-superficie">
               <div className="flex items-center gap-2 border-b border-slate-200 px-5 py-3">
                 <History className="h-4 w-4 text-brand-700" />
                 <h2 className="text-sm font-semibold text-slate-900">Acionamentos deste veiculo</h2>
@@ -433,7 +433,7 @@ export function OrdemServico({ acionamentoId, onVoltar }: { acionamentoId: strin
       )}
 
       {/* Cabecalho da OS */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4">
+      <div className="rounded-2xl border border-slate-200 bg-superficie p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="font-mono text-xs text-slate-400">{a.protocolo}{a.codigo_os ? ` · ${a.codigo_os}` : ''}</p>
@@ -475,7 +475,7 @@ export function OrdemServico({ acionamentoId, onVoltar }: { acionamentoId: strin
 
       {/* Cotacao */}
       {!finalizado && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+        <div className="rounded-2xl border border-slate-200 bg-superficie p-4">
           <h3 className="text-sm font-semibold text-slate-700">Cotacao com prestadores</h3>
           <div className="mt-3 grid gap-3 md:grid-cols-5">
             <FormField label="Prestador" className="md:col-span-2">
@@ -569,7 +569,7 @@ export function OrdemServico({ acionamentoId, onVoltar }: { acionamentoId: strin
 
       {/* Voucher + conclusao */}
       {a.codigo_os && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+        <div className="rounded-2xl border border-slate-200 bg-superficie p-4">
           <h3 className="text-sm font-semibold text-slate-700">Comunicado ao prestador e fechamento</h3>
           <div className="mt-3 flex flex-wrap items-end gap-3">
             <Button
@@ -696,7 +696,7 @@ function CardTrajeto({ acionamento, servico, editavel }: {
   const km = acionamento.distancia_km_calculada != null ? Number(acionamento.distancia_km_calculada) : null;
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+    <div className="rounded-2xl border border-slate-200 bg-superficie p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
           <Route className="h-4 w-4 text-cyan-600" /> Trajeto do atendimento
@@ -1084,7 +1084,7 @@ function TrilhaEdicoes({ acionamentoId }: { acionamentoId: string }) {
   if (!edicoes || edicoes.length === 0) return null;
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white">
+    <div className="rounded-2xl border border-slate-200 bg-superficie">
       <div className="flex items-center gap-2 border-b border-slate-200 px-5 py-3">
         <ClipboardList className="h-4 w-4 text-brand-700" />
         <h3 className="text-sm font-semibold text-slate-900">Historico de alteracoes</h3>

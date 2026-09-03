@@ -133,7 +133,7 @@ export function FaturasCompetencia() {
           { label: 'Em aberto', valor: formatCurrency(kpis.aberto), cor: 'text-amber-700' },
           { label: 'Recebido', valor: formatCurrency(kpis.pago), cor: 'text-emerald-700' },
         ].map((k) => (
-          <div key={k.label} className="rounded-2xl border border-slate-200 bg-white p-4">
+          <div key={k.label} className="rounded-2xl border border-slate-200 bg-superficie p-4">
             <p className="text-xs uppercase tracking-wide text-slate-400">{k.label}</p>
             <p className={`tnum mt-1 text-xl font-semibold ${k.cor}`}>{k.valor}</p>
           </div>
@@ -141,7 +141,7 @@ export function FaturasCompetencia() {
       </div>
 
       {/* Lista */}
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-superficie">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">

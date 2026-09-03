@@ -116,7 +116,7 @@ export default function ComissoesVendedorPage() {
         </CardContent>
       </Card>
 
-      <p className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[11.5px] leading-relaxed text-slate-500">
+      <p className="rounded-xl border border-slate-200 bg-superficie px-3 py-2.5 text-[11.5px] leading-relaxed text-slate-500">
         A adesao recebida por voce <b>na hora</b> fica integralmente com voce e nao passa pelo
         financeiro da empresa — por isso ela nao aparece neste extrato. O que esta aqui e o que a
         empresa recebeu (boleto, PIX ou cartao) e vai repassar a voce.

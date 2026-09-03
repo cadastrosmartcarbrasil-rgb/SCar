@@ -171,7 +171,7 @@ export function ContasFinanceiro() {
               key={t.v}
               onClick={() => setTipo(t.v)}
               className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
-                tipo === t.v ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                tipo === t.v ? 'bg-superficie text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
               }`}
             >
               {t.r}
@@ -201,7 +201,7 @@ export function ContasFinanceiro() {
       </div>
 
       {/* Carteira */}
-      <div className="overflow-x-auto rounded-2xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(20,33,61,0.04)]">
+      <div className="overflow-x-auto rounded-2xl border border-slate-200/80 bg-superficie shadow-[0_1px_2px_rgba(20,33,61,0.04)]">
         <table className="w-full min-w-[1000px] text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-left text-[11px] uppercase tracking-wide text-slate-400">

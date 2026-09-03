@@ -95,7 +95,7 @@ export default function MarcasModelosPage() {
 
       <div className="grid gap-4 md:grid-cols-2">
         {/* Marcas */}
-        <div className="rounded-lg border border-slate-200 bg-white">
+        <div className="rounded-lg border border-slate-200 bg-superficie">
           <div className="border-b border-slate-100 px-4 py-2 text-sm font-medium text-slate-700">
             Marcas <span className="text-slate-400">({(marcas ?? []).length})</span>
           </div>
@@ -185,7 +185,7 @@ export default function MarcasModelosPage() {
         </div>
 
         {/* Modelos */}
-        <div className="rounded-lg border border-slate-200 bg-white">
+        <div className="rounded-lg border border-slate-200 bg-superficie">
           <div className="border-b border-slate-100 px-4 py-2 text-sm font-medium text-slate-700">
             Modelos {marcaAtual && <span className="text-brand-600">de {marcaAtual.nome}</span>}
           </div>
@@ -353,7 +353,7 @@ function MarcaItem({
         <select
           value={marca.status}
           onChange={(e) => onSalvar(e.target.value as StatusCadastro)}
-          className="rounded border border-slate-200 bg-white px-1 py-0.5 text-[11px]"
+          className="rounded border border-slate-200 bg-superficie px-1 py-0.5 text-[11px]"
         >
           {STATUS.map((s) => (
             <option key={s.value} value={s.value}>

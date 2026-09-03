@@ -1,6 +1,9 @@
 import type { Config } from 'tailwindcss';
 
 const config: Config = {
+  // Tema escuro por CLASSE (.dark no <html>), nao por media query: o usuario
+  // escolhe no botao do cabecalho e a escolha vence a preferencia do sistema.
+  darkMode: 'class',
   content: [
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
@@ -12,16 +15,16 @@ const config: Config = {
         // Marca Smart Car Brasil.
         // brand = NAVY (estrutura + acao primaria, como a barra do site).
         brand: {
-          50: '#EAEFF7',
-          100: '#D5DFEE',
-          200: '#B0C0DC',
-          300: '#8397BE',
-          400: '#4F638F',
-          500: '#2C3E66',
-          600: '#1E2B4D',
-          700: '#16213D',
-          800: '#111A30',
-          900: '#0E1730',
+          50: 'rgb(var(--brand-50) / <alpha-value>)',
+          100: 'rgb(var(--brand-100) / <alpha-value>)',
+          200: 'rgb(var(--brand-200) / <alpha-value>)',
+          300: 'rgb(var(--brand-300) / <alpha-value>)',
+          400: 'rgb(var(--brand-400) / <alpha-value>)',
+          500: 'rgb(var(--brand-500) / <alpha-value>)',
+          600: 'rgb(var(--brand-600) / <alpha-value>)',
+          700: 'rgb(var(--brand-700) / <alpha-value>)',
+          800: 'rgb(var(--brand-800) / <alpha-value>)',
+          900: 'rgb(var(--brand-900) / <alpha-value>)',
         },
         // cyan = CIANO da marca (energia/acento: o "CAR" e o rodape do site).
         cyan: {
@@ -48,17 +51,27 @@ const config: Config = {
         //   600  #475569 -> #2F394B              7.58 -> 11.62
         //   700  #334155 -> #222D3F             10.35 -> 13.86
         slate: {
-          50: '#F8FAFC',
-          100: '#F1F5F9',
-          200: '#E2E8F0',
-          300: '#CBD5E1',
-          400: '#5F6C7D',
-          500: '#414D61',
-          600: '#2F394B',
-          700: '#222D3F',
-          800: '#1E293B',
-          900: '#0F172A',
+          50: 'rgb(var(--slate-50) / <alpha-value>)',
+          100: 'rgb(var(--slate-100) / <alpha-value>)',
+          200: 'rgb(var(--slate-200) / <alpha-value>)',
+          300: 'rgb(var(--slate-300) / <alpha-value>)',
+          400: 'rgb(var(--slate-400) / <alpha-value>)',
+          500: 'rgb(var(--slate-500) / <alpha-value>)',
+          600: 'rgb(var(--slate-600) / <alpha-value>)',
+          700: 'rgb(var(--slate-700) / <alpha-value>)',
+          800: 'rgb(var(--slate-800) / <alpha-value>)',
+          900: 'rgb(var(--slate-900) / <alpha-value>)',
         },
+        // Superficies (o que era `bg-white` e o ground do sistema).
+        superficie: 'rgb(var(--superficie) / <alpha-value>)',
+        'superficie-alta': 'rgb(var(--superficie-alta) / <alpha-value>)',
+        fundo: 'rgb(var(--fundo) / <alpha-value>)',
+        // Acao primaria: fundo de botao que SEMPRE leva texto branco. Nao
+        // inverte no tema escuro (so sobe de tom), por isso nao sai da escala brand.
+        acao: 'rgb(var(--acao) / <alpha-value>)',
+        'acao-escura': 'rgb(var(--acao-escura) / <alpha-value>)',
+        // Faixa navy (paginas publicas, topo do portal): escura nos dois temas.
+        faixa: 'rgb(var(--faixa) / <alpha-value>)',
         navy: '#1E2B4D',
         status: {
           success: '#12A150',

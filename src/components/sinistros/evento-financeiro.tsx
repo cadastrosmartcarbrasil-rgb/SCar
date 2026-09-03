@@ -118,7 +118,7 @@ export function EventoFinanceiro({ eventoId, regionalId }: { eventoId: string; r
 
 function Box({ titulo, valor, cor }: { titulo: string; valor: number; cor: string }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3">
+    <div className="rounded-lg border border-slate-200 bg-superficie p-3">
       <p className="text-xs text-slate-500">{titulo}</p>
       <p className={`mt-1 text-lg font-semibold ${cor}`}>{formatCurrency(valor)}</p>
     </div>

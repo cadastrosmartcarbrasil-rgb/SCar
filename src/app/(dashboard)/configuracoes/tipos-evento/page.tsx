@@ -43,7 +43,7 @@ export default function TiposEventoPage() {
         </Button>
       </div>
 
-      <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white">
+      <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-superficie">
         {isLoading && <li className="px-4 py-3 text-sm text-slate-400">Carregando...</li>}
         {(tipos ?? []).map((t) => (
           <li key={t.id} className="flex items-center justify-between px-4 py-2 text-sm">

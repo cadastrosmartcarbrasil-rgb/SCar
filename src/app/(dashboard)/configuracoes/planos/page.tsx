@@ -186,7 +186,7 @@ function PlanoCard({ plano, onEdit, onDelete }: { plano: PlanosProtecaoRow; onEd
   const { data: produtos } = useProdutos();
   const nomes = (vinculos ?? []).map((id) => (produtos ?? []).find((p) => p.id === id)?.nome).filter(Boolean);
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4">
+    <div className="rounded-xl border border-slate-200 bg-superficie p-4">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
           <Layers className="h-4 w-4 text-brand-500" />

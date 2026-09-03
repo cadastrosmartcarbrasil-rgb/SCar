@@ -28,8 +28,8 @@ export default async function RegionalLayout({ children }: { children: React.Rea
 
   if (perfil.papel === 'gestor_regional' && !regional) {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#eef2f8] px-4">
-        <div className="max-w-md rounded-2xl border border-amber-200 bg-white p-6 text-center">
+      <main className="grid min-h-screen place-items-center bg-fundo px-4">
+        <div className="max-w-md rounded-2xl border border-amber-200 bg-superficie p-6 text-center">
           <p className="text-sm font-semibold text-slate-800">Unidade nao vinculada</p>
           <p className="mt-1 text-xs leading-relaxed text-slate-500">
             Seu usuario e de gestor regional, mas nao esta vinculado a nenhuma franquia.
@@ -49,7 +49,7 @@ export default async function RegionalLayout({ children }: { children: React.Rea
         papel={perfil.papel}
         logoUrl={empresa?.logo_url ?? null}
       />
-      <div className="min-w-0 flex-1 bg-[#eef2f8]">
+      <div className="min-w-0 flex-1 bg-fundo">
         <div className="mx-auto max-w-6xl p-4 md:p-8">{children}</div>
       </div>
     </div>

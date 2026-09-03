@@ -31,7 +31,7 @@ function Conteudo() {
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {kpis.map((k) => (
-          <div key={k.label} className="rounded-2xl border border-slate-200 bg-white p-4">
+          <div key={k.label} className="rounded-2xl border border-slate-200 bg-superficie p-4">
             <div className="flex items-center justify-between">
               <p className="text-xs uppercase tracking-wide text-slate-400">{k.label}</p>
               <k.icone className={`h-4 w-4 ${k.cor}`} />

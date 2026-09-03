@@ -307,7 +307,7 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
       </Secao>
 
       {/* Barra de acao fixa */}
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white p-3 md:static md:border-0 md:bg-transparent md:p-0">
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-superficie p-3 md:static md:border-0 md:bg-transparent md:p-0">
         <div className="mx-auto max-w-lg">
           <Button onClick={gerar} disabled={salvarLead.isPending || salvarCotacao.isPending} className="w-full">
             {(salvarLead.isPending || salvarCotacao.isPending) ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
@@ -321,7 +321,7 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
 
 function Secao({ icon: Icon, titulo, children }: { icon: React.ComponentType<{ className?: string }>; titulo: string; children: React.ReactNode }) {
   return (
-    <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
+    <section className="space-y-3 rounded-2xl border border-slate-200 bg-superficie p-4">
       <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-700"><Icon className="h-4 w-4 text-brand-500" /> {titulo}</h2>
       {children}
     </section>

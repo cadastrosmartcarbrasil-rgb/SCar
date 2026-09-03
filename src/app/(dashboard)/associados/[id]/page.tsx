@@ -50,7 +50,7 @@ export default function AssociadoPanel({ params }: { params: { id: string } }) {
       </Link>
 
       {/* Cabecalho do associado */}
-      <div className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-5">
+      <div className="flex items-center gap-4 rounded-xl border border-slate-200 bg-superficie p-5">
         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-50 text-brand-600">
           <UserRound className="h-7 w-7" />
         </div>
@@ -109,7 +109,7 @@ function AbaVeiculos({ associadoId }: { associadoId: string }) {
       <CardContent className="space-y-3 pt-5">
         <div className="flex items-center justify-between">
           <p className="text-sm text-slate-500">Veiculos vinculados a este associado.</p>
-          <Link href="/veiculos" className="inline-flex items-center gap-1 rounded-md bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700">
+          <Link href="/veiculos" className="inline-flex items-center gap-1 rounded-md bg-acao px-3 py-1.5 text-sm text-white hover:bg-acao-escura">
             <Plus className="h-4 w-4" /> Novo veiculo
           </Link>
         </div>
@@ -293,7 +293,7 @@ function AbaComunicacoes({ associadoId }: { associadoId: string }) {
               key={c.label}
               onClick={() => setCanal(c.v)}
               className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm ${
-                canal === c.v ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                canal === c.v ? 'bg-acao text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
               <c.icon className="h-4 w-4" />

@@ -170,7 +170,7 @@ function Resumo({
   rotulo, valor, nota, destaque, alerta,
 }: { rotulo: string; valor: string; nota?: string; destaque?: boolean; alerta?: boolean }) {
   return (
-    <div className={`rounded-xl border px-3 py-2.5 ${destaque ? 'border-brand-200 bg-brand-50' : 'border-slate-200 bg-white'}`}>
+    <div className={`rounded-xl border px-3 py-2.5 ${destaque ? 'border-brand-200 bg-brand-50' : 'border-slate-200 bg-superficie'}`}>
       <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{rotulo}</p>
       <p className={`tnum mt-1 text-lg font-bold ${destaque ? 'text-brand-700' : 'text-slate-800'}`}>{valor}</p>
       {nota && <p className={`mt-0.5 text-[11px] ${alerta ? 'text-rose-600' : 'text-slate-400'}`}>{nota}</p>}

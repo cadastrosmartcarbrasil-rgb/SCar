@@ -92,7 +92,7 @@ export default function EmpresaPage() {
           {/* Logo */}
           <Card>
             <CardContent className="flex flex-wrap items-center gap-6 pt-5">
-              <div className="flex h-24 w-52 items-center justify-center rounded-lg border border-slate-200 bg-white p-2">
+              <div className="flex h-24 w-52 items-center justify-center rounded-lg border border-slate-200 bg-superficie p-2">
                 <img src={empresa?.logo_url || '/logo-smartcar.svg'} alt="Logomarca" className="max-h-full max-w-full object-contain" />
               </div>
               <div>
@@ -329,7 +329,7 @@ function AbaDocumentos({ empresaId }: { empresaId: string }) {
           <FormField label="Tipo de documento" className="w-64">
             <Select value={tipo} onChange={(e) => setTipo(e.target.value)}>{TIPOS_DOC.map((t) => <option key={t} value={t}>{t}</option>)}</Select>
           </FormField>
-          <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-brand-600 px-3 py-2 text-sm text-white hover:bg-brand-700">
+          <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-acao px-3 py-2 text-sm text-white hover:bg-acao-escura">
             <UploadCloud className="h-4 w-4" /> {upload.isPending ? 'Enviando...' : 'Enviar documento'}
             <input type="file" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) upload.mutate({ file: f, empresaId, tipo }, { onSuccess: () => toast.success('Documento enviado'), onError: (er) => toast.error(er.message) }); }} />
           </label>

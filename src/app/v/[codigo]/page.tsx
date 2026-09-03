@@ -39,17 +39,17 @@ export default async function HotlinkPage({ params }: { params: { codigo: string
   const ehVendedor = destino.tipo === 'VENDEDOR';
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-superficie">
       <CabecalhoMarca logoUrl={empresa?.logo_url} />
 
       {/* Hero com o corte diagonal da marca */}
-      <section className="relative overflow-hidden bg-brand-700">
+      <section className="relative overflow-hidden bg-faixa">
         <div
           className="absolute inset-0 bg-[radial-gradient(120%_120%_at_15%_0%,#2C3E66_0%,#16213D_55%,#0E1730_100%)]"
           aria-hidden
         />
         <div
-          className="absolute inset-x-0 bottom-0 h-16 bg-white"
+          className="absolute inset-x-0 bottom-0 h-16 bg-superficie"
           style={{ clipPath: 'polygon(0 62%, 100% 0, 100% 100%, 0 100%)' }}
           aria-hidden
         />
@@ -68,7 +68,7 @@ export default async function HotlinkPage({ params }: { params: { codigo: string
             </p>
 
             {ehVendedor && (
-              <div className="mt-6 inline-flex items-center gap-2.5 rounded-full bg-white/10 py-2 pl-2 pr-4 ring-1 ring-white/15">
+              <div className="mt-6 inline-flex items-center gap-2.5 rounded-full bg-superficie/10 py-2 pl-2 pr-4 ring-1 ring-white/15">
                 <span className="grid h-8 w-8 place-items-center rounded-full bg-cyan-500 text-[13px] font-bold text-brand-800">
                   {destino.nome.slice(0, 1).toUpperCase()}
                 </span>
@@ -109,7 +109,7 @@ export default async function HotlinkPage({ params }: { params: { codigo: string
             ['Mensalidade so apos aprovacao', 'A cobranca comeca depois que a adesao e aprovada e o veiculo entra na base.'],
             ['Atendimento com gente', 'SAC, assistencia e sinistro com equipe propria — nao e robo.'],
           ].map(([titulo, texto]) => (
-            <div key={titulo} className="rounded-2xl border border-slate-200 bg-white p-4">
+            <div key={titulo} className="rounded-2xl border border-slate-200 bg-superficie p-4">
               <BadgeCheck className="h-5 w-5 text-cyan-600" />
               <p className="mt-2 text-[13.5px] font-bold text-brand-800">{titulo}</p>
               <p className="mt-1 text-[12px] leading-relaxed text-slate-500">{texto}</p>

@@ -787,6 +787,46 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
   Vazio, baixarCsv), `lancamento-modal.tsx` (form em secoes + previa do parcelamento),
   `baixa-modal.tsx`, `contas-financeiro.tsx`, `fluxo-caixa.tsx`, `dre-report.tsx`.
 
+## Tema claro / escuro — arquitetura
+- **A cor do sistema mora em `src/app/globals.css`**, como tokens CSS em tripla `R G B`
+  (`--slate-500: 65 77 97`). O `tailwind.config.ts` os consome via
+  `rgb(var(--slate-500) / <alpha-value>)`, e é o `<alpha-value>` que mantém funcionando os
+  modificadores de opacidade que o código já usa (`bg-black/50`, `text-white/70`).
+- **O tema escuro não repinta tela por tela: ele troca o VALOR dos mesmos tokens.** Por isso as
+  ~800 classes de cor que já existiam viraram tema escuro **sem alterar os call sites**.
+  `text-slate-500` continua sendo "texto secundário" nos dois temas — cinza escuro no claro,
+  cinza claro no escuro. **A escala inteira inverte de papel:** `50..300` (fundo sutil e borda)
+  viram superfícies escuras; `400..900` (texto, do apoio ao título) viram texto claro. O mesmo
+  vale para `brand`.
+- **O que NÃO inverte** (leva texto branco nos dois temas, então tem token próprio):
+  `bg-acao`/`hover:bg-acao-escura` (botão primário — era `bg-brand-600`/`hover:bg-brand-700`) e
+  `bg-faixa` (a faixa navy das páginas públicas e do topo do portal — era `bg-brand-700`).
+  **Não use `bg-brand-600` para botão nem `bg-brand-700` para faixa**: no escuro eles clareiam e
+  o texto branco some.
+- **`bg-white` virou `bg-superficie`** (o card) e `bg-[#eef2f8]` virou `bg-fundo` (o ground).
+  `bg-white` ficou reservado a quem precisa de branco DE VERDADE — a placa da logo.
+- **A logo tem tinta escura**, inclusive a do cliente (`logo_url`), de quem não sabemos a cor:
+  `<LogoSmartCar>` põe sozinha uma **placa clara no tema escuro**. Passe `placaNoEscuro={false}`
+  só quando ela já estiver dentro de uma placa (é o caso do `LogoNaCabine`).
+- **Campo de formulário tem cor na base do CSS** (`@layer base` para `input/select/textarea`):
+  sem isso, campo sem `bg-` próprio herda o estilo nativo, e com `color-scheme: dark` o Chrome o
+  pinta de um cinza amarronzado fora da paleta. Como boa parte dos campos nunca declarou fundo
+  (não precisava no tema claro), a correção certa foi na base, não campo a campo.
+- **Overlay de modal usa `bg-black/50`, nunca `bg-slate-900/50`** — a escala inverte e a cortina
+  ficaria clara.
+- **Estado e persistência:** `src/lib/tema.ts` (puro, testado) + `use-tema.ts` + `<ThemeToggle>`.
+  São **três** estados, não dois: `claro`, `escuro` e `sistema`. Quem nunca escolheu segue o
+  `prefers-color-scheme`; quem clicou tem a escolha gravada no `localStorage` (`scar:tema`) e ela
+  vence o sistema. O botão alterna só entre claro e escuro — um ciclo de três deixaria o usuário
+  perdido.
+- **O `SCRIPT_TEMA_INICIAL` roda no `<head>`, antes da primeira pintura.** Sem ele a tela nasce
+  clara e pisca para escura ao hidratar. Por isso o `<html>` tem `suppressHydrationWarning`: o
+  script escreve a classe `dark` antes do React, e sem isso o React acusaria diferença.
+- **O padrão do produto é o CLARO** — é sistema de trabalho, usado o dia inteiro, e a marca foi
+  desenhada no claro.
+- **Ao criar tela nova:** use os tokens (`bg-superficie`, `bg-fundo`, `text-slate-*`, `bg-acao`)
+  e **não escreva hex cru** — é o mesmo cuidado que o white-label vai exigir.
+
 ## Convenção de CAIXA ALTA nos formulários
 - **Cadastro se escreve em MAIÚSCULAS.** É o que impede a mesma pessoa de virar "Joao da Silva",
   "JOAO DA SILVA" e "joao da silva" em três telas. A regra vale para o sistema inteiro.

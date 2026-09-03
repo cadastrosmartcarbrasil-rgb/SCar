@@ -35,11 +35,11 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 pt-16"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 pt-16"
       onClick={onClose}
     >
       <div
-        className={`w-full ${LARGURA[tamanho]} rounded-xl bg-white shadow-xl`}
+        className={`w-full ${LARGURA[tamanho]} rounded-xl bg-superficie shadow-xl`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">

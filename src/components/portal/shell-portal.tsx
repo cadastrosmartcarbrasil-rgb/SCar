@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Car, CreditCard, LogOut, Receipt, UserRound } from 'lucide-react';
 import { LogoSmartCar } from '@/components/hotlink/marca';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { createClient } from '@/lib/supabase/client';
 
 const ITENS = [
@@ -34,11 +35,12 @@ export function ShellPortal({ nome, logoUrl, children }: {
   }
 
   return (
-    <div className="min-h-screen bg-[#eef2f8] pb-20 md:pb-0">
-      <header className="bg-white">
+    <div className="min-h-screen bg-fundo pb-20 md:pb-0">
+      <header className="bg-superficie">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-3">
           <LogoSmartCar url={logoUrl} className="h-11 w-auto object-contain" />
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             <span className="hidden text-right text-[12px] leading-tight text-slate-500 sm:block">
               <span className="block font-semibold text-slate-800">{nome}</span>
               Area do associado
@@ -53,7 +55,7 @@ export function ShellPortal({ nome, logoUrl, children }: {
         </div>
 
         {/* menu horizontal no desktop */}
-        <nav className="hidden bg-brand-700 md:block">
+        <nav className="hidden bg-faixa md:block">
           <div className="mx-auto flex max-w-4xl gap-1 px-4">
             {ITENS.map((i) => (
               <Link
@@ -71,13 +73,13 @@ export function ShellPortal({ nome, logoUrl, children }: {
             ))}
           </div>
         </nav>
-        <div className="h-1 bg-brand-700 md:hidden" />
+        <div className="h-1 bg-faixa md:hidden" />
       </header>
 
       <main className="mx-auto max-w-4xl px-4 py-5">{children}</main>
 
       {/* barra inferior no celular */}
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-slate-200 bg-white md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-slate-200 bg-superficie md:hidden">
         {ITENS.map((i) => (
           <Link
             key={i.href}

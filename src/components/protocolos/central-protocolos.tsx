@@ -40,7 +40,7 @@ export function CentralProtocolos({ filtroInicial }: { filtroInicial?: FiltroPro
       {/* Filtros */}
       <form
         onSubmit={(e) => { e.preventDefault(); setFiltro((f) => ({ ...f, busca: busca.trim() || null })); }}
-        className="flex flex-wrap items-end gap-3 rounded-2xl border border-slate-200 bg-white p-4"
+        className="flex flex-wrap items-end gap-3 rounded-2xl border border-slate-200 bg-superficie p-4"
       >
         <FormField label="Buscar" className="min-w-[220px] flex-1">
           <div className="relative">
@@ -88,7 +88,7 @@ export function CentralProtocolos({ filtroInicial }: { filtroInicial?: FiltroPro
       </form>
 
       {/* Fila */}
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-superficie">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
@@ -177,7 +177,7 @@ function DetalheProtocolo({ protocolo, onVoltar }: { protocolo: ProtocoloLinha; 
       </button>
 
       {/* Cabecalho */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4">
+      <div className="rounded-2xl border border-slate-200 bg-superficie p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="font-mono text-xs text-slate-400">{protocolo.protocolo}</p>
@@ -239,7 +239,7 @@ function DetalheProtocolo({ protocolo, onVoltar }: { protocolo: ProtocoloLinha; 
       </div>
 
       {/* Historico de interacoes */}
-      <div className="rounded-2xl border border-slate-200 bg-white">
+      <div className="rounded-2xl border border-slate-200 bg-superficie">
         <div className="border-b border-slate-200 px-5 py-3">
           <h3 className="text-sm font-semibold text-slate-900">Historico do atendimento</h3>
         </div>

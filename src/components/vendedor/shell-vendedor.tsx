@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { LogoNaCabine } from '@/components/hotlink/marca';
 import { createClient } from '@/lib/supabase/client';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 const ITENS = [
   { href: '/vendedor', label: 'Painel', icon: LayoutDashboard },
@@ -90,17 +91,20 @@ export function ShellVendedor({ nome, unidade, codigo, logoUrl, children }: {
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
       {/* topo mobile */}
-      <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden">
+      <div className="flex items-center justify-between border-b border-slate-200 bg-superficie px-4 py-3 md:hidden">
         <div className="min-w-0">
           <p className="truncate text-sm font-bold text-brand-700">{nome}</p>
           <p className="truncate text-[11px] text-slate-400">{unidade ?? 'Smart Car Brasil'}</p>
         </div>
+        <div className="flex shrink-0 items-center gap-1">
+        <ThemeToggle />
         <button
           onClick={sair}
           className="flex shrink-0 items-center gap-1 rounded-lg px-2 py-1.5 text-[12px] font-semibold text-slate-500 hover:bg-slate-100 hover:text-rose-600"
         >
           <LogOut className="h-4 w-4" /> Sair
         </button>
+        </div>
       </div>
 
       {/* sidebar desktop */}
@@ -112,7 +116,7 @@ export function ShellVendedor({ nome, unidade, codigo, logoUrl, children }: {
           </p>
         </div>
 
-        <div className="mx-3 mb-3 rounded-xl bg-white/5 px-3 py-2.5">
+        <div className="mx-3 mb-3 rounded-xl bg-superficie/5 px-3 py-2.5">
           <p className="truncate text-[13px] font-semibold text-white">{nome}</p>
           <p className="truncate text-[11px] text-white/50">{unidade ?? 'Smart Car Brasil'}</p>
           {codigo && (
@@ -133,8 +137,8 @@ export function ShellVendedor({ nome, unidade, codigo, logoUrl, children }: {
               href={i.href}
               className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition ${
                 ativo(i.href)
-                  ? 'bg-white/10 font-semibold text-white shadow-[inset_2px_0_0_0_#22A7E4]'
-                  : 'text-white/70 hover:bg-white/5 hover:text-white'
+                  ? 'bg-superficie/10 font-semibold text-white shadow-[inset_2px_0_0_0_#22A7E4]'
+                  : 'text-white/70 hover:bg-superficie/5 hover:text-white'
               }`}
             >
               <i.icon className="h-4 w-4" />
@@ -144,12 +148,12 @@ export function ShellVendedor({ nome, unidade, codigo, logoUrl, children }: {
         </nav>
       </aside>
 
-      <div className="min-w-0 flex-1 bg-[#eef2f8] pb-20 md:pb-0">
+      <div className="min-w-0 flex-1 bg-fundo pb-20 md:pb-0">
         <div className="mx-auto max-w-5xl p-4 md:p-8">{children}</div>
       </div>
 
       {/* barra inferior mobile */}
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-slate-200 bg-white md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-slate-200 bg-superficie md:hidden">
         {ITENS.map((i) => (
           <Link
             key={i.href}

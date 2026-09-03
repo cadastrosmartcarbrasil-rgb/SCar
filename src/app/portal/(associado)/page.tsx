@@ -68,7 +68,7 @@ export default function PortalVeiculosPage() {
 
         {isLoading ? (
           <div className="space-y-2">
-            {[0, 1].map((i) => <div key={i} className="h-24 animate-pulse rounded-2xl bg-white" />)}
+            {[0, 1].map((i) => <div key={i} className="h-24 animate-pulse rounded-2xl bg-superficie" />)}
           </div>
         ) : (veiculos ?? []).length === 0 ? (
           <Card>
@@ -82,7 +82,7 @@ export default function PortalVeiculosPage() {
         ) : (
           <ul className="space-y-2">
             {(veiculos ?? []).map((v) => (
-              <li key={v.id} className="rounded-2xl border border-slate-200/80 bg-white p-4">
+              <li key={v.id} className="rounded-2xl border border-slate-200/80 bg-superficie p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="font-mono text-[17px] font-bold uppercase tracking-wider text-brand-800">

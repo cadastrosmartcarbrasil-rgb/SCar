@@ -64,7 +64,7 @@ export default function LeadDetailPage() {
       </Link>
 
       {/* Cabecalho */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4">
+      <div className="rounded-2xl border border-slate-200 bg-superficie p-4">
         <div className="flex items-start justify-between gap-2">
           <h1 className="text-lg font-semibold text-slate-900">{lead.nome}</h1>
           <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_LEAD[lead.status].cor}`}>
@@ -86,7 +86,7 @@ export default function LeadDetailPage() {
       </div>
 
       {/* Esteira */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4">
+      <div className="rounded-2xl border border-slate-200 bg-superficie p-4">
         <p className="mb-3 text-xs font-medium uppercase text-slate-400">Esteira</p>
         <ol className="flex items-center justify-between gap-1">
           {ESTEIRA.map((s) => {
@@ -95,7 +95,7 @@ export default function LeadDetailPage() {
             const done = atual >= idx && lead.status !== 'PERDIDO';
             return (
               <li key={s} className="flex flex-1 flex-col items-center gap-1 text-center">
-                <span className={`h-2.5 w-2.5 rounded-full ${done ? 'bg-brand-600' : 'bg-slate-200'}`} />
+                <span className={`h-2.5 w-2.5 rounded-full ${done ? 'bg-acao' : 'bg-slate-200'}`} />
                 <span className={`text-[9px] leading-tight ${done ? 'text-brand-700' : 'text-slate-400'}`}>{STATUS_LEAD[s].curto}</span>
               </li>
             );
@@ -160,7 +160,7 @@ export default function LeadDetailPage() {
           {podeAuditar ? (
             <div className="mt-3 space-y-2">
               {faltando.length > 0 && (
-                <p className="rounded-lg bg-white/70 px-3 py-2 text-[11.5px] leading-relaxed text-amber-900">
+                <p className="rounded-lg bg-superficie/70 px-3 py-2 text-[11.5px] leading-relaxed text-amber-900">
                   <b>Faltam {faltando.length} item(ns)</b> para o veiculo poder entrar na base:{' '}
                   {faltando.slice(0, 6).join(', ')}
                   {faltando.length > 6 && ` e mais ${faltando.length - 6}`}.
@@ -207,7 +207,7 @@ export default function LeadDetailPage() {
       )}
 
       {/* Cotacoes */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4">
+      <div className="rounded-2xl border border-slate-200 bg-superficie p-4">
         <p className="mb-2 text-xs font-medium uppercase text-slate-400">Cotacoes</p>
         {(cotacoes ?? []).length === 0 ? (
           <p className="text-sm text-slate-400">Nenhuma cotacao gerada.</p>
@@ -255,7 +255,7 @@ export default function LeadDetailPage() {
                     {podeEditarCotacao(lead!.status) && (
                       <button
                         onClick={() => setEditando(c)}
-                        className="inline-flex items-center gap-1 rounded-lg bg-brand-600 px-2.5 py-1.5 text-xs font-medium text-white"
+                        className="inline-flex items-center gap-1 rounded-lg bg-acao px-2.5 py-1.5 text-xs font-medium text-white"
                       >
                         <Pencil className="h-3.5 w-3.5" /> Editar
                       </button>
@@ -271,7 +271,7 @@ export default function LeadDetailPage() {
 
       {/* Historico */}
       {(historico ?? []).length > 0 && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+        <div className="rounded-2xl border border-slate-200 bg-superficie p-4">
           <p className="mb-2 text-xs font-medium uppercase text-slate-400">Historico</p>
           <ul className="space-y-1.5 text-xs text-slate-500">
             {(historico ?? []).map((h) => (

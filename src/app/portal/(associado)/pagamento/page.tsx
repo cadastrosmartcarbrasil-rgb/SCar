@@ -64,12 +64,12 @@ export default function PortalPagamentoPage() {
       </header>
 
       {isLoading ? (
-        <div className="h-24 animate-pulse rounded-2xl bg-white" />
+        <div className="h-24 animate-pulse rounded-2xl bg-superficie" />
       ) : (cartoes ?? []).length > 0 ? (
         <ul className="space-y-2">
           {(cartoes ?? []).map((c) => (
-            <li key={c.id} className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white p-4">
-              <span className="grid h-11 w-14 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-brand-600 to-brand-800 text-[10px] font-bold uppercase tracking-wide text-white">
+            <li key={c.id} className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-superficie p-4">
+              <span className="grid h-11 w-14 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-acao to-faixa text-[10px] font-bold uppercase tracking-wide text-white">
                 {c.bandeira ?? 'cartao'}
               </span>
               <div className="min-w-0 flex-1">
@@ -118,7 +118,7 @@ export default function PortalPagamentoPage() {
       {!mostrarForm ? (
         <button
           onClick={() => setMostrarForm(true)}
-          className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-brand-600 px-4 py-3 text-[14px] font-semibold text-white transition hover:bg-brand-700"
+          className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-acao px-4 py-3 text-[14px] font-semibold text-white transition hover:bg-acao-escura"
         >
           <CreditCard className="h-4 w-4" />
           {(cartoes ?? []).length > 0 ? 'Trocar o cartao' : 'Cadastrar cartao'}
@@ -165,7 +165,7 @@ export default function PortalPagamentoPage() {
                 </button>
                 <button
                   type="submit" disabled={!!problema || enviando}
-                  className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2.5 text-[13px] font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-acao px-4 py-2.5 text-[13px] font-semibold text-white transition hover:bg-acao-escura disabled:opacity-50"
                 >
                   {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
                   Salvar cartao

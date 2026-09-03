@@ -83,7 +83,7 @@ export function DashboardCobranca() {
           cor={Number(inad ?? 0) > 10 ? 'text-rose-700' : 'text-amber-700'}
           carregando={carregandoKpis}
         />
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+        <div className="rounded-2xl border border-slate-200 bg-superficie p-4">
           <div className="flex items-center justify-between">
             <p className="text-xs uppercase tracking-wide text-slate-400">Boletos a vencer</p>
             <CalendarClock className="h-4 w-4 text-cyan-600" />
@@ -106,7 +106,7 @@ export function DashboardCobranca() {
       </div>
 
       {/* ------------------------------------------------ Filtros avancados */}
-      <form onSubmit={aplicarBusca} className="rounded-2xl border border-slate-200 bg-white p-4">
+      <form onSubmit={aplicarBusca} className="rounded-2xl border border-slate-200 bg-superficie p-4">
         <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
           <FormField label="Vencimento de">
             <Input
@@ -179,7 +179,7 @@ export function DashboardCobranca() {
       </form>
 
       {/* ------------------------------------------------ Listagem */}
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-superficie">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
@@ -260,7 +260,7 @@ function Kpi({
   carregando?: boolean;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+    <div className="rounded-2xl border border-slate-200 bg-superficie p-4">
       <div className="flex items-center justify-between">
         <p className="text-xs uppercase tracking-wide text-slate-400">{titulo}</p>
         <Icone className={`h-4 w-4 ${cor}`} />

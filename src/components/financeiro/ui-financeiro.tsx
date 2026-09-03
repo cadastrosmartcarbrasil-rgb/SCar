@@ -42,7 +42,7 @@ export function Indicador({
   carregando?: boolean;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(20,33,61,0.04),0_10px_26px_-16px_rgba(20,33,61,0.18)]">
+    <div className="rounded-2xl border border-slate-200/80 bg-superficie p-4 shadow-[0_1px_2px_rgba(20,33,61,0.04),0_10px_26px_-16px_rgba(20,33,61,0.18)]">
       <div className="flex items-start justify-between gap-2">
         <p className="text-[11.5px] font-semibold uppercase tracking-wide text-slate-500">{titulo}</p>
         {Icon && (
@@ -133,7 +133,7 @@ export function FiltroPeriodo({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-end gap-x-5 gap-y-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(20,33,61,0.04)]">
+    <div className="flex flex-wrap items-end gap-x-5 gap-y-3 rounded-2xl border border-slate-200/80 bg-superficie p-4 shadow-[0_1px_2px_rgba(20,33,61,0.04)]">
       <div className="flex flex-wrap gap-1">
         {PRESETS.map((p) => {
           const alvo = periodoPreset(p.chave);
@@ -144,7 +144,7 @@ export function FiltroPeriodo({
               type="button"
               onClick={() => onChange(alvo)}
               className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
-                ativo ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                ativo ? 'bg-acao text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
               {p.rotulo}

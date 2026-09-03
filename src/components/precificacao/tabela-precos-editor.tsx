@@ -206,7 +206,7 @@ export function TabelaPrecosEditor() {
       {!tipoId ? (
         <p className="text-sm text-slate-400">Selecione um tipo de veiculo para editar a matriz de precos.</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <div className="overflow-x-auto rounded-lg border border-slate-200 bg-superficie">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">

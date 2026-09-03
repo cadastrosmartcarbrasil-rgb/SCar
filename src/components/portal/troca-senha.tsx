@@ -46,16 +46,16 @@ export function TrocaSenhaObrigatoria({ nome, logoUrl }: {
   }
 
   return (
-    <main className="min-h-screen bg-[#eef2f8]">
-      <div className="bg-white">
+    <main className="min-h-screen bg-fundo">
+      <div className="bg-superficie">
         <div className="mx-auto flex max-w-4xl justify-center px-4 py-5">
           <LogoSmartCar url={logoUrl} className="h-14 w-auto object-contain" />
         </div>
-        <div className="h-1 bg-brand-700" />
+        <div className="h-1 bg-faixa" />
       </div>
 
       <div className="mx-auto max-w-md px-4 py-10">
-        <div className="rounded-2xl bg-white p-6 shadow-[0_10px_40px_-12px_rgba(20,33,61,0.25)] ring-1 ring-slate-200/70">
+        <div className="rounded-2xl bg-superficie p-6 shadow-[0_10px_40px_-12px_rgba(20,33,61,0.25)] ring-1 ring-slate-200/70">
           <span className="grid h-12 w-12 place-items-center rounded-xl bg-cyan-50 text-cyan-600">
             <ShieldCheck className="h-6 w-6" />
           </span>
@@ -102,7 +102,7 @@ export function TrocaSenhaObrigatoria({ nome, logoUrl }: {
 
             <button
               type="submit" disabled={!podeEnviar || enviando}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-3 text-[14px] font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-acao px-4 py-3 text-[14px] font-semibold text-white transition hover:bg-acao-escura disabled:opacity-50"
             >
               {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
               Salvar e entrar

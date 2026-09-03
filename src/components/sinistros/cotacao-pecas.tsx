@@ -90,7 +90,7 @@ export function CotacaoPecas({ eventoId, tipoReparo }: { eventoId: string; tipoR
         />
         <button
           onClick={() => criarCotacao.mutate()}
-          className="flex items-center gap-1 rounded-md bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700"
+          className="flex items-center gap-1 rounded-md bg-acao px-3 py-1.5 text-sm text-white hover:bg-acao-escura"
         >
           <Plus className="h-4 w-4" /> Nova cotacao
         </button>
@@ -201,7 +201,7 @@ function CotacaoCard({
             setQtd(1);
             setUnit(0);
           }}
-          className="rounded bg-slate-800 px-2 text-white"
+          className="rounded bg-acao px-2 text-white"
         >
           <Plus className="h-4 w-4" />
         </button>

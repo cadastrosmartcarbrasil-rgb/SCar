@@ -190,7 +190,7 @@ export function TrajetoAcionamento({
         <div className="space-y-2">
           <MapaRota origem={coordOrigem} destino={coordDestino} pontos={rota?.pontos} altura={300} />
 
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-superficie px-3 py-2">
             <div>
               <p className="text-[11px] uppercase tracking-wide text-slate-400">Distancia da rota</p>
               <p className="tnum text-lg font-semibold text-slate-800">

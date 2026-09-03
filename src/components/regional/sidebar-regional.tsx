@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { LogoNaCabine } from '@/components/hotlink/marca';
 import { createClient } from '@/lib/supabase/client';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 const ITENS = [
   { href: '/regional', label: 'Painel', icon: LayoutDashboard },
@@ -43,9 +44,10 @@ export function SidebarRegional({ nome, unidade, codigo, papel, logoUrl }: {
 
   return (
     <>
-      <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden">
+      <div className="flex items-center justify-between border-b border-slate-200 bg-superficie px-4 py-3 md:hidden">
         <span className="text-sm font-bold text-brand-700">{unidade}</span>
         <div className="flex items-center gap-1">
+          <ThemeToggle />
           <button
             onClick={sair}
             className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[12px] font-semibold text-slate-500 hover:bg-slate-100 hover:text-rose-600"
@@ -66,7 +68,7 @@ export function SidebarRegional({ nome, unidade, codigo, papel, logoUrl }: {
           </p>
         </div>
 
-        <div className="mx-3 mb-3 rounded-xl bg-white/5 px-3 py-2.5">
+        <div className="mx-3 mb-3 rounded-xl bg-superficie/5 px-3 py-2.5">
           <p className="truncate text-[13px] font-semibold text-white">{unidade}</p>
           <p className="truncate text-[11px] text-white/50">{nome}</p>
           {codigo && (
@@ -95,8 +97,8 @@ export function SidebarRegional({ nome, unidade, codigo, papel, logoUrl }: {
                 onClick={() => setAberto(false)}
                 className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition ${
                   ativo
-                    ? 'bg-white/10 font-semibold text-white shadow-[inset_2px_0_0_0_#22A7E4]'
-                    : 'text-white/70 hover:bg-white/5 hover:text-white'
+                    ? 'bg-superficie/10 font-semibold text-white shadow-[inset_2px_0_0_0_#22A7E4]'
+                    : 'text-white/70 hover:bg-superficie/5 hover:text-white'
                 }`}
               >
                 <i.icon className="h-4 w-4" />
@@ -108,7 +110,7 @@ export function SidebarRegional({ nome, unidade, codigo, papel, logoUrl }: {
             <Link
               href="/dashboard"
               onClick={() => setAberto(false)}
-              className="mt-2 flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-white/50 transition hover:bg-white/5 hover:text-white"
+              className="mt-2 flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-white/50 transition hover:bg-superficie/5 hover:text-white"
             >
               <Building2 className="h-4 w-4" /> Sistema da matriz
             </Link>

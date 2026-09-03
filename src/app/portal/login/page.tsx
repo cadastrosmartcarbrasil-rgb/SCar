@@ -41,18 +41,18 @@ export default function PortalLoginPage() {
   }
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-superficie">
       <div className="mx-auto flex max-w-5xl justify-center px-4 py-6">
         <LogoSmartCar url={null} className="h-16 w-auto object-contain sm:h-20" />
       </div>
 
-      <section className="relative overflow-hidden bg-brand-700">
+      <section className="relative overflow-hidden bg-faixa">
         <div
           className="absolute inset-0 bg-[radial-gradient(120%_120%_at_15%_0%,#2C3E66_0%,#16213D_55%,#0E1730_100%)]"
           aria-hidden
         />
         <div
-          className="absolute inset-x-0 bottom-0 h-14 bg-white"
+          className="absolute inset-x-0 bottom-0 h-14 bg-superficie"
           style={{ clipPath: 'polygon(0 62%, 100% 0, 100% 100%, 0 100%)' }}
           aria-hidden
         />
@@ -66,7 +66,7 @@ export default function PortalLoginPage() {
 
           <form
             onSubmit={onSubmit}
-            className="mt-7 space-y-3 rounded-2xl bg-white p-6 shadow-[0_10px_40px_-12px_rgba(0,0,0,0.5)]"
+            className="mt-7 space-y-3 rounded-2xl bg-superficie p-6 shadow-[0_10px_40px_-12px_rgba(0,0,0,0.5)]"
           >
             <label className="block">
               <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
@@ -103,7 +103,7 @@ export default function PortalLoginPage() {
             <button
               type="submit"
               disabled={enviando || digitos.length < 11 || !senha}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-3 text-[14px] font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-acao px-4 py-3 text-[14px] font-semibold text-white transition hover:bg-acao-escura disabled:opacity-50"
             >
               {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
               Entrar

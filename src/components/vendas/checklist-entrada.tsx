@@ -23,7 +23,7 @@ export function ChecklistEntrada({ itens }: { itens: ItemChecklistLead[] }) {
 
   return (
     <div className="space-y-3">
-      <div className="rounded-2xl border border-slate-200/80 bg-white p-4">
+      <div className="rounded-2xl border border-slate-200/80 bg-superficie p-4">
         <div className="flex items-center justify-between gap-3">
           <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-800">
             <ShieldCheck className={`h-4 w-4 ${completo ? 'text-emerald-600' : 'text-slate-400'}`} />
@@ -51,7 +51,7 @@ export function ChecklistEntrada({ itens }: { itens: ItemChecklistLead[] }) {
 
       <div className="grid gap-3 sm:grid-cols-2">
         {grupos.map((g) => (
-          <div key={g.grupo} className="rounded-2xl border border-slate-200/80 bg-white p-3">
+          <div key={g.grupo} className="rounded-2xl border border-slate-200/80 bg-superficie p-3">
             <div className="mb-2 flex items-center justify-between">
               <span className={`rounded-lg px-2 py-0.5 text-[11px] font-semibold ${ICONE_GRUPO[g.grupo] ?? 'bg-slate-100 text-slate-600'}`}>
                 {g.grupo}
