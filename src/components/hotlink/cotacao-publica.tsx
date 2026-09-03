@@ -10,7 +10,9 @@ import { formatarMoedaBR } from '@/lib/money';
 import { formatarDocumento } from '@/lib/documento';
 import { normalizarPlaca } from '@/lib/placa';
 import type { PlanoCotado, TipoVeiculoPublico } from '@/lib/venda-publica';
-import { ORDEM_ETAPAS, mensagemDeErro, placaCompleta, podeAvancar } from '@/lib/venda-publica';
+import {
+  ORDEM_ETAPAS, linkWhatsApp, mensagemDaProposta, mensagemDeErro, placaCompleta, podeAvancar,
+} from '@/lib/venda-publica';
 
 const dinheiro = (v: number) => `R$ ${formatarMoedaBR(v)}`;
 
@@ -553,8 +555,15 @@ function Linha({ rotulo, valor, destaque }: { rotulo: string; valor: string; des
 /**
  * Link publico da proposta. Sai pronto no fim da negociacao — o cliente abre
  * na hora, salva no celular e reabre quando quiser, sem depender de e-mail.
+ *
+ * `celular` muda quem recebe: na pagina publica nao ha destinatario (quem
+ * compartilha e o proprio visitante, e o WhatsApp abre a lista de contatos);
+ * no CRM e no portal do vendedor sabemos o numero do lead, entao a conversa
+ * ja abre com ele.
  */
-export function LinkDaProposta({ token, compacto }: { token: string; compacto?: boolean }) {
+export function LinkDaProposta({ token, compacto, celular, nome }: {
+  token: string; compacto?: boolean; celular?: string | null; nome?: string | null;
+}) {
   const [copiado, setCopiado] = useState(false);
   const url = typeof window === 'undefined' ? '' : `${window.location.origin}/cotacao/${token}`;
 
@@ -586,7 +595,9 @@ export function LinkDaProposta({ token, compacto }: { token: string; compacto?: 
           <Copy className="h-3.5 w-3.5" /> {copiado ? 'Link copiado!' : 'Copiar link'}
         </button>
         <a
-          href={`https://wa.me/?text=${encodeURIComponent(`Minha proposta Smart Car Brasil: ${url}`)}`}
+          href={celular
+            ? linkWhatsApp(mensagemDaProposta(url, nome), celular)
+            : `https://wa.me/?text=${encodeURIComponent(`Minha proposta Smart Car Brasil: ${url}`)}`}
           target="_blank"
           rel="noreferrer"
           className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[12px] font-semibold text-emerald-700 transition hover:bg-emerald-100"

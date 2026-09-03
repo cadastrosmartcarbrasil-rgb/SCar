@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import {
-  ArrowLeft, BadgeCheck, Calculator, Car, Loader2, Sparkles, User,
+  AlertTriangle, ArrowLeft, BadgeCheck, Calculator, Car, ExternalLink, Loader2, Sparkles, User,
 } from 'lucide-react';
 import { Input, Select, MoneyInput } from '@/components/ui/field';
 import { Button } from '@/components/ui/button';
@@ -12,8 +12,11 @@ import { FipeConsulta } from '@/components/fipe/fipe-consulta';
 import { useFipePorPlaca } from '@/hooks/use-fipe';
 import { useTiposVeiculo, useProdutos, useCotasParticipacao } from '@/hooks/use-precificacao';
 import {
-  useCotacaoComparativa, useProdutosDoPlano, useSalvarCotacao, useSaveLead, type PlanoComparado,
+  useAvisoDeCaptura, useCotacaoComparativa, useProdutosDoPlano, useSalvarCotacao, useSaveLead,
+  type PlanoComparado,
 } from '@/hooks/use-vendas';
+import { avisoDeCaptura } from '@/lib/atribuicao';
+import { formatarDocumento, validarDocumento } from '@/lib/documento';
 import { avulsosParaCotacao, separarOpcionais } from '@/lib/vistoria';
 import { placaCompleta, tipoVeiculoSugerido } from '@/lib/venda-publica';
 import { normalizarPlaca } from '@/lib/placa';
@@ -73,6 +76,13 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
   const [nome, setNome] = useState('');
   const [celular, setCelular] = useState('');
   const [email, setEmail] = useState('');
+  const [cpfCnpj, setCpfCnpj] = useState('');
+
+  // Esta pessoa ja e conhecida da casa? A checagem roda com o que ja foi
+  // digitado (placa, depois celular/CPF) e NAO trava nada: quem esta com o
+  // cliente na linha continua cotando — mesma escolha do 0043.
+  const { data: classificacao } = useAvisoDeCaptura({ celular, cpfCnpj, placa });
+  const aviso = avisoDeCaptura(classificacao);
 
   // Um preco por plano, recalculado sozinho a cada mudanca de veiculo/opcional.
   const comparativo = useCotacaoComparativa({
@@ -145,11 +155,14 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
     if (!escolhido) return toast.error('Escolha o plano da proposta');
     if (!nome.trim()) return toast.error('Informe o nome do lead');
     if (celular.replace(/\D/g, '').length < 10) return toast.error('Informe um celular valido');
+    // CPF e opcional na captura; digitado errado, nao.
+    if (docPreenchido && !docValido) return toast.error('CPF/CNPJ invalido');
     try {
       const lead = await criar({
         nome: nome.trim(),
         celular: celular.replace(/\D/g, ''),
         email: email.trim() || null,
+        cpf_cnpj: cpfCnpj.replace(/\D/g, '') || null,
         placa: placa ? normalizarPlaca(placa) : null,
         tipo_veiculo_id: tipoVeiculoId,
         marca: marca || null,
@@ -177,6 +190,8 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
     }
   }
 
+  const docPreenchido = cpfCnpj.length >= 11;
+  const docValido = docPreenchido && validarDocumento(cpfCnpj, cpfCnpj.length > 11 ? 'PJ' : 'PF');
   const salvando = salvarLead.isPending || salvarCotacao.isPending;
 
   return (
@@ -185,6 +200,28 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
         <ArrowLeft className="h-4 w-4" /> {voltarPara.rotulo}
       </Link>
       <h1 className="text-xl font-semibold text-slate-900">Nova cotacao</h1>
+
+      {/* Aviso de duplicidade — informa, nunca bloqueia */}
+      {aviso && (
+        <div className={`flex items-start gap-2 rounded-2xl px-3.5 py-3 text-[12.5px] ring-1 ring-inset ${aviso.classe}`}>
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold">{aviso.titulo}</p>
+            <p className="mt-0.5 leading-snug opacity-90">{aviso.texto}</p>
+            {aviso.linkDoLead && (
+              <Link
+                href={aviso.linkDoLead}
+                className="mt-1 inline-flex items-center gap-1 text-[11.5px] font-semibold underline"
+              >
+                Abrir o atendimento que ja existe <ExternalLink className="h-3 w-3" />
+              </Link>
+            )}
+            <p className="mt-1 text-[11px] opacity-70">
+              Isto e um aviso: voce pode seguir com a cotacao normalmente.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* 1. Veiculo — a conversa comeca na placa */}
       <Secao icon={Car} titulo="1. Veiculo">
@@ -369,10 +406,20 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
             <Input value={celular} onChange={(e) => setCelular(maskCelular(e.target.value))}
               inputMode="tel" placeholder="(11) 91234-5678" />
           </Campo>
-          <Campo label="E-mail">
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="opcional" />
+          <Campo label="CPF / CNPJ">
+            <Input
+              value={formatarDocumento(cpfCnpj, cpfCnpj.length > 11 ? 'PJ' : 'PF')}
+              onChange={(e) => setCpfCnpj(e.target.value.replace(/\D/g, '').slice(0, 14))}
+              inputMode="numeric" placeholder="Ajuda a achar duplicidade"
+            />
+            {docPreenchido && !docValido && (
+              <p className="mt-0.5 text-[11px] text-rose-500">CPF/CNPJ invalido</p>
+            )}
           </Campo>
         </div>
+        <Campo label="E-mail">
+          <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="opcional" />
+        </Campo>
         <div>
           <p className="mb-1 text-xs font-medium uppercase text-slate-400">Envio ao cliente</p>
           <div className="flex gap-2">

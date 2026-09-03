@@ -110,3 +110,32 @@ export function placaCompleta(placa: string): boolean {
   const p = (placa ?? '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
   return /^[A-Z]{3}[0-9][0-9A-Z][0-9]{2}$/.test(p);
 }
+
+// ---------------------------------------------------------------------------
+// Enviar a proposta pelo WhatsApp
+//
+// O link publico ja existia; faltava o caminho ate o cliente. Na pagina
+// publica quem manda e o proprio visitante (sem destinatario, o WhatsApp abre
+// a lista de contatos); no CRM sabemos o celular do lead, entao a conversa
+// abre ja com ele.
+// ---------------------------------------------------------------------------
+
+/** Celular em formato wa.me (Brasil). `null` quando nao da para discar. */
+export function numeroWhatsApp(celular?: string | null): string | null {
+  const d = (celular ?? '').replace(/\D/g, '').replace(/^0+/, '');
+  if (d.length < 10) return null;                    // sem DDD nao ha para onde ligar
+  const semDdi = d.startsWith('55') && d.length > 11 ? d.slice(2) : d;
+  if (semDdi.length < 10 || semDdi.length > 11) return null;
+  return `55${semDdi}`;
+}
+
+export function mensagemDaProposta(url: string, nome?: string | null): string {
+  const primeiro = (nome ?? '').trim().split(/\s+/)[0];
+  const ola = primeiro ? `Ola, ${primeiro}! ` : '';
+  return `${ola}Segue a sua proposta da Smart Car Brasil: ${url}`;
+}
+
+export function linkWhatsApp(texto: string, celular?: string | null): string {
+  const numero = numeroWhatsApp(celular);
+  return `https://wa.me/${numero ?? ''}?text=${encodeURIComponent(texto)}`;
+}

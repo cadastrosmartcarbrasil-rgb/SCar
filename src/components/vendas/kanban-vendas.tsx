@@ -5,7 +5,9 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { Car, Phone, Lock, Percent, GripVertical, AlarmClock, Hourglass } from 'lucide-react';
 import { useLeadsKanban, useMoverLead } from '@/hooks/use-vendas';
-import { COLUNAS_KANBAN, colunaDoLead, podeArrastar, podeSoltarEm, exigeMotivo, STATUS_LEAD } from '@/lib/crm';
+import {
+  COLUNAS_KANBAN, colunaDoLead, podeArrastar, podeSoltarEm, exigeMotivo, leadCasaComBusca, STATUS_LEAD,
+} from '@/lib/crm';
 import { rotuloParado, rotuloRetorno, riscoDevolucao, SELO_AGENDA, situacaoAgenda } from '@/lib/agenda';
 import { formatCurrency } from '@/lib/utils';
 import { ModalPerda } from './modal-perda';
@@ -14,8 +16,11 @@ import type { LeadKanban, StatusKanban } from '@/lib/database.types';
 // Quadro Kanban do funil de vendas com drag-and-drop nativo (HTML5), sem
 // dependencia externa. O drop chama `mover_lead_status`, que valida a transicao
 // no banco e grava a trilha.
-export function KanbanVendas() {
-  const { data: leads, isLoading } = useLeadsKanban();
+export function KanbanVendas({ busca, consultorId }: { busca?: string; consultorId?: string | null } = {}) {
+  // O dono do lead filtra no banco (a RPC ja aceita o consultor); a busca
+  // filtra o que ja esta na tela, para responder a cada tecla sem refazer a
+  // consulta. Ver o comentario em `filtroBuscaLeads`.
+  const { data: leads, isLoading } = useLeadsKanban({ consultorId: consultorId ?? null });
   const mover = useMoverLead();
   const [arrastando, setArrastando] = useState<LeadKanban | null>(null);
   const [sobre, setSobre] = useState<StatusKanban | null>(null);
@@ -24,12 +29,16 @@ export function KanbanVendas() {
   const porColuna = useMemo(() => {
     const mapa = new Map<StatusKanban, LeadKanban[]>();
     COLUNAS_KANBAN.forEach((c) => mapa.set(c.id, []));
-    (leads ?? []).forEach((l) => {
-      const col = colunaDoLead(l.status);
-      mapa.get(col)?.push(l);
-    });
+    (leads ?? [])
+      .filter((l) => leadCasaComBusca(l, busca ?? ''))
+      .forEach((l) => {
+        const col = colunaDoLead(l.status);
+        mapa.get(col)?.push(l);
+      });
     return mapa;
-  }, [leads]);
+  }, [leads, busca]);
+
+  const emTela = [...porColuna.values()].reduce((n, l) => n + l.length, 0);
 
   function soltar(destino: StatusKanban) {
     const lead = arrastando;
@@ -55,6 +64,12 @@ export function KanbanVendas() {
 
   return (
     <>
+      {!isLoading && busca && emTela === 0 && (
+        <p className="rounded-2xl border border-dashed border-slate-200 py-6 text-center text-sm text-slate-400">
+          Nenhum lead do quadro casa com &quot;{busca}&quot;.
+        </p>
+      )}
+
       <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 md:mx-0 md:px-0">
         {COLUNAS_KANBAN.map((coluna) => {
           const itens = porColuna.get(coluna.id) ?? [];
@@ -84,7 +99,7 @@ export function KanbanVendas() {
                 {isLoading && <p className="px-1 text-xs text-slate-400">Carregando...</p>}
                 {!isLoading && itens.length === 0 && (
                   <p className="rounded-xl border border-dashed border-slate-200 px-2 py-6 text-center text-xs text-slate-400">
-                    Arraste um lead para ca
+                    {busca ? 'Nada aqui para a busca' : 'Arraste um lead para ca'}
                   </p>
                 )}
                 {itens.map((l) => {

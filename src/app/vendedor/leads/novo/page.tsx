@@ -27,6 +27,7 @@ export default function NovoLeadVendedorPage() {
     const { error: erroFicha } = await supabase
       .from('leads')
       .update({
+        cpf_cnpj: d.cpf_cnpj ?? null,
         tipo_veiculo_id: d.tipo_veiculo_id ?? null,
         marca: d.marca ?? null,
         modelo: d.modelo ?? null,

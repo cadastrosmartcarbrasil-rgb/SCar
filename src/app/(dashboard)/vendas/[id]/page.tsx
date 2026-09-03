@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import {
   ArrowLeft, Phone, Mail, Car, Copy, ChevronLeft, ChevronRight, CheckCircle2, XCircle, ShieldCheck,
-  Loader2, ExternalLink, Pencil, Percent, RotateCcw,
+  Loader2, ExternalLink, Handshake, MessageCircle, Pencil, Percent, RotateCcw,
 } from 'lucide-react';
 import { EditarCotacao } from '@/components/vendas/editar-cotacao';
 import {
@@ -22,6 +22,8 @@ import { FechamentoVenda } from '@/components/vendas/fechamento-venda';
 import { ChecklistEntrada } from '@/components/vendas/checklist-entrada';
 import { ContatosLead } from '@/components/vendas/contatos-lead';
 import { ModalPerda } from '@/components/vendas/modal-perda';
+import { AceitePresencial } from '@/components/vendas/aceite-presencial';
+import { linkWhatsApp, mensagemDaProposta } from '@/lib/venda-publica';
 import { useChecklistLead } from '@/hooks/use-vendas';
 import { pendencias } from '@/lib/vendas';
 
@@ -39,6 +41,7 @@ export default function LeadDetailPage() {
   const [cpf, setCpf] = useState('');
   const [editando, setEditando] = useState<CotacoesRow | null>(null);
   const [perdendo, setPerdendo] = useState(false);
+  const [colhendoAceite, setColhendoAceite] = useState<CotacoesRow | null>(null);
 
   if (isLoading) return <p className="py-10 text-center text-sm text-slate-400">Carregando...</p>;
   if (!lead) return <p className="py-10 text-center text-sm text-slate-400">Lead nao encontrado.</p>;
@@ -254,12 +257,29 @@ export default function LeadDetailPage() {
                     <a href={link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs font-medium text-slate-600">
                       <ExternalLink className="h-3.5 w-3.5" /> Abrir
                     </a>
+                    {/* Mandar a proposta direto para o celular do lead */}
+                    <a
+                      href={linkWhatsApp(mensagemDaProposta(link, lead.nome), lead.celular)}
+                      target="_blank" rel="noreferrer"
+                      className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100"
+                    >
+                      <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+                    </a>
                     {podeEditarCotacao(lead!.status) && (
                       <button
                         onClick={() => setEditando(c)}
                         className="inline-flex items-center gap-1 rounded-lg bg-acao px-2.5 py-1.5 text-xs font-medium text-white"
                       >
                         <Pencil className="h-3.5 w-3.5" /> Editar
+                      </button>
+                    )}
+                    {/* Aceite com o cliente na frente: sem depender do celular dele */}
+                    {podeEditarCotacao(lead!.status) && !lead.aceite_em && (
+                      <button
+                        onClick={() => setColhendoAceite(c)}
+                        className="inline-flex items-center gap-1 rounded-lg bg-cyan-500 px-2.5 py-1.5 text-xs font-semibold text-navy hover:bg-cyan-400"
+                      >
+                        <Handshake className="h-3.5 w-3.5" /> Colher aceite
                       </button>
                     )}
                   </div>
@@ -277,6 +297,10 @@ export default function LeadDetailPage() {
 
       {/* Perder exige motivo — mesma janela do Kanban */}
       {perdendo && <ModalPerda lead={lead} onClose={() => setPerdendo(false)} />}
+
+      {colhendoAceite && (
+        <AceitePresencial lead={lead} cotacao={colhendoAceite} onClose={() => setColhendoAceite(null)} />
+      )}
     </div>
   );
 }

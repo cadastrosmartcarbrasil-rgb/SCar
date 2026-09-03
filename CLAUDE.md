@@ -3,7 +3,7 @@
 > Memória do projeto. Leia isto no início de cada sessão em vez de varrer o repositório inteiro.
 > Mantenha este arquivo atualizado ao adicionar módulos/migrations (é barato e faz o projeto andar rápido).
 
-## Estado atual (retomar aqui) — atualizado ao fim da fase 0032→0045
+## Estado atual (retomar aqui) — atualizado ao fim da fase 0032→0046
 
 **Um único projeto, um único repositório: `cadastrosmartcarbrasil-rgb/scar`** (no GitHub o nome
 aparece como `SCar`). Trabalho e deploy acontecem no branch **`claude/claude-md-opcao-x-98kfj5`**;
@@ -17,9 +17,14 @@ o de trabalho; esse default morto já causou um dia inteiro de trabalho no branc
 - **Último commit desta fase:** `a468ead`.
 - **A migration `0044` JÁ FOI APLICADA em produção** e o Portal do Associado está no ar,
   conferido pelo usuário. As migrations `0001`..`0044` estão todas aplicadas.
-- **`0045_agenda_vendas` é NOVA e ainda NÃO foi aplicada em produção** — rodar no SQL Editor do
-  Supabase ANTES do `docker compose up -d --build`, senão a tela de vendas quebra (o Kanban e a
-  agenda chamam RPCs que só existem depois dela).
+- **`0045_agenda_vendas` e `0046_vendas_duplicidade_aceite` são NOVAS e ainda NÃO foram aplicadas
+  em produção** — rodar as duas, nessa ordem, no SQL Editor do Supabase ANTES do
+  `docker compose up -d --build`, senão a tela de vendas quebra (Kanban, agenda, aviso de
+  duplicidade e aceite presencial chamam RPCs que só existem depois delas).
+- **A `0046` também FECHA UM BURACO DE SEGURANÇA:** `registrar_aceite_venda` era `security definer`
+  concedida a `authenticated` **sem checar quem chama** — qualquer usuário logado (inclusive um
+  associado do `/portal`) podia carimbar aceite em lead alheio. Agora, havendo sessão, exige
+  `pode_tratar_lead()`; o hotlink público (service_role, sem sessão) segue igual.
 
 ### Os 4 portais (e as 2 páginas públicas)
 | Portal | Link | Login | Quem entra |
@@ -103,9 +108,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0045`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **22 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 322 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0046`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **23 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 338 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Todos os portais e páginas
@@ -175,6 +180,7 @@ fixo "Marcado como perdido"). A página foi de `max-w-2xl` para `max-w-5xl`, que
 | `/vendas/[id]` | `src/app/(dashboard)/vendas/[id]/page.tsx` | ficha do lead: contatos, cotação, aceite, fechamento |
 | ↳ contatos | `src/components/vendas/contatos-lead.tsx` | registra contato + retorno; linha do tempo (contatos **e** mudanças de etapa) |
 | ↳ perda | `src/components/vendas/modal-perda.tsx` | motivo obrigatório — usado pela ficha E pelo Kanban |
+| ↳ aceite | `src/components/vendas/aceite-presencial.tsx` | aceite com o cliente na frente (CRM **e** portal do vendedor) |
 | ↳ cotação | `src/components/vendas/editar-cotacao.tsx` | troca FIPE/plano/opcionais e o desconto com alçada |
 | ↳ fechamento | `src/components/vendas/fechamento-venda.tsx` | associado, veículo, documentos/vistoria, adesão |
 | ↳ checklist | `src/components/vendas/checklist-entrada.tsx` | lê a MESMA `checklist_lead()` do banco |
@@ -185,31 +191,53 @@ fixo "Marcado como perdido"). A página foi de `max-w-2xl` para `max-w-5xl`, que
   da fila) e `src/lib/vendas.ts` (comissão, adesão) — **todos com testes; mexeu na regra, ajuste o
   teste**.
 - **RPCs que a tela usa:** `leads_kanban`, `mover_lead_status`, `registrar_interacao_lead`,
-  `agenda_vendas`, `atualizar_cotacao`, `cotar_plano`, `produtos_do_plano`,
+  `agenda_vendas`, `classificar_captura_no_escopo`, `registrar_aceite_venda`,
+  `atualizar_cotacao`, `cotar_plano`, `produtos_do_plano`,
   `produtos_obrigatorios_cotacao`, `simular_desconto_cotacao`, `checklist_lead`,
   `fotos_vistoria_lead`, `autorizar_entrada_lead`.
 - **Antes de mexer no visual:** o sistema tem tema claro e escuro. Use os tokens
   (`bg-superficie`, `bg-fundo`, `bg-acao`, `text-slate-*`) e **nunca hex cru**.
 
-**Ficou de fora (levantado na leitura crítica, o usuário decide se entra):**
-1. **Busca em `/vendas`** por nome/CPF/placa, e `useLeads` sem limite — a Lista com "Todos" baixa a
-   tabela inteira de leads para o navegador. Filtro por consultor no Kanban também: a RPC já aceita
-   `p_consultor_id`, a tela não usa.
-2. **Aviso de duplicidade** em `/vendas/novo` — `classificar_captura` existe e **não é chamada em
-   lugar nenhum do `src/`**. Falta também o campo de CPF na captura.
-3. **Colher aceite presencial pelo CRM** — `registrar_aceite_venda(p_por := 'VENDEDOR')` existe,
-   mas só a rota pública do hotlink chama. Hoje, com o cliente na frente, o vendedor precisa mandar
-   o link e pedir que ele abra no celular. Falta também o botão de enviar a proposta por WhatsApp
-   (`<LinkDaProposta>` já existe no portal do vendedor).
-4. **Uma cotação por lead** — para comparar duas propostas fechadas cria-se OUTRO lead ("+ Nova
+**Segunda rodada (busca, duplicidade e aceite — migration `0046`):**
+
+**4. Achar o lead, e não baixar a base.** `/vendas` ganhou **uma barra de busca só** (nome, CPF/CNPJ,
+placa ou telefone) e o **filtro por consultor**, valendo para as duas visões. `useLeads` deixou de
+trazer a tabela inteira: vem em páginas de 100 com "Carregar mais" e o rodapé diz quantos estão em
+tela. As duas visões filtram de formas diferentes **de propósito** — a Lista busca no banco
+(`filtroBuscaLeads`, um `or` do PostgREST com os caracteres perigosos neutralizados), o Kanban
+filtra o que já está na tela (`leadCasaComBusca`, que responde a cada tecla e ignora acento). O
+dono do lead vai para o banco nos dois casos (`leads_kanban` já aceitava `p_consultor_id`).
+
+**5. Aviso de duplicidade no CRM.** `/vendas/novo` ganhou o campo **CPF/CNPJ** e passou a chamar
+`classificar_captura_no_escopo` assim que há o que procurar (placa completa, celular com DDD ou
+documento inteiro). O banner diz *"já está em atendimento com Fulano"*, *"já é associada"* ou
+*"houve um atendimento antes"* — e **não trava nada**: quem está com o cliente na linha continua
+cotando (mesma escolha do 0043). A RPC nova **não tem parâmetro de regional** (a antiga tem, e com
+o id da franquia vizinha contava os leads e os vendedores de lá); a unidade sai de `escopo_regional()`.
+Ela devolve `pode_abrir`, então o link "abrir o atendimento que já existe" só aparece quando o lead
+é mesmo visível para quem está olhando. Como a tela é compartilhada, o portal do vendedor ganhou junto.
+
+**6. Aceite presencial e a proposta no WhatsApp.** `<AceitePresencial>` grava
+`registrar_aceite_venda(p_por := 'VENDEDOR')` com o cliente na frente — nome completo, CPF/CNPJ e a
+declaração do vendedor; sem depender do celular do cliente. O IP **não** é gravado nesse caminho
+(seria o do vendedor, e passaria por prova do cliente). Está no CRM e no portal do vendedor, que é
+onde a venda presencial acontece. O card da cotação também ganhou **WhatsApp** mandando o link
+direto para o número do lead (`mensagemDaProposta` + `linkWhatsApp`), e o `<LinkDaProposta>` passou
+a aceitar destinatário. **Junto veio a trava que faltava:** ver a nota de segurança da `0046` no
+topo deste arquivo.
+
+**Ficou de fora (o usuário decide se entra):**
+1. **Uma cotação por lead** — para comparar duas propostas fechadas cria-se OUTRO lead ("+ Nova
    cotação (novo lead)"). Suja o funil e duplica o CPF.
-5. **Desconto só em %** — a negociação real é "quanto fica por R$ 89"; falta o caminho inverso.
+2. **Desconto só em %** — a negociação real é "quanto fica por R$ 89"; falta o caminho inverso.
    E o campo usa `<input type="number">`, com o mesmo "0 preso na frente" que o `MoneyInput` curou.
-6. **`editar-cotacao.tsx` não separa o que já vem no plano** (o `/vendas/novo` separa, com selo "no
+3. **`editar-cotacao.tsx` não separa o que já vem no plano** (o `/vendas/novo` separa, com selo "no
    plano"), e `selecaoValida(opcionais, [])` com lista vazia é um no-op que promete uma trava que
    não existe ali.
-7. **Dono do lead na ficha** — não mostra consultor/vendedor nem permite reatribuir
+4. **Dono do lead na ficha** — não mostra consultor/vendedor nem permite reatribuir
    (`atribuir_lead` só está em `/regional/leads`).
+5. **Busca sem acento no banco** — o `ilike` da Lista casa "JOAO" com "JOAO", não com "JOÃO" (o
+   Kanban casa, porque filtra em JS). O certo seria a extensão `unaccent` + índice.
 
 ### Próximos passos oferecidos (o usuário escolhe)
 1. **Ligar o gateway real** (Asaas) — emissão + webhook + baixa automática.
@@ -220,9 +248,7 @@ fixo "Marcado como perdido"). A página foi de `max-w-2xl` para `max-w-5xl`, que
    (já existe em `clientes`) ou um código por WhatsApp resolveria; é mudança localizada na
    rota `/api/portal/login`.
 4. **SLA / notificações do protocolo** (prazo por prioridade, aviso ao responsável).
-5. **Aviso de duplicidade no CRM interno** — `classificar_captura` já existe, falta ligar em
-   `/vendas/novo` ("este CPF já tem lead com o Fulano").
-6. **Cotação pelo portal do vendedor** — ele vê o lead, mas monta a cotação só no `/vendas`.
+5. **Cotação pelo portal do vendedor** — ele vê o lead, mas monta a cotação só no `/vendas`.
 
 ## O que é
 Sistema de gestão para **associação de proteção veicular** (associados, frota, eventos/sinistros,
@@ -643,6 +669,19 @@ lead ATIVO/PERDIDO; (E) `leads_kanban()` **recriada** (muda a lista de colunas, 
 create) devolvendo `ultima_interacao_em`, `proximo_contato_em`, `dias_parado` e
 `limite_sem_contato` da franquia. ESCOLHA REGISTRADA: "parado" conta de `ultima_interacao_em` (ou
 da criacao), NUNCA de `updated_at` — corrigir a FIPE nao e trabalhar o lead.)
+· `0046_vendas_duplicidade_aceite` (duas regras que JA existiam no banco e nenhuma tela chamava:
+(A) `classificar_captura_no_escopo(celular, cpf, placa)` — a classificacao do 0041 para quem
+cadastra na mao. E OUTRA funcao porque a original recebe a regional como PARAMETRO, e um parametro
+que a tela escolhe e um parametro que qualquer um troca: com o id da franquia vizinha ela contava
+os leads e os vendedores de la. Aqui a unidade sai de `escopo_regional()` (0032) e o retorno traz
+`pode_abrir` = `pode_tratar_lead(lead)`, para a tela so oferecer o link do atendimento existente
+quando ele for visivel a quem olha. Sem nada digitado ela nao varre nada; (B) **CORRECAO DE
+SEGURANCA** em `registrar_aceite_venda`: ela nasceu para a pagina publica (service_role, posse
+provada pelo `token_publico`), mas era SECURITY DEFINER concedida a `authenticated` SEM checar o
+chamador — qualquer usuario logado, inclusive um ASSOCIADO do `/portal`, podia carimbar aceite em
+lead alheio com nome e CPF inventados. Agora, quando `auth.uid()` nao e nulo, exige
+`pode_tratar_lead()`; o caminho publico segue identico. So depois disso o CRM e o portal do
+vendedor passaram a colher o ACEITE PRESENCIAL (`p_por := 'VENDEDOR'`).)
 
 ## Módulos (status: todos funcionais)
 Assistência 24h (`/assistencia`: painel de acionamento com trava + limites em tempo real, cotação,
@@ -662,8 +701,10 @@ APIs REST em `/api/v1/sac/*` — `busca`, `visao-360`, `veiculo`, `faturamento`,
 · **Protocolos** (`/protocolos`: Central com fila, filtros, histórico, transferência e encerramento)
 · **Portal do Vendedor** (`/vendedor`: painel, leads, comissões e perfil do próprio vendedor — PWA)
 Vendas/CRM (`/vendas` mobile-first: **agenda do dia** no topo (atrasados + retornos de hoje),
-Kanban com "parado há N dias", captura que **começa na placa** e cota **todos os planos de uma
-vez** (FIPE por placa/cascata), contatos e retornos registrados na ficha do lead, cotação com
+**busca por nome/CPF/placa/telefone** e filtro por consultor, Kanban com "parado há N dias",
+captura que **começa na placa**, avisa duplicidade (sem travar) e cota **todos os planos de uma
+vez** (FIPE por placa/cascata), contatos e retornos registrados na ficha do lead, **aceite
+presencial** com o cliente na frente e envio da proposta por WhatsApp, cotação com
 link público `/cotacao/[token]` detalhada/consolidada + print-PDF, esteira com trava de
 Auditoria — só papel `auditoria`/`admin` clica "Autorizar Entrada" e efetiva cliente+veículo)
 · Associados (painel `/associados/[id]` com abas) · Veículos/Contratos · Eventos/Sinistros

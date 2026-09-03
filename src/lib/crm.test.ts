@@ -14,6 +14,8 @@ import {
   removeuObrigatorio,
   calcularDesconto,
   acoesDoLead,
+  filtroBuscaLeads,
+  leadCasaComBusca,
 } from './crm';
 import type { CotacaoItem, StatusLead } from '@/lib/database.types';
 
@@ -163,5 +165,70 @@ describe('acoesDoLead', () => {
     const validos = ['NOVO', 'ORCAMENTO_GERADO', 'PROPOSTA_ENVIADA', 'EM_NEGOCIACAO', 'APROVADO', 'PERDIDO'];
     (['NOVO', 'ORCAMENTO_GERADO', 'PROPOSTA_ENVIADA', 'EM_NEGOCIACAO', 'APROVADO', 'PERDIDO'] as const)
       .forEach((s) => acoesDoLead(s).forEach((a) => expect(validos).toContain(a.destino)));
+  });
+});
+
+describe('filtroBuscaLeads', () => {
+  it('ignora termo curto demais — nao vale consultar', () => {
+    expect(filtroBuscaLeads('')).toBeNull();
+    expect(filtroBuscaLeads('j')).toBeNull();
+    expect(filtroBuscaLeads('  ')).toBeNull();
+  });
+
+  it('busca por nome e modelo', () => {
+    const f = filtroBuscaLeads('silva') ?? '';
+    expect(f).toContain('nome.ilike.*silva*');
+    expect(f).toContain('modelo.ilike.*silva*');
+  });
+
+  it('procura CPF e celular pelos digitos, com ou sem mascara', () => {
+    const f = filtroBuscaLeads('111.444.777-35') ?? '';
+    expect(f).toContain('cpf_cnpj.ilike.*11144477735*');
+    expect(f).toContain('celular.ilike.*11144477735*');
+  });
+
+  it('procura placa pelo alfanumerico', () => {
+    expect(filtroBuscaLeads('ABC1D23') ?? '').toContain('placa.ilike.*ABC1D23*');
+  });
+
+  it('neutraliza o que quebraria o filtro do PostgREST', () => {
+    const f = filtroBuscaLeads('joao,(x)"') ?? '';
+    // parenteses, aspas e a virgula do TERMO nao podem sobrar no filtro
+    expect(f).not.toMatch(/[()"]/);
+    expect(f).toContain('nome.ilike.*joao x*');
+    // 3 condicoes (nome, modelo, placa) = 2 virgulas, todas separadoras
+    expect(f.split(',').length).toBe(3);
+  });
+});
+
+describe('leadCasaComBusca', () => {
+  const lead = {
+    nome: 'JOÃO DA SILVA', celular: '11988887777', cpf_cnpj: '11144477735',
+    placa: 'ABC1D23', marca: 'FIAT', modelo: 'ARGO',
+  };
+
+  it('casa por nome ignorando acento e caixa', () => {
+    expect(leadCasaComBusca(lead, 'joao')).toBe(true);
+    expect(leadCasaComBusca(lead, 'SILVA')).toBe(true);
+  });
+
+  it('casa por placa, marca e modelo', () => {
+    expect(leadCasaComBusca(lead, 'abc1d23')).toBe(true);
+    expect(leadCasaComBusca(lead, 'argo')).toBe(true);
+  });
+
+  it('casa por telefone e CPF mesmo com mascara digitada', () => {
+    expect(leadCasaComBusca(lead, '(11) 98888')).toBe(true);
+    expect(leadCasaComBusca(lead, '111.444.777-35')).toBe(true);
+  });
+
+  it('nao casa com quem nao tem nada a ver', () => {
+    expect(leadCasaComBusca(lead, 'pereira')).toBe(false);
+    expect(leadCasaComBusca(lead, '99999999999')).toBe(false);
+  });
+
+  it('termo curto nao esconde ninguem', () => {
+    expect(leadCasaComBusca(lead, '')).toBe(true);
+    expect(leadCasaComBusca(lead, 'a')).toBe(true);
   });
 });

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  inferirTipoFipe, mensagemDeErro, ordenarPlanos, placaCompleta, planoSugerido,
-  podeAvancar, tipoVeiculoSugerido,
+  inferirTipoFipe, linkWhatsApp, mensagemDaProposta, mensagemDeErro, numeroWhatsApp,
+  ordenarPlanos, placaCompleta, planoSugerido, podeAvancar, tipoVeiculoSugerido,
 } from './venda-publica';
 
 const plano = (id: string, nivel: number | null, mensalidade: number) => ({
@@ -133,5 +133,38 @@ describe('placaCompleta', () => {
     expect(placaCompleta('ABC12')).toBe(false);
     expect(placaCompleta('')).toBe(false);
     expect(placaCompleta('ABCD123')).toBe(false);
+  });
+});
+
+describe('numeroWhatsApp', () => {
+  it('monta o numero com DDI a partir do que foi digitado', () => {
+    expect(numeroWhatsApp('(11) 98888-7777')).toBe('5511988887777');
+    expect(numeroWhatsApp('1133334444')).toBe('551133334444');
+  });
+
+  it('nao duplica o DDI de quem ja gravou com 55', () => {
+    expect(numeroWhatsApp('5511988887777')).toBe('5511988887777');
+  });
+
+  it('recusa o que nao da para discar', () => {
+    expect(numeroWhatsApp('98887777')).toBeNull();
+    expect(numeroWhatsApp('')).toBeNull();
+    expect(numeroWhatsApp(null)).toBeNull();
+  });
+});
+
+describe('mensagemDaProposta e linkWhatsApp', () => {
+  it('chama a pessoa pelo primeiro nome', () => {
+    expect(mensagemDaProposta('https://x/cotacao/abc', 'JOAO DA SILVA'))
+      .toBe('Ola, JOAO! Segue a sua proposta da Smart Car Brasil: https://x/cotacao/abc');
+  });
+
+  it('sem nome, manda so a proposta', () => {
+    expect(mensagemDaProposta('https://x/cotacao/abc')).not.toContain('Ola');
+  });
+
+  it('sem celular, abre o WhatsApp sem destinatario (a pessoa escolhe)', () => {
+    expect(linkWhatsApp('oi')).toBe('https://wa.me/?text=oi');
+    expect(linkWhatsApp('oi', '(11) 98888-7777')).toBe('https://wa.me/5511988887777?text=oi');
   });
 });

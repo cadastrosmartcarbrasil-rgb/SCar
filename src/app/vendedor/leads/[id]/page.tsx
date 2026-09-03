@@ -4,14 +4,17 @@ import { use, useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import {
-  ArrowLeft, Camera, FileText, Loader2, MessageCircle, Phone, Receipt,
+  ArrowLeft, Camera, FileText, Handshake, Loader2, MessageCircle, Phone, Receipt,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FotosVistoria } from '@/components/vistoria/fotos-vistoria';
 import { LinkDaProposta } from '@/components/hotlink/cotacao-publica';
+import { AceitePresencial } from '@/components/vendas/aceite-presencial';
 import { useCotacoes, useLead, useUploadCrlv } from '@/hooks/use-vendas';
+import { podeEditarCotacao } from '@/lib/crm';
 import { SELO_STATUS_LEAD } from '@/lib/vendedor';
+import type { CotacoesRow } from '@/lib/database.types';
 import { formatCurrency, formatDate } from '@/lib/utils';
 
 /**
@@ -27,6 +30,7 @@ export default function LeadVendedorPage({ params }: { params: Promise<{ id: str
   const { data: cotacoes } = useCotacoes(id);
   const uploadCrlv = useUploadCrlv(id);
   const [vistoriaAberta, setVistoriaAberta] = useState(false);
+  const [colhendoAceite, setColhendoAceite] = useState<CotacoesRow | null>(null);
 
   if (isLoading) return <p className="text-sm text-slate-400">Carregando…</p>;
   if (!lead) {
@@ -123,7 +127,17 @@ export default function LeadVendedorPage({ params }: { params: Promise<{ id: str
                     {formatCurrency(Number(c.total_com_desconto ?? c.total_mensalidade))}
                   </span>
                 </div>
-                <LinkDaProposta token={c.token} compacto />
+                <LinkDaProposta token={c.token} compacto celular={lead.celular} nome={lead.nome} />
+                {/* Com o cliente na frente, nao ha por que depender do celular
+                    dele: o aceite entra como colhido pelo VENDEDOR. */}
+                {!lead.aceite_em && podeEditarCotacao(lead.status) && (
+                  <button
+                    type="button" onClick={() => setColhendoAceite(c)}
+                    className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-300 px-3 py-2 text-[12px] font-semibold text-slate-600 transition hover:bg-slate-50"
+                  >
+                    <Handshake className="h-3.5 w-3.5" /> Cliente aqui comigo: colher aceite
+                  </button>
+                )}
               </div>
             ))}
           </CardContent>
@@ -186,6 +200,10 @@ export default function LeadVendedorPage({ params }: { params: Promise<{ id: str
           </label>
         </CardContent>
       </Card>
+
+      {colhendoAceite && (
+        <AceitePresencial lead={lead} cotacao={colhendoAceite} onClose={() => setColhendoAceite(null)} />
+      )}
     </div>
   );
 }

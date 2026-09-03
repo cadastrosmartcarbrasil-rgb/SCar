@@ -9,7 +9,9 @@
  * Nenhuma delas -> NOVO.
  */
 
-export type TipoCaptura = 'NOVO' | 'DUPLICADO' | 'REATIVACAO' | 'CARTEIRA';
+import type { AvisoCaptura, TipoCaptura } from '@/lib/database.types';
+
+export type { TipoCaptura };
 
 export const ROTULO_CAPTURA: Record<TipoCaptura, { rotulo: string; classe: string; ajuda: string }> = {
   NOVO: {
@@ -127,4 +129,43 @@ export function mensagemAoVisitante(tipo: TipoCaptura, vendedor?: string | null)
     default:
       return 'Recebemos o seu contato! Em breve falamos com voce.';
   }
+}
+
+// ---------------------------------------------------------------------------
+// Aviso de duplicidade no CRM (0046)
+//
+// A mesma classificacao que decide o destino de uma captura do hotlink agora
+// avisa quem cadastra o lead na mao. Regra de ouro herdada do 0043: e AVISO,
+// nunca trava — quem esta com o cliente na linha nao pode ser impedido de
+// cotar. O que muda e o operador saber, ANTES de digitar o resto, que aquele
+// CPF ja tem dono.
+// ---------------------------------------------------------------------------
+export interface AvisoDeCaptura {
+  tipo: TipoCaptura;
+  titulo: string;
+  texto: string;
+  /** Classe do bloco na tela (a cor diz a gravidade). */
+  classe: string;
+  /** Vale mostrar o link "abrir o atendimento"? */
+  linkDoLead: string | null;
+}
+
+/** Traduz o retorno de `classificar_captura_no_escopo` para a tela. */
+export function avisoDeCaptura(bruto: AvisoCaptura | null | undefined): AvisoDeCaptura | null {
+  if (!bruto || bruto.tipo === 'NOVO') return null;  // primeiro contato nao merece alarme
+  const r = ROTULO_CAPTURA[bruto.tipo];
+  const titulos: Record<Exclude<TipoCaptura, 'NOVO'>, string> = {
+    DUPLICADO: bruto.vendedor_nome
+      ? `Esta pessoa ja esta em atendimento com ${bruto.vendedor_nome}`
+      : 'Esta pessoa ja tem atendimento aberto',
+    REATIVACAO: 'Ja houve um atendimento com esta pessoa',
+    CARTEIRA: 'Esta pessoa ja e associada da casa',
+  };
+  return {
+    tipo: bruto.tipo,
+    titulo: titulos[bruto.tipo],
+    texto: [bruto.detalhe, r.ajuda].filter(Boolean).join(' · '),
+    classe: r.classe,
+    linkDoLead: bruto.pode_abrir && bruto.lead_id ? `/vendas/${bruto.lead_id}` : null,
+  };
 }

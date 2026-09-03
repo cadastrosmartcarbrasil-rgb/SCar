@@ -2,20 +2,34 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Plus, Phone, Car, ChevronRight, LayoutGrid, List } from 'lucide-react';
-import { useLeads } from '@/hooks/use-vendas';
+import { Plus, Phone, Car, ChevronRight, LayoutGrid, List, Search, X } from 'lucide-react';
+import { useConsultoresDeVendas, useLeads } from '@/hooks/use-vendas';
 import { KanbanVendas } from '@/components/vendas/kanban-vendas';
 import { AgendaHoje } from '@/components/vendas/agenda-hoje';
+import { Input, Select } from '@/components/ui/field';
 import { ESTEIRA, STATUS_LEAD } from '@/lib/crm';
 import { formatCurrency } from '@/lib/utils';
 import type { StatusLead } from '@/lib/database.types';
+
+/** Quantos leads a lista traz por vez. Ver o comentario em `useLeads`. */
+const PAGINA = 100;
 
 type Filtro = StatusLead | 'TODOS';
 
 export default function VendasPage() {
   const [filtro, setFiltro] = useState<Filtro>('TODOS');
   const [visao, setVisao] = useState<'lista' | 'kanban'>('kanban');
-  const { data: leads, isLoading } = useLeads(filtro);
+  const [busca, setBusca] = useState('');
+  const [consultorId, setConsultorId] = useState('');
+  const [limite, setLimite] = useState(PAGINA);
+  const { data: leads, isLoading } = useLeads({
+    status: filtro, busca, consultorId: consultorId || null, limite,
+  });
+  const { data: consultores } = useConsultoresDeVendas();
+
+  // Trocar de filtro recomeca a paginacao — senao a tela abre com 300 linhas
+  // por causa de uma busca anterior.
+  useEffect(() => { setLimite(PAGINA); }, [filtro, busca, consultorId]);
 
   const chips: Filtro[] = useMemo(() => ['TODOS', ...ESTEIRA, 'PERDIDO'], []);
 
@@ -64,10 +78,42 @@ export default function VendasPage() {
         </div>
       </div>
 
+      {/* Busca e dono do lead — valem para as duas visoes */}
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Input
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar por nome, CPF/CNPJ, placa ou telefone"
+            className="pl-9"
+            caixa="original"
+          />
+          {busca && (
+            <button
+              type="button" onClick={() => setBusca('')} title="Limpar busca"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-slate-400 hover:bg-slate-100"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+        {(consultores ?? []).length > 1 && (
+          <Select
+            value={consultorId}
+            onChange={(e) => setConsultorId(e.target.value)}
+            className="sm:w-56"
+          >
+            <option value="">Todos os consultores</option>
+            {(consultores ?? []).map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+          </Select>
+        )}
+      </div>
+
       {/* O que fazer agora: retornos vencidos e do dia (some quando nao ha nada) */}
       <AgendaHoje />
 
-      {visao === 'kanban' && <KanbanVendas />}
+      {visao === 'kanban' && <KanbanVendas busca={busca} consultorId={consultorId || null} />}
 
       {/* Filtro por status (rolagem horizontal no mobile) */}
       {visao === 'lista' && (
@@ -95,10 +141,18 @@ export default function VendasPage() {
         <p className="py-10 text-center text-sm text-slate-400">Carregando...</p>
       ) : (leads ?? []).length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-200 py-12 text-center">
-          <p className="text-sm text-slate-400">Nenhum lead aqui.</p>
-          <Link href="/vendas/novo" className="mt-2 inline-block text-sm font-medium text-brand-600">
-            + Criar o primeiro
-          </Link>
+          <p className="text-sm text-slate-400">
+            {busca ? `Nenhum lead para "${busca}".` : 'Nenhum lead aqui.'}
+          </p>
+          {busca ? (
+            <button type="button" onClick={() => setBusca('')} className="mt-2 text-sm font-medium text-brand-600">
+              Limpar a busca
+            </button>
+          ) : (
+            <Link href="/vendas/novo" className="mt-2 inline-block text-sm font-medium text-brand-600">
+              + Criar o primeiro
+            </Link>
+          )}
         </div>
       ) : (
         <ul className="space-y-2">
@@ -132,6 +186,24 @@ export default function VendasPage() {
           })}
         </ul>
       ))}
+
+      {/* A lista nao vem inteira: diz quantos apareceram e busca mais sob demanda */}
+      {visao === 'lista' && !isLoading && (leads ?? []).length > 0 && (
+        <div className="flex flex-col items-center gap-2 pt-1">
+          <p className="text-[11.5px] text-slate-400">
+            {(leads ?? []).length} lead{(leads ?? []).length > 1 ? 's' : ''} em tela
+            {(leads ?? []).length >= limite ? ' — ha mais alem deste ponto' : ''}
+          </p>
+          {(leads ?? []).length >= limite && (
+            <button
+              type="button" onClick={() => setLimite((l) => l + PAGINA)}
+              className="rounded-xl border border-slate-200 bg-superficie px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50"
+            >
+              Carregar mais {PAGINA}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -2,7 +2,9 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
+import { filtroBuscaLeads } from '@/lib/crm';
 import type {
+  AvisoCaptura,
   ClientesRow,
   CotacaoItem,
   CotacaoPlano,
@@ -41,14 +43,53 @@ export function useMeuPapel() {
 }
 
 // --- Leads ---
-export function useLeads(status?: StatusLead | 'TODOS') {
+export interface FiltroLeads {
+  status?: StatusLead | 'TODOS';
+  busca?: string;
+  consultorId?: string | null;
+  /** Teto de linhas. A lista NUNCA vem inteira: com a base cheia isso seria
+   *  baixar a tabela de leads para o navegador a cada abertura da tela. */
+  limite?: number;
+}
+
+export function useLeads(filtro?: FiltroLeads | StatusLead | 'TODOS') {
   const supabase = createClient();
+  const f: FiltroLeads = typeof filtro === 'string' ? { status: filtro } : (filtro ?? {});
+  const limite = f.limite ?? 100;
+  const busca = (f.busca ?? '').trim();
+  const filtroBusca = filtroBuscaLeads(busca);
+
   return useQuery<LeadsRow[]>({
-    queryKey: ['vendas', 'leads', status ?? 'TODOS'],
+    queryKey: ['vendas', 'leads', f.status ?? 'TODOS', filtroBusca ?? '', f.consultorId ?? 'all', limite],
     queryFn: async () => {
-      let q = supabase.from('leads').select('*').order('updated_at', { ascending: false });
-      if (status && status !== 'TODOS') q = q.eq('status', status);
+      let q = supabase.from('leads').select('*').order('updated_at', { ascending: false }).limit(limite);
+      if (f.status && f.status !== 'TODOS') q = q.eq('status', f.status);
+      if (f.consultorId) q = q.eq('consultor_id', f.consultorId);
+      if (filtroBusca) q = q.or(filtroBusca);
       const { data, error } = await q;
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+/**
+ * Quem pode aparecer no filtro "consultor". A RLS de `usuarios` (0003) ja
+ * limita: admin/financeiro veem todos, gestor ve a propria unidade e o
+ * consultor ve so a si — e para ele o filtro nem faz sentido, porque a RLS de
+ * `leads` (0038) ja o deixa com a propria carteira.
+ */
+export function useConsultoresDeVendas() {
+  const supabase = createClient();
+  return useQuery<{ id: string; nome: string }[]>({
+    queryKey: ['vendas', 'consultores'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('usuarios')
+        .select('id, nome')
+        .in('papel', ['consultor_vendas', 'gestor_regional', 'admin'])
+        .eq('ativo', true)
+        .order('nome');
       if (error) throw error;
       return data ?? [];
     },
@@ -720,6 +761,77 @@ export function useCotacaoComparativa(entrada: {
       }));
 
       return cotados.filter((c): c is PlanoComparado => c !== null);
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Aviso de duplicidade no CRM (0046)
+//
+// A mesma classificacao do hotlink, agora para quem cadastra na mao. E AVISO,
+// nunca trava: a tela segue cotando (regra do 0043). A RPC nao tem parametro
+// de regional — a unidade sai de quem chama.
+// ---------------------------------------------------------------------------
+export function useAvisoDeCaptura(entrada: {
+  celular?: string; cpfCnpj?: string; placa?: string; ativo?: boolean;
+}) {
+  const supabase = createClient();
+  const celular = (entrada.celular ?? '').replace(/\D/g, '');
+  const cpf = (entrada.cpfCnpj ?? '').replace(/\D/g, '');
+  const placa = (entrada.placa ?? '').trim().toUpperCase();
+  // So consulta quando ha o que procurar de verdade (celular com DDD, CPF/CNPJ
+  // inteiro ou placa completa) — senao seria uma consulta por tecla digitada.
+  const vale = celular.length >= 10 || cpf.length === 11 || cpf.length === 14 || placa.length === 7;
+
+  return useQuery<AvisoCaptura | null>({
+    queryKey: ['vendas', 'aviso-captura', celular, cpf, placa],
+    enabled: vale && entrada.ativo !== false,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('classificar_captura_no_escopo', {
+        p_celular: celular || null,
+        p_cpf_cnpj: cpf || null,
+        p_placa: placa || null,
+      });
+      if (error) throw error;
+      return data?.[0] ?? null;
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Aceite presencial pelo CRM (0046)
+//
+// A funcao ja existia e so a pagina publica chamava: com o cliente na frente,
+// o vendedor precisava mandar o link e pedir que ele abrisse no celular. O
+// banco grava QUEM aceitou (CLIENTE ou VENDEDOR), entao a prova continua
+// dizendo a verdade sobre como o consentimento foi colhido.
+// ---------------------------------------------------------------------------
+export function useRegistrarAceite() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<LeadsRow, Error, {
+    leadId: string; cotacaoId: string | null; nome: string; documento: string;
+  }>({
+    mutationFn: async (i) => {
+      const { data, error } = await supabase.rpc('registrar_aceite_venda', {
+        p_lead_id: i.leadId,
+        p_cotacao_id: i.cotacaoId,
+        p_por: 'VENDEDOR',
+        p_nome: i.nome,
+        p_documento: i.documento,
+        // O IP so faria sentido no dispositivo de quem aceita; aqui quem
+        // responde pelo aceite e o vendedor logado, e e isso que fica gravado.
+        p_ip: null,
+        p_user_agent: typeof navigator === 'undefined' ? null : `CRM · ${navigator.userAgent}`,
+      });
+      if (error) throw error;
+      return data as LeadsRow;
+    },
+    onSuccess: (l) => {
+      qc.invalidateQueries({ queryKey: ['vendas', 'lead', l.id] });
+      qc.invalidateQueries({ queryKey: ['vendas', 'kanban'] });
+      qc.invalidateQueries({ queryKey: ['vendas', 'leads'] });
     },
   });
 }

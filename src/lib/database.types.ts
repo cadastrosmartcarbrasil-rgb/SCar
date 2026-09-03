@@ -1531,6 +1531,8 @@ export type ComissaoRegional = {
   created_at: string;
 };
 
+export type TipoCaptura = 'NOVO' | 'DUPLICADO' | 'REATIVACAO' | 'CARTEIRA';
+
 export type ClassificacaoCaptura = {
   tipo: string;
   lead_id: string | null;
@@ -1538,6 +1540,17 @@ export type ClassificacaoCaptura = {
   vendedor_nome: string | null;
   cliente_id: string | null;
   detalhe: string;
+};
+
+// Aviso de duplicidade no CRM (RPC classificar_captura_no_escopo, 0046).
+// Nao tem parametro de regional: a unidade sai de quem chama.
+export type AvisoCaptura = {
+  tipo: TipoCaptura;
+  lead_id: string | null;
+  vendedor_nome: string | null;
+  detalhe: string;
+  /** O lead apontado e visivel para quem esta olhando? (link so aparece se sim) */
+  pode_abrir: boolean;
 };
 
 export type LeadSemVendedor = {
@@ -2464,6 +2477,10 @@ export type Database = {
           p_cpf_cnpj?: string | null; p_placa?: string | null;
         };
         Returns: ClassificacaoCaptura[];
+      };
+      classificar_captura_no_escopo: {
+        Args: { p_celular?: string | null; p_cpf_cnpj?: string | null; p_placa?: string | null };
+        Returns: AvisoCaptura[];
       };
       parametros_atribuicao: {
         Args: { p_regional_id: string | null };

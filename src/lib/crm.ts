@@ -181,3 +181,71 @@ export function acoesDoLead(status: StatusLead): AcaoLead[] {
   acoes.push({ destino: 'PERDIDO', rotulo: ROTULO_DESTINO.PERDIDO, intencao: 'perder' });
   return acoes;
 }
+
+// ---------------------------------------------------------------------------
+// Busca de leads (0046)
+//
+// Duas telas, duas formas de filtrar, de proposito:
+//   . a LISTA busca no banco (`filtroBuscaLeads`), porque ela nao carrega tudo;
+//   . o KANBAN filtra o que ja esta na tela (`leadCasaComBusca`), que responde
+//     a cada tecla e nao refaz a consulta a cada letra.
+// Diferenca conhecida: em JS da para ignorar acento; no `ilike` do Postgres,
+// nao (exigiria a extensao `unaccent`). Por isso a lista casa "JOAO" com
+// "JOAO", e o Kanban casa tambem com "JOÃO".
+// ---------------------------------------------------------------------------
+
+/** Tira o que quebraria o filtro `or` do PostgREST (virgula, parenteses, curinga). */
+function seguroParaFiltro(v: string): string {
+  return (v ?? '').replace(/[,()*%"'\\]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+export function semAcento(v: string): string {
+  return (v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
+/**
+ * Filtro `or` do PostgREST para a busca da lista. `null` = termo curto demais,
+ * nao vale consultar (e nao vale trazer a tabela inteira de volta).
+ */
+export function filtroBuscaLeads(bruto: string): string | null {
+  const texto = seguroParaFiltro(bruto);
+  const digitos = (bruto ?? '').replace(/\D/g, '');
+  const alfanumerico = texto.replace(/[^a-zA-Z0-9]/g, '');
+  const partes: string[] = [];
+
+  if (texto.length >= 2) {
+    partes.push(`nome.ilike.*${texto}*`);
+    partes.push(`modelo.ilike.*${texto}*`);
+    if (alfanumerico.length >= 3) partes.push(`placa.ilike.*${alfanumerico}*`);
+  }
+  if (digitos.length >= 3) {
+    partes.push(`celular.ilike.*${digitos}*`);
+    partes.push(`cpf_cnpj.ilike.*${digitos}*`);
+  }
+  return partes.length > 0 ? partes.join(',') : null;
+}
+
+export interface LeadBuscavel {
+  nome: string;
+  celular?: string | null;
+  cpf_cnpj?: string | null;
+  placa?: string | null;
+  marca?: string | null;
+  modelo?: string | null;
+}
+
+/** O card casa com o que foi digitado? (nome, telefone, CPF, placa, veiculo) */
+export function leadCasaComBusca(lead: LeadBuscavel, bruto: string): boolean {
+  const termo = semAcento(bruto ?? '').trim();
+  if (termo.length < 2) return true;              // termo curto nao filtra nada
+  const digitos = (bruto ?? '').replace(/\D/g, '');
+
+  const texto = semAcento([lead.nome, lead.marca, lead.modelo, lead.placa].filter(Boolean).join(' '));
+  if (texto.includes(termo)) return true;
+
+  if (digitos.length >= 3) {
+    const numeros = `${lead.celular ?? ''}${lead.cpf_cnpj ?? ''}`.replace(/\D/g, '');
+    if (numeros.includes(digitos)) return true;
+  }
+  return false;
+}
