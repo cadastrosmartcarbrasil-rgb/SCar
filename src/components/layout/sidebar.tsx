@@ -74,7 +74,7 @@ function Wordmark() {
         <span className="text-[15px] font-extrabold tracking-tight text-white">
           SMART<span className="text-cyan-400">CAR</span>BRASIL
         </span>
-        <span className="mt-1 block text-[8.5px] font-semibold tracking-[0.3em] text-slate-300">
+        <span className="mt-1 block text-[8.5px] font-semibold tracking-[0.3em] text-white/55">
           PROTECAO VEICULAR
         </span>
       </span>
@@ -117,7 +117,7 @@ export function Sidebar({ papel, logoUrl }: { papel?: PapelUsuario; logoUrl?: st
           'relative flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-[13.5px] transition',
           active
             ? "bg-cyan-500/15 font-semibold text-white before:absolute before:-left-3 before:top-2 before:bottom-2 before:w-[3px] before:rounded-r before:bg-cyan-400 before:shadow-[0_0_10px_#26aeea] before:content-['']"
-            : 'font-medium text-slate-300 hover:bg-superficie/5 hover:text-white',
+            : 'font-medium text-white/80 hover:bg-white/5 hover:text-white',
         )}
       >
         <item.icon className="h-[18px] w-[18px] shrink-0 opacity-90" />
@@ -128,9 +128,9 @@ export function Sidebar({ papel, logoUrl }: { papel?: PapelUsuario; logoUrl?: st
 
   const Nav = ({ onNav }: { onNav?: () => void }) => (
     <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2">
-      <p className="px-3 pb-1.5 pt-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-300">Operacao</p>
+      <p className="px-3 pb-1.5 pt-3 text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Operacao</p>
       {OPERACAO.map((i) => <NavLink key={i.href} item={i} onNav={onNav} />)}
-      <p className="px-3 pb-1.5 pt-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-300">Gestao</p>
+      <p className="px-3 pb-1.5 pt-4 text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Gestao</p>
       {menuGestao.map((i) => <NavLink key={i.href} item={i} onNav={onNav} />)}
     </nav>
   );
@@ -160,12 +160,12 @@ export function Sidebar({ papel, logoUrl }: { papel?: PapelUsuario; logoUrl?: st
           <aside className="cockpit absolute left-0 top-0 flex h-full w-72 flex-col shadow-xl">
             <div className="flex items-center justify-between gap-3 px-4 py-4">
               <div className="min-w-0 flex-1"><Brand logoUrl={logoUrl} /></div>
-              <button onClick={() => setAberto(false)} aria-label="Fechar" className="text-slate-300 hover:text-white">
+              <button onClick={() => setAberto(false)} aria-label="Fechar" className="text-white/80 hover:text-white">
                 <X className="h-5 w-5" />
               </button>
             </div>
             <Nav onNav={() => setAberto(false)} />
-            <button onClick={sair} className="flex items-center gap-3 border-t border-white/10 px-5 py-3.5 text-sm text-slate-300 hover:text-white">
+            <button onClick={sair} className="flex items-center gap-3 border-t border-white/10 px-5 py-3.5 text-sm text-white/80 hover:text-white">
               <LogOut className="h-4 w-4" /> Sair
             </button>
           </aside>
@@ -178,7 +178,7 @@ export function Sidebar({ papel, logoUrl }: { papel?: PapelUsuario; logoUrl?: st
           <Brand logoUrl={logoUrl} />
         </div>
         <Nav />
-        <button onClick={sair} className="flex items-center gap-3 border-t border-white/10 px-5 py-3.5 text-sm text-slate-300 transition hover:text-white">
+        <button onClick={sair} className="flex items-center gap-3 border-t border-white/10 px-5 py-3.5 text-sm text-white/80 transition hover:text-white">
           <LogOut className="h-4 w-4" /> Sair
         </button>
       </aside>

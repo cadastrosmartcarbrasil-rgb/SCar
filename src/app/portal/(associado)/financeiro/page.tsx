@@ -117,7 +117,7 @@ export default function PortalFinanceiroPage() {
                 {pagavel && (
                   <button
                     onClick={() => setAberto(t)}
-                    className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg bg-cyan-500 px-3 py-2 text-[12.5px] font-bold text-brand-800 transition hover:bg-cyan-400"
+                    className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg bg-cyan-500 px-3 py-2 text-[12.5px] font-bold text-navy transition hover:bg-cyan-400"
                   >
                     <Download className="h-3.5 w-3.5" /> 2a via do boleto
                   </button>

@@ -199,9 +199,7 @@ Prioridade: **segurança (RLS)** e **sempre validado** antes de commitar.
   para uma marca navy e `text-slate-400` dava **2.56** de contraste no card branco, reprovado no
   WCAG AA (mínimo 4.5); agora dá 5.35. Redefinir a paleta escurece **todas as telas de uma vez**,
   e foi seguro porque essas faixas são usadas só como cor de TEXTO (zero `bg-`/`border-` nelas).
-  **50..300 e 800/900 não foram tocados:** são fundo, borda, título e — importante — o texto claro
-  da cabine escura. **Texto sobre fundo navy usa `text-slate-300` ou `text-white/…`; nunca
-  400/500/600**, que agora são escuros e sumiriam ali (a sidebar foi corrigida por isso).
+  **50..300 e 800/900 não foram tocados:** são fundo, borda e título.
 - **Edge Functions (Deno)** para webhook bancário e e-mail (Resend).
 - **RLS é a espinha de segurança.** Toda tabela tem policies; multi-tenant por `regional`.
 
@@ -840,7 +838,15 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
   **Não use `bg-brand-600` para botão nem `bg-brand-700` para faixa**: no escuro eles clareiam e
   o texto branco some.
 - **`bg-white` virou `bg-superficie`** (o card) e `bg-[#eef2f8]` virou `bg-fundo` (o ground).
-  `bg-white` ficou reservado a quem precisa de branco DE VERDADE — a placa da logo.
+  `bg-white` ficou reservado a quem precisa de branco DE VERDADE — a placa da logo e os **véus
+  translúcidos sobre navy** (`bg-white/5`, `bg-white/10`: o hover do menu, o cartão da unidade na
+  cabine). Trocar esses por `bg-superficie/5` apaga o realce no tema escuro.
+- **REGRA DE OURO — sobre fundo que NÃO inverte, o texto também não pode inverter.** Em cima da
+  cabine, da `bg-faixa` e do acento `bg-cyan-500`, use **`text-white/NN`** (55 discreto · 80 item
+  de menu · 100 ativo) ou **`text-navy`** quando o fundo é claro-fixo como o ciano. **Nunca a
+  escala `slate` nem `brand` ali:** elas invertem, e foi assim que o menu da sidebar caiu para
+  **2.07** de contraste no tema escuro (`text-slate-300`, que no claro é cinza-claro e no escuro
+  virou borda azul-escura). Com `text-white/80` dá 9.47 no claro e 11.50 no escuro.
 - **A logo tem tinta escura**, inclusive a do cliente (`logo_url`), de quem não sabemos a cor:
   `<LogoSmartCar>` põe sozinha uma **placa clara no tema escuro**. Passe `placaNoEscuro={false}`
   só quando ela já estiver dentro de uma placa (é o caso do `LogoNaCabine`).

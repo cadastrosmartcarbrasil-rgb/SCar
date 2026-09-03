@@ -68,13 +68,13 @@ export function SidebarRegional({ nome, unidade, codigo, papel, logoUrl }: {
           </p>
         </div>
 
-        <div className="mx-3 mb-3 rounded-xl bg-superficie/5 px-3 py-2.5">
+        <div className="mx-3 mb-3 rounded-xl bg-white/5 px-3 py-2.5">
           <p className="truncate text-[13px] font-semibold text-white">{unidade}</p>
           <p className="truncate text-[11px] text-white/50">{nome}</p>
           {codigo && (
             <button
               onClick={copiarHotlink}
-              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-cyan-500/90 px-2 py-1.5 text-[11px] font-semibold text-brand-800 transition hover:bg-cyan-400"
+              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-cyan-500/90 px-2 py-1.5 text-[11px] font-semibold text-navy transition hover:bg-cyan-400"
             >
               <Copy className="h-3 w-3" /> Meu hotlink de vendas
             </button>
@@ -97,8 +97,8 @@ export function SidebarRegional({ nome, unidade, codigo, papel, logoUrl }: {
                 onClick={() => setAberto(false)}
                 className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition ${
                   ativo
-                    ? 'bg-superficie/10 font-semibold text-white shadow-[inset_2px_0_0_0_#22A7E4]'
-                    : 'text-white/70 hover:bg-superficie/5 hover:text-white'
+                    ? 'bg-white/10 font-semibold text-white shadow-[inset_2px_0_0_0_#22A7E4]'
+                    : 'text-white/70 hover:bg-white/5 hover:text-white'
                 }`}
               >
                 <i.icon className="h-4 w-4" />
@@ -110,7 +110,7 @@ export function SidebarRegional({ nome, unidade, codigo, papel, logoUrl }: {
             <Link
               href="/dashboard"
               onClick={() => setAberto(false)}
-              className="mt-2 flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-white/50 transition hover:bg-superficie/5 hover:text-white"
+              className="mt-2 flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-white/50 transition hover:bg-white/5 hover:text-white"
             >
               <Building2 className="h-4 w-4" /> Sistema da matriz
             </Link>

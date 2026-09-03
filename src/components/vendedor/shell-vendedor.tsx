@@ -55,7 +55,7 @@ export function BotoesHotlink({ codigo, compacto }: { codigo: string | null; com
     <div className={`flex gap-2 ${compacto ? '' : 'flex-col sm:flex-row'}`}>
       <button
         onClick={compartilhar}
-        className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-cyan-500 px-3 py-2 text-[12px] font-semibold text-brand-800 transition hover:bg-cyan-400"
+        className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-cyan-500 px-3 py-2 text-[12px] font-semibold text-navy transition hover:bg-cyan-400"
       >
         <Share2 className="h-3.5 w-3.5" /> Compartilhar meu link
       </button>
@@ -116,7 +116,7 @@ export function ShellVendedor({ nome, unidade, codigo, logoUrl, children }: {
           </p>
         </div>
 
-        <div className="mx-3 mb-3 rounded-xl bg-superficie/5 px-3 py-2.5">
+        <div className="mx-3 mb-3 rounded-xl bg-white/5 px-3 py-2.5">
           <p className="truncate text-[13px] font-semibold text-white">{nome}</p>
           <p className="truncate text-[11px] text-white/50">{unidade ?? 'Smart Car Brasil'}</p>
           {codigo && (
@@ -137,8 +137,8 @@ export function ShellVendedor({ nome, unidade, codigo, logoUrl, children }: {
               href={i.href}
               className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition ${
                 ativo(i.href)
-                  ? 'bg-superficie/10 font-semibold text-white shadow-[inset_2px_0_0_0_#22A7E4]'
-                  : 'text-white/70 hover:bg-superficie/5 hover:text-white'
+                  ? 'bg-white/10 font-semibold text-white shadow-[inset_2px_0_0_0_#22A7E4]'
+                  : 'text-white/70 hover:bg-white/5 hover:text-white'
               }`}
             >
               <i.icon className="h-4 w-4" />

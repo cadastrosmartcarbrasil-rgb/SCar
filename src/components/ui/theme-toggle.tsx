@@ -35,7 +35,7 @@ export function ThemeToggle({
       className={cn(
         'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition',
         variante === 'cabine'
-          ? 'text-slate-300 hover:bg-white/10 hover:text-white'
+          ? 'text-white/80 hover:bg-white/10 hover:text-white'
           : 'text-slate-500 hover:bg-slate-100 hover:text-brand-700',
         className,
       )}

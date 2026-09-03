@@ -574,7 +574,7 @@ export function LinkDaProposta({ token, compacto }: { token: string; compacto?: 
         href={`/cotacao/${token}`}
         target="_blank"
         rel="noreferrer"
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-500 px-4 py-3 text-[14px] font-bold text-brand-800 transition hover:bg-cyan-400"
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-500 px-4 py-3 text-[14px] font-bold text-navy transition hover:bg-cyan-400"
       >
         <FileText className="h-4 w-4" /> Ver minha proposta
       </a>

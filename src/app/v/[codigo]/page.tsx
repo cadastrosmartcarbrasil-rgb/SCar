@@ -68,8 +68,8 @@ export default async function HotlinkPage({ params }: { params: { codigo: string
             </p>
 
             {ehVendedor && (
-              <div className="mt-6 inline-flex items-center gap-2.5 rounded-full bg-superficie/10 py-2 pl-2 pr-4 ring-1 ring-white/15">
-                <span className="grid h-8 w-8 place-items-center rounded-full bg-cyan-500 text-[13px] font-bold text-brand-800">
+              <div className="mt-6 inline-flex items-center gap-2.5 rounded-full bg-white/10 py-2 pl-2 pr-4 ring-1 ring-white/15">
+                <span className="grid h-8 w-8 place-items-center rounded-full bg-cyan-500 text-[13px] font-bold text-navy">
                   {destino.nome.slice(0, 1).toUpperCase()}
                 </span>
                 <span className="text-[12.5px] text-white/80">
