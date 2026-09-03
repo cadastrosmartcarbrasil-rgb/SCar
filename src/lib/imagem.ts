@@ -74,13 +74,19 @@ export function nomeComprimido(nome: string): string {
  */
 export function validarArquivo(
   file: ArquivoBasico,
-  opcoes?: { limiteBytes?: number; aceitaPdf?: boolean },
+  opcoes?: {
+    limiteBytes?: number;
+    aceitaPdf?: boolean;
+    /** Outros formatos que a tela aceita, casados pelo NOME (ex.: /\.xml$/i). */
+    aceitaOutros?: RegExp;
+  },
 ): string | null {
   const limite = opcoes?.limiteBytes ?? LIMITE_BYTES;
   const imagem = ehImagem(file);
   const pdf = ehPdf(file);
+  const outro = opcoes?.aceitaOutros?.test(file.name ?? '') ?? false;
 
-  if (!imagem && !(opcoes?.aceitaPdf && pdf)) {
+  if (!imagem && !(opcoes?.aceitaPdf && pdf) && !outro) {
     return opcoes?.aceitaPdf
       ? 'Envie uma imagem (JPG/PNG) ou um PDF.'
       : 'Envie uma imagem (JPG ou PNG).';

@@ -85,3 +85,20 @@ describe('validarArquivo', () => {
     expect(validarArquivo(arquivo({ size: 50 * 1024 * 1024 }))).toMatch(/grande demais/i);
   });
 });
+
+describe('validarArquivo com outros formatos', () => {
+  const xml = { type: 'application/xml', size: 20_000, name: 'nfe.xml' };
+
+  it('aceita o que a tela declarar (XML da nota, por exemplo)', () => {
+    expect(validarArquivo(xml, { aceitaPdf: true, aceitaOutros: /\.xml$/i })).toBeNull();
+  });
+
+  it('sem a permissao, o mesmo arquivo e recusado', () => {
+    expect(validarArquivo(xml, { aceitaPdf: true })).toMatch(/imagem/i);
+  });
+
+  it('o teto tambem vale para o formato extra', () => {
+    expect(validarArquivo({ ...xml, size: LIMITE_BYTES + 1 }, { aceitaOutros: /\.xml$/i }))
+      .toMatch(/limite/i);
+  });
+});

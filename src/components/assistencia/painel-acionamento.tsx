@@ -19,6 +19,7 @@ import {
   type VeiculoAssistencia, type AbrirAcionamentoInput, type AcionamentoComRel,
 } from '@/hooks/use-assistencia';
 import { MapaRota } from '@/components/mapa/mapa-rota';
+import { AnexosAcionamento } from '@/components/assistencia/anexos-acionamento';
 import {
   TrajetoAcionamento, type RotaCalculada,
 } from '@/components/assistencia/trajeto-acionamento';
@@ -652,6 +653,9 @@ export function OrdemServico({ acionamentoId, onVoltar }: { acionamentoId: strin
           )}
         </div>
       )}
+
+      {/* Prova do atendimento: foto do veiculo, do local, comprovante */}
+      <AnexosAcionamento acionamentoId={a.id} />
 
       {/* Auditoria das edicoes */}
       <TrilhaEdicoes acionamentoId={a.id} />

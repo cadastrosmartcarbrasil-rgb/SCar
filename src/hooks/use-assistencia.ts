@@ -2,7 +2,10 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
+import { comprimirImagem, validarArquivo } from '@/lib/imagem';
 import type {
+  AcionamentoAnexosRow,
+  TipoAnexoAcionamento,
   ServicosAssistenciaRow,
   AcionamentosAssistenciaRow,
   AcionamentoCotacoesRow,
@@ -585,5 +588,115 @@ export function useSalvarPrestador() {
       }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['assistencia'] }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Anexos da OS (0048) — a prova do atendimento
+//
+// Foto do veiculo antes do guincho, foto do local, comprovante do prestador.
+// Mesmo caminho da vistoria de vendas: a imagem e reduzida no navegador
+// (`src/lib/imagem.ts`) e o teto de 10 MB e do banco.
+// ---------------------------------------------------------------------------
+const BUCKET_ASSISTENCIA = 'assistencia';
+
+export function useAnexosAcionamento(acionamentoId?: string | null) {
+  const supabase = createClient();
+  return useQuery<AcionamentoAnexosRow[]>({
+    queryKey: ['assistencia', 'anexos', acionamentoId ?? '-'],
+    enabled: !!acionamentoId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('acionamento_anexos')
+        .select('*')
+        .eq('acionamento_id', acionamentoId as string)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function useUploadAnexoAcionamento(acionamentoId: string) {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<void, Error, { file: File; tipo: TipoAnexoAcionamento }>({
+    mutationFn: async ({ file: bruto, tipo }) => {
+      const recusa = validarArquivo(bruto, { aceitaPdf: true });
+      if (recusa) throw new Error(recusa);
+      const file = await comprimirImagem(bruto);
+
+      const ext = file.name.includes('.') ? `.${file.name.split('.').pop()}` : '';
+      // O caminho COMECA pelo id do acionamento: e assim que a policy de
+      // storage confere quem pode abrir o arquivo.
+      const path = `${acionamentoId}/${Date.now()}-${Math.round(Math.random() * 1e6)}${ext}`;
+
+      const { error: upErr } = await supabase.storage
+        .from(BUCKET_ASSISTENCIA).upload(path, file, { cacheControl: '3600', upsert: false });
+      if (upErr) throw upErr;
+
+      const { data: { user } } = await supabase.auth.getUser();
+      const { error: insErr } = await supabase.from('acionamento_anexos').insert({
+        acionamento_id: acionamentoId,
+        url: path,
+        tipo,
+        descricao: file.name,
+        tamanho_bytes: file.size,
+        enviado_por: user?.id ?? null,
+      });
+      // Linha recusada (teto do banco, permissao): o arquivo nao pode ficar
+      // orfao no bucket.
+      if (insErr) {
+        await supabase.storage.from(BUCKET_ASSISTENCIA).remove([path]);
+        throw insErr;
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['assistencia', 'anexos', acionamentoId] }),
+  });
+}
+
+export function useRemoverAnexoAcionamento(acionamentoId: string) {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<void, Error, AcionamentoAnexosRow>({
+    mutationFn: async (anexo) => {
+      const { error } = await supabase.from('acionamento_anexos').delete().eq('id', anexo.id);
+      if (error) throw error;
+      await supabase.storage.from(BUCKET_ASSISTENCIA).remove([anexo.url]);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['assistencia', 'anexos', acionamentoId] }),
+  });
+}
+
+/** URLs assinadas em lote — uma chamada para todas as miniaturas. */
+export function useUrlsAssinadasAssistencia(paths: (string | null | undefined)[]) {
+  const supabase = createClient();
+  const lista = Array.from(new Set(paths.filter((p): p is string => !!p))).sort();
+  return useQuery<Record<string, string>>({
+    queryKey: ['assistencia', 'urls-assinadas', lista.join('|')],
+    enabled: lista.length > 0,
+    staleTime: 8 * 60_000,
+    gcTime: 8 * 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.storage
+        .from(BUCKET_ASSISTENCIA).createSignedUrls(lista, 60 * 10);
+      if (error) throw error;
+      const mapa: Record<string, string> = {};
+      (data ?? []).forEach((d) => { if (d.path && d.signedUrl) mapa[d.path] = d.signedUrl; });
+      return mapa;
+    },
+  });
+}
+
+/** URL assinada de um arquivo so (abrir o original em outra aba). */
+export function useUrlAssinadaAssistencia() {
+  const supabase = createClient();
+  return useMutation<string, Error, string>({
+    mutationFn: async (path) => {
+      const { data, error } = await supabase.storage
+        .from(BUCKET_ASSISTENCIA).createSignedUrl(path, 60 * 10);
+      if (error) throw error;
+      return data.signedUrl;
+    },
   });
 }

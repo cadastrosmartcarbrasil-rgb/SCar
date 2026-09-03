@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
+import { comprimirImagem, validarArquivo } from '@/lib/imagem';
 import type {
   EventosSinistroRow,
   StatusEvento,
@@ -139,7 +140,14 @@ export function useUploadAnexo(eventoId: string) {
   const supabase = createClient();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ file, tipo }: { file: File; tipo: TipoDocumentoAnexo }) => {
+    mutationFn: async ({ file: bruto, tipo }: { file: File; tipo: TipoDocumentoAnexo }) => {
+      // Foto de avaria sai do celular com 8-12 MB. Reduz aqui, no navegador
+      // (1600px, JPEG), como na vistoria de vendas: o perito ve o mesmo detalhe
+      // e o upload nao morre no 4G do patio. PDF e XML sobem como vieram.
+      const recusa = validarArquivo(bruto, { aceitaPdf: true, aceitaOutros: /\.xml$/i });
+      if (recusa) throw new Error(recusa);
+      const file = await comprimirImagem(bruto);
+
       const ext = file.name.split('.').pop();
       // path = {evento_id}/{timestamp}-{rand}.{ext}  (RLS valida o prefixo evento_id)
       const path = `${eventoId}/${Date.now()}-${Math.round(Math.random() * 1e6)}.${ext}`;

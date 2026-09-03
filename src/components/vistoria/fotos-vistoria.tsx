@@ -2,9 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import {
-  Camera, Check, ChevronLeft, ChevronRight, ExternalLink, Info, Loader2, Trash2, X, ZoomIn,
-} from 'lucide-react';
+import { Camera, Check, Info, Loader2, Trash2, ZoomIn } from 'lucide-react';
+import { VisorImagens } from '@/components/ui/visor-imagens';
 import {
   useAddFotoVistoria, useFotosVistoriaLead, useRemoverFotoVistoria, useUrlAssinadaVendas,
   useUrlsAssinadasVendas,
@@ -135,10 +134,19 @@ export function FotosVistoria({ leadId, somenteLeitura }: {
       </ul>
 
       {ampliada && (
-        <VisorFotos
-          poses={enviadas}
-          urls={urls ?? {}}
-          codigo={ampliada}
+        <VisorImagens
+          imagens={enviadas.map((p) => ({
+            id: p.codigo,
+            titulo: p.nome,
+            legenda: [
+              p.enviada_em ? formatDateTime(p.enviada_em) : null,
+              p.tamanho_bytes != null ? tamanhoLegivel(p.tamanho_bytes) : null,
+              p.arquivo,
+            ].filter(Boolean).join(' · '),
+            url: p.url ? urls?.[p.url] : undefined,
+            original: p.url,
+          }))}
+          id={ampliada}
           onTrocar={setAmpliada}
           onFechar={() => setAmpliada(null)}
           onAbrirOriginal={abrirOriginal}
@@ -251,98 +259,5 @@ function ItemPose({ pose, url, carregandoUrl, enviando, somenteLeitura, onEnviar
         </div>
       </div>
     </li>
-  );
-}
-
-/**
- * Visor em tela cheia: e onde a auditoria confere de verdade — a foto grande,
- * com o nome da pose, o peso e as setas para percorrer o que ja subiu.
- */
-function VisorFotos({ poses, urls, codigo, onTrocar, onFechar, onAbrirOriginal }: {
-  poses: FotoVistoriaModelo[];
-  urls: Record<string, string>;
-  codigo: string;
-  onTrocar: (codigo: string) => void;
-  onFechar: () => void;
-  onAbrirOriginal: (path: string) => void;
-}) {
-  const i = Math.max(0, poses.findIndex((p) => p.codigo === codigo));
-  const atual = poses[i];
-
-  useEffect(() => {
-    function tecla(e: KeyboardEvent) {
-      if (e.key === 'Escape') onFechar();
-      if (e.key === 'ArrowRight' && poses[i + 1]) onTrocar(poses[i + 1].codigo);
-      if (e.key === 'ArrowLeft' && poses[i - 1]) onTrocar(poses[i - 1].codigo);
-    }
-    window.addEventListener('keydown', tecla);
-    return () => window.removeEventListener('keydown', tecla);
-  }, [i, poses, onTrocar, onFechar]);
-
-  if (!atual) return null;
-  const url = atual.url ? urls[atual.url] : undefined;
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex flex-col bg-black/85 p-3 sm:p-6"
-      onClick={onFechar}
-      role="dialog"
-      aria-modal="true"
-      aria-label={`Foto ${atual.nome}`}
-    >
-      <header className="flex items-start justify-between gap-3 text-white" onClick={(e) => e.stopPropagation()}>
-        <div className="min-w-0">
-          <p className="text-[14px] font-semibold">{atual.nome}</p>
-          <p className="tnum text-[11.5px] text-white/70">
-            {atual.enviada_em ? formatDateTime(atual.enviada_em) : ''}
-            {atual.tamanho_bytes != null && ` · ${tamanhoLegivel(atual.tamanho_bytes)}`}
-            {atual.arquivo && ` · ${atual.arquivo}`}
-            {` · ${i + 1} de ${poses.length}`}
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-1.5">
-          {atual.url && (
-            <button
-              type="button" onClick={() => onAbrirOriginal(atual.url as string)}
-              className="inline-flex items-center gap-1 rounded-lg bg-white/10 px-2.5 py-1.5 text-[11.5px] font-semibold text-white hover:bg-white/20"
-            >
-              <ExternalLink className="h-3.5 w-3.5" /> Abrir original
-            </button>
-          )}
-          <button
-            type="button" onClick={onFechar} aria-label="Fechar"
-            className="grid h-8 w-8 place-items-center rounded-lg bg-white/10 text-white hover:bg-white/20"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      </header>
-
-      <div className="flex min-h-0 flex-1 items-center gap-2 py-3" onClick={(e) => e.stopPropagation()}>
-        <Seta lado="esq" ativo={!!poses[i - 1]} onClick={() => poses[i - 1] && onTrocar(poses[i - 1].codigo)} />
-        <div className="flex h-full min-w-0 flex-1 items-center justify-center">
-          {url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={url} alt={atual.nome} className="max-h-full max-w-full rounded-lg object-contain" />
-          ) : (
-            <Loader2 className="h-6 w-6 animate-spin text-white/70" />
-          )}
-        </div>
-        <Seta lado="dir" ativo={!!poses[i + 1]} onClick={() => poses[i + 1] && onTrocar(poses[i + 1].codigo)} />
-      </div>
-    </div>
-  );
-}
-
-function Seta({ lado, ativo, onClick }: { lado: 'esq' | 'dir'; ativo: boolean; onClick: () => void }) {
-  const Icone = lado === 'esq' ? ChevronLeft : ChevronRight;
-  return (
-    <button
-      type="button" onClick={onClick} disabled={!ativo}
-      aria-label={lado === 'esq' ? 'Foto anterior' : 'Proxima foto'}
-      className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/10 text-white transition hover:bg-white/20 disabled:opacity-20"
-    >
-      <Icone className="h-5 w-5" />
-    </button>
   );
 }

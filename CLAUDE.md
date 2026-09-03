@@ -3,7 +3,7 @@
 > Memória do projeto. Leia isto no início de cada sessão em vez de varrer o repositório inteiro.
 > Mantenha este arquivo atualizado ao adicionar módulos/migrations (é barato e faz o projeto andar rápido).
 
-## Estado atual (retomar aqui) — atualizado ao fim da fase 0032→0047
+## Estado atual (retomar aqui) — atualizado ao fim da fase 0032→0048
 
 **Um único projeto, um único repositório: `cadastrosmartcarbrasil-rgb/scar`** (no GitHub o nome
 aparece como `SCar`). Trabalho e deploy acontecem no branch **`claude/claude-md-opcao-x-98kfj5`**;
@@ -17,10 +17,13 @@ o de trabalho; esse default morto já causou um dia inteiro de trabalho no branc
 - **Último commit desta fase:** `a468ead`.
 - **A migration `0044` JÁ FOI APLICADA em produção** e o Portal do Associado está no ar,
   conferido pelo usuário. As migrations `0001`..`0044` estão todas aplicadas.
-- **`0045_agenda_vendas`, `0046_vendas_duplicidade_aceite` e `0047_vistoria_anexo_peso` são NOVAS
-  e ainda NÃO foram aplicadas em produção** — rodar as três, nessa ordem, no SQL Editor do
-  Supabase ANTES do `docker compose up -d --build`, senão a tela de vendas quebra (Kanban, agenda,
-  aviso de duplicidade, aceite presencial e a aba de fotos chamam RPCs que só existem depois delas).
+- **`0045_agenda_vendas`, `0046_vendas_duplicidade_aceite`, `0047_vistoria_anexo_peso` e
+  `0048_assistencia_anexos` são NOVAS e ainda NÃO foram aplicadas em produção** — rodar as quatro,
+  nessa ordem, no SQL Editor do Supabase ANTES do `docker compose up -d --build`, senão a tela de
+  vendas quebra (Kanban, agenda, aviso de duplicidade, aceite presencial e a aba de fotos chamam
+  RPCs que só existem depois delas) e os anexos da OS da 24h não têm onde gravar.
+- **A `0048` cria o bucket `assistencia`** — o SQL Editor cria o registro em `storage.buckets`;
+  confira em *Storage* se ele aparece como **privado** depois de rodar.
 - **A `0046` também FECHA UM BURACO DE SEGURANÇA:** `registrar_aceite_venda` era `security definer`
   concedida a `authenticated` **sem checar quem chama** — qualquer usuário logado (inclusive um
   associado do `/portal`) podia carimbar aceite em lead alheio. Agora, havendo sessão, exige
@@ -108,9 +111,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0047`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **24 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 355 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0048`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **25 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 358 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Todos os portais e páginas
@@ -723,6 +726,17 @@ drop + create) devolvendo `enviada_em`, `tamanho_bytes` e `arquivo` — e o que 
 cada miniatura. O `distinct on` ganhou `a.id` como desempate: dois anexos gravados na MESMA
 transacao tem o mesmo `created_at` (o default e `now()`) e a escolha da "mais recente" seria
 arbitraria — mesmo gotcha da auditoria da OS 24h.)
+· `0048_assistencia_anexos` (ANEXOS DA OS DA 24H — o modulo nasceu completo no dinheiro (cotacao,
+OS, KM excedente, contas a pagar, auditoria da edicao) e VAZIO NA PROVA: a foto do veiculo chegava
+pelo WhatsApp do atendente e morria ali. (A) `acionamento_anexos` (foto do veiculo, foto do local,
+documento, comprovante) com `tamanho_bytes`/`enviado_por`; `tipo` e TEXTO com CHECK, nao enum —
+evita o gotcha de "novo valor de enum na mesma transacao" quando a lista crescer; (B) bucket
+privado **`assistencia`**, no padrao do `sinistros-docs`: o caminho comeca pelo id do acionamento e
+a policy de storage confere o acesso por ele (com regex de uuid antes do cast — sem isso um `name`
+fora do padrao derruba a consulta inteira). RLS espelha `acionamentos_assistencia`: ve quem ve a OS,
+escreve quem opera a 24h; (C) mesmo TETO DE 10 MB do 0047; (D) o teto passa a valer tambem para
+`anexos_evento`, la como **NOT VALID** — foto pesada que subiu antes da compressao continua onde
+esta, so o que entrar agora precisa respeitar.)
 
 ## Módulos (status: todos funcionais)
 Assistência 24h (`/assistencia`: painel de acionamento com trava + limites em tempo real, cotação,
@@ -885,6 +899,12 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
   e registra a divergência para tratamento manual.
 - **Auditoria:** card "Histórico de alterações" na OS — campo, de → para, data/hora, operador e
   motivo (trigger no banco, pega até alteração feita fora das telas).
+- **Anexos da OS (0048):** card **"Fotos e documentos"** — foto do veículo, foto do local,
+  documento e comprovante, com **miniatura** e visor em tela cheia (PDF vira linha com "Abrir").
+  Escolhe-se o **tipo antes do arquivo**: é ele que diz para que a foto serve. A imagem é reduzida
+  no navegador pela mesma regra da vistoria (`src/lib/imagem.ts`) e o teto de 10 MB é do banco.
+  Bucket privado `assistencia`, caminho `{acionamento_id}/…` — a policy de storage confere o
+  acesso pelo prefixo, então arquivo não vaza para quem não vê a OS.
 - **Relatórios:** `/financeiro` → DRE com **filtro por centro de custo** e a tabela
   **Receitas × Despesas por centro de custo** (clicar num centro filtra o DRE). A aba Contas a
   Pagar/Receber também filtra e exibe o centro de custo.
@@ -1243,6 +1263,25 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
   órfão no storage.
 - Espelho puro em `src/lib/vistoria.ts` (`progressoVistoria`, `proximaPose`, `separarOpcionais`,
   `avulsosParaCotacao`) com testes.
+
+## Foto e anexo — UMA regra para o sistema inteiro (`src/lib/imagem.ts`)
+- **Todo upload de imagem passa por `comprimirImagem`**: 1600px no maior lado, JPEG 0,82 (segunda
+  passada em 0,65 se ainda ficar acima de ~1,5 MB). Ela **nunca falha para quem chama** — formato
+  que o navegador não decodifica (HEIC antigo) e imagem que ficaria maior comprimida sobem como
+  vieram.
+- **`validarArquivo` decide o que entra** antes de gastar rede: imagem sempre passa (vai ser
+  reduzida), PDF só onde a tela aceita (`aceitaPdf`), outros formatos por regex (`aceitaOutros`,
+  usado pelo XML da nota no evento). Imagem acima de 40 MB é recusada — nem vale tentar reduzir.
+- **O teto de 10 MB é do BANCO**, em CHECK: `vistoria_anexos` (0047), `acionamento_anexos` (0048) e
+  `anexos_evento` (0048, `not valid` por causa do histórico). Regra que só vive na tela não é regra.
+- **Onde já está ligado:** vistoria da venda e CRLV (`use-vendas.ts`), anexos de evento/sinistro
+  (`use-eventos.ts`) e anexos da OS da 24h (`use-assistencia.ts`). Ao criar um upload novo, use os
+  mesmos dois passos — `validarArquivo` + `comprimirImagem` — e grave `tamanho_bytes`.
+- **Se a linha do anexo falhar, o arquivo recém-enviado é removido do bucket** (o teto do banco
+  recusa depois do upload). Nada de órfão no storage.
+- **Ver a foto é `<VisorImagens>`** (`src/components/ui/visor-imagens.tsx`): miniatura → tela cheia,
+  setas, `Esc` e "abrir original". Está fora das telas de propósito — conferir imagem é o mesmo
+  gesto na vistoria e na OS da 24h.
 
 ## Cotação: o que ja vem no combo (0040)
 - **O bug:** a tela listava TODO produto nao-obrigatorio como "adicional avulso", inclusive os que o

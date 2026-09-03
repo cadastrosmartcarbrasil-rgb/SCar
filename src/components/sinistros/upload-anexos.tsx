@@ -1,11 +1,12 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { useDropzone } from 'react-dropzone';
+import { useDropzone, type FileRejection } from 'react-dropzone';
 import { toast } from 'sonner';
 import { UploadCloud, FileText, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { useAnexos, useUploadAnexo, useSignedUrl } from '@/hooks/use-eventos';
 import type { TipoDocumentoAnexo } from '@/lib/database.types';
+import { LADO_MAXIMO, tamanhoLegivel } from '@/lib/imagem';
 import { formatDate } from '@/lib/utils';
 
 const TIPOS: { value: TipoDocumentoAnexo; label: string }[] = [
@@ -16,8 +17,14 @@ const TIPOS: { value: TipoDocumentoAnexo; label: string }[] = [
   { value: 'NOTA_FISCAL', label: 'Nota Fiscal' },
 ];
 
-// Upload drag-and-drop de fotos/documentos para o Supabase Storage (bucket privado)
-// com preview e listagem. Componente-chave do modulo de sinistros.
+// Upload drag-and-drop de fotos/documentos para o Supabase Storage (bucket
+// privado) com listagem. Componente-chave do modulo de sinistros.
+//
+// A FOTO E REDUZIDA no navegador antes de subir (1600px, JPEG — `useUploadAnexo`),
+// entao o limite do dropzone aqui e so a barreira do absurdo: uma foto de 12 MB
+// do celular precisa PASSAR por este filtro para poder ser comprimida. Era o
+// contrario antes, e o perito recebia "arquivo grande demais" com a foto certa
+// na mao.
 export function UploadAnexos({ eventoId }: { eventoId: string }) {
   const { data: anexos } = useAnexos(eventoId);
   const upload = useUploadAnexo(eventoId);
@@ -39,14 +46,27 @@ export function UploadAnexos({ eventoId }: { eventoId: string }) {
     [tipo, upload],
   );
 
+  const onRejeitado = useCallback((rejeitados: FileRejection[]) => {
+    rejeitados.forEach((r) => {
+      const grande = r.errors.some((e) => e.code === 'file-too-large');
+      toast.error(grande
+        ? `${r.file.name} tem ${tamanhoLegivel(r.file.size)} — grande demais ate para reduzir.`
+        : `${r.file.name}: formato nao aceito (imagem, PDF ou XML).`);
+    });
+  }, []);
+
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
+    onDropRejected: onRejeitado,
     accept: {
-      'image/*': ['.png', '.jpg', '.jpeg', '.webp'],
+      'image/*': ['.png', '.jpg', '.jpeg', '.webp', '.heic'],
       'application/pdf': ['.pdf'],
       'application/xml': ['.xml'],
+      'text/xml': ['.xml'],
     },
-    maxSize: 10 * 1024 * 1024,
+    // Teto do absurdo: o que passa daqui e reduzido antes de subir; PDF/XML
+    // ainda respondem ao teto de 10 MB do banco/rota.
+    maxSize: 40 * 1024 * 1024,
   });
 
   async function abrir(path: string) {
@@ -90,7 +110,9 @@ export function UploadAnexos({ eventoId }: { eventoId: string }) {
         <p className="mt-2 text-sm text-slate-600">
           {isDragActive ? 'Solte os arquivos aqui...' : 'Arraste arquivos ou clique para enviar'}
         </p>
-        <p className="text-xs text-slate-400">Imagens, PDF ou XML - ate 10 MB</p>
+        <p className="text-xs text-slate-400">
+          Imagens, PDF ou XML · a foto e reduzida automaticamente (ate {LADO_MAXIMO}px) antes de subir
+        </p>
       </div>
 
       <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200">
@@ -108,8 +130,9 @@ export function UploadAnexos({ eventoId }: { eventoId: string }) {
                   {a.nome_original ?? a.arquivo_url}
                 </span>
               </button>
-              <span className="text-xs text-slate-400">
-                {a.tipo_documento} - {formatDate(a.created_at)}
+              <span className="tnum text-xs text-slate-400">
+                {a.tipo_documento} · {formatDate(a.created_at)}
+                {a.tamanho_bytes != null && ` · ${tamanhoLegivel(a.tamanho_bytes)}`}
               </span>
             </li>
           );

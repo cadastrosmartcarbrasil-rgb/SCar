@@ -1680,6 +1680,21 @@ export type FotoVistoriaModelo = {
   arquivo: string | null;
 };
 
+// 0048 :: anexos da OS da assistencia 24h
+export type TipoAnexoAcionamento =
+  | 'FOTO_VEICULO' | 'FOTO_LOCAL' | 'DOCUMENTO' | 'COMPROVANTE' | 'OUTRO';
+
+export type AcionamentoAnexosRow = {
+  id: string;
+  acionamento_id: string;
+  url: string;
+  tipo: TipoAnexoAcionamento;
+  descricao: string | null;
+  tamanho_bytes: number | null;
+  enviado_por: string | null;
+  created_at: string;
+};
+
 export type ProdutoDoPlano = {
   produto_id: string;
   nome: string;
@@ -1951,6 +1966,10 @@ export type Database = {
       acionamento_edicoes: TableDef<
         AcionamentoEdicoesRow,
         [Rel<'acionamento_id', 'acionamentos_assistencia'>, Rel<'usuario_id', 'usuarios'>]
+      >;
+      acionamento_anexos: TableDef<
+        AcionamentoAnexosRow,
+        [Rel<'acionamento_id', 'acionamentos_assistencia'>, Rel<'enviado_por', 'usuarios'>]
       >;
       centros_custo: TableDef<CentrosCustoRow>;
       contas_bancarias: TableDef<ContasBancariasRow>;
