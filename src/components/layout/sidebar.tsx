@@ -73,7 +73,7 @@ function Wordmark() {
         <span className="text-[15px] font-extrabold tracking-tight text-white">
           SMART<span className="text-cyan-400">CAR</span>BRASIL
         </span>
-        <span className="mt-1 block text-[8.5px] font-semibold tracking-[0.3em] text-slate-400">
+        <span className="mt-1 block text-[8.5px] font-semibold tracking-[0.3em] text-slate-300">
           PROTECAO VEICULAR
         </span>
       </span>
@@ -127,9 +127,9 @@ export function Sidebar({ papel, logoUrl }: { papel?: PapelUsuario; logoUrl?: st
 
   const Nav = ({ onNav }: { onNav?: () => void }) => (
     <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2">
-      <p className="px-3 pb-1.5 pt-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Operacao</p>
+      <p className="px-3 pb-1.5 pt-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-300">Operacao</p>
       {OPERACAO.map((i) => <NavLink key={i.href} item={i} onNav={onNav} />)}
-      <p className="px-3 pb-1.5 pt-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Gestao</p>
+      <p className="px-3 pb-1.5 pt-4 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-300">Gestao</p>
       {menuGestao.map((i) => <NavLink key={i.href} item={i} onNav={onNav} />)}
     </nav>
   );
@@ -159,12 +159,12 @@ export function Sidebar({ papel, logoUrl }: { papel?: PapelUsuario; logoUrl?: st
           <aside className="cockpit absolute left-0 top-0 flex h-full w-72 flex-col shadow-xl">
             <div className="flex items-center justify-between gap-3 px-4 py-4">
               <div className="min-w-0 flex-1"><Brand logoUrl={logoUrl} /></div>
-              <button onClick={() => setAberto(false)} aria-label="Fechar" className="text-slate-400 hover:text-white">
+              <button onClick={() => setAberto(false)} aria-label="Fechar" className="text-slate-300 hover:text-white">
                 <X className="h-5 w-5" />
               </button>
             </div>
             <Nav onNav={() => setAberto(false)} />
-            <button onClick={sair} className="flex items-center gap-3 border-t border-white/10 px-5 py-3.5 text-sm text-slate-400 hover:text-white">
+            <button onClick={sair} className="flex items-center gap-3 border-t border-white/10 px-5 py-3.5 text-sm text-slate-300 hover:text-white">
               <LogOut className="h-4 w-4" /> Sair
             </button>
           </aside>
@@ -177,7 +177,7 @@ export function Sidebar({ papel, logoUrl }: { papel?: PapelUsuario; logoUrl?: st
           <Brand logoUrl={logoUrl} />
         </div>
         <Nav />
-        <button onClick={sair} className="flex items-center gap-3 border-t border-white/10 px-5 py-3.5 text-sm text-slate-400 transition hover:text-white">
+        <button onClick={sair} className="flex items-center gap-3 border-t border-white/10 px-5 py-3.5 text-sm text-slate-300 transition hover:text-white">
           <LogOut className="h-4 w-4" /> Sair
         </button>
       </aside>

@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { digitarMoeda, formatarMoedaBR } from '@/lib/money';
+import { valorComCaixaPadrao } from '@/lib/texto';
 
 const base =
   'mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm transition focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 disabled:bg-slate-50';
@@ -11,8 +12,66 @@ export function Label({ className, ...props }: React.LabelHTMLAttributes<HTMLLab
   return <label className={cn('text-sm font-medium text-slate-600', className)} {...props} />;
 }
 
-export function Input({ className, ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input className={cn(base, className)} {...props} />;
+// ---------------------------------------------------------------------------
+// Campo de texto do sistema.
+//
+// CAIXA ALTA POR PADRAO: cadastro se escreve em maiusculas, para a mesma pessoa
+// nao virar "Joao", "JOAO" e "joao" em tres telas. Quem decide e
+// `valorComCaixaPadrao` (src/lib/texto.ts), pelo `type` e pelo `name` do campo —
+// e-mail, senha, URL, chave PIX e token ficam como foram digitados. Para forcar
+// a excecao numa tela especifica, `caixa="original"`.
+//
+// A transformacao e no VALOR (nao `text-transform: uppercase`, que so pinta a
+// tela e continuaria gravando o texto bagunçado no banco).
+//
+// O CURSOR precisa de cuidado: num input controlado, devolver ao pai um valor
+// diferente do que esta no DOM faz o React reescrever o campo, e o cursor pula
+// para o fim — quem corrige uma letra no meio do nome digita o resto ao contrario.
+// Como a caixa alta nao muda o comprimento do texto, guardamos a posicao no
+// onChange e a repomos no layout effect, antes de a tela pintar.
+// ---------------------------------------------------------------------------
+export function Input({
+  className,
+  caixa,
+  onChange,
+  ...props
+}: React.InputHTMLAttributes<HTMLInputElement> & { caixa?: 'alta' | 'original' }) {
+  const ref = useRef<HTMLInputElement>(null);
+  const posicao = useRef<number | null>(null);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (posicao.current === null || !el) return;
+    const pos = posicao.current;
+    posicao.current = null;
+    // setSelectionRange nao vale para todo tipo de input (number, date...);
+    // so chegamos aqui em campo de texto, mas o try mantem o campo funcionando
+    // caso alguem passe um type diferente.
+    try {
+      el.setSelectionRange(pos, pos);
+    } catch {
+      /* tipo de input sem selecao — nada a repor */
+    }
+  });
+
+  return (
+    <input
+      ref={ref}
+      className={cn(base, className)}
+      onChange={(e) => {
+        if (caixa !== 'original') {
+          const original = e.target.value;
+          const ajustado = valorComCaixaPadrao(original, props.type, props.name);
+          if (ajustado !== original) {
+            posicao.current = e.target.selectionStart;
+            e.target.value = ajustado;
+          }
+        }
+        onChange?.(e);
+      }}
+      {...props}
+    />
+  );
 }
 
 export function Select({ className, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {

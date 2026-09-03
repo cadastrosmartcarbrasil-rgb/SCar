@@ -112,6 +112,18 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 - **Devolução de lead parado ao pool é MANUAL** (botão em `/regional/leads`); para rodar sozinha
   precisa de agendamento no Supabase.
 - **Ícone do PWA** é o SVG da marca; para Android/iOS decentes, gerar PNGs 192/512.
+- **MULTI-EMPRESA (white-label) — pedido do usuário, deixado para o fim.** O software vai ser
+  usado por outras associações, cada uma com logomarca e paleta próprias. Hoje só a **logo** já é
+  parametrizada (`empresa.logo_url`, lida por todos os portais); **a cor não** — o navy e o ciano
+  estão fixos em `tailwind.config.ts`, que é build-time e por isso não dá para trocar por cliente
+  sem republicar. O caminho quando for a hora: mover a paleta para **CSS custom properties** em
+  `globals.css` (`--brand-600`, `--cyan-500`…), apontar o Tailwind para elas
+  (`brand: { 600: 'rgb(var(--brand-600) / <alpha-value>)' }`), guardar as cores em `empresa`
+  (junto da logo) e injetar um `<style>` com os valores no layout raiz — aí trocar a marca vira
+  cadastro, não deploy. Isso é o mesmo movimento que a logo já fez. Enquanto não acontece, **não
+  espalhe hex cru pelas telas**: use sempre os tokens `brand-*`/`cyan-*`, senão a migração vira
+  uma caçada. Falta decidir também se a paleta é por **empresa** (uma instalação por cliente) ou
+  por **regional** (uma instalação, várias marcas) — muda o desenho da tabela.
 
 ### Próximos passos oferecidos (o usuário escolhe)
 1. **Ligar o gateway real** (Asaas) — emissão + webhook + baixa automática.
@@ -146,6 +158,14 @@ Prioridade: **segurança (RLS)** e **sempre validado** antes de commitar.
   Sidebar = cabine escura (navy + pinstripe `.cockpit-stripe`, wordmark SMART**CAR**BRASIL, item
   ativo com glow ciano). Numeros de painel usam `.tnum` (tabular). Ground `--background #eef2f8`,
   cards brancos `rounded-2xl`. Botao primario navy; foco/realce em ciano. Status colors a parte.
+- **A escala `slate` é NOSSA, não a do Tailwind.** As faixas **400..700** foram escurecidas para
+  metade da luminância original, com 15% de navy misturado — o cinza-claro padrão é fraco demais
+  para uma marca navy e `text-slate-400` dava **2.56** de contraste no card branco, reprovado no
+  WCAG AA (mínimo 4.5); agora dá 5.35. Redefinir a paleta escurece **todas as telas de uma vez**,
+  e foi seguro porque essas faixas são usadas só como cor de TEXTO (zero `bg-`/`border-` nelas).
+  **50..300 e 800/900 não foram tocados:** são fundo, borda, título e — importante — o texto claro
+  da cabine escura. **Texto sobre fundo navy usa `text-slate-300` ou `text-white/…`; nunca
+  400/500/600**, que agora são escuros e sumiriam ali (a sidebar foi corrigida por isso).
 - **Edge Functions (Deno)** para webhook bancário e e-mail (Resend).
 - **RLS é a espinha de segurança.** Toda tabela tem policies; multi-tenant por `regional`.
 
@@ -766,6 +786,24 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
 - **Componentes:** `src/components/financeiro/` — `ui-financeiro.tsx` (Indicador, Selo, FiltroPeriodo,
   Vazio, baixarCsv), `lancamento-modal.tsx` (form em secoes + previa do parcelamento),
   `baixa-modal.tsx`, `contas-financeiro.tsx`, `fluxo-caixa.tsx`, `dre-report.tsx`.
+
+## Convenção de CAIXA ALTA nos formulários
+- **Cadastro se escreve em MAIÚSCULAS.** É o que impede a mesma pessoa de virar "Joao da Silva",
+  "JOAO DA SILVA" e "joao da silva" em três telas. A regra vale para o sistema inteiro.
+- **A transformação é no VALOR, não no CSS.** `text-transform: uppercase` só pinta a tela e
+  continuaria gravando no banco o texto bagunçado — que é justamente o problema.
+- **Quem decide é `src/lib/texto.ts`** (`valorComCaixaPadrao`, testado): olha o `type` e o `name`
+  do próprio campo, então a tela não precisa marcar nada. **Preservam a caixa:** e-mail, senha,
+  URL, **chave PIX** (a aleatória é UUID e a de e-mail é um e-mail — caixa alta faz o pagamento
+  deixar de casar com o cadastro do banco), token/segredo, e todo input não-textual (number, date,
+  checkbox…). Para forçar a exceção numa tela: `<Input caixa="original">`.
+- **O ponto de aplicação é o `<Input>` de `@/components/ui/field`** — 78% dos campos do sistema
+  passam por ele. Campo cru (`<input>`) numa tela específica precisa chamar `valorComCaixaPadrao`
+  na mão, como faz o `Entrada` do `/portal/perfil`.
+- **O que vem de fora também entra padronizado:** o retorno do ViaCEP passa por `paraCaixaAlta`
+  antes de preencher o endereço, senão o endereço buscado sairia diferente do digitado.
+- **Textarea NÃO é transformado** (observação, justificativa, parecer): é texto corrido para
+  leitura humana, não campo de cadastro — caixa alta ali atrapalha em vez de padronizar.
 
 ## Convenção de moeda (UI)
 - **Todo campo de dinheiro usa `<MoneyInput>` de `@/components/ui/field`** — nunca `<input type="number">`

@@ -24,6 +24,12 @@ export function maskCelular(v: string): string {
   return d.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
 }
 
+/** CEP no formato 00000-000. Guarda-se so os digitos; a mascara e da tela. */
+export function maskCep(v: string): string {
+  const d = (v ?? '').replace(/\D/g, '').slice(0, 8);
+  return d.length <= 5 ? d : d.replace(/(\d{5})(\d{0,3})/, '$1-$2');
+}
+
 export function formatDate(value: string | Date | null | undefined): string {
   if (!value) return '-';
   const d = typeof value === 'string' ? new Date(value) : value;

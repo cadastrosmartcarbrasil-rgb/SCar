@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAtualizarPerfilPortal, usePortalPerfil } from '@/hooks/use-portal';
 import { buscarCep } from '@/lib/cep';
 import { formatarDocumento } from '@/lib/documento';
-import { formatDate, maskCelular } from '@/lib/utils';
+import { paraCaixaAlta, valorComCaixaPadrao } from '@/lib/texto';
+import { formatDate, maskCelular, maskCep } from '@/lib/utils';
 
 export default function PortalPerfilPage() {
   const { data: p, isLoading } = usePortalPerfil();
@@ -32,9 +33,16 @@ export default function PortalPerfilPage() {
     try {
       const r = await buscarCep(limpo);
       if (r) {
+        // O ViaCEP devolve "Rua das Flores"/"São Paulo"; o cadastro e em caixa
+        // alta, entao o que chega de fora entra padronizado tambem — senao o
+        // endereco buscado sairia diferente do digitado.
         setEndereco((e) => ({
-          ...e, cep: limpo, logradouro: r.logradouro ?? e.logradouro,
-          bairro: r.bairro ?? e.bairro, cidade: r.cidade ?? e.cidade, uf: r.estado ?? e.uf,
+          ...e,
+          cep: limpo,
+          logradouro: paraCaixaAlta(r.logradouro ?? e.logradouro ?? ''),
+          bairro: paraCaixaAlta(r.bairro ?? e.bairro ?? ''),
+          cidade: paraCaixaAlta(r.cidade ?? e.cidade ?? ''),
+          uf: paraCaixaAlta(r.estado ?? e.uf ?? ''),
         }));
       }
     } finally {
@@ -100,21 +108,32 @@ export default function PortalPerfilPage() {
                 onChange={(v) => setForm({ ...form, telefone: maskCelular(v) })} />
             </div>
 
+            {/* Endereco completo: o CEP preenche logradouro, bairro, cidade e UF,
+                e todos seguem editaveis — condominio e zona rural costumam ter o
+                CEP generico da via, entao o associado precisa poder corrigir. */}
             <div className="grid gap-3 sm:grid-cols-3">
-              <Entrada rotulo="CEP" valor={endereco.cep ?? ''} inputMode="numeric"
-                sufixo={buscandoCep ? '…' : undefined}
+              <Entrada rotulo="CEP" valor={maskCep(endereco.cep ?? '')} inputMode="numeric"
+                sufixo={buscandoCep ? 'buscando…' : undefined}
                 onChange={(v) => {
-                  setEndereco((e) => ({ ...e, cep: v }));
+                  setEndereco((e) => ({ ...e, cep: v.replace(/\D/g, '') }));
                   preencherPorCep(v);
                 }} />
-              <Entrada rotulo="Cidade" valor={endereco.cidade ?? ''}
-                onChange={(v) => setEndereco((e) => ({ ...e, cidade: v }))} className="sm:col-span-2" />
-            </div>
-            <div className="grid gap-3 sm:grid-cols-3">
               <Entrada rotulo="Logradouro" valor={endereco.logradouro ?? ''} className="sm:col-span-2"
                 onChange={(v) => setEndereco((e) => ({ ...e, logradouro: v }))} />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
               <Entrada rotulo="Numero" valor={endereco.numero ?? ''}
                 onChange={(v) => setEndereco((e) => ({ ...e, numero: v }))} />
+              <Entrada rotulo="Complemento" valor={endereco.complemento ?? ''} className="sm:col-span-2"
+                onChange={(v) => setEndereco((e) => ({ ...e, complemento: v }))} />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Entrada rotulo="Bairro" valor={endereco.bairro ?? ''}
+                onChange={(v) => setEndereco((e) => ({ ...e, bairro: v }))} />
+              <Entrada rotulo="Cidade" valor={endereco.cidade ?? ''}
+                onChange={(v) => setEndereco((e) => ({ ...e, cidade: v }))} />
+              <Entrada rotulo="UF" valor={endereco.uf ?? ''} maxLength={2}
+                onChange={(v) => setEndereco((e) => ({ ...e, uf: v }))} />
             </div>
 
             <div className="flex justify-end">
@@ -199,17 +218,20 @@ function Campo({ rotulo, valor }: { rotulo: string; valor?: string | null }) {
   );
 }
 
-function Entrada({ rotulo, valor, onChange, type = 'text', inputMode, className, sufixo }: {
+function Entrada({ rotulo, valor, onChange, type = 'text', inputMode, className, sufixo, maxLength }: {
   rotulo: string; valor: string; onChange: (v: string) => void;
-  type?: string; inputMode?: 'tel' | 'numeric'; className?: string; sufixo?: string;
+  type?: string; inputMode?: 'tel' | 'numeric'; className?: string; sufixo?: string; maxLength?: number;
 }) {
   return (
     <label className={`block ${className ?? ''}`}>
       <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{rotulo}</span>
       <div className="relative mt-1">
         <input
-          type={type} value={valor} inputMode={inputMode}
-          onChange={(e) => onChange(e.target.value)}
+          type={type} value={valor} inputMode={inputMode} maxLength={maxLength}
+          // Mesma regra do <Input> do sistema: cadastro em caixa alta, com
+          // e-mail e senha preservados. Aqui a decisao usa o proprio rotulo,
+          // porque este campo do portal nao tem `name`.
+          onChange={(e) => onChange(valorComCaixaPadrao(e.target.value, type, rotulo))}
           className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-[14px] outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
         />
         {sufixo && (
