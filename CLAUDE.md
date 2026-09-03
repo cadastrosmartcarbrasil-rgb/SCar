@@ -14,7 +14,7 @@ o de trabalho; esse default morto já causou um dia inteiro de trabalho no branc
 
 - **Produção:** `https://app.smartvidanet.com.br` — VPS KingHost, Docker + Caddy (HTTPS auto),
   pasta `/opt/scar`.
-- **Último commit desta fase:** `ad3028b`.
+- **Último commit desta fase:** `a468ead`.
 - **A migration `0044` JÁ FOI APLICADA em produção** e o Portal do Associado está no ar,
   conferido pelo usuário. As migrations `0001`..`0044` estão todas aplicadas.
 
@@ -91,10 +91,18 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `0042` | **Aceite na página pública** + `leads.token_publico` |
 | `0043` | A cotação não para para cliente da base nem para recaptura; o aceite não trava o vendedor |
 
+### Depois da 0044 — trabalho de INTERFACE (sem migration)
+| Commit | Entrega |
+|---|---|
+| `18c2cbb` | `0044` re-executável (`create trigger` não aceita `if not exists`) |
+| `ad3028b` | a tela de login estava presa no guard do próprio portal — ver o gotcha |
+| `cca2b92` | **tipografia escurecida** (escala `slate` própria; `text-slate-400` saiu de 2.56 para 5.35 de contraste), **cadastro em CAIXA ALTA** e endereço completo no perfil do associado |
+| `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
+
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0043`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **20 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 260 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0044`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **21 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 298 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Todos os portais e páginas
@@ -124,6 +132,34 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
   espalhe hex cru pelas telas**: use sempre os tokens `brand-*`/`cyan-*`, senão a migração vira
   uma caçada. Falta decidir também se a paleta é por **empresa** (uma instalação por cliente) ou
   por **regional** (uma instalação, várias marcas) — muda o desenho da tabela.
+
+### PRÓXIMO TÓPICO: ajustes na TELA DE VENDAS (começar por aqui)
+O usuário abriu um tópico só para isso. **Não varra o repositório** — é este o mapa:
+
+| Onde | Arquivo | O que é |
+|---|---|---|
+| `/vendas` | `src/app/(dashboard)/vendas/page.tsx` (133) | a lista/esteira; alterna **Kanban ↔ Lista** (escolha no `localStorage`) |
+| ↳ Kanban | `src/components/vendas/kanban-vendas.tsx` (191) | colunas por etapa, arrastar chama `mover_lead_status`; card em `EM_AUDITORIA`/`ATIVO` fica com cadeado |
+| `/vendas/novo` | `src/app/(dashboard)/vendas/novo/page.tsx` (16) | só embrulha o componente abaixo |
+| ↳ captura | `src/components/vendas/novo-lead-cotacao.tsx` (332) | **compartilhado com `/vendedor/leads/novo`** — mudar aqui muda os dois |
+| `/vendas/[id]` | `src/app/(dashboard)/vendas/[id]/page.tsx` (292) | a ficha do lead: cotação, aceite, fechamento |
+| ↳ cotação | `src/components/vendas/editar-cotacao.tsx` (285) | troca FIPE/plano/opcionais e o desconto com alçada |
+| ↳ fechamento | `src/components/vendas/fechamento-venda.tsx` (355) | associado, veículo, documentos/vistoria, adesão |
+| ↳ checklist | `src/components/vendas/checklist-entrada.tsx` (81) | lê a MESMA `checklist_lead()` do banco |
+| ↳ CRLV | `src/components/vendas/leitor-crlv.tsx` (191) | QR do CRLV-e por câmera/imagem |
+
+- **Estado e regras:** hook `use-vendas.ts`; lógica pura em `src/lib/crm.ts` (esteira, itens
+  obrigatórios, política de desconto) e `src/lib/vendas.ts` (comissão, adesão) — **ambos com
+  testes; mexeu na regra, ajuste o teste**.
+- **RPCs que a tela usa:** `leads_kanban`, `mover_lead_status`, `atualizar_cotacao`,
+  `cotar_plano`, `produtos_do_plano`, `produtos_obrigatorios_cotacao`, `simular_desconto_cotacao`,
+  `checklist_lead`, `fotos_vistoria_lead`, `autorizar_entrada_lead`.
+- **Antes de mexer no visual:** o sistema tem **tema claro e escuro** desde `a468ead`. Use os
+  tokens (`bg-superficie`, `bg-fundo`, `bg-acao`, `text-slate-*`) e **nunca hex cru** — ver a
+  seção "Tema claro / escuro". Campo de formulário já grava em CAIXA ALTA sozinho.
+- **Duas melhorias já mapeadas para esta tela** (itens 5 e 6 da lista abaixo): avisar duplicidade
+  de CPF em `/vendas/novo` (o `classificar_captura` já existe) e deixar o vendedor montar a
+  cotação pelo portal dele.
 
 ### Próximos passos oferecidos (o usuário escolhe)
 1. **Ligar o gateway real** (Asaas) — emissão + webhook + baixa automática.
