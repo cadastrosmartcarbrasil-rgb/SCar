@@ -3,7 +3,7 @@
 > Memória do projeto. Leia isto no início de cada sessão em vez de varrer o repositório inteiro.
 > Mantenha este arquivo atualizado ao adicionar módulos/migrations (é barato e faz o projeto andar rápido).
 
-## Estado atual (retomar aqui) — atualizado ao fim da fase 0032→0044
+## Estado atual (retomar aqui) — atualizado ao fim da fase 0032→0045
 
 **Um único projeto, um único repositório: `cadastrosmartcarbrasil-rgb/scar`** (no GitHub o nome
 aparece como `SCar`). Trabalho e deploy acontecem no branch **`claude/claude-md-opcao-x-98kfj5`**;
@@ -17,6 +17,9 @@ o de trabalho; esse default morto já causou um dia inteiro de trabalho no branc
 - **Último commit desta fase:** `a468ead`.
 - **A migration `0044` JÁ FOI APLICADA em produção** e o Portal do Associado está no ar,
   conferido pelo usuário. As migrations `0001`..`0044` estão todas aplicadas.
+- **`0045_agenda_vendas` é NOVA e ainda NÃO foi aplicada em produção** — rodar no SQL Editor do
+  Supabase ANTES do `docker compose up -d --build`, senão a tela de vendas quebra (o Kanban e a
+  agenda chamam RPCs que só existem depois dela).
 
 ### Os 4 portais (e as 2 páginas públicas)
 | Portal | Link | Login | Quem entra |
@@ -100,9 +103,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0044`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **21 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 298 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0045`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **22 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 322 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Todos os portais e páginas
@@ -133,33 +136,80 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
   uma caçada. Falta decidir também se a paleta é por **empresa** (uma instalação por cliente) ou
   por **regional** (uma instalação, várias marcas) — muda o desenho da tabela.
 
-### PRÓXIMO TÓPICO: ajustes na TELA DE VENDAS (começar por aqui)
-O usuário abriu um tópico só para isso. **Não varra o repositório** — é este o mapa:
+### TELA DE VENDAS — o que mudou nesta sessão (leia antes de mexer de novo)
+Três frentes entregues, na ordem em que o usuário pediu:
+
+**1. `/vendas/novo` virou cotação comparativa, na ordem da conversa.**
+A tela começa na **PLACA** (campo grande, `autoFocus`): assim que ela fica completa
+(`placaCompleta`), a FIPE é consultada sozinha e o **tipo de veículo vem deduzido**
+(`tipoVeiculoSugerido`, o mesmo do hotlink — o vendedor só confirma). Com FIPE + tipo, o hook
+**`useCotacaoComparativa`** cota **todos os planos ativos de uma vez** (mais a "Cobertura base"),
+mostra os cards lado a lado com o do meio marcado como *sugerido*, e **marcar/desmarcar um
+adicional recotiza tudo** — o botão "Calcular mensalidade" acabou, e com ele o buraco de gerar
+proposta sem nunca ter visto o valor. Nome/celular ficaram por último, na seção 3.
+*Cuidado:* o comparativo filtra, por plano, os avulsos que aquele combo já inclui — quem mexer no
+hook tem de manter esse filtro, senão o cliente paga duas vezes pelo mesmo item.
+
+**2. Agenda de vendas (migration `0045`).** O CRM agora guarda o TRABALHO, não só a fase:
+`lead_interacoes` (tipo, resultado, observação, retorno combinado, autor) + as colunas
+`leads.proximo_contato_em/proximo_contato_nota`, gravadas por `registrar_interacao_lead()`.
+`agenda_vendas()` devolve a fila do dia e `leads_kanban()` foi recriada devolvendo `dias_parado` e
+o `limite_sem_contato` da franquia — o card avisa que o lead vai voltar ao pool (regra do 0041)
+**antes** de perdê-lo. "Parado" conta da **última interação**, nunca de `updated_at`: corrigir a
+FIPE não é trabalhar o lead.
+
+**3. `/vendas/[id]`: um caminho só e a ficha com espaço.** Os botões de status saíram do improviso
+e vêm de **`acoesDoLead()`** (`crm.ts`), que espelha `mover_lead_status` — acabaram os dois botões
+para a mesma coisa, *Em Negociação* passou a ser alcançável pela ficha (antes só arrastando) e
+**Perdido exige motivo** pelo `<ModalPerda>`, o mesmo do Kanban (antes a ficha gravava o texto
+fixo "Marcado como perdido"). A página foi de `max-w-2xl` para `max-w-5xl`, que é o que o
+`<FechamentoVenda>` precisava para o checklist de 360px caber ao lado do formulário.
 
 | Onde | Arquivo | O que é |
 |---|---|---|
-| `/vendas` | `src/app/(dashboard)/vendas/page.tsx` (133) | a lista/esteira; alterna **Kanban ↔ Lista** (escolha no `localStorage`) |
-| ↳ Kanban | `src/components/vendas/kanban-vendas.tsx` (191) | colunas por etapa, arrastar chama `mover_lead_status`; card em `EM_AUDITORIA`/`ATIVO` fica com cadeado |
-| `/vendas/novo` | `src/app/(dashboard)/vendas/novo/page.tsx` (16) | só embrulha o componente abaixo |
-| ↳ captura | `src/components/vendas/novo-lead-cotacao.tsx` (332) | **compartilhado com `/vendedor/leads/novo`** — mudar aqui muda os dois |
-| `/vendas/[id]` | `src/app/(dashboard)/vendas/[id]/page.tsx` (292) | a ficha do lead: cotação, aceite, fechamento |
-| ↳ cotação | `src/components/vendas/editar-cotacao.tsx` (285) | troca FIPE/plano/opcionais e o desconto com alçada |
-| ↳ fechamento | `src/components/vendas/fechamento-venda.tsx` (355) | associado, veículo, documentos/vistoria, adesão |
-| ↳ checklist | `src/components/vendas/checklist-entrada.tsx` (81) | lê a MESMA `checklist_lead()` do banco |
-| ↳ CRLV | `src/components/vendas/leitor-crlv.tsx` (191) | QR do CRLV-e por câmera/imagem |
+| `/vendas` | `src/app/(dashboard)/vendas/page.tsx` | lista/esteira; alterna **Kanban ↔ Lista** (`localStorage`) |
+| ↳ agenda | `src/components/vendas/agenda-hoje.tsx` | **o que fazer agora**: atrasados + retornos de hoje (some quando vazia) |
+| ↳ Kanban | `src/components/vendas/kanban-vendas.tsx` | colunas por etapa; card mostra retorno e "parado há N dias" |
+| `/vendas/novo` | `src/app/(dashboard)/vendas/novo/page.tsx` | só embrulha o componente abaixo |
+| ↳ captura | `src/components/vendas/novo-lead-cotacao.tsx` | **compartilhado com `/vendedor/leads/novo`** — mudar aqui muda os dois |
+| `/vendas/[id]` | `src/app/(dashboard)/vendas/[id]/page.tsx` | ficha do lead: contatos, cotação, aceite, fechamento |
+| ↳ contatos | `src/components/vendas/contatos-lead.tsx` | registra contato + retorno; linha do tempo (contatos **e** mudanças de etapa) |
+| ↳ perda | `src/components/vendas/modal-perda.tsx` | motivo obrigatório — usado pela ficha E pelo Kanban |
+| ↳ cotação | `src/components/vendas/editar-cotacao.tsx` | troca FIPE/plano/opcionais e o desconto com alçada |
+| ↳ fechamento | `src/components/vendas/fechamento-venda.tsx` | associado, veículo, documentos/vistoria, adesão |
+| ↳ checklist | `src/components/vendas/checklist-entrada.tsx` | lê a MESMA `checklist_lead()` do banco |
+| ↳ CRLV | `src/components/vendas/leitor-crlv.tsx` | QR do CRLV-e por câmera/imagem |
 
-- **Estado e regras:** hook `use-vendas.ts`; lógica pura em `src/lib/crm.ts` (esteira, itens
-  obrigatórios, política de desconto) e `src/lib/vendas.ts` (comissão, adesão) — **ambos com
-  testes; mexeu na regra, ajuste o teste**.
-- **RPCs que a tela usa:** `leads_kanban`, `mover_lead_status`, `atualizar_cotacao`,
-  `cotar_plano`, `produtos_do_plano`, `produtos_obrigatorios_cotacao`, `simular_desconto_cotacao`,
-  `checklist_lead`, `fotos_vistoria_lead`, `autorizar_entrada_lead`.
-- **Antes de mexer no visual:** o sistema tem **tema claro e escuro** desde `a468ead`. Use os
-  tokens (`bg-superficie`, `bg-fundo`, `bg-acao`, `text-slate-*`) e **nunca hex cru** — ver a
-  seção "Tema claro / escuro". Campo de formulário já grava em CAIXA ALTA sozinho.
-- **Duas melhorias já mapeadas para esta tela** (itens 5 e 6 da lista abaixo): avisar duplicidade
-  de CPF em `/vendas/novo` (o `classificar_captura` já existe) e deixar o vendedor montar a
-  cotação pelo portal dele.
+- **Estado e regras:** hook `use-vendas.ts`; lógica pura em `src/lib/crm.ts` (esteira, ações,
+  itens obrigatórios, desconto), `src/lib/agenda.ts` (dias parado, situação do retorno, ordenação
+  da fila) e `src/lib/vendas.ts` (comissão, adesão) — **todos com testes; mexeu na regra, ajuste o
+  teste**.
+- **RPCs que a tela usa:** `leads_kanban`, `mover_lead_status`, `registrar_interacao_lead`,
+  `agenda_vendas`, `atualizar_cotacao`, `cotar_plano`, `produtos_do_plano`,
+  `produtos_obrigatorios_cotacao`, `simular_desconto_cotacao`, `checklist_lead`,
+  `fotos_vistoria_lead`, `autorizar_entrada_lead`.
+- **Antes de mexer no visual:** o sistema tem tema claro e escuro. Use os tokens
+  (`bg-superficie`, `bg-fundo`, `bg-acao`, `text-slate-*`) e **nunca hex cru**.
+
+**Ficou de fora (levantado na leitura crítica, o usuário decide se entra):**
+1. **Busca em `/vendas`** por nome/CPF/placa, e `useLeads` sem limite — a Lista com "Todos" baixa a
+   tabela inteira de leads para o navegador. Filtro por consultor no Kanban também: a RPC já aceita
+   `p_consultor_id`, a tela não usa.
+2. **Aviso de duplicidade** em `/vendas/novo` — `classificar_captura` existe e **não é chamada em
+   lugar nenhum do `src/`**. Falta também o campo de CPF na captura.
+3. **Colher aceite presencial pelo CRM** — `registrar_aceite_venda(p_por := 'VENDEDOR')` existe,
+   mas só a rota pública do hotlink chama. Hoje, com o cliente na frente, o vendedor precisa mandar
+   o link e pedir que ele abra no celular. Falta também o botão de enviar a proposta por WhatsApp
+   (`<LinkDaProposta>` já existe no portal do vendedor).
+4. **Uma cotação por lead** — para comparar duas propostas fechadas cria-se OUTRO lead ("+ Nova
+   cotação (novo lead)"). Suja o funil e duplica o CPF.
+5. **Desconto só em %** — a negociação real é "quanto fica por R$ 89"; falta o caminho inverso.
+   E o campo usa `<input type="number">`, com o mesmo "0 preso na frente" que o `MoneyInput` curou.
+6. **`editar-cotacao.tsx` não separa o que já vem no plano** (o `/vendas/novo` separa, com selo "no
+   plano"), e `selecaoValida(opcionais, [])` com lista vazia é um no-op que promete uma trava que
+   não existe ali.
+7. **Dono do lead na ficha** — não mostra consultor/vendedor nem permite reatribuir
+   (`atribuir_lead` só está em `/regional/leads`).
 
 ### Próximos passos oferecidos (o usuário escolhe)
 1. **Ligar o gateway real** (Asaas) — emissão + webhook + baixa automática.
@@ -579,6 +629,20 @@ tem parametro para eles. Indice unico parcial garante um cartao principal por as
 `portal_atualizar_perfil` (contato e endereco — nome, CPF e status NAO sao parametros),
 `portal_cartoes`/`portal_registrar_cartao`/`portal_remover_cartao`, `portal_senha_trocada` e
 `portal_registrar_acesso`.)
+· `0045_agenda_vendas` (AGENDA DO VENDEDOR — o CRM sabia a FASE do lead, nao o TRABALHO nele:
+(A) `lead_interacoes` (tipo LIGACAO/WHATSAPP/EMAIL/VISITA/OBSERVACAO x resultado FALOU/
+NAO_ATENDEU/AGENDOU/SEM_INTERESSE, observacao, o retorno combinado NAQUELE contato e o autor) —
+historico, nao rascunho: RLS so de SELECT, a escrita passa pela RPC; (B) o compromisso vigente mora
+no lead (`proximo_contato_em`/`proximo_contato_nota`) porque a agenda precisa de UMA data por lead
+para filtrar barato; (C) `registrar_interacao_lead(...)` grava, carimba `ultima_interacao_em` (o
+mesmo campo que a devolucao ao pool do 0041 le) e move a agenda — recusa agendamento sem data,
+data no passado, tipo desconhecido e "limpar + agendar" ao mesmo tempo, com a trava de propriedade
+em `pode_tratar_lead()` (espelho exato do `using` da policy `leads_update` do 0038); (D)
+`agenda_vendas(ate, consultor, limite)` = a fila do dia (o que venceu + o que vence hoje), sem
+lead ATIVO/PERDIDO; (E) `leads_kanban()` **recriada** (muda a lista de colunas, entao e drop +
+create) devolvendo `ultima_interacao_em`, `proximo_contato_em`, `dias_parado` e
+`limite_sem_contato` da franquia. ESCOLHA REGISTRADA: "parado" conta de `ultima_interacao_em` (ou
+da criacao), NUNCA de `updated_at` — corrigir a FIPE nao e trabalhar o lead.)
 
 ## Módulos (status: todos funcionais)
 Assistência 24h (`/assistencia`: painel de acionamento com trava + limites em tempo real, cotação,
@@ -597,7 +661,9 @@ APIs REST em `/api/v1/sac/*` — `busca`, `visao-360`, `veiculo`, `faturamento`,
 — reutilizáveis por Portal do Associado/Assistência 24h/Chatbot)
 · **Protocolos** (`/protocolos`: Central com fila, filtros, histórico, transferência e encerramento)
 · **Portal do Vendedor** (`/vendedor`: painel, leads, comissões e perfil do próprio vendedor — PWA)
-Vendas/CRM (`/vendas` mobile-first: captura de lead + FIPE por placa/cascata, cotação com
+Vendas/CRM (`/vendas` mobile-first: **agenda do dia** no topo (atrasados + retornos de hoje),
+Kanban com "parado há N dias", captura que **começa na placa** e cota **todos os planos de uma
+vez** (FIPE por placa/cascata), contatos e retornos registrados na ficha do lead, cotação com
 link público `/cotacao/[token]` detalhada/consolidada + print-PDF, esteira com trava de
 Auditoria — só papel `auditoria`/`admin` clica "Autorizar Entrada" e efetiva cliente+veículo)
 · Associados (painel `/associados/[id]` com abas) · Veículos/Contratos · Eventos/Sinistros

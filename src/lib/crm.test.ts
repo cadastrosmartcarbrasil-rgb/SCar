@@ -13,6 +13,7 @@ import {
   selecaoValida,
   removeuObrigatorio,
   calcularDesconto,
+  acoesDoLead,
 } from './crm';
 import type { CotacaoItem, StatusLead } from '@/lib/database.types';
 
@@ -117,5 +118,50 @@ describe('politica de desconto por regional', () => {
     expect(calcularDesconto(200, 0, -5, 10).percentual).toBe(0);
     expect(calcularDesconto(200, 0, 150, 10).percentual).toBe(100);
     expect(calcularDesconto(199.99, 0, 7.5, 10).descontoMensalidade).toBe(15);
+  });
+});
+
+describe('acoesDoLead', () => {
+  const destinos = (s: Parameters<typeof acoesDoLead>[0]) => acoesDoLead(s).map((a) => a.destino);
+
+  it('oferece um caminho so: avancar, voltar e perder', () => {
+    expect(destinos('PROPOSTA_ENVIADA')).toEqual(['EM_NEGOCIACAO', 'ORCAMENTO_GERADO', 'PERDIDO']);
+  });
+
+  it('alcanca Em Negociacao pela ficha (antes so existia arrastando)', () => {
+    expect(destinos('PROPOSTA_ENVIADA')).toContain('EM_NEGOCIACAO');
+  });
+
+  it('nao oferece duas acoes para o mesmo destino', () => {
+    (['NOVO', 'ORCAMENTO_GERADO', 'PROPOSTA_ENVIADA', 'EM_NEGOCIACAO', 'APROVADO'] as const)
+      .forEach((s) => {
+        const d = destinos(s);
+        expect(new Set(d).size).toBe(d.length);
+      });
+  });
+
+  it('lead novo nao tem para onde voltar', () => {
+    expect(destinos('NOVO')).toEqual(['ORCAMENTO_GERADO', 'PERDIDO']);
+  });
+
+  it('para em Aprovado — quem passa disso e a Auditoria', () => {
+    expect(destinos('APROVADO')).toEqual(['EM_NEGOCIACAO', 'PERDIDO']);
+  });
+
+  it('nada a fazer em auditoria ou na base ativa', () => {
+    expect(acoesDoLead('EM_AUDITORIA')).toEqual([]);
+    expect(acoesDoLead('ATIVO')).toEqual([]);
+  });
+
+  it('lead perdido so reabre', () => {
+    expect(acoesDoLead('PERDIDO')).toEqual([
+      { destino: 'NOVO', rotulo: 'Reabrir lead', intencao: 'reabrir' },
+    ]);
+  });
+
+  it('so oferece destino que o banco aceita no funil', () => {
+    const validos = ['NOVO', 'ORCAMENTO_GERADO', 'PROPOSTA_ENVIADA', 'EM_NEGOCIACAO', 'APROVADO', 'PERDIDO'];
+    (['NOVO', 'ORCAMENTO_GERADO', 'PROPOSTA_ENVIADA', 'EM_NEGOCIACAO', 'APROVADO', 'PERDIDO'] as const)
+      .forEach((s) => acoesDoLead(s).forEach((a) => expect(validos).toContain(a.destino)));
   });
 });

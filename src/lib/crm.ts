@@ -124,3 +124,60 @@ export function calcularDesconto(
     descontoAdesao: descAdesao,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Acoes da esteira na ficha do lead (0045)
+//
+// Um caminho so: a ficha passou a oferecer exatamente as mesmas transicoes que
+// o Kanban permite arrastando, porque as duas telas chamam `mover_lead_status`.
+// Antes a ficha tinha botoes proprios (dois deles faziam a mesma coisa) e nao
+// alcancava "Em Negociacao" — que so existia no arrastar.
+// ---------------------------------------------------------------------------
+export type IntencaoAcao = 'avancar' | 'voltar' | 'perder' | 'reabrir';
+
+export interface AcaoLead {
+  destino: StatusKanban;
+  rotulo: string;
+  intencao: IntencaoAcao;
+}
+
+/** Como cada etapa e anunciada no botao (verbo do que acabou de acontecer). */
+export const ROTULO_DESTINO: Record<StatusKanban, string> = {
+  NOVO: 'Voltar para Novo',
+  ORCAMENTO_GERADO: 'Marcar cotacao criada',
+  PROPOSTA_ENVIADA: 'Marcar proposta enviada',
+  EM_NEGOCIACAO: 'Entrou em negociacao',
+  APROVADO: 'Cliente aprovou (-> Auditoria)',
+  PERDIDO: 'Perdido',
+};
+
+/** As transicoes que o banco aceita para este lead, na ordem em que aparecem. */
+export function acoesDoLead(status: StatusLead): AcaoLead[] {
+  // Auditoria e base ativa saem do controle do vendedor (trava de 0028).
+  if (!podeArrastar(status)) return [];
+
+  if (status === 'PERDIDO') {
+    return [{ destino: 'NOVO', rotulo: 'Reabrir lead', intencao: 'reabrir' }];
+  }
+
+  const acoes: AcaoLead[] = [];
+  const i = ESTEIRA.indexOf(status);
+  const proximo = i >= 0 && i < ESTEIRA.length - 1 ? ESTEIRA[i + 1] : null;
+
+  // APROVADO e o fim da linha do vendedor: o banco leva para EM_AUDITORIA.
+  if (proximo && proximo !== 'EM_AUDITORIA' && proximo !== 'ATIVO') {
+    acoes.push({ destino: proximo as StatusKanban, rotulo: ROTULO_DESTINO[proximo as StatusKanban], intencao: 'avancar' });
+  }
+
+  const anterior = i > 0 ? ESTEIRA[i - 1] : null;
+  if (anterior) {
+    acoes.push({
+      destino: anterior as StatusKanban,
+      rotulo: `Voltar para ${STATUS_LEAD[anterior].curto}`,
+      intencao: 'voltar',
+    });
+  }
+
+  acoes.push({ destino: 'PERDIDO', rotulo: ROTULO_DESTINO.PERDIDO, intencao: 'perder' });
+  return acoes;
+}

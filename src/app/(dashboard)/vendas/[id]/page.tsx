@@ -5,20 +5,23 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import {
-  ArrowLeft, Phone, Mail, Car, Copy, Send, CheckCircle2, XCircle, ShieldCheck, Loader2, ExternalLink,
-  Pencil, Percent,
+  ArrowLeft, Phone, Mail, Car, Copy, ChevronLeft, ChevronRight, CheckCircle2, XCircle, ShieldCheck,
+  Loader2, ExternalLink, Pencil, Percent, RotateCcw,
 } from 'lucide-react';
 import { EditarCotacao } from '@/components/vendas/editar-cotacao';
 import {
-  useLead, useCotacoes, useHistoricoLead, useAvancarStatus, useAutorizarEntrada, useMeuPapel,
+  useLead, useCotacoes, useHistoricoLead, useMoverLead, useAutorizarEntrada, useMeuPapel,
 } from '@/hooks/use-vendas';
 import { Input } from '@/components/ui/field';
 import { Button } from '@/components/ui/button';
-import { ESTEIRA, STATUS_LEAD, proximoStatus, podeEditarCotacao } from '@/lib/crm';
+import { ESTEIRA, STATUS_LEAD, acoesDoLead, podeEditarCotacao } from '@/lib/crm';
+import type { IntencaoAcao } from '@/lib/crm';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import type { CotacoesRow, StatusLead } from '@/lib/database.types';
+import type { CotacoesRow } from '@/lib/database.types';
 import { FechamentoVenda } from '@/components/vendas/fechamento-venda';
 import { ChecklistEntrada } from '@/components/vendas/checklist-entrada';
+import { ContatosLead } from '@/components/vendas/contatos-lead';
+import { ModalPerda } from '@/components/vendas/modal-perda';
 import { useChecklistLead } from '@/hooks/use-vendas';
 import { pendencias } from '@/lib/vendas';
 
@@ -28,24 +31,27 @@ export default function LeadDetailPage() {
   const { data: cotacoes } = useCotacoes(id);
   const { data: historico } = useHistoricoLead(id);
   const { data: papel } = useMeuPapel();
-  const avancar = useAvancarStatus();
+  const mover = useMoverLead();
   const autorizar = useAutorizarEntrada();
   const { data: checklist } = useChecklistLead(id);
   const faltando = pendencias((checklist ?? []).map((c) => ({ ...c, detalhe: c.detalhe ?? null })));
 
   const [cpf, setCpf] = useState('');
   const [editando, setEditando] = useState<CotacoesRow | null>(null);
+  const [perdendo, setPerdendo] = useState(false);
 
   if (isLoading) return <p className="py-10 text-center text-sm text-slate-400">Carregando...</p>;
   if (!lead) return <p className="py-10 text-center text-sm text-slate-400">Lead nao encontrado.</p>;
 
   const podeAuditar = papel === 'auditoria' || papel === 'admin';
-  const prox = proximoStatus(lead.status);
+  // Um caminho so, igual ao do Kanban: os dois chamam `mover_lead_status`.
+  const acoes = acoesDoLead(lead.status);
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
-  function mudar(status: StatusLead, motivo?: string) {
-    avancar.mutate({ id: lead!.id, status, perdido_motivo: motivo }, {
-      onSuccess: () => toast.success('Status atualizado'),
+  function mudar(acao: (typeof acoes)[number]) {
+    if (acao.intencao === 'perder') return setPerdendo(true);
+    mover.mutate({ id: lead!.id, status: acao.destino }, {
+      onSuccess: (l) => toast.success(`${lead!.nome} → ${STATUS_LEAD[l.status].label}`),
       onError: (e) => toast.error(e.message),
     });
   }
@@ -58,7 +64,7 @@ export default function LeadDetailPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4 pb-10">
+    <div className="mx-auto max-w-5xl space-y-4 pb-10">
       <Link href="/vendas" className="inline-flex items-center gap-1 text-sm text-slate-500">
         <ArrowLeft className="h-4 w-4" /> Voltar
       </Link>
@@ -124,29 +130,25 @@ export default function LeadDetailPage() {
         </div>
       )}
 
-      {/* Acoes de status */}
-      {lead.status !== 'ATIVO' && lead.status !== 'PERDIDO' && (
-        <div className="flex flex-wrap gap-2">
-          {prox && lead.status !== 'EM_AUDITORIA' && lead.status !== 'PROPOSTA_ENVIADA' && (
-            <Button variant="secondary" onClick={() => mudar(prox)} disabled={avancar.isPending}>
-              Avancar para {STATUS_LEAD[prox].curto}
+      {/* Acoes de status — as MESMAS transicoes que o Kanban aceita */}
+      {acoes.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          {acoes.map((a) => (
+            <Button
+              key={a.destino}
+              variant={VARIANTE_ACAO[a.intencao]}
+              className={a.intencao === 'perder' ? 'text-rose-500 hover:bg-rose-50' : undefined}
+              onClick={() => mudar(a)}
+              disabled={mover.isPending}
+            >
+              <IconeAcao intencao={a.intencao} /> {a.rotulo}
             </Button>
-          )}
-          {lead.status === 'ORCAMENTO_GERADO' && (
-            <Button variant="secondary" onClick={() => mudar('PROPOSTA_ENVIADA')} disabled={avancar.isPending}>
-              <Send className="h-4 w-4" /> Marcar proposta enviada
-            </Button>
-          )}
-          {lead.status === 'PROPOSTA_ENVIADA' && (
-            <Button onClick={() => mudar('APROVADO')} disabled={avancar.isPending}>
-              <CheckCircle2 className="h-4 w-4" /> Cliente aprovou (-&gt; Auditoria)
-            </Button>
-          )}
-          <Button variant="ghost" onClick={() => mudar('PERDIDO', 'Marcado como perdido')} disabled={avancar.isPending} className="text-rose-500">
-            <XCircle className="h-4 w-4" /> Perdido
-          </Button>
+          ))}
         </div>
       )}
+
+      {/* Contatos e agenda: o trabalho em cima do lead */}
+      <ContatosLead lead={lead} historico={historico ?? []} />
 
       {/* Trava de Auditoria */}
       {lead.status === 'EM_AUDITORIA' && (
@@ -269,24 +271,26 @@ export default function LeadDetailPage() {
         <Link href="/vendas/novo" className="mt-3 inline-block text-xs font-medium text-brand-600">+ Nova cotacao (novo lead)</Link>
       </div>
 
-      {/* Historico */}
-      {(historico ?? []).length > 0 && (
-        <div className="rounded-2xl border border-slate-200 bg-superficie p-4">
-          <p className="mb-2 text-xs font-medium uppercase text-slate-400">Historico</p>
-          <ul className="space-y-1.5 text-xs text-slate-500">
-            {(historico ?? []).map((h) => (
-              <li key={h.id} className="flex items-center gap-2">
-                <span className="text-slate-300">{formatDate(h.created_at)}</span>
-                <span>{h.de ? `${STATUS_LEAD[h.de].curto} -> ` : ''}<b className="text-slate-600">{STATUS_LEAD[h.para].curto}</b></span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
       {editando && (
         <EditarCotacao lead={lead} cotacao={editando} onClose={() => setEditando(null)} />
       )}
+
+      {/* Perder exige motivo — mesma janela do Kanban */}
+      {perdendo && <ModalPerda lead={lead} onClose={() => setPerdendo(false)} />}
     </div>
   );
+}
+
+const VARIANTE_ACAO: Record<IntencaoAcao, 'primary' | 'secondary' | 'ghost'> = {
+  avancar: 'primary',
+  voltar: 'ghost',
+  perder: 'ghost',
+  reabrir: 'secondary',
+};
+
+function IconeAcao({ intencao }: { intencao: IntencaoAcao }) {
+  if (intencao === 'avancar') return <ChevronRight className="h-4 w-4" />;
+  if (intencao === 'voltar') return <ChevronLeft className="h-4 w-4" />;
+  if (intencao === 'reabrir') return <RotateCcw className="h-4 w-4" />;
+  return <XCircle className="h-4 w-4" />;
 }

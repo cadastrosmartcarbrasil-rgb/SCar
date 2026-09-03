@@ -9,9 +9,13 @@ import type {
   CotacoesRow,
   FotoVistoriaModelo,
   ItemChecklistLead,
+  LeadAgenda,
   LeadHistoricoRow,
+  LeadInteracoesRow,
   LeadKanban,
   LeadsRow,
+  ResultadoInteracaoLead,
+  TipoInteracaoLead,
   ProdutoDoPlano,
   ProdutoObrigatorio,
   SimulacaoDesconto,
@@ -550,6 +554,172 @@ export function useProdutosDoPlano(planoId?: string | null) {
       const { data, error } = await supabase.rpc('produtos_do_plano', { p_plano_id: planoId! });
       if (error) throw error;
       return data ?? [];
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Agenda e contatos do lead (0045)
+// ---------------------------------------------------------------------------
+
+export type InteracaoComAutor = LeadInteracoesRow & { usuarios: { nome: string } | null };
+
+/** A trilha de contatos do lead (mais recente primeiro). */
+export function useInteracoesLead(leadId?: string) {
+  const supabase = createClient();
+  return useQuery<InteracaoComAutor[]>({
+    queryKey: ['vendas', 'interacoes', leadId ?? 'none'],
+    enabled: !!leadId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('lead_interacoes')
+        .select('*, usuarios(nome)')
+        .eq('lead_id', leadId!)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export interface RegistrarInteracaoInput {
+  leadId: string;
+  tipo: TipoInteracaoLead;
+  resultado?: ResultadoInteracaoLead;
+  observacao?: string | null;
+  proximoContatoEm?: string | null;
+  proximoContatoNota?: string | null;
+  limparAgenda?: boolean;
+}
+
+/** Registra o contato e move a agenda (a validacao das regras e no banco). */
+export function useRegistrarInteracao() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<LeadsRow, Error, RegistrarInteracaoInput>({
+    mutationFn: async (i) => {
+      const { data, error } = await supabase.rpc('registrar_interacao_lead', {
+        p_lead_id: i.leadId,
+        p_tipo: i.tipo,
+        p_resultado: i.resultado ?? 'FALOU',
+        p_observacao: i.observacao ?? null,
+        p_proximo_contato_em: i.proximoContatoEm ?? null,
+        p_proximo_contato_nota: i.proximoContatoNota ?? null,
+        p_limpar_agenda: i.limparAgenda ?? false,
+      });
+      if (error) throw error;
+      return data as LeadsRow;
+    },
+    onSuccess: (l) => {
+      qc.invalidateQueries({ queryKey: ['vendas', 'interacoes', l.id] });
+      qc.invalidateQueries({ queryKey: ['vendas', 'lead', l.id] });
+      qc.invalidateQueries({ queryKey: ['vendas', 'kanban'] });
+      qc.invalidateQueries({ queryKey: ['vendas', 'agenda'] });
+    },
+  });
+}
+
+/** O que fazer hoje: retornos vencidos e do dia (null = ate o fim de hoje). */
+export function useAgendaVendas(ate?: string | null) {
+  const supabase = createClient();
+  return useQuery<LeadAgenda[]>({
+    queryKey: ['vendas', 'agenda', ate ?? 'hoje'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('agenda_vendas', {
+        p_ate: ate ?? null,
+        p_consultor_id: null,
+        p_limite: 100,
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Cotacao comparativa: um preco por plano, de uma vez
+//
+// E o que a pagina publica do hotlink ja fazia (`/api/v1/hotlink/cotar`), agora
+// para quem atende: em vez de trocar o combo no select e clicar em "calcular",
+// o vendedor ve Prata, Ouro e Diamante lado a lado e escolhe.
+// ---------------------------------------------------------------------------
+export interface PlanoComparado {
+  plano_id: string | null;   // null = so a cobertura base
+  nome: string;
+  descricao: string | null;
+  nivel: number | null;
+  mensalidade: number;
+  adesao: number;
+  participacao: number;
+  itens: { nome: string; valor: number; obrigatorio: boolean }[];
+  /** Avulsos que sobraram para este plano (os que ele ja inclui saem da conta). */
+  avulsos_cobrados: string[];
+}
+
+export function useCotacaoComparativa(entrada: {
+  fipe?: number | null;
+  tipoVeiculoId?: string | null;
+  cotaId?: string | null;
+  avulsos?: string[];
+}) {
+  const supabase = createClient();
+  const { fipe, tipoVeiculoId, cotaId } = entrada;
+  const avulsos = [...(entrada.avulsos ?? [])].sort();
+  const pronto = !!fipe && fipe > 0 && !!tipoVeiculoId;
+
+  return useQuery<PlanoComparado[]>({
+    queryKey: ['vendas', 'comparativo', fipe ?? 0, tipoVeiculoId ?? '', cotaId ?? '', avulsos.join(',')],
+    enabled: pronto,
+    queryFn: async () => {
+      const [{ data: planos, error: erroPlanos }, { data: vinculos }, { data: part }] = await Promise.all([
+        supabase.from('planos_protecao').select('id, nome, descricao_comercial, nivel')
+          .eq('ativo', true).order('nivel').order('nome'),
+        supabase.from('plano_produtos').select('plano_id, produto_id'),
+        supabase.rpc('calcular_participacao', {
+          p_fipe: fipe as number, p_tipo_veiculo_id: tipoVeiculoId as string, p_cota_id: cotaId ?? null,
+        }),
+      ]);
+      if (erroPlanos) throw erroPlanos;
+
+      const doPlano = (planoId: string) =>
+        (vinculos ?? []).filter((v) => v.plano_id === planoId).map((v) => v.produto_id);
+
+      // A cobertura base entra como primeira opcao: ha venda que fecha sem combo.
+      const opcoes: { id: string | null; nome: string; descricao: string | null; nivel: number | null }[] = [
+        { id: null, nome: 'Cobertura base', descricao: 'Somente os itens obrigatorios', nivel: -1 },
+        ...(planos ?? []).map((p) => ({
+          id: p.id, nome: p.nome, descricao: p.descricao_comercial, nivel: p.nivel,
+        })),
+      ];
+
+      const cotados = await Promise.all(opcoes.map(async (o) => {
+        // O que o plano ja inclui nao pode ser cobrado de novo como avulso.
+        const incluidos = o.id ? doPlano(o.id) : [];
+        const cobrados = avulsos.filter((a) => !incluidos.includes(a));
+        const { data, error } = await supabase.rpc('cotar_plano', {
+          p_fipe: fipe as number,
+          p_tipo_veiculo_id: tipoVeiculoId as string,
+          p_plano_id: o.id,
+          p_avulsos_ids: cobrados,
+        });
+        if (error) return null;
+        const c = data as unknown as CotacaoPlano;
+        return {
+          plano_id: o.id,
+          nome: o.nome,
+          descricao: o.descricao,
+          nivel: o.nivel,
+          mensalidade: Number(c.valor_total_mensalidade ?? 0),
+          adesao: Number(c.taxa_adesao ?? 0),
+          participacao: Number(part ?? c.franquia_participacao ?? 0),
+          itens: (c.detalhamento_produtos ?? []).map((i) => ({
+            nome: i.nome, valor: Number(i.valor), obrigatorio: i.obrigatorio,
+          })),
+          avulsos_cobrados: cobrados,
+        } as PlanoComparado;
+      }));
+
+      return cotados.filter((c): c is PlanoComparado => c !== null);
     },
   });
 }

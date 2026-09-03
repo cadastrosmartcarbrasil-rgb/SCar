@@ -68,7 +68,11 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
   const [buscandoCep, setBuscandoCep] = useState(false);
   const [enviandoFotos, setEnviandoFotos] = useState(0);
 
-  useEffect(() => setForm(lead), [lead]);
+  // So recarrega o formulario ao trocar de lead. Antes dependia do objeto
+  // inteiro, entao qualquer invalidacao da query (mudar o status, por exemplo)
+  // jogava fora o que o operador estava digitando.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => setForm(lead), [lead.id]);
 
   const set = (patch: Partial<LeadsRow>) => setForm((p) => ({ ...p, ...patch }));
   const setEnd = (patch: Endereco) => set({ endereco: { ...endereco, ...patch } as LeadsRow['endereco'] });

@@ -71,6 +71,9 @@ export type StatusLead =
 // Status que o Kanban pode aplicar via drag-and-drop (0028)
 export type StatusKanban = Exclude<StatusLead, 'EM_AUDITORIA' | 'ATIVO'>;
 export type OrigemFipe = 'API' | 'MANUAL' | 'CONTINGENCIA';
+// 0045 :: agenda de vendas (interacoes do lead)
+export type TipoInteracaoLead = 'LIGACAO' | 'WHATSAPP' | 'EMAIL' | 'VISITA' | 'OBSERVACAO';
+export type ResultadoInteracaoLead = 'FALOU' | 'NAO_ATENDEU' | 'AGENDOU' | 'SEM_INTERESSE';
 // 0026 :: Assistencia 24h
 export type StatusAcionamento =
   | 'ABERTO' | 'EM_COTACAO' | 'AUTORIZADO' | 'EM_ATENDIMENTO' | 'CONCLUIDO' | 'CANCELADO';
@@ -569,6 +572,9 @@ export type LeadsRow = Timestamps & {
   aceite_ip: string | null;
   aceite_user_agent: string | null;
   aceite_cotacao_id: string | null;
+  // 0045 — agenda do vendedor
+  proximo_contato_em: string | null;
+  proximo_contato_nota: string | null;
 };
 
 export type CotacoesRow = {
@@ -619,6 +625,39 @@ export type LeadKanban = {
   desconto_percentual: number | null;
   desconto_aprovado: boolean | null;
   atualizado_em: string;
+  // 0045 — "parado ha N dias" e o retorno combinado
+  ultima_interacao_em: string | null;
+  proximo_contato_em: string | null;
+  dias_parado: number;
+  limite_sem_contato: number;
+};
+
+// Trilha de contato do lead (0045)
+export type LeadInteracoesRow = {
+  id: string;
+  lead_id: string;
+  tipo: TipoInteracaoLead;
+  resultado: ResultadoInteracaoLead;
+  observacao: string | null;
+  proximo_contato_em: string | null;
+  usuario_id: string | null;
+  created_at: string;
+};
+
+// Linha da agenda do dia (RPC agenda_vendas)
+export type LeadAgenda = {
+  id: string;
+  nome: string;
+  celular: string;
+  status: StatusLead;
+  marca: string | null;
+  modelo: string | null;
+  placa: string | null;
+  consultor: string | null;
+  proximo_contato_em: string | null;
+  proximo_contato_nota: string | null;
+  ultima_interacao_em: string | null;
+  dias_parado: number;
 };
 
 // Simulacao do desconto (RPC simular_desconto_cotacao)
@@ -1816,6 +1855,7 @@ export type Database = {
       >;
       cotacoes: TableDef<CotacoesRow, [Rel<'lead_id', 'leads'>]>;
       lead_historico: TableDef<LeadHistoricoRow, [Rel<'lead_id', 'leads'>, Rel<'usuario_id', 'usuarios'>]>;
+      lead_interacoes: TableDef<LeadInteracoesRow, [Rel<'lead_id', 'leads'>, Rel<'usuario_id', 'usuarios'>]>;
       fipe_precos_local: TableDef<FipePrecosLocalRow>;
       faturas: TableDef<
         FaturasRow,
@@ -2343,6 +2383,26 @@ export type Database = {
       leads_kanban: {
         Args: { p_regional_id?: string | null; p_consultor_id?: string | null; p_limite?: number };
         Returns: LeadKanban[];
+      };
+      registrar_interacao_lead: {
+        Args: {
+          p_lead_id: string;
+          p_tipo: TipoInteracaoLead;
+          p_resultado?: ResultadoInteracaoLead;
+          p_observacao?: string | null;
+          p_proximo_contato_em?: string | null;
+          p_proximo_contato_nota?: string | null;
+          p_limpar_agenda?: boolean;
+        };
+        Returns: LeadsRow;
+      };
+      agenda_vendas: {
+        Args: { p_ate?: string | null; p_consultor_id?: string | null; p_limite?: number };
+        Returns: LeadAgenda[];
+      };
+      pode_tratar_lead: {
+        Args: { p_lead_id: string };
+        Returns: boolean;
       };
       atualizar_cotacao: {
         Args: {

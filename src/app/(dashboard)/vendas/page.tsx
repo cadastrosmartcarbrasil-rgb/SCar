@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Plus, Phone, Car, ChevronRight, LayoutGrid, List } from 'lucide-react';
 import { useLeads } from '@/hooks/use-vendas';
 import { KanbanVendas } from '@/components/vendas/kanban-vendas';
+import { AgendaHoje } from '@/components/vendas/agenda-hoje';
 import { ESTEIRA, STATUS_LEAD } from '@/lib/crm';
 import { formatCurrency } from '@/lib/utils';
 import type { StatusLead } from '@/lib/database.types';
@@ -62,6 +63,9 @@ export default function VendasPage() {
           </Link>
         </div>
       </div>
+
+      {/* O que fazer agora: retornos vencidos e do dia (some quando nao ha nada) */}
+      <AgendaHoje />
 
       {visao === 'kanban' && <KanbanVendas />}
 

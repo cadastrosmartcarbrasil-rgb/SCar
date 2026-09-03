@@ -3,13 +3,12 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { Car, Phone, Lock, Percent, GripVertical } from 'lucide-react';
-import { Modal } from '@/components/ui/modal';
-import { Button } from '@/components/ui/button';
-import { FormField, Input } from '@/components/ui/field';
+import { Car, Phone, Lock, Percent, GripVertical, AlarmClock, Hourglass } from 'lucide-react';
 import { useLeadsKanban, useMoverLead } from '@/hooks/use-vendas';
 import { COLUNAS_KANBAN, colunaDoLead, podeArrastar, podeSoltarEm, exigeMotivo, STATUS_LEAD } from '@/lib/crm';
+import { rotuloParado, rotuloRetorno, riscoDevolucao, SELO_AGENDA, situacaoAgenda } from '@/lib/agenda';
 import { formatCurrency } from '@/lib/utils';
+import { ModalPerda } from './modal-perda';
 import type { LeadKanban, StatusKanban } from '@/lib/database.types';
 
 // Quadro Kanban do funil de vendas com drag-and-drop nativo (HTML5), sem
@@ -20,7 +19,7 @@ export function KanbanVendas() {
   const mover = useMoverLead();
   const [arrastando, setArrastando] = useState<LeadKanban | null>(null);
   const [sobre, setSobre] = useState<StatusKanban | null>(null);
-  const [perda, setPerda] = useState<{ lead: LeadKanban; motivo: string } | null>(null);
+  const [perda, setPerda] = useState<LeadKanban | null>(null);
 
   const porColuna = useMemo(() => {
     const mapa = new Map<StatusKanban, LeadKanban[]>();
@@ -42,7 +41,7 @@ export function KanbanVendas() {
       return;
     }
     if (exigeMotivo(destino)) {
-      setPerda({ lead, motivo: '' });
+      setPerda(lead);
       return;
     }
     mover.mutate(
@@ -90,6 +89,10 @@ export function KanbanVendas() {
                 )}
                 {itens.map((l) => {
                   const travado = !podeArrastar(l.status);
+                  // Tempo: o que o gestor precisa ver sem abrir o lead.
+                  const agenda = situacaoAgenda(l.proximo_contato_em);
+                  const esfriando = riscoDevolucao(l.dias_parado, l.limite_sem_contato)
+                    && l.status !== 'PERDIDO' && !travado;
                   return (
                     <div
                       key={l.id}
@@ -142,6 +145,29 @@ export function KanbanVendas() {
                             )}
                             {l.consultor && <span className="text-[10px] text-slate-400">{l.consultor}</span>}
                           </div>
+
+                          {/* Tempo do lead: retorno combinado e ha quanto esta parado */}
+                          <div className="mt-1 flex flex-wrap items-center gap-1">
+                            {agenda !== 'SEM_AGENDA' && (
+                              <span className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium ${SELO_AGENDA[agenda].cor}`}>
+                                <AlarmClock className="h-2.5 w-2.5" />
+                                {rotuloRetorno(l.proximo_contato_em)}
+                              </span>
+                            )}
+                            {!travado && (
+                              <span
+                                title={esfriando
+                                  ? `Sem contato ha ${l.dias_parado} dias — a unidade devolve ao pool com ${l.limite_sem_contato}`
+                                  : undefined}
+                                className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] ${
+                                  esfriando ? 'bg-rose-50 font-medium text-rose-700' : 'text-slate-400'
+                                }`}
+                              >
+                                <Hourglass className="h-2.5 w-2.5" />
+                                {rotuloParado(l.dias_parado)}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -153,39 +179,8 @@ export function KanbanVendas() {
         })}
       </div>
 
-      {/* Perda exige motivo */}
-      <Modal open={!!perda} onClose={() => setPerda(null)} title="Marcar lead como perdido">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!perda?.motivo.trim()) return toast.error('Informe o motivo da perda');
-            mover.mutate(
-              { id: perda.lead.id, status: 'PERDIDO', obs: perda.motivo },
-              {
-                onSuccess: () => { toast.success('Lead marcado como perdido'); setPerda(null); },
-                onError: (e2) => toast.error(e2.message),
-              },
-            );
-          }}
-          className="space-y-3"
-        >
-          <p className="text-sm text-slate-600">
-            {perda?.lead.nome} — o motivo fica no historico do lead.
-          </p>
-          <FormField label="Motivo da perda">
-            <Input
-              autoFocus
-              value={perda?.motivo ?? ''}
-              onChange={(e) => setPerda((p) => (p ? { ...p, motivo: e.target.value } : p))}
-              placeholder="Ex.: fechou com concorrente / sem interesse"
-            />
-          </FormField>
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="secondary" onClick={() => setPerda(null)}>Voltar</Button>
-            <Button type="submit" variant="danger" disabled={mover.isPending}>Marcar como perdido</Button>
-          </div>
-        </form>
-      </Modal>
+      {/* Perda exige motivo — mesma janela que a ficha do lead usa */}
+      {perda && <ModalPerda lead={perda} onClose={() => setPerda(null)} />}
     </>
   );
 }
