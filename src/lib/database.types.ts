@@ -302,6 +302,9 @@ export type VistoriaAnexosRow = {
   tipo: string | null;
   descricao: string | null;
   created_at: string;
+  // 0047 — peso do arquivo (teto de 10 MB no banco) e quem enviou
+  tamanho_bytes: number | null;
+  enviado_por: string | null;
 };
 
 export type AtendimentosRow = Timestamps & {
@@ -1671,6 +1674,10 @@ export type FotoVistoriaModelo = {
   anexo_id: string | null;
   url: string | null;
   enviada: boolean;
+  // 0047 — o que a auditoria precisa para conferir sem abrir uma aba por foto
+  enviada_em: string | null;
+  tamanho_bytes: number | null;
+  arquivo: string | null;
 };
 
 export type ProdutoDoPlano = {

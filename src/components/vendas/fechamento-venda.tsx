@@ -1,22 +1,25 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
 import {
-  Camera, Car, HandCoins, Image as ImgIcon, Loader2, Save, Search, Trash2, UserRound,
+  Camera, Car, ChevronDown, CircleAlert, HandCoins, Image as ImgIcon, Loader2, Save, Search,
+  ShieldCheck, UserRound,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FormField, Input, MoneyInput, Select } from '@/components/ui/field';
 import {
-  useAddFotoVistoria, useBuscarAssociadoPorDocumento, useChecklistLead, useRemoverFotoVistoria,
-  useSalvarFichaLead, useUploadCrlv, useUrlAssinadaVendas, useVendedoresDaRegional, useVistoriaLead,
+  useBuscarAssociadoPorDocumento, useChecklistLead, useSalvarFichaLead, useUploadCrlv,
+  useUrlAssinadaVendas, useVendedoresDaRegional,
 } from '@/hooks/use-vendas';
 import { usePlanos } from '@/hooks/use-precificacao';
 import { buscarCep } from '@/lib/cep';
 import { formatarDocumento, validarDocumento } from '@/lib/documento';
 import { maskCelular, formatCurrency } from '@/lib/utils';
-import { FORMA_ADESAO_ROTULO, ratearAdesao, type FormaAdesao } from '@/lib/vendas';
+import {
+  ABAS_FECHAMENTO, FORMA_ADESAO_ROTULO, pendenciasPorAba, primeiraAbaPendente, progressoChecklist,
+  ratearAdesao, type AbaFechamento, type FormaAdesao,
+} from '@/lib/vendas';
 import type { DadosCrlv } from '@/lib/crlv';
 import type { LeadsRow } from '@/lib/database.types';
 import { FotosVistoria } from '@/components/vistoria/fotos-vistoria';
@@ -55,18 +58,27 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
   const endereco = (form.endereco ?? {}) as Endereco;
 
   const { data: checklist } = useChecklistLead(lead.id);
-  const { data: vistoria } = useVistoriaLead(lead.id);
   const { data: planos } = usePlanos();
   const { data: vendedores } = useVendedoresDaRegional(lead.regional_id);
   const salvar = useSalvarFichaLead();
   const buscarAssociado = useBuscarAssociadoPorDocumento();
-  const addFoto = useAddFotoVistoria(lead.id);
-  const removerFoto = useRemoverFotoVistoria(lead.id);
   const uploadCrlv = useUploadCrlv(lead.id);
   const urlAssinada = useUrlAssinadaVendas();
 
   const [buscandoCep, setBuscandoCep] = useState(false);
-  const [enviandoFotos, setEnviandoFotos] = useState(0);
+  // Na Auditoria a primeira pergunta e sempre a mesma — "as fotos subiram?" —,
+  // entao a ficha abre direto na vistoria para quem esta conferindo.
+  const [aba, setAba] = useState<AbaFechamento>(
+    lead.status === 'EM_AUDITORIA' ? 'vistoria' : 'associado',
+  );
+  const [checklistAberto, setChecklistAberto] = useState(false);
+
+  // As abas espelham os grupos do checklist, entao a pendencia sabe onde mora.
+  const itens = checklist ?? [];
+  const porAba = pendenciasPorAba(itens);
+  const faltamAgora = primeiraAbaPendente(itens);
+  const progresso = progressoChecklist(itens);
+  const completo = progresso.total > 0 && progresso.concluidos === progresso.total;
 
   // So recarrega o formulario ao trocar de lead. Antes dependia do objeto
   // inteiro, entao qualquer invalidacao da query (mudar o status, por exemplo)
@@ -124,18 +136,6 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
     });
   }
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] },
-    onDrop: async (arquivos) => {
-      for (const file of arquivos) {
-        setEnviandoFotos((n) => n + 1);
-        try { await addFoto.mutateAsync({ file }); }
-        catch (e) { toast.error(`Falha em "${file.name}": ${(e as Error).message}`); }
-        finally { setEnviandoFotos((n) => n - 1); }
-      }
-    },
-  });
-
   async function abrir(path: string) {
     try { window.open(await urlAssinada.mutateAsync(path), '_blank', 'noopener'); }
     catch { toast.error('Nao consegui abrir o arquivo'); }
@@ -149,12 +149,88 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
     });
   }
 
-  const fotos = vistoria?.anexos ?? [];
-
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
       <div className="space-y-4">
+        {/* ------------------------------------------------------------------
+            Barra de pendencias + abas.
+            A ficha inteira numa coluna so obrigava a rolar muito — e quem
+            AUDITA rolava ate o fim so para ver as fotos. As abas dividem o
+            trabalho; a barra acima delas continua dizendo, em QUALQUER aba, o
+            que falta para o veiculo entrar na base.
+        ------------------------------------------------------------------- */}
+        <div className="sticky top-0 z-20 -mx-1 rounded-2xl border border-slate-200/80 bg-superficie/95 px-3 py-2.5 backdrop-blur">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="flex items-center gap-1.5 text-[13px] font-semibold text-slate-800">
+              <ShieldCheck className={`h-4 w-4 ${completo ? 'text-emerald-600' : 'text-amber-500'}`} />
+              {completo
+                ? 'Ficha completa — pronta para a Auditoria'
+                : `Faltam ${progresso.total - progresso.concluidos} itens para entrar na base`}
+            </p>
+            <div className="flex items-center gap-2">
+              <span className="tnum text-[11.5px] font-semibold text-slate-500">
+                {progresso.concluidos}/{progresso.total}
+              </span>
+              <button
+                type="button"
+                onClick={() => setChecklistAberto((v) => !v)}
+                className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-[11.5px] font-medium text-slate-600 lg:hidden"
+              >
+                Checklist
+                <ChevronDown className={`h-3.5 w-3.5 transition ${checklistAberto ? 'rotate-180' : ''}`} />
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
+            <div
+              className={`h-full rounded-full transition-all ${completo ? 'bg-emerald-500' : 'bg-cyan-500'}`}
+              style={{ width: `${progresso.percentual}%` }}
+            />
+          </div>
+
+          <nav className="-mx-1 mt-2 flex gap-1 overflow-x-auto px-1">
+            {ABAS_FECHAMENTO.map((a) => {
+              const pendentes = porAba[a.id];
+              const ativa = aba === a.id;
+              return (
+                <button
+                  key={a.id} type="button" onClick={() => setAba(a.id)}
+                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12.5px] font-semibold transition ${
+                    ativa ? 'bg-acao text-white' : 'text-slate-500 hover:bg-slate-100'}`}
+                >
+                  {a.titulo}
+                  {pendentes > 0 && (
+                    <span className={`tnum grid h-4 min-w-4 place-items-center rounded-full px-1 text-[10px] font-bold ${
+                      ativa ? 'bg-white/25 text-white' : 'bg-amber-100 text-amber-800'}`}>
+                      {pendentes}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+
+          {!completo && faltamAgora && faltamAgora !== aba && (
+            <button
+              type="button" onClick={() => setAba(faltamAgora)}
+              className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium text-amber-700 underline"
+            >
+              <CircleAlert className="h-3 w-3" />
+              Ha pendencia em &quot;{ABAS_FECHAMENTO.find((a) => a.id === faltamAgora)?.titulo}&quot;
+            </button>
+          )}
+        </div>
+
+        {/* No celular nao ha coluna lateral: o checklist completo abre aqui */}
+        {checklistAberto && (
+          <div className="lg:hidden">
+            <ChecklistEntrada itens={itens} />
+          </div>
+        )}
+
         {/* ---------------------------------------------------- Associado */}
+        {aba === 'associado' && (
         <Secao icone={UserRound} titulo="Associado" descricao="Confira o CPF/CNPJ primeiro: se ja for associado, a ficha vem preenchida.">
           <div className="grid gap-3 sm:grid-cols-3">
             <FormField label="CPF / CNPJ *" className="sm:col-span-2">
@@ -235,7 +311,10 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
           </div>
         </Secao>
 
+        )}
+
         {/* ---------------------------------------------------- Veiculo */}
+        {aba === 'veiculo' && (
         <Secao icone={Car} titulo="Veiculo" descricao="Chassi, Renavam e cor sao obrigatorios para o veiculo entrar na base.">
           <div className="grid gap-3 sm:grid-cols-4">
             <FormField label="Placa *">
@@ -272,7 +351,10 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
           </div>
         </Secao>
 
-        {/* ---------------------------------------------------- Documentos */}
+        )}
+
+        {/* ---------------------------------------------------- Documentos e fotos */}
+        {aba === 'vistoria' && (
         <Secao icone={Camera} titulo="Documentos e vistoria" descricao="CRLV do veiculo e as fotos obrigatorias da vistoria.">
           <LeitorCrlv onLido={aplicarCrlv} valorAtual={form.crlv_qrcode} />
 
@@ -303,7 +385,10 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
           <FotosVistoria leadId={lead.id} />
         </Secao>
 
+        )}
+
         {/* ---------------------------------------------------- Adesao */}
+        {aba === 'adesao' && (
         <Secao icone={HandCoins} titulo="Adesao e vendedor" descricao="Como a taxa de adesao foi recebida define se ela entra no nosso financeiro.">
           <div className="grid gap-3 sm:grid-cols-3">
             <FormField label="Vendedor *">
@@ -343,6 +428,8 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
           )}
         </Secao>
 
+        )}
+
         <div className="flex justify-end">
           <Button onClick={gravar} disabled={salvar.isPending}>
             {salvar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
@@ -351,8 +438,8 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
         </div>
       </div>
 
-      <aside className="lg:sticky lg:top-4 lg:self-start">
-        <ChecklistEntrada itens={checklist ?? []} />
+      <aside className="hidden lg:sticky lg:top-4 lg:block lg:self-start">
+        <ChecklistEntrada itens={itens} colunas={1} />
       </aside>
     </div>
   );

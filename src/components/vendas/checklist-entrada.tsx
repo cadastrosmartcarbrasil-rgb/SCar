@@ -16,7 +16,11 @@ const ICONE_GRUPO: Record<string, string> = {
  * Le a MESMA funcao que a autorizacao usa no banco (`checklist_lead`), entao
  * nao existe "passou na tela e o banco recusou".
  */
-export function ChecklistEntrada({ itens }: { itens: ItemChecklistLead[] }) {
+export function ChecklistEntrada({ itens, colunas = 2 }: {
+  itens: ItemChecklistLead[];
+  /** 1 coluna quando o checklist vive na lateral estreita da ficha. */
+  colunas?: 1 | 2;
+}) {
   const grupos = agruparChecklist(itens);
   const { concluidos, total, percentual } = progressoChecklist(itens);
   const completo = total > 0 && concluidos === total;
@@ -49,7 +53,7 @@ export function ChecklistEntrada({ itens }: { itens: ItemChecklistLead[] }) {
         )}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className={`grid gap-3 ${colunas === 2 ? 'sm:grid-cols-2' : ''}`}>
         {grupos.map((g) => (
           <div key={g.grupo} className="rounded-2xl border border-slate-200/80 bg-superficie p-3">
             <div className="mb-2 flex items-center justify-between">

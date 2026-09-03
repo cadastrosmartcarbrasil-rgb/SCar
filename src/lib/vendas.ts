@@ -166,3 +166,39 @@ export function progressoChecklist(itens: ItemChecklist[]): { concluidos: number
 export function pendencias(itens: ItemChecklist[]): string[] {
   return itens.filter((i) => !i.ok).map((i) => i.item);
 }
+
+// ---------------------------------------------------------------------------
+// Abas do fechamento da venda (0047)
+//
+// A ficha juntava associado, veiculo, documentos, vistoria e adesao numa
+// coluna so: quem preenche rola muito, e quem AUDITA rola mais ainda ate achar
+// as fotos. As abas espelham exatamente os GRUPOS do `checklist_lead` — assim
+// cada aba sabe quantas pendencias tem, e a pendencia leva para a aba certa em
+// vez de virar uma caca ao campo.
+// ---------------------------------------------------------------------------
+export const ABAS_FECHAMENTO = [
+  { id: 'associado', titulo: 'Associado',  grupo: 'Associado' },
+  { id: 'veiculo',   titulo: 'Veiculo',    grupo: 'Veiculo' },
+  { id: 'vistoria',  titulo: 'Documentos e fotos', grupo: 'Documentos' },
+  { id: 'adesao',    titulo: 'Adesao',     grupo: 'Venda' },
+] as const;
+
+export type AbaFechamento = (typeof ABAS_FECHAMENTO)[number]['id'];
+
+/** Em que aba mora cada grupo do checklist (grupo desconhecido nao some: vai para a 1a). */
+export function abaDoGrupo(grupo: string): AbaFechamento {
+  return ABAS_FECHAMENTO.find((a) => a.grupo === grupo)?.id ?? 'associado';
+}
+
+/** Quantas pendencias cada aba carrega — e o numerinho vermelho da aba. */
+export function pendenciasPorAba(itens: ItemChecklist[]): Record<AbaFechamento, number> {
+  const conta = { associado: 0, veiculo: 0, vistoria: 0, adesao: 0 } as Record<AbaFechamento, number>;
+  itens.filter((i) => !i.ok).forEach((i) => { conta[abaDoGrupo(i.grupo)] += 1; });
+  return conta;
+}
+
+/** A aba onde o trabalho continua. `null` quando nao falta nada. */
+export function primeiraAbaPendente(itens: ItemChecklist[]): AbaFechamento | null {
+  const conta = pendenciasPorAba(itens);
+  return ABAS_FECHAMENTO.find((a) => conta[a.id] > 0)?.id ?? null;
+}

@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { filtroBuscaLeads } from '@/lib/crm';
+import { comprimirImagem, validarArquivo } from '@/lib/imagem';
 import type {
   AvisoCaptura,
   ClientesRow,
@@ -457,7 +458,14 @@ export function useAddFotoVistoria(leadId: string) {
   const supabase = createClient();
   const qc = useQueryClient();
   return useMutation<void, Error, { file: File; tipo?: string }>({
-    mutationFn: async ({ file, tipo }) => {
+    mutationFn: async ({ file: bruto, tipo }) => {
+      // A foto e reduzida AQUI, no navegador: 1600px de lado maior, JPEG. Sobe
+      // rapido no 4G da rua e a auditoria abre sem esperar. O teto de 10 MB
+      // ainda existe no banco (0047), para o caso de a reducao nao rolar.
+      const recusa = validarArquivo(bruto);
+      if (recusa) throw new Error(recusa);
+      const file = await comprimirImagem(bruto);
+
       let vistoriaId: string;
       const { data: existente } = await supabase
         .from('vistorias').select('id').eq('lead_id', leadId).limit(1).maybeSingle();
@@ -479,8 +487,15 @@ export function useAddFotoVistoria(leadId: string) {
         .from(BUCKET_VENDAS).upload(path, file, { cacheControl: '3600', upsert: false });
       if (upErr) throw upErr;
 
-      const { error: insErr } = await supabase.from('vistoria_anexos')
-        .insert({ vistoria_id: vistoriaId, url: path, tipo: tipo ?? null, descricao: file.name });
+      const { data: { user } } = await supabase.auth.getUser();
+      const { error: insErr } = await supabase.from('vistoria_anexos').insert({
+        vistoria_id: vistoriaId,
+        url: path,
+        tipo: tipo ?? null,
+        descricao: file.name,
+        tamanho_bytes: file.size,
+        enviado_por: user?.id ?? null,
+      });
       if (insErr) {
         await supabase.storage.from(BUCKET_VENDAS).remove([path]);
         throw insErr;
@@ -488,6 +503,7 @@ export function useAddFotoVistoria(leadId: string) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['vendas', 'vistoria', leadId] });
+      qc.invalidateQueries({ queryKey: ['vendas', 'fotos-modelo', leadId] });
       qc.invalidateQueries({ queryKey: ['vendas', 'checklist', leadId] });
     },
   });
@@ -504,6 +520,7 @@ export function useRemoverFotoVistoria(leadId: string) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['vendas', 'vistoria', leadId] });
+      qc.invalidateQueries({ queryKey: ['vendas', 'fotos-modelo', leadId] });
       qc.invalidateQueries({ queryKey: ['vendas', 'checklist', leadId] });
     },
   });
@@ -514,7 +531,13 @@ export function useUploadCrlv(leadId: string) {
   const supabase = createClient();
   const qc = useQueryClient();
   return useMutation<void, Error, File>({
-    mutationFn: async (file) => {
+    mutationFn: async (bruto) => {
+      // Foto do CRLV segue a mesma regra da vistoria; PDF sobe como veio (nao
+      // da para recomprimir aqui), so nao pode passar do teto.
+      const recusa = validarArquivo(bruto, { aceitaPdf: true });
+      if (recusa) throw new Error(recusa);
+      const file = await comprimirImagem(bruto);
+
       const ext = file.name.includes('.') ? `.${file.name.split('.').pop()}` : '';
       const path = `crlv/${leadId}/${Date.now()}${ext}`;
       const { error: upErr } = await supabase.storage
@@ -526,6 +549,32 @@ export function useUploadCrlv(leadId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['vendas'] });
       qc.invalidateQueries({ queryKey: ['vendas', 'checklist', leadId] });
+    },
+  });
+}
+
+/**
+ * URLs assinadas de VARIOS arquivos de uma vez — e o que permite a aba de
+ * vistoria mostrar miniatura de tudo sem um clique por foto. O bucket e
+ * privado, entao cada link vale 10 minutos; a query recarrega antes disso.
+ */
+export function useUrlsAssinadasVendas(paths: (string | null | undefined)[]) {
+  const supabase = createClient();
+  const lista = Array.from(new Set(paths.filter((p): p is string => !!p))).sort();
+  return useQuery<Record<string, string>>({
+    queryKey: ['vendas', 'urls-assinadas', lista.join('|')],
+    enabled: lista.length > 0,
+    staleTime: 8 * 60_000,      // o link expira em 10 min
+    gcTime: 8 * 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.storage
+        .from(BUCKET_VENDAS).createSignedUrls(lista, 60 * 10);
+      if (error) throw error;
+      const mapa: Record<string, string> = {};
+      (data ?? []).forEach((d) => {
+        if (d.path && d.signedUrl) mapa[d.path] = d.signedUrl;
+      });
+      return mapa;
     },
   });
 }

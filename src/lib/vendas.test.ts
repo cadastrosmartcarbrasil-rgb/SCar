@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  adesaoEntraNoCaixa, agruparChecklist, margemRegional, pendencias, progressoChecklist,
+  ABAS_FECHAMENTO, ORDEM_CHECKLIST, adesaoEntraNoCaixa, agruparChecklist, margemRegional,
+  pendencias, pendenciasPorAba, primeiraAbaPendente, progressoChecklist,
   ratearAdesao, validarComissaoVendedor, type ItemChecklist,
 } from './vendas';
 
@@ -96,5 +97,44 @@ describe('checklist', () => {
   it('grupo desconhecido vai para o fim', () => {
     const g = agruparChecklist([...itens, { item: 'X', grupo: 'Outro', ok: true, detalhe: null }]);
     expect(g[g.length - 1].grupo).toBe('Outro');
+  });
+});
+
+describe('abas do fechamento', () => {
+  const itens = [
+    { item: 'CPF/CNPJ valido', grupo: 'Associado', ok: true, detalhe: null },
+    { item: 'E-mail', grupo: 'Associado', ok: false, detalhe: null },
+    { item: 'Chassi', grupo: 'Veiculo', ok: false, detalhe: null },
+    { item: 'Renavam', grupo: 'Veiculo', ok: false, detalhe: null },
+    { item: 'Fotos da vistoria', grupo: 'Documentos', ok: false, detalhe: null },
+    { item: 'Vendedor responsavel', grupo: 'Venda', ok: true, detalhe: null },
+  ];
+
+  it('cada grupo do checklist tem uma aba', () => {
+    ORDEM_CHECKLIST.forEach((g) => {
+      expect(ABAS_FECHAMENTO.some((a) => a.grupo === g)).toBe(true);
+    });
+  });
+
+  it('conta as pendencias de cada aba', () => {
+    expect(pendenciasPorAba(itens)).toEqual({
+      associado: 1, veiculo: 2, vistoria: 1, adesao: 0,
+    });
+  });
+
+  it('grupo desconhecido nao some da tela', () => {
+    const conta = pendenciasPorAba([{ item: 'X', grupo: 'Marte', ok: false, detalhe: null }]);
+    expect(conta.associado).toBe(1);
+  });
+
+  it('aponta onde o trabalho continua, na ordem da ficha', () => {
+    expect(primeiraAbaPendente(itens)).toBe('associado');
+    expect(primeiraAbaPendente(itens.filter((i) => i.grupo !== 'Associado'))).toBe('veiculo');
+    expect(primeiraAbaPendente(itens.map((i) => ({ ...i, ok: true })))).toBeNull();
+  });
+
+  it('ficha vazia nao aponta aba nenhuma', () => {
+    expect(primeiraAbaPendente([])).toBeNull();
+    expect(pendenciasPorAba([])).toEqual({ associado: 0, veiculo: 0, vistoria: 0, adesao: 0 });
   });
 });

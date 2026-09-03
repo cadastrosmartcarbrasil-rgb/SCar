@@ -3,7 +3,7 @@
 > Memória do projeto. Leia isto no início de cada sessão em vez de varrer o repositório inteiro.
 > Mantenha este arquivo atualizado ao adicionar módulos/migrations (é barato e faz o projeto andar rápido).
 
-## Estado atual (retomar aqui) — atualizado ao fim da fase 0032→0046
+## Estado atual (retomar aqui) — atualizado ao fim da fase 0032→0047
 
 **Um único projeto, um único repositório: `cadastrosmartcarbrasil-rgb/scar`** (no GitHub o nome
 aparece como `SCar`). Trabalho e deploy acontecem no branch **`claude/claude-md-opcao-x-98kfj5`**;
@@ -17,10 +17,10 @@ o de trabalho; esse default morto já causou um dia inteiro de trabalho no branc
 - **Último commit desta fase:** `a468ead`.
 - **A migration `0044` JÁ FOI APLICADA em produção** e o Portal do Associado está no ar,
   conferido pelo usuário. As migrations `0001`..`0044` estão todas aplicadas.
-- **`0045_agenda_vendas` e `0046_vendas_duplicidade_aceite` são NOVAS e ainda NÃO foram aplicadas
-  em produção** — rodar as duas, nessa ordem, no SQL Editor do Supabase ANTES do
-  `docker compose up -d --build`, senão a tela de vendas quebra (Kanban, agenda, aviso de
-  duplicidade e aceite presencial chamam RPCs que só existem depois delas).
+- **`0045_agenda_vendas`, `0046_vendas_duplicidade_aceite` e `0047_vistoria_anexo_peso` são NOVAS
+  e ainda NÃO foram aplicadas em produção** — rodar as três, nessa ordem, no SQL Editor do
+  Supabase ANTES do `docker compose up -d --build`, senão a tela de vendas quebra (Kanban, agenda,
+  aviso de duplicidade, aceite presencial e a aba de fotos chamam RPCs que só existem depois delas).
 - **A `0046` também FECHA UM BURACO DE SEGURANÇA:** `registrar_aceite_venda` era `security definer`
   concedida a `authenticated` **sem checar quem chama** — qualquer usuário logado (inclusive um
   associado do `/portal`) podia carimbar aceite em lead alheio. Agora, havendo sessão, exige
@@ -108,9 +108,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0046`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **23 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 338 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0047`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **24 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 355 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Todos os portais e páginas
@@ -184,12 +184,15 @@ fixo "Marcado como perdido"). A página foi de `max-w-2xl` para `max-w-5xl`, que
 | ↳ cotação | `src/components/vendas/editar-cotacao.tsx` | troca FIPE/plano/opcionais e o desconto com alçada |
 | ↳ fechamento | `src/components/vendas/fechamento-venda.tsx` | associado, veículo, documentos/vistoria, adesão |
 | ↳ checklist | `src/components/vendas/checklist-entrada.tsx` | lê a MESMA `checklist_lead()` do banco |
+| ↳ vistoria | `src/components/vistoria/fotos-vistoria.tsx` | poses, miniaturas e o visor em tela cheia |
 | ↳ CRLV | `src/components/vendas/leitor-crlv.tsx` | QR do CRLV-e por câmera/imagem |
 
 - **Estado e regras:** hook `use-vendas.ts`; lógica pura em `src/lib/crm.ts` (esteira, ações,
   itens obrigatórios, desconto), `src/lib/agenda.ts` (dias parado, situação do retorno, ordenação
   da fila) e `src/lib/vendas.ts` (comissão, adesão) — **todos com testes; mexeu na regra, ajuste o
   teste**.
+- **Estado e regras (2):** `src/lib/imagem.ts` cuida do peso da foto (redução no navegador) e
+  `src/lib/vendas.ts` das abas do fechamento — os dois com testes.
 - **RPCs que a tela usa:** `leads_kanban`, `mover_lead_status`, `registrar_interacao_lead`,
   `agenda_vendas`, `classificar_captura_no_escopo`, `registrar_aceite_venda`,
   `atualizar_cotacao`, `cotar_plano`, `produtos_do_plano`,
@@ -225,6 +228,35 @@ onde a venda presencial acontece. O card da cotação também ganhou **WhatsApp*
 direto para o número do lead (`mensagemDaProposta` + `linkWhatsApp`), e o `<LinkDaProposta>` passou
 a aceitar destinatário. **Junto veio a trava que faltava:** ver a nota de segurança da `0046` no
 topo deste arquivo.
+
+**Terceira rodada (a ficha em abas e a foto que a Auditoria precisa ver — migration `0047`):**
+
+**7. As fotos da vistoria agora APARECEM.** O problema não era o arquivo: ele sempre foi para o
+bucket privado `vendas` e a policy de storage já libera qualquer staff. O que faltava era a
+**miniatura** — a tela só tinha um botão "Ver" que abria uma aba por foto, então conferir uma
+vistoria eram dez abas. Agora cada pose mostra a imagem, com **data do envio e peso**, e o clique
+abre um **visor em tela cheia** (setas, `Esc`, "abrir original"). Miniatura que não carrega diz
+isso em vermelho, em vez de fingir que está tudo certo. As URLs assinadas vêm **em lote**
+(`useUrlsAssinadasVendas`, `createSignedUrls`, 10 min) — uma chamada, não uma por foto.
+
+**8. Foto pesada é reduzida no navegador, antes de subir.** `src/lib/imagem.ts` (testado):
+`comprimirImagem` redimensiona para no máximo **1600px** no maior lado e recodifica em **JPEG**
+(qualidade 0,82; segunda passada em 0,65 se ainda passar de ~1,5 MB). Formato que o navegador não
+decodifica (HEIC antigo) e imagem que ficaria maior comprimida sobem como vieram — a função nunca
+falha para quem chama. **O teto de 10 MB é do BANCO** (`chk_vistoria_anexo_tamanho`, 0047): regra
+que só vive na tela não é regra. `vistoria_anexos` passou a guardar `tamanho_bytes` e
+`enviado_por`, e `fotos_vistoria_lead` devolve isso + o nome do arquivo. O CRLV segue a mesma
+regra (PDF sobe como veio, só com o teto).
+
+**9. A ficha da venda virou ABAS.** `<FechamentoVenda>` tinha associado, veículo, documentos,
+vistoria e adesão numa coluna só. As abas são **Associado · Veículo · Documentos e fotos ·
+Adesão** e espelham exatamente os **grupos do `checklist_lead`** — por isso cada aba mostra o
+número de pendências dela, e o aviso "há pendência em X" leva para a aba certa. O checklist
+continua visível em **qualquer** aba: barra fixa no topo (progresso + quanto falta) e o checklist
+inteiro na coluna lateral no desktop, ou no botão "Checklist" no celular. **A aba de fotos só
+carrega as imagens quando é aberta** (o componente monta ali), e para um lead `EM_AUDITORIA` a
+ficha **abre direto nela** — é a primeira pergunta de quem audita. Lógica pura em
+`ABAS_FECHAMENTO`/`pendenciasPorAba`/`primeiraAbaPendente` (`src/lib/vendas.ts`), com testes.
 
 **Ficou de fora (o usuário decide se entra):**
 1. **Uma cotação por lead** — para comparar duas propostas fechadas cria-se OUTRO lead ("+ Nova
@@ -682,6 +714,15 @@ chamador — qualquer usuario logado, inclusive um ASSOCIADO do `/portal`, podia
 lead alheio com nome e CPF inventados. Agora, quando `auth.uid()` nao e nulo, exige
 `pode_tratar_lead()`; o caminho publico segue identico. So depois disso o CRM e o portal do
 vendedor passaram a colher o ACEITE PRESENCIAL (`p_por := 'VENDEDOR'`).)
+· `0047_vistoria_anexo_peso` (A AUDITORIA precisa CONFERIR a foto, nao so saber que ela existe:
+(A) `vistoria_anexos` ganha `tamanho_bytes` e `enviado_por`, com **teto de 10 MB no proprio banco**
+(`chk_vistoria_anexo_tamanho`) — a reducao acontece no navegador (`src/lib/imagem.ts`: 1600px no
+maior lado, JPEG), mas regra que so vive na tela nao e regra. Linha antiga fica com peso nulo e
+continua valendo; (B) `fotos_vistoria_lead` **recriada** (muda a lista de colunas de OUT, entao e
+drop + create) devolvendo `enviada_em`, `tamanho_bytes` e `arquivo` — e o que aparece embaixo de
+cada miniatura. O `distinct on` ganhou `a.id` como desempate: dois anexos gravados na MESMA
+transacao tem o mesmo `created_at` (o default e `now()`) e a escolha da "mais recente" seria
+arbitraria — mesmo gotcha da auditoria da OS 24h.)
 
 ## Módulos (status: todos funcionais)
 Assistência 24h (`/assistencia`: painel de acionamento com trava + limites em tempo real, cotação,
@@ -1192,6 +1233,14 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
   `capture="environment"` no input — no celular abre a camera traseira direto.
 - **RLS:** `vistorias`/`vistoria_anexos` enxergam o lead tambem por `vendedor_id` (0040). Sem isso o
   lead do hotlink (criado pelo service_role, sem `consultor_id`) tinha dono mas nao tinha vistoria.
+- **A foto aparece na tela (0047):** cada pose mostra miniatura, data do envio e peso, e o clique
+  abre o visor em tela cheia (setas, `Esc`, "abrir original"). As URLs assinadas vêm **em lote**
+  (`createSignedUrls`, 10 min) — uma chamada, não uma por foto. Miniatura quebrada avisa em
+  vermelho: para a Auditoria, "não carregou" e informação, não silêncio.
+- **Peso: reduzido no navegador, travado no banco (0047).** `comprimirImagem` (`src/lib/imagem.ts`)
+  redimensiona para 1600px no maior lado e recodifica em JPEG antes do upload; o teto de 10 MB é
+  uma CHECK em `vistoria_anexos`. Se o insert falhar, o hook remove o arquivo do bucket — nada de
+  órfão no storage.
 - Espelho puro em `src/lib/vistoria.ts` (`progressoVistoria`, `proximaPose`, `separarOpcionais`,
   `avulsosParaCotacao`) com testes.
 
