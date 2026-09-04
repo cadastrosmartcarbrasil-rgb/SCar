@@ -3,7 +3,7 @@
 > Memória do projeto. Leia isto no início de cada sessão em vez de varrer o repositório inteiro.
 > Mantenha este arquivo atualizado ao adicionar módulos/migrations (é barato e faz o projeto andar rápido).
 
-## Estado atual (retomar aqui) — atualizado ao fim da fase 0032→0049
+## Estado atual (retomar aqui) — atualizado ao fim da fase 0032→0050
 
 **Um único projeto, um único repositório: `cadastrosmartcarbrasil-rgb/scar`** (no GitHub o nome
 aparece como `SCar`). Trabalho e deploy acontecem no branch **`claude/claude-md-opcao-x-98kfj5`**;
@@ -25,6 +25,8 @@ o de trabalho; esse default morto já causou um dia inteiro de trabalho no branc
   anexos da OS da 24h não têm onde gravar e a ficha do veículo quebra ao salvar o rastreador
   (as colunas `rastreador_imei`/`rastreador_chip`/`empresa_rastreamento_id` e a tabela
   `empresas_rastreamento` nascem na `0049`).
+- **`0050_rastreadores_modulo` também é NOVA** — é o módulo de Rastreadores (parque de
+  equipamentos por IMEI). Sem ela a tela `/rastreadores` não abre. Roda depois da `0049`.
 - **A `0048` cria o bucket `assistencia`** — o SQL Editor cria o registro em `storage.buckets`;
   confira em *Storage* se ele aparece como **privado** depois de rodar.
 - **A `0046` também FECHA UM BURACO DE SEGURANÇA:** `registrar_aceite_venda` era `security definer`
@@ -114,9 +116,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0049`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **26 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 370 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0050`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **27 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 385 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Todos os portais e páginas
@@ -278,10 +280,13 @@ ficha **abre direto nela** — é a primeira pergunta de quem audita. Lógica pu
    Kanban casa, porque filtra em JS). O certo seria a extensão `unaccent` + índice.
 
 ### Próximos passos oferecidos (o usuário escolhe)
-1. **Rastreadores — fase 2:** a categoria/módulo próprio (estoque de equipamentos por IMEI,
-   instalação/retirada com histórico, status de comunicação, integração com a plataforma da
-   rastreadora). A fase 1 (dados na ficha do veículo) saiu na `0049`; ver a seção
-   "Rastreadores (0049)".
+1. **Rastreadores — fase 3:** integração com a plataforma da rastreadora (posição, status de
+   comunicação) e a **importação da base do TrackerStock** (~2.400 equipamentos), que por decisão
+   do próprio escopo só acontece depois que clientes e veículos estiverem cadastrados — antes
+   disso a carga geraria milhares de registros órfãos. A fronteira já existe:
+   `empresas_rastreamento.api_config`, `rastreadores.ultima_comunicacao/ultima_posicao` e o tipo
+   de evento `IMPORTACAO`. Também está aberto: **cobrança do equipamento não devolvido**
+   (status 6 e 7 hoje são manuais, sem título no financeiro).
 2. **Ligar o gateway real** (Asaas) — emissão + webhook + baixa automática.
 3. **Termo de adesão** com aceite jurídico no fluxo (`contratos_adesao` já existe; hoje o aceite
    da página pública guarda a prova, mas o texto é o mínimo honesto).
@@ -754,6 +759,23 @@ nem todo veiculo tem rastreador, e a regra de cobranca continua em `tipos_veicul
 UNIQUE PARCIAL do IMEI entre veiculos nao excluidos — um equipamento nao pode estar em dois
 veiculos ao mesmo tempo, e excluir o veiculo devolve o IMEI para o proximo; (D) seed do alerta
 reutilizavel "Rastreador pendente". Logica pura espelhada em `src/lib/rastreador.ts`.)
+· `0050_rastreadores_modulo` (FASE 2 — o EQUIPAMENTO vira entidade: (A) `rastreadores` (um por
+IMEI: estoque, chip/ICCID, operadora, modelo, aquisicao, plataforma, unidade, veiculo e associado)
+com unique parcial `(veiculo_id) where status = 'ATIVO'` — um carro, um equipamento ativo;
+(B) enum `status_rastreador` com os 11 status do sistema antigo e `numero_status_rastreador()`
+preservando a numeracao que a equipe fala ("2 - Ativo"); (C) `rastreador_eventos` append-only
+escrito por TRIGGER (a aplicacao esquece, a trigger nao) e `status_desde` carimbado no BEFORE —
+e ele que sustenta os prazos; (D) `rastreador_manutencoes` com uma ordem aberta por equipamento;
+(E) **a ficha do veiculo (0049) vira ESPELHO**: instalar/desinstalar escreve
+`rastreador_imei`/`rastreador_chip`/`empresa_rastreamento_id` por trigger, entao o SAC continua
+funcionando sem saber do modulo; (F) maquina de estados no banco
+(`transicao_rastreador_valida`) + RPCs `instalar_rastreador`, `desinstalar_rastreador`,
+`mover_status_rastreador`, `transferir_rastreador_regional` e as duas de manutencao;
+(G) consulta: `rastreadores_listar` (paginada), `rastreador_ficha`, `rastreador_historico`,
+`rastreadores_resumo` (dashboard + custo por plataforma), `rastreadores_a_recuperar`,
+`rastreadores_movimentacao`, `rastreadores_giro_estoque`; (H) **`rastreadores_divergencias`** — o
+cruzamento com o cadastro de veiculos, que e o valor do modulo; (I) `planos_protecao.exige_rastreador`,
+somado a regra por tipo de veiculo que ja existia.)
 
 ## Módulos (status: todos funcionais)
 Assistência 24h (`/assistencia`: painel de acionamento com trava + limites em tempo real, cotação,
@@ -788,7 +810,10 @@ remessas bancárias) · Financeiro (contas a pagar/receber + baixas + DRE)
 · Configurações (regionais, usuários,
 vendedores, marcas/modelos, tipos de veículo, cotas de participação (V5..V15), tipos de evento,
 produtos, planos/combos (Prata/Ouro/Diamante), **rastreamento** (empresas rastreadoras), contas
-bancárias, integrações bancárias, plano de contas).
+bancárias, integrações bancárias, plano de contas)
+· **Rastreadores** (`/rastreadores`: parque por IMEI, estoque por unidade/plataforma, instalação no
+veículo, manutenção, painel de divergências com o cadastro da frota e relatórios de custo,
+recuperação e giro).
 
 ## Motor de cotação e combos (0019) — arquitetura
 - **Cotação Base (Plano Prata)** = Casco + Taxa Admin + Assistência 24h + **Rastreador (regra)**.
@@ -1442,30 +1467,59 @@ bancárias, integrações bancárias, plano de contas).
 - Espelho puro em `src/lib/cartao.ts` (Luhn, bandeira pelo BIN, validade, CVV por bandeira) com
   testes — o erro de digitação é pego antes de sair da tela.
 
-## Rastreadores (0049) — arquitetura
-- **Fase 1 (feita):** o rastreador é um dado da **ficha do veículo** — **IMEI**, **Nº do chip**
-  (linha M2M ou ICCID) e **Rastreador por** (FK para `empresas_rastreamento`). Opcionais: nem todo
-  veículo tem rastreador. Quem decide se ele é COBRADO continua sendo a regra de precificação
-  (`tipos_veiculo.exige_rastreador` / `valor_limite_isencao` / `valor_mensalidade_rastreador`) —
-  são coisas diferentes e não se confundem: uma é dinheiro, a outra é o equipamento instalado.
-- **Catálogo de rastreadoras:** `empresas_rastreamento` — tela **Configurações → Rastreamento**
-  (`/configuracoes/rastreamento`, hook `use-rastreamento.ts`), com autopreenchimento por CNPJ na
-  Receita. Sem rastreadora cadastrada o select do veículo avisa e aponta a tela.
-- **O que o banco garante** (não é validação de tela): CHECK de formato do IMEI (14–17 dígitos, 15
-  é o padrão GSM) e do chip (8–22), **unique parcial do IMEI** entre veículos não excluídos e FK
-  `on delete set null`. Teste funcional em `supabase/tests/0049_rastreadores.test.sql`.
-- **Lógica pura testada (Vitest):** `src/lib/rastreador.ts` — `normalizarDigitos`,
-  `imeiFormatoValido`, `imeiLuhnValido` (dígito verificador do IMEI de 15 posições: na tela é
-  **aviso**, não trava, porque equipamento importado às vezes foge do padrão), `chipFormatoValido`,
-  `formatarChip`, `situacaoRastreamento` (COMPLETO/INCOMPLETO/PENDENTE/NAO_EXIGE) e
-  `validarRastreador`.
-- **Onde aparece:** bloco "Rastreamento" no form do veículo (a busca da lista também acha por IMEI
-  e por chip) e no **SAC**, no card do veículo — rastreadora, IMEI, chip, telefone da central e
-  link da plataforma (`/api/v1/sac/veiculo` devolve `rastreadora`), que é o que o atendente precisa
-  na hora do evento.
-- **Fase 2 (planejada):** a categoria/módulo de Rastreadores — estoque de equipamentos por IMEI,
-  instalação/retirada com histórico, status de comunicação e integração com a plataforma da
-  rastreadora. Quando existir, estes campos do veículo viram a "instalação vigente".
+## Rastreadores (0049 + 0050) — arquitetura
+> A especificação que originou a fase 2 está em `docs/modulos/rastreadores.md`, com um cabeçalho
+> dizendo o que foi traduzido para as convenções do SCar (ela foi escrita sem ver o repositório).
+
+**São dois níveis, e a diferença importa:**
+- **Ficha do veículo (0049)** — "o que está instalado neste carro": IMEI, Nº do chip e a
+  rastreadora, em `veiculos`. É o que o SAC lê no atendimento.
+- **Parque de equipamentos (0050)** — "onde estão os meus 2.400 aparelhos": a tabela
+  `rastreadores`, um registro por IMEI, com estoque, ciclo de vida e histórico.
+- **A ficha virou ESPELHO do parque.** Instalar/desinstalar escreve os três campos do veículo por
+  trigger (`fn_rastreador_espelha_veiculo`). Quem digitar o IMEI direto na ficha não quebra nada,
+  mas aparece na divergência `FICHA_SEM_EQUIPAMENTO` — é assim que a base antiga vai sendo
+  puxada para o módulo.
+- **Rastreador COBRADO ≠ rastreador INSTALADO.** O preço continua em
+  `tipos_veiculo.exige_rastreador` (0019) e agora também em `planos_protecao.exige_rastreador`;
+  o equipamento é outra coisa. As duas flags alimentam a divergência "veículo sem rastreador".
+
+**Mapeamento com o que já existia** (não criar estrutura paralela):
+| Conceito do sistema antigo | No SCar |
+|---|---|
+| Filial (Cuiabá, Grande Natal…) | `regionais` — a unidade já é o eixo de RLS (`pode_regional`) |
+| Plataforma (D Traker, Lógica…) | `empresas_rastreamento` (0049), + `custo_mensal_equipamento` e `api_config` |
+| Associado / veículo | `clientes` / `veiculos` |
+
+- **Os 11 status guardam o número que a equipe fala** ("2 - Ativo/Instalado"):
+  `numero_status_rastreador()` no banco e `STATUS_RASTREADOR` em `src/lib/rastreador.ts`.
+- **Máquina de estados em dois lugares, de propósito:** `transicao_rastreador_valida()` no banco
+  (é ela que vale) e `transicoesValidas()` no TS (é ela que monta o menu). Mexeu numa, mexa na
+  outra e no teste — há teste dos dois lados. `BAIXADO` é terminal; `BAIXADO`/`DUPLICADO`/
+  `COBRAR_RASTREADOR` exigem motivo; **ativar é instalar** (precisa do veículo, então nem aparece
+  no menu de status).
+- **Prazos contam de `status_desde`,** carimbado pela trigger BEFORE a cada troca de status:
+  `A_DEVOLVER` > 5 dias sugere cobrar, `INADIMPLENTE` > 35 sugere pedir de volta, `MANUTENCAO` e
+  `BOLETO_GERADO` > 30 destacam. `alertaDePrazo()` (testado) mostra isso na lista e na ficha.
+- **Histórico é da TRIGGER, não da aplicação** (`rastreador_eventos`, append-only, sem update nem
+  delete para ninguém). O motivo digitado na tela chega por
+  `set_config('scar.motivo_rastreador')`, mesmo mecanismo da auditoria da OS 24h.
+- **Divergências (`rastreadores_divergencias`) são o coração do módulo** — 9 tipos, uma consulta
+  só, com severidade: veículo que exige rastreador e não tem · equipamento ativo sem veículo ·
+  equipamento em veículo fora da base · inadimplente com equipamento ativo · dois ativos no mesmo
+  veículo · série repetida · status incoerente/prazo estourado · **ficha do veículo com IMEI que
+  não existe no parque** · cadastro incompleto.
+- **Telas:** `/rastreadores` com 3 abas (Parque · Divergências · Relatórios) + `/rastreadores/[id]`
+  (ficha, ações e linha do tempo) + `/rastreadores/divergencias` como rota própria.
+  Cadastro **manual** é a única porta de entrada de dados nesta fase.
+- **A lista é paginada NO BANCO** (`rastreadores_listar`, 50 por página com `total_registros` na
+  própria linha): o parque tem milhares de equipamentos e nunca vem inteiro para a tela.
+- **Isolamento:** todas as RPCs são SECURITY DEFINER e resolvem a unidade por `escopo_regional()`
+  — passar o id de outra franquia não muda o que volta. Baixa de patrimônio (`BAIXADO`/`DUPLICADO`)
+  só com `tem_acesso_global()`.
+- **Fora do escopo por decisão (não é esquecimento):** importação em massa do TrackerStock e
+  integração por API. A fronteira existe (`api_config`, `ultima_comunicacao`, `ultima_posicao`,
+  evento `IMPORTACAO`), sem produtor.
 
 ## Cota de participação (rateio no evento) — arquitetura
 - **Desacoplada do Plano.** O Plano define a mensalidade (produtos); a cota (% da FIPE no rateio)

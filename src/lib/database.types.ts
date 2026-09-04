@@ -251,6 +251,191 @@ export type EmpresasRastreamentoRow = Timestamps & {
   ativo: boolean;
 };
 
+export type StatusRastreador =
+  | 'DISPONIVEL' | 'ATIVO' | 'INADIMPLENTE' | 'INATIVO' | 'A_DEVOLVER'
+  | 'COBRAR_RASTREADOR' | 'BOLETO_GERADO' | 'PENDENCIA_DADOS' | 'MANUTENCAO'
+  | 'DUPLICADO' | 'BAIXADO';
+
+export type RastreadoresRow = Timestamps & {
+  id: string;
+  imei: string;
+  numero_serie: string | null;
+  iccid: string | null;
+  linha: string | null;
+  operadora: string | null;
+  modelo: string | null;
+  fabricante: string | null;
+  empresa_rastreamento_id: string | null;
+  regional_id: string | null;
+  status: StatusRastreador;
+  veiculo_id: string | null;
+  cliente_id: string | null;
+  data_aquisicao: string | null;
+  valor_aquisicao: number | null;
+  nota_fiscal: string | null;
+  data_instalacao: string | null;
+  data_desinstalacao: string | null;
+  local_instalacao: string | null;
+  instalador: string | null;
+  observacoes: string | null;
+  status_desde: string;
+  ultima_comunicacao: string | null;
+  ultima_posicao: Json | null;
+  created_by: string | null;
+  updated_by: string | null;
+};
+
+export type RastreadorEventosRow = {
+  id: string;
+  rastreador_id: string;
+  tipo: string;
+  status_anterior: StatusRastreador | null;
+  status_novo: StatusRastreador | null;
+  veiculo_anterior_id: string | null;
+  veiculo_novo_id: string | null;
+  regional_anterior_id: string | null;
+  regional_nova_id: string | null;
+  descricao: string | null;
+  payload: Json;
+  usuario_id: string | null;
+  created_at: string;
+};
+
+export type RastreadorManutencoesRow = {
+  id: string;
+  rastreador_id: string;
+  aberta_em: string;
+  fechada_em: string | null;
+  defeito: string | null;
+  solucao: string | null;
+  custo: number | null;
+  fornecedor_id: string | null;
+  fornecedor: string | null;
+  status: 'ABERTA' | 'CONCLUIDA' | 'SEM_REPARO';
+  aberta_por: string | null;
+  fechada_por: string | null;
+};
+
+/** Linha de `rastreadores_listar` (0050). */
+export type RastreadorLista = {
+  id: string;
+  imei: string;
+  numero_serie: string | null;
+  linha: string | null;
+  iccid: string | null;
+  operadora: string | null;
+  modelo: string | null;
+  fabricante: string | null;
+  status: StatusRastreador;
+  status_numero: number;
+  status_desde: string;
+  dias_no_status: number;
+  regional_id: string | null;
+  regional: string | null;
+  empresa_rastreamento_id: string | null;
+  plataforma: string | null;
+  veiculo_id: string | null;
+  placa: string | null;
+  veiculo: string | null;
+  cliente_id: string | null;
+  associado: string | null;
+  data_instalacao: string | null;
+  local_instalacao: string | null;
+  instalador: string | null;
+  total_registros: number;
+};
+
+/** Linha de `rastreador_ficha` (0050). */
+export type RastreadorFicha = {
+  id: string;
+  imei: string;
+  numero_serie: string | null;
+  iccid: string | null;
+  linha: string | null;
+  operadora: string | null;
+  modelo: string | null;
+  fabricante: string | null;
+  status: StatusRastreador;
+  status_numero: number;
+  status_desde: string;
+  dias_no_status: number;
+  regional_id: string | null;
+  regional: string | null;
+  empresa_rastreamento_id: string | null;
+  plataforma: string | null;
+  plataforma_url: string | null;
+  custo_mensal: number | null;
+  veiculo_id: string | null;
+  placa: string | null;
+  veiculo: string | null;
+  cliente_id: string | null;
+  associado: string | null;
+  associado_documento: string | null;
+  data_aquisicao: string | null;
+  valor_aquisicao: number | null;
+  nota_fiscal: string | null;
+  data_instalacao: string | null;
+  data_desinstalacao: string | null;
+  local_instalacao: string | null;
+  instalador: string | null;
+  observacoes: string | null;
+  manutencao_aberta_id: string | null;
+  pode_editar: boolean;
+};
+
+export type RastreadorEvento = {
+  id: string;
+  tipo: string;
+  status_anterior: StatusRastreador | null;
+  status_novo: StatusRastreador | null;
+  veiculo_anterior: string | null;
+  veiculo_novo: string | null;
+  regional_anterior: string | null;
+  regional_nova: string | null;
+  descricao: string | null;
+  autor: string | null;
+  created_at: string;
+};
+
+export type RastreadorDivergencia = {
+  tipo: string;
+  severidade: 'ALTA' | 'MEDIA' | 'BAIXA';
+  rastreador_id: string | null;
+  imei: string | null;
+  veiculo_id: string | null;
+  placa: string | null;
+  cliente_id: string | null;
+  associado: string | null;
+  regional_id: string | null;
+  regional: string | null;
+  descricao: string;
+};
+
+export type RastreadoresResumo = {
+  total: number;
+  ativos: number;
+  estoque: number;
+  por_status: { status: StatusRastreador; numero: number; quantidade: number }[];
+  por_regional: { regional_id: string | null; regional: string; total: number; ativos: number; estoque: number }[];
+  por_plataforma: { plataforma_id: string | null; plataforma: string; total: number; ativos: number; custo_mensal: number }[];
+};
+
+export type RastreadorARecuperar = {
+  rastreador_id: string;
+  imei: string;
+  status: StatusRastreador;
+  status_numero: number;
+  dias_no_status: number;
+  regional: string | null;
+  plataforma: string | null;
+  placa: string | null;
+  associado: string | null;
+  documento: string | null;
+  telefone: string | null;
+  celular: string | null;
+  ultima_instalacao: string | null;
+};
+
 export type TiposAlertaRow = {
   id: string;
   nome: string;
@@ -1933,6 +2118,17 @@ export type Database = {
       veiculo_produtos: TableDef<{ veiculo_id: string; produto_id: string }, [Rel<'veiculo_id', 'veiculos'>, Rel<'produto_id', 'produtos'>]>;
       tipos_alerta: TableDef<TiposAlertaRow>;
       empresas_rastreamento: TableDef<EmpresasRastreamentoRow>;
+      rastreadores: TableDef<
+        RastreadoresRow,
+        [
+          Rel<'empresa_rastreamento_id', 'empresas_rastreamento'>,
+          Rel<'regional_id', 'regionais'>,
+          Rel<'veiculo_id', 'veiculos'>,
+          Rel<'cliente_id', 'clientes'>,
+        ]
+      >;
+      rastreador_eventos: TableDef<RastreadorEventosRow, [Rel<'rastreador_id', 'rastreadores'>]>;
+      rastreador_manutencoes: TableDef<RastreadorManutencoesRow, [Rel<'rastreador_id', 'rastreadores'>, Rel<'fornecedor_id', 'fornecedores'>]>;
       veiculo_alertas: TableDef<VeiculoAlertasRow, [Rel<'veiculo_id', 'veiculos'>, Rel<'tipo_alerta_id', 'tipos_alerta'>]>;
       contratos_adesao: TableDef<ContratosAdesaoRow, [Rel<'cliente_id', 'clientes'>, Rel<'veiculo_id', 'veiculos'>]>;
       vistorias: TableDef<VistoriasRow, [Rel<'veiculo_id', 'veiculos'>]>;
@@ -2007,6 +2203,72 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      // ---- 0050: modulo de rastreadores ----
+      rastreadores_listar: {
+        Args: {
+          p_busca?: string | null;
+          p_status?: string | null;
+          p_regional_id?: string | null;
+          p_plataforma_id?: string | null;
+          p_com_veiculo?: boolean | null;
+          p_limite?: number;
+          p_offset?: number;
+        };
+        Returns: RastreadorLista[];
+      };
+      rastreador_ficha: { Args: { p_id: string }; Returns: RastreadorFicha[] };
+      rastreador_historico: { Args: { p_id: string; p_limite?: number }; Returns: RastreadorEvento[] };
+      rastreadores_resumo: { Args: { p_regional_id?: string | null }; Returns: RastreadoresResumo };
+      rastreadores_divergencias: {
+        Args: {
+          p_regional_id?: string | null;
+          p_tipo?: string | null;
+          p_severidade?: string | null;
+          p_dias_inadimplencia?: number;
+          p_limite?: number;
+        };
+        Returns: RastreadorDivergencia[];
+      };
+      rastreadores_a_recuperar: { Args: { p_regional_id?: string | null }; Returns: RastreadorARecuperar[] };
+      rastreadores_movimentacao: {
+        Args: { p_inicio: string; p_fim: string; p_regional_id?: string | null };
+        Returns: { data: string; tipo: string; imei: string; placa: string | null; regional: string | null; instalador: string | null; autor: string | null }[];
+      };
+      rastreadores_giro_estoque: {
+        Args: { p_regional_id?: string | null };
+        Returns: { regional: string; instalacoes: number; dias_medio_em_estoque: number | null }[];
+      };
+      instalar_rastreador: {
+        Args: {
+          p_rastreador_id: string;
+          p_veiculo_id: string;
+          p_data?: string | null;
+          p_local?: string | null;
+          p_instalador?: string | null;
+          p_observacoes?: string | null;
+        };
+        Returns: RastreadoresRow;
+      };
+      desinstalar_rastreador: {
+        Args: { p_rastreador_id: string; p_status_novo?: string; p_motivo?: string | null; p_data?: string | null };
+        Returns: RastreadoresRow;
+      };
+      mover_status_rastreador: {
+        Args: { p_rastreador_id: string; p_status: string; p_motivo?: string | null };
+        Returns: RastreadoresRow;
+      };
+      transferir_rastreador_regional: {
+        Args: { p_rastreador_id: string; p_regional_id: string; p_motivo?: string | null };
+        Returns: RastreadoresRow;
+      };
+      abrir_manutencao_rastreador: {
+        Args: { p_rastreador_id: string; p_defeito: string; p_fornecedor_id?: string | null; p_fornecedor?: string | null };
+        Returns: RastreadorManutencoesRow;
+      };
+      concluir_manutencao_rastreador: {
+        Args: { p_manutencao_id: string; p_solucao: string; p_custo?: number | null; p_sem_reparo?: boolean };
+        Returns: RastreadorManutencoesRow;
+      };
       gerar_dre: {
         Args:
           | { p_data_inicio: string; p_data_fim: string; p_regional_id?: string | null }

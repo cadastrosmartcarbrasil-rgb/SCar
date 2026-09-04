@@ -22,6 +22,7 @@ import {
   X,
   Building2,
   UserRound,
+  Satellite,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
@@ -38,6 +39,7 @@ const OPERACAO: Item[] = [
   { href: '/vendas', label: 'Vendas / CRM', icon: Target },
   { href: '/associados', label: 'Associados', icon: Users },
   { href: '/veiculos', label: 'Veiculos', icon: Car },
+  { href: '/rastreadores', label: 'Rastreadores', icon: Satellite },
   { href: '/sinistros', label: 'Sinistros', icon: AlertTriangle },
 ];
 const GESTAO: Item[] = [

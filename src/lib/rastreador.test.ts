@@ -2,7 +2,9 @@ import { describe, it, expect } from 'vitest';
 import {
   normalizarDigitos, imeiFormatoValido, imeiLuhnValido, chipFormatoValido,
   formatarChip, temRastreador, situacaoRastreamento, validarRastreador,
-  type DadosRastreador,
+  STATUS_RASTREADOR, statusMeta, rotuloStatus, transicoesValidas, podeTransicionar,
+  exigeMotivo, statusEscolhiveis, alertaDePrazo, rotuloDivergencia,
+  type DadosRastreador, type StatusRastreador,
 } from './rastreador';
 
 const base: DadosRastreador = { rastreador_imei: null, rastreador_chip: null, empresa_rastreamento_id: null };
@@ -76,5 +78,85 @@ describe('validacao do formulario', () => {
   });
   it('completo passa', () => {
     expect(validarRastreador({ rastreador_imei: '860123456789012', rastreador_chip: '5511998877665', empresa_rastreamento_id: 'er-1' })).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Modulo de rastreadores (0050)
+// ---------------------------------------------------------------------------
+describe('status do equipamento', () => {
+  it('os 11 status guardam a numeracao do sistema antigo', () => {
+    expect(STATUS_RASTREADOR).toHaveLength(11);
+    expect(STATUS_RASTREADOR.map((s) => s.numero)).toEqual([1,2,3,4,5,6,7,8,9,10,11]);
+    expect(statusMeta('ATIVO').numero).toBe(2);
+    expect(rotuloStatus('ATIVO')).toBe('2 - Ativo / Instalado');
+    expect(rotuloStatus('BAIXADO')).toBe('11 - Baixado');
+  });
+});
+
+describe('maquina de estados', () => {
+  it('do estoque so sai para instalado ou para os desvios', () => {
+    expect(podeTransicionar('DISPONIVEL', 'ATIVO')).toBe(true);
+    expect(podeTransicionar('DISPONIVEL', 'BOLETO_GERADO')).toBe(false);
+  });
+  it('do veiculo volta ao estoque ou entra na fila de recuperacao', () => {
+    expect(transicoesValidas('ATIVO')).toContain('A_DEVOLVER');
+    expect(transicoesValidas('ATIVO')).toContain('DISPONIVEL');
+  });
+  it('baixado e terminal', () => {
+    expect(transicoesValidas('BAIXADO')).toEqual([]);
+    expect(podeTransicionar('BAIXADO', 'DISPONIVEL')).toBe(false);
+  });
+  it('o mesmo status e sempre aceito (salvar sem mudar nada)', () => {
+    expect(podeTransicionar('MANUTENCAO', 'MANUTENCAO')).toBe(true);
+  });
+  it('ATIVO nao entra no menu de status — ativar e instalar, e exige veiculo', () => {
+    expect(statusEscolhiveis('DISPONIVEL')).not.toContain('ATIVO');
+    expect(statusEscolhiveis('INADIMPLENTE')).not.toContain('ATIVO');
+  });
+  it('baixa, duplicidade e cobranca pedem motivo', () => {
+    expect(exigeMotivo('BAIXADO')).toBe(true);
+    expect(exigeMotivo('DUPLICADO')).toBe(true);
+    expect(exigeMotivo('COBRAR_RASTREADOR')).toBe(true);
+    expect(exigeMotivo('DISPONIVEL')).toBe(false);
+  });
+  it('nenhum status aponta para si mesmo na tabela de transicoes', () => {
+    for (const s of STATUS_RASTREADOR) {
+      expect(transicoesValidas(s.status)).not.toContain(s.status as StatusRastreador);
+    }
+  });
+});
+
+describe('prazos (contados de status_desde)', () => {
+  const HOJE = new Date('2026-09-20T12:00:00Z');
+  it('devolucao pedida ha mais de 5 dias sugere cobrar', () => {
+    const a = alertaDePrazo('A_DEVOLVER', '2026-09-10T12:00:00Z', HOJE);
+    expect(a?.dias).toBe(10);
+    expect(a?.sugestao).toBe('COBRAR_RASTREADOR');
+  });
+  it('dentro do prazo nao alerta', () => {
+    expect(alertaDePrazo('A_DEVOLVER', '2026-09-17T12:00:00Z', HOJE)).toBeNull();
+  });
+  it('inadimplente ha mais de 35 dias sugere pedir de volta', () => {
+    expect(alertaDePrazo('INADIMPLENTE', '2026-07-01T12:00:00Z', HOJE)?.sugestao).toBe('A_DEVOLVER');
+  });
+  it('manutencao arrastada so destaca, sem sugerir', () => {
+    const a = alertaDePrazo('MANUTENCAO', '2026-08-01T12:00:00Z', HOJE);
+    expect(a?.sugestao).toBeNull();
+    expect(a?.mensagem).toContain('manutencao');
+  });
+  it('equipamento em estoque nao tem prazo', () => {
+    expect(alertaDePrazo('DISPONIVEL', '2020-01-01T12:00:00Z', HOJE)).toBeNull();
+  });
+  it('data ausente ou invalida nao quebra', () => {
+    expect(alertaDePrazo('A_DEVOLVER', null, HOJE)).toBeNull();
+    expect(alertaDePrazo('A_DEVOLVER', 'nao e data', HOJE)).toBeNull();
+  });
+});
+
+describe('divergencias', () => {
+  it('traduz o tipo do banco para a tela', () => {
+    expect(rotuloDivergencia('FICHA_SEM_EQUIPAMENTO')).toBe('Ficha do veiculo sem equipamento cadastrado');
+    expect(rotuloDivergencia('TIPO_QUE_NAO_EXISTE')).toBe('TIPO_QUE_NAO_EXISTE');
   });
 });
