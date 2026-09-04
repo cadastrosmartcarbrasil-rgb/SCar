@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import {
   Search, User, Phone, Mail, Loader2, CheckCircle2, XCircle, ShieldCheck,
   Layers, SplitSquareHorizontal, ChevronLeft, Send,
-  Car, AlertTriangle, LifeBuoy, Settings2, Bell, FileSignature, ClipboardCheck, X, Ticket,
+  Car, AlertTriangle, LifeBuoy, Settings2, Bell, FileSignature, ClipboardCheck, X, Ticket, Satellite,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -18,6 +18,7 @@ import {
   useAbrirAtendimento, useAtendimentosVeiculo, type BuscaHit, type Visao360, type VeiculoDetalhe,
 } from '@/hooks/use-sac';
 import { SERVICOS_SAC, STATUS_ATENDIMENTO_LABEL, STATUS_EVENTO_LABEL, type ServicoSac } from '@/lib/sac-servicos';
+import { formatarChip } from '@/lib/rastreador';
 import { useContratosVeiculo, useVistoriasVeiculo } from '@/hooks/use-veiculo-ficha';
 import { useHistoricoAssistenciaVeiculo } from '@/hooks/use-assistencia';
 import { ModalHistoricoFinanceiro, ModalWhatsApp, ModalEmail } from '@/components/sac/acoes-veiculo';
@@ -547,6 +548,30 @@ function VeiculoDetalheCard({ clienteId, veiculo }: { clienteId: string; veiculo
           {dado('FIPE', veiculo.valor_fipe != null ? formatCurrency(veiculo.valor_fipe) : null)}
           {dado('Plano', veiculo.plano_nome)}
         </div>
+
+        {(veiculo.rastreadora || veiculo.rastreador_imei) && (
+          <div className="mt-4 rounded-lg border border-slate-200 p-3">
+            <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              <Satellite className="h-3.5 w-3.5 text-cyan-600" /> Rastreamento
+            </p>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {dado('Rastreador por', veiculo.rastreadora?.nome)}
+              {dado('IMEI', veiculo.rastreador_imei)}
+              {dado('Nº do chip', formatarChip(veiculo.rastreador_chip))}
+            </div>
+            {(veiculo.rastreadora?.telefone || veiculo.rastreadora?.plataforma_url) && (
+              <p className="mt-2 text-xs text-slate-500">
+                {veiculo.rastreadora?.telefone && <span>Central: {veiculo.rastreadora.telefone}</span>}
+                {veiculo.rastreadora?.telefone && veiculo.rastreadora?.plataforma_url && <span> · </span>}
+                {veiculo.rastreadora?.plataforma_url && (
+                  <a href={veiculo.rastreadora.plataforma_url} target="_blank" rel="noreferrer" className="text-cyan-700 hover:underline">
+                    Abrir plataforma
+                  </a>
+                )}
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="mt-4">
           <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">

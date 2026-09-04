@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { ordenarVeiculos } from '@/lib/sac';
+import { normalizarDigitos } from '@/lib/rastreador';
 import type { VeiculosRow } from '@/lib/database.types';
 
 export interface VeiculoComAssociado extends VeiculosRow {
@@ -69,6 +70,10 @@ export function useSaveVeiculo() {
         numero_portas: v.numero_portas ?? null,
         valor_mensalidade: v.valor_mensalidade ?? null,
         dia_vencimento: v.dia_vencimento ?? null,
+        // rastreamento
+        rastreador_imei: normalizarDigitos(v.rastreador_imei) || null,
+        rastreador_chip: normalizarDigitos(v.rastreador_chip) || null,
+        empresa_rastreamento_id: v.empresa_rastreamento_id || null,
       };
 
       let veiculoId = v.id;

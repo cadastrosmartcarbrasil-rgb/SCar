@@ -3,7 +3,7 @@
 > Memória do projeto. Leia isto no início de cada sessão em vez de varrer o repositório inteiro.
 > Mantenha este arquivo atualizado ao adicionar módulos/migrations (é barato e faz o projeto andar rápido).
 
-## Estado atual (retomar aqui) — atualizado ao fim da fase 0032→0048
+## Estado atual (retomar aqui) — atualizado ao fim da fase 0032→0049
 
 **Um único projeto, um único repositório: `cadastrosmartcarbrasil-rgb/scar`** (no GitHub o nome
 aparece como `SCar`). Trabalho e deploy acontecem no branch **`claude/claude-md-opcao-x-98kfj5`**;
@@ -17,11 +17,14 @@ o de trabalho; esse default morto já causou um dia inteiro de trabalho no branc
 - **Último commit desta fase:** `a468ead`.
 - **A migration `0044` JÁ FOI APLICADA em produção** e o Portal do Associado está no ar,
   conferido pelo usuário. As migrations `0001`..`0044` estão todas aplicadas.
-- **`0045_agenda_vendas`, `0046_vendas_duplicidade_aceite`, `0047_vistoria_anexo_peso` e
-  `0048_assistencia_anexos` são NOVAS e ainda NÃO foram aplicadas em produção** — rodar as quatro,
-  nessa ordem, no SQL Editor do Supabase ANTES do `docker compose up -d --build`, senão a tela de
-  vendas quebra (Kanban, agenda, aviso de duplicidade, aceite presencial e a aba de fotos chamam
-  RPCs que só existem depois delas) e os anexos da OS da 24h não têm onde gravar.
+- **`0045_agenda_vendas`, `0046_vendas_duplicidade_aceite`, `0047_vistoria_anexo_peso`,
+  `0048_assistencia_anexos` e `0049_rastreadores` são NOVAS e ainda NÃO foram aplicadas em
+  produção** — rodar as cinco, nessa ordem, no SQL Editor do Supabase ANTES do
+  `docker compose up -d --build`, senão a tela de vendas quebra (Kanban, agenda, aviso de
+  duplicidade, aceite presencial e a aba de fotos chamam RPCs que só existem depois delas), os
+  anexos da OS da 24h não têm onde gravar e a ficha do veículo quebra ao salvar o rastreador
+  (as colunas `rastreador_imei`/`rastreador_chip`/`empresa_rastreamento_id` e a tabela
+  `empresas_rastreamento` nascem na `0049`).
 - **A `0048` cria o bucket `assistencia`** — o SQL Editor cria o registro em `storage.buckets`;
   confira em *Storage* se ele aparece como **privado** depois de rodar.
 - **A `0046` também FECHA UM BURACO DE SEGURANÇA:** `registrar_aceite_venda` era `security definer`
@@ -111,9 +114,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0048`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **25 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 358 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0049`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **26 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 370 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Todos os portais e páginas
@@ -275,15 +278,19 @@ ficha **abre direto nela** — é a primeira pergunta de quem audita. Lógica pu
    Kanban casa, porque filtra em JS). O certo seria a extensão `unaccent` + índice.
 
 ### Próximos passos oferecidos (o usuário escolhe)
-1. **Ligar o gateway real** (Asaas) — emissão + webhook + baixa automática.
-2. **Termo de adesão** com aceite jurídico no fluxo (`contratos_adesao` já existe; hoje o aceite
+1. **Rastreadores — fase 2:** a categoria/módulo próprio (estoque de equipamentos por IMEI,
+   instalação/retirada com histórico, status de comunicação, integração com a plataforma da
+   rastreadora). A fase 1 (dados na ficha do veículo) saiu na `0049`; ver a seção
+   "Rastreadores (0049)".
+2. **Ligar o gateway real** (Asaas) — emissão + webhook + baixa automática.
+3. **Termo de adesão** com aceite jurídico no fluxo (`contratos_adesao` já existe; hoje o aceite
    da página pública guarda a prova, mas o texto é o mínimo honesto).
-3. **Endurecer o primeiro acesso do associado** — hoje a senha inicial é o próprio CPF, então
+4. **Endurecer o primeiro acesso do associado** — hoje a senha inicial é o próprio CPF, então
    quem souber o documento entra até a troca obrigatória. Pedir também a data de nascimento
    (já existe em `clientes`) ou um código por WhatsApp resolveria; é mudança localizada na
    rota `/api/portal/login`.
-4. **SLA / notificações do protocolo** (prazo por prioridade, aviso ao responsável).
-5. **Cotação pelo portal do vendedor** — ele vê o lead, mas monta a cotação só no `/vendas`.
+5. **SLA / notificações do protocolo** (prazo por prioridade, aviso ao responsável).
+6. **Cotação pelo portal do vendedor** — ele vê o lead, mas monta a cotação só no `/vendas`.
 
 ## O que é
 Sistema de gestão para **associação de proteção veicular** (associados, frota, eventos/sinistros,
@@ -737,6 +744,16 @@ fora do padrao derruba a consulta inteira). RLS espelha `acionamentos_assistenci
 escreve quem opera a 24h; (C) mesmo TETO DE 10 MB do 0047; (D) o teto passa a valer tambem para
 `anexos_evento`, la como **NOT VALID** — foto pesada que subiu antes da compressao continua onde
 esta, so o que entrar agora precisa respeitar.)
+· `0049_rastreadores` (FASE 1 do modulo de RASTREADORES — o equipamento passa a ter registro:
+(A) catalogo `empresas_rastreamento` (a prestadora que rastreia — o "Rastreador por:"; nome unico,
+CNPJ, contato/telefone/e-mail, URL da plataforma, ativo; RLS staff-le / `tem_acesso_global`-mantem);
+(B) na ficha do veiculo, `rastreador_imei`, `rastreador_chip` e `empresa_rastreamento_id`
+(`on delete set null`: apagar a rastreadora nao leva o veiculo junto). Os campos sao OPCIONAIS —
+nem todo veiculo tem rastreador, e a regra de cobranca continua em `tipos_veiculo.exige_rastreador`;
+(C) o formato vale NO BANCO, nao so na tela: CHECK de IMEI (14-17 digitos) e de chip (8-22), e
+UNIQUE PARCIAL do IMEI entre veiculos nao excluidos — um equipamento nao pode estar em dois
+veiculos ao mesmo tempo, e excluir o veiculo devolve o IMEI para o proximo; (D) seed do alerta
+reutilizavel "Rastreador pendente". Logica pura espelhada em `src/lib/rastreador.ts`.)
 
 ## Módulos (status: todos funcionais)
 Assistência 24h (`/assistencia`: painel de acionamento com trava + limites em tempo real, cotação,
@@ -762,14 +779,16 @@ vez** (FIPE por placa/cascata), contatos e retornos registrados na ficha do lead
 presencial** com o cliente na frente e envio da proposta por WhatsApp, cotação com
 link público `/cotacao/[token]` detalhada/consolidada + print-PDF, esteira com trava de
 Auditoria — só papel `auditoria`/`admin` clica "Autorizar Entrada" e efetiva cliente+veículo)
-· Associados (painel `/associados/[id]` com abas) · Veículos/Contratos · Eventos/Sinistros
+· Associados (painel `/associados/[id]` com abas) · Veículos/Contratos (ficha com Plano/Opcionais,
+alertas e **Rastreamento**: IMEI, Nº do chip e rastreadora) · Eventos/Sinistros
 (protocolo, reparo próprio/terceiro, financeiro do evento) · Precificação (simulador + editor de
 tabela FIPE com reajuste % + importação por planilha, uma por tipo de veículo) · Empresa (logo/diretoria/mandatos/documentos) · Fornecedores (auto
 CNPJ/CEP) · **Cobrança** (`/cobrancas`: dashboard + faturas por competência + boletagem em lote +
 remessas bancárias) · Financeiro (contas a pagar/receber + baixas + DRE)
 · Configurações (regionais, usuários,
 vendedores, marcas/modelos, tipos de veículo, cotas de participação (V5..V15), tipos de evento,
-produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações bancárias, plano de contas).
+produtos, planos/combos (Prata/Ouro/Diamante), **rastreamento** (empresas rastreadoras), contas
+bancárias, integrações bancárias, plano de contas).
 
 ## Motor de cotação e combos (0019) — arquitetura
 - **Cotação Base (Plano Prata)** = Casco + Taxa Admin + Assistência 24h + **Rastreador (regra)**.
@@ -1401,6 +1420,31 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
   (`POST /creditCard/tokenize` → `creditCardToken`), aguardando a chave.
 - Espelho puro em `src/lib/cartao.ts` (Luhn, bandeira pelo BIN, validade, CVV por bandeira) com
   testes — o erro de digitação é pego antes de sair da tela.
+
+## Rastreadores (0049) — arquitetura
+- **Fase 1 (feita):** o rastreador é um dado da **ficha do veículo** — **IMEI**, **Nº do chip**
+  (linha M2M ou ICCID) e **Rastreador por** (FK para `empresas_rastreamento`). Opcionais: nem todo
+  veículo tem rastreador. Quem decide se ele é COBRADO continua sendo a regra de precificação
+  (`tipos_veiculo.exige_rastreador` / `valor_limite_isencao` / `valor_mensalidade_rastreador`) —
+  são coisas diferentes e não se confundem: uma é dinheiro, a outra é o equipamento instalado.
+- **Catálogo de rastreadoras:** `empresas_rastreamento` — tela **Configurações → Rastreamento**
+  (`/configuracoes/rastreamento`, hook `use-rastreamento.ts`), com autopreenchimento por CNPJ na
+  Receita. Sem rastreadora cadastrada o select do veículo avisa e aponta a tela.
+- **O que o banco garante** (não é validação de tela): CHECK de formato do IMEI (14–17 dígitos, 15
+  é o padrão GSM) e do chip (8–22), **unique parcial do IMEI** entre veículos não excluídos e FK
+  `on delete set null`. Teste funcional em `supabase/tests/0049_rastreadores.test.sql`.
+- **Lógica pura testada (Vitest):** `src/lib/rastreador.ts` — `normalizarDigitos`,
+  `imeiFormatoValido`, `imeiLuhnValido` (dígito verificador do IMEI de 15 posições: na tela é
+  **aviso**, não trava, porque equipamento importado às vezes foge do padrão), `chipFormatoValido`,
+  `formatarChip`, `situacaoRastreamento` (COMPLETO/INCOMPLETO/PENDENTE/NAO_EXIGE) e
+  `validarRastreador`.
+- **Onde aparece:** bloco "Rastreamento" no form do veículo (a busca da lista também acha por IMEI
+  e por chip) e no **SAC**, no card do veículo — rastreadora, IMEI, chip, telefone da central e
+  link da plataforma (`/api/v1/sac/veiculo` devolve `rastreadora`), que é o que o atendente precisa
+  na hora do evento.
+- **Fase 2 (planejada):** a categoria/módulo de Rastreadores — estoque de equipamentos por IMEI,
+  instalação/retirada com histórico, status de comunicação e integração com a plataforma da
+  rastreadora. Quando existir, estes campos do veículo viram a "instalação vigente".
 
 ## Cota de participação (rateio no evento) — arquitetura
 - **Desacoplada do Plano.** O Plano define a mensalidade (produtos); a cota (% da FIPE no rateio)

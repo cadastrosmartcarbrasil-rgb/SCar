@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Car, Search, Loader2, Calculator, Bell } from 'lucide-react';
+import { Plus, Pencil, Trash2, Car, Search, Loader2, Calculator, Bell, Satellite } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { FormField, Input, Select, MoneyInput } from '@/components/ui/field';
@@ -11,6 +11,7 @@ import { useAssociados } from '@/hooks/use-associados';
 import { useRegionais, useVendedores, useUsuarios, useMarcas, useModelos } from '@/hooks/use-config';
 import { useTiposVeiculo, usePlanos, useProdutos } from '@/hooks/use-precificacao';
 import { useVeiculos, useSaveVeiculo, useExcluirVeiculo } from '@/hooks/use-veiculos';
+import { useEmpresasRastreamento } from '@/hooks/use-rastreamento';
 import {
   useTiposAlerta, useVeiculoProdutos, useVeiculoAlertas, useCalcularMensalidadeVeiculo,
 } from '@/hooks/use-veiculo-ficha';
@@ -19,6 +20,7 @@ import { consultarPlaca, normalizarPlaca, placaValida } from '@/lib/placa';
 import { FipeConsulta } from '@/components/fipe/fipe-consulta';
 import { useFipePorPlaca } from '@/hooks/use-fipe';
 import { formatCurrency } from '@/lib/utils';
+import { normalizarDigitos, validarRastreador, imeiLuhnValido } from '@/lib/rastreador';
 import type {
   VeiculosRow,
   StatusVeiculo,
@@ -78,6 +80,7 @@ function VeiculosConteudo() {
   const { data: planos } = usePlanos();
   const { data: produtos } = useProdutos();
   const { data: tiposAlerta } = useTiposAlerta();
+  const { data: rastreadoras } = useEmpresasRastreamento();
   const salvar = useSaveVeiculo();
   const excluir = useExcluirVeiculo();
   const fipePorPlaca = useFipePorPlaca();
@@ -135,7 +138,9 @@ function VeiculosConteudo() {
         (v.placa ?? '').toLowerCase().includes(t) ||
         (v.marca ?? '').toLowerCase().includes(t) ||
         (v.modelo ?? '').toLowerCase().includes(t) ||
-        (v.clientes?.nome_razao_social ?? '').toLowerCase().includes(t),
+        (v.clientes?.nome_razao_social ?? '').toLowerCase().includes(t) ||
+        (v.rastreador_imei ?? '').includes(t) ||
+        (v.rastreador_chip ?? '').includes(t),
     );
   }, [veiculos, busca]);
 
@@ -193,6 +198,12 @@ function VeiculosConteudo() {
     e.preventDefault();
     if (!form.cliente_id) return toast.error('Selecione o associado');
     if (!placaValida(form.placa ?? '')) return toast.error('Placa invalida');
+    const erroRastreador = validarRastreador({
+      rastreador_imei: form.rastreador_imei ?? null,
+      rastreador_chip: form.rastreador_chip ?? null,
+      empresa_rastreamento_id: form.empresa_rastreamento_id ?? null,
+    });
+    if (erroRastreador) return toast.error(erroRastreador);
     // Em veiculo ja cadastrado os alertas sao mantidos pelo painel proprio
     // (abrir/resolver com historico) — salvar NAO pode reescrever o conjunto,
     // senao apaga mensagem, autor e resolucao de cada pendencia.
@@ -203,6 +214,7 @@ function VeiculosConteudo() {
       },
       onError: (err) => {
         const m = (err as Error).message;
+        if (m.includes('rastreador_imei')) return toast.error('IMEI ja cadastrado em outro veiculo');
         toast.error(m.includes('placa') ? 'Placa ja cadastrada' : m);
       },
     });
@@ -519,6 +531,57 @@ function VeiculosConteudo() {
             <FormField label="Nº de portas">
               <Input type="number" min={0} max={9} value={form.numero_portas ?? ''} onChange={(e) => setF({ numero_portas: Number(e.target.value) || null })} />
             </FormField>
+          </div>
+
+          {/* Rastreamento (equipamento instalado no veiculo) */}
+          <div className="space-y-3 rounded-lg border border-slate-200 p-3">
+            <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+              <Satellite className="h-4 w-4 text-cyan-600" /> Rastreamento
+            </p>
+            <div className="grid grid-cols-3 gap-3">
+              <FormField label="IMEI">
+                <Input
+                  value={form.rastreador_imei ?? ''}
+                  onChange={(e) => setF({ rastreador_imei: normalizarDigitos(e.target.value).slice(0, 17) || null })}
+                  placeholder="15 digitos"
+                  className="mt-0 font-mono"
+                  inputMode="numeric"
+                />
+              </FormField>
+              <FormField label="Nº do chip">
+                <Input
+                  value={form.rastreador_chip ?? ''}
+                  onChange={(e) => setF({ rastreador_chip: normalizarDigitos(e.target.value).slice(0, 22) || null })}
+                  placeholder="Linha (DDD + numero) ou ICCID"
+                  className="mt-0 font-mono"
+                  inputMode="numeric"
+                />
+              </FormField>
+              <FormField label="Rastreador por">
+                <Select
+                  value={form.empresa_rastreamento_id ?? ''}
+                  onChange={(e) => setF({ empresa_rastreamento_id: e.target.value || null })}
+                >
+                  <option value="">-- Selecione a rastreadora --</option>
+                  {(rastreadoras ?? []).map((r) => (
+                    <option key={r.id} value={r.id}>{r.nome}</option>
+                  ))}
+                </Select>
+              </FormField>
+            </div>
+            {(rastreadoras ?? []).length === 0 && (
+              <p className="text-xs text-amber-600">
+                Nenhuma rastreadora cadastrada — cadastre em Configuracoes &gt; Rastreamento.
+              </p>
+            )}
+            {!!form.rastreador_imei && form.rastreador_imei.length === 15 && !imeiLuhnValido(form.rastreador_imei) && (
+              <p className="text-xs text-amber-600">
+                Atencao: o digito verificador deste IMEI nao confere — confirme com a rastreadora.
+              </p>
+            )}
+            <p className="text-xs text-slate-400">
+              Preencha somente para veiculos com rastreador instalado. O IMEI e unico: nao pode estar em outro veiculo ativo.
+            </p>
           </div>
 
           {/* Alertas do veiculo — no veiculo JA CADASTRADO usa o painel que le as

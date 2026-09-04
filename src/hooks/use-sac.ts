@@ -42,9 +42,16 @@ export interface EventoResumo {
   status: StatusEvento;
   data_ocorrencia: string;
 }
+export interface RastreadoraResumo {
+  nome: string;
+  telefone: string | null;
+  plataforma_url: string | null;
+}
 // DETALHE completo (carregado sob demanda ao clicar no veiculo).
 export interface VeiculoDetalhe extends VeiculosRow {
   plano_nome: string | null;
+  /** Empresa que rastreia o veiculo, quando ha rastreador — 0049. */
+  rastreadora: RastreadoraResumo | null;
   /** SO os itens contratados do veiculo (plano + avulsos) — 0029. */
   opcionais: OpcionalVeiculo[];
 }
@@ -98,10 +105,13 @@ export function useVeiculoDetalhe(veiculoId?: string) {
     queryKey: ['sac', 'veiculo', veiculoId ?? 'none'],
     enabled: !!veiculoId,
     queryFn: async () => {
-      const r = await jget<{ veiculo: VeiculosRow; plano_nome: string | null; opcionais: OpcionalVeiculo[] }>(
+      const r = await jget<{
+        veiculo: VeiculosRow; plano_nome: string | null;
+        rastreadora: RastreadoraResumo | null; opcionais: OpcionalVeiculo[];
+      }>(
         `/api/v1/sac/veiculo?veiculo_id=${veiculoId}`,
       );
-      return { ...r.veiculo, plano_nome: r.plano_nome, opcionais: r.opcionais };
+      return { ...r.veiculo, plano_nome: r.plano_nome, rastreadora: r.rastreadora, opcionais: r.opcionais };
     },
   });
 }

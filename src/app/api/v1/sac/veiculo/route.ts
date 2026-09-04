@@ -33,5 +33,17 @@ export async function GET(request: Request) {
   // Falha aqui nao pode virar "sem cobertura" silencioso na ficha do atendente.
   if (erroOpcionais) return NextResponse.json({ error: erroOpcionais.message }, { status: 500 });
 
-  return NextResponse.json({ veiculo, plano_nome: plano?.nome ?? null, opcionais: opcionais ?? [] });
+  // Rastreamento: quem rastreia o veiculo, telefone da central e link da
+  // plataforma — o atendente precisa disso na hora do evento (0049).
+  const { data: rastreadora } = veiculo.empresa_rastreamento_id
+    ? await supabase.from('empresas_rastreamento').select('nome, telefone, plataforma_url')
+        .eq('id', veiculo.empresa_rastreamento_id).maybeSingle()
+    : { data: null };
+
+  return NextResponse.json({
+    veiculo,
+    plano_nome: plano?.nome ?? null,
+    rastreadora: rastreadora ?? null,
+    opcionais: opcionais ?? [],
+  });
 }

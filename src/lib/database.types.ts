@@ -211,6 +211,9 @@ export type VeiculosRow = Timestamps & {
   numero_portas: number | null;
   valor_mensalidade: number | null;
   dia_vencimento: number | null;
+  rastreador_imei: string | null;
+  rastreador_chip: string | null;
+  empresa_rastreamento_id: string | null;
 };
 
 export type FaturasRow = Timestamps & {
@@ -233,6 +236,19 @@ export type FaturaItensRow = {
   descricao: string;
   valor: number;
   created_at: string;
+};
+
+export type EmpresasRastreamentoRow = Timestamps & {
+  id: string;
+  nome: string;
+  razao_social: string | null;
+  cnpj: string | null;
+  contato: string | null;
+  telefone: string | null;
+  email: string | null;
+  plataforma_url: string | null;
+  observacoes: string | null;
+  ativo: boolean;
 };
 
 export type TiposAlertaRow = {
@@ -1844,6 +1860,7 @@ export type Database = {
           Rel<'regional_id', 'regionais'>,
           Rel<'cota_participacao_id', 'cotas_participacao'>,
           Rel<'modelo_id', 'modelos'>,
+          Rel<'empresa_rastreamento_id', 'empresas_rastreamento'>,
         ]
       >;
       categorias_dre: TableDef<CategoriasDreRow>;
@@ -1915,6 +1932,7 @@ export type Database = {
       >;
       veiculo_produtos: TableDef<{ veiculo_id: string; produto_id: string }, [Rel<'veiculo_id', 'veiculos'>, Rel<'produto_id', 'produtos'>]>;
       tipos_alerta: TableDef<TiposAlertaRow>;
+      empresas_rastreamento: TableDef<EmpresasRastreamentoRow>;
       veiculo_alertas: TableDef<VeiculoAlertasRow, [Rel<'veiculo_id', 'veiculos'>, Rel<'tipo_alerta_id', 'tipos_alerta'>]>;
       contratos_adesao: TableDef<ContratosAdesaoRow, [Rel<'cliente_id', 'clientes'>, Rel<'veiculo_id', 'veiculos'>]>;
       vistorias: TableDef<VistoriasRow, [Rel<'veiculo_id', 'veiculos'>]>;

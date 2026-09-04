@@ -24,6 +24,13 @@ select proname from pg_proc where proname in (
 );
 ```
 
+Migration que só cria tabela/coluna não aparece em `pg_proc` — confira pelo objeto:
+
+```sql
+-- Rastreadores (0049): devolve o nome se a migration ja foi aplicada.
+select to_regclass('public.empresas_rastreamento');
+```
+
 Montando um ambiente do zero? Cole o `supabase/schema.sql` (consolidado de
 todas as migrations) em vez de rodar uma a uma.
 
