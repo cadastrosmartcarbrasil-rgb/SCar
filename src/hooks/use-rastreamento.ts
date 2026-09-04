@@ -1,49 +1,29 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
-import { normalizarDigitos } from '@/lib/rastreador';
-import type { EmpresasRastreamentoRow } from '@/lib/database.types';
+import type { FornecedoresRow } from '@/lib/database.types';
 
-// --- Catalogo de empresas de rastreamento (o "Rastreador por:" do veiculo) ---
+// A rastreadora e um FORNECEDOR com `empresa_rastreamento = true` (0051).
+// Nao existe mais tabela `empresas_rastreamento`: o cadastro vive em
+// /fornecedores, com o resto dos prestadores.
+export interface Rastreadora extends FornecedoresRow {
+  /** nome como aparece nas telas (fantasia > razao social) */
+  nome: string;
+}
+
 export function useEmpresasRastreamento(incluirInativas = false) {
   const supabase = createClient();
-  return useQuery<EmpresasRastreamentoRow[]>({
+  return useQuery<Rastreadora[]>({
     queryKey: ['rastreamento', 'empresas', incluirInativas],
     queryFn: async () => {
-      let q = supabase.from('empresas_rastreamento').select('*').order('nome');
+      let q = supabase.from('fornecedores').select('*')
+        .eq('empresa_rastreamento', true)
+        .order('razao_social');
       if (!incluirInativas) q = q.eq('ativo', true);
       const { data, error } = await q;
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []).map((f) => ({ ...f, nome: f.nome_fantasia?.trim() || f.razao_social }));
     },
-  });
-}
-
-export function useSaveEmpresaRastreamento() {
-  const supabase = createClient();
-  const qc = useQueryClient();
-  return useMutation<void, Error, Partial<EmpresasRastreamentoRow>>({
-    mutationFn: async (e) => {
-      const payload = {
-        nome: (e.nome ?? '').trim(),
-        razao_social: e.razao_social?.trim() || null,
-        cnpj: normalizarDigitos(e.cnpj) || null,
-        contato: e.contato?.trim() || null,
-        telefone: e.telefone?.trim() || null,
-        email: e.email?.trim() || null,
-        plataforma_url: e.plataforma_url?.trim() || null,
-        observacoes: e.observacoes?.trim() || null,
-        ativo: e.ativo ?? true,
-      };
-      if (e.id) {
-        const { error } = await supabase.from('empresas_rastreamento').update(payload).eq('id', e.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('empresas_rastreamento').insert(payload);
-        if (error) throw error;
-      }
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['rastreamento', 'empresas'] }),
   });
 }

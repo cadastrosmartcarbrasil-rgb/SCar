@@ -555,7 +555,9 @@ export function useSalvarPrestador() {
     mutationFn: async (p) => {
       const payload = {
         tipo_pessoa: p.tipo_pessoa ?? 'PJ',
-        documento: (p.documento ?? '').replace(/\D/g, ''),
+        // documento e opcional desde a 0051; vazio precisa virar null, senao
+        // dois prestadores sem CNPJ colidiriam no unique da coluna.
+        documento: (p.documento ?? '').replace(/\D/g, '') || null,
         razao_social: p.razao_social,
         nome_fantasia: p.nome_fantasia || null,
         email: p.email || null,

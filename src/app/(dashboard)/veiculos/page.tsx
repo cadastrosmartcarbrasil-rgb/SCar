@@ -571,7 +571,7 @@ function VeiculosConteudo() {
             </div>
             {(rastreadoras ?? []).length === 0 && (
               <p className="text-xs text-amber-600">
-                Nenhuma rastreadora cadastrada — cadastre em Configuracoes &gt; Rastreamento.
+                Nenhuma rastreadora cadastrada — cadastre em Fornecedores (aba Rastreadoras).
               </p>
             )}
             {!!form.rastreador_imei && form.rastreador_imei.length === 15 && !imeiLuhnValido(form.rastreador_imei) && (

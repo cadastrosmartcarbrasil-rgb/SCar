@@ -11,8 +11,11 @@ begin
     values (u_adm, 'Admin', 'adm@t.com', 'admin', null);
   perform set_config('request.jwt.claim.sub', u_adm::text, false);
 
-  insert into empresas_rastreamento (nome, cnpj, telefone, plataforma_url)
-    values ('Smart Tracker', '11222333000181', '(11) 4000-0000', 'https://www.smarttracker.com.br')
+  -- a rastreadora e um FORNECEDOR com o tipo marcado (0051)
+  insert into fornecedores (tipo_pessoa, documento, razao_social, nome_fantasia, telefone,
+                            plataforma_url, empresa_rastreamento)
+    values ('PJ', '11222333000181', 'SMART TRACKER LTDA', 'Smart Tracker', '(11) 4000-0000',
+            'https://www.smarttracker.com.br', true)
     returning id into er;
 
   insert into clientes (tipo_pessoa, nome_razao_social, cpf_cnpj, regional_id)
@@ -50,7 +53,7 @@ begin
   raise notice 'OK veiculo excluido libera o IMEI para outro veiculo';
 
   -- ------------------------------------------------- rastreadora sai, veiculo fica
-  delete from empresas_rastreamento where id = er;
+  delete from fornecedores where id = er;
   select count(*) into n from veiculos where id = v1 and empresa_rastreamento_id is null;
   assert n = 1, 'apagar a rastreadora nao pode levar o veiculo junto';
   select count(*) into n from veiculos where id = v1 and rastreador_imei = '860123456789012';
@@ -66,13 +69,15 @@ begin
   assert n = 1, 'o alerta "Rastreador pendente" tem de existir no catalogo';
   raise notice 'OK alerta "Rastreador pendente" disponivel para o SAC';
 
-  -- ------------------------------------------------- nome da rastreadora e unico
-  insert into empresas_rastreamento (nome) values ('Autotrac');
+  -- ------------------------------------------------- documento e unico entre fornecedores
+  insert into fornecedores (tipo_pessoa, documento, razao_social, empresa_rastreamento)
+    values ('PJ', '11444777000161', 'AUTOTRAC LTDA', true);
   begin
-    insert into empresas_rastreamento (nome) values ('Autotrac');
-    assert false, 'nome de rastreadora duplicado deveria ser recusado';
+    insert into fornecedores (tipo_pessoa, documento, razao_social, empresa_rastreamento)
+      values ('PJ', '11444777000161', 'AUTOTRAC 2', true);
+    assert false, 'CNPJ repetido entre fornecedores deveria ser recusado';
   exception when unique_violation then null; end;
-  raise notice 'OK catalogo de rastreadoras nao aceita nome repetido';
+  raise notice 'OK rastreadora entra no cadastro unico de fornecedores';
 
   raise notice '=== TESTES 0049 (rastreadores - fase 1) PASSARAM ===';
 end $$;

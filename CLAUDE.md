@@ -3,7 +3,7 @@
 > Memória do projeto. Leia isto no início de cada sessão em vez de varrer o repositório inteiro.
 > Mantenha este arquivo atualizado ao adicionar módulos/migrations (é barato e faz o projeto andar rápido).
 
-## Estado atual (retomar aqui) — atualizado ao fim da fase 0032→0050
+## Estado atual (retomar aqui) — atualizado ao fim da fase 0032→0051
 
 **Um único projeto, um único repositório: `cadastrosmartcarbrasil-rgb/scar`** (no GitHub o nome
 aparece como `SCar`). Trabalho e deploy acontecem no branch **`claude/claude-md-opcao-x-98kfj5`**;
@@ -27,6 +27,11 @@ o de trabalho; esse default morto já causou um dia inteiro de trabalho no branc
   `empresas_rastreamento` nascem na `0049`).
 - **`0050_rastreadores_modulo` também é NOVA** — é o módulo de Rastreadores (parque de
   equipamentos por IMEI). Sem ela a tela `/rastreadores` não abre. Roda depois da `0049`.
+- **`0051_fornecedores_unificados` é NOVA e MEXE EM DADOS** — junta prestador da 24h, rastreadora
+  e fornecedor de peças num cadastro só (`fornecedores`), **migra as linhas de
+  `empresas_rastreamento`, reaponta as FKs de `veiculos`/`rastreadores` e APAGA a tabela
+  paralela**. Rode-a depois da `0050`, na mesma janela — entre a `0049` e a `0051` a ficha do
+  veículo aponta para uma tabela que vai deixar de existir.
 - **A `0048` cria o bucket `assistencia`** — o SQL Editor cria o registro em `storage.buckets`;
   confira em *Storage* se ele aparece como **privado** depois de rodar.
 - **A `0046` também FECHA UM BURACO DE SEGURANÇA:** `registrar_aceite_venda` era `security definer`
@@ -116,8 +121,8 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0050`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **27 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Migrations `0001`..`0051`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **28 suites** em `supabase/tests/*.test.sql` — todas passando.
 - **Vitest: 385 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
@@ -776,6 +781,17 @@ funcionando sem saber do modulo; (F) maquina de estados no banco
 `rastreadores_movimentacao`, `rastreadores_giro_estoque`; (H) **`rastreadores_divergencias`** — o
 cruzamento com o cadastro de veiculos, que e o valor do modulo; (I) `planos_protecao.exige_rastreador`,
 somado a regra por tipo de veiculo que ja existia.)
+· `0051_fornecedores_unificados` (UM CADASTRO SO: prestador da 24h, rastreadora e fornecedor de
+pecas sao a mesma coisa — uma empresa que presta servico. (A) `fornecedores` ganha
+`empresa_rastreamento` (mesmo padrao do `prestador_assistencia` de 0026) + `contato`,
+`plataforma_url`, `custo_mensal_equipamento` e `api_config`; (B) `documento` deixa de ser
+OBRIGATORIO (o CHECK segue valendo para o que for preenchido) — o cadastro de rastreadora que
+foi absorvido nao exigia CNPJ; (C) MIGRA as linhas de `empresas_rastreamento` para
+`fornecedores` (casando por CNPJ quando ha), reaponta `veiculos.empresa_rastreamento_id` e
+`rastreadores.empresa_rastreamento_id` e SO ENTAO faz `drop table empresas_rastreamento`;
+(D) as funcoes do modulo (0050) passam a ler `fornecedores`; (E) `pode_cadastrar_fornecedor()`
+inclui o `gestor_regional` — quem contrata guincho e rastreadora na ponta e a unidade, e o
+cadastro nao podia depender de admin.)
 
 ## Módulos (status: todos funcionais)
 Assistência 24h (`/assistencia`: painel de acionamento com trava + limites em tempo real, cotação,
@@ -804,13 +820,13 @@ Auditoria — só papel `auditoria`/`admin` clica "Autorizar Entrada" e efetiva 
 · Associados (painel `/associados/[id]` com abas) · Veículos/Contratos (ficha com Plano/Opcionais,
 alertas e **Rastreamento**: IMEI, Nº do chip e rastreadora) · Eventos/Sinistros
 (protocolo, reparo próprio/terceiro, financeiro do evento) · Precificação (simulador + editor de
-tabela FIPE com reajuste % + importação por planilha, uma por tipo de veículo) · Empresa (logo/diretoria/mandatos/documentos) · Fornecedores (auto
-CNPJ/CEP) · **Cobrança** (`/cobrancas`: dashboard + faturas por competência + boletagem em lote +
+tabela FIPE com reajuste % + importação por planilha, uma por tipo de veículo) · Empresa (logo/diretoria/mandatos/documentos) · **Fornecedores** (um cadastro só: peças/serviços,
+prestadores da 24h e rastreadoras, com auto CNPJ/CEP) · **Cobrança** (`/cobrancas`: dashboard + faturas por competência + boletagem em lote +
 remessas bancárias) · Financeiro (contas a pagar/receber + baixas + DRE)
 · Configurações (regionais, usuários,
 vendedores, marcas/modelos, tipos de veículo, cotas de participação (V5..V15), tipos de evento,
-produtos, planos/combos (Prata/Ouro/Diamante), **rastreamento** (empresas rastreadoras), contas
-bancárias, integrações bancárias, plano de contas)
+produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações bancárias, plano de
+contas)
 · **Rastreadores** (`/rastreadores`: parque por IMEI, estoque por unidade/plataforma, instalação no
 veículo, manutenção, painel de divergências com o cadastro da frota e relatórios de custo,
 recuperação e giro).
@@ -1467,7 +1483,31 @@ recuperação e giro).
 - Espelho puro em `src/lib/cartao.ts` (Luhn, bandeira pelo BIN, validade, CVV por bandeira) com
   testes — o erro de digitação é pego antes de sair da tela.
 
-## Rastreadores (0049 + 0050) — arquitetura
+## Fornecedores — UM cadastro para quem presta serviço (0051)
+- **Prestador da 24h, rastreadora e fornecedor de peças são a mesma entidade:** uma empresa que
+  presta serviço para a associação. Tudo vive em **`fornecedores`**; o que muda é a **marcação de
+  tipo** (`prestador_assistencia`, `empresa_rastreamento`) e os campos que só aquele tipo usa.
+  Uma empresa pode ser as duas coisas — a que reboca às vezes é a que instala o rastreador.
+- **Nunca criar tabela nova de "cadastro de empresa".** Foi o erro que a `0051` desfez: a
+  `empresas_rastreamento` (0049) era uma tabela paralela para a mesma coisa, e ainda por cima
+  morava em **Configurações**, que só admin e financeiro abrem — justamente quem *não* faz esse
+  cadastro no dia a dia.
+- **Um formulário só:** `<ModalFornecedor>` (`src/components/fornecedores/modal-fornecedor.tsx`),
+  usado por `/fornecedores` e pela aba **Prestadores** da Assistência 24h. As seções de 24h e de
+  rastreamento aparecem conforme a marcação. Mesma escolha do `<ModalVendedor>`: dois lugares de
+  entrada, um formulário para manter.
+- **`/fornecedores` tem abas** (Todos · Peças e serviços · Prestadores 24h · Rastreadoras) e aceita
+  `?tipo=rastreadora` na URL — é para lá que o módulo de Rastreadores manda quem quer cadastrar.
+- **O que fica em cada tela:** o *cadastro da empresa* é sempre em Fornecedores; a
+  Assistência 24h cuida do que é dela (**serviços atendidos e valores acordados**), e o módulo de
+  Rastreadores, do parque de equipamentos.
+- **`documento` é OPCIONAL** desde a `0051` (segue validado quando informado): o cadastro de
+  rastreadora absorvido não exigia CNPJ e prestador pequeno às vezes entra sem. Ao salvar, campo
+  vazio tem de virar **null** — duas empresas com `''` colidiriam no unique.
+- **Quem cadastra:** `pode_cadastrar_fornecedor()` = admin/financeiro + time da 24h + **gestor
+  regional**. Cadastro operacional não pode depender de quem tem acesso a Configurações.
+
+## Rastreadores (0049 + 0050 + 0051) — arquitetura
 > A especificação que originou a fase 2 está em `docs/modulos/rastreadores.md`, com um cabeçalho
 > dizendo o que foi traduzido para as convenções do SCar (ela foi escrita sem ver o repositório).
 
@@ -1488,7 +1528,7 @@ recuperação e giro).
 | Conceito do sistema antigo | No SCar |
 |---|---|
 | Filial (Cuiabá, Grande Natal…) | `regionais` — a unidade já é o eixo de RLS (`pode_regional`) |
-| Plataforma (D Traker, Lógica…) | `empresas_rastreamento` (0049), + `custo_mensal_equipamento` e `api_config` |
+| Plataforma (D Traker, Lógica…) | `fornecedores` com `empresa_rastreamento = true` (0051), + `custo_mensal_equipamento` e `api_config` |
 | Associado / veículo | `clientes` / `veiculos` |
 
 - **Os 11 status guardam o número que a equipe fala** ("2 - Ativo/Instalado"):

@@ -46,7 +46,7 @@ export function RelatoriosRastreadores() {
       <section className="rounded-lg border border-slate-200 bg-superficie p-4">
         <h2 className="text-sm font-semibold text-slate-700">Custo mensal por plataforma</h2>
         <p className="mb-3 text-xs text-slate-400">
-          Equipamentos ATIVOS x custo por equipamento cadastrado em Configuracoes &gt; Rastreamento.
+          Equipamentos ATIVOS x custo por equipamento cadastrado na ficha da rastreadora (Fornecedores).
         </p>
         <table className="w-full text-sm">
           <thead>

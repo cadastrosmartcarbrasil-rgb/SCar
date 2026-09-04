@@ -14,8 +14,10 @@ begin
     values (u_adm, 'Admin', 'adm@t.com', 'admin', null);
   perform set_config('request.jwt.claim.sub', u_adm::text, false);
 
-  insert into empresas_rastreamento (nome, custo_mensal_equipamento)
-    values ('D Traker', 12.50) returning id into pl;
+  insert into fornecedores (tipo_pessoa, documento, razao_social, nome_fantasia,
+                            custo_mensal_equipamento, empresa_rastreamento)
+    values ('PJ', '11222333000181', 'D TRAKER LTDA', 'D Traker', 12.50, true)
+    returning id into pl;
   select id into tv from tipos_veiculo where nome = 'Passeio';
 
   insert into clientes (tipo_pessoa, nome_razao_social, cpf_cnpj, regional_id)

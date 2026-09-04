@@ -1,191 +1,163 @@
 'use client';
 
-import { useState } from 'react';
-import { toast } from 'sonner';
-import { Plus, Pencil, Store, Search, Loader2, Check, X } from 'lucide-react';
+import { Suspense, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Plus, Pencil, Store, Search, LifeBuoy, Satellite } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Modal } from '@/components/ui/modal';
-import { FormField, Input, Select } from '@/components/ui/field';
-import { useFornecedores, useSaveFornecedor } from '@/hooks/use-fornecedores';
-import { consultarCnpj } from '@/lib/cnpj';
-import { buscarCep } from '@/lib/cep';
-import { validarDocumento, formatarDocumento, soDigitos, formatarTelefone } from '@/lib/documento';
-import type { FornecedoresRow, TipoPessoa, Json } from '@/lib/database.types';
+import { useFornecedores, type TipoFornecedor } from '@/hooks/use-fornecedores';
+import {
+  ModalFornecedor, formularioVazio, type FormFornecedor, type EnderecoFornecedor,
+} from '@/components/fornecedores/modal-fornecedor';
+import { formatarDocumento, formatarTelefone } from '@/lib/documento';
+import { formatCurrency } from '@/lib/utils';
+import type { FornecedoresRow } from '@/lib/database.types';
 
-interface EndForn {
-  cep?: string; logradouro?: string; numero?: string; complemento?: string;
-  bairro?: string; cidade?: string; uf?: string; [k: string]: string | undefined | null;
-}
-type FormForn = Omit<Partial<FornecedoresRow>, 'endereco'> & { endereco: EndForn };
+// Um cadastro so: fornecedor de pecas, prestador da 24h e rastreadora. Os
+// filtros abaixo sao marcacoes na mesma tabela, nao telas diferentes (0051).
+const ABAS: { id: TipoFornecedor; label: string; icon: React.ElementType }[] = [
+  { id: 'todos', label: 'Todos', icon: Store },
+  { id: 'geral', label: 'Pecas e servicos', icon: Store },
+  { id: 'prestador', label: 'Prestadores 24h', icon: LifeBuoy },
+  { id: 'rastreadora', label: 'Rastreadoras', icon: Satellite },
+];
 
-export default function FornecedoresPage() {
-  const { data: fornecedores, isLoading } = useFornecedores();
-  const salvar = useSaveFornecedor();
-  const [aberto, setAberto] = useState(false);
-  const [form, setForm] = useState<FormForn>({ tipo_pessoa: 'PJ', endereco: {} });
-  const [consultando, setConsultando] = useState(false);
+function Conteudo() {
+  const params = useSearchParams();
+  const inicial = (params.get('tipo') as TipoFornecedor) || 'todos';
+  const [aba, setAba] = useState<TipoFornecedor>(ABAS.some((a) => a.id === inicial) ? inicial : 'todos');
+  const [busca, setBusca] = useState('');
+  const [edit, setEdit] = useState<FormFornecedor | null>(null);
 
-  const tipo = (form.tipo_pessoa ?? 'PJ') as TipoPessoa;
-  const docValido = form.documento ? validarDocumento(form.documento, tipo) : null;
-  const end = form.endereco ?? {};
-  const setEnd = (p: Partial<EndForn>) => setForm((f) => ({ ...f, endereco: { ...f.endereco, ...p } }));
-  const setF = (p: Partial<FormForn>) => setForm((f) => ({ ...f, ...p }));
+  const { data: fornecedores, isLoading } = useFornecedores(aba);
 
-  function novo() {
-    setForm({ tipo_pessoa: 'PJ', endereco: {}, ativo: true });
-    setAberto(true);
-  }
+  const filtrados = useMemo(() => {
+    const t = busca.trim().toLowerCase();
+    if (!t) return fornecedores ?? [];
+    return (fornecedores ?? []).filter((f) =>
+      f.razao_social.toLowerCase().includes(t)
+      || (f.nome_fantasia ?? '').toLowerCase().includes(t)
+      || (f.documento ?? '').includes(t.replace(/\D/g, ''))
+      || (f.cobertura ?? '').toLowerCase().includes(t),
+    );
+  }, [fornecedores, busca]);
 
-  async function consultar() {
-    if (!validarDocumento(form.documento ?? '', 'PJ')) return toast.error('CNPJ invalido');
-    setConsultando(true);
-    const d = await consultarCnpj(form.documento ?? '');
-    setConsultando(false);
-    if (!d.found) {
-      toast.message('Consulta indisponivel - preencha os dados manualmente.');
-      return;
-    }
-    setForm((f) => ({
-      ...f,
-      razao_social: d.razao_social ?? f.razao_social,
-      nome_fantasia: d.nome_fantasia ?? f.nome_fantasia,
-      situacao_cadastral: d.situacao_cadastral ?? f.situacao_cadastral,
-      cnae_principal: d.cnae_principal ?? f.cnae_principal,
-      email: d.email ?? f.email,
-      telefone: d.telefone ?? f.telefone,
-      endereco: { ...f.endereco, ...(d.endereco ?? {}) } as EndForn,
-      dados_receita: (d.raw as Json) ?? f.dados_receita,
-    }));
-    toast.success('Dados da Receita preenchidos');
-  }
-
-  async function onCepBlur() {
-    if (soDigitos(end.cep ?? '').length !== 8) return;
-    const r = await buscarCep(end.cep ?? '');
-    if (!r) return toast.error('CEP nao encontrado');
-    setEnd({ logradouro: r.logradouro, bairro: r.bairro, cidade: r.cidade, uf: r.estado });
-  }
-
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!form.razao_social) return toast.error('Informe o nome/razao social');
-    if (!validarDocumento(form.documento ?? '', tipo)) return toast.error(tipo === 'PF' ? 'CPF invalido' : 'CNPJ invalido');
-    salvar.mutate(form, {
-      onSuccess: () => { toast.success('Fornecedor salvo'); setAberto(false); },
-      onError: (err) => toast.error(err.message.includes('documento') ? 'Documento ja cadastrado' : err.message),
-    });
+  function editar(f: FornecedoresRow) {
+    setEdit({ ...f, endereco: (f.endereco as EnderecoFornecedor) ?? {} });
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-500">
-          Cadastro de fornecedores. Ao informar um CNPJ, use o botao Consultar para autopreencher via Receita.
-        </p>
-        <Button onClick={novo}><Plus className="h-4 w-4" /> Novo Fornecedor</Button>
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">Fornecedores</h1>
+          <p className="max-w-2xl text-sm text-slate-500">
+            Quem presta servico para a associacao: oficina e pecas, prestador da Assistencia 24h e
+            empresa de rastreamento. Um cadastro so — o tipo e uma marcacao na ficha.
+          </p>
+        </div>
+        <Button onClick={() => setEdit(formularioVazio(
+          aba === 'prestador' ? 'prestador' : aba === 'rastreadora' ? 'rastreadora' : undefined,
+        ))}>
+          <Plus className="h-4 w-4" /> Novo fornecedor
+        </Button>
+      </div>
+
+      <div className="flex flex-wrap gap-1 border-b border-slate-200">
+        {ABAS.map((a) => (
+          <button key={a.id} onClick={() => setAba(a.id)}
+            className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm ${
+              aba === a.id ? 'border-brand-600 font-medium text-brand-700' : 'border-transparent text-slate-500 hover:text-slate-700'
+            }`}>
+            <a.icon className="h-4 w-4" /> {a.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+        <input value={busca} onChange={(e) => setBusca(e.target.value)}
+          placeholder="Buscar por nome, documento ou cobertura"
+          className="w-full rounded-md border border-slate-300 py-2 pl-9 pr-3 text-sm" />
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-slate-200 bg-superficie">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
-              <th className="px-4 py-2">Razao Social</th>
+              <th className="px-4 py-2">Fornecedor</th>
+              <th className="px-4 py-2">Tipo</th>
               <th className="px-4 py-2">Documento</th>
-              <th className="px-4 py-2">CNAE</th>
               <th className="px-4 py-2">Contato</th>
+              <th className="px-4 py-2">Ativo</th>
               <th className="px-4 py-2 text-right">Acoes</th>
             </tr>
           </thead>
           <tbody>
-            {isLoading && <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-400">Carregando...</td></tr>}
-            {(fornecedores ?? []).map((f) => (
+            {isLoading && <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-400">Carregando...</td></tr>}
+            {filtrados.map((f) => (
               <tr key={f.id} className="border-b border-slate-50 last:border-0">
                 <td className="px-4 py-2 font-medium text-slate-800">
-                  <span className="inline-flex items-center gap-2"><Store className="h-4 w-4 text-brand-500" /> {f.razao_social}</span>
+                  {f.nome_fantasia?.trim() || f.razao_social}
+                  {f.nome_fantasia?.trim() && <span className="block text-xs text-slate-400">{f.razao_social}</span>}
                 </td>
-                <td className="px-4 py-2 text-slate-600">{formatarDocumento(f.documento, f.tipo_pessoa)}</td>
-                <td className="px-4 py-2 text-slate-500">{f.cnae_principal ?? '-'}</td>
-                <td className="px-4 py-2 text-slate-600">{f.telefone || f.email || '-'}</td>
+                <td className="px-4 py-2">
+                  <div className="flex flex-wrap gap-1">
+                    {f.prestador_assistencia && (
+                      <span className="inline-flex items-center gap-1 rounded bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+                        <LifeBuoy className="h-3 w-3" /> 24h
+                      </span>
+                    )}
+                    {f.empresa_rastreamento && (
+                      <span className="inline-flex items-center gap-1 rounded bg-cyan-50 px-2 py-0.5 text-[11px] font-medium text-cyan-700">
+                        <Satellite className="h-3 w-3" /> Rastreadora
+                      </span>
+                    )}
+                    {!f.prestador_assistencia && !f.empresa_rastreamento && (
+                      <span className="rounded bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">Pecas / servicos</span>
+                    )}
+                  </div>
+                  {f.empresa_rastreamento && Number(f.custo_mensal_equipamento ?? 0) > 0 && (
+                    <span className="block text-[11px] text-slate-400">
+                      {formatCurrency(Number(f.custo_mensal_equipamento))} por equipamento/mes
+                    </span>
+                  )}
+                </td>
+                <td className="px-4 py-2 font-mono text-slate-600">
+                  {f.documento ? formatarDocumento(f.documento, f.tipo_pessoa) : '—'}
+                </td>
+                <td className="px-4 py-2 text-slate-600">
+                  {[f.contato, f.telefone ? formatarTelefone(f.telefone) : null].filter(Boolean).join(' · ')
+                    || f.email || '—'}
+                  {f.cobertura && <span className="block text-[11px] text-slate-400">{f.cobertura}</span>}
+                </td>
+                <td className="px-4 py-2">
+                  {f.ativo ? <span className="text-emerald-600">Sim</span> : <span className="text-slate-400">Nao</span>}
+                </td>
                 <td className="px-4 py-2 text-right">
-                  <button onClick={() => { setForm({ ...f, endereco: (f.endereco as EndForn) ?? {} }); setAberto(true); }} className="rounded p-1.5 text-slate-500 hover:bg-slate-100">
+                  <button onClick={() => editar(f)} className="rounded p-1.5 text-slate-500 hover:bg-slate-100">
                     <Pencil className="h-4 w-4" />
                   </button>
                 </td>
               </tr>
             ))}
-            {!isLoading && (fornecedores ?? []).length === 0 && <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-400">Nenhum fornecedor.</td></tr>}
+            {!isLoading && filtrados.length === 0 && (
+              <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-400">Nenhum fornecedor nesta lista.</td></tr>
+            )}
           </tbody>
         </table>
       </div>
 
-      <Modal open={aberto} onClose={() => setAberto(false)} title={form.id ? 'Editar Fornecedor' : 'Novo Fornecedor'} tamanho="xl">
-        <form onSubmit={submit} className="space-y-3">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <FormField label="Tipo">
-              <Select value={tipo} onChange={(e) => setF({ tipo_pessoa: e.target.value as TipoPessoa })}>
-                <option value="PJ">CNPJ (PJ)</option>
-                <option value="PF">CPF (PF)</option>
-              </Select>
-            </FormField>
-            <FormField label={tipo === 'PJ' ? 'CNPJ *' : 'CPF *'} className="sm:col-span-2">
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Input value={form.documento ? formatarDocumento(form.documento, tipo) : ''} onChange={(e) => setF({ documento: soDigitos(e.target.value) })}
-                    placeholder={tipo === 'PJ' ? '00.000.000/0000-00' : '000.000.000-00'}
-                    className={docValido === false ? 'border-rose-400 pr-8' : docValido ? 'border-emerald-400 pr-8' : 'pr-8'} />
-                  {docValido === true && <Check className="absolute right-2 top-2.5 h-4 w-4 text-emerald-500" />}
-                  {docValido === false && <X className="absolute right-2 top-2.5 h-4 w-4 text-rose-500" />}
-                </div>
-                {tipo === 'PJ' && (
-                  <Button type="button" variant="secondary" onClick={consultar} disabled={consultando} className="mt-0 shrink-0">
-                    {consultando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />} Consultar
-                  </Button>
-                )}
-              </div>
-            </FormField>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <FormField label={tipo === 'PJ' ? 'Razao social *' : 'Nome *'}>
-              <Input value={form.razao_social ?? ''} onChange={(e) => setF({ razao_social: e.target.value })} />
-            </FormField>
-            <FormField label="Nome fantasia">
-              <Input value={form.nome_fantasia ?? ''} onChange={(e) => setF({ nome_fantasia: e.target.value })} />
-            </FormField>
-          </div>
-          {tipo === 'PJ' && (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <FormField label="Situacao cadastral"><Input value={form.situacao_cadastral ?? ''} onChange={(e) => setF({ situacao_cadastral: e.target.value })} /></FormField>
-              <FormField label="CNAE principal"><Input value={form.cnae_principal ?? ''} onChange={(e) => setF({ cnae_principal: e.target.value })} /></FormField>
-            </div>
-          )}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <FormField label="E-mail"><Input type="email" value={form.email ?? ''} onChange={(e) => setF({ email: e.target.value })} /></FormField>
-            <FormField label="Telefone"><Input value={form.telefone ? formatarTelefone(form.telefone) : ''} onChange={(e) => setF({ telefone: soDigitos(e.target.value) })} /></FormField>
-          </div>
-
-          <div className="rounded-lg border border-slate-200 p-3">
-            <p className="mb-2 text-sm font-medium text-slate-600">Endereco</p>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <FormField label="CEP"><Input value={end.cep ?? ''} onChange={(e) => setEnd({ cep: e.target.value })} onBlur={onCepBlur} /></FormField>
-              <FormField label="Logradouro" className="col-span-2 sm:col-span-3"><Input value={end.logradouro ?? ''} onChange={(e) => setEnd({ logradouro: e.target.value })} /></FormField>
-            </div>
-            <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <FormField label="Numero"><Input value={end.numero ?? ''} onChange={(e) => setEnd({ numero: e.target.value })} /></FormField>
-              <FormField label="Bairro" className="col-span-2"><Input value={end.bairro ?? ''} onChange={(e) => setEnd({ bairro: e.target.value })} /></FormField>
-              <FormField label="UF"><Input maxLength={2} value={end.uf ?? ''} onChange={(e) => setEnd({ uf: e.target.value.toUpperCase() })} /></FormField>
-            </div>
-            <div className="mt-2">
-              <FormField label="Cidade"><Input value={end.cidade ?? ''} onChange={(e) => setEnd({ cidade: e.target.value })} /></FormField>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="secondary" onClick={() => setAberto(false)}>Cancelar</Button>
-            <Button type="submit" disabled={salvar.isPending}>{salvar.isPending ? 'Salvando...' : 'Salvar'}</Button>
-          </div>
-        </form>
-      </Modal>
+      {edit && (
+        <ModalFornecedor aberto inicial={edit} onClose={() => setEdit(null)} />
+      )}
     </div>
+  );
+}
+
+export default function FornecedoresPage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-slate-400">Carregando...</p>}>
+      <Conteudo />
+    </Suspense>
   );
 }

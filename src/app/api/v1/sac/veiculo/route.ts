@@ -35,10 +35,14 @@ export async function GET(request: Request) {
 
   // Rastreamento: quem rastreia o veiculo, telefone da central e link da
   // plataforma — o atendente precisa disso na hora do evento (0049).
-  const { data: rastreadora } = veiculo.empresa_rastreamento_id
-    ? await supabase.from('empresas_rastreamento').select('nome, telefone, plataforma_url')
+  // A rastreadora e um FORNECEDOR com o tipo marcado (0051).
+  const { data: forn } = veiculo.empresa_rastreamento_id
+    ? await supabase.from('fornecedores').select('razao_social, nome_fantasia, telefone, plataforma_url')
         .eq('id', veiculo.empresa_rastreamento_id).maybeSingle()
     : { data: null };
+  const rastreadora = forn
+    ? { nome: forn.nome_fantasia?.trim() || forn.razao_social, telefone: forn.telefone, plataforma_url: forn.plataforma_url }
+    : null;
 
   return NextResponse.json({
     veiculo,

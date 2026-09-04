@@ -238,19 +238,6 @@ export type FaturaItensRow = {
   created_at: string;
 };
 
-export type EmpresasRastreamentoRow = Timestamps & {
-  id: string;
-  nome: string;
-  razao_social: string | null;
-  cnpj: string | null;
-  contato: string | null;
-  telefone: string | null;
-  email: string | null;
-  plataforma_url: string | null;
-  observacoes: string | null;
-  ativo: boolean;
-};
-
 export type StatusRastreador =
   | 'DISPONIVEL' | 'ATIVO' | 'INADIMPLENTE' | 'INATIVO' | 'A_DEVOLVER'
   | 'COBRAR_RASTREADOR' | 'BOLETO_GERADO' | 'PENDENCIA_DADOS' | 'MANUTENCAO'
@@ -1142,7 +1129,8 @@ export type AdesaoFaixaRow = {
 export type FornecedoresRow = Timestamps & {
   id: string;
   tipo_pessoa: TipoPessoa;
-  documento: string;
+  /** opcional desde a 0051 — validado quando informado */
+  documento: string | null;
   razao_social: string;
   nome_fantasia: string | null;
   situacao_cadastral: string | null;
@@ -1158,6 +1146,12 @@ export type FornecedoresRow = Timestamps & {
   cobertura: string | null;
   chave_pix: string | null;
   observacoes: string | null;
+  // 0051: a rastreadora e um fornecedor com tipo marcado (nao ha tabela propria)
+  empresa_rastreamento: boolean;
+  contato: string | null;
+  plataforma_url: string | null;
+  custo_mensal_equipamento: number;
+  api_config: Json;
 };
 
 // ---- Assistencia 24h (0026) ------------------------------------------------
@@ -2045,7 +2039,7 @@ export type Database = {
           Rel<'regional_id', 'regionais'>,
           Rel<'cota_participacao_id', 'cotas_participacao'>,
           Rel<'modelo_id', 'modelos'>,
-          Rel<'empresa_rastreamento_id', 'empresas_rastreamento'>,
+          Rel<'empresa_rastreamento_id', 'fornecedores'>,
         ]
       >;
       categorias_dre: TableDef<CategoriasDreRow>;
@@ -2117,11 +2111,10 @@ export type Database = {
       >;
       veiculo_produtos: TableDef<{ veiculo_id: string; produto_id: string }, [Rel<'veiculo_id', 'veiculos'>, Rel<'produto_id', 'produtos'>]>;
       tipos_alerta: TableDef<TiposAlertaRow>;
-      empresas_rastreamento: TableDef<EmpresasRastreamentoRow>;
       rastreadores: TableDef<
         RastreadoresRow,
         [
-          Rel<'empresa_rastreamento_id', 'empresas_rastreamento'>,
+          Rel<'empresa_rastreamento_id', 'fornecedores'>,
           Rel<'regional_id', 'regionais'>,
           Rel<'veiculo_id', 'veiculos'>,
           Rel<'cliente_id', 'clientes'>,

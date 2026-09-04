@@ -27,7 +27,7 @@ export default function RastreadoresPage() {
             cruzamento com o cadastro da frota.
           </p>
         </div>
-        <Link href="/configuracoes/rastreamento"
+        <Link href="/fornecedores?tipo=rastreadora"
           className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-superficie px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
           <Settings2 className="h-4 w-4" /> Rastreadoras
         </Link>
