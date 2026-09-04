@@ -31,6 +31,9 @@ create table if not exists empresas_rastreamento (
 );
 create index if not exists idx_empresas_rastreamento_ativo on empresas_rastreamento (ativo, nome);
 
+-- `drop` antes do `create`: a migration precisa poder ser rodada de novo por
+-- cima de uma execucao parcial (gotcha ja conhecido nas 0043/0044).
+drop trigger if exists trg_empresas_rastreamento_updated on empresas_rastreamento;
 create trigger trg_empresas_rastreamento_updated before update on empresas_rastreamento
   for each row execute function set_updated_at();
 
@@ -74,7 +77,9 @@ create index if not exists idx_veiculos_empresa_rastreamento on veiculos (empres
 alter table empresas_rastreamento enable row level security;
 
 -- catalogo global (como tipos_alerta): staff le, admin/financeiro mantem.
+drop policy if exists er_select on empresas_rastreamento;
 create policy er_select on empresas_rastreamento for select to authenticated using (is_staff());
+drop policy if exists er_write on empresas_rastreamento;
 create policy er_write  on empresas_rastreamento for all to authenticated
   using (tem_acesso_global()) with check (tem_acesso_global());
 

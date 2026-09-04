@@ -1536,7 +1536,8 @@ no fim — o runner procura por "PASSARAM") e rode `npm run schema`.
   `○` (estática), porque o layout pai chama `getUser()` a cada request.
 - **`create trigger` não aceita `if not exists`** — sempre `drop trigger if exists <nome> on
   <tabela>;` antes, senão a migration não é re-executável e re-rodá-la no SQL Editor para com
-  `42710: trigger already exists` (mordeu na 0044; padrão já usado em 0024/0028/0031/0032/0034).
+  `42710: trigger already exists` (mordeu na 0044 e **de novo na 0049**, já no SQL Editor de
+  produção; padrão já usado em 0024/0028/0031/0032/0034).
   Vale o mesmo raciocínio de `create policy` (logo abaixo).
 - **Chave estrangeira nova pode quebrar um `select` com embed.** `leads.aceite_cotacao_id` (0042)
   criou a SEGUNDA relação entre `cotacoes` e `leads`; o embed `from('cotacoes').select('*, leads(...)')`
