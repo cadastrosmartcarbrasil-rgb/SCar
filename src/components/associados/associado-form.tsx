@@ -79,7 +79,7 @@ export function AssociadoForm({
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <FormField label="Situacao">
           <Select value={form.status ?? 'ativo'} onChange={(e) => setForm({ ...form, status: e.target.value as StatusCliente })}>
             {SITUACOES.map((s) => (
@@ -116,15 +116,15 @@ export function AssociadoForm({
 
       {tipo === 'PF' && (
         <>
-          <div className="grid grid-cols-3 gap-3">
-            <FormField label="Data de nascimento" className="col-span-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <FormField label="Data de nascimento" className="sm:col-span-2">
               <Input type="date" value={form.data_nascimento ?? ''} onChange={(e) => setForm({ ...form, data_nascimento: e.target.value })} />
             </FormField>
             <FormField label="Idade">
               <Input value={idade != null ? `${idade} anos` : '-'} disabled />
             </FormField>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <FormField label="Sexo">
               <Select value={form.sexo ?? ''} onChange={(e) => setForm({ ...form, sexo: e.target.value })}>
                 <option value="">-- Selecione --</option>
@@ -148,7 +148,7 @@ export function AssociadoForm({
         </FormField>
       )}
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <FormField label="E-mail principal">
           <Input type="email" value={form.email ?? ''} onChange={(e) => setForm({ ...form, email: e.target.value })} />
         </FormField>
@@ -156,7 +156,7 @@ export function AssociadoForm({
           <Input type="email" value={form.email_adicional ?? ''} onChange={(e) => setForm({ ...form, email_adicional: e.target.value })} />
         </FormField>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <FormField label="Telefone">
           <Input value={form.telefone ?? ''} onChange={(e) => setForm({ ...form, telefone: e.target.value })} />
         </FormField>
@@ -180,23 +180,23 @@ export function AssociadoForm({
         <p className="mb-2 flex items-center gap-1.5 text-sm font-medium text-slate-600">
           <MapPin className="h-4 w-4" /> Endereco
         </p>
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <FormField label="CEP">
             <Input value={end.cep ?? ''} onChange={(e) => setEnd({ cep: e.target.value })} onBlur={onCepBlur} placeholder={buscandoCep ? 'Buscando...' : '00000-000'} />
           </FormField>
-          <FormField label="Rua / Logradouro" className="col-span-3">
+          <FormField label="Rua / Logradouro" className="col-span-2 sm:col-span-3">
             <Input value={end.logradouro ?? ''} onChange={(e) => setEnd({ logradouro: e.target.value })} />
           </FormField>
         </div>
-        <div className="mt-3 grid grid-cols-4 gap-3">
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <FormField label="Numero">
             <Input value={end.numero ?? ''} onChange={(e) => setEnd({ numero: e.target.value })} />
           </FormField>
-          <FormField label="Complemento" className="col-span-3">
+          <FormField label="Complemento" className="col-span-2 sm:col-span-3">
             <Input value={end.complemento ?? ''} onChange={(e) => setEnd({ complemento: e.target.value })} />
           </FormField>
         </div>
-        <div className="mt-3 grid grid-cols-4 gap-3">
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <FormField label="Bairro" className="col-span-2">
             <Input value={end.bairro ?? ''} onChange={(e) => setEnd({ bairro: e.target.value })} />
           </FormField>

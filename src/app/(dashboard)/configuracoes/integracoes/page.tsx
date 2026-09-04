@@ -145,13 +145,12 @@ export default function IntegracoesPage() {
       <Modal
         open={aberto}
         onClose={() => setAberto(false)}
-        title={ed?.id ? 'Editar Integracao' : 'Nova Integracao Bancaria'}
-      >
+        title={ed?.id ? 'Editar Integracao' : 'Nova Integracao Bancaria'} tamanho="lg">
         <form onSubmit={submit} className="space-y-3">
           <FormField label="Nome / apelido *">
             <Input value={ed?.nome ?? ''} onChange={(e) => setEd((p) => ({ ...p, nome: e.target.value }))} />
           </FormField>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <FormField label="Provedor">
               <Select
                 value={ed?.provedor ?? 'ASAAS'}
@@ -188,7 +187,7 @@ export default function IntegracoesPage() {
               placeholder="Cole a chave do gateway"
             />
           </FormField>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <FormField label="Token extra (opcional)">
               <Input
                 value={ed?.api_token_extra ?? ''}

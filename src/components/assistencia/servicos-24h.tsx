@@ -87,7 +87,7 @@ export function Servicos24h() {
         </table>
       </div>
 
-      <Modal open={!!edit} onClose={() => setEdit(null)} title={edit?.id ? 'Editar servico 24h' : 'Novo servico 24h'}>
+      <Modal open={!!edit} onClose={() => setEdit(null)} title={edit?.id ? 'Editar servico 24h' : 'Novo servico 24h'} tamanho="lg">
         <form onSubmit={submit} className="space-y-3">
           <FormField label="Descricao do servico">
             <Input

@@ -110,7 +110,7 @@ export default function EmpresaPage() {
           <Card>
             <CardContent className="space-y-4 pt-5">
               <h2 className="text-sm font-semibold text-slate-700">Dados cadastrais</h2>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <FormField label="Razao social *">
                   <Input value={form.razao_social ?? ''} onChange={(e) => setF({ razao_social: e.target.value })} />
                 </FormField>
@@ -118,7 +118,7 @@ export default function EmpresaPage() {
                   <Input value={form.nome_fantasia ?? ''} onChange={(e) => setF({ nome_fantasia: e.target.value })} />
                 </FormField>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <FormField label="CNPJ">
                   <div className="relative">
                     <Input value={form.cnpj ? formatarCNPJ(form.cnpj) : ''} onChange={(e) => setF({ cnpj: soDigitos(e.target.value) })}
@@ -150,12 +150,12 @@ export default function EmpresaPage() {
           <Card>
             <CardContent className="space-y-4 pt-5">
               <h2 className="text-sm font-semibold text-slate-700">Contatos</h2>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <FormField label="E-mail principal"><Input type="email" value={form.email_principal ?? ''} onChange={(e) => setF({ email_principal: e.target.value })} /></FormField>
                 <FormField label="E-mail financeiro"><Input type="email" value={form.email_financeiro ?? ''} onChange={(e) => setF({ email_financeiro: e.target.value })} /></FormField>
                 <FormField label="E-mail juridico/adm"><Input type="email" value={form.email_juridico ?? ''} onChange={(e) => setF({ email_juridico: e.target.value })} /></FormField>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <FormField label="Telefone fixo"><Input value={form.telefone_fixo ? formatarTelefone(form.telefone_fixo) : ''} onChange={(e) => setF({ telefone_fixo: soDigitos(e.target.value) })} placeholder="(00) 0000-0000" /></FormField>
                 <FormField label="WhatsApp principal"><Input value={form.whatsapp_principal ? formatarTelefone(form.whatsapp_principal) : ''} onChange={(e) => setF({ whatsapp_principal: soDigitos(e.target.value) })} placeholder="(00) 00000-0000" /></FormField>
                 <FormField label="WhatsApp suporte"><Input value={form.whatsapp_suporte ? formatarTelefone(form.whatsapp_suporte) : ''} onChange={(e) => setF({ whatsapp_suporte: soDigitos(e.target.value) })} placeholder="(00) 00000-0000" /></FormField>
@@ -167,15 +167,15 @@ export default function EmpresaPage() {
           <Card>
             <CardContent className="space-y-4 pt-5">
               <h2 className="flex items-center gap-1.5 text-sm font-semibold text-slate-700"><MapPin className="h-4 w-4" /> Endereco</h2>
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <FormField label="CEP"><Input value={end.cep ? formatarCEP(end.cep) : ''} onChange={(e) => setEnd({ cep: soDigitos(e.target.value) })} onBlur={onCepBlur} placeholder="00000-000" /></FormField>
-                <FormField label="Logradouro" className="col-span-3"><Input value={end.logradouro ?? ''} onChange={(e) => setEnd({ logradouro: e.target.value })} /></FormField>
+                <FormField label="Logradouro" className="col-span-2 sm:col-span-3"><Input value={end.logradouro ?? ''} onChange={(e) => setEnd({ logradouro: e.target.value })} /></FormField>
               </div>
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <FormField label="Numero"><Input value={end.numero ?? ''} onChange={(e) => setEnd({ numero: e.target.value })} /></FormField>
-                <FormField label="Complemento" className="col-span-3"><Input value={end.complemento ?? ''} onChange={(e) => setEnd({ complemento: e.target.value })} /></FormField>
+                <FormField label="Complemento" className="col-span-2 sm:col-span-3"><Input value={end.complemento ?? ''} onChange={(e) => setEnd({ complemento: e.target.value })} /></FormField>
               </div>
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <FormField label="Bairro" className="col-span-2"><Input value={end.bairro ?? ''} onChange={(e) => setEnd({ bairro: e.target.value })} /></FormField>
                 <FormField label="Cidade"><Input value={end.cidade ?? ''} onChange={(e) => setEnd({ cidade: e.target.value })} /></FormField>
                 <FormField label="UF"><Input maxLength={2} value={end.uf ?? ''} onChange={(e) => setEnd({ uf: e.target.value.toUpperCase() })} /></FormField>
@@ -228,12 +228,12 @@ function AbaDiretoria({ empresaId }: { empresaId: string }) {
 
       {atual && <MembrosDiretoria mandato={atual} />}
 
-      <Modal open={!!novo} onClose={() => setNovo(null)} title="Novo mandato">
+      <Modal open={!!novo} onClose={() => setNovo(null)} title="Novo mandato" tamanho="lg">
         <form onSubmit={(e) => { e.preventDefault();
             if (!novo?.data_fim || novo.data_fim <= (novo.data_inicio ?? '')) return toast.error('Data fim deve ser posterior a data inicio');
             salvarMandato.mutate(novo, { onSuccess: (m) => { toast.success('Mandato criado'); setMandatoSel(m.id); setNovo(null); }, onError: (er) => toast.error(er.message) }); }}
           className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <FormField label="Inicio do mandato *"><Input type="date" value={novo?.data_inicio ?? ''} onChange={(e) => setNovo((p) => ({ ...p, data_inicio: e.target.value }))} /></FormField>
             <FormField label="Fim do mandato *"><Input type="date" value={novo?.data_fim ?? ''} onChange={(e) => setNovo((p) => ({ ...p, data_fim: e.target.value }))} /></FormField>
           </div>
@@ -286,16 +286,16 @@ function MembrosDiretoria({ mandato }: { mandato: MandatosRow }) {
         </table>
       </CardContent>
 
-      <Modal open={!!ed} onClose={() => setEd(null)} title={ed?.id ? 'Editar membro' : 'Novo membro'}>
+      <Modal open={!!ed} onClose={() => setEd(null)} title={ed?.id ? 'Editar membro' : 'Novo membro'} tamanho="lg">
         <form onSubmit={(e) => { e.preventDefault(); if (!ed?.nome_completo) return toast.error('Informe o nome');
             salvar.mutate(ed, { onSuccess: () => { toast.success('Salvo'); setEd(null); }, onError: (er) => toast.error(er.message.includes('cpf') ? 'CPF invalido' : er.message) }); }}
           className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <FormField label="Cargo *"><Input value={ed?.cargo ?? ''} onChange={(e) => setEd((p) => ({ ...p, cargo: e.target.value }))} placeholder="Presidente, Tesoureiro..." /></FormField>
             <FormField label="CPF"><Input value={ed?.cpf ?? ''} onChange={(e) => setEd((p) => ({ ...p, cpf: e.target.value }))} placeholder="000.000.000-00" /></FormField>
           </div>
           <FormField label="Nome completo *"><Input value={ed?.nome_completo ?? ''} onChange={(e) => setEd((p) => ({ ...p, nome_completo: e.target.value }))} /></FormField>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <FormField label="Telefone"><Input value={ed?.telefone ?? ''} onChange={(e) => setEd((p) => ({ ...p, telefone: e.target.value }))} /></FormField>
             <FormField label="WhatsApp"><Input value={ed?.whatsapp ?? ''} onChange={(e) => setEd((p) => ({ ...p, whatsapp: e.target.value }))} /></FormField>
             <FormField label="E-mail"><Input type="email" value={ed?.email ?? ''} onChange={(e) => setEd((p) => ({ ...p, email: e.target.value }))} /></FormField>

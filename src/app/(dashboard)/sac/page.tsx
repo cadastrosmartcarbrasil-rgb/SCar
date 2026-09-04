@@ -265,7 +265,7 @@ function ModalProtocoloAssociado({ associado, onClose }: { associado: ClientesRo
   }
 
   return (
-    <Modal open onClose={onClose} title="Abrir protocolo do associado">
+    <Modal open onClose={onClose} title="Abrir protocolo do associado" tamanho="lg">
       <form onSubmit={enviar} className="space-y-3">
         <div className="rounded-lg bg-slate-50 p-3 text-sm">
           <p className="text-[11px] font-semibold uppercase text-slate-400">Associado</p>
@@ -701,7 +701,7 @@ function ServicoModal({ servico, veiculo, clienteId, onClose }: {
   }
 
   return (
-    <Modal open onClose={onClose} title={servico.titulo}>
+    <Modal open onClose={onClose} title={servico.titulo} tamanho="lg">
       <form onSubmit={enviar} className="space-y-3">
         <div className="rounded-lg bg-slate-50 p-3 text-sm">
           <p className="text-[11px] font-semibold uppercase text-slate-400">Veiculo do atendimento</p>

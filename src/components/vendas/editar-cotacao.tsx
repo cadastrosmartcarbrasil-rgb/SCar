@@ -134,7 +134,7 @@ export function EditarCotacao({
   }
 
   return (
-    <Modal open onClose={onClose} title="Editar cotacao">
+    <Modal open onClose={onClose} title="Editar cotacao" tamanho="lg">
       <form onSubmit={salvar} className="space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
           <FormField label="Valor FIPE">

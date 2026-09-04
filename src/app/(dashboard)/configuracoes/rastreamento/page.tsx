@@ -106,7 +106,7 @@ export default function RastreamentoPage() {
         </table>
       </div>
 
-      <Modal open={aberto} onClose={() => setAberto(false)} title={ed?.id ? `Editar ${ed.nome}` : 'Nova Empresa de Rastreamento'}>
+      <Modal open={aberto} onClose={() => setAberto(false)} title={ed?.id ? `Editar ${ed.nome}` : 'Nova Empresa de Rastreamento'} tamanho="lg">
         <form onSubmit={submit} className="space-y-3">
           <FormField label="CNPJ">
             <div className="flex gap-2">
@@ -121,7 +121,7 @@ export default function RastreamentoPage() {
               </Button>
             </div>
           </FormField>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <FormField label="Nome (como aparece no veiculo) *">
               <Input value={ed?.nome ?? ''} onChange={(e) => setF({ nome: e.target.value })} placeholder="Ex.: Smart Tracker" />
             </FormField>
@@ -129,7 +129,7 @@ export default function RastreamentoPage() {
               <Input value={ed?.razao_social ?? ''} onChange={(e) => setF({ razao_social: e.target.value })} />
             </FormField>
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <FormField label="Contato">
               <Input value={ed?.contato ?? ''} onChange={(e) => setF({ contato: e.target.value })} placeholder="Pessoa de contato" />
             </FormField>

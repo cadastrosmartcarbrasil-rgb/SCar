@@ -136,7 +136,7 @@ export default function AssociadosPage() {
         </table>
       </div>
 
-      <Modal open={aberto} onClose={() => setAberto(false)} title="Novo Associado">
+      <Modal open={aberto} onClose={() => setAberto(false)} title="Novo Associado" tamanho="xl">
         <AssociadoForm
           initial={novoAssociadoVazio()}
           onCancel={() => setAberto(false)}

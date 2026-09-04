@@ -319,7 +319,7 @@ function VeiculosConteudo() {
         </table>
       </div>
 
-      <Modal open={aberto} onClose={() => setAberto(false)} title={form.id ? `Editar ${form.placa}` : 'Novo Veiculo (Contrato)'}>
+      <Modal open={aberto} onClose={() => setAberto(false)} title={form.id ? `Editar ${form.placa}` : 'Novo Veiculo (Contrato)'} tamanho="xl">
         <datalist id="dl-marcas">
           {(marcas ?? []).map((m) => (
             <option key={m.id} value={m.nome} />
@@ -361,7 +361,7 @@ function VeiculosConteudo() {
           </FormField>
 
           {/* Marca / Modelo */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <FormField label="Marca">
               <Input list="dl-marcas" value={form.marca ?? ''} onChange={(e) => setF({ marca: e.target.value })} />
             </FormField>
@@ -370,16 +370,16 @@ function VeiculosConteudo() {
             </FormField>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <FormField label="Renavam">
               <Input value={form.renavam ?? ''} onChange={(e) => setF({ renavam: e.target.value })} />
             </FormField>
-            <FormField label="Chassi" className="col-span-2">
+            <FormField label="Chassi" className="sm:col-span-2">
               <Input value={form.chassi ?? ''} onChange={(e) => setF({ chassi: e.target.value })} />
             </FormField>
           </div>
 
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <FormField label="Cor">
               <Input value={form.cor ?? ''} onChange={(e) => setF({ cor: e.target.value })} />
             </FormField>
@@ -411,7 +411,7 @@ function VeiculosConteudo() {
             </FormField>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <FormField label="Combustivel">
               <Select value={form.combustivel ?? ''} onChange={(e) => setF({ combustivel: (e.target.value || null) as Combustivel })}>
                 <option value="">--</option>
@@ -467,7 +467,7 @@ function VeiculosConteudo() {
           />
 
           {/* FIPE */}
-          <div className="grid grid-cols-2 gap-3 rounded-lg border border-slate-200 p-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 rounded-lg border border-slate-200 p-3">
             <FormField label="Codigo FIPE">
               <Input value={form.codigo_fipe ?? ''} onChange={(e) => setF({ codigo_fipe: e.target.value })} placeholder="002001-5" />
             </FormField>
@@ -478,7 +478,7 @@ function VeiculosConteudo() {
                 placeholder="0,00"
               />
             </FormField>
-            <p className="col-span-2 text-xs text-slate-400">
+            <p className="text-xs text-slate-400 sm:col-span-2">
               O valor FIPE e a base do calculo da mensalidade.
             </p>
           </div>
@@ -494,7 +494,7 @@ function VeiculosConteudo() {
             </FormField>
             <div>
               <p className="mb-1 text-sm font-medium text-slate-600">Produtos opcionais</p>
-              <div className="grid grid-cols-2 gap-1">
+              <div className="grid grid-cols-2 gap-1 sm:grid-cols-3">
                 {opcionaisDisp.map((p) => (
                   <label key={p.id} className="flex items-center gap-2 text-sm text-slate-700">
                     <input type="checkbox" checked={opcionais.has(p.id)} onChange={() => toggleSet(setOpcionais, p.id)} className="h-4 w-4 rounded border-slate-300" />
@@ -504,7 +504,7 @@ function VeiculosConteudo() {
                 {opcionaisDisp.length === 0 && <span className="text-xs text-slate-400">Nenhum opcional cadastrado.</span>}
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <FormField label="Valor da mensalidade (R$)">
                 <MoneyInput value={form.valor_mensalidade ?? null} onChange={(v) => setF({ valor_mensalidade: v })} placeholder="0,00" />
               </FormField>
@@ -520,7 +520,7 @@ function VeiculosConteudo() {
           </div>
 
           {/* Situacao do bem */}
-          <div className="grid grid-cols-4 items-end gap-3">
+          <div className="grid grid-cols-2 items-end gap-3 sm:grid-cols-4">
             <label className="flex items-center gap-2 pb-2 text-sm text-slate-700">
               <input type="checkbox" checked={form.alienado ?? false} onChange={(e) => setF({ alienado: e.target.checked })} className="h-4 w-4 rounded border-slate-300" />
               Alienado
@@ -538,7 +538,7 @@ function VeiculosConteudo() {
             <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
               <Satellite className="h-4 w-4 text-cyan-600" /> Rastreamento
             </p>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <FormField label="IMEI">
                 <Input
                   value={form.rastreador_imei ?? ''}
@@ -592,7 +592,7 @@ function VeiculosConteudo() {
           ) : (
             <div className="rounded-lg border border-slate-200 p-3">
               <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-slate-700"><Bell className="h-4 w-4 text-amber-500" /> Alertas iniciais</p>
-              <div className="grid grid-cols-2 gap-1">
+              <div className="grid grid-cols-2 gap-1 sm:grid-cols-3">
                 {(tiposAlerta ?? []).map((a) => (
                   <label key={a.id} className="flex items-center gap-2 text-sm text-slate-700">
                     <input type="checkbox" checked={alertas.has(a.id)} onChange={() => toggleSet(setAlertas, a.id)} className="h-4 w-4 rounded border-slate-300" />
@@ -606,7 +606,7 @@ function VeiculosConteudo() {
           )}
 
           {/* Dados do contrato */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <FormField label="Regional">
               <Select value={form.regional_id ?? ''} onChange={(e) => setF({ regional_id: e.target.value || null })}>
                 <option value="">-- Selecione --</option>
@@ -629,7 +629,7 @@ function VeiculosConteudo() {
             </FormField>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <FormField label="Data do contrato">
               <Input type="date" value={form.data_contrato ?? ''} onChange={(e) => setF({ data_contrato: e.target.value })} />
             </FormField>

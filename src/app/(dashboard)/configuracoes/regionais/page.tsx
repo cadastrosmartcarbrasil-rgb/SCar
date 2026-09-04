@@ -142,7 +142,7 @@ export default function RegionaisPage() {
         </table>
       </div>
 
-      <Modal open={aberto} onClose={() => setAberto(false)} title={editando?.id ? 'Editar Regional' : 'Nova Regional'}>
+      <Modal open={aberto} onClose={() => setAberto(false)} title={editando?.id ? 'Editar Regional' : 'Nova Regional'} tamanho="lg">
         <form onSubmit={submit} className="space-y-3">
           <FormField label="Nome da regional *">
             <Input
@@ -161,8 +161,8 @@ export default function RegionaisPage() {
           <FormField label="Logradouro">
             <Input value={endereco.logradouro ?? ''} onChange={(e) => setEndereco({ logradouro: e.target.value })} />
           </FormField>
-          <div className="grid grid-cols-3 gap-3">
-            <FormField label="Cidade" className="col-span-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <FormField label="Cidade" className="sm:col-span-2">
               <Input value={endereco.cidade ?? ''} onChange={(e) => setEndereco({ cidade: e.target.value })} />
             </FormField>
             <FormField label="UF">
@@ -181,7 +181,7 @@ export default function RegionaisPage() {
               Quanto esta regional recebe da associacao. E o <b>teto</b> do que ela pode ceder aos
               seus vendedores — nenhum vendedor pode ter percentual maior que este.
             </p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <FormField label="Adesao">
                 <PercentInput
                   value={editando?.taxa_comissao_adesao == null ? null : Number(editando.taxa_comissao_adesao) * 100}

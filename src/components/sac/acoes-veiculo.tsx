@@ -41,7 +41,7 @@ export function ModalHistoricoFinanceiro({
   const [editando, setEditando] = useState<TituloCliente | null>(null);
 
   return (
-    <Modal open onClose={onClose} title={`Historico financeiro${placa ? ` — ${placa}` : ''}`}>
+    <Modal open onClose={onClose} title={`Historico financeiro${placa ? ` — ${placa}` : ''}`} tamanho="lg">
       {isLoading && <p className="text-sm text-slate-400">Carregando...</p>}
       {!isLoading && (titulos ?? []).length === 0 && (
         <p className="text-sm text-slate-400">Nenhum boleto para este associado.</p>
@@ -138,7 +138,7 @@ function ModalEditarBoleto({ titulo, onClose }: { titulo: TituloCliente; onClose
   const erro = validarAjuste(original, form.desconto ?? 0, form.acrescimo ?? 0);
 
   return (
-    <Modal open onClose={onClose} title="Editar boleto em aberto">
+    <Modal open onClose={onClose} title="Editar boleto em aberto" tamanho="lg">
       <form
         onSubmit={(e) => {
           e.preventDefault();

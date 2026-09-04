@@ -118,16 +118,16 @@ export default function FornecedoresPage() {
         </table>
       </div>
 
-      <Modal open={aberto} onClose={() => setAberto(false)} title={form.id ? 'Editar Fornecedor' : 'Novo Fornecedor'}>
+      <Modal open={aberto} onClose={() => setAberto(false)} title={form.id ? 'Editar Fornecedor' : 'Novo Fornecedor'} tamanho="xl">
         <form onSubmit={submit} className="space-y-3">
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <FormField label="Tipo">
               <Select value={tipo} onChange={(e) => setF({ tipo_pessoa: e.target.value as TipoPessoa })}>
                 <option value="PJ">CNPJ (PJ)</option>
                 <option value="PF">CPF (PF)</option>
               </Select>
             </FormField>
-            <FormField label={tipo === 'PJ' ? 'CNPJ *' : 'CPF *'} className="col-span-2">
+            <FormField label={tipo === 'PJ' ? 'CNPJ *' : 'CPF *'} className="sm:col-span-2">
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <Input value={form.documento ? formatarDocumento(form.documento, tipo) : ''} onChange={(e) => setF({ documento: soDigitos(e.target.value) })}
@@ -145,7 +145,7 @@ export default function FornecedoresPage() {
             </FormField>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <FormField label={tipo === 'PJ' ? 'Razao social *' : 'Nome *'}>
               <Input value={form.razao_social ?? ''} onChange={(e) => setF({ razao_social: e.target.value })} />
             </FormField>
@@ -154,23 +154,23 @@ export default function FornecedoresPage() {
             </FormField>
           </div>
           {tipo === 'PJ' && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <FormField label="Situacao cadastral"><Input value={form.situacao_cadastral ?? ''} onChange={(e) => setF({ situacao_cadastral: e.target.value })} /></FormField>
               <FormField label="CNAE principal"><Input value={form.cnae_principal ?? ''} onChange={(e) => setF({ cnae_principal: e.target.value })} /></FormField>
             </div>
           )}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <FormField label="E-mail"><Input type="email" value={form.email ?? ''} onChange={(e) => setF({ email: e.target.value })} /></FormField>
             <FormField label="Telefone"><Input value={form.telefone ? formatarTelefone(form.telefone) : ''} onChange={(e) => setF({ telefone: soDigitos(e.target.value) })} /></FormField>
           </div>
 
           <div className="rounded-lg border border-slate-200 p-3">
             <p className="mb-2 text-sm font-medium text-slate-600">Endereco</p>
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <FormField label="CEP"><Input value={end.cep ?? ''} onChange={(e) => setEnd({ cep: e.target.value })} onBlur={onCepBlur} /></FormField>
-              <FormField label="Logradouro" className="col-span-3"><Input value={end.logradouro ?? ''} onChange={(e) => setEnd({ logradouro: e.target.value })} /></FormField>
+              <FormField label="Logradouro" className="col-span-2 sm:col-span-3"><Input value={end.logradouro ?? ''} onChange={(e) => setEnd({ logradouro: e.target.value })} /></FormField>
             </div>
-            <div className="mt-2 grid grid-cols-4 gap-3">
+            <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
               <FormField label="Numero"><Input value={end.numero ?? ''} onChange={(e) => setEnd({ numero: e.target.value })} /></FormField>
               <FormField label="Bairro" className="col-span-2"><Input value={end.bairro ?? ''} onChange={(e) => setEnd({ bairro: e.target.value })} /></FormField>
               <FormField label="UF"><Input maxLength={2} value={end.uf ?? ''} onChange={(e) => setEnd({ uf: e.target.value.toUpperCase() })} /></FormField>

@@ -118,12 +118,12 @@ export default function ProdutosPage() {
         </table>
       </div>
 
-      <Modal open={aberto} onClose={() => setAberto(false)} title={ed?.id ? 'Editar Produto' : 'Novo Produto'}>
+      <Modal open={aberto} onClose={() => setAberto(false)} title={ed?.id ? 'Editar Produto' : 'Novo Produto'} tamanho="lg">
         <form onSubmit={submit} className="space-y-3">
           <FormField label="Nome *">
             <Input value={ed?.nome ?? ''} onChange={(e) => setEd((p) => ({ ...p, nome: e.target.value }))} />
           </FormField>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <FormField label="Categoria">
               <Select value={ed?.categoria ?? 'BENEFICIO'} onChange={(e) => setEd((p) => ({ ...p, categoria: e.target.value }))}>
                 {CATEGORIAS.map((c) => (

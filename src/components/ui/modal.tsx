@@ -4,8 +4,17 @@ import { useEffect } from 'react';
 import { X } from 'lucide-react';
 
 // Modal simples (dialog) para formularios de cadastro/edicao.
-// `tamanho`: formularios normais ficam em 'md'; telas com mapa/tabela pedem
-// 'lg' ou 'xl' para nao espremer o conteudo.
+//
+// `tamanho` — a regra e o TAMANHO DO FORMULARIO, nao o gosto da tela:
+//   md (512px, padrao) : confirmacao, aviso, ate ~5 campos numa coluna;
+//   lg (768px)         : cadastro de 6 a 11 campos, duas colunas no desktop;
+//   xl (1024px)        : ficha longa (12+ campos ou varias secoes) — veiculo,
+//                        associado, fornecedor, empresa.
+// Modal e sempre `w-full` ate esse teto: no celular ocupa a tela inteira, no PC
+// para de crescer onde a leitura ainda e confortavel. Alargar aqui SO resolve
+// metade — as grades de campo tambem precisam ser responsivas
+// (`grid-cols-1 sm:grid-cols-N`), senao o desktop ganha espaco e o celular
+// continua com 4 colunas espremidas.
 const LARGURA = { md: 'max-w-lg', lg: 'max-w-3xl', xl: 'max-w-5xl' } as const;
 
 export function Modal({

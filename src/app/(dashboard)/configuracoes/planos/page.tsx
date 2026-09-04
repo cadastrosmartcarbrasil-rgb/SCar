@@ -120,11 +120,11 @@ export default function PlanosPage() {
         )}
       </div>
 
-      <Modal open={aberto} onClose={() => setAberto(false)} title={ed?.id ? 'Editar Plano' : 'Novo Plano'}>
+      <Modal open={aberto} onClose={() => setAberto(false)} title={ed?.id ? 'Editar Plano' : 'Novo Plano'} tamanho="lg">
         {ed && (
           <form onSubmit={submit} className="space-y-3">
-            <div className="grid grid-cols-3 gap-3">
-              <div className="col-span-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="sm:col-span-2">
                 <FormField label="Nome do plano *">
                   <Input value={ed.nome} onChange={(e) => setEd({ ...ed, nome: e.target.value })} placeholder="Ex.: Plano Ouro" />
                 </FormField>

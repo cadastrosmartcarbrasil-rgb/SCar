@@ -87,9 +87,9 @@ export default function ContasBancariasPage() {
         )}
       </div>
 
-      <Modal open={aberto} onClose={() => setAberto(false)} title={ed?.id ? 'Editar Conta' : 'Nova Conta'}>
+      <Modal open={aberto} onClose={() => setAberto(false)} title={ed?.id ? 'Editar Conta' : 'Nova Conta'} tamanho="lg">
         <form onSubmit={submit} className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <FormField label="Nome / apelido *">
               <Input value={ed?.nome ?? ''} onChange={(e) => setEd((p) => ({ ...p, nome: e.target.value }))} placeholder="Ex.: Conta Principal, Caixa Interno" />
             </FormField>
@@ -104,7 +104,7 @@ export default function ContasBancariasPage() {
               <FormField label="Banco">
                 <Input value={ed?.banco ?? ''} onChange={(e) => setEd((p) => ({ ...p, banco: e.target.value }))} placeholder="Ex.: Banco do Brasil, Itau, Inter" />
               </FormField>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <FormField label="Agencia"><Input value={ed?.agencia ?? ''} onChange={(e) => setEd((p) => ({ ...p, agencia: e.target.value }))} /></FormField>
                 <FormField label="Conta"><Input value={ed?.conta ?? ''} onChange={(e) => setEd((p) => ({ ...p, conta: e.target.value }))} /></FormField>
               </div>

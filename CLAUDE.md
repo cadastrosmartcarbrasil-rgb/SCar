@@ -1056,6 +1056,27 @@ bancárias, integrações bancárias, plano de contas).
 - **Ao criar tela nova:** use os tokens (`bg-superficie`, `bg-fundo`, `text-slate-*`, `bg-acao`)
   e **não escreva hex cru** — é o mesmo cuidado que o white-label vai exigir.
 
+## Largura das telas e dos modais (responsivo de verdade)
+- **O sistema é responsivo para o celular, mas no PC ele tem de USAR a largura.** O erro clássico
+  aqui foi o contrário dos dois: o modal nascia com 512px (`max-w-lg`) no desktop e as grades de
+  campo eram FIXAS (`grid-cols-4`), então o PC ficava com uma coluna estreita e o celular com
+  quatro colunas espremidas. Corrigir só a largura resolve metade.
+- **`<Modal tamanho>` escolhe pelo TAMANHO DO FORMULÁRIO, não pelo gosto:** `md` (512px, padrão)
+  para confirmação/aviso e até ~5 campos; `lg` (768px) para cadastro de 6 a 11 campos; `xl`
+  (1024px) para ficha longa (12+ campos ou várias seções) — veículo, associado, fornecedor,
+  empresa, painel da 24h, lançamento financeiro. Modal curto em `xl` fica vazio: é o problema
+  oposto, não uma melhoria.
+- **Toda grade de campo é responsiva:** `grid-cols-1 sm:grid-cols-2/3` para linhas de 2–3 campos e
+  `grid-cols-2 sm:grid-cols-4` para linhas de 4 (no celular 2 colunas ainda são legíveis). Lista de
+  checkbox (`gap-1`) vai a `grid-cols-2 sm:grid-cols-3`.
+- **`col-span-N` tem de acompanhar a grade.** `col-span-3` dentro de uma grade que virou de 1 ou 2
+  colunas no celular **cria coluna implícita e estoura a largura** — o campo vaza para fora do
+  modal. Use `col-span-2 sm:col-span-3` (ou `sm:col-span-2`), nunca o `col-span` cru.
+- **Não é tudo que deve alargar:** `Configurações → Tipos de Veículo` e `Tipos de Evento` são
+  listas de um campo só e continuam em `max-w-xl` de propósito — um input sozinho com 1400px é
+  pior, não melhor. O layout do dashboard (`(dashboard)/layout.tsx`) não tem teto de largura: a
+  tabela usa a tela inteira, então o que precisa de ajuste é o modal, não o shell.
+
 ## Convenção de CAIXA ALTA nos formulários
 - **Cadastro se escreve em MAIÚSCULAS.** É o que impede a mesma pessoa de virar "Joao da Silva",
   "JOAO DA SILVA" e "joao da silva" em três telas. A regra vale para o sistema inteiro.

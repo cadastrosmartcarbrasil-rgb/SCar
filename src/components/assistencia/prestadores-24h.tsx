@@ -143,7 +143,7 @@ export function Prestadores24h() {
         </table>
       </div>
 
-      <Modal open={!!edit} onClose={() => setEdit(null)} title={edit?.id ? 'Editar prestador' : 'Novo prestador 24h'}>
+      <Modal open={!!edit} onClose={() => setEdit(null)} title={edit?.id ? 'Editar prestador' : 'Novo prestador 24h'} tamanho="lg">
         <form onSubmit={submit} className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <FormField label="Tipo">

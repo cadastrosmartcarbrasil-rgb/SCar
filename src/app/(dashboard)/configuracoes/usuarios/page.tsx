@@ -152,7 +152,7 @@ export default function UsuariosPage() {
         </table>
       </div>
 
-      <Modal open={aberto} onClose={() => setAberto(false)} title="Novo Usuario">
+      <Modal open={aberto} onClose={() => setAberto(false)} title="Novo Usuario" tamanho="lg">
         <form onSubmit={submit} className="space-y-3">
           <FormField label="Nome completo *">
             <Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
@@ -172,7 +172,7 @@ export default function UsuariosPage() {
               placeholder="O usuario podera troca-la depois"
             />
           </FormField>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <FormField label="Papel *">
               <Select
                 value={form.papel}
