@@ -1549,6 +1549,11 @@ no fim — o runner procura por "PASSARAM") e rode `npm run schema`.
   ANTES. Aconteceu com `registrar_captura_hotlink` (0041→0042→0043).
 - **`create policy` não tem `if not exists`:** sempre `drop policy if exists` antes, senão a migration
   não é re-executável (0040/0041).
+- **Seed idempotente: prefira `insert ... select ... where not exists` a `on conflict`.** O
+  `on conflict (col)` depende da INFERÊNCIA do índice único: num banco onde esse índice esteja em
+  outra forma (criado à mão, `deferrable`) a cláusula é recusada/ignorada e o insert estoura
+  `23505 duplicate key`. Mordeu no seed do alerta "Rastreador pendente" (0049) rodando no SQL
+  Editor de produção — e **não reproduzia no harness local**, onde o índice é o do `create table`.
 - **Migration que depende de coluna criada em outra** deve garanti-la com `add column if not exists`:
   o corpo de uma função plpgsql só é validado na CHAMADA, então a falta da coluna não aparece na
   aplicação — aparece com o cliente na tela (0043).

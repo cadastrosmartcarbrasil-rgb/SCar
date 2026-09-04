@@ -22396,6 +22396,10 @@ grant select, insert, update, delete on empresas_rastreamento to authenticated;
 -- ============================================================================
 -- SEED: alerta de pendencia de rastreador (catalogo de 0023)
 -- ============================================================================
-insert into tipos_alerta (nome, descricao, severidade) values
-  ('Rastreador pendente', 'Veiculo exige rastreador e ainda nao tem IMEI/chip cadastrados', 'ALTA')
-on conflict (nome) do nothing;
+-- `where not exists` em vez de `on conflict (nome)`: o ON CONFLICT depende da
+-- INFERENCIA do indice unico, e num banco onde esse indice esteja em outra forma
+-- (criado a mao, deferrable) a clausula e ignorada e o insert estoura 23505.
+-- Este formato nao depende de indice nenhum e e re-executavel em qualquer banco.
+insert into tipos_alerta (nome, descricao, severidade)
+select 'Rastreador pendente', 'Veiculo exige rastreador e ainda nao tem IMEI/chip cadastrados', 'ALTA'
+where not exists (select 1 from tipos_alerta where nome = 'Rastreador pendente');
