@@ -3,7 +3,7 @@
 > Memória do projeto. Leia isto no início de cada sessão em vez de varrer o repositório inteiro.
 > Mantenha este arquivo atualizado ao adicionar módulos/migrations (é barato e faz o projeto andar rápido).
 
-## Estado atual (retomar aqui) — atualizado ao fim da fase 0032→0053
+## Estado atual (retomar aqui) — atualizado ao fim da fase 0032→0054
 
 **Um único projeto, um único repositório: `cadastrosmartcarbrasil-rgb/scar`** (no GitHub o nome
 aparece como `SCar`). Trabalho e deploy acontecem no branch **`claude/claude-md-opcao-x-98kfj5`**;
@@ -27,6 +27,9 @@ o de trabalho; esse default morto já causou um dia inteiro de trabalho no branc
   `empresas_rastreamento` nascem na `0049`).
 - **`0050_rastreadores_modulo` também é NOVA** — é o módulo de Rastreadores (parque de
   equipamentos por IMEI). Sem ela a tela `/rastreadores` não abre. Roda depois da `0049`.
+- **`0054_usuarios_protecao_admin` é NOVA** — a equipe passou a ser editável (papel, unidade,
+  ativação e **redefinição de senha**) e o banco ganhou duas travas: ninguém se promove a admin na
+  própria linha e o sistema não fica sem administrador ativo.
 - **`0052_seguranca_rpc` e `0053_rastreador_ciclo_financeiro` são NOVAS** — a `0052` fecha a
   camada de RPC (ver "Segurança das RPCs" abaixo) e a `0053` liga o rastreador ao cadastro e ao
   financeiro. Rodam por último, depois da `0051`.
@@ -124,8 +127,8 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0053`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **30 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Migrations `0001`..`0054`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **31 suites** em `supabase/tests/*.test.sql` — todas passando.
 - **Vitest: 390 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
@@ -808,6 +811,14 @@ inteiro da empresa para qualquer usuario logado (agora exigem `is_staff()` e pas
 `checklist_lead`/`fotos_vistoria_lead`, `interacoes_protocolo` e `liberar_leads_sem_contato`
 (esta ultima so para a gestao); (C) a policy de insert de `lead_atribuicoes` aceitava qualquer
 logado — agora exige staff.)
+· `0054_usuarios_protecao_admin` (A EQUIPE VIRA EDITAVEL — e o banco fecha duas portas:
+(A) ESCALADA DE PRIVILEGIO: a policy `usuarios_update_self` (0003) libera update na PROPRIA linha
+e RLS **nao restringe coluna** — qualquer usuario da equipe podia rodar
+`update usuarios set papel = 'admin' where id = auth.uid()` e virar administrador sozinho. Trigger
+`fn_usuarios_campos_sensiveis`: papel, unidade e ativacao so mudam por admin (ou pelo servidor,
+que roda sem sessao com service_role). Corrigir o proprio nome continua liberado;
+(B) `fn_usuarios_protege_ultimo_admin` recusa rebaixar, desativar ou apagar o ULTIMO admin ativo —
+a trava vive no banco porque a rota de edicao usa service_role, que ignora RLS.)
 · `0053_rastreador_ciclo_financeiro` (O EQUIPAMENTO OBEDECE AO CADASTRO E AO FINANCEIRO:
 (A) trigger `fn_veiculo_move_rastreador` — veiculo que vai para inativo/suspenso/baixado/excluido
 manda o rastreador instalado para "4 - Inativo (pedir devolucao)" na hora;
@@ -1538,6 +1549,12 @@ recuperação e giro).
 - **Cada rota de API carrega o próprio guard.** O middleware protege as PÁGINAS; para `/api/*` ele
   não redireciona (verificado). Toda rota nova precisa do seu `getUser()` + checagem de papel — as
   que usam `service_role` sem sessão (hotlink, portal/login) são públicas de propósito.
+- **RLS não restringe COLUNA.** Policy que libera a própria linha (`id = auth.uid()`) libera a
+  linha inteira — foi assim que qualquer usuário podia se promover a admin (0054). Quando só
+  alguns campos podem mudar, a trava é **trigger**, não policy.
+- **A regra que a service_role tem de respeitar vive no BANCO.** A rota `/api/usuarios` usa
+  service_role (para mexer em `auth.users`), e service_role ignora RLS: por isso a trava do último
+  admin é trigger, não checagem na rota. A rota só dá a mensagem bonita.
 - **Login do portal tem freio** (`src/lib/rate-limit.ts`, testado): 5 tentativas por documento e
   30 por IP a cada 10 min; acertar a senha zera o contador do documento. É o alvo óbvio do sistema
   porque a senha do primeiro acesso é o próprio CPF. O contador vive na memória do processo —

@@ -7,6 +7,7 @@ import type {
   CategoriasDreRow,
   IntegracoesBancariasRow,
   UsuariosRow,
+  PapelUsuario,
   MarcasRow,
   ModelosRow,
   VendedoresRow,
@@ -223,15 +224,56 @@ export function useCreateUsuario() {
   });
 }
 
+/** Dados do usuario da equipe que EDITAM pela tela de Usuarios. */
+export interface EdicaoUsuario {
+  id: string;
+  nome?: string;
+  email?: string;
+  papel?: PapelUsuario;
+  regional_id?: string | null;
+  ativo?: boolean;
+  /** senha nova (redefinicao pelo admin); vazio = nao mexe na senha */
+  senha?: string;
+}
+
+/**
+ * Edicao do usuario da equipe.
+ *
+ * Passa pela rota `/api/usuarios` (PATCH) e nao direto pelo supabase-js: o
+ * e-mail e a senha vivem em `auth.users`, que so a service_role alcanca. E o
+ * update direto tinha um efeito pior que falhar — falhava EM SILENCIO: quando
+ * a RLS barrava (usuario que nao e admin), o supabase-js devolvia sucesso com
+ * zero linhas alteradas e a tela dizia "Atualizado" sem ter atualizado nada.
+ */
 export function useUpdateUsuario() {
-  const supabase = createClient();
   const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ id, ...patch }: Partial<UsuariosRow> & { id: string }) => {
-      const { error } = await supabase.from('usuarios').update(patch).eq('id', id);
-      if (error) throw error;
+  return useMutation<{ senha_redefinida: boolean }, Error, EdicaoUsuario>({
+    mutationFn: async (edicao) => {
+      const r = await fetch('/api/usuarios', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(edicao),
+      });
+      const json = (await r.json().catch(() => ({}))) as { error?: string; senha_redefinida?: boolean };
+      if (!r.ok) throw new Error(json.error ?? 'Nao foi possivel salvar o usuario.');
+      return { senha_redefinida: !!json.senha_redefinida };
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['config', 'usuarios'] }),
+  });
+}
+
+/** O usuario logado (para a tela saber se ele pode gerenciar a equipe). */
+export function usePerfilAtual() {
+  const supabase = createClient();
+  return useQuery<UsuariosRow | null>({
+    queryKey: ['config', 'perfil-atual'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      const { data, error } = await supabase.from('usuarios').select('*').eq('id', user.id).maybeSingle();
+      if (error) throw error;
+      return data ?? null;
+    },
   });
 }
 
