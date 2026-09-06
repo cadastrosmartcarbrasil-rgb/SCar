@@ -162,7 +162,8 @@ export function useSalvarRastreador() {
 /** Toda acao de negocio passa por RPC — as regras moram no banco. */
 function useAcaoRastreador<T extends Record<string, unknown>>(
   rpc: 'instalar_rastreador' | 'desinstalar_rastreador' | 'mover_status_rastreador'
-     | 'transferir_rastreador_regional' | 'abrir_manutencao_rastreador' | 'concluir_manutencao_rastreador',
+     | 'transferir_rastreador_regional' | 'abrir_manutencao_rastreador'
+     | 'concluir_manutencao_rastreador' | 'cobrar_rastreador',
 ) {
   const supabase = createClient();
   const qc = useQueryClient();
@@ -210,5 +211,34 @@ export const useAbrirManutencao = () => useAcaoRastreador<{
 export const useConcluirManutencao = () => useAcaoRastreador<{
   p_manutencao_id: string; p_solucao: string; p_custo?: number | null; p_sem_reparo?: boolean;
 }>('concluir_manutencao_rastreador');
+
+/** 0053: gera o titulo do equipamento nao devolvido (status 6 -> 7). */
+export const useCobrarRastreador = () => useAcaoRastreador<{
+  p_rastreador_id: string; p_valor: number; p_vencimento?: string | null; p_observacao?: string | null;
+}>('cobrar_rastreador');
+
+/**
+ * 0053: passa o financeiro no parque — marca 3-Inadimplente quem estourou o
+ * prazo e devolve para 2-Ativo quem pagou. Devolve quantos mudaram de lado.
+ */
+export function useSincronizarInadimplencia() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<{ marcados: number; regularizados: number }, Error, { dias?: number; regionalId?: string }>({
+    mutationFn: async ({ dias, regionalId }) => {
+      const { data, error } = await supabase.rpc('sincronizar_rastreadores_inadimplencia', {
+        p_dias: dias ?? 35,
+        p_regional_id: regionalId || null,
+      });
+      if (error) throw error;
+      const linha = (data ?? [])[0];
+      return { marcados: linha?.marcados ?? 0, regularizados: linha?.regularizados ?? 0 };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['rastreadores'] });
+      qc.invalidateQueries({ queryKey: ['veiculos'] });
+    },
+  });
+}
 
 export type { RastreadorLista, RastreadorFicha, RastreadorManutencoesRow };

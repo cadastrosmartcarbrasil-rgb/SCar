@@ -2,11 +2,12 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { CircleAlert, Download, ArrowRight } from 'lucide-react';
+import { CircleAlert, Download, ArrowRight, RefreshCw, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/field';
 import { useRegionais } from '@/hooks/use-config';
-import { useDivergenciasRastreadores } from '@/hooks/use-rastreadores';
+import { useDivergenciasRastreadores, useSincronizarInadimplencia } from '@/hooks/use-rastreadores';
+import { toast } from 'sonner';
 import { DIVERGENCIAS, COR_SEVERIDADE, rotuloDivergencia } from '@/lib/rastreador';
 
 // O painel que a operacao olha todo dia: onde o parque de equipamentos e o
@@ -17,6 +18,22 @@ export function DivergenciasRastreadores() {
   const [regionalId, setRegionalId] = useState('');
   const { data: regionais } = useRegionais();
   const { data: linhas, isLoading } = useDivergenciasRastreadores({ tipo, severidade, regionalId });
+  const sincronizar = useSincronizarInadimplencia();
+
+  // O financeiro entrando no parque: marca 3-Inadimplente quem estourou o prazo
+  // e devolve para 2-Ativo quem pagou. E acao explicita, nao automatica — quem
+  // olha a divergencia decide aplicar.
+  function aplicarInadimplencia() {
+    sincronizar.mutate(
+      { regionalId: regionalId || undefined },
+      {
+        onSuccess: (r) => toast.success(
+          `${r.marcados} equipamento(s) marcados como inadimplentes · ${r.regularizados} devolvidos para ativo`,
+        ),
+        onError: (e) => toast.error(e.message),
+      },
+    );
+  }
 
   const porSeveridade = useMemo(() => {
     const c = { ALTA: 0, MEDIA: 0, BAIXA: 0 };
@@ -62,6 +79,10 @@ export function DivergenciasRastreadores() {
           {(regionais ?? []).map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
         </Select>
         <Button variant="secondary" onClick={exportar}><Download className="h-4 w-4" /> CSV</Button>
+        <Button onClick={aplicarInadimplencia} disabled={sincronizar.isPending}>
+          {sincronizar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+          Aplicar inadimplencia
+        </Button>
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-slate-200 bg-superficie">
@@ -122,6 +143,9 @@ export function DivergenciasRastreadores() {
       </div>
       <p className="text-xs text-slate-400">
         As correcoes acontecem na ficha do equipamento ou do veiculo — nada e corrigido em massa.
+        A excecao e <strong>Aplicar inadimplencia</strong>, que so espelha o financeiro no status do
+        equipamento (3 - Inadimplente para quem passou de 35 dias de atraso; 2 - Ativo de volta para
+        quem pagou) e registra o motivo no historico de cada aparelho.
       </p>
     </div>
   );

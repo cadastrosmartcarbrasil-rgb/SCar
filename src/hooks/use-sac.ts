@@ -48,10 +48,24 @@ export interface RastreadoraResumo {
   plataforma_url: string | null;
 }
 // DETALHE completo (carregado sob demanda ao clicar no veiculo).
+export interface SituacaoRastreamento {
+  tem_equipamento: boolean;
+  rastreador_id: string | null;
+  imei: string | null;
+  status: string | null;
+  status_numero: number | null;
+  rastreadora: string | null;
+  suspenso_por_debito: boolean;
+  dias_atraso: number;
+  exige_rastreador: boolean;
+  situacao: string;
+}
 export interface VeiculoDetalhe extends VeiculosRow {
   plano_nome: string | null;
   /** Empresa que rastreia o veiculo, quando ha rastreador — 0049. */
   rastreadora: RastreadoraResumo | null;
+  /** Rastreamento ativo/suspenso por debito — 0053. */
+  rastreamento: SituacaoRastreamento | null;
   /** SO os itens contratados do veiculo (plano + avulsos) — 0029. */
   opcionais: OpcionalVeiculo[];
 }
@@ -107,11 +121,15 @@ export function useVeiculoDetalhe(veiculoId?: string) {
     queryFn: async () => {
       const r = await jget<{
         veiculo: VeiculosRow; plano_nome: string | null;
-        rastreadora: RastreadoraResumo | null; opcionais: OpcionalVeiculo[];
+        rastreadora: RastreadoraResumo | null; rastreamento: SituacaoRastreamento | null;
+        opcionais: OpcionalVeiculo[];
       }>(
         `/api/v1/sac/veiculo?veiculo_id=${veiculoId}`,
       );
-      return { ...r.veiculo, plano_nome: r.plano_nome, rastreadora: r.rastreadora, opcionais: r.opcionais };
+      return {
+        ...r.veiculo, plano_nome: r.plano_nome, rastreadora: r.rastreadora,
+        rastreamento: r.rastreamento ?? null, opcionais: r.opcionais,
+      };
     },
   });
 }

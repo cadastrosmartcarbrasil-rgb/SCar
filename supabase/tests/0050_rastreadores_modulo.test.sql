@@ -173,11 +173,18 @@ begin
   select count(*) into n from rastreadores_divergencias() where tipo = 'CADASTRO_INCOMPLETO';
   assert n >= 1, 'equipamento sem chip/linha tem de aparecer';
 
-  -- (d) equipamento ativo em veiculo que saiu da base
+  -- (d) equipamento ativo em veiculo que saiu da base.
+  -- Desde a 0053 o proprio veiculo empurra o equipamento para recolhimento
+  -- (status 4), entao a divergencia so aparece para o caso legado: alguem
+  -- deixou o equipamento ATIVO com o veiculo ja fora da base.
   update veiculos set status = 'inativo' where id = v2;
+  select status into txt from rastreadores where veiculo_id = v2;
+  assert txt = 'INATIVO', 'veiculo inativo manda o equipamento para recolhimento (0053), veio ' || txt;
+
+  update rastreadores set status = 'ATIVO' where veiculo_id = v2;   -- simula o legado
   select count(*) into n from rastreadores_divergencias()
    where tipo = 'RASTREADOR_EM_VEICULO_INATIVO';
-  assert n = 1, 'equipamento em veiculo inativo e candidato a recolhimento, veio ' || n;
+  assert n = 1, 'equipamento ativo em veiculo inativo tem de aparecer, veio ' || n;
   update veiculos set status = 'ativo' where id = v2;
 
   -- (e) prazo estourado: A_DEVOLVER ha mais de 5 dias

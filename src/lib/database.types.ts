@@ -2210,6 +2210,24 @@ export type Database = {
         Returns: RastreadorLista[];
       };
       rastreador_ficha: { Args: { p_id: string }; Returns: RastreadorFicha[] };
+      // ---- 0053: o equipamento obedece ao cadastro e ao financeiro ----
+      sincronizar_rastreadores_inadimplencia: {
+        Args: { p_dias?: number; p_regional_id?: string | null };
+        Returns: { marcados: number; regularizados: number }[];
+      };
+      cobrar_rastreador: {
+        Args: { p_rastreador_id: string; p_valor: number; p_vencimento?: string | null; p_observacao?: string | null };
+        Returns: TitulosFinanceirosRow;
+      };
+      dias_atraso_cliente: { Args: { p_cliente_id: string }; Returns: number };
+      situacao_rastreamento_veiculo: {
+        Args: { p_veiculo_id: string };
+        Returns: {
+          tem_equipamento: boolean; rastreador_id: string | null; imei: string | null;
+          status: StatusRastreador | null; status_numero: number | null; rastreadora: string | null;
+          suspenso_por_debito: boolean; dias_atraso: number; exige_rastreador: boolean; situacao: string;
+        }[];
+      };
       rastreador_historico: { Args: { p_id: string; p_limite?: number }; Returns: RastreadorEvento[] };
       rastreadores_resumo: { Args: { p_regional_id?: string | null }; Returns: RastreadoresResumo };
       rastreadores_divergencias: {

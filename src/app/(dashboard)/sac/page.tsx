@@ -559,6 +559,11 @@ function VeiculoDetalheCard({ clienteId, veiculo }: { clienteId: string; veiculo
               {dado('IMEI', veiculo.rastreador_imei)}
               {dado('Nº do chip', formatarChip(veiculo.rastreador_chip))}
             </div>
+            {veiculo.rastreamento?.suspenso_por_debito && (
+              <p className="mt-2 rounded-md bg-rose-50 px-2.5 py-1.5 text-xs font-medium text-rose-700">
+                Rastreamento suspenso: associado com {veiculo.rastreamento.dias_atraso} dia(s) de atraso.
+              </p>
+            )}
             {(veiculo.rastreadora?.telefone || veiculo.rastreadora?.plataforma_url) && (
               <p className="mt-2 text-xs text-slate-500">
                 {veiculo.rastreadora?.telefone && <span>Central: {veiculo.rastreadora.telefone}</span>}

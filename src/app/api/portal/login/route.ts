@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { validarDocumento } from '@/lib/documento';
+import { consumirTentativa, limparTentativas, ipDaRequisicao } from '@/lib/rate-limit';
 
 /**
  * Login do Portal do Associado: CPF/CNPJ + senha.
@@ -29,6 +30,21 @@ export async function POST(request: Request) {
   }
   if (!validarDocumento(doc, doc.length > 11 ? 'PJ' : 'PF')) {
     return NextResponse.json({ error: 'CPF/CNPJ invalido.' }, { status: 400 });
+  }
+
+  // Freio de tentativas. A senha do primeiro acesso e o proprio documento
+  // (0044), entao este endpoint e o alvo obvio: enumerar CPF e barato. Conta
+  // por DOCUMENTO e por IP — o primeiro protege o associado, o segundo impede
+  // varrer a base inteira de um so lugar.
+  const ip = ipDaRequisicao(request);
+  const porDoc = consumirTentativa(`portal:doc:${doc}`, 5, 600);
+  const porIp = consumirTentativa(`portal:ip:${ip}`, 30, 600);
+  if (!porDoc.permitido || !porIp.permitido) {
+    const esperar = Math.max(porDoc.esperar, porIp.esperar);
+    return NextResponse.json(
+      { error: `Muitas tentativas. Tente de novo em ${Math.ceil(esperar / 60)} minuto(s).` },
+      { status: 429, headers: { 'Retry-After': String(esperar) } },
+    );
   }
 
   const admin = createAdminClient();
@@ -77,6 +93,10 @@ export async function POST(request: Request) {
   const supabase = createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
   if (error) return invalido;
+
+  // Acertou: o contador do documento zera (quem sabe a senha nao e atacante).
+  // O contador por IP fica, para nao virar um jeito de limpar o freio.
+  limparTentativas(`portal:doc:${doc}`);
 
   await admin.from('clientes')
     .update({

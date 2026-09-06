@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { toast } from 'sonner';
 import {
-  ChevronLeft, Satellite, Car, Wrench, ArrowRightLeft, History, ExternalLink, Loader2,
+  ChevronLeft, Satellite, Car, Wrench, ArrowRightLeft, History, ExternalLink, Loader2, Receipt,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
@@ -15,6 +15,7 @@ import { useVeiculos } from '@/hooks/use-veiculos';
 import {
   useRastreadorFicha, useRastreadorHistorico, useInstalarRastreador, useDesinstalarRastreador,
   useMoverStatusRastreador, useTransferirRastreador, useAbrirManutencao, useConcluirManutencao,
+  useCobrarRastreador,
 } from '@/hooks/use-rastreadores';
 import {
   statusMeta, rotuloStatus, statusEscolhiveis, exigeMotivo, alertaDePrazo, formatarChip,
@@ -22,7 +23,7 @@ import {
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { StatusRastreador } from '@/lib/database.types';
 
-type Acao = 'instalar' | 'desinstalar' | 'status' | 'transferir' | 'manutencao' | 'concluir' | null;
+type Acao = 'instalar' | 'desinstalar' | 'status' | 'transferir' | 'manutencao' | 'concluir' | 'cobrar' | null;
 
 export default function FichaRastreadorPage() {
   const { id } = useParams<{ id: string }>();
@@ -68,6 +69,9 @@ export default function FichaRastreadorPage() {
             {r.manutencao_aberta_id
               ? <Button variant="secondary" onClick={() => setAcao('concluir')}><Wrench className="h-4 w-4" /> Concluir manutencao</Button>
               : <Button variant="secondary" onClick={() => setAcao('manutencao')}><Wrench className="h-4 w-4" /> Manutencao</Button>}
+            {r.status === 'COBRAR_RASTREADOR' && (
+              <Button onClick={() => setAcao('cobrar')}><Receipt className="h-4 w-4" /> Cobrar equipamento</Button>
+            )}
             <Button variant="secondary" onClick={() => setAcao('transferir')}><ArrowRightLeft className="h-4 w-4" /> Transferir</Button>
             <Button variant="secondary" onClick={() => setAcao('status')}>Mudar status</Button>
           </div>
@@ -188,6 +192,7 @@ function ModalAcao({ acao, ficha, onClose }: {
   const transferir = useTransferirRastreador();
   const abrirManut = useAbrirManutencao();
   const concluirManut = useConcluirManutencao();
+  const cobrar = useCobrarRastreador();
 
   const [veiculoId, setVeiculoId] = useState('');
   const [local, setLocal] = useState('');
@@ -199,10 +204,12 @@ function ModalAcao({ acao, ficha, onClose }: {
   const [solucao, setSolucao] = useState('');
   const [custo, setCusto] = useState<number | null>(null);
   const [semReparo, setSemReparo] = useState(false);
+  const [valorCobranca, setValorCobranca] = useState<number | null>(null);
+  const [vencimento, setVencimento] = useState('');
 
   const opcoesStatus = useMemo(() => statusEscolhiveis(ficha.status), [ficha.status]);
   const pendente = instalar.isPending || desinstalar.isPending || mover.isPending
-    || transferir.isPending || abrirManut.isPending || concluirManut.isPending;
+    || transferir.isPending || abrirManut.isPending || concluirManut.isPending || cobrar.isPending;
 
   const erro = (e: Error) => toast.error(e.message);
   const feito = (msg: string) => { toast.success(msg); onClose(); };
@@ -244,6 +251,13 @@ function ModalAcao({ acao, ficha, onClose }: {
         { onSuccess: () => feito('Manutencao aberta'), onError: erro },
       );
     }
+    if (acao === 'cobrar') {
+      if (!valorCobranca || valorCobranca <= 0) return toast.error('Informe o valor a cobrar');
+      return cobrar.mutate(
+        { p_rastreador_id: ficha.id, p_valor: valorCobranca, p_vencimento: vencimento || null },
+        { onSuccess: () => feito('Titulo do equipamento gerado'), onError: erro },
+      );
+    }
     if (acao === 'concluir') {
       if (!ficha.manutencao_aberta_id) return toast.error('Nao ha manutencao aberta');
       if (!solucao.trim()) return toast.error('Descreva o que foi feito');
@@ -258,6 +272,7 @@ function ModalAcao({ acao, ficha, onClose }: {
     instalar: 'Instalar em veiculo', desinstalar: 'Desinstalar equipamento',
     status: 'Mudar status', transferir: 'Transferir de unidade',
     manutencao: 'Abrir manutencao', concluir: 'Concluir manutencao',
+    cobrar: 'Cobrar o equipamento nao devolvido',
   };
 
   return (
@@ -334,6 +349,24 @@ function ModalAcao({ acao, ficha, onClose }: {
             <FormField label="Motivo">
               <Textarea rows={2} value={motivo} onChange={(e) => setMotivo(e.target.value)} />
             </FormField>
+          </>
+        )}
+
+        {acao === 'cobrar' && (
+          <>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <FormField label="Valor a cobrar *">
+                <MoneyInput value={valorCobranca} onChange={setValorCobranca} />
+              </FormField>
+              <FormField label="Vencimento">
+                <Input type="date" value={vencimento} onChange={(e) => setVencimento(e.target.value)} />
+              </FormField>
+            </div>
+            <p className="text-xs text-slate-500">
+              Gera um titulo a receber no nome do associado que ficou com o aparelho e move o
+              equipamento para <strong>7 - Boleto gerado</strong>. O titulo aparece no financeiro do
+              associado e na 2a via do SAC.
+            </p>
           </>
         )}
 

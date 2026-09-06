@@ -44,10 +44,17 @@ export async function GET(request: Request) {
     ? { nome: forn.nome_fantasia?.trim() || forn.razao_social, telefone: forn.telefone, plataforma_url: forn.plataforma_url }
     : null;
 
+  // Situacao do rastreamento (0053): diz ao atendente se o equipamento esta
+  // suspenso por debito — a mesma leitura de atraso que a 24h usa.
+  const { data: sitRastreio } = await supabase.rpc('situacao_rastreamento_veiculo', {
+    p_veiculo_id: veiculoId,
+  });
+
   return NextResponse.json({
     veiculo,
     plano_nome: plano?.nome ?? null,
     rastreadora: rastreadora ?? null,
+    rastreamento: (sitRastreio ?? [])[0] ?? null,
     opcionais: opcionais ?? [],
   });
 }

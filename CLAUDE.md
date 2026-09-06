@@ -3,7 +3,7 @@
 > Memória do projeto. Leia isto no início de cada sessão em vez de varrer o repositório inteiro.
 > Mantenha este arquivo atualizado ao adicionar módulos/migrations (é barato e faz o projeto andar rápido).
 
-## Estado atual (retomar aqui) — atualizado ao fim da fase 0032→0051
+## Estado atual (retomar aqui) — atualizado ao fim da fase 0032→0053
 
 **Um único projeto, um único repositório: `cadastrosmartcarbrasil-rgb/scar`** (no GitHub o nome
 aparece como `SCar`). Trabalho e deploy acontecem no branch **`claude/claude-md-opcao-x-98kfj5`**;
@@ -27,6 +27,9 @@ o de trabalho; esse default morto já causou um dia inteiro de trabalho no branc
   `empresas_rastreamento` nascem na `0049`).
 - **`0050_rastreadores_modulo` também é NOVA** — é o módulo de Rastreadores (parque de
   equipamentos por IMEI). Sem ela a tela `/rastreadores` não abre. Roda depois da `0049`.
+- **`0052_seguranca_rpc` e `0053_rastreador_ciclo_financeiro` são NOVAS** — a `0052` fecha a
+  camada de RPC (ver "Segurança das RPCs" abaixo) e a `0053` liga o rastreador ao cadastro e ao
+  financeiro. Rodam por último, depois da `0051`.
 - **`0051_fornecedores_unificados` é NOVA e MEXE EM DADOS** — junta prestador da 24h, rastreadora
   e fornecedor de peças num cadastro só (`fornecedores`), **migra as linhas de
   `empresas_rastreamento`, reaponta as FKs de `veiculos`/`rastreadores` e APAGA a tabela
@@ -121,9 +124,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0051`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **28 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 385 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0053`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **30 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 390 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Todos os portais e páginas
@@ -792,6 +795,30 @@ foi absorvido nao exigia CNPJ; (C) MIGRA as linhas de `empresas_rastreamento` pa
 (D) as funcoes do modulo (0050) passam a ler `fornecedores`; (E) `pode_cadastrar_fornecedor()`
 inclui o `gestor_regional` — quem contrata guincho e rastreadora na ponta e a unidade, e o
 cadastro nao podia depender de admin.)
+· `0052_seguranca_rpc` (AUDITORIA DE FIM DE PROJETO — a camada de RPC estava aberta:
+(A) no Postgres o `execute` de funcao e concedido a `public` POR PADRAO, e o PostgREST publica
+toda funcao do schema como RPC — ou seja, TODAS as nossas funcoes eram chamaveis com a chave
+`anon`, a que vai no bundle do navegador. Revogado de `public`/`anon` e concedido explicitamente
+a `authenticated` e `service_role`; as paginas publicas nao perdem nada porque rodam com
+`service_role` no servidor; (B) `authenticated` NAO e so a equipe — o associado do /portal tem
+login desde a 0044. Entao entrou trava DENTRO das funcoes que liam ou escreviam sem checar quem
+chama, com destaque para `gerar_dre` e `resumo_por_centro_custo`, que devolviam o resultado
+inteiro da empresa para qualquer usuario logado (agora exigem `is_staff()` e passam pelo
+`escopo_regional`); tambem `classificar_captura`, `cliente_da_pessoa`, `lead_da_pessoa`,
+`checklist_lead`/`fotos_vistoria_lead`, `interacoes_protocolo` e `liberar_leads_sem_contato`
+(esta ultima so para a gestao); (C) a policy de insert de `lead_atribuicoes` aceitava qualquer
+logado — agora exige staff.)
+· `0053_rastreador_ciclo_financeiro` (O EQUIPAMENTO OBEDECE AO CADASTRO E AO FINANCEIRO:
+(A) trigger `fn_veiculo_move_rastreador` — veiculo que vai para inativo/suspenso/baixado/excluido
+manda o rastreador instalado para "4 - Inativo (pedir devolucao)" na hora;
+(B) `sincronizar_rastreadores_inadimplencia(dias, regional)` marca "3 - Inadimplente" quem passou
+do prazo e DEVOLVE para "2 - Ativo" quem pagou, pela mesma leitura de atraso da 24h
+(`dias_atraso_cliente`), com o motivo no historico do aparelho; botao "Aplicar inadimplencia" na
+tela de divergencias; (C) `instalar_rastreador` recusa associado com mais de 35 dias de atraso —
+a matriz (`tem_acesso_global`) libera, a ponta nao; (D) `cobrar_rastreador(rastreador, valor,
+vencimento)` gera o titulo a receber do equipamento nao devolvido e move para "7 - Boleto gerado",
+fechando o buraco dos status 6 e 7; (E) `situacao_rastreamento_veiculo(veiculo)` — o que o SAC
+mostra: tem equipamento? esta suspenso por debito? ha quantos dias de atraso?)
 
 ## Módulos (status: todos funcionais)
 Assistência 24h (`/assistencia`: painel de acionamento com trava + limites em tempo real, cotação,
@@ -1483,6 +1510,39 @@ recuperação e giro).
 - Espelho puro em `src/lib/cartao.ts` (Luhn, bandeira pelo BIN, validade, CVV por bandeira) com
   testes — o erro de digitação é pego antes de sair da tela.
 
+## Segurança das RPCs (0052) — o que vale para SEMPRE
+- **`execute` em função nasce concedido a `public` no Postgres, e o PostgREST publica toda função
+  do schema como RPC.** Ou seja: sem revogar, qualquer função é chamável com a **chave `anon`**,
+  que vai no bundle do navegador. Função `security definer` ignora RLS — a proteção tem de estar
+  dentro dela.
+- **RITO OBRIGATÓRIO: toda migration que cria função termina com este bloco.**
+  ```sql
+  revoke execute on all functions in schema public from public;
+  revoke execute on all functions in schema public from anon;
+  grant  execute on all functions in schema public to authenticated;
+  grant  execute on all functions in schema public to service_role;
+  ```
+  `alter default privileges ... revoke execute from public` **NÃO resolve** — testado: a função
+  criada em seguida nasce de novo com `=X/` (PUBLIC). Quem esquecer o bloco **não passa no
+  `npm run test:db`**: o teste `0052` falha listando as funções que ficaram abertas para o `anon`.
+- **`authenticated` NÃO é a equipe.** O associado do `/portal` tem login desde a 0044 e é
+  `authenticated` como qualquer atendente. Portanto "estar logado" nunca foi controle de acesso:
+  quem lê dado da operação precisa ser **staff** (`is_staff()` = tem linha em `usuarios`).
+- **Padrão da trava dentro da função:** `is_staff() or auth.uid() is null`.
+  Com sessão → tem de ser staff. Sem sessão → é o caminho público, que roda por `service_role` no
+  servidor (hotlink, cotação pública, webhook) e é confiável. O `anon` não chega lá, porque perdeu
+  o `execute`.
+- **As páginas públicas não dependem de `anon`:** `/v/<codigo>` e `/cotacao/<token>` são server
+  components com `service_role`, e as rotas `/api/v1/hotlink/*` também. Por isso o `anon` ficou
+  sem nenhuma RPC — e não há caminho público quebrado.
+- **Cada rota de API carrega o próprio guard.** O middleware protege as PÁGINAS; para `/api/*` ele
+  não redireciona (verificado). Toda rota nova precisa do seu `getUser()` + checagem de papel — as
+  que usam `service_role` sem sessão (hotlink, portal/login) são públicas de propósito.
+- **Login do portal tem freio** (`src/lib/rate-limit.ts`, testado): 5 tentativas por documento e
+  30 por IP a cada 10 min; acertar a senha zera o contador do documento. É o alvo óbvio do sistema
+  porque a senha do primeiro acesso é o próprio CPF. O contador vive na memória do processo —
+  serve para UM container, que é o caso hoje; com mais de uma instância, trocar por Redis/tabela.
+
 ## Fornecedores — UM cadastro para quem presta serviço (0051)
 - **Prestador da 24h, rastreadora e fornecedor de peças são a mesma entidade:** uma empresa que
   presta serviço para a associação. Tudo vive em **`fornecedores`**; o que muda é a **marcação de
@@ -1557,6 +1617,15 @@ recuperação e giro).
 - **Isolamento:** todas as RPCs são SECURITY DEFINER e resolvem a unidade por `escopo_regional()`
   — passar o id de outra franquia não muda o que volta. Baixa de patrimônio (`BAIXADO`/`DUPLICADO`)
   só com `tem_acesso_global()`.
+- **O equipamento obedece ao cadastro e ao financeiro (0053):** veículo que sai da base empurra o
+  rastreador para *4 - Inativo* por trigger; `sincronizar_rastreadores_inadimplencia()` marca
+  *3 - Inadimplente* quem passou de 35 dias de atraso e devolve para *2 - Ativo* quem pagou (botão
+  **Aplicar inadimplência** na aba Divergências); `instalar_rastreador` recusa associado devendo
+  (a matriz libera, a ponta não); `cobrar_rastreador()` gera o título do equipamento não devolvido
+  e move para *7 - Boleto gerado*. O SAC mostra "rastreamento suspenso" na ficha do veículo
+  (`situacao_rastreamento_veiculo`).
+- **A leitura de atraso é UMA para o sistema todo:** `dias_atraso_cliente()` — a mesma que a
+  Assistência 24h usa. Não criar outra régua de inadimplência.
 - **Fora do escopo por decisão (não é esquecimento):** importação em massa do TrackerStock e
   integração por API. A fronteira existe (`api_config`, `ultima_comunicacao`, `ultima_posicao`,
   evento `IMPORTACAO`), sem produtor.
