@@ -280,3 +280,122 @@ no repositório e a próxima sessão não depende de rede.
 - **Não pular o rito de entrega:** migration + suite em `supabase/tests/` + espelho puro em
   `src/lib/*.ts` com Vitest + `npm run schema` + `npm run validate`. E o **rito de segurança da
   0052** (revoke/grant) em toda migration que cria função — a suite `0052` reprova quem esquecer.
+
+---
+
+## Configuração — o que precisa ser preparado
+
+Sim, precisa. E são **três coisas diferentes**, que não moram no mesmo lugar de propósito.
+
+### 1. O segredo — variável de ambiente no VPS
+
+`MUTUAL_API_BASE` e `MUTUAL_API_TOKEN` (ou `MUTUAL_CLIENT_ID`/`MUTUAL_CLIENT_SECRET`, se a
+autenticação for OAuth — a documentação decide). Mesmo padrão do `PLACAFIPE_TOKEN`,
+`GOOGLE_MAPS_API_KEY` e `RESEND_API_KEY`: **o token nunca vai ao navegador**, é injetado na rota
+`/api/v1/mutual/*` do lado do servidor.
+
+> **Por que env e não uma tabela**, já que `integracoes_bancarias` guarda `api_key` no banco?
+> Porque aquilo é multi-gateway, por regional e editável pela tela — precisa ser dado. Aqui é um
+> sistema só, da matriz, e **o token do Mutual dá leitura da base inteira de associados**. No env
+> ele fica fora do alcance de quem tem `tem_acesso_global()` e abre Configurações.
+
+**Passo de deploy:** editar o `.env` no VPS e `docker compose up -d --build`. É o mesmo passo que
+o `RESEND_API_KEY` ainda pendente — vale resolver os dois na mesma janela.
+
+### 2. A configuração operacional — no banco, com tela
+
+Isto é dado, não segredo, e muda sem deploy:
+
+- **de-para filial do Mutual → `regionais`** — revisado por humano, nada criado automaticamente
+  (criar regional é criar tenant, e ela atravessa RLS, `escopo_regional()` e todos os painéis);
+- **de-para de vocabulário** — status e tipo de evento (ver a tabela de destino abaixo);
+- **estado da sincronia** — cursor/última página/último erro por entidade, para **retomar de onde
+  parou** em vez de recomeçar 13 mil registros;
+- **flag de cobrança externa por regional** — o interruptor do cutover.
+
+### 3. O que NÃO configurar
+
+Nada de tela de "mapeamento genérico configurável campo a campo". **De-para de campo vive em
+código, testado** (`src/lib/*.ts` + Vitest, o padrão da casa). Configurável demais é pior: ninguém
+descobre qual regra estava valendo quando o dado entrou errado.
+
+> A migration disso seria a **`0062`** (próxima livre).
+
+---
+
+## O contrato de destino — a metade do de-para que já dá para preencher
+
+**A comparação com o Mutual não pôde ser feita** (domínio bloqueado, ver o topo). O que segue é o
+**lado SCar completo**: todo campo de destino, com tipo, obrigatoriedade e o que acontece se vier
+vazio. Quando a documentação chegar, comparar vira preencher a coluna vazia — não trabalho novo.
+
+Legenda: **PK-N** = chave natural (unique) · **OBR** = `not null` · **CHK** = tem constraint.
+
+### `clientes`
+| Campo SCar | Regra | Se vier vazio do Mutual | Campo Mutual |
+|---|---|---|---|
+| `cpf_cnpj` | **OBR · PK-N · CHK** `validar_documento` | **Quarentena** — não há placeholder possível (unique) | ❓ |
+| `tipo_pessoa` | **OBR** · enum `PF`\|`PJ` | Deduzir pelo tamanho do documento | ❓ |
+| `nome_razao_social` | **OBR** | Quarentena | ❓ |
+| `status` | **OBR** · enum: `ativo` `inadimplente` `cancelado` `inativo` `suspenso` `excluido` | `ativo` (default) — **perigoso**: importar cancelado como ativo | ❓ |
+| `matricula` | **PK-N** · gerada por `matricula_seq` se nula | SCar inventa outra ⇒ **dois números para a mesma pessoa** (achado nº 4) | ❓ |
+| `regional_id` | nulável, mas **na prática obrigatório** (RLS/escopo) | Associado fica invisível nos painéis por unidade | ❓ |
+| `email` · `telefone` | opcionais | Portal e WhatsApp ficam sem contato | ❓ |
+| `endereco` (jsonb) | opcional | Praça do painel da 24h cai em "NAO INFORMADO" | ❓ |
+| `data_nascimento` | opcional | É a alternativa para endurecer o 1º acesso do portal | ❓ |
+| `rg_ie` · `nome_mae` · `sexo` · `email_adicional` | opcionais | — | ❓ |
+
+### `veiculos`
+| Campo SCar | Regra | Se vier vazio do Mutual | Campo Mutual |
+|---|---|---|---|
+| `placa` | **OBR · PK-N** (global, não por cliente) | Quarentena. Placa transferida ⇒ dois contratos disputam | ❓ |
+| `cliente_id` | **OBR** (FK) | Quarentena | ❓ |
+| `status` | **OBR** · enum: `ativo` `suspenso` `baixado` `inativo` `excluido` `vistoria_pendente` `em_evento` | `ativo` (default) | ❓ |
+| `data_ativacao` | — | **Vira `current_date` pelo trigger `trg_veiculo_marca_ativacao`** ⇒ mina nº 2. **Quarentena** | ❓ |
+| `chassi` · `renavam` | **PK-N** nuláveis | **Vazio tem de virar `NULL`, nunca `''`** — duas strings vazias colidem no unique | ❓ |
+| `valor_fipe` · `codigo_fipe` | opcionais | Sem eles a mensalidade não recalcula | ❓ |
+| `tipo_veiculo_id` | FK | Sem tipo, `cotar_plano` devolve 0 e **não gera fatura** | ❓ |
+| `plano_protecao_id` | FK | idem | ❓ |
+| `valor_mensalidade` | override negociado | Cai no `cotar_plano` | ❓ |
+| `dia_vencimento` | — | Cai no padrão legado (dia 10 do mês seguinte) | ❓ |
+| `tipo_faturamento` | **OBR** · `AGRUPADO_ASSOCIADO` \| `INDIVIDUAL_VEICULO` | Default agrupado | ❓ |
+| `uso` | **OBR** · `passeio` \| `app` \| `comercial` | Default `passeio` | ❓ |
+| `marca` · `modelo` · `ano_fabricacao` · `ano_modelo` · `cor` | opcionais | Ficha pobre no SAC | ❓ |
+| `rastreador_imei` · `rastreador_chip` · `empresa_rastreamento_id` | **CHK** IMEI 14-17 díg., chip 8-22; IMEI **unique parcial** | Alimenta a divergência `FICHA_SEM_EQUIPAMENTO` (0050) | ❓ |
+| `regional_id` · `alienado` · `numero_portas` · `categoria` | opcionais | — | ❓ |
+
+### `titulos_financeiros`
+| Campo SCar | Regra | Observação | Campo Mutual |
+|---|---|---|---|
+| `cliente_id` | **OBR** (FK) | — | ❓ |
+| `veiculo_id` | nulável | — | ❓ |
+| `valor` | **OBR · CHK** `>= 0` | — | ❓ |
+| `data_vencimento` | **OBR** | **Alimenta `dias_atraso_cliente` ⇒ bloqueia 24h e rastreador** (achado nº 5) | ❓ |
+| `status` | **OBR** · `pendente` `pago` `cancelado` `vencido` | Efetivo: pendente + vencido no passado já conta como vencido | ❓ |
+| `data_pagamento` · `valor_pago` | opcionais | Histórico pago **fora do DRE** (achado nº 6) | ❓ |
+| `linha_digitavel` · `nosso_numero` · `url_boleto` | opcionais | **Provavelmente NÃO reaproveitáveis** — são do banco do Mutual | ❓ |
+
+### `eventos_sinistro`
+| Campo SCar | Regra | Observação | Campo Mutual |
+|---|---|---|---|
+| `numero_protocolo` | **PK-N** · gerado por trigger `EVT-YYYYMMDD-XXXX` | **Mesma colisão de numeração da `matricula`** — decidir junto | ❓ |
+| `veiculo_id` · `cliente_id` | **OBR** (FK) | Evento de veículo em quarentena não entra | ❓ |
+| `data_ocorrencia` | **OBR** | — | ❓ |
+| `tipo_evento` | **OBR** · enum com **só 5 valores**: `ROUBO` `FURTO` `COLISAO` `TERCEIROS` `GUINCHO` | **É o de-para mais apertado do projeto.** Incêndio, alagamento, vidros, fenômeno natural não existem hoje | ❓ |
+| `status` | **OBR** · `ABERTO` `EM_ANALISE` `COTACAO_PECAS` `REPARO` `CONCLUIDO` `NEGADO` | — | ❓ |
+| `descricao` · `operador_atual_id` · `regional_id` | opcionais | Operador do Mutual não existe em `usuarios` | ❓ |
+
+> **Se o de-para de `tipo_evento` exigir valores novos:** `alter type ... add value if not exists`
+> **e comparar como TEXTO no resto do arquivo** — valor novo de enum não pode ser usado na mesma
+> transação que o criou (`55P04`). Gotcha já registrado no `CLAUDE.md` (0017/0026/0028/0029).
+
+### As três decisões que este quadro já expõe, sem depender do Mutual
+
+1. **Numeração:** `matricula` e `numero_protocolo` são unique e autogerados. Duas fontes numerando
+   no mesmo espaço colidem. Reservar faixa, prefixar, ou tratar o número do Mutual como campo de
+   consulta — **uma escolha, três lugares.**
+2. **Status importado como `ativo` por default é o pior default possível** aqui: transforma
+   associado cancelado em associado ativo, e veículo baixado em veículo faturável. O de-para de
+   status é obrigatório, não "se der tempo".
+3. **Campo vazio tem de virar `NULL`** em `chassi`, `renavam` e em todo unique nulável. É a mordida
+   do `fornecedores.documento` (0051) esperando para acontecer de novo, agora em escala de milhares.
