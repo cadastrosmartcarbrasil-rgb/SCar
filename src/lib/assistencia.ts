@@ -3,9 +3,14 @@
 // / confirmar_prestador_assistencia) + o modelo do comunicado (voucher) enviado
 // ao prestador. Ficam aqui para uso na UI e cobertura por testes.
 import type {
+  AssistPainelMes,
+  AssistPainelPraca,
+  AssistPainelServico,
   ElegibilidadeAssistencia,
   SituacaoAssistencia,
   StatusAcionamento,
+  StatusVeiculo,
+  AssistPainelSituacao,
 } from '@/lib/database.types';
 import { linksNavegacao, rotuloRota, type EnderecoGeo } from '@/lib/geo';
 
@@ -204,4 +209,123 @@ export function enderecoTexto(e: unknown): string | null {
   const partes = [o.logradouro, o.numero, o.bairro, o.cidade, o.uf, o.referencia]
     .filter((p) => typeof p === 'string' && p.trim() !== '') as string[];
   return partes.length ? partes.join(', ') : null;
+}
+
+// ===========================================================================
+// PAINEL GERENCIAL (0061) — leitura de gestao sobre os acionamentos
+// A conta que vira decisao mora aqui, testavel; a UI so desenha.
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
+// Frota: o painel fala ATIVO / INATIVO / BLOQUEADO. 'suspenso' e bloqueio
+// (inadimplencia/pendencia); o que nao e 'ativo' nem 'suspenso' e inativo.
+// ---------------------------------------------------------------------------
+export type GrupoSituacao = 'ATIVO' | 'BLOQUEADO' | 'INATIVO';
+
+export function grupoSituacao(status: StatusVeiculo): GrupoSituacao {
+  if (status === 'ativo') return 'ATIVO';
+  if (status === 'suspenso') return 'BLOQUEADO';
+  return 'INATIVO';
+}
+
+export function agruparSituacao(linhas: AssistPainelSituacao[]): {
+  grupo: GrupoSituacao; quantidade: number; fracao: number;
+}[] {
+  const total = linhas.reduce((acc, l) => acc + Number(l.quantidade), 0);
+  const ordem: GrupoSituacao[] = ['ATIVO', 'INATIVO', 'BLOQUEADO'];
+  const soma = new Map<GrupoSituacao, number>(ordem.map((g) => [g, 0]));
+  for (const l of linhas) {
+    const g = grupoSituacao(l.situacao);
+    soma.set(g, (soma.get(g) ?? 0) + Number(l.quantidade));
+  }
+  return ordem.map((grupo) => ({
+    grupo,
+    quantidade: soma.get(grupo) ?? 0,
+    fracao: total > 0 ? (soma.get(grupo) ?? 0) / total : 0,
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// Participacao de cada servico no volume (o "23,1%" da leitura rapida).
+// ---------------------------------------------------------------------------
+export interface FatiaServico extends AssistPainelServico {
+  fracao: number;
+  /** true quando ha veiculo que ja bateu o teto de usos do servico. */
+  temVeiculoNoLimite: boolean;
+}
+
+export function fatiasPorServico(linhas: AssistPainelServico[]): FatiaServico[] {
+  const total = linhas.reduce((acc, l) => acc + Number(l.acionamentos), 0);
+  return linhas.map((l) => ({
+    ...l,
+    fracao: total > 0 ? Number(l.acionamentos) / total : 0,
+    temVeiculoNoLimite: Number(l.veiculos_no_limite) > 0,
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// Praca: rotulo e leitura de risco. O que aponta o alvo e a TAXA sobre a frota
+// local, nao o volume — 30 acionamentos em 200 veiculos e problema; em 3.000,
+// e ruido. Praca sem frota mapeada nao entra no ranking de risco (taxa 0).
+// ---------------------------------------------------------------------------
+export interface PracaLeitura extends AssistPainelPraca {
+  rotulo: string;
+  custoPorVeiculo: number;
+  /** Taxa >= 75% da maior taxa da lista, com frota conhecida. */
+  critica: boolean;
+}
+
+export function lerPracas(linhas: AssistPainelPraca[]): PracaLeitura[] {
+  const maior = linhas.reduce((m, l) => Math.max(m, Number(l.taxa)), 0);
+  return linhas.map((l) => {
+    const veiculos = Number(l.veiculos);
+    const taxa = Number(l.taxa);
+    return {
+      ...l,
+      rotulo: l.uf && l.uf !== 'NF' ? `${l.cidade}-${l.uf}` : l.cidade,
+      custoPorVeiculo: veiculos > 0 ? Number(l.custo) / veiculos : 0,
+      critica: maior > 0 && veiculos > 0 && taxa >= maior * 0.75,
+    };
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Tempo medio de atendimento no formato da operacao (HH:MM).
+// ---------------------------------------------------------------------------
+export function formatarHoras(horas: number | null | undefined): string {
+  const h = Number(horas ?? 0);
+  if (!Number.isFinite(h) || h <= 0) return '00:00';
+  const totalMin = Math.round(h * 60);
+  return `${String(Math.floor(totalMin / 60)).padStart(2, '0')}:${String(totalMin % 60).padStart(2, '0')}`;
+}
+
+// ---------------------------------------------------------------------------
+// Tendencia contra o mes anterior. Base zero nao tem comparacao possivel.
+// ---------------------------------------------------------------------------
+export function variacao(atual: number, anterior: number): number | null {
+  if (!anterior) return atual > 0 ? null : 0;
+  return (atual - anterior) / anterior;
+}
+
+export function compararUltimosMeses(serie: AssistPainelMes[]): {
+  atual: AssistPainelMes | null;
+  anterior: AssistPainelMes | null;
+  varAcionamentos: number | null;
+  varCusto: number | null;
+} {
+  const atual = serie.length > 0 ? serie[serie.length - 1] : null;
+  const anterior = serie.length > 1 ? serie[serie.length - 2] : null;
+  return {
+    atual,
+    anterior,
+    varAcionamentos: atual && anterior ? variacao(Number(atual.acionamentos), Number(anterior.acionamentos)) : null,
+    varCusto: atual && anterior ? variacao(Number(atual.custo), Number(anterior.custo)) : null,
+  };
+}
+
+/** Rotulo curto do mes da serie (2026-09-01 -> set/26). */
+export function rotuloMes(competencia: string): string {
+  const [ano, mes] = competencia.split('-');
+  const nomes = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  return `${nomes[Number(mes) - 1] ?? mes}/${ano.slice(2)}`;
 }

@@ -17,6 +17,12 @@ import type {
   FornecedoresRow,
   StatusAcionamento,
   EdicaoAcionamento,
+  AssistPainelResumo,
+  AssistPainelServico,
+  AssistPainelPraca,
+  AssistPainelMes,
+  AssistPainelVeiculo,
+  AssistPainelSituacao,
   Json,
 } from '@/lib/database.types';
 
@@ -699,6 +705,103 @@ export function useUrlAssinadaAssistencia() {
         .from(BUCKET_ASSISTENCIA).createSignedUrl(path, 60 * 10);
       if (error) throw error;
       return data.signedUrl;
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// PAINEL GERENCIAL (0061) — leitura da aba Assistencia 24h da Visao Geral.
+// Todas as RPCs sao SECURITY DEFINER com escopo_regional: quem nao tem acesso
+// global so enxerga a propria unidade, mesmo que a UI mande outro p_regional_id.
+// ---------------------------------------------------------------------------
+export interface FiltroPainel24h {
+  inicio: string;
+  fim: string;
+  regionalId?: string | null;
+}
+
+const chavePainel = (f: FiltroPainel24h) => [f.inicio, f.fim, f.regionalId ?? 'todas'];
+
+export function usePainelResumo(f: FiltroPainel24h) {
+  const supabase = createClient();
+  return useQuery<AssistPainelResumo | null>({
+    queryKey: ['assistencia', 'painel', 'resumo', ...chavePainel(f)],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('assist_painel_resumo', {
+        p_data_inicio: f.inicio, p_data_fim: f.fim, p_regional_id: f.regionalId ?? null,
+      });
+      if (error) throw error;
+      return data?.[0] ?? null;
+    },
+  });
+}
+
+export function usePainelPorServico(f: FiltroPainel24h) {
+  const supabase = createClient();
+  return useQuery<AssistPainelServico[]>({
+    queryKey: ['assistencia', 'painel', 'servico', ...chavePainel(f)],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('assist_painel_por_servico', {
+        p_data_inicio: f.inicio, p_data_fim: f.fim, p_regional_id: f.regionalId ?? null,
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function usePainelPorPraca(f: FiltroPainel24h, limite = 10) {
+  const supabase = createClient();
+  return useQuery<AssistPainelPraca[]>({
+    queryKey: ['assistencia', 'painel', 'praca', ...chavePainel(f), limite],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('assist_painel_por_praca', {
+        p_data_inicio: f.inicio, p_data_fim: f.fim, p_regional_id: f.regionalId ?? null, p_limite: limite,
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function usePainelSerie(meses = 12, regionalId?: string | null) {
+  const supabase = createClient();
+  return useQuery<AssistPainelMes[]>({
+    queryKey: ['assistencia', 'painel', 'serie', meses, regionalId ?? 'todas'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('assist_painel_serie', {
+        p_meses: meses, p_regional_id: regionalId ?? null,
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function usePainelReincidencia(f: FiltroPainel24h, limite = 10) {
+  const supabase = createClient();
+  return useQuery<AssistPainelVeiculo[]>({
+    queryKey: ['assistencia', 'painel', 'reincidencia', ...chavePainel(f), limite],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('assist_painel_reincidencia', {
+        p_data_inicio: f.inicio, p_data_fim: f.fim, p_regional_id: f.regionalId ?? null, p_limite: limite,
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function usePainelFrotaSituacao(regionalId?: string | null) {
+  const supabase = createClient();
+  return useQuery<AssistPainelSituacao[]>({
+    queryKey: ['assistencia', 'painel', 'frota', regionalId ?? 'todas'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('assist_painel_frota_situacao', {
+        p_regional_id: regionalId ?? null,
+      });
+      if (error) throw error;
+      return data ?? [];
     },
   });
 }

@@ -1384,6 +1384,63 @@ export type AcionamentoHistoricoRow = {
 };
 
 // Consumo do limite por servico, em tempo real (RPC elegibilidade_assistencia)
+// ---------------------------------------------------------------------------
+// Painel gerencial da Assistencia 24h (0061) — retornos das RPCs de leitura
+// ---------------------------------------------------------------------------
+export type AssistPainelResumo = {
+  veiculos_total: number;
+  veiculos_ativos: number;
+  veiculos_inativos: number;
+  veiculos_bloqueados: number;
+  acionamentos: number;
+  acionamentos_hoje: number;
+  acionamentos_abertos: number;
+  media_diaria: number;
+  indice_acionamento: number; // fracao 0..1
+  tempo_medio_horas: number;
+  custo_total: number;
+  custo_medio: number;
+  custo_por_veiculo: number;
+  veiculos_acionaram: number;
+  reincidentes: number;
+};
+
+export type AssistPainelServico = {
+  servico_id: string;
+  servico: string;
+  acionamentos: number;
+  veiculos: number;
+  custo: number;
+  custo_medio: number;
+  computa_limite: boolean;
+  limite_quantidade: number | null;
+  janela_meses: number | null;
+  veiculos_no_limite: number;
+};
+
+export type AssistPainelPraca = {
+  cidade: string;
+  uf: string;
+  acionamentos: number;
+  custo: number;
+  veiculos: number;   // frota da praca (0 = nao mapeada)
+  taxa: number;       // acionamentos / frota (fracao)
+};
+
+export type AssistPainelMes = { competencia: string; acionamentos: number; custo: number };
+
+export type AssistPainelVeiculo = {
+  veiculo_id: string;
+  placa: string;
+  descricao: string | null;
+  associado: string;
+  acionamentos: number;
+  custo: number;
+  ultimo_uso: string;
+};
+
+export type AssistPainelSituacao = { situacao: StatusVeiculo; quantidade: number };
+
 export type ElegibilidadeAssistencia = {
   servico_id: string;
   descricao: string;
@@ -2686,6 +2743,30 @@ export type Database = {
       elegibilidade_assistencia: {
         Args: { p_veiculo_id: string };
         Returns: ElegibilidadeAssistencia[];
+      };
+      assist_painel_resumo: {
+        Args: { p_data_inicio: string; p_data_fim: string; p_regional_id?: string | null };
+        Returns: AssistPainelResumo[];
+      };
+      assist_painel_por_servico: {
+        Args: { p_data_inicio: string; p_data_fim: string; p_regional_id?: string | null };
+        Returns: AssistPainelServico[];
+      };
+      assist_painel_por_praca: {
+        Args: { p_data_inicio: string; p_data_fim: string; p_regional_id?: string | null; p_limite?: number };
+        Returns: AssistPainelPraca[];
+      };
+      assist_painel_serie: {
+        Args: { p_meses?: number; p_regional_id?: string | null };
+        Returns: AssistPainelMes[];
+      };
+      assist_painel_reincidencia: {
+        Args: { p_data_inicio: string; p_data_fim: string; p_regional_id?: string | null; p_limite?: number };
+        Returns: AssistPainelVeiculo[];
+      };
+      assist_painel_frota_situacao: {
+        Args: { p_regional_id?: string | null };
+        Returns: AssistPainelSituacao[];
       };
       situacao_assistencia_veiculo: {
         Args: { p_veiculo_id: string };

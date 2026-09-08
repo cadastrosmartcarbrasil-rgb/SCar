@@ -9,6 +9,14 @@ import {
   linkWhatsApp,
   enderecoTexto,
   rotaDoVoucher,
+  grupoSituacao,
+  agruparSituacao,
+  fatiasPorServico,
+  lerPracas,
+  formatarHoras,
+  variacao,
+  compararUltimosMeses,
+  rotuloMes,
   type DadosVoucher,
 } from './assistencia';
 import type { ElegibilidadeAssistencia, SituacaoAssistencia } from '@/lib/database.types';
@@ -207,5 +215,134 @@ describe('rota e navegacao no voucher (0031)', () => {
     const html = montarVoucherHtml(base);
     expect(html).toContain('google.com/maps/dir/');
     expect(html).toContain('waze.com/ul');
+  });
+});
+
+// ===========================================================================
+// PAINEL GERENCIAL (0061)
+// ===========================================================================
+describe('painel 24h — frota por situacao', () => {
+  it('mapeia os status do banco nos 3 grupos do painel', () => {
+    expect(grupoSituacao('ativo')).toBe('ATIVO');
+    expect(grupoSituacao('suspenso')).toBe('BLOQUEADO');
+    expect(grupoSituacao('inativo')).toBe('INATIVO');
+    expect(grupoSituacao('baixado')).toBe('INATIVO');
+    expect(grupoSituacao('em_evento')).toBe('INATIVO');
+  });
+
+  it('consolida grupos e calcula o percentual', () => {
+    const [ativo, inativo, bloqueado] = agruparSituacao([
+      { situacao: 'ativo', quantidade: 2522 },
+      { situacao: 'inativo', quantidade: 10000 },
+      { situacao: 'baixado', quantidade: 500 },
+      { situacao: 'suspenso', quantidade: 1 },
+    ]);
+    expect(ativo.quantidade).toBe(2522);
+    expect(inativo.quantidade).toBe(10500); // inativo + baixado no mesmo grupo
+    expect(bloqueado.quantidade).toBe(1);
+    expect(Math.round(ativo.fracao * 100)).toBe(19);
+  });
+
+  it('frota vazia nao divide por zero', () => {
+    expect(agruparSituacao([]).every((g) => g.fracao === 0 && g.quantidade === 0)).toBe(true);
+  });
+});
+
+describe('painel 24h — servicos', () => {
+  const linhas = [
+    { servico_id: 's1', servico: 'Reboque Passeio', acionamentos: 11, veiculos: 6, custo: 5500, custo_medio: 500, computa_limite: true, limite_quantidade: 2, janela_meses: 12, veiculos_no_limite: 2 },
+    { servico_id: 's2', servico: 'Chaveiro', acionamentos: 9, veiculos: 9, custo: 1350, custo_medio: 150, computa_limite: true, limite_quantidade: 1, janela_meses: 12, veiculos_no_limite: 0 },
+  ];
+
+  it('participacao soma 100%', () => {
+    const f = fatiasPorServico(linhas);
+    expect(f.reduce((a, x) => a + x.fracao, 0)).toBeCloseTo(1, 10);
+    expect(f[0].fracao).toBeCloseTo(11 / 20, 10);
+  });
+
+  it('marca o servico que ja tem veiculo no teto do limite', () => {
+    const [reboque, chaveiro] = fatiasPorServico(linhas);
+    expect(reboque.temVeiculoNoLimite).toBe(true);
+    expect(chaveiro.temVeiculoNoLimite).toBe(false);
+  });
+
+  it('lista vazia nao gera NaN', () => {
+    expect(fatiasPorServico([])).toEqual([]);
+  });
+});
+
+describe('painel 24h — pracas (a taxa aponta o alvo, nao o volume)', () => {
+  const pracas = [
+    { cidade: 'SAO PAULO', uf: 'SP', acionamentos: 30, custo: 15000, veiculos: 3000, taxa: 0.01 },
+    { cidade: 'CUIABA', uf: 'MT', acionamentos: 30, custo: 12000, veiculos: 200, taxa: 0.15 },
+    { cidade: 'NAO INFORMADO', uf: 'NF', acionamentos: 5, custo: 500, veiculos: 0, taxa: 0 },
+  ];
+
+  it('mesmo volume, so a praca pequena e critica', () => {
+    const [sp, cba] = lerPracas(pracas);
+    expect(sp.acionamentos).toBe(cba.acionamentos);
+    expect(cba.critica).toBe(true);
+    expect(sp.critica).toBe(false);
+  });
+
+  it('rotulo junta UF, e UF desconhecida nao polui', () => {
+    const [sp, , nf] = lerPracas(pracas);
+    expect(sp.rotulo).toBe('SAO PAULO-SP');
+    expect(nf.rotulo).toBe('NAO INFORMADO');
+  });
+
+  it('praca sem frota mapeada nao vira Infinity nem entra como critica', () => {
+    const [, , nf] = lerPracas(pracas);
+    expect(nf.custoPorVeiculo).toBe(0);
+    expect(nf.critica).toBe(false);
+  });
+
+  it('custo por veiculo da praca', () => {
+    const [sp, cba] = lerPracas(pracas);
+    expect(sp.custoPorVeiculo).toBeCloseTo(5, 10);
+    expect(cba.custoPorVeiculo).toBeCloseTo(60, 10);
+  });
+});
+
+describe('painel 24h — tempo medio e tendencia', () => {
+  it('horas decimais viram HH:MM', () => {
+    expect(formatarHoras(0.1)).toBe('00:06');
+    expect(formatarHoras(1.5)).toBe('01:30');
+    expect(formatarHoras(26.25)).toBe('26:15');
+  });
+
+  it('sem dado vira 00:00', () => {
+    expect(formatarHoras(null)).toBe('00:00');
+    expect(formatarHoras(undefined)).toBe('00:00');
+    expect(formatarHoras(-3)).toBe('00:00');
+  });
+
+  it('variacao percentual, com base zero sem comparacao', () => {
+    expect(variacao(120, 100)).toBeCloseTo(0.2, 10);
+    expect(variacao(80, 100)).toBeCloseTo(-0.2, 10);
+    expect(variacao(10, 0)).toBeNull();
+    expect(variacao(0, 0)).toBe(0);
+  });
+
+  it('compara o ultimo mes com o anterior', () => {
+    const c = compararUltimosMeses([
+      { competencia: '2026-07-01', acionamentos: 10, custo: 1000 },
+      { competencia: '2026-08-01', acionamentos: 20, custo: 3000 },
+      { competencia: '2026-09-01', acionamentos: 26, custo: 4500 },
+    ]);
+    expect(c.atual?.competencia).toBe('2026-09-01');
+    expect(c.varAcionamentos).toBeCloseTo(0.3, 10);
+    expect(c.varCusto).toBeCloseTo(0.5, 10);
+  });
+
+  it('serie de um mes so nao tem comparativo', () => {
+    const c = compararUltimosMeses([{ competencia: '2026-09-01', acionamentos: 5, custo: 100 }]);
+    expect(c.anterior).toBeNull();
+    expect(c.varCusto).toBeNull();
+  });
+
+  it('rotulo curto do mes', () => {
+    expect(rotuloMes('2026-09-01')).toBe('set/26');
+    expect(rotuloMes('2025-01-01')).toBe('jan/25');
   });
 });

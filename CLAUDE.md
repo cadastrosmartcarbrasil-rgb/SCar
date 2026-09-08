@@ -3,7 +3,7 @@
 > Memória do projeto. Leia isto no início de cada sessão em vez de varrer o repositório inteiro.
 > Mantenha este arquivo atualizado ao adicionar módulos/migrations (é barato e faz o projeto andar rápido).
 
-## Estado atual (retomar aqui) — atualizado ao fim da fase 0032→0056
+## Estado atual (retomar aqui) — atualizado ao fim da fase 0032→0061
 
 **Um único projeto, um único repositório: `cadastrosmartcarbrasil-rgb/scar`** (no GitHub o nome
 aparece como `SCar`). Trabalho e deploy acontecem no branch **`claude/claude-md-opcao-x-98kfj5`**;
@@ -43,6 +43,16 @@ o de trabalho; esse default morto já causou um dia inteiro de trabalho no branc
 - **`0054_usuarios_protecao_admin` é NOVA** — a equipe passou a ser editável (papel, unidade,
   ativação e **redefinição de senha**) e o banco ganhou duas travas: ninguém se promove a admin na
   própria linha e o sistema não fica sem administrador ativo.
+- **`0060_limpeza_atendimentos_orfaos` é NOVA e é CORRETIVA — rode-a ANTES da `0061`.**
+  Uma sessão trabalhou no branch parado (o default morto abaixo) e aplicou em produção uma
+  `0025_assistencia_24h` que **não pertence a esta linha**: ela montava a 24h em cima de
+  `atendimentos`, sem saber que o módulo de verdade (`0026`) já existia. Nada foi destruído, mas
+  ficaram 12 colunas mortas em `atendimentos`, um trigger inerte e 11 RPCs lendo fonte vazia.
+  A `0060` desfaz tudo — **restaurando `abrir_atendimento` e `opcionais_elegibilidade` ANTES de
+  dropar as colunas** (a versão substituída inseria nelas; dropar primeiro quebraria a abertura de
+  protocolo no SAC). Em base limpa ela é no-op.
+- **`0061_assistencia_painel` é NOVA** — o PAINEL GERENCIAL da 24h como aba da Visão Geral
+  (ver seção própria). Só leitura, sobre `acionamentos_assistencia`. Sem ela a aba não abre.
 - **`0052_seguranca_rpc` e `0053_rastreador_ciclo_financeiro` são NOVAS** — a `0052` fecha a
   camada de RPC (ver "Segurança das RPCs" abaixo) e a `0053` liga o rastreador ao cadastro e ao
   financeiro. Rodam por último, depois da `0051`.
@@ -902,7 +912,23 @@ vencimento)` gera o titulo a receber do equipamento nao devolvido e move para "7
 fechando o buraco dos status 6 e 7; (E) `situacao_rastreamento_veiculo(veiculo)` — o que o SAC
 mostra: tem equipamento? esta suspenso por debito? ha quantos dias de atraso?)
 
+· `0060_limpeza_atendimentos_orfaos` (CORRETIVA: desfaz a `0025_assistencia_24h` orfa que uma
+sessao aplicou em producao vinda do branch parado — restaura `abrir_atendimento` e
+`opcionais_elegibilidade` as versoes de 0021/0022 ANTES de dropar as 12 colunas mortas de
+`atendimentos`, o trigger `trg_atendimento_conclusao` e as 11 RPCs que liam fonte vazia.
+Idempotente e no-op em base limpa. A suite 0060 prova que o SAC continua abrindo protocolo
+depois da limpeza e que as colunas da Central de Protocolos (0029) ficam de pe).
+· `0061_assistencia_painel` (PAINEL GERENCIAL da Assistencia 24h, so LEITURA, sobre
+`acionamentos_assistencia`: `assist_painel_movimentos` (fonte unica — CANCELADO nunca entra e a
+praca cai no endereco do associado quando a OS nao tem origem), `_resumo` (frota + volume +
+indice + SLA + custo + **custo por veiculo ativo** + reincidentes), `_por_servico` (com a regra de
+limite do catalogo e QUANTOS VEICULOS JA ESTAO NO TETO), `_por_praca` (traz a frota da praca junto:
+a **taxa** e que aponta o alvo, nao o volume), `_serie`, `_reincidencia` e `_frota_situacao`;
+helper `norm_cidade`. Todas SECURITY DEFINER + `escopo_regional` + o rito de revoke da 0052).
+
 ## Módulos (status: todos funcionais)
+Painel/Visão Geral (`/dashboard`, 2 abas: indicadores da operação + **Assistência 24h** — o painel
+gerencial da 0061, ver seção própria)
 Assistência 24h (`/assistencia`: painel de acionamento com trava + limites em tempo real, cotação,
 OS, voucher ao prestador e Contas a Pagar) · SAC / Atendimento (`/sac`: **veículo-first + lazy** — busca por Nome/CPF/Placa → `visao-360` traz
 uma **lista resumida leve** (Placa/Marca-Modelo/Ano/Status, sem opcionais); ao clicar, `/api/v1/sac/veiculo`
@@ -1096,6 +1122,32 @@ recuperação e giro).
   (e-mail + senha do **Gestor/Diretor** + justificativa). A rota `/api/v1/vendas/desconto` autentica
   o gestor numa sessão efêmera e aplica o desconto com ela, gravando `desconto_aprovado_por`.
   Voltar para dentro do limite limpa a aprovação. Uma trigger garante a regra mesmo fora da UI.
+
+## Painel gerencial da Assistência 24h (0061) — a aba da Visão Geral
+- **Por que existe:** a `0026` resolveu a OPERAÇÃO (abrir, cotar, autorizar OS, pagar o prestador).
+  Faltava a leitura de GESTÃO. Assistência é a maior saída de caixa da proteção veicular e ninguém
+  enxergava **quanto consome, por quê e onde**.
+- **Onde fica:** `/dashboard` tem 2 abas — **Visão Geral** e **Assistência 24h**.
+  Componente: `src/components/dashboard/assistencia-24h.tsx`. A aba tem link para `/assistencia`
+  (a operação) — painel é leitura, ação continua lá.
+- **Fonte é a OS, não um cadastro novo:** o custo é o `valor_total` que **já virou título no Contas
+  a Pagar**, não estimativa digitada; a praça sai do `origem` jsonb que a tela de trajeto preenche.
+  Nenhuma captura foi criada para o painel — se um número está errado, o erro está na OS.
+- **Regra de ouro:** `assist_painel_movimentos()` é a fonte única. **CANCELADO nunca entra**
+  (não consumiu cota nem gerou título) e a praça cai no endereço do associado quando a OS não tem
+  origem — só vira "NAO INFORMADO" se nem isso existir.
+- **O painel:** período (presets do Financeiro) + unidade · 6 indicadores (acionamentos com
+  hoje/média diária, custo, **custo por veículo ativo** — o número que vira preço —, índice de
+  acionamento, tempo médio HH:MM, reincidentes) · faixa da frota (Ativos/Inativos/Bloqueados) ·
+  **serviço acionado** (barras ranqueadas; fica **vermelho** quando há veículo no teto do limite
+  contratado) · **onde acontece** (a barra é a TAXA sobre a frota da praça: 30 acionamentos em 200
+  veículos é problema, em 3.000 é ruído) · custo em 12 meses com variação · reincidência. CSV em
+  cada bloco.
+- **Lógica pura testada:** `src/lib/assistencia.ts` — `agruparSituacao`, `fatiasPorServico`,
+  `lerPracas` (a leitura de risco por taxa), `formatarHoras`, `variacao`, `compararUltimosMeses`.
+- **Paleta:** um acento só (`#139AD6`) + status (`#12A150`/`#64748B`/`#E5484D`), validada para
+  daltonismo e contraste **nos dois temas**; toda barra e faixa carrega rótulo visível — identidade
+  nunca depende da cor. Os gráficos usam hex fixo, como os demais do sistema.
 
 ## Módulo Assistência 24h (0026) — fluxo, trava e integrações
 - **Entradas:** menu lateral → **Assistência 24h** (`/assistencia`) e o card **Assistência 24h** do
