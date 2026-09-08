@@ -8,22 +8,12 @@ import { Modal } from '@/components/ui/modal';
 import { FormField, Input, Select, Textarea } from '@/components/ui/field';
 import { useRegionais } from '@/hooks/use-config';
 import { useSalvarMemo, type FormMemo } from '@/hooks/use-memos';
-import { CATEGORIAS, PRIORIDADES } from '@/lib/memos';
+import { CATEGORIAS, PRIORIDADES, PAPEIS_MEMO, PAPEIS_DIRETORIA } from '@/lib/memos';
 
-/** Papeis endereçaveis. Espelha `papel_usuario`. */
-export const PAPEIS_MEMO: { valor: string; rotulo: string }[] = [
-  { valor: 'admin', rotulo: 'Administrador' },
-  { valor: 'gestor_regional', rotulo: 'Gestor Regional' },
-  { valor: 'consultor_vendas', rotulo: 'Consultor de Vendas' },
-  { valor: 'financeiro', rotulo: 'Financeiro' },
-  { valor: 'sinistro', rotulo: 'Sinistro' },
-  { valor: 'cotador', rotulo: 'Cotador' },
-  { valor: 'auditoria', rotulo: 'Auditoria' },
-  { valor: 'assistencia_24h', rotulo: 'Assistencia 24h' },
-];
-
-/** Espelha `papeis_diretoria()` no banco (0056). */
-export const PAPEIS_DIRETORIA = ['admin', 'financeiro'];
+// Os papeis endereçaveis moram em `src/lib/memos.ts` (o mural tambem os usa
+// para escrever o destino do comunicado); reexportados aqui para as telas que
+// ja os importavam deste arquivo.
+export { PAPEIS_MEMO, PAPEIS_DIRETORIA };
 
 export function memoVazio(): FormMemo {
   return {

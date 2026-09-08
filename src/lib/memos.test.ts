@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   memoVigente, pendenteCiencia, ordenarMemos, resumoLeitura, categoriaMeta, prioridadeMeta,
+  destinoDoMemo,
   type MemoBase,
 } from './memos';
 
@@ -61,5 +62,28 @@ describe('rotulos', () => {
     expect(categoriaMeta('INVENTADO').valor).toBe('COMUNICADO');
     expect(prioridadeMeta('INVENTADO').valor).toBe('MEDIA');
     expect(categoriaMeta('SCRIPT').rotulo).toBe('Script / Procedimento');
+  });
+});
+
+describe('destinoDoMemo', () => {
+  it('sem unidade e sem papel alcanca a empresa inteira', () => {
+    expect(destinoDoMemo(null, null)).toBe('Todas as unidades');
+    expect(destinoDoMemo(null, [])).toBe('Todas as unidades');
+  });
+
+  it('nomeia a unidade quando o comunicado e local', () => {
+    expect(destinoDoMemo('Cuiaba', null)).toBe('Cuiaba');
+    expect(destinoDoMemo('Cuiaba', ['sinistro'])).toBe('Cuiaba · Sinistro');
+  });
+
+  it('reconhece o destino "diretoria" que a franquia usa', () => {
+    expect(destinoDoMemo(null, ['admin', 'financeiro'])).toBe('Diretoria / administracao');
+    // com unidade nao e mais o destino da diretoria, e um recorte da unidade
+    expect(destinoDoMemo('Natal', ['admin', 'financeiro']))
+      .toBe('Natal · Administrador, Financeiro');
+  });
+
+  it('papel desconhecido cai no proprio codigo, sem quebrar a frase', () => {
+    expect(destinoDoMemo(null, ['papel_novo'])).toBe('Todas as unidades · papel_novo');
   });
 });

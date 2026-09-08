@@ -63,3 +63,47 @@ export function resumoLeitura(leituras: number, destinatarios: number): string {
   const pct = Math.round((leituras / destinatarios) * 100);
   return `${leituras} de ${destinatarios} deram ciencia (${pct}%)`;
 }
+
+/**
+ * Papeis endereçaveis por um comunicado. Espelha o enum `papel_usuario`.
+ * Vive aqui (e nao na tela) porque o rotulo e usado tanto no formulario quanto
+ * na frase de destino do mural.
+ */
+export const PAPEIS_MEMO: { valor: string; rotulo: string }[] = [
+  { valor: 'admin', rotulo: 'Administrador' },
+  { valor: 'gestor_regional', rotulo: 'Gestor Regional' },
+  { valor: 'consultor_vendas', rotulo: 'Consultor de Vendas' },
+  { valor: 'financeiro', rotulo: 'Financeiro' },
+  { valor: 'sinistro', rotulo: 'Sinistro' },
+  { valor: 'cotador', rotulo: 'Cotador' },
+  { valor: 'auditoria', rotulo: 'Auditoria' },
+  { valor: 'assistencia_24h', rotulo: 'Assistencia 24h' },
+];
+
+/** Espelha `papeis_diretoria()` no banco (0056). */
+export const PAPEIS_DIRETORIA = ['admin', 'financeiro'];
+
+export const papelMemoRotulo = (p: string) =>
+  PAPEIS_MEMO.find((x) => x.valor === p)?.rotulo ?? p;
+
+/**
+ * Para quem o comunicado foi endereçado, em uma frase — "Cuiaba · Sinistro",
+ * "Todas as unidades", "Diretoria / administracao". E o que o autor precisa
+ * ler ao lado do proprio comunicado no mural (0057): sem isso, ver o aviso na
+ * tela passa a impressao de que ele foi para todo mundo.
+ */
+export function destinoDoMemo(
+  regional: string | null | undefined,
+  papeis: string[] | null | undefined,
+): string {
+  const temPapeis = !!papeis?.length;
+  const soDiretoria =
+    temPapeis &&
+    papeis!.length === PAPEIS_DIRETORIA.length &&
+    papeis!.every((p) => PAPEIS_DIRETORIA.includes(p));
+
+  if (!regional && soDiretoria) return 'Diretoria / administracao';
+  const onde = regional ?? 'Todas as unidades';
+  if (!temPapeis) return onde;
+  return `${onde} · ${papeis!.map(papelMemoRotulo).join(', ')}`;
+}

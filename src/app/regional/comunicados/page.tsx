@@ -4,14 +4,15 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import {
   Megaphone, Plus, Inbox, Send, Check, Archive, Pencil, Eye, Building2, Users, Loader2,
+  AlertTriangle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useUnidadeAtual } from '@/components/regional/contexto-unidade';
 import {
   useMeuMural, useMarcarMemoLido, useMemosGestao, useArquivarMemo, type FormMemo,
 } from '@/hooks/use-memos';
-import { ModalMemo, memoVazio, PAPEIS_MEMO, PAPEIS_DIRETORIA } from '@/components/memos/modal-memo';
-import { categoriaMeta, prioridadeMeta, resumoLeitura } from '@/lib/memos';
+import { ModalMemo, memoVazio, PAPEIS_DIRETORIA } from '@/components/memos/modal-memo';
+import { categoriaMeta, prioridadeMeta, resumoLeitura, papelMemoRotulo } from '@/lib/memos';
 import { formatDate } from '@/lib/utils';
 
 type Aba = 'recebidos' | 'enviados';
@@ -35,7 +36,11 @@ export default function ComunicadosRegionalPage() {
   const marcar = useMarcarMemoLido();
   const arquivar = useArquivarMemo();
 
-  const pendentes = (mural.data ?? []).filter((m) => m.pendente_ciencia).length;
+  // "Recebidos" e o que CHEGOU para a unidade. O que o gestor mandou tem aba
+  // propria — a RPC devolve os dois (0057) para que o autor nunca fique sem
+  // retorno, e aqui a separacao ja existe na tela.
+  const recebidos = (mural.data ?? []).filter((m) => !m.meu);
+  const pendentes = recebidos.filter((m) => m.pendente_ciencia).length;
 
   const abas: { id: Aba; label: string; icon: React.ElementType; contador?: number }[] = [
     { id: 'recebidos', label: 'Recebidos', icon: Inbox, contador: pendentes },
@@ -77,12 +82,12 @@ export default function ComunicadosRegionalPage() {
       {aba === 'recebidos' && (
         <div className="space-y-3">
           {mural.isLoading && <p className="text-sm text-slate-400">Carregando...</p>}
-          {!mural.isLoading && (mural.data ?? []).length === 0 && (
+          {!mural.isLoading && recebidos.length === 0 && (
             <p className="rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-400">
               Nenhum comunicado para voce agora.
             </p>
           )}
-          {(mural.data ?? []).map((m) => {
+          {recebidos.map((m) => {
             const cat = categoriaMeta(m.categoria);
             const pri = prioridadeMeta(m.prioridade);
             return (
@@ -171,10 +176,13 @@ export default function ComunicadosRegionalPage() {
                         </span>
                       )}
                       <span className="block text-[11px] text-slate-400">
-                        {m.papeis?.length
-                          ? m.papeis.map((p) => PAPEIS_MEMO.find((x) => x.valor === p)?.rotulo ?? p).join(', ')
-                          : 'Todos os papeis'}
+                        {m.papeis?.length ? m.papeis.map(papelMemoRotulo).join(', ') : 'Todos os papeis'}
                       </span>
+                      {m.destinatarios === 0 && (
+                        <span className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-rose-600">
+                          <AlertTriangle className="h-3 w-3" /> nenhum usuario ativo neste endereço
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-2 text-slate-600">
                       <span className="inline-flex items-center gap-1.5">

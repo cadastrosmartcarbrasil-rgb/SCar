@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { useMeuMural, useMarcarMemoLido, useAcionamentosAbertos } from '@/hooks/use-memos';
 import { useProtocolos, useResumoProtocolos } from '@/hooks/use-protocolos';
-import { categoriaMeta, prioridadeMeta, pendenteCiencia } from '@/lib/memos';
+import { categoriaMeta, prioridadeMeta, pendenteCiencia, destinoDoMemo } from '@/lib/memos';
 import { STATUS_ATENDIMENTO_LABEL } from '@/lib/sac-servicos';
 import { formatDate } from '@/lib/utils';
 
@@ -135,13 +135,22 @@ function MuralDaGestao() {
                     {m.prioridade !== 'BAIXA' && (
                       <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${pri.cor}`}>{pri.rotulo}</span>
                     )}
-                    {m.regional && (
-                      <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600">{m.regional}</span>
+                    {m.meu && (
+                      <span className="rounded bg-cyan-50 px-1.5 py-0.5 text-[10px] font-medium text-cyan-700">
+                        voce publicou
+                      </span>
+                    )}
+                    {(m.regional || m.papeis?.length) && (
+                      <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600">
+                        {destinoDoMemo(m.regional, m.papeis)}
+                      </span>
                     )}
                   </span>
                   <span className="mt-1 block text-sm font-semibold text-slate-800">{m.titulo}</span>
                   <span className="mt-0.5 block text-[11px] text-slate-400">
-                    {m.autor} · {formatDate(m.publicado_em)}
+                    {/* no proprio comunicado, o que interessa e para QUEM ele foi */}
+                    {m.meu ? `Para ${destinoDoMemo(m.regional, m.papeis)}` : m.autor}
+                    {' · '}{formatDate(m.publicado_em)}
                     {m.lido_em ? ' · ciencia dada' : ''}
                   </span>
                 </span>

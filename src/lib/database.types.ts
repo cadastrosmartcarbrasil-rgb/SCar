@@ -458,12 +458,14 @@ export type MemoDoUsuario = {
   lido: boolean;
   lido_em: string | null;
   pendente_ciencia: boolean;
+  /** 0057: para quem foi, e se fui EU que publiquei (o autor ve o proprio memo) */
+  papeis: string[] | null;
+  meu: boolean;
 };
 /** Linha de `memos_gestao` — com o acompanhamento da ciencia. */
 export type MemoGestao = MemoDoUsuario & {
   publicado: boolean;
   regional_id: string | null;
-  papeis: string[] | null;
   leituras: number;
   destinatarios: number;
   /** 0056: fui EU que publiquei (a franquia acompanha o que enviou) */

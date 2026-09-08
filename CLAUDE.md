@@ -29,6 +29,9 @@ o de trabalho; esse default morto já causou um dia inteiro de trabalho no branc
   equipamentos por IMEI). Sem ela a tela `/rastreadores` não abre. Roda depois da `0049`.
 - **`0056_memos_diretoria` é NOVA** — o mural ganha mão dupla (a franquia manda recado para a
   diretoria) e o mural pessoal deixa de despejar o aviso interno de toda unidade na matriz.
+- **`0057_memos_autor_ve` é NOVA e CORRIGE a 0056** — quem publica um comunicado endereçado a
+  UMA unidade (ou a um papel que não é o seu) não via o próprio aviso em tela nenhuma, e o
+  sintoma era "publiquei e não apareceu". Roda depois da `0056`.
 - **`0055_memos_comunicados` é NOVA** — o mural interno (`memos` + `memo_leituras`) que alimenta a
   **Central do Atendente** na tela do SAC. Sem ela, o SAC quebra ao abrir (a Central chama
   `memos_do_usuario`).
@@ -132,9 +135,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0056`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **33 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 406 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0057`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **34 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 410 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Todos os portais e páginas
@@ -825,6 +828,16 @@ interno, a diretoria abriria o SAC com dezenas de recados que nao sao dela. O mu
 foi ENDEREÇADO a pessoa; para acompanhar tudo existe a tela da gestao; (C) `memos_gestao` ganhou
 escopo (a matriz ve tudo; o gestor ve o da unidade dele + o que ele enviou) e a coluna `meu` —
 muda a lista de OUT, entao foi drop + create.)
+· `0057_memos_autor_ve` (QUEM PUBLICA PRECISA VER O QUE PUBLICOU — a 0056 acertou ao tirar o
+`or tem_acesso_global()` do mural, mas a regra passou a valer tambem para o AUTOR: a matriz que
+endereça um aviso a UMA unidade, ou a um papel que nao e o dela, publicava e nao via nada em tela
+alguma; o gestor que manda recado a diretoria, idem. Sem retorno na tela a unica leitura possivel e
+"o sistema quebrou". `memos_do_usuario` **recriada** (entram `papeis` e `meu` na lista de OUT, entao
+drop + create) com `or m.publicado_por = eu.id`: o autor sempre ve o proprio comunicado, marcado
+como **"voce publicou"** e com o DESTINO ao lado ("Para Cuiaba · Sinistro") — ver o aviso sem saber
+para quem ele foi seria trocar uma duvida por outra. O mural de quem NAO publicou nao mudou. A tela
+da gestao passa a avisar em vermelho quando o endereço escolhido **nao tem nenhum usuario ativo**
+(`destinatarios = 0`), que e o outro jeito de um comunicado nao chegar a ninguem.)
 · `0055_memos_comunicados` (MURAL INTERNO — a tela do SAC nascia vazia ate alguem ser buscado, e
 e justamente ai que a equipe precisa de tres respostas: o que esta na MINHA mao, o que a gestao
 MANDOU e o que esta pegando fogo. (A) `memos` — comunicado publicado pela gestao, ENDEREÇAVEL por
@@ -939,6 +952,12 @@ recuperação e giro).
   destinos e só dois: **minha equipe** e **diretoria/administração** (papéis `admin`/`financeiro`,
   sem unidade). Publicar para a unidade vizinha ou soltar aviso geral continua sendo da matriz — a
   regra vive em `salvar_memo`, não na tela.
+- **O AUTOR sempre vê o próprio comunicado (0057)**, marcado com "voce publicou" e o destino ao
+  lado. Foi bug real: endereçar a uma unidade (ou a um papel que não é o seu) e publicar de dentro
+  da matriz fazia o aviso sumir de todas as telas de quem publicou. Na franquia, a aba *Recebidos*
+  filtra o que é `meu` — o que ela mandou tem aba própria.
+- **Endereço sem ninguém ativo aparece em vermelho** na tela da gestão (`destinatarios = 0`): é o
+  outro jeito de um comunicado não chegar a ninguém, e ele não pode ser silencioso.
 - **O mural pessoal é o que foi endereçado a VOCÊ.** A versão 0055 mandava todo memo de toda
   unidade para quem tem acesso global; com nove franquias publicando aviso interno, a diretoria
   abriria o SAC com dezenas de recados que não são dela. Para acompanhar tudo existe a tela da
@@ -953,7 +972,8 @@ recuperação e giro).
   no escopo franquia ele mostra os dois destinos em vez do seletor de unidade. Arquivar tira
   do mural e preserva a ciência de quem já leu; `expira_em` faz o aviso sumir sozinho no prazo.
 - **Lógica pura testada:** `src/lib/memos.ts` (`ordenarMemos`, `pendenteCiencia`, `memoVigente`,
-  `resumoLeitura`) — a ordem do mural é a mesma do `order by` da RPC, dos dois lados.
+  `resumoLeitura`, `destinoDoMemo`, e os rótulos `PAPEIS_MEMO`/`PAPEIS_DIRETORIA` — que moram aqui,
+  não na tela, porque o mural também precisa escrever o destino) — a ordem do mural é a mesma do `order by` da RPC, dos dois lados.
 
 ## SAC — alertas, busca e ordenação (0030)
 - **Alerta do veículo tem UMA fonte:** `alertas_veiculo` (linhas de `veiculo_alertas` + o tipo).

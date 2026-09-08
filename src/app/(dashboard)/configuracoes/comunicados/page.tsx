@@ -2,11 +2,11 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Pencil, Megaphone, Archive, Eye } from 'lucide-react';
+import { Plus, Pencil, Megaphone, Archive, Eye, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useMemosGestao, useArquivarMemo, type FormMemo } from '@/hooks/use-memos';
-import { ModalMemo, memoVazio, PAPEIS_MEMO } from '@/components/memos/modal-memo';
-import { categoriaMeta, prioridadeMeta, resumoLeitura } from '@/lib/memos';
+import { ModalMemo, memoVazio } from '@/components/memos/modal-memo';
+import { categoriaMeta, prioridadeMeta, resumoLeitura, papelMemoRotulo } from '@/lib/memos';
 import { formatDate } from '@/lib/utils';
 
 export default function ComunicadosPage() {
@@ -63,10 +63,15 @@ export default function ComunicadosPage() {
                   <td className="px-4 py-2 text-slate-600">
                     {m.regional ?? 'Todas as unidades'}
                     <span className="block text-[11px] text-slate-400">
-                      {m.papeis?.length
-                        ? m.papeis.map((p) => PAPEIS_MEMO.find((x) => x.valor === p)?.rotulo ?? p).join(', ')
-                        : 'Todos os papeis'}
+                      {m.papeis?.length ? m.papeis.map(papelMemoRotulo).join(', ') : 'Todos os papeis'}
                     </span>
+                    {/* endereço sem ninguem ativo: o comunicado nao chega a tela de
+                        pessoa alguma, e isso precisa aparecer aqui e nao virar duvida */}
+                    {m.destinatarios === 0 && (
+                      <span className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-rose-600">
+                        <AlertTriangle className="h-3 w-3" /> nenhum usuario ativo neste endereço
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-2 text-slate-600">
                     {m.exige_leitura ? (
