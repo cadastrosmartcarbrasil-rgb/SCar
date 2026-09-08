@@ -7,22 +7,24 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { FiltroPeriodo, Vazio, periodoPreset, type Periodo } from '@/components/financeiro/ui-financeiro';
 import { ModalVendedor } from '@/components/vendedores/modal-vendedor';
-import { useDesempenhoEquipe, useMinhaRegional } from '@/hooks/use-regional';
+import { useDesempenhoEquipe } from '@/hooks/use-regional';
 import { useVendedoresLista } from '@/hooks/use-vendedores';
 import { formatCurrency } from '@/lib/utils';
 import type { VendedoresRow } from '@/lib/database.types';
+import { useUnidadeAtual } from '@/components/regional/contexto-unidade';
 
 const pct = (v: number) => `${(Number(v) * 100).toFixed(2).replace('.00', '').replace('.', ',')}%`;
 
 export default function EquipeRegionalPage() {
   const [periodo, setPeriodo] = useState<Periodo>(() => periodoPreset('mes'));
-  const { data: equipe, isLoading } = useDesempenhoEquipe({ regionalId: null, ...periodo });
+  const { regionalId } = useUnidadeAtual();
+  const { data: equipe, isLoading } = useDesempenhoEquipe({ regionalId, ...periodo });
 
   // A franquia cadastra a propria equipe aqui dentro — sem voltar ao sistema
   // de gestao. `listar_vendedores` ja limita a unidade de quem chama, e a RLS
   // de `vendedores` so deixa o gestor escrever na propria regional.
-  const { data: minha } = useMinhaRegional();
-  const regionalId = minha?.perfil?.regional_id ?? null;
+  // Antes vinha do cadastro de quem olha — o que deixava a tela vazia para a
+  // matriz, que nao tem regional propria. Agora vem da unidade em visualizacao.
   const { data: cadastros } = useVendedoresLista({ regionalId });
   const [editando, setEditando] = useState<Partial<VendedoresRow> | null>(null);
 

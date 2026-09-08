@@ -2,7 +2,7 @@
 
 import { Info } from 'lucide-react';
 import { FinanceiroRegional } from '@/components/regional/financeiro-regional';
-import { useMinhaRegional } from '@/hooks/use-regional';
+import { useUnidadeAtual } from '@/components/regional/contexto-unidade';
 
 /**
  * Financeiro da unidade — proposital e deliberadamente pequeno.
@@ -11,7 +11,7 @@ import { useMinhaRegional } from '@/hooks/use-regional';
  * centro de custo nem conta bancaria: sao cadastros da matriz.
  */
 export default function FinanceiroRegionalPage() {
-  const { data } = useMinhaRegional();
+  const { regionalId } = useUnidadeAtual();
   return (
     <div className="space-y-5">
       <header>
@@ -29,7 +29,7 @@ export default function FinanceiroRegionalPage() {
         lançamento da matriz nunca aparece nem pode ser baixado por esta página.
       </p>
 
-      <FinanceiroRegional regionalId={data?.perfil?.regional_id ?? null} />
+      <FinanceiroRegional regionalId={regionalId} />
     </div>
   );
 }

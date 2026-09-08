@@ -12,11 +12,13 @@ import {
 import { useComissoesRegional, useRepassarComissao } from '@/hooks/use-regional';
 import { somarMoeda } from '@/lib/money';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import { useUnidadeAtual } from '@/components/regional/contexto-unidade';
 
 export default function ComissoesRegionalPage() {
   const [periodo, setPeriodo] = useState<Periodo>(() => periodoPreset('mes'));
+  const { regionalId } = useUnidadeAtual();
   const [status, setStatus] = useState('');
-  const { data: comissoes, isLoading } = useComissoesRegional({ regionalId: null, ...periodo, status });
+  const { data: comissoes, isLoading } = useComissoesRegional({ regionalId, ...periodo, status });
   const repassar = useRepassarComissao();
 
   // Repassar = virar contas a pagar da unidade. O titulo nasce no financeiro

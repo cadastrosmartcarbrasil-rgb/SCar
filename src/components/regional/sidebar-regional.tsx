@@ -6,9 +6,11 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import {
   BarChart3, Building2, Copy, LayoutDashboard, LogOut, Menu, Users, Wallet, X, Zap,
+  Repeat2,
 } from 'lucide-react';
 import { LogoNaCabine } from '@/components/hotlink/marca';
 import { createClient } from '@/lib/supabase/client';
+import { useTrocarUnidade } from '@/components/regional/contexto-unidade';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 const ITENS = [
@@ -19,14 +21,17 @@ const ITENS = [
   { href: '/regional/financeiro', label: 'Financeiro', icon: Wallet },
 ];
 
-export function SidebarRegional({ nome, unidade, codigo, papel, logoUrl }: {
+export function SidebarRegional({ nome, unidade, codigo, papel, logoUrl, podeTrocarUnidade }: {
   nome: string; unidade: string; codigo: string | null;
   /** O atalho para o sistema de gestao so faz sentido para o admin. */
   papel?: string;
   logoUrl?: string | null;
+  /** A matriz visita varias unidades; o gestor mora numa so e nao troca. */
+  podeTrocarUnidade?: boolean;
 }) {
   const pathname = usePathname();
   const [aberto, setAberto] = useState(false);
+  const trocarUnidade = useTrocarUnidade();
 
   function copiarHotlink() {
     if (!codigo) return toast.error('Esta unidade ainda nao tem codigo de hotlink');
@@ -45,7 +50,15 @@ export function SidebarRegional({ nome, unidade, codigo, papel, logoUrl }: {
   return (
     <>
       <div className="flex items-center justify-between border-b border-slate-200 bg-superficie px-4 py-3 md:hidden">
-        <span className="text-sm font-bold text-brand-700">{unidade}</span>
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span className="truncate text-sm font-bold text-brand-700">{unidade}</span>
+          {podeTrocarUnidade && (
+            <button onClick={trocarUnidade} className="rounded p-1 text-slate-400 hover:bg-slate-100"
+              title="Trocar de unidade">
+              <Repeat2 className="h-4 w-4" />
+            </button>
+          )}
+        </span>
         <div className="flex items-center gap-1">
           <ThemeToggle />
           <button
@@ -77,6 +90,14 @@ export function SidebarRegional({ nome, unidade, codigo, papel, logoUrl }: {
               className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-cyan-500/90 px-2 py-1.5 text-[11px] font-semibold text-navy transition hover:bg-cyan-400"
             >
               <Copy className="h-3 w-3" /> Meu hotlink de vendas
+            </button>
+          )}
+          {podeTrocarUnidade && (
+            <button
+              onClick={trocarUnidade}
+              className="mt-1.5 flex w-full items-center justify-center gap-1.5 rounded-lg border border-white/15 px-2 py-1.5 text-[11px] font-semibold text-white/80 transition hover:border-cyan-400/40 hover:bg-cyan-500/15 hover:text-white"
+            >
+              <Repeat2 className="h-3 w-3" /> Trocar de unidade
             </button>
           )}
           <button

@@ -10,9 +10,10 @@ import { Select } from '@/components/ui/field';
 import { FiltroPeriodo, Vazio, periodoPreset, type Periodo } from '@/components/financeiro/ui-financeiro';
 import {
   useAtribuirLead, useDesempenhoEquipe, useLeadsRegional, useLeadsSemVendedor,
-  useLiberarLeadsParados, useMinhaRegional,
+  useLiberarLeadsParados,
 } from '@/hooks/use-regional';
 import { formatDate } from '@/lib/utils';
+import { useUnidadeAtual } from '@/components/regional/contexto-unidade';
 
 const COR_STATUS: Record<string, string> = {
   NOVO: 'bg-cyan-50 text-cyan-700 ring-cyan-200',
@@ -26,13 +27,12 @@ const COR_STATUS: Record<string, string> = {
 
 export default function LeadsRegionalPage() {
   const [periodo, setPeriodo] = useState<Periodo>(() => periodoPreset('mes'));
+  const { regionalId } = useUnidadeAtual();
   const [somenteHotlink, setSomenteHotlink] = useState(false);
-  const { data: leads, isLoading } = useLeadsRegional({ regionalId: null, ...periodo, somenteHotlink });
+  const { data: leads, isLoading } = useLeadsRegional({ regionalId, ...periodo, somenteHotlink });
 
-  const { data: minha } = useMinhaRegional();
-  const regionalId = minha?.perfil?.regional_id ?? null;
   const { data: pool } = useLeadsSemVendedor(regionalId);
-  const { data: equipe } = useDesempenhoEquipe({ regionalId: null, ...periodo });
+  const { data: equipe } = useDesempenhoEquipe({ regionalId, ...periodo });
   const atribuir = useAtribuirLead();
   const liberar = useLiberarLeadsParados();
   const [destino, setDestino] = useState<Record<string, string>>({});

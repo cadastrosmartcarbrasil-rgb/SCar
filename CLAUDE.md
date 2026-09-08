@@ -129,7 +129,7 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 ### Estado de validação (fim da fase)
 - **Migrations `0001`..`0054`** + `schema.sql` consolidado aplicam limpos no harness local.
 - **31 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 390 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Vitest: 398 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Todos os portais e páginas
@@ -1285,8 +1285,23 @@ recuperação e giro).
   So marca `boas_vindas_enviada_em` quando o e-mail realmente saiu.
 
 ## Portal da Franquia (0036) — `/regional`
-- **Quem entra:** papel `gestor_regional` COM regional no cadastro (admin/financeiro entram para dar
-  suporte, mas o banco continua limitando o que veem). Layout proprio em `src/app/regional/layout.tsx`,
+- **A MATRIZ ESCOLHE A UNIDADE ao entrar.** O sistema de gestão é a matriz; a franquia se
+  administra por este portal — e é por aqui que a matriz entra nela. Quem tem acesso global
+  (admin/financeiro) cai numa tela **"Selecione a unidade"** (`<SelecionarUnidade>`) listando as
+  regionais com cidade/UF, e entra em **uma por vez**: a tela do portal é a operação de uma
+  franquia, não um consolidado. Trocar de unidade é um botão no cartão da cabine.
+- **O gestor não escolhe nada:** entra sempre na própria unidade, mesmo que o cookie diga outra.
+- **Como a unidade viaja:** cookie `scar_unidade` (12h) lido pelo layout (server component) e
+  distribuído às telas pelo `<UnidadeProvider>` / `useUnidadeAtual()`. Regra pura e testada em
+  `src/lib/unidade.ts` (`decidirUnidade`, `temAcessoGlobal`, `localDaUnidade`).
+  **O cookie NÃO é controle de acesso** — ele é escrito pelo navegador. Quem decide o dado é o
+  `escopo_regional()` no banco, que ignora o id pedido por quem não tem acesso global; o cookie
+  serve para a TELA não mentir (mostrar "Natal" servindo dados de Cuiabá).
+- **Antes desta correção as telas mandavam `regionalId: null`** — para o gestor isso funcionava
+  (o banco resolvia pela sessão), mas para a matriz virava "nenhuma unidade" e o portal nascia
+  vazio. Toda tela do `/regional` agora tira o id do `useUnidadeAtual()`.
+- **Quem entra:** papel `gestor_regional` COM regional no cadastro (admin/financeiro entram para
+  visitar qualquer unidade, e o banco continua limitando o que cada um vê). Layout proprio em `src/app/regional/layout.tsx`,
   sidebar cockpit com o hotlink da unidade no topo. Atalho "Portal da Franquia" no menu principal.
 - **5 telas:** Painel (indicadores + ranking da equipe) · Minha Equipe (desempenho por vendedor,
   hotlink de cada um e o **cadastro da equipe ali dentro** — o mesmo `<ModalVendedor>` da matriz,

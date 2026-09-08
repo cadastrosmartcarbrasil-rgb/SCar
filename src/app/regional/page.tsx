@@ -11,10 +11,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Indicador, FiltroPeriodo, Vazio, periodoPreset, type Periodo } from '@/components/financeiro/ui-financeiro';
 import { useDesempenhoEquipe, usePainelRegional } from '@/hooks/use-regional';
 import { formatCurrency } from '@/lib/utils';
+import { useUnidadeAtual } from '@/components/regional/contexto-unidade';
 
 export default function PainelRegionalPage() {
   const [periodo, setPeriodo] = useState<Periodo>(() => periodoPreset('mes'));
-  const filtro = { regionalId: null, ...periodo };
+  // A unidade vem do portal (o gestor entra na dele; a matriz escolhe qual visitar).
+  const { regionalId, nome: nomeUnidade } = useUnidadeAtual();
+  const filtro = { regionalId, ...periodo };
   const { data: p, isLoading } = usePainelRegional(filtro);
   const { data: equipe } = useDesempenhoEquipe(filtro);
 
@@ -28,7 +31,7 @@ export default function PainelRegionalPage() {
       <header>
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Painel da Franquia</h1>
         <p className="mt-0.5 text-sm text-slate-500">
-          Desempenho da sua equipe, comissoes e o financeiro da unidade.
+          {nomeUnidade} — desempenho da equipe, comissoes e o financeiro da unidade.
         </p>
       </header>
 
