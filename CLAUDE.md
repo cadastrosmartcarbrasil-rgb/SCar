@@ -3,7 +3,7 @@
 > Memória do projeto. Leia isto no início de cada sessão em vez de varrer o repositório inteiro.
 > Mantenha este arquivo atualizado ao adicionar módulos/migrations (é barato e faz o projeto andar rápido).
 
-## Estado atual (retomar aqui) — atualizado ao fim da fase 0032→0054
+## Estado atual (retomar aqui) — atualizado ao fim da fase 0032→0055
 
 **Um único projeto, um único repositório: `cadastrosmartcarbrasil-rgb/scar`** (no GitHub o nome
 aparece como `SCar`). Trabalho e deploy acontecem no branch **`claude/claude-md-opcao-x-98kfj5`**;
@@ -27,6 +27,9 @@ o de trabalho; esse default morto já causou um dia inteiro de trabalho no branc
   `empresas_rastreamento` nascem na `0049`).
 - **`0050_rastreadores_modulo` também é NOVA** — é o módulo de Rastreadores (parque de
   equipamentos por IMEI). Sem ela a tela `/rastreadores` não abre. Roda depois da `0049`.
+- **`0055_memos_comunicados` é NOVA** — o mural interno (`memos` + `memo_leituras`) que alimenta a
+  **Central do Atendente** na tela do SAC. Sem ela, o SAC quebra ao abrir (a Central chama
+  `memos_do_usuario`).
 - **`0054_usuarios_protecao_admin` é NOVA** — a equipe passou a ser editável (papel, unidade,
   ativação e **redefinição de senha**) e o banco ganhou duas travas: ninguém se promove a admin na
   própria linha e o sistema não fica sem administrador ativo.
@@ -127,9 +130,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0054`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **31 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 398 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0055`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **32 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 406 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Todos os portais e páginas
@@ -811,6 +814,17 @@ inteiro da empresa para qualquer usuario logado (agora exigem `is_staff()` e pas
 `checklist_lead`/`fotos_vistoria_lead`, `interacoes_protocolo` e `liberar_leads_sem_contato`
 (esta ultima so para a gestao); (C) a policy de insert de `lead_atribuicoes` aceitava qualquer
 logado — agora exige staff.)
+· `0055_memos_comunicados` (MURAL INTERNO — a tela do SAC nascia vazia ate alguem ser buscado, e
+e justamente ai que a equipe precisa de tres respostas: o que esta na MINHA mao, o que a gestao
+MANDOU e o que esta pegando fogo. (A) `memos` — comunicado publicado pela gestao, ENDEREÇAVEL por
+unidade (`regional_id` nulo = todas) e por papel (`papeis` nulo/vazio = todos), com `categoria`
+(COMUNICADO/SCRIPT/URGENTE), `prioridade`, `exige_leitura` e `expira_em`. Categoria e prioridade
+sao TEXTO com CHECK, nao enum (a lista cresce e enum novo nao pode ser usado na mesma transacao);
+(B) `memo_leituras` — a ciencia de cada um, sem update nem delete; (C) RPCs `memos_do_usuario()`
+(mural ja com o `lido` e a ordem: ciencia pendente > prioridade > data), `marcar_memo_lido()`,
+`salvar_memo()`, `memos_gestao()` (com quantos leram de quantos) e `arquivar_memo()`;
+(D) `pode_publicar_memo()` = matriz publica para qualquer unidade, gestor regional so para a
+propria.)
 · `0054_usuarios_protecao_admin` (A EQUIPE VIRA EDITAVEL — e o banco fecha duas portas:
 (A) ESCALADA DE PRIVILEGIO: a policy `usuarios_update_self` (0003) libera update na PROPRIA linha
 e RLS **nao restringe coluna** — qualquer usuario da equipe podia rodar
@@ -863,8 +877,8 @@ prestadores da 24h e rastreadoras, com auto CNPJ/CEP) · **Cobrança** (`/cobran
 remessas bancárias) · Financeiro (contas a pagar/receber + baixas + DRE)
 · Configurações (regionais, usuários,
 vendedores, marcas/modelos, tipos de veículo, cotas de participação (V5..V15), tipos de evento,
-produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações bancárias, plano de
-contas)
+produtos, planos/combos (Prata/Ouro/Diamante), **comunicados** (mural interno), contas bancárias,
+integrações bancárias, plano de contas)
 · **Rastreadores** (`/rastreadores`: parque por IMEI, estoque por unidade/plataforma, instalação no
 veículo, manutenção, painel de divergências com o cadastro da frota e relatórios de custo,
 recuperação e giro).
@@ -899,6 +913,24 @@ recuperação e giro).
   completa), **links do Waze** (resgate e destino) e o aviso de que rota e KM autorizados são
   estritamente os da OS — trecho não autorizado não é pago. Espelho puro em
   `src/lib/geo.ts` + `rotaDoVoucher` (`src/lib/assistencia.ts`), com testes.
+
+## Central do Atendente — o SAC antes da busca (0055)
+- **A tela do SAC tem dois estados.** Sem associado selecionado, a área abaixo da busca é a
+  **Central do Atendente**; assim que alguém é escolhido, ela sai de cena e a ficha assume — o
+  atendimento continua focado na pessoa. Antes esse espaço (o maior da tela) tinha uma frase cinza.
+- **Três blocos, na ordem em que a operação precisa deles:** *Meus protocolos* (os que estão com
+  quem está logado, só os abertos, clique leva ao atendimento) · *Mural da gestão* (comunicados,
+  scripts e avisos) · *Alertas do dia* (24h em aberto, protocolos alta/urgente e parados +7 dias,
+  cada número clicável para a tela filtrada).
+- **Comunicado é endereçado, não broadcast:** por unidade e por papel. Quem publica é a gestão
+  (`pode_publicar_memo()`); o gestor regional só publica para a própria unidade.
+- **Ciência de leitura:** `exige_leitura` mantém o comunicado em destaque (fundo âmbar, botão
+  "Marcar como lido") até a pessoa dar ciência. A gestão acompanha em Configurações → Comunicados
+  ("3 de 12 deram ciência"). Ninguém "desl" — `memo_leituras` não tem update nem delete.
+- **Onde se publica:** `Configurações → Comunicados` (`/configuracoes/comunicados`). Arquivar tira
+  do mural e preserva a ciência de quem já leu; `expira_em` faz o aviso sumir sozinho no prazo.
+- **Lógica pura testada:** `src/lib/memos.ts` (`ordenarMemos`, `pendenteCiencia`, `memoVigente`,
+  `resumoLeitura`) — a ordem do mural é a mesma do `order by` da RPC, dos dois lados.
 
 ## SAC — alertas, busca e ordenação (0030)
 - **Alerta do veículo tem UMA fonte:** `alertas_veiculo` (linhas de `veiculo_alertas` + o tipo).

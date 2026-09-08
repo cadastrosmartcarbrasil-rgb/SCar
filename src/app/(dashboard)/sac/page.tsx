@@ -19,6 +19,8 @@ import {
 } from '@/hooks/use-sac';
 import { SERVICOS_SAC, STATUS_ATENDIMENTO_LABEL, STATUS_EVENTO_LABEL, type ServicoSac } from '@/lib/sac-servicos';
 import { formatarChip } from '@/lib/rastreador';
+import { CentralAtendente } from '@/components/sac/central-atendente';
+import { usePerfilAtual } from '@/hooks/use-config';
 import { useContratosVeiculo, useVistoriasVeiculo } from '@/hooks/use-veiculo-ficha';
 import { useHistoricoAssistenciaVeiculo } from '@/hooks/use-assistencia';
 import { ModalHistoricoFinanceiro, ModalWhatsApp, ModalEmail } from '@/components/sac/acoes-veiculo';
@@ -36,6 +38,7 @@ import type {
 type Aba = 'veiculos' | 'eventos' | 'protocolos';
 
 export default function SacPage() {
+  const { data: perfil } = usePerfilAtual();
   const [q, setQ] = useState('');
   const [clienteId, setClienteId] = useState<string | undefined>();
   const [veiculoId, setVeiculoId] = useState<string | undefined>();
@@ -86,7 +89,11 @@ export default function SacPage() {
         )}
       </div>
 
-      {!clienteId && <p className="text-sm text-slate-400">Busque um associado para iniciar o atendimento.</p>}
+      {/* ESTADO DE ESPERA: enquanto ninguem foi buscado, a area util vira a
+          Central do Atendente (protocolos na mao, mural da gestao e alertas).
+          Selecionado o associado, ela sai de cena e a ficha assume — o
+          atendimento continua focado na pessoa. */}
+      {!clienteId && <CentralAtendente usuarioId={perfil?.id} />}
       {clienteId && isLoading && <p className="py-10 text-center text-sm text-slate-400">Carregando dados...</p>}
       {busca.error && (
         <p className="text-sm text-rose-600">Falha na busca: {(busca.error as Error).message}</p>

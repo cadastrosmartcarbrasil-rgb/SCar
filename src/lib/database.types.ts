@@ -423,6 +423,51 @@ export type RastreadorARecuperar = {
   ultima_instalacao: string | null;
 };
 
+// ---- 0055: mural interno (memos) -------------------------------------------
+export type MemosRow = Timestamps & {
+  id: string;
+  titulo: string;
+  mensagem: string;
+  categoria: string;
+  prioridade: string;
+  exige_leitura: boolean;
+  publicado: boolean;
+  regional_id: string | null;
+  papeis: string[] | null;
+  expira_em: string | null;
+  publicado_por: string | null;
+  publicado_em: string;
+};
+export type MemoLeiturasRow = {
+  memo_id: string;
+  usuario_id: string;
+  lido_em: string;
+};
+/** Linha de `memos_do_usuario` — o mural do atendente. */
+export type MemoDoUsuario = {
+  id: string;
+  titulo: string;
+  mensagem: string;
+  categoria: string;
+  prioridade: string;
+  exige_leitura: boolean;
+  publicado_em: string;
+  expira_em: string | null;
+  autor: string | null;
+  regional: string | null;
+  lido: boolean;
+  lido_em: string | null;
+  pendente_ciencia: boolean;
+};
+/** Linha de `memos_gestao` — com o acompanhamento da ciencia. */
+export type MemoGestao = MemoDoUsuario & {
+  publicado: boolean;
+  regional_id: string | null;
+  papeis: string[] | null;
+  leituras: number;
+  destinatarios: number;
+};
+
 export type TiposAlertaRow = {
   id: string;
   nome: string;
@@ -2111,6 +2156,8 @@ export type Database = {
       >;
       veiculo_produtos: TableDef<{ veiculo_id: string; produto_id: string }, [Rel<'veiculo_id', 'veiculos'>, Rel<'produto_id', 'produtos'>]>;
       tipos_alerta: TableDef<TiposAlertaRow>;
+      memos: TableDef<MemosRow, [Rel<'regional_id', 'regionais'>, Rel<'publicado_por', 'usuarios'>]>;
+      memo_leituras: TableDef<MemoLeiturasRow, [Rel<'memo_id', 'memos'>, Rel<'usuario_id', 'usuarios'>]>;
       rastreadores: TableDef<
         RastreadoresRow,
         [
@@ -2196,6 +2243,30 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      // ---- 0055: mural interno ----
+      memos_do_usuario: {
+        Args: { p_incluir_lidos?: boolean; p_limite?: number };
+        Returns: MemoDoUsuario[];
+      };
+      marcar_memo_lido: { Args: { p_memo_id: string }; Returns: boolean };
+      memos_gestao: { Args: { p_limite?: number }; Returns: MemoGestao[] };
+      arquivar_memo: { Args: { p_id: string }; Returns: boolean };
+      salvar_memo: {
+        Args: {
+          p_titulo: string;
+          p_mensagem: string;
+          p_categoria?: string;
+          p_prioridade?: string;
+          p_exige_leitura?: boolean;
+          p_regional_id?: string | null;
+          p_papeis?: string[] | null;
+          p_expira_em?: string | null;
+          p_publicado?: boolean;
+          p_id?: string | null;
+        };
+        Returns: MemosRow;
+      };
+      pode_publicar_memo: { Args: Record<string, never>; Returns: boolean };
       // ---- 0050: modulo de rastreadores ----
       rastreadores_listar: {
         Args: {
