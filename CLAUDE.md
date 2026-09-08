@@ -376,9 +376,11 @@ ficha **abre direto nela** — é a primeira pergunta de quem audita. Lógica pu
 5. **SLA / notificações do protocolo** (prazo por prioridade, aviso ao responsável).
 6. **Cotação pelo portal do vendedor** — ele vê o lead, mas monta a cotação só no `/vendas`.
 
-## PRÓXIMO TÓPICO — API de consulta e importação do sistema atual (preparado, não iniciado)
-> Levantamento feito ao fim da sessão do painel da 24h. **Nada foi construído**: isto é o mapa do
-> terreno para a próxima sessão começar decidindo, não pesquisando.
+## PRÓXIMO TÓPICO — integração com o MUTUAL (analisado, não iniciado)
+> Levantamento feito ao fim da sessão do painel da 24h; **as perguntas em aberto foram respondidas
+> pelo usuário em 08/09/2026** e viraram plano. **Nada foi construído.**
+> **O PLANO COMPLETO ESTÁ EM `docs/modulos/integracao-mutual.md` — leia-o antes de escrever
+> qualquer linha deste tópico.** O que fica aqui é o resumo e as minas terrestres.
 
 ### As 3 minas terrestres (confirmadas no código, não suposições)
 1. **Importar veículo `ativo` FATURA a base inteira.** `trg_veiculo_primeira_cobranca` (0025) roda
@@ -420,19 +422,36 @@ correspondência que `docs/modulos/rastreadores.md` já mapeou para o TrackerSto
   Vitest + `npm run schema` + `npm run validate`. E o **rito de segurança da 0052** (revoke/grant)
   em toda migration que cria função.
 
-### Perguntas que só o usuário responde (levar para a próxima sessão)
-1. **Qual é o software atual, e ele TEM API?** O CLAUDE.md cita "relatório SGA" (marcas/modelos) e
-   TrackerStock (rastreadores) — não está registrado se o sistema de gestão é o SGA nem se ele
-   expõe API. Se não houver, a porta é exportação (CSV/XLSX) e cai no molde do
-   `precificacao-import`.
-2. **Consulta ao vivo ou migração de uma vez?** São projetos diferentes: consulta contínua pede
-   um cliente + cache; migração pede carga idempotente, quarentena e conferência.
-3. **O que entra:** só associados e veículos, ou também o histórico financeiro (títulos pagos,
-   inadimplência) e os eventos? Histórico é o que dá trabalho e o que decide o desenho.
-4. **Vira sistema único ou os dois convivem?** Se convivem, é preciso decidir quem manda em cada
-   dado — senão a divergência aparece depois, como já acontece entre a ficha do veículo e o parque
-   de rastreadores.
-5. **Volume e janela:** ~13 mil veículos pelo painel. Carga em janela de manutenção ou aos poucos?
+### Respondido pelo usuário (08/09/2026) — não perguntar de novo
+1. **Sistema atual: MUTUAL** (Mutual Ignit). **Tem API:**
+   `https://smartcar-api.mutualignit.com.br/public_api/v2/docs/`.
+2. **Consulta ao vivo ou migração? Consultar PRIMEIRO**, para avaliar os dados antes de importar.
+3. **O que entra:** associados/veículos **e** financeiro **e** eventos — os três.
+4. **Convivência: SIM, por um tempo — e por enquanto QUEM MANDA É O MUTUAL.**
+5. **Volume e janela:** a definir; é uma das saídas da fase de diagnóstico.
+
+### O que a resposta 4 muda (a conclusão da análise)
+**Não é migração, é replicação unidirecional Mutual → SCar com cutover gradual por unidade.**
+Consequências que o levantamento original não tinha:
+- **Não existe chave externa em NENHUMA tabela do SCar** (tudo é chave natural: `cpf_cnpj`,
+  `placa`). Replicação contínua exige uma tabela de vínculo `(sistema, entidade, id_externo,
+  registro_id)` — CPF é corrigido, placa é transferida e registro em quarentena não tem linha
+  onde pendurar id.
+- **`veiculo_faturavel()` (0024) é o interruptor do cutover.** Os 4 caminhos de geração de fatura
+  (0025 linhas 49/206/237/317) passam por ela: uma condição de "cobrança externa" ali faz o
+  veículo importado viver no SAC/portal/24h **sem gerar boleto** — e virar a flag por regional é
+  o cutover. **Isso resolve a mina nº 1 melhor que a GUC**, que só protege a janela da carga e
+  não o lote de faturamento rodado meses depois.
+- **A GUC `scar.importacao` é LOCAL À TRANSAÇÃO** — setar numa chamada e gravar noutra não
+  funciona (cada chamada do supabase-js é uma transação). Tem de ser `set_config` + escrita
+  DENTRO da mesma RPC, como fazem 0027/0050.
+- **`clientes.matricula` é gerada por sequence** (`matricula_seq`, 0006) e é `unique`: a
+  numeração do Mutual e a do SCar disputam o mesmo espaço. Decidir antes da carga.
+- **Título em aberto importado errado BLOQUEIA o associado**, não só relata: `dias_atraso_cliente`
+  alimenta a recusa de acionamento da 24h e a inadimplência do rastreador. É o argumento a favor
+  do "consultar primeiro".
+- **Histórico pago reescreve DRE de mês fechado** (`dre_movimentos`, 0032) e, na convivência, faz
+  os dois sistemas contarem a mesma receita. O DRE do SCar começa na data de corte.
 
 ## O que é
 Sistema de gestão para **associação de proteção veicular** (associados, frota, eventos/sinistros,
