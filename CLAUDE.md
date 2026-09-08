@@ -242,6 +242,30 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
 - Para JSONB tipado em formulário, adicione `[key: string]: string | undefined` na interface do endereço/local.
 - Versões: `@supabase/ssr@^0.7`, `@supabase/supabase-js@2.111`. Não voltar o ssr para 0.5 (arity incompatível).
 
+## Gráficos e tema (Recharts) — arquitetura
+
+> **Regra:** o tema escuro troca o **valor** dos tokens CSS e **não repinta os call sites**.
+> Logo, tudo que é *cromo* de gráfico (texto de eixo, grade, cursor, fundo do tooltip) **nunca**
+> pode levar hex fixo — vira texto escuro sobre fundo escuro (foi medido ~2,1:1 antes da correção).
+
+- **Tokens** (`src/app/globals.css`, tripla RGB p/ usar em `rgb(var(--x))`): `--superficie`
+  (fundo de card/tooltip), `--superficie-alta` (borda sobre a superfície) e `--grafico-texto`
+  (eixo/grade/rótulos). O bloco `.dark` só troca o valor deles.
+- **`.grafico-tema`** é a classe do container (vai no `<ResponsiveContainer className="grafico-tema">`):
+  define a `color` do tema, e daí `currentColor` alimenta eixo, grade e cursor; o texto do tooltip
+  vem por **herança** (por isso o preset do tooltip não fixa `color`).
+- **Presets em `src/components/ui/grafico.ts`** — use sempre estes, não escreva hex de cromo:
+  `EIXO` (tick 11px) · `EIXO_GRANDE` (12px) · `GRADE` · `LINHA_EIXO` · `CURSOR` · `TOOLTIP`.
+  Ex.: `<XAxis tick={EIXO} />`, `<CartesianGrid {...GRADE} />`, `<Tooltip contentStyle={TOOLTIP} />`.
+- **As cores das SÉRIES continuam em hex** (barras, linhas, áreas, `Cell`): são identidade do dado
+  e já foram escolhidas para funcionar nos dois temas. **Não** troque por token.
+- **Aplicado em:** `dashboard/kpi-cards.tsx`, `financeiro/fluxo-caixa.tsx`, `financeiro/dre-report.tsx`.
+- **Como verificar:** medir com `getComputedStyle` do `tspan` do eixo (não julgar por captura
+  reduzida). Medido em Chromium: tick 4,76:1 no claro e 6,48:1 no escuro (AA ≥ 4,5:1); o tooltip
+  sai de branco fixo para `rgb(var(--superficie))`.
+- **Pendente:** a agulha/eixo do tacômetro em `kpi-cards.tsx` (`stroke="#1E2B4D"`) ainda é hex fixo
+  — é cromo, não dado; vai sumir no fundo escuro quando o tema escuro existir de fato.
+
 ## Convenção de moeda (UI)
 - **Todo campo de dinheiro usa `<MoneyInput>` de `@/components/ui/field`** — nunca `<input type="number">`
   (ele nasce com "0", obriga manobra de cursor e aceita "0012").

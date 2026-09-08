@@ -14,6 +14,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useDashboardKpis, useReceitaSerie } from '@/hooks/use-dashboard';
 import { formatCurrency, formatPercent } from '@/lib/utils';
+import { CURSOR, EIXO_GRANDE, GRADE, LINHA_EIXO, TOOLTIP } from '@/components/ui/grafico';
 
 type Tom = 'cyan' | 'amber' | 'green' | 'rose';
 const TOM: Record<Tom, string> = {
@@ -95,15 +96,15 @@ export function DashboardKpis() {
           </CardHeader>
           <CardContent>
             <div className="h-72 w-full">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer className="grafico-tema" width="100%" height="100%">
                 <BarChart data={serie ?? []} barGap={4}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#EDF1F7" vertical={false} />
-                  <XAxis dataKey="mes" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={{ stroke: '#E2E8F0' }} tickLine={false} />
-                  <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} axisLine={false} tickLine={false} />
+                  <CartesianGrid strokeDasharray="3 3" {...GRADE} vertical={false} />
+                  <XAxis dataKey="mes" tick={EIXO_GRANDE} axisLine={LINHA_EIXO} tickLine={false} />
+                  <YAxis tick={EIXO_GRANDE} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} axisLine={false} tickLine={false} />
                   <Tooltip
                     formatter={(v: number) => formatCurrency(v)}
-                    contentStyle={{ borderRadius: 12, border: '1px solid #E2E8F0', boxShadow: '0 8px 24px -12px rgba(20,33,61,.25)', fontSize: 12 }}
-                    cursor={{ fill: 'rgba(30,43,77,0.04)' }}
+                    contentStyle={{ ...TOOLTIP, boxShadow: '0 8px 24px -12px rgba(20,33,61,.25)' }}
+                    cursor={CURSOR}
                   />
                   <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
                   <Bar dataKey="previsto" name="Previsto" fill="#54B2E0" radius={[4, 4, 0, 0]} maxBarSize={26} />

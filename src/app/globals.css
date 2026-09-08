@@ -28,3 +28,29 @@ body {
     repeating-linear-gradient(-45deg, transparent 0 13px, rgba(255, 255, 255, 0.02) 13px 14px),
     linear-gradient(180deg, #1e2b4d 0%, #131d38 100%);
 }
+
+/* ---------------------------------------------------------------------------
+   Tokens de superficie para os graficos (Recharts).
+
+   O tema escuro troca o VALOR destes tokens; os call sites nao sao repintados.
+   Por isso texto de eixo, linhas de grade e fundo de tooltip NUNCA podem usar
+   hex fixo — senao ficam escuros sobre fundo escuro. Ver `.grafico-tema`.
+   As cores das SERIES (barras/linhas) seguem em hex: sao identidade do dado.
+   --------------------------------------------------------------------------- */
+:root {
+  --superficie: 255 255 255; /* fundo de card/tooltip */
+  --superficie-alta: 226 232 240; /* borda/divisoria sobre a superficie */
+  --grafico-texto: 100 116 139; /* slate-500: eixo, grade e rotulos */
+}
+
+.dark {
+  --superficie: 23 30 48;
+  --superficie-alta: 42 55 84;
+  --grafico-texto: 148 163 184; /* slate-400 */
+}
+
+/* Container de grafico: define a cor herdada por `currentColor` (eixo, grade,
+   cursor) e pelo texto do tooltip. Trocar o token repinta tudo de uma vez. */
+.grafico-tema {
+  color: rgb(var(--grafico-texto));
+}

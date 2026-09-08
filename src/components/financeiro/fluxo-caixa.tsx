@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAging, useFinanceiroResumo, useFluxoMensal } from '@/hooks/use-financeiro';
 import { formatCurrency } from '@/lib/utils';
 import { somarMoeda } from '@/lib/money';
+import { EIXO, GRADE, TOOLTIP } from '@/components/ui/grafico';
 import { FiltroPeriodo, Indicador, Vazio, periodoPreset, type Periodo } from './ui-financeiro';
 
 const MES_CURTO = new Intl.DateTimeFormat('pt-BR', { month: 'short', year: '2-digit' });
@@ -92,14 +93,14 @@ export function FluxoCaixa({ regionalId }: { regionalId?: string | null }) {
           ) : serie.length === 0 ? (
             <Vazio icon={Activity} titulo="Sem titulos no intervalo" descricao="Escolha um periodo maior nos atalhos acima ou lance contas a pagar/receber." />
           ) : (
-            <ResponsiveContainer width="100%" height={280}>
+            <ResponsiveContainer className="grafico-tema" width="100%" height={280}>
               <BarChart data={serie} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} stackOffset="sign">
-                <CartesianGrid strokeDasharray="3 3" stroke="#e8edf5" vertical={false} />
-                <XAxis dataKey="mes" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
-                <YAxis tickFormatter={compacto} tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} width={48} />
+                <CartesianGrid strokeDasharray="3 3" {...GRADE} vertical={false} />
+                <XAxis dataKey="mes" tick={EIXO} tickLine={false} axisLine={false} />
+                <YAxis tickFormatter={compacto} tick={EIXO} tickLine={false} axisLine={false} width={48} />
                 <Tooltip
                   formatter={(v: number | string) => formatCurrency(Math.abs(Number(v)))}
-                  contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }}
+                  contentStyle={TOOLTIP}
                 />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
                 <Bar dataKey="Entradas previstas" fill="#9FD6F1" radius={[4, 4, 0, 0]} maxBarSize={22} />
@@ -119,7 +120,7 @@ export function FluxoCaixa({ regionalId }: { regionalId?: string | null }) {
             {acumulado.length === 0 ? (
               <Vazio icon={Activity} titulo="Sem projecao" descricao="Sem titulos no intervalo escolhido." />
             ) : (
-              <ResponsiveContainer width="100%" height={220}>
+              <ResponsiveContainer className="grafico-tema" width="100%" height={220}>
                 <AreaChart data={acumulado} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="grad-saldo" x1="0" y1="0" x2="0" y2="1">
@@ -127,10 +128,10 @@ export function FluxoCaixa({ regionalId }: { regionalId?: string | null }) {
                       <stop offset="100%" stopColor="#22A7E4" stopOpacity={0.02} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e8edf5" vertical={false} />
-                  <XAxis dataKey="mes" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
-                  <YAxis tickFormatter={compacto} tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} width={48} />
-                  <Tooltip formatter={(v: number | string) => formatCurrency(Number(v))} contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }} />
+                  <CartesianGrid strokeDasharray="3 3" {...GRADE} vertical={false} />
+                  <XAxis dataKey="mes" tick={EIXO} tickLine={false} axisLine={false} />
+                  <YAxis tickFormatter={compacto} tick={EIXO} tickLine={false} axisLine={false} width={48} />
+                  <Tooltip formatter={(v: number | string) => formatCurrency(Number(v))} contentStyle={TOOLTIP} />
                   <Area type="monotone" dataKey="Acumulado" stroke="#139AD6" strokeWidth={2.5} fill="url(#grad-saldo)" />
                 </AreaChart>
               </ResponsiveContainer>
@@ -167,11 +168,11 @@ function TabelaAging({ titulo, linhas }: { titulo: string; linhas: { faixa: stri
         <p className="text-[11.5px] font-semibold uppercase tracking-wide text-slate-500">{titulo}</p>
         <p className="tnum text-sm font-bold text-slate-800">{formatCurrency(total)}</p>
       </div>
-      <ResponsiveContainer width="100%" height={110}>
+      <ResponsiveContainer className="grafico-tema" width="100%" height={110}>
         <BarChart data={dados} layout="vertical" margin={{ top: 0, right: 12, left: 0, bottom: 0 }}>
           <XAxis type="number" hide />
-          <YAxis type="category" dataKey="faixa" width={96} tick={{ fontSize: 11, fill: '#64748b' }} tickLine={false} axisLine={false} />
-          <Tooltip formatter={(v: number | string) => formatCurrency(Number(v))} contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }} />
+          <YAxis type="category" dataKey="faixa" width={96} tick={EIXO} tickLine={false} axisLine={false} />
+          <Tooltip formatter={(v: number | string) => formatCurrency(Number(v))} contentStyle={TOOLTIP} />
           <Bar dataKey="total" radius={[0, 4, 4, 0]} maxBarSize={16}>
             {dados.map((d) => <Cell key={d.faixa} fill={COR_FAIXA[Math.min(d.ordem, COR_FAIXA.length) - 1]} />)}
           </Bar>

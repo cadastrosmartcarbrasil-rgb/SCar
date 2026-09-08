@@ -8,6 +8,7 @@ import { BarChart3, Download, Printer, Target, TrendingDown, TrendingUp, Wallet 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select } from '@/components/ui/field';
+import { EIXO, GRADE, TOOLTIP } from '@/components/ui/grafico';
 import { useDre, useDreComparativo, useDreMensal, useDreResumo } from '@/hooks/use-dre';
 import { useCentrosCusto } from '@/hooks/use-financeiro';
 import { calcularIndicadores, estruturarDre, periodoAnterior, variacaoPercentual } from '@/lib/financeiro';
@@ -148,14 +149,14 @@ export function DreReport({ regionalId }: { regionalId?: string | null }) {
           {grafico.length === 0 ? (
             <Vazio icon={BarChart3} titulo="Sem movimento no intervalo" descricao="Assim que houver receitas ou despesas classificadas, a evolucao aparece aqui." />
           ) : (
-            <ResponsiveContainer width="100%" height={260}>
+            <ResponsiveContainer className="grafico-tema" width="100%" height={260}>
               <ComposedChart data={grafico} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e8edf5" vertical={false} />
-                <XAxis dataKey="mes" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
-                <YAxis tickFormatter={compacto} tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} width={48} />
+                <CartesianGrid strokeDasharray="3 3" {...GRADE} vertical={false} />
+                <XAxis dataKey="mes" tick={EIXO} tickLine={false} axisLine={false} />
+                <YAxis tickFormatter={compacto} tick={EIXO} tickLine={false} axisLine={false} width={48} />
                 <Tooltip
                   formatter={(v: number | string) => formatCurrency(Number(v))}
-                  contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }}
+                  contentStyle={TOOLTIP}
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 <Bar dataKey="Receita" fill="#22A7E4" radius={[4, 4, 0, 0]} maxBarSize={26} />
