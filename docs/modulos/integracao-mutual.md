@@ -260,6 +260,36 @@ Lista curta e objetiva — é isto que destrava o de-para campo a campo:
    **filial**, e o **status** de cada entidade (com a lista de valores possíveis).
 6. Ambiente de **homologação/sandbox**, se houver.
 
+### Credenciais — o que pedir à Mutual (e por quê)
+
+**Sim, vai precisar de token.** `public_api` na URL significa "a API pública do produto", documentada
+para integradores — **não** "aberta sem credencial". Uma API que expõe associados, veículos,
+financeiro e eventos não poderia ser aberta sem virar vazamento de base e problema de LGPD.
+
+Peça de uma vez só, para não virar ida e volta:
+
+1. **Credencial de PRODUÇÃO com escopo de LEITURA (read-only).** Nesta fase o SCar só lê — o Mutual
+   é quem manda. Credencial sem escopo de escrita significa que **nenhum erro nosso pode corromper
+   o sistema que hoje sustenta a operação**. É a pergunta mais barata de fazer e a mais cara de
+   esquecer.
+2. **Credencial de HOMOLOGAÇÃO/sandbox**, se existir — é onde a Fase 1 deve rodar primeiro.
+3. **O token é preso a IP?** Vários provedores amarram a credencial a uma lista de IPs. Se for o
+   caso, informe o IP do VPS (`app.smartvidanet.com.br`) no pedido — senão a primeira chamada falha
+   com um erro de autenticação que parece token errado e não é.
+4. **Como o token viaja** (header `Authorization: Bearer`, header próprio, corpo do POST) e
+   **se expira** — se for OAuth com refresh, a integração precisa renovar sozinha.
+5. **Rate limit** — quantas chamadas por minuto/hora. É o que decide se a carga de ~13 mil veículos
+   cabe numa madrugada ou leva dias.
+6. **Filtro por data de alteração** (`updated_since`/`modified_after`) em cada entidade — repetindo
+   por importância: é isto que decide se manter o espelho vivo é barato ou caro.
+7. **O arquivo OpenAPI** (o `.json`/`.yaml` que a página de docs consome). Com ele em
+   `docs/modulos/mutual-openapi.json`, o de-para campo a campo sai sem depender de rede.
+
+**Onde o token vive depois:** `.env` do VPS, lido pela rota `/api/v1/mutual/*` no servidor.
+**Nunca no navegador, nunca commitado, nunca em tabela** — ver "Configuração" acima. Ele dá
+leitura da base inteira de associados: é o segredo mais sensível que o projeto vai guardar,
+acima do `PLACAFIPE_TOKEN` e do gateway.
+
 **Como destravar:** liberar `smartcar-api.mutualignit.com.br` na política de egress da sessão,
 **ou** salvar o OpenAPI (o `.json`/`.yaml` que a página de docs consome) em
 `docs/modulos/mutual-openapi.json`. A segunda opção tem uma vantagem: o contrato fica versionado
