@@ -35,6 +35,22 @@ aparece como `SCar`). Trabalho e deploy acontecem no branch **`claude/claude-md-
 > `claude/financial-dre-improvements-6zfj3k`. Era falso**, e foi o que levou uma sessão a cortar
 > dali e trabalhar 59 commits atrás. Não existe branch espelho: existe UM branch vivo.
 
+### ⚠️ DUAS AÇÕES MANUAIS PENDENTES (o usuário autorizou; o agente não tem permissão)
+Tentadas em 08/09/2026 e **bloqueadas**: não há ferramenta para alterar configuração do
+repositório, e `git push --delete` volta **HTTP 403** (a credencial da sessão faz push, não apaga
+branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conhecido.
+
+1. **Trocar o branch padrão** para `claude/claude-md-opcao-x-98kfj5`:
+   GitHub → repositório → *Settings* → *General* → *Default branch* → ícone de troca →
+   escolher `claude/claude-md-opcao-x-98kfj5` → *Update*.
+   **É isto que fecha o buraco:** o hook só existe no branch que a sessão clona; enquanto o
+   padrão for o morto, uma sessão nova pode nascer sem aviso nenhum.
+2. **Apagar os 4 branches mortos** (nenhum é o padrão, então podem ir a qualquer momento):
+   `claude/financial-dre-improvements-6zfj3k` · `claude/git-push-issue-to49ky` ·
+   `claude/vehicle-trackers-module-jl4rjw` · `claude/assistencia-24h-dashboard-cqdb35`.
+   GitHub → *Branches* → lixeira em cada um. Depois da troca do padrão, o
+   `claude/scar-project-btasdf` também pode ser apagado.
+
 - **Produção:** `https://app.smartvidanet.com.br` — VPS KingHost, Docker + Caddy (HTTPS auto),
   pasta `/opt/scar`.
 - **Último commit desta fase:** `a468ead`.
