@@ -4,6 +4,9 @@ import {
   STATUS_PROTOCOLO,
   rotuloCategoria,
   corPrioridade,
+  situacaoParecer,
+  resumoPareceres,
+  ordenarPareceres,
   protocoloAberto,
   precisaAtencao,
   linkWhatsAppAssociado,
@@ -105,5 +108,37 @@ describe('ajuste do boleto (historico financeiro)', () => {
     expect(validarAjuste(200, 50, 10)).toBeNull();
     // desconto pode chegar ao total quando ha acrescimo
     expect(validarAjuste(200, 210, 10)).toBeNull();
+  });
+});
+
+describe('pareceres do protocolo (0059)', () => {
+  const p = (respondido: boolean, dias: number) => ({ respondido, dias_esperando: dias });
+
+  it('parecer novo espera sem alarde; depois de 3 dias cobra e de 7 atrasa', () => {
+    expect(situacaoParecer(p(false, 0)).rotulo).toBe('Aguardando');
+    expect(situacaoParecer(p(false, 3)).cor).toContain('amber');
+    expect(situacaoParecer(p(false, 7)).atrasado).toBe(true);
+    expect(situacaoParecer(p(false, 9)).rotulo).toBe('Atrasado ha 9 dias');
+  });
+
+  it('respondido nunca conta como atrasado, por mais que tenha demorado', () => {
+    expect(situacaoParecer(p(true, 30))).toMatchObject({ rotulo: 'Respondido', atrasado: false });
+  });
+
+  it('o resumo diz o que falta, que e a pergunta de quem vai decidir', () => {
+    expect(resumoPareceres([]).texto).toBe('Nenhum parecer solicitado');
+    expect(resumoPareceres([p(true, 1), p(false, 2)])).toMatchObject({
+      total: 2, respondidos: 1, pendentes: 1, atrasados: 0,
+      texto: '1 de 2 pareceres · faltam 1',
+    });
+    expect(resumoPareceres([p(true, 1), p(true, 2)]).texto).toBe('2 parecer(es) — todos respondidos');
+    expect(resumoPareceres([p(false, 8), p(false, 1)]).atrasados).toBe(1);
+  });
+
+  it('quem esta esperando ha mais tempo aparece primeiro', () => {
+    const ordenado = ordenarPareceres([p(true, 20), p(false, 1), p(false, 9)]);
+    expect(ordenado.map((x) => [x.respondido, x.dias_esperando])).toEqual([
+      [false, 9], [false, 1], [true, 20],
+    ]);
   });
 });

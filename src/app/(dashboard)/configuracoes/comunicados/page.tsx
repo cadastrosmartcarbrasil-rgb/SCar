@@ -2,17 +2,19 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Pencil, Megaphone, Archive, Eye, AlertTriangle } from 'lucide-react';
+import { Plus, Pencil, Megaphone, Archive, Eye, AlertTriangle, MessagesSquare, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useMemosGestao, useArquivarMemo, type FormMemo } from '@/hooks/use-memos';
 import { ModalMemo, memoVazio } from '@/components/memos/modal-memo';
-import { categoriaMeta, prioridadeMeta, resumoLeitura, papelMemoRotulo } from '@/lib/memos';
+import { categoriaMeta, prioridadeMeta, resumoLeitura, papelMemoRotulo, resumoRespostas } from '@/lib/memos';
+import { ConversaMemo } from '@/components/memos/conversa-memo';
 import { formatDate } from '@/lib/utils';
 
 export default function ComunicadosPage() {
   const { data: memos, isLoading } = useMemosGestao();
   const arquivar = useArquivarMemo();
   const [form, setForm] = useState<FormMemo | null>(null);
+  const [conversa, setConversa] = useState<string | null>(null);
 
   return (
     <div className="space-y-4">
@@ -33,12 +35,13 @@ export default function ComunicadosPage() {
               <th className="px-4 py-2">Comunicado</th>
               <th className="px-4 py-2">Para quem</th>
               <th className="px-4 py-2">Ciencia</th>
+              <th className="px-4 py-2">Conversa</th>
               <th className="px-4 py-2">Publicado</th>
               <th className="px-4 py-2 text-right">Acoes</th>
             </tr>
           </thead>
           <tbody>
-            {isLoading && <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-400">Carregando...</td></tr>}
+            {isLoading && <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-400">Carregando...</td></tr>}
             {(memos ?? []).map((m) => {
               const cat = categoriaMeta(m.categoria);
               const pri = prioridadeMeta(m.prioridade);
@@ -83,6 +86,19 @@ export default function ComunicadosPage() {
                       <span className="text-slate-400">{m.leituras} leitura(s)</span>
                     )}
                   </td>
+                  <td className="px-4 py-2">
+                    <button
+                      onClick={() => setConversa(conversa === m.id ? null : m.id)}
+                      className={`inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs transition ${
+                        m.respostas_nao_lidas > 0
+                          ? 'bg-amber-50 font-medium text-amber-800 hover:bg-amber-100'
+                          : 'text-slate-600 hover:bg-slate-50'}`}
+                    >
+                      <MessagesSquare className="h-3.5 w-3.5" />
+                      {resumoRespostas(m.respostas, m.respostas_nao_lidas) ?? 'Sem resposta'}
+                      {conversa === m.id ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                    </button>
+                  </td>
                   <td className="px-4 py-2 text-slate-600">
                     {formatDate(m.publicado_em)}
                     {m.expira_em && <span className="block text-[11px] text-slate-400">ate {formatDate(m.expira_em)}</span>}
@@ -112,8 +128,20 @@ export default function ComunicadosPage() {
                 </tr>
               );
             })}
+            {/* A conversa abre embaixo da linha: a matriz responde cada unidade
+                de dentro da mesma tela em que publicou. */}
+            {(memos ?? []).filter((m) => m.id === conversa).map((m) => (
+              <tr key={`${m.id}-conversa`} className="border-b border-slate-50 bg-fundo/60">
+                <td colSpan={6} className="px-4 py-3">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Conversa · {m.titulo}
+                  </p>
+                  <ConversaMemo memoId={m.id} modo="autor" />
+                </td>
+              </tr>
+            ))}
             {!isLoading && (memos ?? []).length === 0 && (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-slate-400">
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-400">
                 <Megaphone className="mx-auto mb-2 h-6 w-6 text-slate-300" />
                 Nenhum comunicado publicado ainda.
               </td></tr>

@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { toast } from 'sonner';
-import { ArrowRightLeft, Clock, Paperclip, Wrench, Info, DollarSign } from 'lucide-react';
+import { Clock, Paperclip, Wrench, Info, DollarSign } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { UploadAnexos } from './upload-anexos';
 import { CotacaoPecas } from './cotacao-pecas';
 import { EventoFinanceiro } from './evento-financeiro';
-import { useEvento, useHistoricoProtocolo, useTransferirProtocolo } from '@/hooks/use-eventos';
+import { useEvento, useHistoricoProtocolo } from '@/hooks/use-eventos';
+import { useUsuarios } from '@/hooks/use-config';
+import { TramitacaoEvento } from './tramitacao-evento';
 import { PIPELINE_SINISTRO, TIPO_EVENTO_LABEL } from '@/types/domain';
 import { formatDate, formatCurrency } from '@/lib/utils';
 import type { StatusEvento, TipoEvento, Json } from '@/lib/database.types';
@@ -27,10 +28,8 @@ interface LocalEvento {
 export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
   const { data: evento, isLoading } = useEvento(eventoId);
   const { data: historico } = useHistoricoProtocolo(eventoId);
-  const transferir = useTransferirProtocolo(eventoId);
+  const { data: usuarios } = useUsuarios();
   const [aba, setAba] = useState<Aba>('info');
-  const [parecer, setParecer] = useState('');
-  const [novoStatus, setNovoStatus] = useState<StatusEvento | ''>('');
 
   if (isLoading || !evento) return <p className="text-sm text-slate-500">Carregando protocolo...</p>;
 
@@ -44,24 +43,6 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
   const local = (evento.local_evento as Json as LocalEvento) ?? {};
   const tipoNome =
     e.tipos_evento?.nome ?? (evento.tipo_evento ? TIPO_EVENTO_LABEL[evento.tipo_evento as TipoEvento] : '-');
-
-  function tramitar() {
-    transferir.mutate(
-      {
-        destino: evento!.operador_atual_id ?? '',
-        parecer: parecer || undefined,
-        novoStatus: (novoStatus || undefined) as StatusEvento | undefined,
-      },
-      {
-        onSuccess: () => {
-          toast.success('Protocolo tramitado');
-          setParecer('');
-          setNovoStatus('');
-        },
-        onError: (err) => toast.error((err as Error).message),
-      },
-    );
-  }
 
   const abas: { id: Aba; label: string; icon: React.ElementType }[] = [
     { id: 'info', label: 'Dados', icon: Info },
@@ -176,8 +157,16 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
                   {(historico ?? []).map((h) => (
                     <li key={h.id} className="relative">
                       <span className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-brand-500" />
-                      <p className="text-sm font-medium text-slate-800">{h.acao_realizada}</p>
-                      {h.status_anterior && (
+                      <p className="text-sm font-medium text-slate-800">
+                        {ACAO_HISTORICO[h.acao_realizada] ?? h.acao_realizada}
+                        {/* de nada adianta dizer "TRANSFERENCIA" sem dizer para quem */}
+                        {h.usuario_destino_id && (
+                          <span className="font-normal text-slate-500">
+                            {' '}· {nomeDe(usuarios, h.usuario_destino_id)}
+                          </span>
+                        )}
+                      </p>
+                      {h.status_anterior && h.status_anterior !== h.status_novo && (
                         <p className="text-xs text-slate-500">
                           {h.status_anterior} → {h.status_novo}
                         </p>
@@ -194,52 +183,24 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
         </Card>
       </div>
 
-      {/* Tramitacao */}
+      {/* Tramitacao + pareceres (0059): passar a bola de verdade e pedir analise */}
       <div>
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ArrowRightLeft className="h-4 w-4" /> Tramitar Protocolo
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div>
-              <label className="text-xs text-slate-500">Novo status</label>
-              <select
-                value={novoStatus}
-                onChange={(ev) => setNovoStatus(ev.target.value as StatusEvento)}
-                className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-              >
-                <option value="">Manter status atual</option>
-                {PIPELINE_SINISTRO.map((c) => (
-                  <option key={c.status} value={c.status}>
-                    {c.titulo}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs text-slate-500">Parecer / observacoes</label>
-              <textarea
-                value={parecer}
-                onChange={(ev) => setParecer(ev.target.value)}
-                rows={4}
-                className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-                placeholder="Descreva a analise ou motivo da transferencia..."
-              />
-            </div>
-            <button
-              onClick={tramitar}
-              disabled={transferir.isPending}
-              className="w-full rounded-md bg-acao py-2 text-sm font-medium text-white hover:bg-acao-escura disabled:opacity-60"
-            >
-              {transferir.isPending ? 'Registrando...' : 'Registrar tramitacao'}
-            </button>
-          </CardContent>
-        </Card>
+        <TramitacaoEvento eventoId={eventoId} operadorAtualId={evento.operador_atual_id} />
       </div>
     </div>
   );
+}
+
+/** Rotulos da trilha do evento — `acao_realizada` e texto no banco (0002/0059). */
+const ACAO_HISTORICO: Record<string, string> = {
+  ABERTURA: 'Protocolo aberto',
+  TRANSFERENCIA: 'Transferido para',
+  MUDANCA_STATUS: 'Status alterado',
+  PARECER: 'Parecer registrado',
+};
+
+function nomeDe(usuarios: { id: string; nome: string }[] | undefined, id: string): string {
+  return usuarios?.find((u) => u.id === id)?.nome ?? 'equipe';
 }
 
 function Secao({ titulo, children }: { titulo: string; children: React.ReactNode }) {

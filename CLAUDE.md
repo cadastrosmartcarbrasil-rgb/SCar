@@ -32,6 +32,11 @@ o de trabalho; esse default morto já causou um dia inteiro de trabalho no branc
 - **`0057_memos_autor_ve` é NOVA e CORRIGE a 0056** — quem publica um comunicado endereçado a
   UMA unidade (ou a um papel que não é o seu) não via o próprio aviso em tela nenhuma, e o
   sintoma era "publiquei e não apareceu". Roda depois da `0056`.
+- **`0058_memos_respostas` é NOVA** — o comunicado vira CONVERSA: quem recebe devolve o recado
+  por ali, e quem publicou responde de volta, uma conversa por destinatário.
+- **`0059_protocolo_evento_pareceres` é NOVA** — a tramitação do evento/sinistro passa a ter
+  destinatário de verdade (antes só trocava o status), usa a Central de Protocolos que já
+  existia e ganha o pedido de PARECER a várias pessoas.
 - **`0055_memos_comunicados` é NOVA** — o mural interno (`memos` + `memo_leituras`) que alimenta a
   **Central do Atendente** na tela do SAC. Sem ela, o SAC quebra ao abrir (a Central chama
   `memos_do_usuario`).
@@ -135,9 +140,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0057`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **34 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 410 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0059`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **36 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 417 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Todos os portais e páginas
@@ -838,6 +843,34 @@ como **"voce publicou"** e com o DESTINO ao lado ("Para Cuiaba · Sinistro") —
 para quem ele foi seria trocar uma duvida por outra. O mural de quem NAO publicou nao mudou. A tela
 da gestao passa a avisar em vermelho quando o endereço escolhido **nao tem nenhum usuario ativo**
 (`destinatarios = 0`), que e o outro jeito de um comunicado nao chegar a ninguem.)
+· `0058_memos_respostas` (O COMUNICADO VIRA CONVERSA — o mural so ia de ida: publicava, a pessoa
+lia, dava ciencia, e a devolutiva saia do sistema para o WhatsApp. `memo_respostas` guarda o papo,
+e a decisao que importa e o RECORTE: um comunicado pode ir para dezenas de pessoas, e um mural
+unico de respostas faria o desabafo do gestor de Cuiaba ser lido pelas outras oito unidades — entao
+cada destinatario tem a SUA conversa com quem publicou (`com_usuario_id`, fixo na linha do papo).
+O destinatario ve so a dele; quem publicou (e a matriz) ve todas e responde em cada uma.
+`memo_visivel_para()` passa a ser a UNICA definicao de endereçamento — a que o mural usa e a que
+autoriza responder — e de proposito NAO olha `publicado`/`expira_em`: a conversa nao pode sumir no
+meio so porque o aviso venceu. RPCs `responder_memo`, `memo_conversas`, `memo_mensagens` e
+`marcar_conversa_lida`; `memos_do_usuario` e `memos_gestao` **recriadas** com o contador de
+respostas e o que falta ler.)
+· `0059_protocolo_evento_pareceres` (O EVENTO TRAMITA DE VERDADE E PEDE PARECER — (A) o card
+"Tramitar Protocolo" do sinistro mandava como destino o operador que JA estava com o evento (ou
+string vazia): nunca transferiu para ninguem, so trocava o status e guardava um parecer solto — e a
+funcao aceitava calada, sem checar staff nem se o destino existia. `transferir_protocolo` recriada
+com destinatario validado e recusa de tramitacao vazia; (B) o MECANISMO JA EXISTIA e nao estava
+ligado: `atendimentos.evento_id` esta na tabela desde a 0022 sem ninguem escrever nele. Agora
+`protocolo_do_evento()` cria/reaproveita o protocolo do evento (herdando associado, veiculo e
+unidade), e tramitar o evento vira transferir o protocolo — ele aparece na Central, em "Meus
+protocolos" e na Central do Atendente. O `historico_protocolo` continua sendo escrito: e dele que
+a linha do tempo do sinistro e o Kanban vivem; (C) PARECER — sinistro vai para o juridico, para a
+vistoria, para a diretoria, cada um opina e volta. Isso e um PEDIDO COM RESPOSTA, nao um
+comentario: duas interacoes novas (`PARECER_SOLICITADO` -> `PARECER`) ligadas por
+`protocolo_interacoes.responde_a`; enquanto nao ha resposta o pedido esta PENDENTE. RPCs
+`solicitar_parecer` (varias pessoas de uma vez, sem duplicar pedido em aberto), `responder_parecer`
+(so de quem foi chamado — a matriz destrava quem saiu de ferias), `pareceres_protocolo` e
+`meus_pareceres_pendentes`; `listar_protocolos` **recriada** com `evento_id` e
+`pareceres_pendentes`.)
 · `0055_memos_comunicados` (MURAL INTERNO — a tela do SAC nascia vazia ate alguem ser buscado, e
 e justamente ai que a equipe precisa de tres respostas: o que esta na MINHA mao, o que a gestao
 MANDOU e o que esta pegando fogo. (A) `memos` — comunicado publicado pela gestao, ENDEREÇAVEL por
@@ -971,9 +1004,39 @@ recuperação e giro).
   `<ModalMemo escopo="matriz"|"franquia">` (mesma escolha do `<ModalFornecedor>`/`<ModalVendedor>`);
   no escopo franquia ele mostra os dois destinos em vez do seletor de unidade. Arquivar tira
   do mural e preserva a ciência de quem já leu; `expira_em` faz o aviso sumir sozinho no prazo.
+- **O comunicado tem RESPOSTA (0058), e ela é privada por destinatário.** Quem recebe devolve o
+  recado no próprio mural (`<ConversaMemo modo="minha">`); quem publicou vê **uma conversa por
+  pessoa** e responde dentro de cada uma (`modo="autor"`) — em Configurações → Comunicados, na aba
+  *Enviados* da franquia e no próprio mural. Um mural único de respostas faria o recado de uma
+  unidade ser lido pelas outras, e aí ninguém responde mais nada. Abrir a conversa **já dá ciência**
+  do que o outro lado escreveu: pedir mais um clique só faria o contador mentir.
 - **Lógica pura testada:** `src/lib/memos.ts` (`ordenarMemos`, `pendenteCiencia`, `memoVigente`,
-  `resumoLeitura`, `destinoDoMemo`, e os rótulos `PAPEIS_MEMO`/`PAPEIS_DIRETORIA` — que moram aqui,
+  `resumoLeitura`, `destinoDoMemo`, `resumoRespostas`, `ordenarConversas`, e os rótulos `PAPEIS_MEMO`/`PAPEIS_DIRETORIA` — que moram aqui,
   não na tela, porque o mural também precisa escrever o destino) — a ordem do mural é a mesma do `order by` da RPC, dos dois lados.
+
+## Tramitação do evento e PARECERES (0059)
+- **Tramitar o evento é transferir o protocolo dele.** O evento ganha (sob demanda) um registro em
+  `atendimentos` — `protocolo_do_evento()`, com índice único em `evento_id` — herdando associado,
+  veículo e unidade. Assim a transferência cai na **Central de Protocolos** de quem recebeu, e não
+  só na linha do tempo do sinistro. Não criar tabela paralela: era o que faltava ligar, não criar.
+- **O `historico_protocolo` continua sendo escrito.** É dele que a linha do tempo do evento e o
+  Kanban vivem; o protocolo acompanha, não substitui. `acao_realizada` agora distingue
+  `TRANSFERENCIA` / `MUDANCA_STATUS` / `PARECER`, e a trilha mostra **para quem** foi.
+- **Tramitação vazia é recusada** (sem destino, sem status e sem parecer não há o que registrar), e
+  destino inexistente/inativo também. Antes a tela mandava o próprio operador atual como destino e
+  o banco aceitava calado — a transferência nunca acontecia.
+- **Parecer é pedido COM resposta, não comentário.** `solicitar_parecer(protocolo, usuarios[],
+  pergunta)` chama várias pessoas de uma vez (pedido pendente não é duplicado); cada uma responde
+  com `responder_parecer`, e é a ligação `protocolo_interacoes.responde_a` que fecha o par. Quem
+  responde é **quem foi chamado** — a matriz (`tem_acesso_global`) destrava um parecer parado
+  (férias, desligamento) e fica registrado quem escreveu.
+- **O que trava o processo dos outros aparece:** bloco *"Esperando o seu parecer"* na Central do
+  Atendente (fora de "Meus protocolos" de propósito — ali está o que é MEU, aqui o que depende de
+  mim) e selo de pareceres pendentes na fila da Central. Régua em `src/lib/protocolos.ts`
+  (`situacaoParecer`, `resumoPareceres`, `ordenarPareceres`, testados): 3 dias cobra, 7 atrasa.
+- **`?protocolo=<id>` abre o atendimento direto** na Central (o link já existia e não fazia nada).
+- **Telas:** `src/components/sinistros/tramitacao-evento.tsx` (substituiu o card antigo em
+  `protocolo-detail.tsx`) e o bloco de pareceres em `central-atendente.tsx`.
 
 ## SAC — alertas, busca e ordenação (0030)
 - **Alerta do veículo tem UMA fonte:** `alertas_veiculo` (linhas de `veiculo_alertas` + o tipo).

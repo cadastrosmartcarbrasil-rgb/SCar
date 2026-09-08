@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import {
   Search, Filter, ArrowLeftRight, CheckCircle2, MessageSquarePlus, Clock, User, Car,
-  AlertTriangle, X,
+  AlertTriangle, X, ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
@@ -23,13 +24,28 @@ import type { ProtocoloLinha, PrioridadeAtendimento } from '@/lib/database.types
 
 // Central de Protocolos: fila de todos os atendimentos, com histórico de
 // interacoes, transferencia entre atendentes e encerramento.
-export function CentralProtocolos({ filtroInicial }: { filtroInicial?: FiltroProtocolos }) {
+export function CentralProtocolos({
+  filtroInicial, abrirId,
+}: {
+  filtroInicial?: FiltroProtocolos;
+  /** id vindo de `?protocolo=` — quem clicou num link ja disse qual quer ver */
+  abrirId?: string | null;
+}) {
   const [filtro, setFiltro] = useState<FiltroProtocolos>({ status: 'ABERTOS', ...filtroInicial });
   const [busca, setBusca] = useState('');
   const [aberto, setAberto] = useState<ProtocoloLinha | null>(null);
+  const [jaAbriu, setJaAbriu] = useState(false);
 
   const { data: protocolos, isLoading } = useProtocolos(filtro);
   const { data: atendentes } = useAtendentes();
+
+  // Abre o protocolo pedido pela URL assim que a fila chega — uma vez so, para
+  // nao reabrir sozinho quando a pessoa clicar em "Voltar a Central".
+  useEffect(() => {
+    if (jaAbriu || !abrirId || !protocolos?.length) return;
+    const alvo = protocolos.find((p) => p.id === abrirId);
+    if (alvo) { setAberto(alvo); setJaAbriu(true); }
+  }, [abrirId, protocolos, jaAbriu]);
 
   if (aberto) {
     return <DetalheProtocolo protocolo={aberto} onVoltar={() => setAberto(null)} />;
@@ -131,6 +147,13 @@ export function CentralProtocolos({ filtroInicial }: { filtroInicial?: FiltroPro
                 <td className="px-4 py-2 text-slate-600">
                   {p.assunto ?? '-'}
                   {p.interacoes > 0 && <span className="ml-1 text-xs text-slate-400">({p.interacoes})</span>}
+                  {/* 0059: protocolo parado esperando alguem opinar nao pode
+                      parecer "em andamento" como qualquer outro. */}
+                  {p.pareceres_pendentes > 0 && (
+                    <span className="ml-1 rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+                      {p.pareceres_pendentes} parecer(es) pendente(s)
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-2 text-slate-600">{p.responsavel ?? <span className="text-rose-500">sem responsavel</span>}</td>
                 <td className="px-4 py-2">
@@ -187,6 +210,14 @@ function DetalheProtocolo({ protocolo, onVoltar }: { protocolo: ProtocoloLinha; 
               {protocolo.placa ? ` · ${protocolo.placa}` : ''}
             </p>
             {protocolo.descricao && <p className="mt-1 text-sm text-slate-500">{protocolo.descricao}</p>}
+            {protocolo.evento_id && (
+              <Link
+                href={`/sinistros/${protocolo.evento_id}`}
+                className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-cyan-700 hover:underline"
+              >
+                <ExternalLink className="h-3 w-3" /> Abrir o evento deste protocolo
+              </Link>
+            )}
           </div>
           <div className="flex flex-col items-end gap-1">
             <span className={`rounded px-2 py-0.5 text-xs ${STATUS_PROTOCOLO[protocolo.status].cor}`}>

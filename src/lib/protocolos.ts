@@ -44,6 +44,8 @@ export const TIPO_INTERACAO_LABEL: Record<TipoInteracaoProtocolo, string> = {
   STATUS: 'Mudanca de status',
   TRANSFERENCIA: 'Transferencia',
   ENCERRAMENTO: 'Encerramento',
+  PARECER_SOLICITADO: 'Parecer solicitado',
+  PARECER: 'Parecer',
 };
 
 export function rotuloCategoria(tipo: TipoAtendimento): string {
@@ -130,4 +132,54 @@ export function validarAjuste(original: number, desconto: number, acrescimo: num
     return 'Desconto maior que o valor do titulo';
   }
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// PARECERES (0059) — sinistro nao anda com uma pessoa so: vai para o juridico,
+// para a vistoria, para a diretoria, e volta. O que interessa na tela e QUEM
+// ainda deve, e ha quanto tempo — um parecer esquecido para o processo inteiro.
+// ---------------------------------------------------------------------------
+
+/** Dias a partir dos quais um parecer pendente deixa de ser "normal". */
+export const PARECER_COBRAR_DIAS = 3;
+export const PARECER_ATRASADO_DIAS = 7;
+
+export interface ParecerBase {
+  respondido: boolean;
+  dias_esperando: number;
+}
+
+export function situacaoParecer(p: ParecerBase): { rotulo: string; cor: string; atrasado: boolean } {
+  if (p.respondido) return { rotulo: 'Respondido', cor: 'bg-emerald-50 text-emerald-700', atrasado: false };
+  if (p.dias_esperando >= PARECER_ATRASADO_DIAS) {
+    return { rotulo: `Atrasado ha ${p.dias_esperando} dias`, cor: 'bg-rose-50 text-rose-700', atrasado: true };
+  }
+  if (p.dias_esperando >= PARECER_COBRAR_DIAS) {
+    return { rotulo: `Aguardando ha ${p.dias_esperando} dias`, cor: 'bg-amber-50 text-amber-700', atrasado: false };
+  }
+  return { rotulo: 'Aguardando', cor: 'bg-slate-100 text-slate-600', atrasado: false };
+}
+
+/** "2 de 3 pareceres" — o que o analista precisa saber antes de decidir. */
+export function resumoPareceres(lista: ParecerBase[]): {
+  total: number; respondidos: number; pendentes: number; atrasados: number; texto: string;
+} {
+  const total = lista.length;
+  const respondidos = lista.filter((p) => p.respondido).length;
+  const pendentes = total - respondidos;
+  const atrasados = lista.filter((p) => !p.respondido && p.dias_esperando >= PARECER_ATRASADO_DIAS).length;
+  const texto = total === 0
+    ? 'Nenhum parecer solicitado'
+    : pendentes === 0
+      ? `${total} parecer(es) — todos respondidos`
+      : `${respondidos} de ${total} pareceres · faltam ${pendentes}`;
+  return { total, respondidos, pendentes, atrasados, texto };
+}
+
+/** Pendentes primeiro, e dentro deles o que espera ha mais tempo. */
+export function ordenarPareceres<T extends ParecerBase>(lista: T[]): T[] {
+  return [...lista].sort((a, b) => {
+    if (a.respondido !== b.respondido) return a.respondido ? 1 : -1;
+    return b.dias_esperando - a.dias_esperando;
+  });
 }

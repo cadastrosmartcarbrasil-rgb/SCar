@@ -29,7 +29,10 @@ export type TipoAtendimento =
   // 0029: categorias da Central de Protocolos
   | 'FINANCEIRO' | 'DUVIDAS' | 'RECLAMACAO' | 'OUTROS';
 export type PrioridadeAtendimento = 'BAIXA' | 'NORMAL' | 'ALTA' | 'URGENTE';
-export type TipoInteracaoProtocolo = 'COMENTARIO' | 'STATUS' | 'TRANSFERENCIA' | 'ENCERRAMENTO';
+export type TipoInteracaoProtocolo =
+  | 'COMENTARIO' | 'STATUS' | 'TRANSFERENCIA' | 'ENCERRAMENTO'
+  // 0059: o pedido de parecer e a resposta dele
+  | 'PARECER_SOLICITADO' | 'PARECER';
 export type CanalAtendimento = 'SAC_INTERNO' | 'PORTAL';
 export type StatusAtendimento = 'ABERTO' | 'EM_ANDAMENTO' | 'CONCLUIDO' | 'CANCELADO';
 export type SeveridadeAlerta = 'BAIXA' | 'MEDIA' | 'ALTA';
@@ -461,6 +464,9 @@ export type MemoDoUsuario = {
   /** 0057: para quem foi, e se fui EU que publiquei (o autor ve o proprio memo) */
   papeis: string[] | null;
   meu: boolean;
+  /** 0058: a conversa deste comunicado (a minha; a soma de todas, para quem publicou) */
+  respostas: number;
+  respostas_nao_lidas: number;
 };
 /** Linha de `memos_gestao` — com o acompanhamento da ciencia. */
 export type MemoGestao = MemoDoUsuario & {
@@ -470,6 +476,39 @@ export type MemoGestao = MemoDoUsuario & {
   destinatarios: number;
   /** 0056: fui EU que publiquei (a franquia acompanha o que enviou) */
   meu: boolean;
+  /** 0058: quantas pessoas responderam (uma conversa por destinatario) */
+  conversas: number;
+};
+export type MemoRespostasRow = {
+  id: string;
+  memo_id: string;
+  com_usuario_id: string;
+  autor_id: string;
+  mensagem: string;
+  lida_em: string | null;
+  created_at: string;
+};
+/** Linha de `memo_conversas` — um papo por destinatario. */
+export type MemoConversa = {
+  com_usuario_id: string;
+  pessoa: string;
+  papel: string | null;
+  unidade: string | null;
+  mensagens: number;
+  nao_lidas: number;
+  ultima_mensagem: string | null;
+  ultima_em: string;
+  ultima_minha: boolean;
+};
+/** Linha de `memo_mensagens` — o texto trocado dentro de uma conversa. */
+export type MemoMensagem = {
+  id: string;
+  autor_id: string;
+  autor: string;
+  minha: boolean;
+  mensagem: string;
+  lida_em: string | null;
+  created_at: string;
 };
 
 export type TiposAlertaRow = {
@@ -578,6 +617,8 @@ export type ProtocoloInteracoesRow = {
   para_usuario: string | null;
   interno: boolean;
   usuario_id: string | null;
+  /** 0059: quando esta interacao RESPONDE outra (parecer -> pedido de parecer) */
+  responde_a: string | null;
   created_at: string;
 };
 
@@ -602,6 +643,38 @@ export type ProtocoloLinha = {
   atualizado_em: string;
   encerrado_em: string | null;
   dias_aberto: number;
+  /** 0059: de que EVENTO este protocolo veio, e quantos pareceres faltam */
+  evento_id: string | null;
+  pareceres_pendentes: number;
+};
+
+/** Linha de `pareceres_protocolo` — pedido de parecer e a resposta dele. */
+export type ParecerProtocolo = {
+  pedido_id: string;
+  pergunta: string | null;
+  pedido_por: string;
+  para_id: string | null;
+  para: string | null;
+  pedido_em: string;
+  respondido: boolean;
+  parecer: string | null;
+  respondido_por: string | null;
+  respondido_em: string | null;
+  dias_esperando: number;
+};
+/** Linha de `meus_pareceres_pendentes` — o que esperam de MIM. */
+export type ParecerPendente = {
+  pedido_id: string;
+  atendimento_id: string;
+  protocolo: string | null;
+  evento_id: string | null;
+  assunto: string | null;
+  associado: string;
+  placa: string | null;
+  pergunta: string | null;
+  pedido_por: string;
+  pedido_em: string;
+  dias_esperando: number;
 };
 
 // Interacao formatada (RPC interacoes_protocolo)
@@ -2271,6 +2344,33 @@ export type Database = {
         Returns: MemosRow;
       };
       pode_publicar_memo: { Args: Record<string, never>; Returns: boolean };
+      // ---- 0058: o comunicado vira conversa ----
+      responder_memo: {
+        Args: { p_memo_id: string; p_mensagem: string; p_com_usuario?: string | null };
+        Returns: MemoRespostasRow;
+      };
+      memo_conversas: { Args: { p_memo_id: string }; Returns: MemoConversa[] };
+      memo_mensagens: {
+        Args: { p_memo_id: string; p_com_usuario?: string | null };
+        Returns: MemoMensagem[];
+      };
+      marcar_conversa_lida: {
+        Args: { p_memo_id: string; p_com_usuario?: string | null };
+        Returns: number;
+      };
+      memo_visivel_para: { Args: { p_memo_id: string; p_usuario_id: string }; Returns: boolean };
+      // ---- 0059: protocolo do evento e pareceres ----
+      protocolo_do_evento: { Args: { p_evento_id: string }; Returns: string };
+      solicitar_parecer: {
+        Args: { p_atendimento_id: string; p_usuarios: string[]; p_pergunta: string };
+        Returns: number;
+      };
+      responder_parecer: {
+        Args: { p_pedido_id: string; p_mensagem: string };
+        Returns: ProtocoloInteracoesRow;
+      };
+      pareceres_protocolo: { Args: { p_atendimento_id: string }; Returns: ParecerProtocolo[] };
+      meus_pareceres_pendentes: { Args: { p_limite?: number }; Returns: ParecerPendente[] };
       // ---- 0050: modulo de rastreadores ----
       rastreadores_listar: {
         Args: {
@@ -2451,7 +2551,7 @@ export type Database = {
       transferir_protocolo: {
         Args: {
           p_evento_id: string;
-          p_usuario_destino_id: string;
+          p_usuario_destino_id?: string | null;
           p_parecer?: string | null;
           p_novo_status?: StatusEvento | null;
         };

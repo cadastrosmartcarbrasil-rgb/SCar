@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
-import type { MemoDoUsuario, MemoGestao } from '@/lib/database.types';
+import type { MemoConversa, MemoDoUsuario, MemoGestao, MemoMensagem } from '@/lib/database.types';
 
 /** O mural de quem esta logado (Central do Atendente). */
 export function useMeuMural(incluirLidos = true) {
@@ -115,5 +115,74 @@ export function useAcionamentosAbertos() {
       return data ?? [];
     },
     refetchInterval: 60_000,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// A conversa do comunicado (0058)
+// ---------------------------------------------------------------------------
+
+/** As conversas de um comunicado: todas para quem publicou, a propria para os demais. */
+export function useMemoConversas(memoId: string | null) {
+  const supabase = createClient();
+  return useQuery<MemoConversa[]>({
+    queryKey: ['memos', 'conversas', memoId],
+    enabled: !!memoId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('memo_conversas', { p_memo_id: memoId! });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+/** As mensagens de UMA conversa (sem `comUsuario`, a de quem esta logado). */
+export function useMemoMensagens(memoId: string | null, comUsuario?: string | null) {
+  const supabase = createClient();
+  return useQuery<MemoMensagem[]>({
+    queryKey: ['memos', 'mensagens', memoId, comUsuario ?? 'eu'],
+    enabled: !!memoId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('memo_mensagens', {
+        p_memo_id: memoId!,
+        p_com_usuario: comUsuario ?? null,
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function useResponderMemo() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<unknown, Error, { memoId: string; mensagem: string; comUsuario?: string | null }>({
+    mutationFn: async ({ memoId, mensagem, comUsuario }) => {
+      const { data, error } = await supabase.rpc('responder_memo', {
+        p_memo_id: memoId,
+        p_mensagem: mensagem,
+        p_com_usuario: comUsuario ?? null,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['memos'] }),
+  });
+}
+
+/** Abrir a conversa ja e dar ciencia do que o outro lado escreveu. */
+export function useMarcarConversaLida() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<number, Error, { memoId: string; comUsuario?: string | null }>({
+    mutationFn: async ({ memoId, comUsuario }) => {
+      const { data, error } = await supabase.rpc('marcar_conversa_lida', {
+        p_memo_id: memoId,
+        p_com_usuario: comUsuario ?? null,
+      });
+      if (error) throw error;
+      return data ?? 0;
+    },
+    onSuccess: (n) => { if (n > 0) qc.invalidateQueries({ queryKey: ['memos'] }); },
   });
 }

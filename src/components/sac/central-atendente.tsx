@@ -5,11 +5,14 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import {
   Ticket, Megaphone, Siren, ArrowRight, Check, ChevronDown, ChevronUp, LifeBuoy,
-  Loader2, BellRing,
+  Loader2, BellRing, Gavel,
 } from 'lucide-react';
 import { useMeuMural, useMarcarMemoLido, useAcionamentosAbertos } from '@/hooks/use-memos';
 import { useProtocolos, useResumoProtocolos } from '@/hooks/use-protocolos';
-import { categoriaMeta, prioridadeMeta, pendenteCiencia, destinoDoMemo } from '@/lib/memos';
+import { useMeusPareceresPendentes } from '@/hooks/use-eventos';
+import { situacaoParecer } from '@/lib/protocolos';
+import { categoriaMeta, prioridadeMeta, pendenteCiencia, destinoDoMemo, resumoRespostas } from '@/lib/memos';
+import { ConversaMemo } from '@/components/memos/conversa-memo';
 import { STATUS_ATENDIMENTO_LABEL } from '@/lib/sac-servicos';
 import { formatDate } from '@/lib/utils';
 
@@ -30,6 +33,7 @@ export function CentralAtendente({ usuarioId }: { usuarioId?: string | null }) {
     <div className="grid gap-4 lg:grid-cols-[1.15fr_1fr]">
       <div className="space-y-4">
         <MeusProtocolos usuarioId={usuarioId} />
+        <PareceresPendentes />
         <QuadroAlertas />
       </div>
       <MuralDaGestao />
@@ -92,6 +96,55 @@ function MeusProtocolos({ usuarioId }: { usuarioId?: string | null }) {
   );
 }
 
+/**
+ * O que TRAVA o processo dos outros (0059): parecer que pediram a mim e eu
+ * ainda nao dei. Fica fora de "Meus protocolos" de proposito — ali esta o que
+ * e MEU; aqui esta o que e de outra pessoa e depende de mim. O bloco some
+ * quando nao ha nada, para nao virar moldura vazia.
+ */
+function PareceresPendentes() {
+  const { data: pareceres } = useMeusPareceresPendentes();
+  const lista = pareceres ?? [];
+  if (!lista.length) return null;
+
+  return (
+    <section className="rounded-2xl border border-amber-200 bg-amber-50/40">
+      <header className="flex items-center justify-between gap-2 border-b border-amber-100 px-4 py-3">
+        <p className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+          <Gavel className="h-4 w-4 text-amber-600" /> Esperando o seu parecer
+        </p>
+        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+          {lista.length}
+        </span>
+      </header>
+      <div className="divide-y divide-amber-100">
+        {lista.slice(0, 6).map((p) => {
+          const sit = situacaoParecer({ respondido: false, dias_esperando: p.dias_esperando });
+          return (
+            <Link
+              key={p.pedido_id}
+              href={p.evento_id ? `/sinistros/${p.evento_id}` : `/protocolos?protocolo=${p.atendimento_id}`}
+              className="flex items-center justify-between gap-3 px-4 py-2.5 transition hover:bg-amber-100/40"
+            >
+              <span className="min-w-0">
+                <span className="flex flex-wrap items-center gap-1.5">
+                  <span className="font-mono text-xs font-semibold text-slate-700">{p.protocolo}</span>
+                  <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${sit.cor}`}>{sit.rotulo}</span>
+                </span>
+                <span className="mt-0.5 block truncate text-sm text-slate-700">{p.pergunta}</span>
+                <span className="block truncate text-[11px] text-slate-500">
+                  {p.pedido_por} · {p.associado}{p.placa ? ` · ${p.placa}` : ''}
+                </span>
+              </span>
+              <ArrowRight className="h-4 w-4 shrink-0 text-amber-400" />
+            </Link>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 // ---------------------------------------------------------------- bloco 2
 function MuralDaGestao() {
   const { data: memos, isLoading } = useMeuMural();
@@ -145,6 +198,14 @@ function MuralDaGestao() {
                         {destinoDoMemo(m.regional, m.papeis)}
                       </span>
                     )}
+                    {resumoRespostas(m.respostas, m.respostas_nao_lidas) && (
+                      <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                        m.respostas_nao_lidas > 0
+                          ? 'bg-amber-100 text-amber-800'
+                          : 'bg-slate-100 text-slate-600'}`}>
+                        {resumoRespostas(m.respostas, m.respostas_nao_lidas)}
+                      </span>
+                    )}
                   </span>
                   <span className="mt-1 block text-sm font-semibold text-slate-800">{m.titulo}</span>
                   <span className="mt-0.5 block text-[11px] text-slate-400">
@@ -166,6 +227,14 @@ function MuralDaGestao() {
                   {m.expira_em && (
                     <p className="mt-1 text-[11px] text-slate-400">Vale ate {formatDate(m.expira_em)}.</p>
                   )}
+                  {/* Responder por aqui: sem isso a devolutiva sai do sistema e
+                      vai para o WhatsApp, onde ninguem mais acha. */}
+                  <div className="mt-3 border-t border-slate-100 pt-3">
+                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                      {m.meu ? 'Respostas que voce recebeu' : 'Sua conversa sobre este comunicado'}
+                    </p>
+                    <ConversaMemo memoId={m.id} modo={m.meu ? 'autor' : 'minha'} compacta />
+                  </div>
                 </div>
               )}
 

@@ -25503,3 +25503,828 @@ revoke execute on all functions in schema public from public;
 revoke execute on all functions in schema public from anon;
 grant  execute on all functions in schema public to authenticated;
 grant  execute on all functions in schema public to service_role;
+
+-- >>>>>>>>>>>>>>>>>>>>>>>> migrations/0058_memos_respostas.sql >>>>>>>>>>>>>>>>>>>>>>>>
+
+-- ============================================================================
+-- SCar :: 0058_memos_respostas.sql
+--
+-- O COMUNICADO VIRA CONVERSA.
+--
+-- Ate aqui o mural so ia de ida: a matriz publicava, a pessoa lia e dava
+-- ciencia. Mas o uso real e outro — a matriz manda um recado ao Marcio, gestor
+-- de uma unidade, e ele PRECISA devolver ali mesmo ("ja resolvi", "falta o
+-- material", "quem autoriza?"), com a matriz respondendo de volta. Sem isso a
+-- resposta sai do sistema e vai para o WhatsApp, onde ninguem mais acha.
+--
+-- COMO A CONVERSA E RECORTADA (esta e a decisao que importa)
+-- Um comunicado pode ir para dezenas de pessoas. Se a resposta fosse um mural
+-- unico, o desabafo do gestor de Cuiaba sobre a unidade dele seria lido pelas
+-- outras oito — e ninguem responderia mais nada. Entao cada destinatario tem a
+-- SUA conversa com quem publicou:
+--   . `com_usuario_id` = o lado destinatario, fixo na linha inteira do papo;
+--   . o destinatario ve so a conversa dele;
+--   . quem publicou (e a matriz) ve todas, uma por pessoa, e responde em cada.
+--
+-- `memo_visivel_para()` responde "esse comunicado e dessa pessoa?" e passa a
+-- ser a UNICA definicao de endereçamento — a mesma que o mural usa e a que
+-- autoriza responder. De proposito ela NAO olha `publicado`/`expira_em`: a
+-- conversa nao pode sumir no meio so porque o aviso venceu.
+-- ============================================================================
+
+create table if not exists memo_respostas (
+  id             uuid primary key default gen_random_uuid(),
+  memo_id        uuid not null references memos(id) on delete cascade,
+  -- o lado DESTINATARIO da conversa (nao muda; e o que separa um papo do outro)
+  com_usuario_id uuid not null references usuarios(id) on delete cascade,
+  autor_id       uuid not null references usuarios(id) on delete cascade,
+  mensagem       text not null,
+  lida_em        timestamptz,
+  created_at     timestamptz not null default now()
+);
+
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'chk_memo_resposta_texto') then
+    alter table memo_respostas add constraint chk_memo_resposta_texto
+      check (btrim(mensagem) <> '');
+  end if;
+end $$;
+
+create index if not exists idx_memo_respostas_conversa
+  on memo_respostas (memo_id, com_usuario_id, created_at);
+create index if not exists idx_memo_respostas_autor on memo_respostas (autor_id);
+
+comment on table memo_respostas is
+  'Resposta ao comunicado. Uma conversa por destinatario (com_usuario_id) com quem publicou.';
+comment on column memo_respostas.com_usuario_id is
+  'O destinatario dono da conversa — nao e o autor da mensagem: quem publicou tambem escreve aqui.';
+
+-- ----------------------------------------------------------------------------
+-- A definicao UNICA de "este comunicado e desta pessoa?"
+-- ----------------------------------------------------------------------------
+create or replace function memo_visivel_para(p_memo_id uuid, p_usuario_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+      from memos m
+      join usuarios u on u.id = p_usuario_id
+     where m.id = p_memo_id
+       and (
+         m.publicado_por = u.id                       -- o autor sempre ve o que publicou (0057)
+         or (
+           (m.regional_id is null or m.regional_id is not distinct from u.regional_id)
+           and (m.papeis is null or cardinality(m.papeis) = 0 or u.papel::text = any(m.papeis))
+         )
+       )
+  );
+$$;
+
+comment on function memo_visivel_para(uuid, uuid) is
+  'Endereçamento do comunicado (unidade + papel, ou o proprio autor). Ignora publicado/expira_em de proposito: a conversa sobrevive ao aviso.';
+
+-- ----------------------------------------------------------------------------
+-- Responder
+-- ----------------------------------------------------------------------------
+create or replace function responder_memo(
+  p_memo_id     uuid,
+  p_mensagem    text,
+  p_com_usuario uuid default null   -- nulo = respondo NA MINHA conversa
+)
+returns memo_respostas
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  m   memos;
+  r   memo_respostas;
+  eu  uuid := auth.uid();
+  com uuid;
+begin
+  if not is_staff() then raise exception 'Somente a equipe responde comunicado'; end if;
+  if coalesce(btrim(p_mensagem), '') = '' then raise exception 'Escreva a resposta'; end if;
+
+  select * into m from memos where id = p_memo_id;
+  if m.id is null then raise exception 'Comunicado nao encontrado'; end if;
+
+  com := coalesce(p_com_usuario, eu);
+
+  if com = eu then
+    -- respondendo na propria conversa: preciso ter recebido o comunicado
+    if not memo_visivel_para(p_memo_id, eu) then
+      raise exception 'Este comunicado nao foi endereçado a voce';
+    end if;
+    -- o autor tambem "recebe" o proprio memo (0057) — mas responder a si mesmo
+    -- nao e conversa nenhuma: ele precisa dizer com QUEM esta falando.
+    if m.publicado_por = eu and p_com_usuario is null then
+      raise exception 'Escolha a conversa que voce quer responder';
+    end if;
+  else
+    -- falar DENTRO da conversa de outra pessoa e de quem publicou (ou da matriz)
+    if not (m.publicado_por = eu or tem_acesso_global()) then
+      raise exception 'Somente quem publicou o comunicado responde nesta conversa';
+    end if;
+    if not memo_visivel_para(p_memo_id, com) then
+      raise exception 'Essa pessoa nao recebeu este comunicado';
+    end if;
+  end if;
+
+  insert into memo_respostas (memo_id, com_usuario_id, autor_id, mensagem)
+    values (p_memo_id, com, eu, btrim(p_mensagem))
+    returning * into r;
+
+  return r;
+end;
+$$;
+
+comment on function responder_memo(uuid, text, uuid) is
+  'Responde o comunicado. Sem p_com_usuario responde na propria conversa; com ele, quem publicou responde a conversa daquela pessoa.';
+
+-- ----------------------------------------------------------------------------
+-- Ler: as conversas (visao de quem publicou) e as mensagens de uma delas
+-- ----------------------------------------------------------------------------
+create or replace function memo_conversas(p_memo_id uuid)
+returns table (
+  com_usuario_id uuid, pessoa text, papel text, unidade text,
+  mensagens integer, nao_lidas integer,
+  ultima_mensagem text, ultima_em timestamptz, ultima_minha boolean
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with eu as (select auth.uid() as id),
+  base as (
+    select r.*
+      from memo_respostas r
+      join memos m on m.id = r.memo_id
+      cross join eu
+     where r.memo_id = p_memo_id
+       and is_staff()
+       -- quem publicou (e a matriz) ve todas as conversas; os demais, so a sua
+       and (m.publicado_por = eu.id or tem_acesso_global() or r.com_usuario_id = eu.id)
+  )
+  select b.com_usuario_id, u.nome, u.papel::text, reg.nome,
+         count(*)::int,
+         count(*) filter (where b.autor_id <> (select id from eu) and b.lida_em is null)::int,
+         (array_agg(b.mensagem  order by b.created_at desc))[1],
+         max(b.created_at),
+         (array_agg(b.autor_id  order by b.created_at desc))[1] = (select id from eu)
+    from base b
+    join usuarios u on u.id = b.com_usuario_id
+    left join regionais reg on reg.id = u.regional_id
+   group by b.com_usuario_id, u.nome, u.papel, reg.nome
+   order by max(b.created_at) desc;
+$$;
+
+comment on function memo_conversas(uuid) is
+  'Conversas de um comunicado: todas para quem publicou, so a propria para os demais.';
+
+create or replace function memo_mensagens(
+  p_memo_id     uuid,
+  p_com_usuario uuid default null   -- nulo = a minha conversa
+)
+returns table (
+  id uuid, autor_id uuid, autor text, minha boolean,
+  mensagem text, lida_em timestamptz, created_at timestamptz
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with eu as (select auth.uid() as id)
+  select r.id, r.autor_id, coalesce(a.nome, 'Gestao'), r.autor_id = eu.id,
+         r.mensagem, r.lida_em, r.created_at
+    from memo_respostas r
+    join memos m on m.id = r.memo_id
+    cross join eu
+    left join usuarios a on a.id = r.autor_id
+   where r.memo_id = p_memo_id
+     and r.com_usuario_id = coalesce(p_com_usuario, eu.id)
+     and is_staff()
+     and (m.publicado_por = eu.id or tem_acesso_global() or r.com_usuario_id = eu.id)
+   order by r.created_at;
+$$;
+
+create or replace function marcar_conversa_lida(
+  p_memo_id     uuid,
+  p_com_usuario uuid default null
+)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  eu  uuid := auth.uid();
+  com uuid := coalesce(p_com_usuario, auth.uid());
+  n   integer;
+begin
+  if not is_staff() then raise exception 'Sem permissao'; end if;
+
+  update memo_respostas r
+     set lida_em = now()
+    from memos m
+   where m.id = r.memo_id
+     and r.memo_id = p_memo_id
+     and r.com_usuario_id = com
+     and r.autor_id <> eu
+     and r.lida_em is null
+     and (m.publicado_por = eu or tem_acesso_global() or r.com_usuario_id = eu);
+
+  get diagnostics n = row_count;
+  return n;
+end;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- RLS: leitura pela propria conversa ou por quem publicou. Escrita so por RPC.
+-- ----------------------------------------------------------------------------
+alter table memo_respostas enable row level security;
+
+drop policy if exists memo_resp_select on memo_respostas;
+create policy memo_resp_select on memo_respostas for select to authenticated
+  using (
+    is_staff() and (
+      com_usuario_id = auth.uid()
+      or tem_acesso_global()
+      or exists (select 1 from memos m where m.id = memo_id and m.publicado_por = auth.uid())
+    )
+  );
+
+grant select on memo_respostas to authenticated;
+
+-- ----------------------------------------------------------------------------
+-- O mural e a tela da gestao passam a mostrar que ha conversa
+-- (entram colunas de OUT nas duas — drop + create)
+-- ----------------------------------------------------------------------------
+drop function if exists memos_do_usuario(boolean, integer);
+create or replace function memos_do_usuario(
+  p_incluir_lidos boolean default true,
+  p_limite        integer default 20
+)
+returns table (
+  id uuid, titulo text, mensagem text, categoria text, prioridade text,
+  exige_leitura boolean, publicado_em timestamptz, expira_em date,
+  autor text, regional text, lido boolean, lido_em timestamptz,
+  pendente_ciencia boolean, papeis text[], meu boolean,
+  respostas integer, respostas_nao_lidas integer
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with eu as (
+    select u.id, u.papel::text as papel, u.regional_id
+      from usuarios u where u.id = auth.uid()
+  )
+  select m.id, m.titulo, m.mensagem, m.categoria, m.prioridade,
+         m.exige_leitura, m.publicado_em, m.expira_em,
+         coalesce(a.nome, 'Gestao'), reg.nome,
+         l.usuario_id is not null, l.lido_em,
+         m.exige_leitura and l.usuario_id is null,
+         m.papeis,
+         m.publicado_por = eu.id,
+         -- a conversa que aparece no mural e a DA PESSOA; para quem publicou, a
+         -- soma de todas (o retorno dos outros e o que ele espera ver)
+         (select count(*)::int from memo_respostas r
+           where r.memo_id = m.id
+             and (case when m.publicado_por = eu.id then true
+                       else r.com_usuario_id = eu.id end)),
+         (select count(*)::int from memo_respostas r
+           where r.memo_id = m.id
+             and r.autor_id <> eu.id and r.lida_em is null
+             and (case when m.publicado_por = eu.id then true
+                       else r.com_usuario_id = eu.id end))
+    from memos m
+    cross join eu
+    left join usuarios  a   on a.id  = m.publicado_por
+    left join regionais reg on reg.id = m.regional_id
+    left join memo_leituras l on l.memo_id = m.id and l.usuario_id = eu.id
+   where m.publicado
+     and (m.expira_em is null or m.expira_em >= current_date)
+     and memo_visivel_para(m.id, eu.id)
+     and (p_incluir_lidos or l.usuario_id is null)
+   order by
+     (m.exige_leitura and l.usuario_id is null) desc,
+     case m.prioridade when 'ALTA' then 1 when 'MEDIA' then 2 else 3 end,
+     m.publicado_em desc
+   limit greatest(coalesce(p_limite, 20), 1);
+$$;
+
+comment on function memos_do_usuario(boolean, integer) is
+  'Mural: o que foi endereçado a pessoa (ou publicado por ela), ja com a conversa e o que falta ler.';
+
+drop function if exists memos_gestao(integer);
+create or replace function memos_gestao(p_limite integer default 100)
+returns table (
+  id uuid, titulo text, mensagem text, categoria text, prioridade text,
+  exige_leitura boolean, publicado boolean, publicado_em timestamptz, expira_em date,
+  regional_id uuid, regional text, papeis text[], autor text,
+  leituras integer, destinatarios integer, meu boolean,
+  conversas integer, respostas integer, respostas_nao_lidas integer
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select m.id, m.titulo, m.mensagem, m.categoria, m.prioridade,
+         m.exige_leitura, m.publicado, m.publicado_em, m.expira_em,
+         m.regional_id, reg.nome, m.papeis, coalesce(a.nome, 'Gestao'),
+         (select count(*)::int from memo_leituras l where l.memo_id = m.id),
+         (select count(*)::int from usuarios u
+           where u.ativo
+             and (m.regional_id is null or u.regional_id is not distinct from m.regional_id)
+             and (m.papeis is null or cardinality(m.papeis) = 0 or u.papel::text = any(m.papeis))),
+         m.publicado_por = auth.uid(),
+         -- as conversas so contam para quem pode LE-LAS (quem publicou e a matriz);
+         -- o gestor que apenas recebe um aviso da matriz nao fica sabendo do que
+         -- as outras unidades responderam.
+         (select count(distinct r.com_usuario_id)::int from memo_respostas r
+           where r.memo_id = m.id
+             and (m.publicado_por = auth.uid() or tem_acesso_global() or r.com_usuario_id = auth.uid())),
+         (select count(*)::int from memo_respostas r
+           where r.memo_id = m.id
+             and (m.publicado_por = auth.uid() or tem_acesso_global() or r.com_usuario_id = auth.uid())),
+         (select count(*)::int from memo_respostas r
+           where r.memo_id = m.id and r.autor_id <> auth.uid() and r.lida_em is null
+             and (m.publicado_por = auth.uid() or tem_acesso_global() or r.com_usuario_id = auth.uid()))
+    from memos m
+    left join usuarios  a   on a.id  = m.publicado_por
+    left join regionais reg on reg.id = m.regional_id
+   where pode_publicar_memo()
+     and (tem_acesso_global()
+          or pode_regional(m.regional_id)
+          or m.publicado_por = auth.uid())
+   order by m.publicado desc, m.publicado_em desc
+   limit greatest(coalesce(p_limite, 100), 1);
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Rito de seguranca (0052): funcao nasce com EXECUTE para PUBLIC.
+-- ----------------------------------------------------------------------------
+revoke execute on all functions in schema public from public;
+revoke execute on all functions in schema public from anon;
+grant  execute on all functions in schema public to authenticated;
+grant  execute on all functions in schema public to service_role;
+
+-- >>>>>>>>>>>>>>>>>>>>>>>> migrations/0059_protocolo_evento_pareceres.sql >>>>>>>>>>>>>>>>>>>>>>>>
+
+-- ============================================================================
+-- SCar :: 0059_protocolo_evento_pareceres.sql
+--
+-- O EVENTO PASSA A TRAMITAR DE VERDADE — e a pedir PARECER.
+--
+-- (A) O QUE ESTAVA QUEBRADO. O card "Tramitar Protocolo" da tela do sinistro
+--     chamava `transferir_protocolo` mandando como destino o operador que JA
+--     estava com o evento (`operador_atual_id`), ou string vazia quando nao
+--     havia nenhum. Ou seja: nunca transferiu para ninguem — na pratica so
+--     trocava o status e guardava um parecer solto. E a funcao aceitava isso
+--     calada: nao checava staff nem se o destino existia.
+--
+-- (B) O MECANISMO JA EXISTIA, SO NAO ESTAVA LIGADO. A Central de Protocolos
+--     (0029) tem fila, responsavel, tramitacao e historico de interacoes — e
+--     `atendimentos.evento_id` esta na tabela desde a 0022, sem NINGUEM
+--     escrever nele. Agora o evento ganha (sob demanda) o seu protocolo:
+--     `protocolo_do_evento()` cria/reaproveita, herdando associado, veiculo e
+--     unidade do proprio evento. Tramitar o evento vira transferir o protocolo:
+--     ele aparece na Central, em "Meus protocolos" e na Central do Atendente.
+--     Nada de estrutura paralela — a mesma regra do modulo 24h.
+--
+-- (C) PARECER. Sinistro nao anda com uma pessoa so: vai para o juridico, para a
+--     vistoria, para a diretoria, cada um opina e volta. Isso e um PEDIDO com
+--     resposta, nao um comentario. Duas interacoes novas
+--     (`PARECER_SOLICITADO` -> `PARECER`) ligadas por `responde_a`: enquanto nao
+--     ha resposta, o pedido esta PENDENTE e aparece na tela de quem deve opinar.
+--     Reusa `protocolo_interacoes`, que ja e o historico do protocolo.
+--
+-- O `historico_protocolo` do evento continua sendo escrito: e dele que a linha
+-- do tempo do sinistro e o Kanban vivem. O protocolo nao substitui, acompanha.
+-- ============================================================================
+
+-- Valores novos do enum: usados so DENTRO de plpgsql (cast em tempo de chamada)
+-- e comparados como TEXTO nas funcoes SQL — gotcha do 0017/0026/0028/0029.
+alter type tipo_interacao_protocolo add value if not exists 'PARECER_SOLICITADO';
+alter type tipo_interacao_protocolo add value if not exists 'PARECER';
+
+alter table protocolo_interacoes
+  add column if not exists responde_a uuid references protocolo_interacoes(id) on delete cascade;
+
+create index if not exists idx_protocolo_interacoes_responde
+  on protocolo_interacoes (responde_a) where responde_a is not null;
+create index if not exists idx_protocolo_interacoes_para
+  on protocolo_interacoes (para_usuario) where para_usuario is not null;
+
+comment on column protocolo_interacoes.responde_a is
+  'Quando a interacao RESPONDE outra (parecer -> pedido de parecer). Pedido sem resposta = pendente.';
+
+-- Um protocolo por evento.
+create unique index if not exists uq_atendimento_evento
+  on atendimentos (evento_id) where evento_id is not null;
+
+-- ----------------------------------------------------------------------------
+-- (B) O protocolo do evento — criado sob demanda
+-- ----------------------------------------------------------------------------
+create or replace function protocolo_do_evento(p_evento_id uuid)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  ev eventos_sinistro;
+  a  atendimentos;
+begin
+  if not is_staff() then raise exception 'Sem permissao'; end if;
+
+  select * into ev from eventos_sinistro where id = p_evento_id;
+  if ev.id is null then raise exception 'Evento nao encontrado'; end if;
+
+  select * into a from atendimentos where evento_id = p_evento_id;
+  if a.id is not null then return a.id; end if;
+
+  insert into atendimentos (
+    cliente_id, veiculo_id, tipo, canal, status, assunto, descricao,
+    prioridade, regional_id, aberto_por, responsavel_id, evento_id
+  ) values (
+    ev.cliente_id, ev.veiculo_id, 'SINISTRO', 'SAC_INTERNO', 'EM_ANDAMENTO',
+    'Evento ' || coalesce(ev.numero_protocolo, ''), ev.descricao,
+    'ALTA', ev.regional_id, auth.uid(),
+    coalesce(ev.operador_atual_id, auth.uid()), ev.id
+  )
+  returning * into a;
+
+  return a.id;
+end;
+$$;
+
+comment on function protocolo_do_evento(uuid) is
+  'Id do protocolo (atendimentos) do evento, criando-o na primeira vez. E por ele que o sinistro tramita.';
+
+-- ----------------------------------------------------------------------------
+-- (A) A tramitacao do evento, agora com destinatario de verdade
+-- ----------------------------------------------------------------------------
+create or replace function transferir_protocolo(
+  p_evento_id          uuid,
+  p_usuario_destino_id uuid default null,   -- nulo = so muda status / registra parecer
+  p_parecer            text default null,
+  p_novo_status        status_evento default null
+)
+returns eventos_sinistro
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_origem uuid := auth.uid();
+  v_atual  eventos_sinistro;
+  v_status_anterior status_evento;
+  v_status_novo     status_evento;
+  v_destino uuid;
+  v_atend   uuid;
+begin
+  if not is_staff() then raise exception 'Sem permissao'; end if;
+
+  select * into v_atual from eventos_sinistro where id = p_evento_id for update;
+  if not found then
+    raise exception 'Evento % nao encontrado', p_evento_id using errcode = 'no_data_found';
+  end if;
+
+  if p_usuario_destino_id is not null
+     and not exists (select 1 from usuarios where id = p_usuario_destino_id and ativo) then
+    raise exception 'Responsavel de destino invalido ou inativo';
+  end if;
+
+  -- Sem destino, o evento fica com quem ja estava (ou com quem esta tramitando):
+  -- nao existe protocolo sem dono.
+  v_destino := coalesce(p_usuario_destino_id, v_atual.operador_atual_id, v_origem);
+
+  if p_usuario_destino_id is null
+     and p_novo_status is null
+     and coalesce(btrim(p_parecer), '') = '' then
+    raise exception 'Informe o destino, o novo status ou o parecer';
+  end if;
+
+  v_status_anterior := v_atual.status;
+  v_status_novo     := coalesce(p_novo_status, v_atual.status);
+
+  update eventos_sinistro
+     set operador_atual_id = v_destino,
+         status            = v_status_novo,
+         updated_at        = now()
+   where id = p_evento_id
+   returning * into v_atual;
+
+  insert into historico_protocolo (
+    evento_id, usuario_origem_id, usuario_destino_id,
+    acao_realizada, status_anterior, status_novo, observacoes
+  ) values (
+    p_evento_id, v_origem, v_destino,
+    case when p_usuario_destino_id is not null then 'TRANSFERENCIA'
+         when p_novo_status is not null        then 'MUDANCA_STATUS'
+         else 'PARECER' end,
+    v_status_anterior, v_status_novo, p_parecer
+  );
+
+  -- Espelha na Central de Protocolos: e la que a pessoa VE que algo caiu na mao
+  -- dela. Sem isso a transferencia so existiria dentro da tela do sinistro.
+  v_atend := protocolo_do_evento(p_evento_id);
+  update atendimentos
+     set responsavel_id = v_destino, updated_at = now()
+   where id = v_atend;
+
+  insert into protocolo_interacoes (
+    atendimento_id, tipo, mensagem, de_usuario, para_usuario, usuario_id
+  ) values (
+    v_atend,
+    (case when p_usuario_destino_id is not null then 'TRANSFERENCIA' else 'COMENTARIO' end)
+      ::tipo_interacao_protocolo,
+    coalesce(nullif(btrim(coalesce(p_parecer, '')), ''),
+             'Status: ' || v_status_anterior::text || ' -> ' || v_status_novo::text),
+    case when p_usuario_destino_id is not null then v_origem end,
+    case when p_usuario_destino_id is not null then v_destino end,
+    v_origem
+  );
+
+  return v_atual;
+end;
+$$;
+
+comment on function transferir_protocolo(uuid, uuid, text, status_evento) is
+  'Tramita o evento: troca o responsavel e/ou o status, grava o parecer e espelha na Central de Protocolos.';
+
+-- ----------------------------------------------------------------------------
+-- (C) Parecer: pedido -> resposta
+-- ----------------------------------------------------------------------------
+create or replace function solicitar_parecer(
+  p_atendimento_id uuid,
+  p_usuarios       uuid[],
+  p_pergunta       text
+)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  a     atendimentos;
+  u     uuid;
+  alvos uuid[];
+  n     integer := 0;
+begin
+  if not is_staff() then raise exception 'Sem permissao'; end if;
+  if coalesce(btrim(p_pergunta), '') = '' then
+    raise exception 'Escreva o que voce precisa que analisem';
+  end if;
+  if p_usuarios is null or cardinality(p_usuarios) = 0 then
+    raise exception 'Escolha quem deve dar o parecer';
+  end if;
+
+  select * into a from atendimentos where id = p_atendimento_id;
+  if a.id is null then raise exception 'Protocolo nao encontrado'; end if;
+  if a.encerrado_em is not null then raise exception 'Protocolo ja encerrado'; end if;
+
+  select array_agg(distinct x) into alvos from unnest(p_usuarios) x where x is not null;
+  if alvos is null then raise exception 'Escolha quem deve dar o parecer'; end if;
+
+  foreach u in array alvos
+  loop
+    if not exists (select 1 from usuarios where id = u and ativo) then
+      raise exception 'Parecerista invalido ou inativo';
+    end if;
+    -- pedido repetido e ruido: se ja ha um pendente para a pessoa, nao duplica
+    if exists (
+      select 1 from protocolo_interacoes i
+       where i.atendimento_id = p_atendimento_id
+         and i.tipo::text = 'PARECER_SOLICITADO'
+         and i.para_usuario = u
+         and not exists (select 1 from protocolo_interacoes r where r.responde_a = i.id)
+    ) then
+      continue;
+    end if;
+
+    insert into protocolo_interacoes (
+      atendimento_id, tipo, mensagem, de_usuario, para_usuario, usuario_id
+    ) values (
+      p_atendimento_id, 'PARECER_SOLICITADO'::tipo_interacao_protocolo,
+      btrim(p_pergunta), auth.uid(), u, auth.uid()
+    );
+    n := n + 1;
+  end loop;
+
+  update atendimentos
+     set status = 'EM_ANDAMENTO', updated_at = now()
+   where id = p_atendimento_id and status::text = 'ABERTO';
+
+  return n;
+end;
+$$;
+
+comment on function solicitar_parecer(uuid, uuid[], text) is
+  'Pede parecer a uma ou varias pessoas no protocolo. Pedido pendente nao e duplicado.';
+
+create or replace function responder_parecer(
+  p_pedido_id uuid,
+  p_mensagem  text
+)
+returns protocolo_interacoes
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  ped protocolo_interacoes;
+  i   protocolo_interacoes;
+begin
+  if not is_staff() then raise exception 'Sem permissao'; end if;
+  if coalesce(btrim(p_mensagem), '') = '' then raise exception 'Escreva o seu parecer'; end if;
+
+  select * into ped from protocolo_interacoes where id = p_pedido_id;
+  if ped.id is null or ped.tipo::text <> 'PARECER_SOLICITADO' then
+    raise exception 'Pedido de parecer nao encontrado';
+  end if;
+  -- O parecer e de quem foi chamado. A matriz responde no lugar dele quando
+  -- precisa destravar (ferias, desligamento) — e fica registrado quem escreveu.
+  if ped.para_usuario is distinct from auth.uid() and not tem_acesso_global() then
+    raise exception 'Este parecer foi pedido a outra pessoa';
+  end if;
+  if exists (select 1 from protocolo_interacoes r where r.responde_a = p_pedido_id) then
+    raise exception 'Este parecer ja foi dado';
+  end if;
+
+  insert into protocolo_interacoes (
+    atendimento_id, tipo, mensagem, de_usuario, para_usuario, usuario_id, responde_a
+  ) values (
+    ped.atendimento_id, 'PARECER'::tipo_interacao_protocolo, btrim(p_mensagem),
+    auth.uid(), ped.de_usuario, auth.uid(), p_pedido_id
+  )
+  returning * into i;
+
+  return i;
+end;
+$$;
+
+-- Os pareceres de um protocolo, com o que ainda falta.
+create or replace function pareceres_protocolo(p_atendimento_id uuid)
+returns table (
+  pedido_id    uuid,
+  pergunta     text,
+  pedido_por   text,
+  para_id      uuid,
+  para         text,
+  pedido_em    timestamptz,
+  respondido   boolean,
+  parecer      text,
+  respondido_por text,
+  respondido_em  timestamptz,
+  dias_esperando integer
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select i.id, i.mensagem, coalesce(du.nome, 'Gestao'), i.para_usuario, pu.nome, i.created_at,
+         r.id is not null, r.mensagem, ru.nome, r.created_at,
+         (extract(day from now() - i.created_at))::int
+    from protocolo_interacoes i
+    left join usuarios du on du.id = i.de_usuario
+    left join usuarios pu on pu.id = i.para_usuario
+    left join protocolo_interacoes r on r.responde_a = i.id
+    left join usuarios ru on ru.id = r.usuario_id
+   where i.atendimento_id = p_atendimento_id
+     and i.tipo::text = 'PARECER_SOLICITADO'
+     and is_staff()
+   order by (r.id is not null), i.created_at desc;
+$$;
+
+-- O que ESTA COMIGO para opinar — alimenta a Central do Atendente e a tela do evento.
+create or replace function meus_pareceres_pendentes(p_limite integer default 20)
+returns table (
+  pedido_id    uuid,
+  atendimento_id uuid,
+  protocolo    text,
+  evento_id    uuid,
+  assunto      text,
+  associado    text,
+  placa        text,
+  pergunta     text,
+  pedido_por   text,
+  pedido_em    timestamptz,
+  dias_esperando integer
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select i.id, a.id, a.numero_protocolo, a.evento_id, a.assunto,
+         cl.nome_razao_social, ve.placa, i.mensagem, coalesce(du.nome, 'Gestao'), i.created_at,
+         (extract(day from now() - i.created_at))::int
+    from protocolo_interacoes i
+    join atendimentos a on a.id = i.atendimento_id
+    join clientes cl on cl.id = a.cliente_id
+    left join veiculos ve on ve.id = a.veiculo_id
+    left join usuarios du on du.id = i.de_usuario
+   where i.tipo::text = 'PARECER_SOLICITADO'
+     and i.para_usuario = auth.uid()
+     and a.encerrado_em is null
+     and is_staff()
+     and not exists (select 1 from protocolo_interacoes r where r.responde_a = i.id)
+   order by i.created_at
+   limit greatest(coalesce(p_limite, 20), 1);
+$$;
+
+-- ----------------------------------------------------------------------------
+-- (D) A Central passa a mostrar de qual EVENTO o protocolo veio, e quantos
+--     pareceres ainda faltam. Muda a lista de OUT -> drop + create.
+-- ----------------------------------------------------------------------------
+drop function if exists listar_protocolos(text, uuid, text, text, uuid, int);
+create or replace function listar_protocolos(
+  p_status       text default null,
+  p_responsavel  uuid default null,
+  p_busca        text default null,
+  p_prioridade   text default null,
+  p_regional_id  uuid default null,
+  p_limite       int default 300
+)
+returns table (
+  id             uuid,
+  protocolo      text,
+  cliente_id     uuid,
+  associado      text,
+  veiculo_id     uuid,
+  placa          text,
+  tipo           tipo_atendimento,
+  assunto        text,
+  descricao      text,
+  status         status_atendimento,
+  prioridade     prioridade_atendimento,
+  responsavel_id uuid,
+  responsavel    text,
+  canal          canal_atendimento,
+  interacoes     integer,
+  aberto_em      timestamptz,
+  atualizado_em  timestamptz,
+  encerrado_em   timestamptz,
+  dias_aberto    integer,
+  evento_id      uuid,
+  pareceres_pendentes integer
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select a.id, a.numero_protocolo, a.cliente_id, cl.nome_razao_social, a.veiculo_id, ve.placa,
+         a.tipo, a.assunto, a.descricao, a.status, a.prioridade, a.responsavel_id, u.nome, a.canal,
+         (select count(*)::int from protocolo_interacoes pi where pi.atendimento_id = a.id),
+         a.created_at, a.updated_at, a.encerrado_em,
+         (extract(day from now() - a.created_at))::int,
+         a.evento_id,
+         (select count(*)::int from protocolo_interacoes pi
+           where pi.atendimento_id = a.id
+             and pi.tipo::text = 'PARECER_SOLICITADO'
+             and not exists (select 1 from protocolo_interacoes r where r.responde_a = pi.id))
+    from atendimentos a
+    join clientes cl on cl.id = a.cliente_id
+    left join veiculos ve on ve.id = a.veiculo_id
+    left join usuarios u on u.id = a.responsavel_id
+   where (tem_acesso_global() or pode_regional(a.regional_id))
+     and (p_regional_id is null or a.regional_id = p_regional_id)
+     and (p_responsavel is null or a.responsavel_id = p_responsavel)
+     and (p_prioridade is null or a.prioridade::text = p_prioridade)
+     and (
+       p_status is null
+       or (p_status = 'ABERTOS' and a.encerrado_em is null)
+       or a.status::text = p_status
+     )
+     and (
+       p_busca is null or btrim(p_busca) = ''
+       or a.numero_protocolo ilike '%' || p_busca || '%'
+       or cl.nome_razao_social ilike '%' || p_busca || '%'
+       or coalesce(ve.placa, '') ilike '%' || p_busca || '%'
+       or coalesce(a.assunto, '') ilike '%' || p_busca || '%'
+     )
+   order by (a.encerrado_em is null) desc,
+            case a.prioridade when 'URGENTE' then 1 when 'ALTA' then 2 when 'NORMAL' then 3 else 4 end,
+            a.created_at desc
+   limit coalesce(p_limite, 300);
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Rito de seguranca (0052): funcao nasce com EXECUTE para PUBLIC.
+-- ----------------------------------------------------------------------------
+revoke execute on all functions in schema public from public;
+revoke execute on all functions in schema public from anon;
+grant  execute on all functions in schema public to authenticated;
+grant  execute on all functions in schema public to service_role;

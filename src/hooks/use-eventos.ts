@@ -9,6 +9,8 @@ import type {
   TipoDocumentoAnexo,
   AnexosEventoRow,
   HistoricoProtocoloRow,
+  ParecerProtocolo,
+  ParecerPendente,
 } from '@/lib/database.types';
 
 export interface EventoComRelacionamentos extends EventosSinistroRow {
@@ -77,10 +79,12 @@ export function useTransferirProtocolo(eventoId: string) {
   const supabase = createClient();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (args: { destino: string; parecer?: string; novoStatus?: StatusEvento }) => {
+    mutationFn: async (args: { destino?: string | null; parecer?: string; novoStatus?: StatusEvento }) => {
       const { data, error } = await supabase.rpc('transferir_protocolo', {
         p_evento_id: eventoId,
-        p_usuario_destino_id: args.destino,
+        // Sem destino a RPC mantem quem ja estava — o que ela NAO faz mais e
+        // aceitar string vazia e fingir que transferiu (0059).
+        p_usuario_destino_id: args.destino || null,
         p_parecer: args.parecer ?? null,
         p_novo_status: args.novoStatus ?? null,
       });
@@ -89,6 +93,98 @@ export function useTransferirProtocolo(eventoId: string) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['eventos'] });
+      qc.invalidateQueries({ queryKey: ['protocolos'] });
+      qc.invalidateQueries({ queryKey: ['pareceres'] });
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// O protocolo do evento e os PARECERES (0059)
+//
+// Sinistro nao anda com uma pessoa so: vai para o juridico, para a vistoria,
+// para a diretoria — cada um opina e volta. O mecanismo e o da Central de
+// Protocolos, que ja existia; aqui ele finalmente e usado pelo evento.
+// ---------------------------------------------------------------------------
+
+/** Id do protocolo do evento (a RPC cria na primeira vez que alguem abre). */
+export function useProtocoloDoEvento(eventoId: string | null) {
+  const supabase = createClient();
+  return useQuery<string | null>({
+    queryKey: ['protocolos', 'do-evento', eventoId],
+    enabled: !!eventoId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('protocolo_do_evento', { p_evento_id: eventoId! });
+      if (error) throw error;
+      return data ?? null;
+    },
+  });
+}
+
+export function usePareceresProtocolo(atendimentoId: string | null) {
+  const supabase = createClient();
+  return useQuery<ParecerProtocolo[]>({
+    queryKey: ['pareceres', atendimentoId],
+    enabled: !!atendimentoId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('pareceres_protocolo', {
+        p_atendimento_id: atendimentoId!,
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+/** O que esperam de MIM — alimenta a Central do Atendente. */
+export function useMeusPareceresPendentes() {
+  const supabase = createClient();
+  return useQuery<ParecerPendente[]>({
+    queryKey: ['pareceres', 'meus-pendentes'],
+    refetchInterval: 120_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('meus_pareceres_pendentes', { p_limite: 20 });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function useSolicitarParecer() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<number, Error, { atendimentoId: string; usuarios: string[]; pergunta: string }>({
+    mutationFn: async ({ atendimentoId, usuarios, pergunta }) => {
+      const { data, error } = await supabase.rpc('solicitar_parecer', {
+        p_atendimento_id: atendimentoId,
+        p_usuarios: usuarios,
+        p_pergunta: pergunta,
+      });
+      if (error) throw error;
+      return data ?? 0;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['pareceres'] });
+      qc.invalidateQueries({ queryKey: ['protocolos'] });
+    },
+  });
+}
+
+export function useResponderParecer() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<unknown, Error, { pedidoId: string; mensagem: string }>({
+    mutationFn: async ({ pedidoId, mensagem }) => {
+      const { data, error } = await supabase.rpc('responder_parecer', {
+        p_pedido_id: pedidoId,
+        p_mensagem: mensagem,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['pareceres'] });
+      qc.invalidateQueries({ queryKey: ['protocolos'] });
     },
   });
 }

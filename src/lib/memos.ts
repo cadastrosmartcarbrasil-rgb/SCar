@@ -107,3 +107,34 @@ export function destinoDoMemo(
   if (!temPapeis) return onde;
   return `${onde} · ${papeis!.map(papelMemoRotulo).join(', ')}`;
 }
+
+// ---------------------------------------------------------------------------
+// CONVERSA (0058) — o comunicado deixou de ser mão única. Cada destinatário tem
+// o SEU papo com quem publicou; estas funções escrevem o que a tela mostra.
+// ---------------------------------------------------------------------------
+
+/** "3 respostas · 1 nova" — o que vai no selo do comunicado no mural. */
+export function resumoRespostas(respostas: number, naoLidas: number): string | null {
+  if (respostas <= 0) return null;
+  const base = respostas === 1 ? '1 resposta' : `${respostas} respostas`;
+  return naoLidas > 0 ? `${base} · ${naoLidas} nova${naoLidas > 1 ? 's' : ''}` : base;
+}
+
+export interface ConversaBase {
+  nao_lidas: number;
+  ultima_em: string;
+}
+
+/**
+ * Ordem das conversas para quem publicou: primeiro quem está esperando resposta
+ * (tem mensagem não lida), depois a conversa mais recente. Quem publicou abre a
+ * tela para responder — o que já foi lido pode esperar.
+ */
+export function ordenarConversas<T extends ConversaBase>(conversas: T[]): T[] {
+  return [...conversas].sort((a, b) => {
+    const pa = a.nao_lidas > 0 ? 0 : 1;
+    const pb = b.nao_lidas > 0 ? 0 : 1;
+    if (pa !== pb) return pa - pb;
+    return b.ultima_em.localeCompare(a.ultima_em);
+  });
+}

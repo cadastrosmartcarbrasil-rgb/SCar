@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   memoVigente, pendenteCiencia, ordenarMemos, resumoLeitura, categoriaMeta, prioridadeMeta,
-  destinoDoMemo,
+  destinoDoMemo, resumoRespostas, ordenarConversas,
   type MemoBase,
 } from './memos';
 
@@ -85,5 +85,30 @@ describe('destinoDoMemo', () => {
 
   it('papel desconhecido cai no proprio codigo, sem quebrar a frase', () => {
     expect(destinoDoMemo(null, ['papel_novo'])).toBe('Todas as unidades · papel_novo');
+  });
+});
+
+describe('conversa do comunicado (0058)', () => {
+  it('sem resposta nao ha selo nenhum', () => {
+    expect(resumoRespostas(0, 0)).toBeNull();
+  });
+
+  it('conta as respostas e destaca o que ainda nao foi lido', () => {
+    expect(resumoRespostas(1, 0)).toBe('1 resposta');
+    expect(resumoRespostas(3, 0)).toBe('3 respostas');
+    expect(resumoRespostas(3, 1)).toBe('3 respostas · 1 nova');
+    expect(resumoRespostas(5, 2)).toBe('5 respostas · 2 novas');
+  });
+
+  it('quem esta esperando resposta vem primeiro, depois o papo mais recente', () => {
+    const conversas = [
+      { nome: 'lida antiga', nao_lidas: 0, ultima_em: '2026-01-01T10:00:00Z' },
+      { nome: 'nova',        nao_lidas: 2, ultima_em: '2026-01-02T10:00:00Z' },
+      { nome: 'lida recente', nao_lidas: 0, ultima_em: '2026-01-05T10:00:00Z' },
+      { nome: 'nova antiga', nao_lidas: 1, ultima_em: '2026-01-01T09:00:00Z' },
+    ];
+    expect(ordenarConversas(conversas).map((c) => c.nome)).toEqual([
+      'nova', 'nova antiga', 'lida recente', 'lida antiga',
+    ]);
   });
 });

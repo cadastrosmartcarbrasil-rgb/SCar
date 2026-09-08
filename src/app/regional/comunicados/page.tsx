@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import {
   Megaphone, Plus, Inbox, Send, Check, Archive, Pencil, Eye, Building2, Users, Loader2,
-  AlertTriangle,
+  AlertTriangle, MessagesSquare, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useUnidadeAtual } from '@/components/regional/contexto-unidade';
@@ -12,7 +12,8 @@ import {
   useMeuMural, useMarcarMemoLido, useMemosGestao, useArquivarMemo, type FormMemo,
 } from '@/hooks/use-memos';
 import { ModalMemo, memoVazio, PAPEIS_DIRETORIA } from '@/components/memos/modal-memo';
-import { categoriaMeta, prioridadeMeta, resumoLeitura, papelMemoRotulo } from '@/lib/memos';
+import { categoriaMeta, prioridadeMeta, resumoLeitura, papelMemoRotulo, resumoRespostas } from '@/lib/memos';
+import { ConversaMemo } from '@/components/memos/conversa-memo';
 import { formatDate } from '@/lib/utils';
 
 type Aba = 'recebidos' | 'enviados';
@@ -30,6 +31,7 @@ export default function ComunicadosRegionalPage() {
   const { regionalId, nome } = useUnidadeAtual();
   const [aba, setAba] = useState<Aba>('recebidos');
   const [form, setForm] = useState<FormMemo | null>(null);
+  const [conversa, setConversa] = useState<string | null>(null);
 
   const mural = useMeuMural();
   const enviados = useMemosGestao();
@@ -101,6 +103,14 @@ export default function ComunicadosRegionalPage() {
                       ciencia obrigatoria
                     </span>
                   )}
+                  {resumoRespostas(m.respostas, m.respostas_nao_lidas) && (
+                    <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                      m.respostas_nao_lidas > 0
+                        ? 'bg-amber-100 text-amber-800'
+                        : 'bg-slate-100 text-slate-600'}`}>
+                      {resumoRespostas(m.respostas, m.respostas_nao_lidas)}
+                    </span>
+                  )}
                 </div>
                 <h2 className="mt-1.5 text-sm font-semibold text-slate-800">{m.titulo}</h2>
                 <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{m.mensagem}</p>
@@ -109,6 +119,12 @@ export default function ComunicadosRegionalPage() {
                   {m.expira_em ? ` · vale ate ${formatDate(m.expira_em)}` : ''}
                   {m.lido_em ? ' · ciencia dada' : ''}
                 </p>
+                <div className="mt-3 border-t border-slate-100 pt-3">
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                    Responder a quem enviou
+                  </p>
+                  <ConversaMemo memoId={m.id} modo="minha" compacta />
+                </div>
                 {m.pendente_ciencia && (
                   <button
                     onClick={() => marcar.mutate(m.id, {
@@ -189,6 +205,17 @@ export default function ComunicadosRegionalPage() {
                         <Eye className="h-3.5 w-3.5 text-slate-400" />
                         {resumoLeitura(m.leituras, m.destinatarios)}
                       </span>
+                      <button
+                        onClick={() => setConversa(conversa === m.id ? null : m.id)}
+                        className={`mt-1 flex items-center gap-1.5 rounded-lg px-1.5 py-0.5 text-[11px] transition ${
+                          m.respostas_nao_lidas > 0
+                            ? 'bg-amber-50 font-medium text-amber-800 hover:bg-amber-100'
+                            : 'text-slate-500 hover:bg-slate-50'}`}
+                      >
+                        <MessagesSquare className="h-3 w-3" />
+                        {resumoRespostas(m.respostas, m.respostas_nao_lidas) ?? 'Sem resposta'}
+                        {conversa === m.id ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                      </button>
                     </td>
                     <td className="px-4 py-2">
                       <div className="flex justify-end gap-1">
@@ -215,6 +242,18 @@ export default function ComunicadosRegionalPage() {
                   </tr>
                 );
               })}
+              {/* Quem a unidade mandou o recado ja pode ter devolvido — a conversa
+                  abre aqui mesmo, sem sair da aba de enviados. */}
+              {(enviados.data ?? []).filter((m) => m.id === conversa).map((m) => (
+                <tr key={`${m.id}-conversa`} className="border-b border-slate-50 bg-fundo/60">
+                  <td colSpan={4} className="px-4 py-3">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      Conversa · {m.titulo}
+                    </p>
+                    <ConversaMemo memoId={m.id} modo="autor" />
+                  </td>
+                </tr>
+              ))}
               {!enviados.isLoading && (enviados.data ?? []).length === 0 && (
                 <tr><td colSpan={4} className="px-4 py-8 text-center text-slate-400">
                   <Megaphone className="mx-auto mb-2 h-6 w-6 text-slate-300" />

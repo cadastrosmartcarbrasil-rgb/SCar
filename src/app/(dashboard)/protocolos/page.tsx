@@ -12,6 +12,8 @@ function Conteudo() {
 
   // ?meus=1 vem do card do dashboard ("meus atendimentos").
   const meus = params.get('meus') === '1';
+  // ?protocolo=<id> abre direto o atendimento (Central do Atendente, parecer pendente).
+  const abrirId = params.get('protocolo');
 
   const kpis = [
     { label: 'Em aberto', valor: resumo?.abertos ?? 0, icone: Ticket, cor: 'text-brand-700' },
@@ -41,7 +43,10 @@ function Conteudo() {
         ))}
       </div>
 
-      <CentralProtocolos filtroInicial={meus ? { status: 'ABERTOS' } : undefined} />
+      <CentralProtocolos
+        filtroInicial={meus ? { status: 'ABERTOS' } : abrirId ? { status: null } : undefined}
+        abrirId={abrirId}
+      />
     </div>
   );
 }
