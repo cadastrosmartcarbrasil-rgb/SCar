@@ -1,5 +1,17 @@
 # CLAUDE.md — SCar (Proteção Veicular)
 
+> ## ⛔ ANTES DE ESCREVER QUALQUER LINHA: CONFIRA O BRANCH
+> ```bash
+> git rev-parse --abbrev-ref HEAD    # tem de ser: claude/claude-md-opcao-x-98kfj5
+> ```
+> **Trabalho e deploy vivem em `claude/claude-md-opcao-x-98kfj5`.** O default do GitHub
+> (`claude/scar-project-btasdf`) está **parado em `953c53c`** — é um branch MORTO, não outro projeto.
+> Trabalhar nele já custou **dois dias**: a fase da tela de vendas e, depois, o painel da 24h
+> (uma sessão inteira construída sobre uma base 59 commits atrás, com migration `0025` duplicada
+> que precisou de uma corretiva — a `0060` — para sair da produção).
+> Há um **SessionStart hook** (`.claude/hooks/session-start.sh`) que grita quando a sessão nasce
+> no branch errado, mas ele só existe nos branches que o têm: **confira mesmo assim.**
+
 > Memória do projeto. Leia isto no início de cada sessão em vez de varrer o repositório inteiro.
 > Mantenha este arquivo atualizado ao adicionar módulos/migrations (é barato e faz o projeto andar rápido).
 
@@ -53,6 +65,12 @@ o de trabalho; esse default morto já causou um dia inteiro de trabalho no branc
   protocolo no SAC). Em base limpa ela é no-op.
 - **`0061_assistencia_painel` é NOVA** — o PAINEL GERENCIAL da 24h como aba da Visão Geral
   (ver seção própria). Só leitura, sobre `acionamentos_assistencia`. Sem ela a aba não abre.
+- **Próxima migration livre: `0062`.** As `0060` e `0061` já estão no branch de trabalho e ainda
+  **não foram aplicadas em produção** (rodar nessa ordem, depois das `0045`..`0059`).
+- **`.claude/hooks/session-start.sh` é NOVO** — avisa quando a sessão nasce no branch errado e
+  instala as dependências. Ele **só roda se estiver no branch que a sessão clonou**; enquanto o
+  default do GitHub for o branch morto, uma sessão que caia lá não terá o hook. A correção
+  definitiva é trocar o branch padrão do repositório (decisão do usuário).
 - **`0052_seguranca_rpc` e `0053_rastreador_ciclo_financeiro` são NOVAS** — a `0052` fecha a
   camada de RPC (ver "Segurança das RPCs" abaixo) e a `0053` liga o rastreador ao cadastro e ao
   financeiro. Rodam por último, depois da `0051`.
@@ -330,6 +348,64 @@ ficha **abre direto nela** — é a primeira pergunta de quem audita. Lógica pu
    rota `/api/portal/login`.
 5. **SLA / notificações do protocolo** (prazo por prioridade, aviso ao responsável).
 6. **Cotação pelo portal do vendedor** — ele vê o lead, mas monta a cotação só no `/vendas`.
+
+## PRÓXIMO TÓPICO — API de consulta e importação do sistema atual (preparado, não iniciado)
+> Levantamento feito ao fim da sessão do painel da 24h. **Nada foi construído**: isto é o mapa do
+> terreno para a próxima sessão começar decidindo, não pesquisando.
+
+### As 3 minas terrestres (confirmadas no código, não suposições)
+1. **Importar veículo `ativo` FATURA a base inteira.** `trg_veiculo_primeira_cobranca` (0025) roda
+   `after insert` e chama `gerar_primeira_cobranca_veiculo`. Carregar 2.522 veículos ativos geraria
+   2.522 faturas do mês corrente — cobrar de novo quem já paga no sistema atual. **A importação
+   precisa de um interruptor**, e o projeto já tem o padrão para isso: GUC de sessão
+   (`set_config('scar.importacao','true')`, como `scar.motivo_edicao`/`scar.obs_lead`/
+   `scar.motivo_rastreador` já fazem), lido pelo trigger.
+2. **`data_ativacao` vira HOJE se vier vazia.** `trg_veiculo_marca_ativacao` (0025, BEFORE) carimba
+   `current_date` quando o campo é nulo. Sem trazer a data real da migração, a carteira inteira
+   nasce "ativada hoje" — e isso contamina `veiculo_faturavel` (0024), o tempo de casa e o painel
+   da 24h. O trigger só preenche quando está NULO, então **basta a importação trazer a data**.
+3. **O banco valida documento** (`chk_documento_valido` em `clientes`) e base legada sempre tem
+   CPF em branco, com dígito errado ou "000...". Decidir ANTES de escrever código: recusar a linha,
+   estacionar numa área de quarentena, ou importar o associado como pendente.
+
+### Colisões de unicidade que a carga vai encontrar
+`clientes.cpf_cnpj` · `veiculos.placa` · `veiculos.chassi` · `veiculos.renavam` são UNIQUE.
+Chassi e renavam são **nuláveis**: campo vazio tem de virar **NULL**, nunca `''` — duas linhas com
+string vazia colidem (foi exatamente o que mordeu em `fornecedores.documento`, 0051).
+
+### Ordem obrigatória da carga (dependência de FK)
+`regionais` → `clientes` → `veiculos` → `titulos_financeiros`/`faturas` → eventos e acionamentos.
+**A unidade é o eixo de tudo:** `regional_id` atravessa RLS, `escopo_regional()` e os painéis. A
+primeira coisa a definir é o **de-para "filial do sistema atual" → `regionais`** — a mesma tabela de
+correspondência que `docs/modulos/rastreadores.md` já mapeou para o TrackerStock.
+
+### O que REUSAR (o CLAUDE.md manda não inventar caminho paralelo)
+- **Proxy com segredo no servidor:** `/api/fipe` é o padrão — token em env, nunca no navegador,
+  cliente chama a rota interna. Uma API externa de consulta segue esse molde.
+- **Importação por arquivo com PRÉVIA E DIFF:** `src/lib/precificacao-import.ts` (testado) já
+  resolve o difícil — validação que aponta linha e coluna, erro de fórmula do Excel que bloqueia em
+  vez de gravar zero em silêncio, e a prévia mostrando o que entra/muda/sai. É o modelo de UX para
+  qualquer carga.
+- **Idempotência:** `gerar_faturas_cliente`, `emitir_titulo_fatura` e `abrir_alerta_veiculo` são os
+  exemplos da casa — rodar duas vezes não duplica. Importação **tem** de ser re-executável: a
+  primeira carga nunca é a definitiva.
+- **Rito de entrega:** migration + suite em `supabase/tests/` + espelho puro em `src/lib/*.ts` com
+  Vitest + `npm run schema` + `npm run validate`. E o **rito de segurança da 0052** (revoke/grant)
+  em toda migration que cria função.
+
+### Perguntas que só o usuário responde (levar para a próxima sessão)
+1. **Qual é o software atual, e ele TEM API?** O CLAUDE.md cita "relatório SGA" (marcas/modelos) e
+   TrackerStock (rastreadores) — não está registrado se o sistema de gestão é o SGA nem se ele
+   expõe API. Se não houver, a porta é exportação (CSV/XLSX) e cai no molde do
+   `precificacao-import`.
+2. **Consulta ao vivo ou migração de uma vez?** São projetos diferentes: consulta contínua pede
+   um cliente + cache; migração pede carga idempotente, quarentena e conferência.
+3. **O que entra:** só associados e veículos, ou também o histórico financeiro (títulos pagos,
+   inadimplência) e os eventos? Histórico é o que dá trabalho e o que decide o desenho.
+4. **Vira sistema único ou os dois convivem?** Se convivem, é preciso decidir quem manda em cada
+   dado — senão a divergência aparece depois, como já acontece entre a ficha do veículo e o parque
+   de rastreadores.
+5. **Volume e janela:** ~13 mil veículos pelo painel. Carga em janela de manutenção ou aos poucos?
 
 ## O que é
 Sistema de gestão para **associação de proteção veicular** (associados, frota, eventos/sinistros,
