@@ -2,60 +2,17 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Pencil, Megaphone, Archive, Eye, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Megaphone, Archive, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Modal } from '@/components/ui/modal';
-import { FormField, Input, Select, Textarea } from '@/components/ui/field';
-import { useRegionais } from '@/hooks/use-config';
-import {
-  useMemosGestao, useSalvarMemo, useArquivarMemo, type FormMemo,
-} from '@/hooks/use-memos';
-import { CATEGORIAS, PRIORIDADES, categoriaMeta, prioridadeMeta, resumoLeitura } from '@/lib/memos';
+import { useMemosGestao, useArquivarMemo, type FormMemo } from '@/hooks/use-memos';
+import { ModalMemo, memoVazio, PAPEIS_MEMO } from '@/components/memos/modal-memo';
+import { categoriaMeta, prioridadeMeta, resumoLeitura } from '@/lib/memos';
 import { formatDate } from '@/lib/utils';
-
-// Papeis que podem receber um comunicado enderecado. Espelha `papel_usuario`.
-const PAPEIS: { valor: string; rotulo: string }[] = [
-  { valor: 'admin', rotulo: 'Administrador' },
-  { valor: 'gestor_regional', rotulo: 'Gestor Regional' },
-  { valor: 'consultor_vendas', rotulo: 'Consultor de Vendas' },
-  { valor: 'financeiro', rotulo: 'Financeiro' },
-  { valor: 'sinistro', rotulo: 'Sinistro' },
-  { valor: 'cotador', rotulo: 'Cotador' },
-  { valor: 'auditoria', rotulo: 'Auditoria' },
-  { valor: 'assistencia_24h', rotulo: 'Assistencia 24h' },
-];
-
-const vazio = (): FormMemo => ({
-  titulo: '', mensagem: '', categoria: 'COMUNICADO', prioridade: 'MEDIA',
-  exige_leitura: false, regional_id: null, papeis: null, expira_em: null, publicado: true,
-});
 
 export default function ComunicadosPage() {
   const { data: memos, isLoading } = useMemosGestao();
-  const { data: regionais } = useRegionais();
-  const salvar = useSalvarMemo();
   const arquivar = useArquivarMemo();
   const [form, setForm] = useState<FormMemo | null>(null);
-
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!form) return;
-    if (!form.titulo.trim()) return toast.error('Informe o titulo');
-    if (!form.mensagem.trim()) return toast.error('Escreva a mensagem');
-    salvar.mutate(form, {
-      onSuccess: () => { toast.success('Comunicado publicado'); setForm(null); },
-      onError: (err) => toast.error(err.message),
-    });
-  }
-
-  function alternarPapel(papel: string, marcado: boolean) {
-    setForm((f) => {
-      if (!f) return f;
-      const atuais = new Set(f.papeis ?? []);
-      if (marcado) atuais.add(papel); else atuais.delete(papel);
-      return { ...f, papeis: atuais.size ? [...atuais] : null };
-    });
-  }
 
   return (
     <div className="space-y-4">
@@ -66,7 +23,7 @@ export default function ComunicadosPage() {
           for endereçado. Com <strong>leitura obrigatoria</strong>, ficam em destaque ate a pessoa dar
           ciencia — e voce acompanha quantos leram.
         </p>
-        <Button onClick={() => setForm(vazio())}><Plus className="h-4 w-4" /> Novo comunicado</Button>
+        <Button onClick={() => setForm(memoVazio())}><Plus className="h-4 w-4" /> Novo comunicado</Button>
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-slate-200 bg-superficie">
@@ -107,7 +64,7 @@ export default function ComunicadosPage() {
                     {m.regional ?? 'Todas as unidades'}
                     <span className="block text-[11px] text-slate-400">
                       {m.papeis?.length
-                        ? m.papeis.map((p) => PAPEIS.find((x) => x.valor === p)?.rotulo ?? p).join(', ')
+                        ? m.papeis.map((p) => PAPEIS_MEMO.find((x) => x.valor === p)?.rotulo ?? p).join(', ')
                         : 'Todos os papeis'}
                     </span>
                   </td>
@@ -160,86 +117,9 @@ export default function ComunicadosPage() {
         </table>
       </div>
 
-      <Modal open={!!form} onClose={() => setForm(null)} tamanho="lg"
-        title={form?.id ? 'Editar comunicado' : 'Novo comunicado'}
-        subtitulo="Aparece na Central do Atendente para quem voce endereçar.">
-        {form && (
-          <form onSubmit={submit} className="space-y-3">
-            <FormField label="Titulo *">
-              <Input value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })}
-                placeholder="Ex.: Nova regra de cadastramento" />
-            </FormField>
-            <FormField label="Mensagem *">
-              <Textarea rows={5} value={form.mensagem}
-                onChange={(e) => setForm({ ...form, mensagem: e.target.value })}
-                placeholder="O texto que a equipe vai ler no mural." />
-            </FormField>
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <FormField label="Categoria">
-                <Select value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value })}>
-                  {CATEGORIAS.map((c) => <option key={c.valor} value={c.valor}>{c.rotulo}</option>)}
-                </Select>
-              </FormField>
-              <FormField label="Prioridade">
-                <Select value={form.prioridade} onChange={(e) => setForm({ ...form, prioridade: e.target.value })}>
-                  {PRIORIDADES.map((p) => <option key={p.valor} value={p.valor}>{p.rotulo}</option>)}
-                </Select>
-              </FormField>
-              <FormField label="Vale ate (opcional)">
-                <Input type="date" value={form.expira_em ?? ''}
-                  onChange={(e) => setForm({ ...form, expira_em: e.target.value || null })} />
-              </FormField>
-            </div>
-
-            <FormField label="Unidade">
-              <Select value={form.regional_id ?? ''}
-                onChange={(e) => setForm({ ...form, regional_id: e.target.value || null })}>
-                <option value="">Todas as unidades</option>
-                {(regionais ?? []).map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
-              </Select>
-            </FormField>
-
-            <div className="rounded-lg border border-slate-200 p-3">
-              <p className="mb-2 text-sm font-medium text-slate-600">Papeis destinatarios</p>
-              <div className="grid grid-cols-2 gap-1 sm:grid-cols-3">
-                {PAPEIS.map((p) => (
-                  <label key={p.valor} className="flex items-center gap-2 text-sm text-slate-700">
-                    <input type="checkbox" checked={form.papeis?.includes(p.valor) ?? false}
-                      onChange={(e) => alternarPapel(p.valor, e.target.checked)}
-                      className="h-4 w-4 rounded border-slate-300" />
-                    {p.rotulo}
-                  </label>
-                ))}
-              </div>
-              <p className="mt-1 text-xs text-slate-400">
-                Nenhum marcado = todos os papeis recebem.
-              </p>
-            </div>
-
-            <label className="flex items-center gap-2 text-sm text-slate-700">
-              <input type="checkbox" checked={form.exige_leitura}
-                onChange={(e) => setForm({ ...form, exige_leitura: e.target.checked })}
-                className="h-4 w-4 rounded border-slate-300" />
-              Exigir ciencia de leitura (fica em destaque ate a pessoa marcar como lido)
-            </label>
-            <label className="flex items-center gap-2 text-sm text-slate-700">
-              <input type="checkbox" checked={form.publicado}
-                onChange={(e) => setForm({ ...form, publicado: e.target.checked })}
-                className="h-4 w-4 rounded border-slate-300" />
-              Publicado (desmarque para guardar sem mostrar no mural)
-            </label>
-
-            <div className="flex justify-end gap-2 border-t border-slate-100 pt-3">
-              <Button type="button" variant="secondary" onClick={() => setForm(null)}>Cancelar</Button>
-              <Button type="submit" disabled={salvar.isPending}>
-                {salvar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Megaphone className="h-4 w-4" />}
-                {form.id ? 'Salvar' : 'Publicar'}
-              </Button>
-            </div>
-          </form>
-        )}
-      </Modal>
+      {form && (
+        <ModalMemo aberto inicial={form} escopo="matriz" onClose={() => setForm(null)} />
+      )}
     </div>
   );
 }

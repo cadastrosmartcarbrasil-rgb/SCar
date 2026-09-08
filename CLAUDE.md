@@ -3,7 +3,7 @@
 > Memória do projeto. Leia isto no início de cada sessão em vez de varrer o repositório inteiro.
 > Mantenha este arquivo atualizado ao adicionar módulos/migrations (é barato e faz o projeto andar rápido).
 
-## Estado atual (retomar aqui) — atualizado ao fim da fase 0032→0055
+## Estado atual (retomar aqui) — atualizado ao fim da fase 0032→0056
 
 **Um único projeto, um único repositório: `cadastrosmartcarbrasil-rgb/scar`** (no GitHub o nome
 aparece como `SCar`). Trabalho e deploy acontecem no branch **`claude/claude-md-opcao-x-98kfj5`**;
@@ -27,6 +27,8 @@ o de trabalho; esse default morto já causou um dia inteiro de trabalho no branc
   `empresas_rastreamento` nascem na `0049`).
 - **`0050_rastreadores_modulo` também é NOVA** — é o módulo de Rastreadores (parque de
   equipamentos por IMEI). Sem ela a tela `/rastreadores` não abre. Roda depois da `0049`.
+- **`0056_memos_diretoria` é NOVA** — o mural ganha mão dupla (a franquia manda recado para a
+  diretoria) e o mural pessoal deixa de despejar o aviso interno de toda unidade na matriz.
 - **`0055_memos_comunicados` é NOVA** — o mural interno (`memos` + `memo_leituras`) que alimenta a
   **Central do Atendente** na tela do SAC. Sem ela, o SAC quebra ao abrir (a Central chama
   `memos_do_usuario`).
@@ -130,8 +132,8 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0055`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **32 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Migrations `0001`..`0056`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **33 suites** em `supabase/tests/*.test.sql` — todas passando.
 - **Vitest: 406 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
@@ -814,6 +816,15 @@ inteiro da empresa para qualquer usuario logado (agora exigem `is_staff()` e pas
 `checklist_lead`/`fotos_vistoria_lead`, `interacoes_protocolo` e `liberar_leads_sem_contato`
 (esta ultima so para a gestao); (C) a policy de insert de `lead_atribuicoes` aceitava qualquer
 logado — agora exige staff.)
+· `0056_memos_diretoria` (O MURAL VIRA MAO DUPLA: (A) a franquia so publicava para a PROPRIA
+unidade — agora tem DOIS destinos e so dois: **minha equipe** (`regional_id` = a unidade dele) e
+**diretoria** (`regional_id` nulo + `papeis` dentro de `papeis_diretoria()` = {admin, financeiro}).
+Continua barrado publicar para a unidade vizinha ou soltar aviso geral, que e da matriz;
+(B) `memos_do_usuario` perdeu o `or tem_acesso_global()`: com nove franquias publicando aviso
+interno, a diretoria abriria o SAC com dezenas de recados que nao sao dela. O mural pessoal e o que
+foi ENDEREÇADO a pessoa; para acompanhar tudo existe a tela da gestao; (C) `memos_gestao` ganhou
+escopo (a matriz ve tudo; o gestor ve o da unidade dele + o que ele enviou) e a coluna `meu` —
+muda a lista de OUT, entao foi drop + create.)
 · `0055_memos_comunicados` (MURAL INTERNO — a tela do SAC nascia vazia ate alguem ser buscado, e
 e justamente ai que a equipe precisa de tres respostas: o que esta na MINHA mao, o que a gestao
 MANDOU e o que esta pegando fogo. (A) `memos` — comunicado publicado pela gestao, ENDEREÇAVEL por
@@ -923,11 +934,23 @@ recuperação e giro).
   scripts e avisos) · *Alertas do dia* (24h em aberto, protocolos alta/urgente e parados +7 dias,
   cada número clicável para a tela filtrada).
 - **Comunicado é endereçado, não broadcast:** por unidade e por papel. Quem publica é a gestão
-  (`pode_publicar_memo()`); o gestor regional só publica para a própria unidade.
+  (`pode_publicar_memo()`).
+- **O mural tem MÃO DUPLA (0056).** A matriz publica para qualquer unidade; a franquia tem dois
+  destinos e só dois: **minha equipe** e **diretoria/administração** (papéis `admin`/`financeiro`,
+  sem unidade). Publicar para a unidade vizinha ou soltar aviso geral continua sendo da matriz — a
+  regra vive em `salvar_memo`, não na tela.
+- **O mural pessoal é o que foi endereçado a VOCÊ.** A versão 0055 mandava todo memo de toda
+  unidade para quem tem acesso global; com nove franquias publicando aviso interno, a diretoria
+  abriria o SAC com dezenas de recados que não são dela. Para acompanhar tudo existe a tela da
+  gestão (`memos_gestao`), que respeita escopo: a matriz vê tudo, o gestor vê o da unidade dele
+  mais o que ele enviou.
 - **Ciência de leitura:** `exige_leitura` mantém o comunicado em destaque (fundo âmbar, botão
   "Marcar como lido") até a pessoa dar ciência. A gestão acompanha em Configurações → Comunicados
   ("3 de 12 deram ciência"). Ninguém "desl" — `memo_leituras` não tem update nem delete.
-- **Onde se publica:** `Configurações → Comunicados` (`/configuracoes/comunicados`). Arquivar tira
+- **Onde se publica:** a matriz em `Configurações → Comunicados`; a franquia em
+  `/regional/comunicados` (abas *Recebidos* e *Enviados pela unidade*). **Um formulário só** —
+  `<ModalMemo escopo="matriz"|"franquia">` (mesma escolha do `<ModalFornecedor>`/`<ModalVendedor>`);
+  no escopo franquia ele mostra os dois destinos em vez do seletor de unidade. Arquivar tira
   do mural e preserva a ciência de quem já leu; `expira_em` faz o aviso sumir sozinho no prazo.
 - **Lógica pura testada:** `src/lib/memos.ts` (`ordenarMemos`, `pendenteCiencia`, `memoVigente`,
   `resumoLeitura`) — a ordem do mural é a mesma do `order by` da RPC, dos dois lados.

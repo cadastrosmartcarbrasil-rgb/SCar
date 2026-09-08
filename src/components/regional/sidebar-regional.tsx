@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import {
   BarChart3, Building2, Copy, LayoutDashboard, LogOut, Menu, Users, Wallet, X, Zap,
   Repeat2,
+  Megaphone,
 } from 'lucide-react';
 import { LogoNaCabine } from '@/components/hotlink/marca';
 import { createClient } from '@/lib/supabase/client';
@@ -19,6 +20,7 @@ const ITENS = [
   { href: '/regional/leads', label: 'Leads', icon: Zap },
   { href: '/regional/comissoes', label: 'Comissoes', icon: BarChart3 },
   { href: '/regional/financeiro', label: 'Financeiro', icon: Wallet },
+  { href: '/regional/comunicados', label: 'Comunicados', icon: Megaphone },
 ];
 
 export function SidebarRegional({ nome, unidade, codigo, papel, logoUrl, podeTrocarUnidade }: {

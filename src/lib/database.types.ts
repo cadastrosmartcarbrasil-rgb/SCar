@@ -466,6 +466,8 @@ export type MemoGestao = MemoDoUsuario & {
   papeis: string[] | null;
   leituras: number;
   destinatarios: number;
+  /** 0056: fui EU que publiquei (a franquia acompanha o que enviou) */
+  meu: boolean;
 };
 
 export type TiposAlertaRow = {
