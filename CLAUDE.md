@@ -18,11 +18,22 @@
 ## Estado atual (retomar aqui) — atualizado ao fim da fase 0032→0061
 
 **Um único projeto, um único repositório: `cadastrosmartcarbrasil-rgb/scar`** (no GitHub o nome
-aparece como `SCar`). Trabalho e deploy acontecem no branch **`claude/claude-md-opcao-x-98kfj5`**;
-o mesmo commit é espelhado em `claude/financial-dre-improvements-6zfj3k` (branch da sessão).
-O `claude/scar-project-btasdf` é o branch padrão do GitHub e está **parado em `953c53c`** — não é
-outro projeto, é um default morto. *Sugestão pendente: trocar o branch padrão do repositório para
-o de trabalho; esse default morto já causou um dia inteiro de trabalho no branch errado.*
+aparece como `SCar`). Trabalho e deploy acontecem no branch **`claude/claude-md-opcao-x-98kfj5`**.
+
+**Os outros branches do repositório estão TODOS mortos** (conferido em 08/09/2026):
+
+| Branch | Situação |
+|---|---|
+| `claude/claude-md-opcao-x-98kfj5` | **O ÚNICO VIVO** — trabalho e deploy |
+| `claude/scar-project-btasdf` | default do GitHub, parado em `953c53c` |
+| `claude/financial-dre-improvements-6zfj3k` | **29 commits atrás**, 0 à frente |
+| `claude/git-push-issue-to49ky` | parado, contido na trunk salvo 1 commit |
+| `claude/vehicle-trackers-module-jl4rjw` | totalmente contido na trunk |
+| `claude/assistencia-24h-dashboard-cqdb35` | sessão que caiu no branch errado; **não mesclar** (traz `0024`/`0025` que colidem) |
+
+> **CORREÇÃO — este arquivo dizia que o commit era "espelhado" em
+> `claude/financial-dre-improvements-6zfj3k`. Era falso**, e foi o que levou uma sessão a cortar
+> dali e trabalhar 59 commits atrás. Não existe branch espelho: existe UM branch vivo.
 
 - **Produção:** `https://app.smartvidanet.com.br` — VPS KingHost, Docker + Caddy (HTTPS auto),
   pasta `/opt/scar`.
