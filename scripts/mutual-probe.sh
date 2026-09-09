@@ -30,10 +30,10 @@ fi
 
 # le json sem depender de jq
 ler() { python3 -c "$1" 2>/dev/null; }
-codigo() { curl -s -o "$2" -w '%{http_code}' -m 25 "$@" 2>/dev/null || echo 000; }
+# obs: a API responde 301 em varios caminhos -> todo curl aqui usa -L
 
 echo "== 1. O dominio responde e este IP esta liberado? =========================="
-HTTP=$(curl -s -o "$SAIDA/docs.html" -w '%{http_code}' -m 25 "$BASE$PREFIXO$DOCS")
+HTTP=$(curl -sL -o "$SAIDA/docs.html" -w '%{http_code}' -m 30 "$BASE$PREFIXO$DOCS")
 echo "GET $PREFIXO$DOCS  ->  HTTP $HTTP  ($(wc -c <"$SAIDA/docs.html") bytes)"
 case "$HTTP" in
   000) echo '   !! SEM RESPOSTA. Timeout = IP deste servidor provavelmente NAO liberado.';;
@@ -50,15 +50,30 @@ grep -oE '(spec-url|data-url|url)["'"'"']?[:=]["'"'"' ]*[^"'"'"' ><]+' "$SAIDA/d
 echo '   -- testando os caminhos usuais --'
 for P in "$PREFIXO/swagger.json" "$PREFIXO/swagger.yaml" "$PREFIXO/swagger/?format=openapi" \
          "$PREFIXO/schema/?format=json" "$PREFIXO/schema/" "$PREFIXO/openapi.json"; do
-  H=$(curl -s -o "$SAIDA/spec.tmp" -w '%{http_code}' -m 25 "$BASE$P")
+  H=$(curl -sL -o "$SAIDA/spec.tmp" -w '%{http_code}|%{url_effective}' -m 40 "$BASE$P")
+  URLF="${H#*|}"; H="${H%%|*}"
   T=$(head -c 1 "$SAIDA/spec.tmp" 2>/dev/null)
   if [ "$H" = "200" ] && { [ "$T" = "{" ] || [ "$T" = "o" ]; }; then
     mv "$SAIDA/spec.tmp" "$SAIDA/mutual-openapi.json"
-    echo "   ACHOU -> $P  (salvo em $SAIDA/mutual-openapi.json)"; break
+    echo "   ACHOU -> $P"; echo "          URL final: $URLF"; echo "          salvo em $SAIDA/mutual-openapi.json"; break
   fi
   echo "   $H  $P"
 done
 rm -f "$SAIDA/spec.tmp"
+if [ ! -s "$SAIDA/mutual-openapi.json" ]; then
+  echo '   Nenhum caminho devolveu JSON. Tentando de novo COM o token'
+  echo '   (alguns provedores servem o contrato so para quem esta autenticado):'
+  for P in "$PREFIXO/swagger.json" "$PREFIXO/schema/?format=json"; do
+    H=$(curl -sL -o "$SAIDA/spec.tmp" -w '%{http_code}' -m 40 \
+        -H "Authorization: Bearer $MUTUAL_TOKEN" -H 'Accept: application/json' "$BASE$P")
+    T=$(head -c 1 "$SAIDA/spec.tmp" 2>/dev/null)
+    if [ "$H" = "200" ] && [ "$T" = "{" ]; then
+      mv "$SAIDA/spec.tmp" "$SAIDA/mutual-openapi.json"; echo "   ACHOU (autenticado) -> $P"; break
+    fi
+    echo "   $H  $P (com token)"
+  done
+  rm -f "$SAIDA/spec.tmp"
+fi
 
 SPEC="$SAIDA/mutual-openapi.json"
 if [ -s "$SPEC" ]; then
@@ -88,7 +103,7 @@ for NOME in 'Bearer' 'Basic' 'Token'; do
     Basic)     HDR="Authorization: Basic $MUTUAL_TOKEN";;
     Token)     HDR="Authorization: Token $MUTUAL_TOKEN";;
   esac
-  H=$(curl -s -o "$SAIDA/probe.json" -w '%{http_code}' -m 25 -H "$HDR" -H 'Accept: application/json' "$BASE$ALVO")
+  H=$(curl -sL -o "$SAIDA/probe.json" -w '%{http_code}' -m 30 -H "$HDR" -H 'Accept: application/json' "$BASE$ALVO")
   echo "   $NOME -> HTTP $H"
   if [ "$H" = "200" ]; then
     echo "   >> FUNCIONOU com '$NOME'. Primeiros 400 caracteres do retorno:"
