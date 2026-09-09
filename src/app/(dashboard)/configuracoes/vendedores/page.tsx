@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import {
-  BadgeDollarSign, Eye, KeyRound, Link2, Loader2, Mail, Pencil, Plus, Search, Trash2,
+  BadgeDollarSign, Eye, KeyRound, Link2, Loader2, Mail, Pencil, Plus, Search, Trash2, Upload,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
@@ -11,6 +11,7 @@ import { FormField, Input, Select } from '@/components/ui/field';
 import { useRegionais } from '@/hooks/use-config';
 import { useEnviarBoasVindas, useExcluirVendedor, useVendedoresLista } from '@/hooks/use-vendedores';
 import { ModalVendedor, Secao } from '@/components/vendedores/modal-vendedor';
+import { ImportarVendedores } from '@/components/vendedores/importar-vendedores';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { VendedorLista, VendedoresRow } from '@/lib/database.types';
 
@@ -24,6 +25,7 @@ const pct = (v: number | null | undefined) =>
   `${(Number(v ?? 0) * 100).toFixed(2).replace('.00', '').replace('.', ',')}%`;
 
 export default function VendedoresPage() {
+  const [importando, setImportando] = useState(false);
   const [busca, setBusca] = useState('');
   const [regionalFiltro, setRegionalFiltro] = useState('');
   const { data: vendedores, isLoading } = useVendedoresLista({
@@ -54,9 +56,14 @@ export default function VendedoresPage() {
             acesso ao portal.
           </p>
         </div>
-        <Button onClick={() => setEditando({ ativo: true, taxa_comissao_adesao: 0, taxa_comissao_recorrente: 0 })}>
-          <Plus className="h-4 w-4" /> Novo Vendedor
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" onClick={() => setImportando(true)}>
+            <Upload className="h-4 w-4" /> Importar planilha
+          </Button>
+          <Button onClick={() => setEditando({ ativo: true, taxa_comissao_adesao: 0, taxa_comissao_recorrente: 0 })}>
+            <Plus className="h-4 w-4" /> Novo Vendedor
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -159,6 +166,7 @@ export default function VendedoresPage() {
       {editando && <ModalVendedor inicial={editando} onClose={() => setEditando(null)} />}
       {vendo && <ModalFicha vendedor={vendo} onClose={() => setVendo(null)} onEditar={() => { setEditando(vendo as unknown as VendedoresRow); setVendo(null); }} />}
       {boasVindas && <ModalBoasVindas vendedor={boasVindas} onClose={() => setBoasVindas(null)} />}
+      <ImportarVendedores aberto={importando} onClose={() => setImportando(false)} />
     </div>
   );
 }

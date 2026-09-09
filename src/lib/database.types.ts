@@ -3461,6 +3461,11 @@ export type Database = {
         Returns: UsuarioListado[];
       };
       usuario_acesso_ativo: { Args: Record<string, never>; Returns: boolean };
+      // 0069 — carga da equipe de vendas por planilha.
+      importar_vendedores: {
+        Args: { p_linhas: Json; p_respeitar_status?: boolean };
+        Returns: { criados: number; atualizados: number }[];
+      };
     };
     Enums: {
       papel_usuario: PapelUsuario;

@@ -133,9 +133,13 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
   passa a CORTAR O ACESSO DE VERDADE**: até aqui `is_staff()`/`auth_papel()` ignoravam o campo e
   desativar alguém não fazia nada (ver a seção própria). Sem ela a tela
   `/configuracoes/usuarios` não abre (chama `usuarios_listar`).
-- **Próxima migration livre: `0069`.** As `0060`, `0061`, `0063`, `0064`, `0065`, `0066`, `0067` e `0068` já estão no branch de trabalho e
+- **`0069_vendedores_importacao` é NOVA** — a carga da equipe de vendas por planilha
+  (`Configurações → Vendedores → Importar planilha`). Ver a seção própria: as três decisões que
+  moram no banco (todos entram INATIVOS, comissão zerada, nunca cria acesso) e a trava de que
+  unidade em branco **não vira matriz**.
+- **Próxima migration livre: `0070`.** As `0060`, `0061`, `0063`..`0069` já estão no branch de trabalho e
   ainda **não foram aplicadas em produção** (rodar nessa ordem, depois das `0045`..`0059`); a
-  `0062` JÁ FOI aplicada. A `0067` e a `0068` são independentes do Mutual e podem ir junto.
+  `0062` JÁ FOI aplicada. A `0067`, a `0068` e a `0069` são independentes do Mutual e podem ir junto.
 - **`.claude/hooks/session-start.sh` é NOVO** — avisa quando a sessão nasce no branch errado e
   instala as dependências. Ele **só roda se estiver no branch que a sessão clonou**; enquanto o
   default do GitHub for o branch morto, uma sessão que caia lá não terá o hook. A correção
@@ -237,9 +241,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0068`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **45 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 511 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0069`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **46 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 539 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Todos os portais e páginas
@@ -1256,6 +1260,15 @@ Sao os tres helpers-raiz, entao `is_admin`, `tem_acesso_global`, `pode_regional`
 recriada para o portal do vendedor cair junto; (C) `usuario_acesso_ativo()` para a TELA explicar o
 corte e `usuarios_listar(p_incluir_inativos)` com unidade, vinculo de vendedor e por quantas
 unidades a pessoa responde. Espelho puro em `src/lib/usuario.ts`).
+· `0069_vendedores_importacao` (CARGA DA EQUIPE DE VENDAS POR PLANILHA: (A) `vendedores.documento`
+normalizado para SO DIGITOS + unique PARCIAL — vira a chave de reconciliacao, e parcial porque o
+campo e opcional (0035); (B) `importar_vendedores(p_linhas jsonb, p_respeitar_status)` — upsert
+re-executavel por documento e, sem ele, por e-mail. ATOMICA de proposito, e a previa da TELA e que
+impede a explosao (teto da franquia 0034, unidade ativa 0067, regional mapeada); (C) tres decisoes
+no banco: **todos entram INATIVOS** por padrao, **comissao entra ZERADA** e **nunca cria acesso ao
+portal**; (D) reimportar NAO apaga o que a planilha nao traz — comissao e banco configurados na tela
+sobrevivem. `regional_id` nulo e RECUSADO: aqui nulo significa MATRIZ. Espelho puro em
+`src/lib/vendedores-import.ts`).
 · `0062_integracao_mutual` (FASE 1 da integracao com o MUTUAL — espelho de LEITURA e diagnostico:
 `mutual_captura` (entidade + id_externo unico, payload jsonb, soft-delete) e `mutual_sincronias`;
 os espelhos em SQL da logica de `src/lib/mutual.ts` (`mutual_texto`, `mutual_status_veiculo`,
@@ -1827,6 +1840,45 @@ recuperação e giro).
   (`contratos/<vendedor>/`) e envia por Resend com o PDF anexado (max ~5 MB). **Sem `RESEND_API_KEY`
   nao finge que enviou:** guarda o contrato, devolve o texto pronto e avisa que o envio e manual.
   So marca `boas_vindas_enviada_em` quando o e-mail realmente saiu.
+
+## Importação de VENDEDORES por planilha (0069)
+- **Onde:** `Configurações → Vendedores` → botão **Importar planilha**
+  (`src/components/vendedores/importar-vendedores.tsx`). Três passos numa tela: arquivo →
+  de-para da unidade → prévia com diff.
+- **Por que planilha e não API:** metade do cadastro (comissão, banco, PIX, prazo) **não existe no
+  sistema de origem** — é acordo comercial, digitado de qualquer jeito. E são centenas, não
+  milhares: não há escala que pague uma integração. Modelo de UX herdado de
+  `precificacao-import.ts`, como o CLAUDE.md manda.
+- **O de-para é por NOME DISTINTO, não por linha.** O relatório real do Mutual trouxe 379 linhas
+  com **8 nomes de regional** — 8 decisões, não 379. A tela mostra cada grupo com a contagem **e as
+  cidades**, porque grupo espalhado por 50 cidades de 10 estados não é uma unidade, é um balde
+  (foi o caso de "SMART CAR BRASIL APROVES-BR", 152 pessoas).
+- **⚠️ Nome sem unidade escolhida BLOQUEIA a linha.** Nunca "cai na matriz": aqui
+  `regional_id is null` significa **MATRIZ** (0067), então um de-para silencioso jogaria a equipe
+  inteira de uma franquia para dentro do escopo da matriz, atravessando RLS e `escopo_regional()`.
+  A RPC recusa `regional_id` nulo mesmo se alguém a chamar direto.
+- **TODOS ENTRAM INATIVOS por padrão.** O relatório marcou **363 de 379 como "Ativo"** — mas
+  "Ativo" na origem significa "não apagado", não "vendendo hoje". Importar 363 ativos criaria 363
+  hotlinks captando lead e 363 comissões para conferir. O checkbox *Respeitar a coluna Status*
+  existe, e a tela mostra o número na frente antes de você marcá-lo.
+- **Comissão entra ZERADA** quando a planilha não traz: zero não paga ninguém por engano, um
+  palpite paga. E **nunca cria acesso ao portal** (`usuario_id` fica nulo) — importar 379 acessos
+  é criar 379 senhas que ninguém controla e que, desde a 0068, contam como equipe.
+- **A carga é RE-EXECUTÁVEL e não apaga o que a planilha não traz.** Chave: `documento` (só
+  dígitos) e, sem ele, `email` em minúsculas. Reimportar corrige o nome e **preserva** comissão,
+  banco e PIX configurados na tela — o relatório de origem não tem essas colunas.
+- **A RPC é ATÔMICA de propósito** (meia importação de equipe é pior que nenhuma), então a
+  validação que evita a explosão vive na PRÉVIA: teto de comissão da franquia (0034), unidade
+  inativa recusando vendedor ativo (0067), regional mapeada, repetido dentro da própria planilha.
+  Linha barrada vira "estas 3 ficam de fora, e por isto", não "a importação falhou".
+- **Erro de fórmula do Excel bloqueia**, como na precificação — célula `#N/D` passando como vazia
+  grava lixo em silêncio. Coluna a mais vira **aviso**, nunca erro: relatório de sistema sempre
+  traz coluna que o cadastro não usa (o do Mutual trouxe Rua, Nº, Bairro, CEP).
+- **CPF inválido é AVISO, não erro** — 30 das 379 linhas vieram com dígito errado, e o documento
+  aqui é chave de reconciliação com a origem, não documento fiscal. Entra como veio, marcado.
+- **Lógica pura testada:** `src/lib/vendedores-import.ts` —
+  `interpretarPlanilhaVendedores`, `agruparRegionais`, `casarRegional`, `montarPrevia`,
+  `chaveDoVendedor`, `gerarModeloCsvVendedores`.
 
 ## Usuário da equipe — ficha e ACESSO (0068)
 - **Onde:** `Configuracoes → Usuarios`. A lista mostra pessoa + cargo, contato, papel, unidade,

@@ -15,6 +15,7 @@ import type {
   StatusCadastro,
   RegionalListada,
   UsuarioListado,
+  Json,
 } from '@/lib/database.types';
 
 // ---------------------------------------------------------------------------
@@ -370,6 +371,38 @@ export function useVendedores() {
       const { data, error } = await supabase.from('vendedores').select('*');
       if (error) throw error;
       return data ?? [];
+    },
+  });
+}
+
+/**
+ * Carga da equipe por planilha (RPC `importar_vendedores`, 0069).
+ *
+ * ATOMICA de proposito: meia importacao de equipe e pior que nenhuma, porque
+ * ninguem sabe onde parou. A validacao que evita a explosao (teto da franquia,
+ * unidade ativa, regional mapeada) mora na PREVIA — `montarPrevia` em
+ * `src/lib/vendedores-import.ts`.
+ */
+export function useImportarVendedores() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<
+    { criados: number; atualizados: number },
+    Error,
+    { linhas: Record<string, unknown>[]; respeitarStatus: boolean }
+  >({
+    mutationFn: async ({ linhas, respeitarStatus }) => {
+      const { data, error } = await supabase.rpc('importar_vendedores', {
+        p_linhas: linhas as unknown as Json,
+        p_respeitar_status: respeitarStatus,
+      });
+      if (error) throw new Error(error.message);
+      const r = data?.[0];
+      return { criados: r?.criados ?? 0, atualizados: r?.atualizados ?? 0 };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['config', 'vendedores'] });
+      qc.invalidateQueries({ queryKey: ['config', 'regionais'] });
     },
   });
 }
