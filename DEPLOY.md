@@ -100,60 +100,64 @@ failed to solve: node:20-alpine: ... dial tcp: lookup registry-1.docker.io
 on 127.0.0.53:53: read udp ... i/o timeout
 ```
 
-**Isso não é erro do projeto** — o Docker não conseguiu resolver DNS no VPS.
-O `127.0.0.53` é o resolvedor local do sistema (`systemd-resolved`); quando ele
-para de responder, nada que precise de nome de domínio funciona, e o primeiro a
-reclamar é o `FROM node:20-alpine`. Como o build falhou, **o contêiner antigo
-continua no ar**: o site não caiu, só não foi atualizado.
+**Não é erro do projeto, e o site NÃO caiu:** build que falha não substitui o
+contêiner — a produção segue na versão anterior. O que quebrou foi o DNS do
+*daemon* do Docker.
 
-Tudo abaixo roda **dentro do VPS**.
+#### O que aconteceu de verdade (diagnosticado em 09/09/2026)
 
-**1) Confirme que é DNS, e não a rede inteira:**
+**`getent` e o Docker não usam o mesmo caminho de DNS — e é isso que engana.**
+O `getent` fala com o `systemd-resolved` por D-Bus (`nss-resolve`, no
+`nsswitch.conf`), então ele responde bem mesmo com o resolvedor pela metade. O
+daemon do Docker é Go compilado sem CGO: lê o `/etc/resolv.conf` cru e consulta
+**`127.0.0.53:53` por UDP** — o *stub listener*. Aqui o stub estava **no ar e
+mudo**: `ss -ulnp | grep ':53'` mostrava `127.0.0.53%lo:53` escutando, o
+`getent ahostsv4 registry-1.docker.io` devolvia os IPs certinhos, e mesmo assim
+o build estourava.
+
+Consequência prática: **`getent` funcionando NÃO prova que o Docker vai
+resolver**, e `systemctl restart systemd-resolved` não conserta este caso.
+
+#### O contorno que resolveu (e é o mais rápido)
+
 ```bash
-ping -c1 8.8.8.8                      # rede OK? (responde = a rede está viva)
-getent hosts registry-1.docker.io     # nome resolve? (vazio = é DNS mesmo)
+cd /opt/scar && DOCKER_BUILDKIT=0 docker compose up -d --build
 ```
 
-**2) ⚠️ OLHE SE VEIO SÓ IPv6.** Foi o caso em 09/09/2026: o `getent` devolveu
-oito endereços `2600:1f18:...` e **nenhum IPv4**. Isso não é "DNS morto" — é a
-consulta **A** (IPv4) estourando o tempo enquanto a **AAAA** (IPv6) responde
-normal. O Docker precisa da A, então ele acusa `i/o timeout` mesmo com o
-`systemd-resolved` ativo e um `getent` que *parece* ter funcionado. O teste que
-não mente:
-```bash
-getent ahostsv4 registry-1.docker.io  # VAZIO = é isto que está acontecendo
-```
-Reiniciar o `systemd-resolved` **não resolve este caso**: o defeito está no
-resolvedor de cima (o do provedor), não no daemon local.
+Funciona porque quem falha na resolução é o **daemon**, e o builder antigo não
+precisa dele: usa a `node:20-alpine` que já está no cache local em vez de pedir
+o manifesto ao registro. O `npm ci` roda **dentro do contêiner**, que recebe DNS
+próprio do Docker (com o host apontando para `127.0.0.53`, o Docker troca por
+resolvedor público dentro do contêiner). Deploy inteiro sem tocar no servidor.
 
-**3) O conserto: DNS público, em drop-in** (não edite o `resolved.conf` direto —
-o drop-in sobrevive a atualização do sistema):
-```bash
-mkdir -p /etc/systemd/resolved.conf.d
-printf '[Resolve]\nDNS=8.8.8.8 1.1.1.1\nFallbackDNS=9.9.9.9\n' \
-  > /etc/systemd/resolved.conf.d/dns-publico.conf
-systemctl restart systemd-resolved
-getent ahostsv4 registry-1.docker.io  # tem de devolver IPv4 agora
-```
-Voltando o IPv4, repita o deploy normal (`git pull` + `docker compose up -d --build`).
+**É contorno, não conserto:** o `docker compose up -d --build` normal vai parar
+no mesmo lugar na próxima vez. Quem não quiser lembrar disso, aplique o conserto
+abaixo.
 
-**4) Se ainda assim o `systemd-resolved` estiver mudo:**
+#### O conserto (tira o Docker da dependência do stub)
+
 ```bash
-systemctl restart systemd-resolved
-getent hosts registry-1.docker.io
+cat /run/systemd/resolve/resolv.conf   # PRECISA listar nameservers de verdade
+ln -sf /run/systemd/resolve/resolv.conf /etc/resolv.conf
+cat /etc/resolv.conf                   # nao pode mais mostrar 127.0.0.53
 ```
 
-**5) Precisa subir AGORA e o DNS não coopera:** se a imagem base já está no
-servidor (`docker images | grep node`), o **builder antigo** usa a cópia local
-em vez de perguntar ao registro:
+Passa a valer o arquivo de *uplink* que o próprio systemd mantém com os
+servidores reais do provedor, em vez do stub. É modo suportado do
+`systemd-resolved` e a configuração de muitos hosts Docker; o que se perde é o
+cache local de DNS. Se o `cat` do primeiro comando vier vazio ou sem
+`nameserver`, **não troque** — sem servidor real ali você fica sem DNS nenhum.
+
+Reverter é uma linha:
 ```bash
-DOCKER_BUILDKIT=0 docker compose up -d --build
+ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
 ```
-Tem chance real de ir até o fim: quem falha na resolução é o **daemon**, e o
-contêiner do build usa outro DNS — quando o `/etc/resolv.conf` do host aponta
-para `127.0.0.53`, o Docker troca por resolvedor público dentro do contêiner,
-então o `npm ci` costuma passar. Ainda assim é contorno: o próximo deploy
-esbarra no mesmo DNS. Feche o item 3.
+
+Causa raiz do stub mudo, se um dia valer investigar (quase sempre é regra de
+firewall descartando UDP no loopback):
+```bash
+ufw status; iptables -S INPUT | head
+```
 
 ## 3. Conferência
 
@@ -163,8 +167,7 @@ esbarra no mesmo DNS. Feche o item 3.
 | Tela abre e quebra ao carregar dados | Falta rodar a migration daquele módulo no Supabase |
 | `not a git repository` | O comando rodou no Windows, não no servidor |
 | `couldn't find remote ref` | Branch errado no `git pull` |
-| `failed to resolve source metadata` / `i/o timeout` | DNS do VPS — ver a seção acima; o site **não** caiu |
-| `getent` devolve só endereços `2600:...` | A consulta IPv4 (A) está falhando; teste com `getent ahostsv4` |
+| `failed to resolve source metadata` / `i/o timeout` | DNS do daemon do Docker — ver a seção acima; o site **não** caiu. Saída rápida: `DOCKER_BUILDKIT=0 docker compose up -d --build` |
 
 ## Branch de produção
 
