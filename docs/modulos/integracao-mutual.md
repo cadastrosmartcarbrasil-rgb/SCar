@@ -622,3 +622,34 @@ não existem lá. Vai exigir `alter type ... add value if not exists` **com o go
    COBRADO ATUALMENTE** e o **dia de vencimento** (é o que a decisão de preço congelado exige).
 4. **Rate limit** documentado.
 5. Se `Basic` e `Bearer` usam a mesma credencial ou credenciais diferentes.
+
+---
+
+## O CONTRATO FOI LOCALIZADO (09/09/2026) — e uma regra que vale para TODA chamada
+
+```
+GET https://smartcar-api.mutualignit.com.br/public_api/v2/swagger.json/
+    -> HTTP 200 · 227.277 bytes · application/json
+    -> {"swagger": "2.0", "info": {"title": "SMARTCAR API", ...
+```
+
+### ⚠️ A API exige BARRA NO FIM — `APPEND_SLASH` do Django
+`/swagger.json` devolve **301** para `/swagger.json/`. O mesmo vale para os endpoints
+(`/event/`, como a tela já mostrava). Duas consequências práticas para o nosso cliente:
+
+1. **Sempre montar a URL com a barra final.** Sem ela, cada chamada paga uma ida e volta extra —
+   em ~13 mil registros paginados isso é tempo de carga jogado fora.
+2. **`fetch` do Node segue redirect por padrão, mas em POST um 301 pode virar GET e PERDER O CORPO**
+   (comportamento histórico dos clientes HTTP). Como as nossas chamadas são de leitura, o risco é
+   baixo — mas a regra fica: **a barra final é obrigatória, não opcional**, e o cliente não deve
+   depender do redirecionamento para funcionar.
+
+### É **Swagger 2.0**, não OpenAPI 3
+Muda onde as coisas moram ao ler o arquivo: `securityDefinitions` (não `components.securitySchemes`),
+`definitions` (não `components.schemas`) e existe `basePath`. Qualquer gerador de cliente que
+usarmos precisa aceitar 2.0 ou converter antes.
+
+### Onde o arquivo está
+Baixado no VPS em `/root/mutual-openapi.json`. **Ele não contém dado de associado — só o formato** —
+então pode e deve ser versionado em `docs/modulos/mutual-openapi.json`, para a próxima sessão não
+depender de rede nem de política de egress.

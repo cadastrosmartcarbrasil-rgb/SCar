@@ -48,7 +48,7 @@ grep -oE '(spec-url|data-url|url)["'"'"']?[:=]["'"'"' ]*[^"'"'"' ><]+' "$SAIDA/d
   | head -20 || echo '   (nada obvio no HTML — segue para os caminhos usuais)'
 
 echo '   -- testando os caminhos usuais --'
-for P in "$PREFIXO/swagger.json" "$PREFIXO/swagger.yaml" "$PREFIXO/swagger/?format=openapi" \
+for P in "$PREFIXO/swagger.json/" "$PREFIXO/swagger.json" "$PREFIXO/swagger.yaml" "$PREFIXO/swagger/?format=openapi" \
          "$PREFIXO/schema/?format=json" "$PREFIXO/schema/" "$PREFIXO/openapi.json"; do
   H=$(curl -sL -o "$SAIDA/spec.tmp" -w '%{http_code}|%{url_effective}' -m 40 "$BASE$P")
   URLF="${H#*|}"; H="${H%%|*}"
