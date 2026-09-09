@@ -869,17 +869,38 @@ Resolve o N+1 do veículo. **Só o endereço e o contato do associado ficam de f
 /core/address/?id=<address_id> -> CEP, rua, número, bairro, cidade, UF
 ```
 
-### ⭐ Existe um atalho que traz TUDO de uma vez — mas exige permissão
-**`/integrations/contract_objects/`** devolve, num único objeto: `vehicle_data` + `person_data`
-**com `address_data` aninhado** + `implementos_data` + `contract_data` + **`products_data` com
-`product_name`** + `beneficiaries_data` + `smartphone_data`. Elimina o N+1 de endereço **e** dá o
-nome dos produtos.
+### Um atalho possível (otimização, não requisito)
+**`/integrations/contract_objects/`** devolve num único objeto `vehicle_data` + `person_data`
+**com `address_data` aninhado** + `contract_data` + **`products_data` com `product_name`**.
+Eliminaria o N+1 de endereço e daria o nome dos produtos.
 
-**Porém `supplier_id` é parâmetro OBRIGATÓRIO** — é o endpoint que a Mutual dá a integradores
-parceiros (o mesmo molde de `/apoio/`, `/softruck/`, `/zelo/`, `/split_risk/`).
-**➡️ PERGUNTAR À MUTUAL: podemos ter um `supplier_id`?** Se sim, a carga fica drasticamente mais
-simples e barata. Se não, vale o caminho de três chamadas acima. **É a pergunta de maior impacto
-que resta.**
+**Exige `supplier_id` obrigatório.** ⚠️ **Isto NÃO tem relação com as parcerias abaixo** — não é
+"virar parceiro da Softruck", é a Mutual emitir uma credencial de integração para o SCar, que é o
+sistema da própria associação. **Vale perguntar, mas é otimização:** o caminho de três chamadas
+funciona sem depender de resposta, e com paginação de 500 a diferença é de minutos.
+
+### 🚫 FORA DO ESCOPO POR DECISÃO DO USUÁRIO (09/09/2026) — não poluir a migração
+A associação **não tem parceria com nenhuma destas empresas**. Os endpoints existem no contrato
+porque a Mutual atende outras associações; **para nós são ruído** e não entram em fase nenhuma:
+
+| Endpoint | Empresa |
+|---|---|
+| `/softruck/contract_objects/` | Softruck (rastreamento) |
+| `/zelo/beneficiaries/` | Zelo (benefício) |
+| `/apoio/contract_objects/` | Apoio |
+| `/split_risk/*` | Split Risk (divisão de risco / apólice) |
+| `/redeveiculos/buscar/*` | redeveiculos.com |
+| `/ativo247/error_notification/` | Ativo247 |
+
+**Consequência para o módulo de Rastreadores:** a pista da Softruck **morre aqui**. O parque de
+equipamentos continua vindo do **TrackerStock**, como já estava planejado — a fronteira
+`fornecedores.api_config` segue sem produtor. O que a API do Mutual ainda dá sobre rastreador é o
+**produto cobrado** (aparece em `invoice_product` / `contract_object_product`, e há o tipo de
+fatura `TRACKER_FINE`), não o equipamento. **Rastreador COBRADO ≠ rastreador INSTALADO** — a mesma
+distinção que a 0049/0050 já registrou.
+
+**`BENEFICIARIO` e `SMARTPHONE` como `object_type` também saem do escopo:** só importamos
+`object_type = VEHICLE` (e `IMPLEMENTOS`, se houver carreta na carteira).
 
 ## ⚠️ O veículo NÃO tem status — ele vem do contrato
 `V2PublicApiVehicleSerializerResponse` **não possui campo de status**. O status vive em dois níveis:
@@ -995,8 +1016,9 @@ nos demais endpoints e o rate limit.**
   `NOVA_VENDA`·`REATIVACAO`·`SUBSTITUICAO`·`TROCA_TITULARIDADE`·`RENOVACAO`.
 
 ## As perguntas que restam para a Mutual
-1. **Podemos ter um `supplier_id` para `/integrations/contract_objects/`?** (maior impacto)
-2. **Rate limit** e o teto real de `page_size`.
+1. **`/person/` e `/event/` paginam de fato?** O contrato não declara `page` neles. Sem paginação
+   e sem `updated_at`, varrer a base de associados depende inteiramente de entrar por contrato —
+   que é o desenho adotado, mas convém confirmar.
+2. **Rate limit** e o teto real de `page_size` fora de `/quotation/`.
 3. Registros com `deleted = true` **aparecem** nas listagens?
-4. `/person/` e `/event/` **paginam** de fato (o contrato não declara `page`)? Como varrer a base
-   inteira de associados sem `updated_at`?
+4. *(otimização)* Um `supplier_id` para `/integrations/contract_objects/` — não é requisito.
