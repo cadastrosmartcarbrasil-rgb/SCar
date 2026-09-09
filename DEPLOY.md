@@ -112,32 +112,48 @@ Tudo abaixo roda **dentro do VPS**.
 ```bash
 ping -c1 8.8.8.8                      # rede OK? (responde = a rede está viva)
 getent hosts registry-1.docker.io     # nome resolve? (vazio = é DNS mesmo)
-systemctl status systemd-resolved --no-pager | head -5
 ```
 
-**2) O conserto que resolve na maioria das vezes:**
+**2) ⚠️ OLHE SE VEIO SÓ IPv6.** Foi o caso em 09/09/2026: o `getent` devolveu
+oito endereços `2600:1f18:...` e **nenhum IPv4**. Isso não é "DNS morto" — é a
+consulta **A** (IPv4) estourando o tempo enquanto a **AAAA** (IPv6) responde
+normal. O Docker precisa da A, então ele acusa `i/o timeout` mesmo com o
+`systemd-resolved` ativo e um `getent` que *parece* ter funcionado. O teste que
+não mente:
 ```bash
+getent ahostsv4 registry-1.docker.io  # VAZIO = é isto que está acontecendo
+```
+Reiniciar o `systemd-resolved` **não resolve este caso**: o defeito está no
+resolvedor de cima (o do provedor), não no daemon local.
+
+**3) O conserto: DNS público, em drop-in** (não edite o `resolved.conf` direto —
+o drop-in sobrevive a atualização do sistema):
+```bash
+mkdir -p /etc/systemd/resolved.conf.d
+printf '[Resolve]\nDNS=8.8.8.8 1.1.1.1\nFallbackDNS=9.9.9.9\n' \
+  > /etc/systemd/resolved.conf.d/dns-publico.conf
 systemctl restart systemd-resolved
-getent hosts registry-1.docker.io     # tem de devolver um IP agora
+getent ahostsv4 registry-1.docker.io  # tem de devolver IPv4 agora
 ```
-Resolvendo, repita o deploy normal (`git pull` + `docker compose up -d --build`).
+Voltando o IPv4, repita o deploy normal (`git pull` + `docker compose up -d --build`).
 
-**3) Se o `systemd-resolved` continuar mudo**, aponte um DNS público de forma
-permanente (`/etc/systemd/resolved.conf`):
+**4) Se ainda assim o `systemd-resolved` estiver mudo:**
 ```bash
-printf '[Resolve]\nDNS=8.8.8.8 1.1.1.1\nFallbackDNS=9.9.9.9\n' >> /etc/systemd/resolved.conf
 systemctl restart systemd-resolved
 getent hosts registry-1.docker.io
 ```
 
-**4) Precisa subir AGORA e o DNS não coopera:** se a imagem base já está no
+**5) Precisa subir AGORA e o DNS não coopera:** se a imagem base já está no
 servidor (`docker images | grep node`), o **builder antigo** usa a cópia local
 em vez de perguntar ao registro:
 ```bash
 DOCKER_BUILDKIT=0 docker compose up -d --build
 ```
-Isso é contorno, não conserto — o `npm ci` do build também precisa de rede, e o
-próximo deploy vai esbarrar no mesmo DNS. Feche o item 2 ou 3.
+Tem chance real de ir até o fim: quem falha na resolução é o **daemon**, e o
+contêiner do build usa outro DNS — quando o `/etc/resolv.conf` do host aponta
+para `127.0.0.53`, o Docker troca por resolvedor público dentro do contêiner,
+então o `npm ci` costuma passar. Ainda assim é contorno: o próximo deploy
+esbarra no mesmo DNS. Feche o item 3.
 
 ## 3. Conferência
 
@@ -147,7 +163,8 @@ próximo deploy vai esbarrar no mesmo DNS. Feche o item 2 ou 3.
 | Tela abre e quebra ao carregar dados | Falta rodar a migration daquele módulo no Supabase |
 | `not a git repository` | O comando rodou no Windows, não no servidor |
 | `couldn't find remote ref` | Branch errado no `git pull` |
-| `failed to resolve source metadata` / `i/o timeout` | DNS do VPS fora do ar — ver a seção acima; o site **não** caiu |
+| `failed to resolve source metadata` / `i/o timeout` | DNS do VPS — ver a seção acima; o site **não** caiu |
+| `getent` devolve só endereços `2600:...` | A consulta IPv4 (A) está falhando; teste com `getent ahostsv4` |
 
 ## Branch de produção
 
