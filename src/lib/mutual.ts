@@ -281,3 +281,32 @@ export function problemasDoObjeto(o: ObjetoMutual): MotivoQuarentena[] {
   if (textoOuNulo(o.due_day) === null) p.push('SEM_DIA_VENCIMENTO');
   return p;
 }
+
+/**
+ * `contract_period` do Mutual -> meses.
+ *
+ * POR QUE ISTO IMPORTA: `veiculos.valor_mensalidade` (0024) e MENSAL, e o
+ * Mutual cobra em periodos (a tela mostra "Semestral · 6 parcelas · parcela
+ * R$ 120,00 · total R$ 720,00"). Se `final_total_value` for o TOTAL e a carga
+ * gravar isso como mensalidade, o associado recebe boleto de 6x o que paga.
+ * A conversao nao esta escrita aqui de proposito — primeiro os dados dizem se
+ * o campo e a parcela ou o total (`mutual_periodicidade()`), depois a Fase 3
+ * decide. Aqui so normalizamos o vocabulario.
+ *
+ * O contrato deles usa 12/6/3/1; a tela mostra o rotulo. Aceita os dois.
+ */
+export function mesesDoPeriodoMutual(valor: unknown): number | null {
+  const t = textoOuNulo(valor == null ? null : String(valor));
+  if (!t) return null;
+  switch (t.toUpperCase()) {
+    case '1': case 'MENSAL': return 1;
+    case '3': case 'TRIMESTRAL': return 3;
+    case '6': case 'SEMESTRAL': return 6;
+    case '12': case 'ANUAL': return 12;
+    default: return null;
+  }
+}
+
+export const ROTULO_PERIODO_MUTUAL: Record<number, string> = {
+  1: 'Mensal', 3: 'Trimestral', 6: 'Semestral', 12: 'Anual',
+};

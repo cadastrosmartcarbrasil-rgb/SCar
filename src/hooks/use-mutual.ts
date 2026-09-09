@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import type { EntidadeMutual } from '@/lib/mutual';
 import type {
   MutualDiagnostico, MutualPorStatus, MutualFilial,
-  MutualQuarentena, MutualResumoCaptura, MutualStatusNaoMapeado,
+  MutualQuarentena, MutualResumoCaptura, MutualStatusNaoMapeado, MutualPeriodicidade,
 } from '@/lib/database.types';
 
 /** O que ja esta na area de captura. */
@@ -119,6 +119,23 @@ async function chamar(body: Record<string, unknown>): Promise<RespostaMutual> {
 export function usePingMutual() {
   return useMutation<RespostaMutual, Error, void>({
     mutationFn: () => chamar({ action: 'ping' }),
+  });
+}
+
+/**
+ * Periodicidade da cobranca — e a consulta que decide se `final_total_value` e
+ * a PARCELA ou o TOTAL do contrato. `veiculos.valor_mensalidade` (0024) e
+ * MENSAL: trocar um pelo outro cobra 6x a mais num contrato semestral.
+ */
+export function useMutualPeriodicidade() {
+  const supabase = createClient();
+  return useQuery<MutualPeriodicidade[]>({
+    queryKey: ['mutual', 'periodicidade'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('mutual_periodicidade', {});
+      if (error) throw error;
+      return data ?? [];
+    },
   });
 }
 

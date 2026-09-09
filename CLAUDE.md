@@ -103,7 +103,15 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
   de `veiculo_faturavel`, 0024) e o acervo inativo vira grupo informativo. Junto vieram
   `mutual_status_nao_mapeados()` (o enum do swagger **não é exaustivo**) e `/contract/` como
   entidade capturável — `due_day` e `regional` **não estão** no objeto do contrato.
-- **Próxima migration livre: `0064`.** As `0060`, `0061` e `0063` já estão no branch de trabalho e
+- **`0064_mutual_dia_vencimento_contrato` é NOVA e CORRIGE outro falso alarme** — conferido na
+  TELA do Mutual: o dia de vencimento **existe**, na *Configuração da cobrança* do CONTRATO
+  ("Dia de vencimento da parcela"). O diagnóstico acusava centenas de "Faturável sem dia de
+  vencimento" com o dado existindo, só noutro endpoint. Agora `due_day` e `regional` são
+  resolvidos pelo `/contract/` (com o objeto como fallback) e, enquanto ninguém puxou os
+  contratos, a tela **diz isso** em vez de acusar o dado. Junto veio `mutual_periodicidade()`,
+  por causa do que a mesma tela revelou: contrato **Semestral, 6 parcelas, parcela R$ 120,
+  total R$ 720** — `valor_mensalidade` (0024) é MENSAL, e importar o total cobraria 6× a mais.
+- **Próxima migration livre: `0065`.** As `0060`, `0061`, `0063` e `0064` já estão no branch de trabalho e
   ainda **não foram aplicadas em produção** (rodar nessa ordem, depois das `0045`..`0059`); a
   `0062` JÁ FOI aplicada.
 - **`.claude/hooks/session-start.sh` é NOVO** — avisa quando a sessão nasce no branch errado e
@@ -207,9 +215,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0063`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **40 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 478 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0064`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **41 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 480 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Todos os portais e páginas
@@ -466,7 +474,7 @@ Consequências que o levantamento original não tinha:
 - **Histórico pago reescreve DRE de mês fechado** (`dre_movimentos`, 0032) e, na convivência, faz
   os dois sistemas contarem a mesma receita. O DRE do SCar começa na data de corte.
 
-## Integração com o Mutual — Fase 1 (0062 + 0063): espelho de leitura e diagnóstico
+## Integração com o Mutual — Fase 1 (0062 + 0063 + 0064): espelho de leitura e diagnóstico
 > Plano completo e de-para campo a campo: **`docs/modulos/integracao-mutual.md`**. Leia antes de
 > tocar neste módulo.
 
@@ -523,6 +531,21 @@ Consequências que o levantamento original não tinha:
 - **A amostra da API vem dos MAIS ANTIGOS primeiro.** Nos 2.500 primeiros de 17.610 objetos:
   2.438 INATIVO contra 35 ATIVO. Nenhum percentual de amostra parcial fala da carteira — só
   concluir com a captura completa.
+- **O DIA DE VENCIMENTO E A UNIDADE SAEM DO CONTRATO (0064), não do objeto.** Conferido na tela
+  do Mutual: o campo está na *Configuração da cobrança* do contrato. `mutual_diagnostico` e
+  `mutual_quarentena` resolvem `due_day`/`regional` pelo `/contract/` (objeto só como fallback).
+  **Lição que vale para o módulo inteiro:** enquanto o endpoint que guarda o dado não foi
+  capturado, o indicador tem de dizer *"puxe os contratos"* — acusar ausência de um dado que
+  ninguém puxou foi o que gerou centenas de falsos críticos duas vezes seguidas.
+- **⚠️ O CONTRATO TEM PERÍODO — e `valor_mensalidade` (0024) é MENSAL.** A tela do Mutual mostra
+  *Semestral · 6 parcelas · parcela R$ 120,00 · total R$ 720,00*. Se `final_total_value` for o
+  TOTAL e a carga gravar como mensalidade, o associado recebe boleto de **6× o que paga**.
+  **Isso ainda NÃO está decidido** — `mutual_periodicidade()` (período × parcelas × valor
+  mediano/mín/máx do objeto) existe para a resposta sair dos DADOS: se a mediana do semestral
+  for parecida com a do mensal, é parcela; se for ~6×, é total e a Fase 3 divide. `contract_period`
+  (12/6/3/1 ou o rótulo) vira meses em `mesesDoPeriodoMutual`/`mutual_meses_periodo`, e período
+  desconhecido devolve **null** de propósito: assumir "mensal" no escuro é o caminho para cobrar
+  a mais.
 - **A captura vai até o fim sozinha, EM BLOCOS (`useCapturaMutual`).** Um clique puxa a entidade
   inteira; o laço vive no navegador e cada bloco é uma requisição curta. Não é uma requisição só
   de propósito: 17.610 objetos são 36 páginas e as faturas passam de 400 — uma chamada desse
@@ -534,7 +557,7 @@ Consequências que o levantamento original não tinha:
   caso de a API nunca dizer que acabou.
 - **RPCs:** `mutual_registrar_captura` (só `tem_acesso_global`), `mutual_diagnostico`,
   `mutual_por_status`, `mutual_filiais`, `mutual_quarentena`, `mutual_status_nao_mapeados`,
-  `mutual_resumo_capturas`.
+  `mutual_periodicidade`, `mutual_resumo_capturas`.
 
 ## O que é
 Sistema de gestão para **associação de proteção veicular** (associados, frota, eventos/sinistros,
@@ -1130,6 +1153,17 @@ indice + SLA + custo + **custo por veiculo ativo** + reincidentes), `_por_servic
 limite do catalogo e QUANTOS VEICULOS JA ESTAO NO TETO), `_por_praca` (traz a frota da praca junto:
 a **taxa** e que aponta o alvo, nao o volume), `_serie`, `_reincidencia` e `_frota_situacao`;
 helper `norm_cidade`. Todas SECURITY DEFINER + `escopo_regional` + o rito de revoke da 0052).
+· `0064_mutual_dia_vencimento_contrato` (CORRETIVA: o dia de vencimento EXISTE no Mutual — esta na
+"Configuracao da cobranca" do CONTRATO, nao no objeto. O diagnostico acusava centenas de
+"Faturavel sem dia de vencimento" com o dado existindo, so noutro endpoint. `mutual_diagnostico` e
+`mutual_quarentena` passam a resolver `due_day` e `regional` pelo `/contract/` (objeto como
+fallback); enquanto ninguem puxou os contratos, o indicador vira ATENCAO e a tela diz "puxe
+/contract/" em vez de acusar o dado. Entram tambem "Contratos capturados", "Objeto sem contrato
+correspondente" e "Faturavel em contrato NAO mensal". `mutual_periodicidade()` mostra periodo x
+parcelas x valor mediano/min/max do objeto — e a consulta que responde se `final_total_value` e a
+PARCELA ou o TOTAL, porque `valor_mensalidade` (0024) e MENSAL e a tela do Mutual mostrou contrato
+semestral com 6 parcelas de R$ 120 e total R$ 720. `mutual_meses_periodo` espelha
+`mesesDoPeriodoMutual`, devolvendo null para periodo desconhecido em vez de assumir mensal).
 · `0062_integracao_mutual` (FASE 1 da integracao com o MUTUAL — espelho de LEITURA e diagnostico:
 `mutual_captura` (entidade + id_externo unico, payload jsonb, soft-delete) e `mutual_sincronias`;
 os espelhos em SQL da logica de `src/lib/mutual.ts` (`mutual_texto`, `mutual_status_veiculo`,

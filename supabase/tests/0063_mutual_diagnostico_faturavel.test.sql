@@ -124,10 +124,15 @@ begin
   assert n = 1, format('a placa FTz3b34 tem de ser apontada, veio %s', n);
 
   -- 205,206,207 nao declaram `regional` no objeto — na base real foram 100%,
-  -- e e por isso que a unidade tem de sair de /contract/.
+  -- e e por isso que a unidade tem de sair de /contract/ (0064). Desde a 0064 a
+  -- conta segue a mesma regra dos bloqueios: a CARTEIRA VIVA de um lado (aqui
+  -- 201 e 202, os dois com unidade) e o acervo encerrado do outro (o 205).
   select valor into n from mutual_diagnostico()
-   where indicador = 'Objetos SEM unidade declarada';
-  assert n = 3, format('3 objetos sem unidade, veio %s', n);
+   where indicador = 'Faturavel sem unidade (contrato e objeto)';
+  assert n = 0, format('os faturaveis declaram unidade, veio %s', n);
+  select valor into n from mutual_diagnostico()
+   where grupo = 'ACERVO INATIVO' and indicador = 'Sem unidade';
+  assert n = 1, format('o 205 e o inativo sem unidade, veio %s', n);
   raise notice 'OK o diagnostico aponta caixa da placa e ausencia de unidade';
 
   -- (F) quarentena: por padrao, so quem vai faturar --------------------------

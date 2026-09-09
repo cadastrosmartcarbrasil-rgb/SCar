@@ -8,9 +8,12 @@ import {
 import { Button } from '@/components/ui/button';
 import {
   useMutualCapturas, useMutualDiagnostico, useMutualPorStatus, useMutualFiliais,
-  useMutualQuarentena, useMutualStatusNaoMapeados, usePingMutual, useCapturaMutual,
+  useMutualQuarentena, useMutualStatusNaoMapeados, useMutualPeriodicidade,
+  usePingMutual, useCapturaMutual,
 } from '@/hooks/use-mutual';
-import { ENTIDADES_INCREMENTAIS, ROTULO_QUARENTENA, type EntidadeMutual } from '@/lib/mutual';
+import {
+  ENTIDADES_INCREMENTAIS, ROTULO_QUARENTENA, ROTULO_PERIODO_MUTUAL, type EntidadeMutual,
+} from '@/lib/mutual';
 import type { MutualDiagnostico, SeveridadeDiagnostico } from '@/lib/database.types';
 
 // FASE 1 da integracao com o MUTUAL: consulta e diagnostico.
@@ -69,6 +72,7 @@ export default function IntegracaoMutualPage() {
   const [soFaturaveis, setSoFaturaveis] = useState(true);
   const quarentena = useMutualQuarentena(200, soFaturaveis);
   const naoMapeados = useMutualStatusNaoMapeados();
+  const periodicidade = useMutualPeriodicidade();
   const ping = usePingMutual();
   const { puxarTudo, parar, progresso, rodando } = useCapturaMutual();
   const [paginas, setPaginas] = useState(5);
@@ -292,6 +296,58 @@ export default function IntegracaoMutualPage() {
           ))}
         </div>
       </Secao>
+
+      {(periodicidade.data ?? []).length > 0 && (
+        <Secao titulo="Periodicidade da cobranca" icone={ListChecks}>
+          <p className="mb-3 text-xs text-slate-500">
+            No SCar, <code className="text-[11px]">valor_mensalidade</code> e{' '}
+            <strong>mensal</strong>. No Mutual o contrato tem periodo (a tela mostra
+            &quot;Semestral · 6 parcelas · parcela R$ 120,00 · total R$ 720,00&quot;), entao e
+            preciso saber se o <code className="text-[11px]">final_total_value</code> do objeto e a{' '}
+            <strong>parcela</strong> ou o <strong>total</strong>. <strong>Compare as linhas:</strong>{' '}
+            se o valor mediano do semestral for parecido com o do mensal, e parcela; se for umas 6
+            vezes maior, e o total — e a carga precisa dividir, senao o associado recebe boleto de
+            6x o que paga hoje.
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs uppercase tracking-wide text-slate-500">
+                  <th className="pb-2">Periodo</th>
+                  <th className="pb-2 text-right">Contratos</th>
+                  <th className="pb-2 text-right">Faturaveis</th>
+                  <th className="pb-2 text-right">Parcelas (media)</th>
+                  <th className="pb-2 text-right">Valor mediano</th>
+                  <th className="pb-2 text-right">Faixa</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(periodicidade.data ?? []).map((p) => (
+                  <tr key={p.periodo} className="border-t border-slate-100">
+                    <td className="py-2 text-slate-800">
+                      {p.meses ? ROTULO_PERIODO_MUTUAL[p.meses] ?? p.periodo : p.periodo}
+                      {p.meses && p.meses > 1 && (
+                        <span className="ml-1.5 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ring-1 bg-amber-50 text-amber-700 ring-amber-200">
+                          nao mensal
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-2 text-right tnum text-slate-900">{p.contratos}</td>
+                    <td className="py-2 text-right tnum text-slate-600">{p.objetos}</td>
+                    <td className="py-2 text-right tnum text-slate-600">{p.parcelas_media ?? '—'}</td>
+                    <td className="py-2 text-right tnum font-semibold text-slate-900">
+                      {p.valor_mediano != null ? `R$ ${p.valor_mediano}` : '—'}
+                    </td>
+                    <td className="py-2 text-right tnum text-xs text-slate-500">
+                      {p.valor_minimo != null ? `${p.valor_minimo} a ${p.valor_maximo}` : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Secao>
+      )}
 
       {(naoMapeados.data ?? []).length > 0 && (
         <Secao titulo="Status que o de-para NAO reconhece" icone={ShieldAlert}>

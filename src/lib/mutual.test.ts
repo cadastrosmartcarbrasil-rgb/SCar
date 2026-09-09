@@ -3,6 +3,7 @@ import {
   urlMutual, cabecalhoMutual, extrairLista, extrairTotal, temProximaPagina,
   textoOuNulo, numeroOuNulo, dataLocalDeIso, tipoPessoaMutual,
   statusVeiculoDoContrato, statusTituloMutual, ehMensalidade, problemasDoObjeto,
+  mesesDoPeriodoMutual,
 } from './mutual';
 
 const BASE = 'https://smartcar-api.mutualignit.com.br';
@@ -222,5 +223,21 @@ describe('problemasDoObjeto', () => {
 
   it('acumula todos os motivos, nao para no primeiro', () => {
     expect(problemasDoObjeto({ contract_status: 'ATIVO' }).length).toBeGreaterThanOrEqual(5);
+  });
+});
+
+describe('mesesDoPeriodoMutual', () => {
+  it('aceita o codigo do contrato e o rotulo da tela', () => {
+    expect(mesesDoPeriodoMutual('1')).toBe(1);
+    expect(mesesDoPeriodoMutual(6)).toBe(6);
+    expect(mesesDoPeriodoMutual('SEMESTRAL')).toBe(6);
+    expect(mesesDoPeriodoMutual('Anual')).toBe(12);
+  });
+  it('vocabulario desconhecido nao vira 1 por engano', () => {
+    // Assumir "mensal" no escuro e o caminho para cobrar 6x a mais: o periodo
+    // desconhecido tem de aparecer como desconhecido.
+    expect(mesesDoPeriodoMutual('QUINZENAL')).toBeNull();
+    expect(mesesDoPeriodoMutual('')).toBeNull();
+    expect(mesesDoPeriodoMutual(null)).toBeNull();
   });
 });

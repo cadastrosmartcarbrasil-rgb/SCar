@@ -2248,6 +2248,18 @@ export type MutualQuarentena = {
   motivos: string[];
 };
 
+/** 0064: periodicidade da cobranca — parcela ou total? */
+export type MutualPeriodicidade = {
+  periodo: string;
+  meses: number | null;
+  contratos: number;
+  objetos: number;
+  parcelas_media: number | null;
+  valor_mediano: number | null;
+  valor_minimo: number | null;
+  valor_maximo: number | null;
+};
+
 /** 0063: o vocabulario do Mutual que o de-para ainda nao reconhece. */
 export type MutualStatusNaoMapeado = {
   contract_status: string | null;
@@ -3363,6 +3375,7 @@ export type Database = {
         Args: Record<string, never>;
         Returns: MutualStatusNaoMapeado[];
       };
+      mutual_periodicidade: { Args: Record<string, never>; Returns: MutualPeriodicidade[] };
       mutual_resumo_capturas: { Args: Record<string, never>; Returns: MutualResumoCaptura[] };
     };
     Enums: {
