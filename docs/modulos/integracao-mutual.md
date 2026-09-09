@@ -579,12 +579,10 @@ guardar o `contract_id` só na tabela de vínculo (mais barato; perde o agrupame
 tratar contrato como o `tipo_faturamento AGRUPADO_ASSOCIADO` que já existe ·
 criar a entidade (caro, e mexe em RLS, cobrança e SAC).
 
-### 🔴 O filtro por data de alteração NÃO apareceu
-Os query params de `GET /event/` visíveis são **`protocol`, `sub_status_id`, `event_status`, `id`** —
-chaves de negócio, **nenhuma de "alterado desde"**. Se isso se confirmar no OpenAPI completo, a
-**sincronia incremental (Fase 6) fica cara**: sem cursor por data, manter o espelho vivo vira
-varredura periódica da base inteira, e o rate limit passa a mandar no desenho.
-**É a primeira coisa a procurar no swagger.json.**
+### ~~🔴 O filtro por data de alteração NÃO apareceu~~ → **CORRIGIDO: ele EXISTE**
+> A suspeita acima nasceu da tela de `GET /event/`, onde os params visíveis eram só `protocol`,
+> `sub_status_id`, `event_status` e `id`. **O contrato completo desmentiu isso** — ver
+> "A sincronia incremental é barata", abaixo. Fica registrado o erro para ninguém reabrir a dúvida.
 
 ### 🟡 `event_status` tem 8 valores; o SCar tem 6, e eles quase não se encontram
 Mutual: `ANDAMENTO` · `NEGADO` · `FINALIZADO` · `MIGRADO` · `SINDICANCIA` · `CANCELADO` ·
@@ -653,3 +651,71 @@ usarmos precisa aceitar 2.0 ou converter antes.
 Baixado no VPS em `/root/mutual-openapi.json`. **Ele não contém dado de associado — só o formato** —
 então pode e deve ser versionado em `docs/modulos/mutual-openapi.json`, para a próxima sessão não
 depender de rede nem de política de egress.
+
+---
+
+## O CONTRATO LIDO — o que muda (09/09/2026)
+
+### ✅ A SINCRONIA INCREMENTAL É BARATA — a maior dúvida do projeto, resolvida
+A API expõe filtros no estilo **django-filter** (`__gte`/`__lte`) sobre as datas:
+
+```
+/contract/?updated_at__gte=…&updated_at__lte=…
+/contract/?created_at__gte=…      /contract/?last_log_date__gte=…
+/contract/contract_object/            ?updated_at__gte / __lte
+/contract/contract_object_vehicle/    ?updated_at__gte / __lte
+/contract/contract_object_vehicle_implemento/ ?updated_at__gte / __lte
+```
+
+**Consequência direta: a Fase 6 deixa de ser varredura da base inteira.** "Puxar o que mudou desde
+a última sincronia" é uma chamada com `updated_at__gte`, e o rate limit para de mandar no desenho.
+O espelho vivo passa a ser barato de manter — e, com isso, a convivência dos dois sistemas deixa de
+ter prazo curto por limitação técnica.
+
+### ✅ Existe TRILHA DE LOG — melhor que `updated_at` para sincronizar
+Aparecem endpoints de log próprios, também filtráveis por data:
+`/contract/log/` · `/contract/contract_object/log/` · `/contract/logs_contract_consultant/` ·
+`/contract/logs_contract_regional/`
+
+`updated_at` diz **que** algo mudou; o log diz **o que** mudou. Para reconciliação e para o
+diagnóstico de divergência isso vale mais — e `logs_contract_regional` sugere que **troca de
+unidade é evento rastreável**, o que interessa direto ao nosso `regional_id`.
+
+### 🟢 O desencontro estrutural ficou menor do que parecia
+Os caminhos revelam o modelo do Mutual:
+
+```
+contract
+  └── contract_object                     (o objeto protegido — genérico)
+        ├── contract_object_vehicle       -> veiculos
+        ├── contract_object_vehicle_implemento  -> implemento/reboque
+        └── contract_object_product       -> veiculo_produtos (opcionais contratados)
+  └── additional_value  (?applied_at)     -> possivelmente o ajuste/valor negociado
+```
+
+Ou seja: `contract_object_vehicle` ≈ **`veiculos`** e `contract_object_product` ≈
+**`veiculo_produtos`**. **As duas pontas já existem no SCar** — o que sobra sem lugar é só o nível
+`contract`, e para ele a saída barata (guardar o `contract_id` na tabela de vínculo) continua
+valendo, agora com menos perda do que se supunha.
+
+**`/contract/additional_value/` com `applied_at` é a pista mais quente para a decisão de preço
+congelado** — é candidato natural a guardar o valor efetivamente aplicado ao contrato. Conferir no
+de-para campo a campo.
+
+### Autenticação, do próprio contrato
+```json
+{"Basic": {"type": "basic"},
+ "Bearer": {"type": "apiKey", "name": "Authorization", "in": "header"}}
+```
+`basePath: /public_api/v2/` · **69 endpoints**.
+
+⚠️ **Atenção a uma sutileza:** o "Bearer" está declarado como **`apiKey` no header `Authorization`**,
+e Swagger 2.0 **não registra prefixo**. Então não está dito se o valor é `Bearer <token>` ou o token
+cru. **Testar os dois** — é exatamente o que o `scripts/mutual-probe.sh` faz.
+
+### ⚠️ O que esta leitura ainda NÃO responde
+A listagem saiu **truncada em 40 linhas** (limite do próprio comando de sondagem) e, por ordem
+alfabética, **tudo o que apareceu foi `/contract/*`**. Portanto **ainda não sabemos** se
+`/person/`, `/vehicle/`, `/invoice/`/`/faturas/` e `/event/` também têm `updated_at__gte` —
+e é o que decide se a sincronia incremental vale para **todas** as entidades ou só para a família
+de contrato. **Próxima medição, sem truncar.**
