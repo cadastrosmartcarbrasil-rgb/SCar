@@ -91,6 +91,31 @@ type Insert<T> = Partial<T>;
 type Update<T> = Partial<T>;
 
 // ---- Tabelas (Row) ---------------------------------------------------------
+/** Uma linha de `regionais_listar` (0067). */
+export type RegionalListada = {
+  id: string;
+  nome: string;
+  codigo: string | null;
+  cnpj: string | null;
+  telefone: string | null;
+  email: string | null;
+  cidade: string | null;
+  uf: string | null;
+  ativo: boolean;
+  inativada_em: string | null;
+  responsavel_id: string | null;
+  responsavel_nome: string | null;
+  usuarios: number;
+  vendedores: number;
+  vendedores_ativos: number;
+  associados: number;
+  veiculos: number;
+  veiculos_ativos: number;
+  leads: number;
+  lancamentos: number;
+  pode_excluir: boolean;
+};
+
 export type RegionaisRow = Timestamps & {
   id: string;
   nome: string;
@@ -109,6 +134,11 @@ export type RegionaisRow = Timestamps & {
   dias_protecao_lead: number;
   dias_sem_contato_lead: number;
   distribuicao_lead: string;
+  // 0067 — contato e situacao da unidade
+  telefone: string | null;
+  email: string | null;
+  ativo: boolean;
+  inativada_em: string | null;
 };
 
 export type UsuariosRow = Timestamps & {
@@ -3389,6 +3419,11 @@ export type Database = {
         Returns: MutualCampo[];
       };
       mutual_resumo_capturas: { Args: Record<string, never>; Returns: MutualResumoCaptura[] };
+      // 0067 — a unidade com os numeros que dizem se ela esta viva.
+      regionais_listar: {
+        Args: { p_incluir_inativas?: boolean };
+        Returns: RegionalListada[];
+      };
     };
     Enums: {
       papel_usuario: PapelUsuario;

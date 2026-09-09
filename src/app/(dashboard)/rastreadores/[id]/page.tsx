@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { FormField, Input, Select, Textarea, MoneyInput } from '@/components/ui/field';
 import { useRegionais } from '@/hooks/use-config';
+import { opcoesParaEscolher } from '@/lib/regional';
 import { useVeiculos } from '@/hooks/use-veiculos';
 import {
   useRastreadorFicha, useRastreadorHistorico, useInstalarRastreador, useDesinstalarRastreador,
@@ -341,7 +342,7 @@ function ModalAcao({ acao, ficha, onClose }: {
             <FormField label="Unidade de destino *">
               <Select value={regionalId} onChange={(e) => setRegionalId(e.target.value)}>
                 <option value="">-- Selecione --</option>
-                {(regionais ?? []).filter((r) => r.id !== ficha.regional_id).map((r) => (
+                {opcoesParaEscolher(regionais).filter((r) => r.id !== ficha.regional_id).map((r) => (
                   <option key={r.id} value={r.id}>{r.nome}</option>
                 ))}
               </Select>

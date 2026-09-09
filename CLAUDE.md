@@ -124,9 +124,13 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
   veículos já indenizados receberem boleto todo mês. Foram para `inativo`. **`SINISTRADO` continua
   `em_evento`** — sinistro em andamento é associado ativo, segue pagando. Junto, `mutual_por_status`
   parou de chamar vocabulário desconhecido de "funil de venda" (decisão tomada × decisão pendente).
-- **Próxima migration livre: `0067`.** As `0060`, `0061`, `0063`, `0064`, `0065` e `0066` já estão no branch de trabalho e
+- **`0067_regional_completa` é NOVA** — a unidade ganha contato (telefone/e-mail), endereço
+  completo com busca por CEP e, sobretudo, **situação Ativa/Inativa**; e o banco passa a RECUSAR
+  a exclusão de unidade com movimento (ver a seção própria). Sem ela a tela `/configuracoes/regionais`
+  não abre (chama `regionais_listar`).
+- **Próxima migration livre: `0068`.** As `0060`, `0061`, `0063`, `0064`, `0065`, `0066` e `0067` já estão no branch de trabalho e
   ainda **não foram aplicadas em produção** (rodar nessa ordem, depois das `0045`..`0059`); a
-  `0062` JÁ FOI aplicada.
+  `0062` JÁ FOI aplicada. A `0067` é independente do Mutual e pode ir junto.
 - **`.claude/hooks/session-start.sh` é NOVO** — avisa quando a sessão nasce no branch errado e
   instala as dependências. Ele **só roda se estiver no branch que a sessão clonou**; enquanto o
   default do GitHub for o branch morto, uma sessão que caia lá não terá o hook. A correção
@@ -228,9 +232,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0066`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **43 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 484 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0067`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **44 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 496 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Todos os portais e páginas
@@ -1225,6 +1229,17 @@ recebeu e saiu. `DIFICULDADE FINANCEIRA` segue sem mapeamento (o usuario nomeou 
 nao estava). Junto, `mutual_por_status` parou de rotular vocabulario desconhecido como "funil de
 venda": funil e decisao TOMADA, desconhecido e decisao PENDENTE, e juntar os dois escondia o que
 falta responder).
+· `0067_regional_completa` (CONTROLE TOTAL DA REGIONAL: a unidade ganha `telefone`, `email`,
+`ativo` e `inativada_em` (carimbada por trigger). (A) unidade INATIVA sai de circulacao — nao
+recebe vendedor novo (`fn_vendedor_regional_ativa`), nao resolve hotlink (`resolver_hotlink`
+recriada exigindo `regional_ativa`, inclusive para o vendedor DELA) e some das listas de escolha;
+o que ela ja produziu continua inteiro nos relatorios e no DRE; (B) **EXCLUIR unidade com
+movimento passa a ser RECUSADO pelo banco** (`fn_regional_bloqueia_exclusao`) — as ~20 FKs que
+apontam para `regionais` sao `on delete set null` e neste sistema `regional_id is null` significa
+MATRIZ, entao apagar uma franquia moveria a carteira dela para o escopo da matriz em silencio;
+o erro nomeia o que esta pendurado; (C) `regionais_listar(p_incluir_inativas)` devolve a unidade
+com equipe, carteira, lancamentos e `pode_excluir` — e a tela de controle total. Espelho puro em
+`src/lib/regional.ts`).
 · `0062_integracao_mutual` (FASE 1 da integracao com o MUTUAL — espelho de LEITURA e diagnostico:
 `mutual_captura` (entidade + id_externo unico, payload jsonb, soft-delete) e `mutual_sincronias`;
 os espelhos em SQL da logica de `src/lib/mutual.ts` (`mutual_texto`, `mutual_status_veiculo`,
@@ -1796,6 +1811,38 @@ recuperação e giro).
   (`contratos/<vendedor>/`) e envia por Resend com o PDF anexado (max ~5 MB). **Sem `RESEND_API_KEY`
   nao finge que enviou:** guarda o contrato, devolve o texto pronto e avisa que o envio e manual.
   So marca `boas_vindas_enviada_em` quando o e-mail realmente saiu.
+
+## Regional / unidade — cadastro e situacao (0067)
+- **Onde:** `Configuracoes → Regionais`. A lista mostra contato, responsavel, **equipe** (vendedores
+  ativos), **carteira** (associados e veiculos ativos) e a situacao — os numeros vem de
+  `regionais_listar`, nao de contagem na tela.
+- **Endereco completo com CEP.** O `endereco` jsonb passou a guardar `cep`, `logradouro`, `numero`,
+  `complemento`, `bairro`, `cidade` e `uf`; o CEP busca no ViaCEP no `onBlur` e na lupa, mesmo
+  padrao do `<ModalFornecedor>`. Antes a unidade so tinha logradouro/cidade/UF e nenhuma busca.
+- **REGRA DE OURO: `ativo` decide onde a unidade e OFERECIDA, nunca o que ela ja produziu.**
+  Inativa sai das listas de cadastro (usuario, vendedor, associado, lancamento, comunicado,
+  seletor da matriz), para de captar por hotlink e nao entra no rodizio. **Continua inteira nos
+  relatorios e no DRE**, marcada com "(inativa)" nos filtros — esconder o passado de uma franquia
+  encerrada nao limpa o relatorio, falsifica o resultado da associacao.
+- **A inativa selecionada continua na lista de escolha** (`opcoesParaEscolher(regionais, atual)`):
+  sem isso, abrir um associado de unidade encerrada mostraria o campo em branco e o primeiro
+  "salvar" trocaria a unidade dele em silencio.
+- **⚠️ EXCLUIR UNIDADE COM MOVIMENTO E RECUSADO PELO BANCO.** Todas as ~20 FKs que apontam para
+  `regionais` sao `on delete set null`, e aqui `regional_id is null` significa **MATRIZ**: apagar
+  "Cuiaba" jogaria os associados, veiculos, leads e lancamentos dela no escopo da matriz, sem
+  aviso e sem volta. O trigger `fn_regional_bloqueia_exclusao` recusa nomeando o que esta
+  pendurado; a lixeira na tela so fica ativa quando `pode_excluir`. **Consolidar unidades e
+  MIGRAR primeiro, excluir depois.**
+- **NAO existe hotlink DA UNIDADE na tela** (decisao do usuario): quem responde pela franquia entra
+  tambem como **vendedor**, com hotlink proprio. A coluna `regionais.codigo` e o `resolver_hotlink`
+  ficaram INTACTOS de proposito — ha leads em producao com `origem_hotlink` de codigo de unidade, e
+  derrubar isso quebraria links ja distribuidos. O botao "Meu hotlink" saiu da cabine do
+  `/regional`.
+- **BUG CORRIGIDO JUNTO:** as regras de atribuicao de lead (0041 — protecao, devolucao ao pool,
+  rodizio) estavam no formulario desde a 0041 e **nunca chegavam ao banco**: o payload do
+  `useSaveRegional` nao as listava. O gestor mudava, salvava, e a unidade seguia no padrao.
+- **Logica pura testada:** `src/lib/regional.ts` — `opcoesParaEscolher`, `opcoesParaFiltrar`,
+  `pendenciasDaUnidade`, `podeExcluirUnidade`, `avisoDeInativacao`, `rotuloUnidade`.
 
 ## Portal da Franquia (0036) — `/regional`
 - **A MATRIZ ESCOLHE A UNIDADE ao entrar.** O sistema de gestão é a matriz; a franquia se

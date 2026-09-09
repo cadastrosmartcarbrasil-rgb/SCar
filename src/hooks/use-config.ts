@@ -13,11 +13,16 @@ import type {
   VendedoresRow,
   TiposEventoRow,
   StatusCadastro,
+  RegionalListada,
 } from '@/lib/database.types';
 
 // ---------------------------------------------------------------------------
 // Regionais (franquias)
 // ---------------------------------------------------------------------------
+
+/** Uma linha de `regionais_listar` (0067). */
+export type RegionalPainel = RegionalListada;
+
 export function useRegionais() {
   const supabase = createClient();
   return useQuery<RegionaisRow[]>({
@@ -46,6 +51,17 @@ export function useSaveRegional() {
         // Comissao da franquia (0034) — teto do que ela cede aos vendedores.
         taxa_comissao_adesao: r.taxa_comissao_adesao ?? 0,
         taxa_comissao_recorrente: r.taxa_comissao_recorrente ?? 0,
+        // Regras de atribuicao do lead (0041). ATENCAO: elas estavam no
+        // formulario desde a 0041 e NUNCA chegavam ao banco — o payload nao as
+        // listava, entao o gestor mudava a protecao do lead, salvava, e a
+        // unidade continuava com o padrao. Nao remover daqui.
+        dias_protecao_lead: r.dias_protecao_lead ?? 30,
+        dias_sem_contato_lead: r.dias_sem_contato_lead ?? 7,
+        distribuicao_lead: r.distribuicao_lead ?? 'MANUAL',
+        // Contato e situacao da unidade (0067)
+        telefone: r.telefone || null,
+        email: r.email || null,
+        ativo: r.ativo ?? true,
       };
       if (r.id) {
         const { error } = await supabase.from('regionais').update(payload).eq('id', r.id);
@@ -59,11 +75,45 @@ export function useSaveRegional() {
   });
 }
 
+/**
+ * A unidade com os numeros que dizem se ela esta viva e se da para excluir
+ * (RPC `regionais_listar`, 0067). E o que a tela de Regionais mostra.
+ */
+export function useRegionaisPainel(incluirInativas = true) {
+  const supabase = createClient();
+  return useQuery<RegionalPainel[]>({
+    queryKey: ['config', 'regionais', 'painel', incluirInativas],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('regionais_listar', {
+        p_incluir_inativas: incluirInativas,
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+/** Liga/desliga a unidade. Inativar NAO apaga nada — ver `src/lib/regional.ts`. */
+export function useSituacaoRegional() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ativo }: { id: string; ativo: boolean }) => {
+      const { error } = await supabase.from('regionais').update({ ativo }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['config', 'regionais'] }),
+  });
+}
+
 export function useDeleteRegional() {
   const supabase = createClient();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
+      // O banco recusa a exclusao de unidade com movimento (trigger
+      // `fn_regional_bloqueia_exclusao`, 0067): sem isso as FKs
+      // `on delete set null` moveriam a carteira dela para a MATRIZ.
       const { error } = await supabase.from('regionais').delete().eq('id', id);
       if (error) throw error;
     },

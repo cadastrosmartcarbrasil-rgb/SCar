@@ -14,6 +14,7 @@ import {
   FiltroPeriodo, Vazio, baixarCsv, periodoPreset, type Periodo,
 } from '@/components/financeiro/ui-financeiro';
 import { useRegionais } from '@/hooks/use-config';
+import { rotuloUnidade } from '@/lib/regional';
 import {
   usePainelResumo, usePainelPorServico, usePainelPorPraca, usePainelSerie,
   usePainelReincidencia, usePainelFrotaSituacao,
@@ -476,7 +477,9 @@ export function AssistenciaPainel() {
           >
             <option value="">Todas</option>
             {(regionais ?? []).map((rg) => (
-              <option key={rg.id} value={rg.id}>{rg.nome}</option>
+              <option key={rg.id} value={rg.id}>
+                {rotuloUnidade(rg)}
+              </option>
             ))}
           </select>
         </label>

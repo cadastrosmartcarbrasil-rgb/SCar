@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { FormField, Input, Select } from '@/components/ui/field';
 import { useRegionais } from '@/hooks/use-config';
+import { rotuloUnidade } from '@/lib/regional';
 import {
   useFaturas, useFaturaItens, useGerarFaturas, useEmitirTitulos, useEmitirTituloFatura,
   useCancelarFatura, type FaturaComRel,
@@ -102,7 +103,9 @@ export function FaturasCompetencia() {
             <Select value={regionalId} onChange={(e) => setRegionalId(e.target.value)}>
               <option value="">Todas</option>
               {(regionais ?? []).map((r) => (
-                <option key={r.id} value={r.id}>{r.nome}</option>
+                <option key={r.id} value={r.id}>
+                  {rotuloUnidade(r)}
+                </option>
               ))}
             </Select>
           </FormField>

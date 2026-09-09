@@ -14,6 +14,7 @@ import {
   usePerfilAtual,
   type NovoUsuario,
 } from '@/hooks/use-config';
+import { opcoesParaEscolher } from '@/lib/regional';
 import type { PapelUsuario, UsuariosRow } from '@/lib/database.types';
 
 const PAPEIS: { value: PapelUsuario; label: string; nota?: string }[] = [
@@ -233,7 +234,7 @@ export default function UsuariosPage() {
               <Select value={form.regional_id ?? ''}
                 onChange={(e) => setForm({ ...form, regional_id: e.target.value || null })}>
                 <option value="">-- Global --</option>
-                {(regionais ?? []).map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
+                {opcoesParaEscolher(regionais, form.regional_id).map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
               </Select>
             </FormField>
           </div>
@@ -276,7 +277,7 @@ export default function UsuariosPage() {
                 <Select value={edicao.regional_id ?? ''}
                   onChange={(e) => setEdicao({ ...edicao, regional_id: e.target.value || null })}>
                   <option value="">-- Global --</option>
-                  {(regionais ?? []).map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
+                  {opcoesParaEscolher(regionais, edicao.regional_id).map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
                 </Select>
               </FormField>
             </div>

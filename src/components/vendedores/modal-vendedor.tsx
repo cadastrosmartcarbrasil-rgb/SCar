@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { FormField, Input, PercentInput, Select, Textarea } from '@/components/ui/field';
 import { useRegionais, useUsuarios } from '@/hooks/use-config';
+import { opcoesParaEscolher } from '@/lib/regional';
 import { useAcessoPortal, useSalvarVendedor, useSugerirCodigo } from '@/hooks/use-vendedores';
 import { validarComissaoVendedor } from '@/lib/vendas';
 import { formatarTelefone } from '@/lib/documento';
@@ -127,7 +128,7 @@ export function ModalVendedor({ inicial, onClose, regionalFixa }: {
               onChange={(e) => set({ regional_id: e.target.value || null })}
             >
               <option value="">-- Selecione --</option>
-              {(regionais ?? []).map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
+              {opcoesParaEscolher(regionais, form.regional_id).map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
             </Select>
           </FormField>
           <FormField label="Codigo (hotlink)">

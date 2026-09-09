@@ -9,6 +9,7 @@ import { FormField, Input, MoneyInput, Select, Textarea } from '@/components/ui/
 import { useFornecedores } from '@/hooks/use-fornecedores';
 import { useAssociados } from '@/hooks/use-associados';
 import { usePlanoContas, useRegionais } from '@/hooks/use-config';
+import { opcoesParaEscolher } from '@/lib/regional';
 import { useCentrosCusto, useSaveLancamento } from '@/hooks/use-financeiro';
 import { gerarParcelas, type Periodicidade } from '@/lib/financeiro';
 import { formatCurrency, formatDate } from '@/lib/utils';
@@ -194,7 +195,7 @@ export function LancamentoModal({
                 onChange={(e) => set({ regional_id: e.target.value || null })}
               >
                 <option value="">-- Matriz (visivel so p/ admin e financeiro) --</option>
-                {(regionais ?? []).map((r) => (
+                {opcoesParaEscolher(regionais, form.regional_id).map((r) => (
                   <option key={r.id} value={r.id}>{r.nome}</option>
                 ))}
               </Select>

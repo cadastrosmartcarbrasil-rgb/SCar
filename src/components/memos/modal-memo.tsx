@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { FormField, Input, Select, Textarea } from '@/components/ui/field';
 import { useRegionais } from '@/hooks/use-config';
+import { opcoesParaEscolher } from '@/lib/regional';
 import { useSalvarMemo, type FormMemo } from '@/hooks/use-memos';
 import { CATEGORIAS, PRIORIDADES, PAPEIS_MEMO, PAPEIS_DIRETORIA } from '@/lib/memos';
 
@@ -166,7 +167,7 @@ export function ModalMemo({
               <Select value={form.regional_id ?? ''}
                 onChange={(e) => setForm({ ...form, regional_id: e.target.value || null })}>
                 <option value="">Todas as unidades</option>
-                {(regionais ?? []).map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
+                {opcoesParaEscolher(regionais, form.regional_id).map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
               </Select>
             </FormField>
             <div className="rounded-lg border border-slate-200 p-3">

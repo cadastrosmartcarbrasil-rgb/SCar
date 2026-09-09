@@ -6,6 +6,7 @@ import { CircleAlert, Download, ArrowRight, RefreshCw, Loader2 } from 'lucide-re
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/field';
 import { useRegionais } from '@/hooks/use-config';
+import { rotuloUnidade } from '@/lib/regional';
 import { useDivergenciasRastreadores, useSincronizarInadimplencia } from '@/hooks/use-rastreadores';
 import { toast } from 'sonner';
 import { DIVERGENCIAS, COR_SEVERIDADE, rotuloDivergencia } from '@/lib/rastreador';
@@ -76,7 +77,7 @@ export function DivergenciasRastreadores() {
         </Select>
         <Select value={regionalId} onChange={(e) => setRegionalId(e.target.value)} className="mt-0 w-auto">
           <option value="">Todas as unidades</option>
-          {(regionais ?? []).map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
+          {(regionais ?? []).map((r) => <option key={r.id} value={r.id}>{rotuloUnidade(r)}</option>)}
         </Select>
         <Button variant="secondary" onClick={exportar}><Download className="h-4 w-4" /> CSV</Button>
         <Button onClick={aplicarInadimplencia} disabled={sincronizar.isPending}>

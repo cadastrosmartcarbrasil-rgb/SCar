@@ -7,6 +7,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { FormField, Input, Select } from '@/components/ui/field';
 import { useRegionais } from '@/hooks/use-config';
+import { rotuloUnidade } from '@/lib/regional';
 import { useResumoCobrancas, useListaCobrancas, type FiltroDashboard } from '@/hooks/use-cobrancas';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { StatusCobranca } from '@/lib/database.types';
@@ -163,7 +164,9 @@ export function DashboardCobranca() {
             >
               <option value="">Todas</option>
               {(regionais ?? []).map((r) => (
-                <option key={r.id} value={r.id}>{r.nome}</option>
+                <option key={r.id} value={r.id}>
+                  {rotuloUnidade(r)}
+                </option>
               ))}
             </Select>
           </FormField>

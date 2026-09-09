@@ -34,7 +34,7 @@ export default async function RegionalLayout({ children }: { children: React.Rea
     .from('empresa').select('logo_url, razao_social').limit(1).maybeSingle();
 
   const { data: regionais } = await supabase
-    .from('regionais').select('id, nome, codigo, endereco').order('nome');
+    .from('regionais').select('id, nome, codigo, endereco, ativo').order('nome');
   const lista = regionais ?? [];
 
   const escolha = decidirUnidade(
@@ -59,7 +59,10 @@ export default async function RegionalLayout({ children }: { children: React.Rea
 
   if (escolha.modo === 'ESCOLHER') {
     const nomeMatriz = (empresa?.razao_social ?? '').trim().toUpperCase();
-    const unidades: UnidadeEscolhivel[] = lista.map((r) => ({
+    // A matriz so entra em unidade EM OPERACAO (0067). O gestor amarrado a uma
+    // unidade inativada nao passa por aqui — quem decide para ele e o
+    // `regional_id` do cadastro, nao este seletor.
+    const unidades: UnidadeEscolhivel[] = lista.filter((r) => r.ativo !== false).map((r) => ({
       id: r.id,
       nome: r.nome,
       local: localDaUnidade(r.endereco),
@@ -86,7 +89,6 @@ export default async function RegionalLayout({ children }: { children: React.Rea
         <SidebarRegional
           nome={perfil.nome}
           unidade={unidade?.nome ?? 'Unidade'}
-          codigo={unidade?.codigo ?? null}
           papel={perfil.papel}
           logoUrl={empresa?.logo_url ?? null}
           podeTrocarUnidade={temAcessoGlobal(perfil.papel)}

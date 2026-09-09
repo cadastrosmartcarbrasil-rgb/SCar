@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { FormField, Input, Select, MoneyInput, Textarea } from '@/components/ui/field';
 import { useRegionais } from '@/hooks/use-config';
+import { rotuloUnidade } from '@/lib/regional';
 import { useEmpresasRastreamento } from '@/hooks/use-rastreamento';
 import {
   useRastreadores, useRastreadoresResumo, useSalvarRastreador,
@@ -114,7 +115,7 @@ export function PainelRastreadores() {
         </div>
         <Select value={f.regionalId ?? ''} onChange={(e) => aplicar({ regionalId: e.target.value || undefined })} className="mt-0 w-auto">
           <option value="">Todas as unidades</option>
-          {(regionais ?? []).map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
+          {(regionais ?? []).map((r) => <option key={r.id} value={r.id}>{rotuloUnidade(r)}</option>)}
         </Select>
         <Select value={f.plataformaId ?? ''} onChange={(e) => aplicar({ plataformaId: e.target.value || undefined })} className="mt-0 w-auto">
           <option value="">Todas as plataformas</option>
@@ -228,7 +229,7 @@ export function PainelRastreadores() {
               <Select value={novo?.regional_id ?? ''}
                 onChange={(e) => setNovo((n) => ({ ...n, regional_id: e.target.value || null }))}>
                 <option value="">-- Selecione --</option>
-                {(regionais ?? []).map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
+                {(regionais ?? []).map((r) => <option key={r.id} value={r.id}>{rotuloUnidade(r)}</option>)}
               </Select>
             </FormField>
             <FormField label="Operadora do chip">

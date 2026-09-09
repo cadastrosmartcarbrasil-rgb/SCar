@@ -6,6 +6,7 @@ import { Check, X, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FormField, Input, Select } from '@/components/ui/field';
 import { useRegionais } from '@/hooks/use-config';
+import { opcoesParaEscolher } from '@/lib/regional';
 import { useSaveAssociado, type EnderecoAssociado } from '@/hooks/use-associados';
 import { validarDocumento, formatarDocumento, calcularIdade, soDigitos } from '@/lib/documento';
 import { buscarCep } from '@/lib/cep';
@@ -168,7 +169,7 @@ export function AssociadoForm({
       <FormField label="Regional vinculada">
         <Select value={form.regional_id ?? ''} onChange={(e) => setForm({ ...form, regional_id: e.target.value || null })}>
           <option value="">-- Selecione --</option>
-          {(regionais ?? []).map((r) => (
+          {opcoesParaEscolher(regionais, form.regional_id).map((r) => (
             <option key={r.id} value={r.id}>
               {r.nome}
             </option>

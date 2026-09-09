@@ -9,6 +9,7 @@ import { Modal } from '@/components/ui/modal';
 import { FormField, Input, Select, MoneyInput } from '@/components/ui/field';
 import { useAssociados } from '@/hooks/use-associados';
 import { useRegionais, useVendedores, useUsuarios, useMarcas, useModelos } from '@/hooks/use-config';
+import { rotuloUnidade } from '@/lib/regional';
 import { useTiposVeiculo, usePlanos, useProdutos } from '@/hooks/use-precificacao';
 import { useVeiculos, useSaveVeiculo, useExcluirVeiculo } from '@/hooks/use-veiculos';
 import { useEmpresasRastreamento } from '@/hooks/use-rastreamento';
@@ -612,7 +613,7 @@ function VeiculosConteudo() {
                 <option value="">-- Selecione --</option>
                 {(regionais ?? []).map((r) => (
                   <option key={r.id} value={r.id}>
-                    {r.nome}
+                    {rotuloUnidade(r)}
                   </option>
                 ))}
               </Select>

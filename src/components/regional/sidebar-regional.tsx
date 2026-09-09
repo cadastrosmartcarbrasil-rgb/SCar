@@ -3,9 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { toast } from 'sonner';
 import {
-  BarChart3, Building2, Copy, LayoutDashboard, LogOut, Menu, Users, Wallet, X, Zap,
+  BarChart3, Building2, LayoutDashboard, LogOut, Menu, Users, Wallet, X, Zap,
   Repeat2,
   Megaphone,
 } from 'lucide-react';
@@ -23,8 +22,8 @@ const ITENS = [
   { href: '/regional/comunicados', label: 'Comunicados', icon: Megaphone },
 ];
 
-export function SidebarRegional({ nome, unidade, codigo, papel, logoUrl, podeTrocarUnidade }: {
-  nome: string; unidade: string; codigo: string | null;
+export function SidebarRegional({ nome, unidade, papel, logoUrl, podeTrocarUnidade }: {
+  nome: string; unidade: string;
   /** O atalho para o sistema de gestao so faz sentido para o admin. */
   papel?: string;
   logoUrl?: string | null;
@@ -34,15 +33,6 @@ export function SidebarRegional({ nome, unidade, codigo, papel, logoUrl, podeTro
   const pathname = usePathname();
   const [aberto, setAberto] = useState(false);
   const trocarUnidade = useTrocarUnidade();
-
-  function copiarHotlink() {
-    if (!codigo) return toast.error('Esta unidade ainda nao tem codigo de hotlink');
-    const url = `${window.location.origin}/v/${codigo}`;
-    navigator.clipboard.writeText(url).then(
-      () => toast.success(`Hotlink da unidade copiado: ${url}`),
-      () => toast.error(`Copie manualmente: ${url}`),
-    );
-  }
 
   async function sair() {
     await createClient().auth.signOut();
@@ -86,14 +76,6 @@ export function SidebarRegional({ nome, unidade, codigo, papel, logoUrl, podeTro
         <div className="mx-3 mb-3 rounded-xl bg-white/5 px-3 py-2.5">
           <p className="truncate text-[13px] font-semibold text-white">{unidade}</p>
           <p className="truncate text-[11px] text-white/50">{nome}</p>
-          {codigo && (
-            <button
-              onClick={copiarHotlink}
-              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-cyan-500/90 px-2 py-1.5 text-[11px] font-semibold text-navy transition hover:bg-cyan-400"
-            >
-              <Copy className="h-3 w-3" /> Meu hotlink de vendas
-            </button>
-          )}
           {podeTrocarUnidade && (
             <button
               onClick={trocarUnidade}

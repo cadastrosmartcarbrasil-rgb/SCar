@@ -5,6 +5,7 @@ import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/field';
 import { useRegionais } from '@/hooks/use-config';
+import { rotuloUnidade } from '@/lib/regional';
 import {
   useRastreadoresResumo, useRastreadoresARecuperar, useGiroEstoque,
 } from '@/hooks/use-rastreadores';
@@ -39,7 +40,7 @@ export function RelatoriosRastreadores() {
     <div className="space-y-5">
       <Select value={regionalId} onChange={(e) => setRegionalId(e.target.value)} className="mt-0 w-auto">
         <option value="">Todas as unidades</option>
-        {(regionais ?? []).map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
+        {(regionais ?? []).map((r) => <option key={r.id} value={r.id}>{rotuloUnidade(r)}</option>)}
       </Select>
 
       {/* Custo por plataforma: ativos x custo mensal do equipamento */}

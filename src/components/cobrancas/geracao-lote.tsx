@@ -6,6 +6,7 @@ import { PlayCircle, Send, Landmark, CheckCircle2, XCircle, Clock } from 'lucide
 import { Button } from '@/components/ui/button';
 import { FormField, Input, Select } from '@/components/ui/field';
 import { useRegionais } from '@/hooks/use-config';
+import { rotuloUnidade } from '@/lib/regional';
 import { useAssociados } from '@/hooks/use-associados';
 import { useVeiculos } from '@/hooks/use-veiculos';
 import {
@@ -119,7 +120,9 @@ export function GeracaoLote() {
             <Select value={regionalId} onChange={(e) => setRegionalId(e.target.value)}>
               <option value="">Todas</option>
               {(regionais ?? []).map((r) => (
-                <option key={r.id} value={r.id}>{r.nome}</option>
+                <option key={r.id} value={r.id}>
+                  {rotuloUnidade(r)}
+                </option>
               ))}
             </Select>
           </FormField>
