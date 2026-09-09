@@ -14,6 +14,7 @@ import type {
   TiposEventoRow,
   StatusCadastro,
   RegionalListada,
+  UsuarioListado,
 } from '@/lib/database.types';
 
 // ---------------------------------------------------------------------------
@@ -254,6 +255,12 @@ export interface NovoUsuario {
   senha: string;
   papel: UsuariosRow['papel'];
   regional_id?: string | null;
+  // Ficha (0068) — contato e vinculo de quem responde pelo que faz.
+  telefone?: string | null;
+  documento?: string | null;
+  cargo?: string | null;
+  data_inicio?: string | null;
+  observacoes?: string | null;
 }
 
 // Criacao de usuario passa por Route Handler (usa a service_role no servidor).
@@ -274,6 +281,24 @@ export function useCreateUsuario() {
   });
 }
 
+/**
+ * A equipe com a ficha resolvida (RPC `usuarios_listar`, 0068): unidade pelo
+ * nome, vinculo de vendedor e por quantas unidades a pessoa responde.
+ */
+export function useUsuariosPainel(incluirInativos = true) {
+  const supabase = createClient();
+  return useQuery<UsuarioListado[]>({
+    queryKey: ['config', 'usuarios', 'painel', incluirInativos],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('usuarios_listar', {
+        p_incluir_inativos: incluirInativos,
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
 /** Dados do usuario da equipe que EDITAM pela tela de Usuarios. */
 export interface EdicaoUsuario {
   id: string;
@@ -284,6 +309,13 @@ export interface EdicaoUsuario {
   ativo?: boolean;
   /** senha nova (redefinicao pelo admin); vazio = nao mexe na senha */
   senha?: string;
+  // Ficha (0068)
+  telefone?: string | null;
+  documento?: string | null;
+  cargo?: string | null;
+  data_inicio?: string | null;
+  data_desligamento?: string | null;
+  observacoes?: string | null;
 }
 
 /**

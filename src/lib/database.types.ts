@@ -148,6 +148,37 @@ export type UsuariosRow = Timestamps & {
   papel: PapelUsuario;
   regional_id: string | null;
   ativo: boolean;
+  // 0068 — a ficha de quem responde pelo que faz no sistema
+  telefone: string | null;
+  documento: string | null;
+  /** funcao na empresa; NAO confundir com `papel`, que e permissao */
+  cargo: string | null;
+  data_inicio: string | null;
+  data_desligamento: string | null;
+  observacoes: string | null;
+};
+
+/** Uma linha de `usuarios_listar` (0068). */
+export type UsuarioListado = {
+  id: string;
+  nome: string;
+  email: string;
+  telefone: string | null;
+  documento: string | null;
+  cargo: string | null;
+  papel: PapelUsuario;
+  regional_id: string | null;
+  regional_nome: string | null;
+  ativo: boolean;
+  data_inicio: string | null;
+  data_desligamento: string | null;
+  observacoes: string | null;
+  criado_em: string;
+  vendedor_id: string | null;
+  vendedor_codigo: string | null;
+  vendedor_ativo: boolean | null;
+  /** por quantas unidades esta pessoa responde (`regionais.responsavel_id`) */
+  responsavel_por: number;
 };
 
 export type VendedoresRow = Timestamps & {
@@ -3424,6 +3455,12 @@ export type Database = {
         Args: { p_incluir_inativas?: boolean };
         Returns: RegionalListada[];
       };
+      // 0068 — a equipe com a ficha e o vinculo de vendedor.
+      usuarios_listar: {
+        Args: { p_incluir_inativos?: boolean };
+        Returns: UsuarioListado[];
+      };
+      usuario_acesso_ativo: { Args: Record<string, never>; Returns: boolean };
     };
     Enums: {
       papel_usuario: PapelUsuario;

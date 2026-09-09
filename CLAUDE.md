@@ -128,9 +128,14 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
   completo com busca por CEP e, sobretudo, **situação Ativa/Inativa**; e o banco passa a RECUSAR
   a exclusão de unidade com movimento (ver a seção própria). Sem ela a tela `/configuracoes/regionais`
   não abre (chama `regionais_listar`).
-- **Próxima migration livre: `0068`.** As `0060`, `0061`, `0063`, `0064`, `0065`, `0066` e `0067` já estão no branch de trabalho e
+- **`0068_usuarios_ficha` é NOVA e é de SEGURANÇA, não cosmética** — o usuário ganha ficha
+  (telefone, CPF, cargo, data de início/desligamento, observações) e, sobretudo, **`usuarios.ativo`
+  passa a CORTAR O ACESSO DE VERDADE**: até aqui `is_staff()`/`auth_papel()` ignoravam o campo e
+  desativar alguém não fazia nada (ver a seção própria). Sem ela a tela
+  `/configuracoes/usuarios` não abre (chama `usuarios_listar`).
+- **Próxima migration livre: `0069`.** As `0060`, `0061`, `0063`, `0064`, `0065`, `0066`, `0067` e `0068` já estão no branch de trabalho e
   ainda **não foram aplicadas em produção** (rodar nessa ordem, depois das `0045`..`0059`); a
-  `0062` JÁ FOI aplicada. A `0067` é independente do Mutual e pode ir junto.
+  `0062` JÁ FOI aplicada. A `0067` e a `0068` são independentes do Mutual e podem ir junto.
 - **`.claude/hooks/session-start.sh` é NOVO** — avisa quando a sessão nasce no branch errado e
   instala as dependências. Ele **só roda se estiver no branch que a sessão clonou**; enquanto o
   default do GitHub for o branch morto, uma sessão que caia lá não terá o hook. A correção
@@ -232,9 +237,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0067`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **44 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 496 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0068`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **45 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 511 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Todos os portais e páginas
@@ -1240,6 +1245,17 @@ MATRIZ, entao apagar uma franquia moveria a carteira dela para o escopo da matri
 o erro nomeia o que esta pendurado; (C) `regionais_listar(p_incluir_inativas)` devolve a unidade
 com equipe, carteira, lancamentos e `pode_excluir` — e a tela de controle total. Espelho puro em
 `src/lib/regional.ts`).
+· `0068_usuarios_ficha` (O USUARIO VIRA CADASTRO DE RESPONSABILIDADE — e a `ativo` passa a
+valer: (A) `telefone`, `documento` (CPF validado, unique PARCIAL porque o campo e opcional),
+`cargo` (funcao na empresa, NAO confundir com `papel`, que e permissao), `data_inicio`,
+`data_desligamento` (carimbada por trigger ao desativar, limpa ao reativar) e `observacoes`;
+(B) **`is_staff()`, `auth_papel()` e `auth_regional_id()` passam a exigir `and ativo`** — ate aqui
+desmarcar "Usuario ativo" mudava um checkbox e nada mais, com a tela prometendo o contrario.
+Sao os tres helpers-raiz, entao `is_admin`, `tem_acesso_global`, `pode_regional`, `pode_auditar` e
+`pode_liberar_assistencia` caem junto sem tocar em mais nada; `vendedor_atual()` (0038) tambem foi
+recriada para o portal do vendedor cair junto; (C) `usuario_acesso_ativo()` para a TELA explicar o
+corte e `usuarios_listar(p_incluir_inativos)` com unidade, vinculo de vendedor e por quantas
+unidades a pessoa responde. Espelho puro em `src/lib/usuario.ts`).
 · `0062_integracao_mutual` (FASE 1 da integracao com o MUTUAL — espelho de LEITURA e diagnostico:
 `mutual_captura` (entidade + id_externo unico, payload jsonb, soft-delete) e `mutual_sincronias`;
 os espelhos em SQL da logica de `src/lib/mutual.ts` (`mutual_texto`, `mutual_status_veiculo`,
@@ -1812,6 +1828,43 @@ recuperação e giro).
   nao finge que enviou:** guarda o contrato, devolve o texto pronto e avisa que o envio e manual.
   So marca `boas_vindas_enviada_em` quando o e-mail realmente saiu.
 
+## Usuário da equipe — ficha e ACESSO (0068)
+- **Onde:** `Configuracoes → Usuarios`. A lista mostra pessoa + cargo, contato, papel, unidade,
+  **desde quando** (com o tempo de casa) e o acesso; marca quem também é **vendedor** e quem
+  **responde por unidade**. Os dados vêm de `usuarios_listar`.
+- **🔴 A CORREÇÃO QUE IMPORTA: `usuarios.ativo` NÃO CORTAVA NADA até a 0068.** `is_staff()` (0003)
+  e `auth_papel()` (0002) olhavam só `id = auth.uid()`, sem `and ativo` — desmarcar "Usuario ativo"
+  mudava um checkbox e a pessoa continuava logando, lendo a carteira, lançando no financeiro e
+  autorizando OS. E a tela **prometia o contrário** ("desmarcar tira o acesso sem apagar o
+  histórico"), o que é pior que não ter o campo: a gestão acreditava ter revogado um acesso que
+  seguia aberto.
+- **A trava está na RAIZ, de propósito.** Os três helpers (`is_staff`, `auth_papel`,
+  `auth_regional_id`) sustentam a RLS inteira: exigir `ativo` neles derruba junto `is_admin`,
+  `tem_acesso_global`, `pode_regional`, `pode_auditar`, `pode_ver_carteira_regional` e
+  `pode_liberar_assistencia`. **Não existe tela para caçar** — e não crie checagem paralela de
+  `ativo` em RPC nova; ela já vem de graça.
+- **`vendedor_atual()` (0038) foi recriada junto:** ela olhava só `vendedores.ativo`, então o
+  desativado perdia o `/dashboard` e continuava entrando no `/vendedor`. A formulação é defensiva —
+  recusa quando existe linha INATIVA em `usuarios`, em vez de exigir linha ativa — para o vendedor
+  **sem** portal (`usuario_id` nulo, 0035) seguir exatamente como antes.
+- **`usuarios_select_self` (0003) NÃO mudou, e isso é deliberado:** a pessoa desativada precisa
+  continuar lendo a própria linha, senão a tela não teria como dizer *"seu acesso foi desativado"* —
+  mostraria um painel vazio, que se lê como sistema quebrado. Os três layouts (`/dashboard`,
+  `/regional`, `/vendedor`) param e explicam, via `usuario_acesso_ativo()`.
+- **A trava do ÚLTIMO ADMIN (0054) deixou de ser conveniência e virou carga:** é ela que impede a
+  empresa de se trancar para fora desativando o único administrador ativo. Há teste.
+- **CARGO ≠ PAPEL, e ficam em campos diferentes.** `papel` é PERMISSÃO (o que o sistema deixa
+  fazer); `cargo` é a função na empresa ("Supervisora de Atendimento"). Misturar os dois é o
+  caminho para o RH pedir um papel novo só para mudar um título.
+- **CPF é opcional mas único** — `unique` PARCIAL (`where documento is not null`), senão o segundo
+  cadastro sem CPF colidiria com o primeiro (gotcha de `fornecedores.documento`, 0051). Validado no
+  banco por `chk_usuario_documento_valido`.
+- **Desativar avisa o que mais cai junto:** a unidade que fica sem responsável e o portal do
+  vendedor (`avisoDeDesativacao`). Reativar limpa a data de desligamento.
+- **Lógica pura testada:** `src/lib/usuario.ts` — `PAPEIS_USUARIO`, `rotuloPapel`, `exigeUnidade`
+  (só o gestor regional), `validarFichaUsuario`, `situacaoUsuario`, `tempoDeCasa`,
+  `avisoDeDesativacao`.
+
 ## Regional / unidade — cadastro e situacao (0067)
 - **Onde:** `Configuracoes → Regionais`. A lista mostra contato, responsavel, **equipe** (vendedores
   ativos), **carteira** (associados e veiculos ativos) e a situacao — os numeros vem de
@@ -2355,6 +2408,11 @@ no fim — o runner procura por "PASSARAM") e rode `npm run schema`.
   testado), que só aceita caminho interno e barra também `/api/*` — logout durante
   uma chamada de API gravava `redirect=/api/...` e o login terminava numa tela de
   JSON, indistinguível de "não entrou".
+- **Campo de "ativo" que nenhuma função de segurança lê é uma promessa falsa.** `usuarios.ativo`
+  existia desde a 0001 e só a 0068 fez `is_staff()`/`auth_papel()` olharem para ele — 67 migrations
+  construídas sobre um checkbox decorativo, com a tela dizendo que ele revogava acesso.
+  **Ao criar flag de situação (`ativo`, `bloqueado`, `suspenso`), escreva no mesmo commit quem a
+  LÊ** — e um teste que prove o corte, não só a gravação.
 - Erro `syntax error near "//"` no SQL Editor = arquivo TypeScript colado por engano; SQL começa com `--`.
 - Trigger com CASE retornando enum: fazer cast `(case ... end)::meu_enum`.
 - Comparar `old.status` (enum) com `''` quebra; usar `is [not] distinct from`.

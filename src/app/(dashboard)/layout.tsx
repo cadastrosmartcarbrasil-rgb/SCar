@@ -15,9 +15,17 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // Confirma que o usuario e da equipe interna (e nao apenas um associado).
   const { data: perfil } = await supabase
     .from('usuarios')
-    .select('nome, papel')
+    .select('nome, papel, ativo')
     .eq('id', user.id)
     .maybeSingle();
+
+  // Acesso cortado (0068): `is_staff()` ja recusa esta pessoa no banco, entao
+  // sem esta parada ela entraria num painel VAZIO, sem explicacao nenhuma.
+  // A policy `usuarios_select_self` continua deixando ela ler a propria linha
+  // justamente para a tela conseguir dizer o que houve.
+  if (perfil && perfil.ativo === false) {
+    return <SemAcesso email={user.email ?? ''} nome={perfil.nome} motivo="desativado" />;
+  }
 
   if (!perfil) {
     // Nao e staff: se for associado (cliente), vai ao portal; senao, sem acesso.

@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { SidebarRegional } from '@/components/regional/sidebar-regional';
 import { SelecionarUnidade, type UnidadeEscolhivel } from '@/components/regional/selecionar-unidade';
 import { UnidadeProvider } from '@/components/regional/contexto-unidade';
+import { SemAcesso } from '@/components/layout/sem-acesso';
 import { COOKIE_UNIDADE, decidirUnidade, localDaUnidade, temAcessoGlobal } from '@/lib/unidade';
 
 /**
@@ -25,9 +26,15 @@ export default async function RegionalLayout({ children }: { children: React.Rea
   if (!user) redirect('/login');
 
   const { data: perfil } = await supabase
-    .from('usuarios').select('nome, papel, regional_id').eq('id', user.id).maybeSingle();
+    .from('usuarios').select('nome, papel, regional_id, ativo').eq('id', user.id).maybeSingle();
 
   if (!perfil) redirect('/login');
+  // Acesso cortado (0068): sem esta parada o portal abriria com todos os
+  // indicadores em zero — `escopo_regional()` nao resolve mais para quem nao e
+  // staff — e isso se le como sistema quebrado, nao como acesso revogado.
+  if (perfil.ativo === false) {
+    return <SemAcesso email={user.email ?? ''} nome={perfil.nome} motivo="desativado" />;
+  }
   if (!['gestor_regional', 'admin', 'financeiro'].includes(perfil.papel)) redirect('/dashboard');
 
   const { data: empresa } = await supabase

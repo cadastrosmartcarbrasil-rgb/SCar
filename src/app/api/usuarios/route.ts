@@ -9,6 +9,12 @@ interface Body {
   senha: string;
   papel: PapelUsuario;
   regional_id?: string | null;
+  // Ficha (0068)
+  telefone?: string | null;
+  documento?: string | null;
+  cargo?: string | null;
+  data_inicio?: string | null;
+  observacoes?: string | null;
 }
 
 interface BodyEdicao {
@@ -20,7 +26,23 @@ interface BodyEdicao {
   ativo?: boolean;
   /** senha nova; so vai para a admin API quando vem preenchida */
   senha?: string;
+  // Ficha (0068)
+  telefone?: string | null;
+  documento?: string | null;
+  cargo?: string | null;
+  data_inicio?: string | null;
+  data_desligamento?: string | null;
+  observacoes?: string | null;
 }
+
+/**
+ * Campo de texto opcional: vazio tem de virar NULL, nunca `''`.
+ * `documento` tem unique PARCIAL (`where documento is not null`) — com string
+ * vazia o segundo cadastro sem CPF colidiria com o primeiro. Foi o gotcha de
+ * `fornecedores.documento` (0051), e aqui vale igual.
+ */
+const textoOuNulo = (v: string | null | undefined) =>
+  v === undefined ? undefined : (v ?? '').trim() || null;
 
 /** Quem chama e admin? Devolve o id de quem chamou, ou a resposta de erro. */
 async function exigirAdmin() {
@@ -78,6 +100,28 @@ export async function POST(request: Request) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+
+  // O trigger monta o perfil com nome/papel/unidade; a FICHA (0068) vem por
+  // update logo em seguida — o metadata do auth nao e lugar de guardar CPF.
+  const ficha = {
+    telefone: textoOuNulo(body.telefone),
+    documento: textoOuNulo(body.documento),
+    cargo: textoOuNulo(body.cargo),
+    data_inicio: textoOuNulo(body.data_inicio),
+    observacoes: textoOuNulo(body.observacoes),
+  };
+  if (data.user?.id && Object.values(ficha).some((v) => v !== null)) {
+    const { error: erroFicha } = await admin
+      .from('usuarios').update(ficha).eq('id', data.user.id);
+    // O acesso JA existe; recusar a resposta agora faria o admin tentar criar
+    // de novo e bater em "e-mail ja cadastrado". Devolve o aviso, nao o erro.
+    if (erroFicha) {
+      return NextResponse.json({
+        ok: true, id: data.user.id,
+        aviso: `Usuario criado, mas a ficha nao foi salva: ${erroFicha.message}`,
+      });
+    }
   }
 
   return NextResponse.json({ ok: true, id: data.user?.id });
@@ -146,6 +190,16 @@ export async function PATCH(request: Request) {
   if (body.papel !== undefined) patch.papel = body.papel;
   if (body.regional_id !== undefined) patch.regional_id = body.regional_id || null;
   if (body.ativo !== undefined) patch.ativo = body.ativo;
+  // Ficha (0068). `textoOuNulo` devolve undefined quando o campo nem veio, e
+  // undefined nao entra no patch — enviar metade da ficha nao apaga a outra.
+  if (body.telefone !== undefined) patch.telefone = textoOuNulo(body.telefone) ?? null;
+  if (body.documento !== undefined) patch.documento = textoOuNulo(body.documento) ?? null;
+  if (body.cargo !== undefined) patch.cargo = textoOuNulo(body.cargo) ?? null;
+  if (body.data_inicio !== undefined) patch.data_inicio = textoOuNulo(body.data_inicio) ?? null;
+  if (body.data_desligamento !== undefined) {
+    patch.data_desligamento = textoOuNulo(body.data_desligamento) ?? null;
+  }
+  if (body.observacoes !== undefined) patch.observacoes = textoOuNulo(body.observacoes) ?? null;
 
   if (Object.keys(patch).length > 0) {
     const { error } = await admin.from('usuarios').update(patch).eq('id', body.id);
