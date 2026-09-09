@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import type { EntidadeMutual } from '@/lib/mutual';
@@ -121,14 +122,113 @@ export function usePingMutual() {
   });
 }
 
-/** Puxa paginas de uma entidade para a area de captura. */
-export function useCapturarMutual() {
+export interface ProgressoCaptura {
+  entidade: EntidadeMutual;
+  registros: number;          // acumulado NESTA rodada
+  paginas: number;
+  total: number | null;       // quanto o Mutual diz ter
+  proxima: number;            // pagina que sera pedida a seguir
+}
+
+export interface ResultadoCaptura {
+  configured: boolean;
+  ok: boolean;
+  registros: number;
+  paginas: number;
+  total: number | null;
+  /** Onde retomar. `null` = a entidade acabou. */
+  proximaPagina: number | null;
+  parado: boolean;            // o usuario mandou parar
+  erro?: string;
+}
+
+// Teto de seguranca: se a API devolver "ha mais" para sempre, o laco tem de
+// terminar. 5.000 paginas de 500 = 2,5 milhoes de registros — muito acima de
+// qualquer entidade do Mutual (a maior, faturas, tem ~206 mil).
+const PAGINA_MAXIMA = 5000;
+
+/**
+ * Puxa uma entidade INTEIRA, em blocos, ate a API dizer que acabou.
+ *
+ * Por que em blocos e nao numa requisicao so: 17.610 objetos de contrato sao 36
+ * paginas, e as faturas passam de 400 — uma requisicao unica desse tamanho
+ * estoura o tempo do proxy antes de terminar, e ai nao se salva nem o que ja
+ * tinha vindo. Cada bloco e uma requisicao curta que ja grava o que trouxe, e a
+ * captura e re-executavel (upsert), entao parar no meio nunca perde trabalho.
+ *
+ * O cache so e invalidado NO FIM: o diagnostico e uma consulta cara, e refaze-lo
+ * a cada bloco deixaria a tela mais lenta que a propria carga.
+ */
+export function useCapturaMutual() {
   const qc = useQueryClient();
-  return useMutation<RespostaMutual, Error, {
-    entidade: EntidadeMutual; paginas?: number; pagina_inicial?: number;
-    page_size?: number; updated_at__gte?: string;
-  }>({
-    mutationFn: (v) => chamar({ action: 'capturar', ...v }),
-    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['mutual'] }); },
-  });
+  const [progresso, setProgresso] = useState<ProgressoCaptura | null>(null);
+  const [rodando, setRodando] = useState(false);
+  const pararRef = useRef(false);
+
+  const parar = useCallback(() => { pararRef.current = true; }, []);
+
+  const puxarTudo = useCallback(async (
+    entidade: EntidadeMutual,
+    opcoes: { paginasPorVez?: number; inicio?: number; updated_at__gte?: string } = {},
+  ): Promise<ResultadoCaptura> => {
+    const paginasPorVez = opcoes.paginasPorVez ?? 5;
+    let pagina = Math.max(opcoes.inicio ?? 1, 1);
+    let registros = 0;
+    let paginas = 0;
+    let total: number | null = null;
+
+    pararRef.current = false;
+    setRodando(true);
+    setProgresso({ entidade, registros, paginas, total, proxima: pagina });
+
+    try {
+      for (;;) {
+        const r = await chamar({
+          action: 'capturar', entidade,
+          paginas: paginasPorVez, pagina_inicial: pagina,
+          updated_at__gte: opcoes.updated_at__gte,
+        });
+
+        if (!r.configured) {
+          return { configured: false, ok: false, registros, paginas, total,
+                   proximaPagina: pagina, parado: false };
+        }
+        if (!r.ok) {
+          // Para no ponto: `pagina` e de onde retomar depois de resolver.
+          return { configured: true, ok: false, registros, paginas, total,
+                   proximaPagina: pagina, parado: false,
+                   erro: r.erro ?? r.error ?? 'Falha ao consultar o Mutual' };
+        }
+
+        registros += r.registros ?? 0;
+        paginas += r.paginas ?? 0;
+        total = r.total_remoto ?? total;
+
+        // Acabou: a API nao aponta proxima pagina, ou o bloco veio vazio
+        // (protege contra um `proxima_pagina` que nunca zera).
+        const proxima = r.proxima_pagina;
+        if (!proxima || (r.paginas ?? 0) === 0 || proxima > PAGINA_MAXIMA) {
+          return { configured: true, ok: true, registros, paginas, total,
+                   proximaPagina: proxima && proxima <= PAGINA_MAXIMA ? proxima : null,
+                   parado: false };
+        }
+
+        pagina = proxima;
+        setProgresso({ entidade, registros, paginas, total, proxima: pagina });
+
+        // O pedido de parada e atendido ENTRE blocos: abortar no meio deixaria
+        // o servidor gravando sem ninguem para dizer onde retomar.
+        if (pararRef.current) {
+          return { configured: true, ok: true, registros, paginas, total,
+                   proximaPagina: pagina, parado: true };
+        }
+      }
+    } finally {
+      setRodando(false);
+      setProgresso(null);
+      void qc.invalidateQueries({ queryKey: ['mutual'] });
+    }
+  }, [qc]);
+
+  return { puxarTudo, parar, progresso, rodando };
 }

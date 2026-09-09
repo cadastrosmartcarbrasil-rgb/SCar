@@ -8,7 +8,7 @@ import {
 import { Button } from '@/components/ui/button';
 import {
   useMutualCapturas, useMutualDiagnostico, useMutualPorStatus, useMutualFiliais,
-  useMutualQuarentena, useMutualStatusNaoMapeados, usePingMutual, useCapturarMutual,
+  useMutualQuarentena, useMutualStatusNaoMapeados, usePingMutual, useCapturaMutual,
 } from '@/hooks/use-mutual';
 import { ENTIDADES_INCREMENTAIS, ROTULO_QUARENTENA, type EntidadeMutual } from '@/lib/mutual';
 import type { MutualDiagnostico, SeveridadeDiagnostico } from '@/lib/database.types';
@@ -70,7 +70,7 @@ export default function IntegracaoMutualPage() {
   const quarentena = useMutualQuarentena(200, soFaturaveis);
   const naoMapeados = useMutualStatusNaoMapeados();
   const ping = usePingMutual();
-  const capturar = useCapturarMutual();
+  const { puxarTudo, parar, progresso, rodando } = useCapturaMutual();
   const [paginas, setPaginas] = useState(5);
   // De onde continuar em cada entidade. Sem isto, o botao recomeçaria sempre da
   // pagina 1 e uma base de ~13 mil objetos nunca passaria das primeiras.
@@ -84,22 +84,38 @@ export default function IntegracaoMutualPage() {
   }
 
   async function puxar(entidade: EntidadeMutual) {
-    const inicio = proximas[entidade] ?? 1;
-    const r = await capturar.mutateAsync({ entidade, paginas, pagina_inicial: inicio });
-    if (!r.configured) { toast.error('MUTUAL_API_TOKEN nao esta configurada no servidor'); return; }
-    if (!r.ok) { toast.error(r.erro ?? r.error ?? 'Falha ao consultar o Mutual'); return; }
+    const r = await puxarTudo(entidade, {
+      paginasPorVez: paginas,
+      inicio: proximas[entidade] ?? 1,
+    });
 
-    // Guarda de onde continuar; sem `proxima_pagina`, a entidade acabou.
+    // Onde retomar. Sem `proximaPagina`, a entidade acabou.
     setProximas((p) => {
       const novo = { ...p };
-      if (r.proxima_pagina) novo[entidade] = r.proxima_pagina;
+      if (r.proximaPagina) novo[entidade] = r.proximaPagina;
       else delete novo[entidade];
       return novo;
     });
+
+    if (!r.configured) { toast.error('MUTUAL_API_TOKEN nao esta configurada no servidor'); return; }
+    if (!r.ok) {
+      // O que ja veio esta gravado: o erro diz de onde retomar, nao manda recomecar.
+      toast.error(
+        `${r.erro} — ${r.registros} registros gravados antes de parar` +
+        (r.proximaPagina ? `. Clique de novo para retomar da pagina ${r.proximaPagina}.` : '.'),
+      );
+      return;
+    }
+    if (r.parado) {
+      toast.message(
+        `Parado a seu pedido: ${r.registros} registros em ${r.paginas} pagina(s). ` +
+        `Clique de novo para retomar da pagina ${r.proximaPagina}.`,
+      );
+      return;
+    }
     toast.success(
-      `${r.registros} registros em ${r.paginas} pagina(s)` +
-      (r.total_remoto ? ` de ${r.total_remoto} no total` : '') +
-      (r.proxima_pagina ? '. Clique de novo para continuar.' : '. Acabou esta entidade.'),
+      `Concluido: ${r.registros} registros em ${r.paginas} pagina(s)` +
+      (r.total ? ` de ${r.total} no total` : '') + '.',
     );
   }
 
@@ -142,20 +158,55 @@ export default function IntegracaoMutualPage() {
       </Secao>
 
       <Secao titulo="Puxar dados" icone={DownloadCloud} acao={
-        <label className="flex items-center gap-2 text-xs text-slate-600">
-          Paginas por vez
-          <select
-            className="rounded-lg border border-slate-200 px-2 py-1 text-sm"
-            value={paginas}
-            onChange={(e) => setPaginas(Number(e.target.value))}
-          >
-            {[1, 5, 20, 50, 100].map((n) => <option key={n} value={n}>{n}</option>)}
-          </select>
-          {Object.keys(proximas).length > 0 && (
-            <Button variant="ghost" onClick={() => setProximas({})}>Recomecar do inicio</Button>
-          )}
-        </label>
+        rodando ? (
+          <Button variant="secondary" onClick={parar}>Parar</Button>
+        ) : (
+          <label className="flex items-center gap-2 text-xs text-slate-600">
+            Paginas por bloco
+            <select
+              className="rounded-lg border border-slate-200 px-2 py-1 text-sm"
+              value={paginas}
+              onChange={(e) => setPaginas(Number(e.target.value))}
+            >
+              {[1, 5, 20, 50, 100].map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+            {Object.keys(proximas).length > 0 && (
+              <Button variant="ghost" onClick={() => setProximas({})}>Recomecar do inicio</Button>
+            )}
+          </label>
+        )
       }>
+        <p className="mb-3 text-xs text-slate-500">
+          O clique puxa a entidade <strong>ate o fim</strong>, em blocos — nao e preciso ficar
+          clicando. Cada bloco ja grava o que trouxe e a captura e re-executavel, entao parar no
+          meio (ou um erro de rede) nunca perde o que ja veio: o proximo clique retoma de onde
+          parou.
+        </p>
+
+        {progresso && (
+          <div className="mb-3 rounded-xl border border-cyan-200 bg-cyan-50/60 p-3">
+            <p className="text-sm font-medium text-slate-800">
+              Puxando {ENTIDADES.find((x) => x.chave === progresso.entidade)?.rotulo ?? progresso.entidade}...
+            </p>
+            <p className="mt-0.5 text-xs tnum text-slate-600">
+              {progresso.registros} registros · {progresso.paginas} pagina(s)
+              {progresso.total ? ` de ${progresso.total} no total` : ''} · proxima pagina{' '}
+              {progresso.proxima}
+            </p>
+            {progresso.total ? (
+              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
+                <div
+                  className="h-full rounded-full bg-cyan-500 transition-all"
+                  style={{ width: `${Math.min(100, Math.round((progresso.registros / progresso.total) * 100))}%` }}
+                />
+              </div>
+            ) : null}
+            <p className="mt-1.5 text-[11px] text-slate-500">
+              O botao <strong>Parar</strong> encerra no fim do bloco atual — nao no meio de uma
+              gravacao.
+            </p>
+          </div>
+        )}
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {ENTIDADES.map((e) => {
             const cap = (capturas.data ?? []).find((c) => c.entidade === e.chave);
@@ -163,7 +214,7 @@ export default function IntegracaoMutualPage() {
               <button
                 key={e.chave}
                 onClick={() => void puxar(e.chave)}
-                disabled={capturar.isPending}
+                disabled={rodando}
                 className="rounded-xl border border-slate-200 bg-fundo p-3 text-left transition hover:border-cyan-400 disabled:opacity-60"
               >
                 <div className="flex items-center justify-between gap-2">

@@ -522,7 +522,16 @@ Consequências que o levantamento original não tinha:
   conhecido) e o diagnóstico avisa. **Vocabulário novo do Mutual = veículo faltando na carga.**
 - **A amostra da API vem dos MAIS ANTIGOS primeiro.** Nos 2.500 primeiros de 17.610 objetos:
   2.438 INATIVO contra 35 ATIVO. Nenhum percentual de amostra parcial fala da carteira — só
-  concluir com a captura completa (o botão continua de onde parou, via `proxima_pagina`).
+  concluir com a captura completa.
+- **A captura vai até o fim sozinha, EM BLOCOS (`useCapturaMutual`).** Um clique puxa a entidade
+  inteira; o laço vive no navegador e cada bloco é uma requisição curta. Não é uma requisição só
+  de propósito: 17.610 objetos são 36 páginas e as faturas passam de 400 — uma chamada desse
+  tamanho estoura o tempo do proxy antes de terminar, e aí não se salva nem o que já tinha vindo.
+  Como cada bloco já grava e a captura é re-executável (upsert), parar no meio ou cair a rede
+  **nunca perde trabalho**: o retorno diz de qual página retomar, e o próximo clique continua dali.
+  O cache do TanStack só é invalidado **no fim** — o diagnóstico é consulta cara e refazê-lo a cada
+  bloco deixaria a tela mais lenta que a própria carga. `PAGINA_MAXIMA` (5.000) é o freio para o
+  caso de a API nunca dizer que acabou.
 - **RPCs:** `mutual_registrar_captura` (só `tem_acesso_global`), `mutual_diagnostico`,
   `mutual_por_status`, `mutual_filiais`, `mutual_quarentena`, `mutual_status_nao_mapeados`,
   `mutual_resumo_capturas`.
