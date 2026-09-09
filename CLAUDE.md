@@ -118,7 +118,13 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
   nenhum:** 3.527 de 3.527 faturáveis sem ela, com os contratos todos capturados. Em vez de
   chutar um terceiro lugar, entrou `mutual_campos(entidade, caminho)` — o inspetor que lista as
   chaves do payload, quantas vêm preenchidas e um exemplo.
-- **Próxima migration livre: `0066`.** As `0060`, `0061`, `0063`, `0064` e `0065` já estão no branch de trabalho e
+- **`0066_mutual_indenizado_nao_fatura` é NOVA** — decisão do usuário: *"quem está em Indenizado,
+  Indenização, Inativo/pago não vamos gerar mensalidades"*. Isso **muda o de-para**, porque
+  `em_evento` **É faturável** (`veiculo_faturavel`, 0024): deixar `INDENIZADO` ali faria 26
+  veículos já indenizados receberem boleto todo mês. Foram para `inativo`. **`SINISTRADO` continua
+  `em_evento`** — sinistro em andamento é associado ativo, segue pagando. Junto, `mutual_por_status`
+  parou de chamar vocabulário desconhecido de "funil de venda" (decisão tomada × decisão pendente).
+- **Próxima migration livre: `0067`.** As `0060`, `0061`, `0063`, `0064`, `0065` e `0066` já estão no branch de trabalho e
   ainda **não foram aplicadas em produção** (rodar nessa ordem, depois das `0045`..`0059`); a
   `0062` JÁ FOI aplicada.
 - **`.claude/hooks/session-start.sh` é NOVO** — avisa quando a sessão nasce no branch errado e
@@ -222,9 +228,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0065`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **42 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 483 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0066`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **43 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 484 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Todos os portais e páginas
@@ -481,7 +487,7 @@ Consequências que o levantamento original não tinha:
 - **Histórico pago reescreve DRE de mês fechado** (`dre_movimentos`, 0032) e, na convivência, faz
   os dois sistemas contarem a mesma receita. O DRE do SCar começa na data de corte.
 
-## Integração com o Mutual — Fase 1 (0062 → 0065): espelho de leitura e diagnóstico
+## Integração com o Mutual — Fase 1 (0062 → 0066): espelho de leitura e diagnóstico
 > Plano completo e de-para campo a campo: **`docs/modulos/integracao-mutual.md`**. Leia antes de
 > tocar neste módulo.
 
@@ -550,7 +556,20 @@ Consequências que o levantamento original não tinha:
   mensal. "Semestral" no Mutual é a **vigência** (6 parcelas mensais), não a frequência do boleto:
   bate com a tela (*parcela R$ 120 · 6× · total R$ 720*). **A carga grava `final_total_value`
   direto em `veiculos.valor_mensalidade`, sem dividir.**
-- **🔴 A UNIDADE NÃO ESTÁ EM `regional` — NEM NO OBJETO NEM NO CONTRATO.** Com os 17.616
+- **QUEM NÃO GERA MENSALIDADE (decisão do usuário, 0066):** `INDENIZADO`, `INDENIZAÇÃO` (todas as
+  grafias) e `INATIVO/PAGO` → `inativo`. **A armadilha era `em_evento`:** ele parece o lugar certo
+  para "indenizado", mas está na lista de `veiculo_faturavel` (0024) — 26 veículos já indenizados
+  receberiam boleto todo mês. **`SINISTRADO` fica em `em_evento` de propósito:** sinistro em
+  andamento é associado ativo e segue pagando; indenizado já recebeu e saiu.
+- **O FATURAMENTO É MENSAL — os 6 boletos são só o LOTE de emissão.** A associação emite carnê de
+  6 meses de uma vez para não rodar emissão todo mês (em dezembro saem janeiro a junho). É
+  exatamente o que `gerar_faturas_periodo(comp_inicial, meses, …)` (0025) já faz, com padrão de 6
+  meses, na aba **Boletagem em Lote** de `/cobrancas`. **Não é preciso construir nada** — e é a
+  confirmação de que `final_total_value` é a parcela mensal.
+- **🔴 A UNIDADE NÃO ESTÁ EM `regional` — NEM NO OBJETO NEM NO CONTRATO.** O usuário informou que
+  a regional e o consultor ficam na aba **GERAL do ASSOCIADO** e também no **cadastro do veículo** —
+  ou seja, procurar em `person_data`/`vehicle_data` do objeto e na entidade `PERSON`, com
+  `mutual_campos`, **sem chutar o nome do campo**. Com os 17.616
   contratos capturados, **3.527 de 3.527 faturáveis** seguem sem unidade e as 10 filiais aparecem
   com "0 objetos". É bloqueante: `regional_id` atravessa RLS, `escopo_regional()` e todos os
   painéis. **Onde ela mora é pergunta em aberto** — use `mutual_campos('CONTRACT')` para achar o
@@ -1197,6 +1216,15 @@ inclusive dentro de objeto aninhado. Junto, duas grafias novas do MESMO vocabula
 (`INDENIZACAO`/`INDENIZAÇAO` -> em_evento, ao lado de `INDENIZADO`; `INATIVO/PAGO` -> inativo);
 `DIFICULDADE FINANCEIRA` fica DE FORA de proposito — sem par obvio, mapear no escuro manda boleto
 para quem nao devia ou tira da base quem ainda paga).
+· `0066_mutual_indenizado_nao_fatura` (DECISAO DO USUARIO: "quem esta em Indenizado, Indenizacao,
+Inativo/pago nao vamos gerar mensalidades". Muda o de-para, e nao e cosmetico: `em_evento` E
+FATURAVEL (esta em `veiculo_faturavel`, 0024, ao lado de ativo e vistoria_pendente), entao os 26
+veiculos ja indenizados receberiam boleto todo mes. Foram para `inativo`. `SINISTRADO` CONTINUA
+`em_evento` de proposito — sinistro em andamento e associado ativo que segue pagando; indenizado ja
+recebeu e saiu. `DIFICULDADE FINANCEIRA` segue sem mapeamento (o usuario nomeou tres status, e esse
+nao estava). Junto, `mutual_por_status` parou de rotular vocabulario desconhecido como "funil de
+venda": funil e decisao TOMADA, desconhecido e decisao PENDENTE, e juntar os dois escondia o que
+falta responder).
 · `0062_integracao_mutual` (FASE 1 da integracao com o MUTUAL — espelho de LEITURA e diagnostico:
 `mutual_captura` (entidade + id_externo unico, payload jsonb, soft-delete) e `mutual_sincronias`;
 os espelhos em SQL da logica de `src/lib/mutual.ts` (`mutual_texto`, `mutual_status_veiculo`,

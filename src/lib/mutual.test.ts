@@ -118,7 +118,6 @@ describe('statusVeiculoDoContrato', () => {
     expect(statusVeiculoDoContrato('SUSPENSO')).toBe('suspenso');
     expect(statusVeiculoDoContrato('PENDENTE_VISTORIA')).toBe('vistoria_pendente');
     expect(statusVeiculoDoContrato('SINISTRADO')).toBe('em_evento');
-    expect(statusVeiculoDoContrato('INDENIZADO')).toBe('em_evento');
     expect(statusVeiculoDoContrato('CANCELADO')).toBe('inativo');
     expect(statusVeiculoDoContrato('CANCELADO_TROCA_TITULARIDADE')).toBe('inativo');
   });
@@ -142,15 +141,24 @@ describe('statusVeiculoDoContrato', () => {
   // O enum do swagger NAO e exaustivo: este apareceu so na primeira leitura da
   // base real (09/09/2026). Antes da 0063 ele caia no `null` e era contado como
   // funil de venda — o lugar errado, porque e contrato ENCERRANDO.
-  // Variacoes de GRAFIA do mesmo vocabulario, vistas na carga completa. Nao e
-  // chute: `INDENIZADO` e `INATIVO` ja estavam mapeados, mudou a escrita.
-  it('as grafias de INDENIZACAO caem no mesmo em_evento de INDENIZADO', () => {
-    expect(statusVeiculoDoContrato('INDENIZACAO')).toBe('em_evento');
-    expect(statusVeiculoDoContrato('INDENIZAÇAO')).toBe('em_evento');
-    expect(statusVeiculoDoContrato('INDENIZAÇÃO')).toBe('em_evento');
+  // DECISAO DO USUARIO (09/09/2026): "quem esta em Indenizado, Indenizacao,
+  // Inativo/pago NAO vamos gerar mensalidades". `em_evento` E faturavel
+  // (veiculo_faturavel, 0024), entao os tres tem de ser `inativo` — senao 26
+  // veiculos ja indenizados voltariam a receber boleto todo mes.
+  it('INDENIZADO e suas grafias NAO faturam', () => {
+    expect(statusVeiculoDoContrato('INDENIZADO')).toBe('inativo');
+    expect(statusVeiculoDoContrato('INDENIZACAO')).toBe('inativo');
+    expect(statusVeiculoDoContrato('INDENIZAÇAO')).toBe('inativo');
+    expect(statusVeiculoDoContrato('INDENIZAÇÃO')).toBe('inativo');
   });
   it('INATIVO/PAGO e inativo', () => {
     expect(statusVeiculoDoContrato('INATIVO/PAGO')).toBe('inativo');
+  });
+  // A distincao que sustenta a decisao: sinistro EM ANDAMENTO nao e indenizacao
+  // paga. O associado do sinistro segue na casa e segue pagando.
+  it('SINISTRADO continua faturando (em_evento), ao contrario de INDENIZADO', () => {
+    expect(statusVeiculoDoContrato('SINISTRADO')).toBe('em_evento');
+    expect(statusVeiculoDoContrato('INDENIZADO')).toBe('inativo');
   });
   // DE FORA de proposito: sem par obvio, pode ser associado renegociando divida
   // (entra e fatura) ou contrato encerrado (entra como historico). Errar manda

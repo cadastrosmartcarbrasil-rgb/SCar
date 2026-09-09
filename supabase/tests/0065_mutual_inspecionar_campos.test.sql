@@ -20,9 +20,13 @@ begin
   perform set_config('request.jwt.claim.sub', u_adm::text, false);
 
   -- (A) grafias novas do MESMO vocabulario -----------------------------------
-  assert mutual_status_veiculo('INDENIZACAO') = 'em_evento', 'sem cedilha';
-  assert mutual_status_veiculo('INDENIZAÇAO') = 'em_evento', 'como veio da base';
-  assert mutual_status_veiculo('INDENIZADO')  = 'em_evento', 'o original segue valendo';
+  -- As grafias entraram aqui (0065); o DESTINO delas mudou na 0066, quando o
+  -- usuario decidiu que indenizado nao gera mensalidade. O que esta suite ainda
+  -- prova e que as tres escritas caem no MESMO lugar — seja ele qual for.
+  assert mutual_status_veiculo('INDENIZACAO') = mutual_status_veiculo('INDENIZADO'),
+    'sem cedilha tem de cair junto com o original';
+  assert mutual_status_veiculo('INDENIZAÇAO') = mutual_status_veiculo('INDENIZADO'),
+    'como veio da base, idem';
   assert mutual_status_veiculo('INATIVO/PAGO') = 'inativo', 'INATIVO/PAGO';
   -- Sem par obvio: fica de fora ATE o usuario decidir. Mapear no escuro manda
   -- boleto para quem nao devia, ou tira da base quem ainda paga.

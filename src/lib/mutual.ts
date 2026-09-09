@@ -188,12 +188,9 @@ export function statusVeiculoDoContrato(
       return 'suspenso';
     case 'PENDENTE_VISTORIA':
       return 'vistoria_pendente';
+    // Sinistro EM ANDAMENTO: o associado segue na casa e segue pagando.
+    // `em_evento` entra em `veiculo_faturavel` (0024), e aqui isso e correto.
     case 'SINISTRADO':
-    case 'INDENIZADO':
-    // Mesma coisa, outra grafia — veio assim da base real (com e sem cedilha).
-    case 'INDENIZACAO':
-    case 'INDENIZAÇAO':
-    case 'INDENIZAÇÃO':
       return 'em_evento';
     case 'INATIVO':
     case 'CANCELADO':
@@ -208,6 +205,13 @@ export function statusVeiculoDoContrato(
     // encerrando e o equipamento vai ser recolhido. O enum do contrato deles
     // NAO e exaustivo — por isso `mutual_status_nao_mapeados()` existe.
     case 'INATIVO/PAGO':
+    // DECISAO DO USUARIO (09/09/2026): indenizado NAO gera mensalidade. Estes
+    // estavam em `em_evento`, que E faturavel — 26 veiculos ja indenizados
+    // receberiam boleto todo mes.
+    case 'INDENIZADO':
+    case 'INDENIZACAO':
+    case 'INDENIZAÇAO':
+    case 'INDENIZAÇÃO':
     case 'AGUARDADO A RETIRADA DO RASTREADOR':
       return 'inativo';
     default:
