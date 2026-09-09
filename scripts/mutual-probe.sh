@@ -19,6 +19,7 @@ set -uo pipefail
 
 BASE="${MUTUAL_BASE:-https://smartcar-api.mutualignit.com.br}"
 PREFIXO="${MUTUAL_PREFIXO:-/public_api/v2}"
+DOCS="${MUTUAL_DOCS:-/redoc/}"      # confirmado na tela: Redoc, nao /docs/
 SAIDA="${MUTUAL_SAIDA:-/root/mutual}"
 mkdir -p "$SAIDA"
 
@@ -32,8 +33,8 @@ ler() { python3 -c "$1" 2>/dev/null; }
 codigo() { curl -s -o "$2" -w '%{http_code}' -m 25 "$@" 2>/dev/null || echo 000; }
 
 echo "== 1. O dominio responde e este IP esta liberado? =========================="
-HTTP=$(curl -s -o "$SAIDA/docs.html" -w '%{http_code}' -m 25 "$BASE$PREFIXO/docs/")
-echo "GET $PREFIXO/docs/  ->  HTTP $HTTP  ($(wc -c <"$SAIDA/docs.html") bytes)"
+HTTP=$(curl -s -o "$SAIDA/docs.html" -w '%{http_code}' -m 25 "$BASE$PREFIXO$DOCS")
+echo "GET $PREFIXO$DOCS  ->  HTTP $HTTP  ($(wc -c <"$SAIDA/docs.html") bytes)"
 case "$HTTP" in
   000) echo '   !! SEM RESPOSTA. Timeout = IP deste servidor provavelmente NAO liberado.';;
   200) echo '   OK: a rede daqui alcanca a Mutual.';;
@@ -47,8 +48,8 @@ grep -oE '(spec-url|data-url|url)["'"'"']?[:=]["'"'"' ]*[^"'"'"' ><]+' "$SAIDA/d
   | head -20 || echo '   (nada obvio no HTML — segue para os caminhos usuais)'
 
 echo '   -- testando os caminhos usuais --'
-for P in "$PREFIXO/schema/?format=json" "$PREFIXO/schema/" "$PREFIXO/openapi.json" \
-         "$PREFIXO/docs/openapi.json" "$PREFIXO/swagger.json" "$PREFIXO/docs/?format=openapi"; do
+for P in "$PREFIXO/swagger.json" "$PREFIXO/swagger.yaml" "$PREFIXO/swagger/?format=openapi" \
+         "$PREFIXO/schema/?format=json" "$PREFIXO/schema/" "$PREFIXO/openapi.json"; do
   H=$(curl -s -o "$SAIDA/spec.tmp" -w '%{http_code}' -m 25 "$BASE$P")
   T=$(head -c 1 "$SAIDA/spec.tmp" 2>/dev/null)
   if [ "$H" = "200" ] && { [ "$T" = "{" ] || [ "$T" = "o" ]; }; then
@@ -80,12 +81,12 @@ fi
 
 echo
 echo "== 3. O token funciona? (testa as 3 formas mais comuns) ===================="
-ALVO="${MUTUAL_ALVO:-$PREFIXO/events/}"   # troque por um GET real da lista acima
-for NOME in 'Bearer' 'Token' 'X-API-Key'; do
+ALVO="${MUTUAL_ALVO:-$PREFIXO/event/}"    # confirmado na tela: GET /event/ (singular)
+for NOME in 'Bearer' 'Basic' 'Token'; do
   case "$NOME" in
     Bearer)    HDR="Authorization: Bearer $MUTUAL_TOKEN";;
+    Basic)     HDR="Authorization: Basic $MUTUAL_TOKEN";;
     Token)     HDR="Authorization: Token $MUTUAL_TOKEN";;
-    X-API-Key) HDR="X-API-Key: $MUTUAL_TOKEN";;
   esac
   H=$(curl -s -o "$SAIDA/probe.json" -w '%{http_code}' -m 25 -H "$HDR" -H 'Accept: application/json' "$BASE$ALVO")
   echo "   $NOME -> HTTP $H"

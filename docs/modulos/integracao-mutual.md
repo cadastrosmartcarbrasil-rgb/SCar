@@ -537,3 +537,88 @@ com segurança.
 
 **A sequência, então:** amostra (diagnóstico) → **carga completa, sem cobrar** → sincronia incremental
 mantendo o espelho vivo → **cutover por unidade** → o Mutual vira consulta histórica.
+
+---
+
+## O QUE A TELA DA API MOSTROU (09/09/2026) — primeira leitura real do contrato
+
+> Fonte: captura de tela do Redoc em `…/public_api/v2/redoc/#tag/Evento`, enviada pelo usuário.
+> **Ainda não é o OpenAPI completo** — é o que estava visível na tela. Vale como confirmação
+> parcial, não como contrato fechado.
+
+### Confirmado (correções ao que estava suposto aqui)
+| Suposição anterior | O que a tela mostra |
+|---|---|
+| docs em `/docs/` | é **`/redoc/`** — Redoc, provavelmente servido por **drf-yasg** (então o spec deve estar em `/public_api/v2/swagger.json`) |
+| autenticação a descobrir | **`AUTHORIZATIONS: Basic or Bearer`** — aceita os dois; usar **`Authorization: Bearer <token>`** |
+| endpoints no plural | **`GET /event/`** — singular, com barra no fim (padrão Django/DRF) |
+
+### O inventário de entidades (o menu lateral) e o de-para com o SCar
+| Tag no Mutual | No SCar |
+|---|---|
+| **Associado** | `clientes` |
+| **Contrato** | ⚠️ **não existe como entidade** — ver o desencontro estrutural abaixo |
+| **Evento** | `eventos_sinistro` |
+| **Faturas** | `faturas` / `titulos_financeiros` |
+| **Vistoria** | `vistorias` + `vistoria_anexos` |
+| **Cotação** · **Cotação - Fipe** | `cotacoes` + a integração FIPE que já temos |
+| **Pagamentos - Perfil de Cartão** | `cartoes_cobranca` (0044) — cartão tokenizado |
+| **Aceite Digital** | o aceite de `registrar_aceite_venda` (0042/0046) |
+| **Implemento** | reboque/carreta — entra em `tipos_veiculo` |
+| **Associação** · **Core** | configuração/base do próprio Mutual |
+| **Integrações - Apoio / Ativo247 / Geral** | integrações deles; **Ativo247 parece ser plataforma de rastreamento** — cruzar com o módulo de Rastreadores |
+
+### 🔴 Desencontro estrutural: o Mutual tem CONTRATO, o SCar não
+O retorno de `/event/` traz **`person_id`, `contract_id` e `vehicle_id` como três campos separados**.
+O modelo do Mutual é **pessoa → contrato → veículo**; o do SCar é **cliente → veículo** (o
+`contratos_adesao` é só o termo de adesão, não o vínculo comercial).
+
+Isso é uma decisão de arquitetura, não um de-para de campo. Um contrato com **dois veículos** não
+tem onde caber hoje. Três saídas, a decidir com o volume da Fase 1 em mãos:
+guardar o `contract_id` só na tabela de vínculo (mais barato; perde o agrupamento) ·
+tratar contrato como o `tipo_faturamento AGRUPADO_ASSOCIADO` que já existe ·
+criar a entidade (caro, e mexe em RLS, cobrança e SAC).
+
+### 🔴 O filtro por data de alteração NÃO apareceu
+Os query params de `GET /event/` visíveis são **`protocol`, `sub_status_id`, `event_status`, `id`** —
+chaves de negócio, **nenhuma de "alterado desde"**. Se isso se confirmar no OpenAPI completo, a
+**sincronia incremental (Fase 6) fica cara**: sem cursor por data, manter o espelho vivo vira
+varredura periódica da base inteira, e o rate limit passa a mandar no desenho.
+**É a primeira coisa a procurar no swagger.json.**
+
+### 🟡 `event_status` tem 8 valores; o SCar tem 6, e eles quase não se encontram
+Mutual: `ANDAMENTO` · `NEGADO` · `FINALIZADO` · `MIGRADO` · `SINDICANCIA` · `CANCELADO` ·
+`EVENTO_EM_ESPERA` · `DOCUMENTACAO_PENDENTE`
+SCar: `ABERTO` · `EM_ANALISE` · `COTACAO_PECAS` · `REPARO` · `CONCLUIDO` · `NEGADO`
+
+Casam bem só `NEGADO` e `FINALIZADO→CONCLUIDO`. **`SINDICANCIA`, `CANCELADO`, `EVENTO_EM_ESPERA` e
+`DOCUMENTACAO_PENDENTE` não têm equivalente** — e `COTACAO_PECAS`/`REPARO` são etapas nossas que
+não existem lá. Vai exigir `alter type ... add value if not exists` **com o gotcha de sempre**
+(valor novo de enum não pode ser usado na mesma transação — comparar como TEXTO).
+`MIGRADO` sugere que **o próprio Mutual já recebeu uma migração antes**; vale perguntar de onde.
+
+### 🟡 Outros achados do payload de `/event/`
+- **Os ids são INTEIROS** (`"id": 0`, `regional_id: 0`, `person_id: 0`), não uuid. Confirma a tabela
+  de vínculo — e o `id_externo` dela é numérico, não uuid.
+- **`regional_id` já vem no payload.** Ótimo: o eixo de unidade existe do outro lado. Continua
+  precisando do de-para para os ids do SCar.
+- **`address_id` é referência, não endereço.** O endereço é entidade própria — importar a ficha
+  completa exige uma segunda chamada por endereço. **Isso é custo de carga real** e pode dominar
+  o tempo total; procurar no spec um endpoint de listagem de endereços em lote.
+- **Datas em ISO-8601 UTC** (`2019-08-24T14:15:22Z`). `eventos_sinistro.data_ocorrencia` é `date`:
+  **converter para o fuso local ANTES de cortar a hora**, senão evento das 21h vira o dia seguinte.
+  Erro clássico e silencioso de importação.
+- **`type_involvement: "CAUSADOR"`** — envolvimento (causador/vítima) não existe no SCar; é outra
+  dimensão, separada de `tipo_evento`.
+- **`sindicancia_status: "REGULAR"`** — sindicância é um subsistema inteiro que não temos.
+- **`siga_protocols_ids`** — há um terceiro sistema no meio ("SIGA"). Perguntar o que é antes de
+  assumir que dá para ignorar.
+- **Não apareceu `updated_at`/`modified_at` no payload** — reforça a dúvida da sincronia incremental.
+
+### O que procurar no `swagger.json` (ordem de importância)
+1. **Filtro por data de alteração** em qualquer endpoint — decide o custo da Fase 6.
+2. **Formato da paginação** (DRF costuma devolver `{count, next, previous, results}`).
+3. **`/associado/`, `/contrato/`, `/faturas/`** — os campos, e principalmente **onde está o VALOR
+   COBRADO ATUALMENTE** e o **dia de vencimento** (é o que a decisão de preço congelado exige).
+4. **Rate limit** documentado.
+5. Se `Basic` e `Bearer` usam a mesma credencial ou credenciais diferentes.
