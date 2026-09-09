@@ -813,3 +813,190 @@ Cadastros pequenos, sem incremental: carga completa a cada sincronia resolve.
 Toda a família `/quotation/` (cotação, FIPE, planos, `generate_contract`, `generate_pdf`,
 `{quotation_token}`) é **venda** — e venda nova nasce no SCar, pelo hotlink e pelo CRM. Curiosidade
 útil: eles também têm token público de cotação, mesma ideia do nosso `leads.token_publico`.
+
+---
+
+# O DE-PARA CAMPO A CAMPO (contrato lido em 09/09/2026)
+
+> Extraído do `swagger.json` completo (Swagger 2.0, 69 endpoints, 227 KB).
+> Para rebaixar de novo: `GET https://smartcar-api.mutualignit.com.br/public_api/v2/swagger.json/`
+> (**com a barra final**; sem ela, 301).
+
+## Autenticação — sem ambiguidade
+A descrição do próprio contrato diz, textualmente:
+```
+Authorization: Bearer <SEU_TOKEN>
+```
+O prefixo **`Bearer ` faz parte do valor**. (`securityDefinitions` declara também `Basic`, mas o
+texto oficial manda usar Bearer.) Há ainda **criptografia híbrida RSA-OAEP + AES-256-GCM
+obrigatória em alguns endpoints** — na prática só os de **cartão**; **nenhum endpoint de LEITURA
+que vamos usar exige isso.**
+
+## 🔴 ACHADO PRINCIPAL: o valor congelado, o dia e a data de ativação estão TODOS no mesmo lugar
+
+`contract_object` (e seu irmão `contract_object_vehicle`) carrega exatamente o que a decisão de
+preço congelado precisa — e o endpoint é **incremental E paginado**:
+
+| Campo Mutual | Descrição no contrato | Destino no SCar |
+|---|---|---|
+| **`final_total_value`** | "Valor final total, já considerando produtos e descontos" | **`veiculos.valor_mensalidade`** ← o valor a congelar |
+| **`due_day`** | "Dia de pagamento" | **`veiculos.dia_vencimento`** |
+| **`first_activation_date`** | "Primeira data de ativação do contrato" | **`veiculos.data_ativacao`** ← desarma a mina nº 2 |
+| **`is_fixed_amount`** | "O valor da mensalidade é fixa e **não passa por atualização**" | ⭐ eles JÁ têm a semântica do nosso override |
+| `accession_value` | Valor da adesão | `leads.adesao_valor` / histórico |
+| `protected_value` | Valor protegido | `veiculos.valor_fipe` (conferir contra `vehicle_price`) |
+| `is_fixed_cota` | Cota fixa, não atualiza | `veiculos.cota_participacao_id` (override) |
+| `plan_id` | Plano contratado | `veiculos.plano_protecao_id` (via de-para de planos) |
+| `status` | `CRIADO`·`ATIVO`·`INATIVO`·`REMOVIDO` | entra na composição de `veiculos.status` |
+| `regional` · `consultant` · `sales_team` | unidade / vendedor / equipe | `regional_id` · `vendedor_id` · (sem destino) |
+
+**`is_fixed_amount` merece atenção:** o Mutual já distingue "valor que congela" de "valor que
+recalcula". **Se esse campo vier `true` para parte da carteira, ele é a resposta pronta** para quais
+veículos entram com override — e os `false` também entram congelados, por decisão do usuário, mas
+com a informação preservada para uma eventual rotina de reajuste futura.
+
+## 🟢 A ESPINHA DA CARGA: `/contract/contract_object/nested/`
+`INCR` + `PAG` + já traz `vehicle_data` e `person_data` embutidos (`implementos_data` também).
+Resolve o N+1 do veículo. **Só o endereço e o contato do associado ficam de fora** — daí:
+
+```
+/contract/contract_object/nested/?updated_at__gte=<T>&page_size=500
+   ├── vehicle_data     (placa, chassi, renavam, fipe, marca, modelo, anos, cor/tipo/categoria/uso)
+   ├── person_data      (só id, cpf_cnpj, name)
+   └── final_total_value · due_day · first_activation_date · plan_id · status
+        ↓
+/person/?id=<person_id>       -> e-mail, telefone, nascimento, mãe, estado civil, address_id, regional
+/core/address/?id=<address_id> -> CEP, rua, número, bairro, cidade, UF
+```
+
+### ⭐ Existe um atalho que traz TUDO de uma vez — mas exige permissão
+**`/integrations/contract_objects/`** devolve, num único objeto: `vehicle_data` + `person_data`
+**com `address_data` aninhado** + `implementos_data` + `contract_data` + **`products_data` com
+`product_name`** + `beneficiaries_data` + `smartphone_data`. Elimina o N+1 de endereço **e** dá o
+nome dos produtos.
+
+**Porém `supplier_id` é parâmetro OBRIGATÓRIO** — é o endpoint que a Mutual dá a integradores
+parceiros (o mesmo molde de `/apoio/`, `/softruck/`, `/zelo/`, `/split_risk/`).
+**➡️ PERGUNTAR À MUTUAL: podemos ter um `supplier_id`?** Se sim, a carga fica drasticamente mais
+simples e barata. Se não, vale o caminho de três chamadas acima. **É a pergunta de maior impacto
+que resta.**
+
+## ⚠️ O veículo NÃO tem status — ele vem do contrato
+`V2PublicApiVehicleSerializerResponse` **não possui campo de status**. O status vive em dois níveis:
+`contract_object.status` (4 valores) e `contract.contract_status` (**25 valores**). Portanto
+`veiculos.status` do SCar é **derivado**, não copiado — e a regra de derivação é uma decisão a
+registrar (proposta inicial abaixo).
+
+### De-para de status → `veiculos.status` (proposta)
+| `contract_status` (Mutual) | → SCar |
+|---|---|
+| `ATIVO` | `ativo` |
+| `INADIMPLENTE` | `ativo` (a inadimplência do SCar é derivada dos títulos, não do status) |
+| `SUSPENSO` | `suspenso` |
+| `PENDENTE_VISTORIA` | `vistoria_pendente` |
+| `SINISTRADO` · `INDENIZADO` | `em_evento` |
+| `INATIVO` · `CANCELADO*` · `NEGADO` · `RECUSADO` · `EXPIRADO` · `SUBSTITUIDO` · `REMOVIDO` | `inativo` |
+| `CRIADO` · `GERADO_PENDENCIA` · `AGUARDANDO_ACEITE` · `PENDENTE_ANALISE` · `AUTORIZADO` · `LINK_PAGAMENTO_ENVIADO` · `PAGAMENTO_GERADO` · `PENDENTE` · `NEGOCIACAO_PERDIDA` · `REATIVACAO` | **não importar** — é funil de venda, e venda nova nasce no SCar |
+
+> **Nenhum status do Mutual mapeia para `baixado` ou `excluido`** — são estados nossos.
+
+## `person` → `clientes`
+| Campo Mutual | Destino | Observação |
+|---|---|---|
+| `id` / `uuid` | tabela de vínculo | ver o achado do UUID abaixo |
+| `name` | `nome_razao_social` | ⚠️ **x-nullable** → quarentena se vazio |
+| `cpf_cnpj` | `cpf_cnpj` | ⚠️ **x-nullable** → **quarentena confirmada como necessária** |
+| `person_type` | `tipo_pessoa` | ⚠️ vem `"1"` / `"2"`, não `PF`/`PJ` — de-para obrigatório |
+| `gender` | `sexo` | `"1"`/`"2"`/`"3"` |
+| `email` · `phone` | `email` · `telefone` | `phone` é **required** |
+| `birthdate` | `data_nascimento` | serve para endurecer o 1º acesso do portal |
+| `mother_name` | `nome_mae` | |
+| `marital_status` | — | `MARRIED`/`SINGLE`/`DIVORCED`/`WIDOWED`; **sem destino** |
+| `address` (id) | `endereco` (jsonb) | via `/core/address/` |
+| `regional` (id) | `regional_id` | via de-para de unidade |
+| **`invoice_unification_type`** | **`veiculos.tipo_faturamento`** | `NORMAL`·`INDIVIDUAL`·`UNICO`·`VENCIMENTO` → nós temos só 2 (`AGRUPADO_ASSOCIADO`/`INDIVIDUAL_VEICULO`). **Decisão necessária** |
+| `know_option` | — | "onde conheceu"; sem destino (o SCar tem `origem_hotlink`) |
+| `deleted` | — | ver soft-delete abaixo |
+
+## `vehicle` → `veiculos`
+| Campo Mutual | Destino | Observação |
+|---|---|---|
+| `plate` · `chassi` · `renavam` | `placa` · `chassi` · `renavam` | ⚠️ **os três x-nullable**; vazio **tem de virar NULL** |
+| `assembler` · `model` | `marca` · `modelo` | |
+| `fabrication_year` · `model_year` | `ano_fabricacao` · `ano_modelo` | vêm como **string**, converter |
+| `vehicle_price` | `valor_fipe` | conferir contra `protected_value` do objeto |
+| `cod_fipe` | `codigo_fipe` | |
+| `vehicle_type_id` | `tipo_veiculo_id` | `/vehicle/type/` só tem **4**: `CARRO`·`MOTO`·`CAMINHAO`·`NAO_HOMOLOGADO` |
+| `vehicle_color_id` | `cor` | via `/vehicle/color/` |
+| `vehicle_category_id` | `categoria` | via `/vehicle/category/` |
+| `vehicle_use_type_id` | `uso` | via `/vehicle/use_type/` → `passeio`/`app`/`comercial` |
+| `regional_id` | `regional_id` | ⭐ o veículo também carrega a unidade |
+| `fuel_type` | `combustivel` | 9 valores lá, 5 no nosso enum → de-para |
+| `transmission_type` | — | 8 valores; nosso `tipo_cambio` tem 3 |
+| `km` / `mileage` | — | sem destino hoje |
+| `external_id` | — | "Id externo utilizado pelo cliente" — **campo livre do lado deles** |
+
+## `invoice` → `titulos_financeiros` / `faturas`
+| Campo Mutual | Destino |
+|---|---|
+| `amount` · `paid_amount` | `valor` · `valor_pago` |
+| `original_amount` | `valor_original` (0029) |
+| `discount_amount` | `desconto` (0029) |
+| `expiration_date` · `payment_date` | `data_vencimento` · `data_pagamento` |
+| `original_expiration_date` | conferência do ajuste de boleto |
+| **`reference_month` + `reference_year`** | **`faturas.competencia`** |
+| `linha_digitavel` · `codigo_de_barra` | `linha_digitavel` |
+| `nosso_numero` · `numero_documento` | `nosso_numero` |
+| `invoice_billet_url` · `checkout_link` | `url_boleto` |
+| `pix_qrcode` (+ `invoice_pix.emv`) | `pix_qrcode_url` · `pix_copia_cola` |
+| `bank_id` | `integracoes_bancarias` / `contas_bancarias` |
+| `contract_id` | resolve `cliente_id` e `veiculo_id` pelo vínculo |
+| `in_serasa` · `days_pro_rata` · `transaction_fee` | sem destino |
+
+**`invoice_status` (16 valores) → `status_titulo` (4):** `SUCCEEDED*` → `pago` ·
+`PENDING`/`CREATED` → `pendente` · `OVERDUE` → `vencido` · `CANCELED*`/`FAILED`/`REFUNDED` →
+`cancelado`. **`invoice_type` tem 20 valores** — e só `MONTHLY_PAYMENT` (+ `PRO_RATA`,
+`ACCESSION_MONTHLY_PAYMENT`) é mensalidade. **Filtrar por tipo é obrigatório**, senão adesão,
+comissão, repasse e multa de rastreador entram como se fossem mensalidade.
+
+## Três achados técnicos que evitam retrabalho
+
+### ⭐ 1. Existe `uuid` em quase TODO recurso, além do `id` inteiro
+`person`, `vehicle`, `contract`, `contract_object`, `invoice`, `address`… todos expõem
+`uuid` (formato uuid, `readOnly`). **É chave externa melhor que o id inteiro** — estável, não
+colide entre entidades e casa com o tipo que o SCar já usa. **A tabela de vínculo deve guardar os
+dois** (`id_externo` numérico para montar as URLs, `uuid_externo` como identidade).
+
+### ⚠️ 2. Soft-delete: existe `deleted: boolean` em quase tudo
+Registro apagado no Mutual **pode continuar sendo devolvido pela API**. A carga precisa **tratar
+`deleted = true` explicitamente** — provavelmente ignorando na primeira carga e, na sincronia,
+inativando o que virou `deleted` do lado de lá. Sem isso, apagar no Mutual não repercute no SCar
+e a divergência cresce em silêncio.
+
+### 3. Paginação é `page` + `page_size`, teto aparente de **500**
+(`/quotation/` declara `default: 500` e "máximo: 500".) Com 500 por página, ~13 mil objetos são
+~26 requisições — a carga completa é questão de minutos, não de madrugada. **Confirmar o teto real
+nos demais endpoints e o rate limit.**
+
+## O que existe lá e não tem onde cair aqui (decisões, não esquecimentos)
+- **`third_party`** (terceiros do evento) traz um workflow de oficina inteiro que o SCar não tem:
+  data de entrada/entrega, cotação e compra de peças, previsão de entrega, **4 vistorias de
+  supervisão**, vistoria de qualidade, CNH do terceiro e `event_grau`
+  (`PERDA_TOTAL`/`PERDA_PARCIAL`/`ROUBO_FURTO`/`ASSISTENCIAS`).
+- **Comissão do consultor pode ser MONETÁRIA** (`monthly_commission_mode: MONETARY`,
+  `*_commission_amount`). O SCar só tem percentual (`numeric(6,4)`) — consultor com comissão em
+  reais **não tem representação**.
+- **`sales_team`** (time de vendas) é um nível entre regional e consultor que não existe no SCar.
+- **`smartphone`, `BENEFICIARIO`, `SMARTPHONE`** como `object_type`: eles protegem celular e
+  pessoas, não só veículo.
+- **`contract.contract_type`**: `RATEIO_MENSAL` × `RATEIO_PRESUMIDO`; e `contract_period`
+  (12/6/3/1) com `number_installments` — modelo de vigência que o SCar não modela.
+- ✅ **`contract_negotion_type`** bate **exatamente** com o nosso `tipo_negociacao`:
+  `NOVA_VENDA`·`REATIVACAO`·`SUBSTITUICAO`·`TROCA_TITULARIDADE`·`RENOVACAO`.
+
+## As perguntas que restam para a Mutual
+1. **Podemos ter um `supplier_id` para `/integrations/contract_objects/`?** (maior impacto)
+2. **Rate limit** e o teto real de `page_size`.
+3. Registros com `deleted = true` **aparecem** nas listagens?
+4. `/person/` e `/event/` **paginam** de fato (o contrato não declara `page`)? Como varrer a base
+   inteira de associados sem `updated_at`?
