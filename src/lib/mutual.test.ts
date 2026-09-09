@@ -138,6 +138,13 @@ describe('statusVeiculoDoContrato', () => {
     expect(statusVeiculoDoContrato('COISA_NOVA')).toBeNull();
     expect(statusVeiculoDoContrato(null)).toBeNull();
   });
+  // O enum do swagger NAO e exaustivo: este apareceu so na primeira leitura da
+  // base real (09/09/2026). Antes da 0063 ele caia no `null` e era contado como
+  // funil de venda — o lugar errado, porque e contrato ENCERRANDO.
+  it('AGUARDADO A RETIRADA DO RASTREADOR (visto em producao) vira inativo', () => {
+    expect(statusVeiculoDoContrato('AGUARDADO A RETIRADA DO RASTREADOR')).toBe('inativo');
+    expect(statusVeiculoDoContrato('aguardado a retirada do rastreador')).toBe('inativo');
+  });
 });
 
 describe('statusTituloMutual', () => {

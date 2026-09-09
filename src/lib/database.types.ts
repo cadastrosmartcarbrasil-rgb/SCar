@@ -2188,7 +2188,7 @@ export type LeadRegional = {
 // Views/Functions/Enums/CompositeTypes com o formato exato.
 // ---- 0062: integracao com o Mutual (Fase 1 - espelho de leitura) -----------
 export type EntidadeMutual =
-  | 'CONTRACT_OBJECT' | 'PERSON' | 'ADDRESS' | 'INVOICE' | 'EVENT'
+  | 'CONTRACT_OBJECT' | 'CONTRACT' | 'PERSON' | 'ADDRESS' | 'INVOICE' | 'EVENT'
   | 'REGIONAL' | 'CONSULTANT'
   | 'VEHICLE_TYPE' | 'VEHICLE_COLOR' | 'VEHICLE_CATEGORY' | 'VEHICLE_USE_TYPE' | 'EVENT_TYPE';
 
@@ -2246,6 +2246,13 @@ export type MutualQuarentena = {
   cpf_cnpj: string | null;
   situacao: string | null;
   motivos: string[];
+};
+
+/** 0063: o vocabulario do Mutual que o de-para ainda nao reconhece. */
+export type MutualStatusNaoMapeado = {
+  contract_status: string | null;
+  quantidade: number;
+  exemplo_placa: string | null;
 };
 
 export type MutualResumoCaptura = {
@@ -3348,7 +3355,14 @@ export type Database = {
       mutual_diagnostico: { Args: Record<string, never>; Returns: MutualDiagnostico[] };
       mutual_por_status: { Args: Record<string, never>; Returns: MutualPorStatus[] };
       mutual_filiais: { Args: Record<string, never>; Returns: MutualFilial[] };
-      mutual_quarentena: { Args: { p_limite?: number }; Returns: MutualQuarentena[] };
+      mutual_quarentena: {
+        Args: { p_limite?: number; p_somente_faturaveis?: boolean };
+        Returns: MutualQuarentena[];
+      };
+      mutual_status_nao_mapeados: {
+        Args: Record<string, never>;
+        Returns: MutualStatusNaoMapeado[];
+      };
       mutual_resumo_capturas: { Args: Record<string, never>; Returns: MutualResumoCaptura[] };
     };
     Enums: {

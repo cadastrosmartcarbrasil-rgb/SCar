@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import type { EntidadeMutual } from '@/lib/mutual';
 import type {
   MutualDiagnostico, MutualPorStatus, MutualFilial,
-  MutualQuarentena, MutualResumoCaptura,
+  MutualQuarentena, MutualResumoCaptura, MutualStatusNaoMapeado,
 } from '@/lib/database.types';
 
 /** O que ja esta na area de captura. */
@@ -59,12 +59,32 @@ export function useMutualFiliais() {
   });
 }
 
-export function useMutualQuarentena(limite = 200) {
+export function useMutualQuarentena(limite = 200, somenteFaturaveis = true) {
   const supabase = createClient();
   return useQuery<MutualQuarentena[]>({
-    queryKey: ['mutual', 'quarentena', limite],
+    queryKey: ['mutual', 'quarentena', limite, somenteFaturaveis],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('mutual_quarentena', { p_limite: limite });
+      const { data, error } = await supabase.rpc('mutual_quarentena', {
+        p_limite: limite,
+        p_somente_faturaveis: somenteFaturaveis,
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+/**
+ * O vocabulario do Mutual que o nosso de-para ainda nao cobre. O enum do
+ * swagger NAO e exaustivo — `AGUARDADO A RETIRADA DO RASTREADOR` so apareceu
+ * na base real. Sem esta lista, status desconhecido some como "funil de venda".
+ */
+export function useMutualStatusNaoMapeados() {
+  const supabase = createClient();
+  return useQuery<MutualStatusNaoMapeado[]>({
+    queryKey: ['mutual', 'status-nao-mapeados'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('mutual_status_nao_mapeados', {});
       if (error) throw error;
       return data ?? [];
     },

@@ -8,7 +8,7 @@ import {
 import { Button } from '@/components/ui/button';
 import {
   useMutualCapturas, useMutualDiagnostico, useMutualPorStatus, useMutualFiliais,
-  useMutualQuarentena, usePingMutual, useCapturarMutual,
+  useMutualQuarentena, useMutualStatusNaoMapeados, usePingMutual, useCapturarMutual,
 } from '@/hooks/use-mutual';
 import { ENTIDADES_INCREMENTAIS, ROTULO_QUARENTENA, type EntidadeMutual } from '@/lib/mutual';
 import type { MutualDiagnostico, SeveridadeDiagnostico } from '@/lib/database.types';
@@ -19,6 +19,7 @@ import type { MutualDiagnostico, SeveridadeDiagnostico } from '@/lib/database.ty
 
 const ENTIDADES: { chave: EntidadeMutual; rotulo: string; nota: string }[] = [
   { chave: 'CONTRACT_OBJECT', rotulo: 'Objetos de contrato', nota: 'a espinha: veiculo + associado + valor cobrado' },
+  { chave: 'CONTRACT', rotulo: 'Contratos', nota: 'e AQUI que moram o dia de vencimento e a unidade' },
   { chave: 'REGIONAL', rotulo: 'Filiais', nota: 'de-para com as nossas unidades' },
   { chave: 'PERSON', rotulo: 'Associados', nota: 'ficha completa (sem filtro por alteracao)' },
   { chave: 'ADDRESS', rotulo: 'Enderecos', nota: 'entidade propria no Mutual' },
@@ -31,6 +32,12 @@ const ENTIDADES: { chave: EntidadeMutual; rotulo: string; nota: string }[] = [
   { chave: 'VEHICLE_USE_TYPE', rotulo: 'Tipos de uso', nota: 'tabela de dominio' },
   { chave: 'EVENT_TYPE', rotulo: 'Tipos de evento', nota: 'tabela de dominio' },
 ];
+
+// A ordem em que a gestao le: quanto tem -> o que trava a carteira viva ->
+// cadastro -> unicidade -> estrutura -> e, por ultimo, o acervo encerrado, que
+// e informativo. Sem isto os grupos sairiam em ordem alfabetica e "ACERVO
+// INATIVO" abriria o relatorio, que e o oposto da prioridade.
+const ORDEM_GRUPOS = ['VOLUME', 'BLOQUEIO', 'CADASTRO', 'UNICIDADE', 'ESTRUTURA', 'ACERVO INATIVO'];
 
 const TOM: Record<SeveridadeDiagnostico, string> = {
   OK: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
@@ -59,7 +66,9 @@ export default function IntegracaoMutualPage() {
   const diagnostico = useMutualDiagnostico();
   const porStatus = useMutualPorStatus();
   const filiais = useMutualFiliais();
-  const quarentena = useMutualQuarentena(200);
+  const [soFaturaveis, setSoFaturaveis] = useState(true);
+  const quarentena = useMutualQuarentena(200, soFaturaveis);
+  const naoMapeados = useMutualStatusNaoMapeados();
   const ping = usePingMutual();
   const capturar = useCapturarMutual();
   const [paginas, setPaginas] = useState(5);
@@ -94,9 +103,12 @@ export default function IntegracaoMutualPage() {
     );
   }
 
-  const grupos = (diagnostico.data ?? []).reduce<Record<string, MutualDiagnostico[]>>((acc, d) => {
+  const porGrupo = (diagnostico.data ?? []).reduce<Record<string, MutualDiagnostico[]>>((acc, d) => {
     (acc[d.grupo] ??= []).push(d); return acc;
   }, {});
+  const grupos = Object.entries(porGrupo).sort(
+    ([a], [b]) => (ORDEM_GRUPOS.indexOf(a) + 1 || 99) - (ORDEM_GRUPOS.indexOf(b) + 1 || 99),
+  );
   const criticos = (diagnostico.data ?? []).filter((d) => d.severidade === 'CRITICO' && d.valor > 0);
 
   return (
@@ -204,7 +216,7 @@ export default function IntegracaoMutualPage() {
           </p>
         )}
         <div className="space-y-4">
-          {Object.entries(grupos).map(([grupo, itens]) => (
+          {grupos.map(([grupo, itens]) => (
             <div key={grupo}>
               <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">{grupo}</h3>
               <div className="overflow-x-auto">
@@ -229,6 +241,36 @@ export default function IntegracaoMutualPage() {
           ))}
         </div>
       </Secao>
+
+      {(naoMapeados.data ?? []).length > 0 && (
+        <Secao titulo="Status que o de-para NAO reconhece" icone={ShieldAlert}>
+          <p className="mb-3 text-xs text-slate-500">
+            O enum do swagger deles <strong>nao e exaustivo</strong>. Estes status vieram da base
+            real e hoje <strong>nao entram</strong> — cada um precisa de uma decisao antes da carga,
+            senao vira veiculo faltando na importacao sem ninguem perceber.
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs uppercase tracking-wide text-slate-500">
+                  <th className="pb-2">Status no Mutual</th>
+                  <th className="pb-2 text-right">Quantidade</th>
+                  <th className="pb-2">Exemplo (placa)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(naoMapeados.data ?? []).map((s) => (
+                  <tr key={s.contract_status ?? '-'} className="border-t border-slate-100">
+                    <td className="py-2 text-slate-800">{s.contract_status ?? '(sem status)'}</td>
+                    <td className="py-2 text-right tnum text-slate-900">{s.quantidade}</td>
+                    <td className="py-2 tnum text-slate-600">{s.exemplo_placa ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Secao>
+      )}
 
       {(porStatus.data ?? []).length > 0 && (
         <Secao titulo="Situacao dos contratos (de-para)" icone={ListChecks}>
@@ -289,10 +331,21 @@ export default function IntegracaoMutualPage() {
       )}
 
       {(quarentena.data ?? []).length > 0 && (
-        <Secao titulo={`Quarentena (${quarentena.data?.length})`} icone={ShieldAlert}>
+        <Secao
+          titulo={`Quarentena (${quarentena.data?.length})`}
+          icone={ShieldAlert}
+          acao={
+            <Button variant="ghost" onClick={() => setSoFaturaveis((v) => !v)}>
+              {soFaturaveis ? 'Ver o acervo inteiro' : 'So a carteira viva'}
+            </Button>
+          }
+        >
           <p className="mb-3 text-xs text-slate-500">
             Linhas que <strong>nao entrariam</strong> na base como estao. Corrigir no Mutual e
-            puxar de novo — a captura e re-executavel.
+            puxar de novo — a captura e re-executavel.{' '}
+            {soFaturaveis
+              ? 'Mostrando so a carteira que vai FATURAR: num contrato encerrado, valor e dia de vencimento em branco sao o esperado, nao um problema.'
+              : 'Mostrando o acervo inteiro. No contrato encerrado, valor e vencimento nao contam como motivo — so placa, CPF e nome.'}
           </p>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

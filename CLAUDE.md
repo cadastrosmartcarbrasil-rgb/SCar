@@ -96,8 +96,16 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
   espelho de leitura e diagnóstico. **Não escreve em `clientes`, `veiculos`, `titulos_financeiros`,
   `faturas` nem `eventos_sinistro`** — cria uma área de captura própria e devolve um relatório.
   Sem ela a tela `/integracao/mutual` não abre. Ver a seção própria.
-- **Próxima migration livre: `0063`.** As `0060`, `0061` e `0062` já estão no branch de trabalho e
-  ainda **não foram aplicadas em produção** (rodar nessa ordem, depois das `0045`..`0059`).
+- **`0063_mutual_diagnostico_faturavel` é NOVA e CORRIGE a `0062`** — a primeira leitura da base
+  real mostrou que o diagnóstico contava bloqueio (valor, dia de vencimento, ativação) sobre
+  **contrato encerrado**, onde a ausência é o esperado: 2.432 falsos CRÍTICOS afogavam os poucos
+  verdadeiros. Agora o grupo `BLOQUEIO` conta **só sobre quem entraria faturável** (os três status
+  de `veiculo_faturavel`, 0024) e o acervo inativo vira grupo informativo. Junto vieram
+  `mutual_status_nao_mapeados()` (o enum do swagger **não é exaustivo**) e `/contract/` como
+  entidade capturável — `due_day` e `regional` **não estão** no objeto do contrato.
+- **Próxima migration livre: `0064`.** As `0060`, `0061` e `0063` já estão no branch de trabalho e
+  ainda **não foram aplicadas em produção** (rodar nessa ordem, depois das `0045`..`0059`); a
+  `0062` JÁ FOI aplicada.
 - **`.claude/hooks/session-start.sh` é NOVO** — avisa quando a sessão nasce no branch errado e
   instala as dependências. Ele **só roda se estiver no branch que a sessão clonou**; enquanto o
   default do GitHub for o branch morto, uma sessão que caia lá não terá o hook. A correção
@@ -199,9 +207,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0059`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **36 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 417 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0063`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **40 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 470 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Todos os portais e páginas
@@ -458,7 +466,7 @@ Consequências que o levantamento original não tinha:
 - **Histórico pago reescreve DRE de mês fechado** (`dre_movimentos`, 0032) e, na convivência, faz
   os dois sistemas contarem a mesma receita. O DRE do SCar começa na data de corte.
 
-## Integração com o Mutual — Fase 1 (0062): espelho de leitura e diagnóstico
+## Integração com o Mutual — Fase 1 (0062 + 0063): espelho de leitura e diagnóstico
 > Plano completo e de-para campo a campo: **`docs/modulos/integracao-mutual.md`**. Leia antes de
 > tocar neste módulo.
 
@@ -481,9 +489,12 @@ Consequências que o levantamento original não tinha:
 - **A carga é dirigida por CONTRATO, não por associado.** `/person/` não tem `updated_at` nem
   paginação declarada: é consulta pontual, não feed. A espinha é
   `/contract/contract_object/nested/` (incremental + paginado, já traz veículo e associado).
-- **O valor cobrado hoje sai de `contract_object.final_total_value`**, o dia de
-  `due_day` e a ativação de `first_activation_date` — os três no mesmo objeto. É o que a decisão
-  de **preço congelado** exige (o motor `cotar_plano` passa a valer só para contratos novos).
+- **O valor cobrado hoje sai de `contract_object.final_total_value`** e a ativação de
+  `first_activation_date` — é o que a decisão de **preço congelado** exige (o motor `cotar_plano`
+  passa a valer só para contratos novos). **Mas o `due_day` e a unidade (`regional`) NÃO estão no
+  objeto:** medido em produção, vieram vazios em **2.497 de 2.497** e em **100%**. Eles moram no
+  **`/contract/`**, que virou entidade capturável na `0063`. Sem puxar os dois endpoints a carga
+  nasceria com a carteira inteira na matriz e vencendo no dia 10.
 - **R$ 0,00 NÃO congela — vaza.** `valor_mensalidade_veiculo` (0024) só respeita o override quando
   `> 0`; veículo de cortesia importado com zero cairia no `cotar_plano` e o associado que nunca
   pagou receberia boleto. Por isso o diagnóstico marca valor nulo **ou zero** como CRÍTICO.
@@ -499,8 +510,22 @@ Consequências que o levantamento original não tinha:
   e o `uuid_externo` usa `coalesce` para um payload parcial não apagar a chave externa estável.
 - **Softruck, Zelo, Apoio, Split Risk, redeveiculos e Ativo247 estão FORA** — a associação não tem
   parceria com elas. Só `object_type = VEHICLE` (e `IMPLEMENTOS`) entra.
+- **BLOQUEIO conta só a CARTEIRA VIVA (0063).** Valor, dia de vencimento e data de ativação são
+  problema de quem vai **faturar** — nos mesmos três status de `veiculo_faturavel` (`ativo`,
+  `em_evento`, `vistoria_pendente`). Contrato encerrado sem valor é o esperado, e marcá-lo como
+  CRÍTICO afogava o sinal real (foi o que aconteceu: 2.432 falsos críticos na primeira leitura).
+  O acervo inativo aparece no grupo **ACERVO INATIVO**, informativo, e a quarentena olha a
+  carteira viva por padrão (`p_somente_faturaveis`, com botão na tela para ver tudo).
+- **O ENUM DO SWAGGER NÃO É EXAUSTIVO.** `AGUARDADO A RETIRADA DO RASTREADOR` apareceu só na base
+  real e caía no `else null`, ou seja, era contado como *funil de venda*. Status desconhecido não
+  pode sumir: `mutual_status_nao_mapeados()` lista o que o de-para não reconhece (fora o funil
+  conhecido) e o diagnóstico avisa. **Vocabulário novo do Mutual = veículo faltando na carga.**
+- **A amostra da API vem dos MAIS ANTIGOS primeiro.** Nos 2.500 primeiros de 17.610 objetos:
+  2.438 INATIVO contra 35 ATIVO. Nenhum percentual de amostra parcial fala da carteira — só
+  concluir com a captura completa (o botão continua de onde parou, via `proxima_pagina`).
 - **RPCs:** `mutual_registrar_captura` (só `tem_acesso_global`), `mutual_diagnostico`,
-  `mutual_por_status`, `mutual_filiais`, `mutual_quarentena`, `mutual_resumo_capturas`.
+  `mutual_por_status`, `mutual_filiais`, `mutual_quarentena`, `mutual_status_nao_mapeados`,
+  `mutual_resumo_capturas`.
 
 ## O que é
 Sistema de gestão para **associação de proteção veicular** (associados, frota, eventos/sinistros,
@@ -1096,6 +1121,27 @@ indice + SLA + custo + **custo por veiculo ativo** + reincidentes), `_por_servic
 limite do catalogo e QUANTOS VEICULOS JA ESTAO NO TETO), `_por_praca` (traz a frota da praca junto:
 a **taxa** e que aponta o alvo, nao o volume), `_serie`, `_reincidencia` e `_frota_situacao`;
 helper `norm_cidade`. Todas SECURITY DEFINER + `escopo_regional` + o rito de revoke da 0052).
+· `0062_integracao_mutual` (FASE 1 da integracao com o MUTUAL — espelho de LEITURA e diagnostico:
+`mutual_captura` (entidade + id_externo unico, payload jsonb, soft-delete) e `mutual_sincronias`;
+os espelhos em SQL da logica de `src/lib/mutual.ts` (`mutual_texto`, `mutual_status_veiculo`,
+`mutual_tipo_pessoa`); e as RPCs `mutual_registrar_captura` (upsert re-executavel, so
+`tem_acesso_global`), `mutual_diagnostico`, `mutual_por_status`, `mutual_filiais`,
+`mutual_quarentena` e `mutual_resumo_capturas`. **Nada escreve na operacao** — ha teste provando
+que `clientes`, `veiculos`, `titulos_financeiros` e `faturas` seguem zerados).
+· `0063_mutual_diagnostico_faturavel` (CORRETIVA da 0062, escrita a partir da PRIMEIRA LEITURA DA
+BASE REAL: (A) o grupo `BLOQUEIO` do diagnostico contava valor/dia/ativacao sobre TODO objeto
+importavel, inclusive contrato INATIVO — onde a ausencia e o esperado, porque veiculo inativo nao
+passa em `veiculo_faturavel` (0024) e nunca gera boleto. Foram 2.432 falsos CRITICOS afogando os
+verdadeiros. Agora a conta e feita sobre a CTE `fat` (os tres status de `veiculo_faturavel`), os
+indicadores ganharam o prefixo "Faturavel", entrou o VOLUME "Entrariam FATURAVEIS (a carteira
+viva)" e o acervo encerrado virou o grupo informativo `ACERVO INATIVO`; (B) `/contract/` vira
+entidade capturavel — `due_day` veio vazio em 2.497 de 2.497 e `regional` em 100% dos objetos, ou
+seja os dois moram no CONTRATO; (C) `AGUARDADO A RETIRADA DO RASTREADOR`, ausente do enum do
+swagger, entra no de-para como inativo, e a nova `mutual_status_nao_mapeados()` lista todo status
+desconhecido que nao seja funil — sem ela, vocabulario novo do Mutual vira veiculo faltando na
+carga, em silencio; (D) `mutual_quarentena` recriada com `p_somente_faturaveis` (muda a
+assinatura, entao e drop + create) e dois indicadores novos: placa fora do padrao e objeto sem
+unidade declarada).
 
 ## Módulos (status: todos funcionais)
 Painel/Visão Geral (`/dashboard`, 2 abas: indicadores da operação + **Assistência 24h** — o painel

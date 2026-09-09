@@ -18,6 +18,10 @@ import type { StatusVeiculo, TipoPessoa, StatusTitulo } from '@/lib/database.typ
  *  fora por decisao do usuario: a associacao nao tem parceria com elas. */
 export const ENTIDADES_MUTUAL = {
   CONTRACT_OBJECT: '/contract/contract_object/nested/',
+  // Medido em producao (09/09/2026): no objeto, `due_day` veio vazio em 2.497 de
+  // 2.497 e `regional` em 100% — os dois campos existem no contrato TAMBEM, e e
+  // de la que eles precisam sair.
+  CONTRACT: '/contract/',
   PERSON: '/person/',
   ADDRESS: '/core/address/',
   INVOICE: '/invoice/',
@@ -34,10 +38,10 @@ export const ENTIDADES_MUTUAL = {
 export type EntidadeMutual = keyof typeof ENTIDADES_MUTUAL;
 
 /** Quais entidades aceitam `updated_at__gte` (medido no swagger, 09/09/2026). */
-export const ENTIDADES_INCREMENTAIS: EntidadeMutual[] = ['CONTRACT_OBJECT', 'INVOICE'];
+export const ENTIDADES_INCREMENTAIS: EntidadeMutual[] = ['CONTRACT_OBJECT', 'CONTRACT', 'INVOICE'];
 
 /** Quais paginam com `page`/`page_size`. PERSON e EVENT nao declaram. */
-export const ENTIDADES_PAGINADAS: EntidadeMutual[] = ['CONTRACT_OBJECT', 'INVOICE', 'ADDRESS'];
+export const ENTIDADES_PAGINADAS: EntidadeMutual[] = ['CONTRACT_OBJECT', 'CONTRACT', 'INVOICE', 'ADDRESS'];
 
 /**
  * Monta a URL da API do Mutual.
@@ -196,6 +200,10 @@ export function statusVeiculoDoContrato(
     case 'EXPIRADO':
     case 'SUBSTITUIDO':
     case 'REMOVIDO':
+    // Visto na base real e AUSENTE do enum do swagger: o contrato esta se
+    // encerrando e o equipamento vai ser recolhido. O enum do contrato deles
+    // NAO e exaustivo — por isso `mutual_status_nao_mapeados()` existe.
+    case 'AGUARDADO A RETIRADA DO RASTREADOR':
       return 'inativo';
     default:
       // CRIADO, GERADO_PENDENCIA, AGUARDANDO_ACEITE, PENDENTE_ANALISE,

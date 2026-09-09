@@ -129,13 +129,13 @@ begin
 
   -- A MINA Nº 2: sem data de ativacao (103)
   select valor, severidade into rec from mutual_diagnostico()
-   where indicador = 'Sem data de ativacao';
+   where indicador = 'Faturavel sem data de ativacao';
   assert rec.valor = 1 and rec.severidade = 'CRITICO',
     format('sem data de ativacao: %s / %s', rec.valor, rec.severidade);
 
   -- A ARMADILHA DO ZERO: cortesia com 0,00 conta como "sem valor cobrado"
   select valor, severidade into rec from mutual_diagnostico()
-   where indicador = 'Sem valor cobrado (nulo ou zero)';
+   where indicador = 'Faturavel sem valor cobrado (nulo ou zero)';
   assert rec.valor = 1 and rec.severidade = 'CRITICO',
     format('R$ 0,00 tem de ser CRITICO (cortesia voltaria a ser cobrada): %s', rec.valor);
 
@@ -146,7 +146,7 @@ begin
 
   -- sem dia de vencimento (104)
   select valor into n from mutual_diagnostico()
-   where indicador = 'Sem dia de vencimento';
+   where indicador = 'Faturavel sem dia de vencimento';
   assert n = 1, format('1 sem dia, veio %s', n);
 
   -- contrato 9001 tem dois veiculos

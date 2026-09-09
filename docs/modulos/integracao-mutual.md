@@ -1064,6 +1064,95 @@ Não cria associado, veículo, fatura, título nem boleto. A suite `0062` termin
 `clientes`, `veiculos`, `titulos_financeiros` e `faturas` seguem **zerados** depois de toda a
 sondagem. A carga é a Fase 3, e ela começa só quando os números do diagnóstico estiverem na mesa.
 
+---
+
+# 📊 A PRIMEIRA LEITURA DA BASE REAL (09/09/2026) — e a corretiva `0063`
+
+A Fase 1 subiu, a conexão fechou e a primeira sondagem trouxe **2.500 dos 17.610** objetos de
+contrato. Os números derrubaram três coisas que a amostra sintética dos testes não conseguia
+mostrar.
+
+## O que a API disse
+| Entidade | Total remoto |
+|---|---|
+| Objetos de contrato | **17.610** (2.500 capturados) |
+| Faturas | **205.705** |
+| Endereços | 44.935 |
+| Associados | 12.627 |
+| Eventos | 2.885 |
+| Consultores | 379 |
+| Filiais | 10 |
+| Tipos de evento | 68 · Tipos de veículo | 3 |
+
+## Achado 1 — a amostra está enviesada, e isso não é defeito do diagnóstico
+A API devolve **os mais antigos primeiro**. Nos 2.500 primeiros: **2.438 INATIVO** contra
+**35 ATIVO**. Ou seja, o que foi lido é quase todo **acervo encerrado** — e nenhum percentual
+dessa amostra representa a carteira. **Só faz sentido concluir qualquer coisa com os 17.610
+capturados.** O botão continua de onde parou (`proxima_pagina`), então é clicar até acabar.
+
+## Achado 2 — o diagnóstico estava contando errado (erro meu, corrigido na `0063`)
+"Sem valor cobrado" apareceu em **2.432** linhas marcadas **CRÍTICO**. Estava errado: dessas,
+quase todas são contrato **INATIVO**, e veículo inativo **não passa em `veiculo_faturavel()`**
+(0024) — nunca gera fatura, nunca vira boleto. Valor e dia de vencimento em branco ali são o
+**esperado**, não um impedimento.
+
+O efeito prático do erro é o pior possível num relatório de qualidade: **2.432 falsos críticos
+afogavam os poucos verdadeiros**. A `0063` separa as duas contas:
+
+- **`BLOQUEIO`** passa a ser calculado **só sobre quem entraria faturável** (os mesmos três
+  status de `veiculo_faturavel`: `ativo`, `em_evento`, `vistoria_pendente`), e os indicadores
+  ganharam o prefixo **"Faturável…"** para dizer isso na própria linha.
+- **`ACERVO INATIVO`** é um grupo novo, **informativo**, onde o mesmo dado aparece sem alarme.
+- **`VOLUME`** ganhou *"Entrariam FATURÁVEIS (a carteira viva)"* — o número que decide a carga.
+- A **quarentena** passou a olhar, por padrão, só a carteira viva (`p_somente_faturaveis`), com
+  um botão na tela para ver o acervo inteiro. No acervo, valor/dia/ativação **não contam como
+  motivo**: sobram placa, CPF e nome, que são `not null` no SCar de qualquer jeito.
+
+## Achado 3 — `due_day` e `regional` NÃO estão no objeto do contrato
+Medido: `due_day` vazio em **2.497 de 2.497** e `regional` em **100%**. Os dois campos existem
+**também no `/contract/`**, e é de lá que precisam sair. O de-para acima já apontava o
+`contract_object` como espinha — segue verdadeiro para veículo, associado e valor —, mas
+**vencimento e unidade exigem o segundo endpoint**. `/contract/` entrou como entidade capturável
+(`ENTIDADES_MUTUAL.CONTRACT`, incremental e paginada) e a tela ganhou o cartão *Contratos*.
+
+> **Isto não é detalhe.** A unidade (`regional_id`) atravessa RLS, `escopo_regional()` e todos os
+> painéis; o dia de vencimento decide o boleto. Sem `/contract/` a carga nasceria com a carteira
+> inteira na matriz e vencendo no dia 10.
+
+## Achado 4 — o enum do swagger NÃO é exaustivo
+Apareceu **`AGUARDADO A RETIRADA DO RASTREADOR`** (3 objetos), que não existe na especificação.
+Ele caía no `else null` e era contado como *funil de venda* — o lugar errado, porque é contrato
+**encerrando com equipamento a recolher**. Agora vira `inativo`, dos dois lados
+(`src/lib/mutual.ts` e `mutual_status_veiculo`), com teste em cada um.
+
+E porque o problema vai voltar, a `0063` criou **`mutual_status_nao_mapeados()`**: lista todo
+status que o de-para não reconhece **e que não é funil conhecido**, com quantidade e uma placa de
+exemplo. O diagnóstico traz o total como *ATENÇÃO*, e a tela mostra a lista. Sem isso, vocabulário
+novo do Mutual vira **veículo faltando na importação, em silêncio**.
+
+## Achado 5 — placa em minúscula
+A quarentena trouxe `FTz3b34`, `TKW6a20`. A carga tem de **normalizar para caixa alta**, como
+manda a convenção do projeto (`src/lib/texto.ts`) — e o diagnóstico agora aponta quantas estão
+fora do padrão, em vez de deixar isso para a Fase 3 descobrir.
+
+## O que a `0063` entrega
+| Peça | Arquivo |
+|---|---|
+| Migration corretiva | `supabase/migrations/0063_mutual_diagnostico_faturavel.sql` |
+| Suite de banco | `supabase/tests/0063_mutual_diagnostico_faturavel.test.sql` |
+| Espelho puro | `src/lib/mutual.ts` · `src/lib/mutual.test.ts` |
+| Tela | `src/app/(dashboard)/integracao/mutual/page.tsx` · `src/hooks/use-mutual.ts` |
+
+**Validação:** `npm run validate` limpo — **470 testes** Vitest, migrations `0001..0063` +
+`schema.sql`, **40 suites** de banco e o build.
+
+## O que fazer agora, nesta ordem
+1. **Terminar de puxar os objetos de contrato** (clicar até a mensagem dizer "acabou esta
+   entidade") — só então o diagnóstico fala da base, e não dos registros mais velhos dela.
+2. **Puxar `Contratos` (`/contract/`)** e confirmar que `due_day` e a unidade estão lá.
+3. Ler de novo: *Entrariam FATURÁVEIS* e o grupo `BLOQUEIO` são as duas linhas que decidem se a
+   Fase 3 pode começar.
+
 ## Próximo passo (Fase 2)
 De-para de filiais → `regionais` (tela de correspondência, revisada por humano) e a tabela de
-vínculo `(sistema, entidade, id_externo, uuid_externo, registro_id)`. Migration `0063`.
+vínculo `(sistema, entidade, id_externo, uuid_externo, registro_id)`. Migration **`0064`**.
