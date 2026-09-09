@@ -218,16 +218,22 @@ function Campo({ rotulo, valor }: { rotulo: string; valor?: string | null }) {
   );
 }
 
-function Entrada({ rotulo, valor, onChange, type = 'text', inputMode, className, sufixo, maxLength }: {
+function Entrada({ rotulo, valor, onChange, type = 'text', inputMode, className, sufixo, maxLength, autoComplete }: {
   rotulo: string; valor: string; onChange: (v: string) => void;
-  type?: string; inputMode?: 'tel' | 'numeric'; className?: string; sufixo?: string; maxLength?: number;
+  type?: string; inputMode?: 'tel' | 'numeric'; className?: string; sufixo?: string;
+  maxLength?: number; autoComplete?: string;
 }) {
+  // Campo de senha sem `autocomplete` faz o gerenciador do navegador nao
+  // preencher nem oferecer salvar — e e o aviso que o Chrome mostra no F12.
+  // Aqui e sempre TROCA de senha, entao o padrao e `new-password`.
+  const preenchimento = autoComplete ?? (type === 'password' ? 'new-password' : undefined);
   return (
     <label className={`block ${className ?? ''}`}>
       <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{rotulo}</span>
       <div className="relative mt-1">
         <input
           type={type} value={valor} inputMode={inputMode} maxLength={maxLength}
+          autoComplete={preenchimento}
           // Mesma regra do <Input> do sistema: cadastro em caixa alta, com
           // e-mail e senha preservados. Aqui a decisao usa o proprio rotulo,
           // porque este campo do portal nao tem `name`.

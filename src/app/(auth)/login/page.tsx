@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { ShieldCheck } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { mensagemDeLogin, ehSessaoCorrompida, destinoDoLogin } from '@/lib/auth-mensagens';
 
 // Login do painel administrativo (staff): e-mail + senha.
 // useSearchParams exige um limite de Suspense para a geracao estatica.
@@ -29,15 +30,23 @@ function LoginForm() {
     setLoading(true);
     const { data, error } = await supabase.auth.signInWithPassword({ email, password: senha });
     if (error) {
+      // Sessao morta guardada no navegador trava o proximo login: o cliente
+      // fica tentando renovar um token que o servidor ja recusou. Limpar SO o
+      // lado local resolve, e o proximo clique entra normalmente.
+      if (ehSessaoCorrompida(error.message)) {
+        await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+      }
       setLoading(false);
-      toast.error(error.message);
+      toast.error(mensagemDeLogin(error.message));
       return;
     }
 
     // Cada perfil entra na sua casa: o gestor de franquia no portal da
     // unidade, o vendedor no portal dele. Um `redirect` explicito na URL
     // sempre vence.
-    let destino = params.get('redirect');
+    // O `?redirect=` vem da URL: `destinoDoLogin` so deixa passar caminho
+    // interno (ver o porque em auth-mensagens.ts).
+    let destino = destinoDoLogin(params.get('redirect'), '');
     if (!destino && data.user) {
       const { data: perfil } = await supabase
         .from('usuarios').select('papel, regional_id').eq('id', data.user.id).maybeSingle();
@@ -49,7 +58,7 @@ function LoginForm() {
       }
     }
     setLoading(false);
-    router.push(destino ?? '/dashboard');
+    router.push(destino || '/dashboard');
     router.refresh();
   }
 
@@ -68,6 +77,9 @@ function LoginForm() {
           <label className="text-sm text-slate-600">E-mail</label>
           <input
             type="email"
+            name="email"
+            autoComplete="username"
+            autoFocus
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -78,6 +90,8 @@ function LoginForm() {
           <label className="text-sm text-slate-600">Senha</label>
           <input
             type="password"
+            name="password"
+            autoComplete="current-password"
             required
             value={senha}
             onChange={(e) => setSenha(e.target.value)}

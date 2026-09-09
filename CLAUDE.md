@@ -209,7 +209,7 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 ### Estado de validação (fim da fase)
 - **Migrations `0001`..`0063`** + `schema.sql` consolidado aplicam limpos no harness local.
 - **40 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 470 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Vitest: 478 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Todos os portais e páginas
@@ -2183,6 +2183,27 @@ no fim — o runner procura por "PASSARAM") e rode `npm run schema`.
   o corpo de uma função plpgsql só é validado na CHAMADA, então a falta da coluna não aparece na
   aplicação — aparece com o cliente na tela (0043).
 
+- **Redirecionar sem levar os cookies APAGA a limpeza da sessão.** No
+  `updateSession` (middleware), o `getUser()` pode escrever cookies em `response` —
+  e quando o refresh token é recusado, o que ele escreve é a ORDEM DE APAGAR a
+  sessão morta. Devolver um `NextResponse.redirect` novo joga essa limpeza fora:
+  o navegador fica com um cookie inválido que ninguém remove, toda rota
+  protegida bate no login e o próprio login parte de uma sessão corrompida.
+  Sintoma: **"deslogou e não loga mais"**, que só saía limpando os cookies do
+  site na mão. Todo `NextResponse.redirect` do middleware tem de copiar
+  `response.cookies` antes de retornar.
+- **Campo de senha SEM `autocomplete` não é só aviso do Chrome.** Sem
+  `autoComplete="username"` no e-mail e `"current-password"` na senha, o
+  gerenciador do navegador não preenche nem oferece salvar — e quem dependia do
+  preenchimento automático "não consegue mais entrar". O `/login` do staff era o
+  único campo de senha do sistema sem isso.
+- **`?redirect=` da URL é escrito por quem manda o link, não por nós.** O login
+  usava direto no `router.push`, então `/login?redirect=https://site-falso/`
+  levava a pessoa para fora do domínio logo depois de digitar a senha (phishing
+  com a nossa tela legítima). Passa por `destinoDoLogin` (`src/lib/auth-mensagens.ts`,
+  testado), que só aceita caminho interno e barra também `/api/*` — logout durante
+  uma chamada de API gravava `redirect=/api/...` e o login terminava numa tela de
+  JSON, indistinguível de "não entrou".
 - Erro `syntax error near "//"` no SQL Editor = arquivo TypeScript colado por engano; SQL começa com `--`.
 - Trigger com CASE retornando enum: fazer cast `(case ... end)::meu_enum`.
 - Comparar `old.status` (enum) com `''` quebra; usar `is [not] distinct from`.

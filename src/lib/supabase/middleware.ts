@@ -44,7 +44,17 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = path.startsWith('/portal') ? '/portal/login' : '/login';
     url.searchParams.set('redirect', path);
-    return NextResponse.redirect(url);
+    const redirecionamento = NextResponse.redirect(url);
+    // ATENCAO: o `getUser()` acima pode ter escrito cookies em `response` —
+    // quando o refresh token expira ou e recusado, o Supabase manda APAGAR os
+    // cookies da sessao morta. Devolver um `NextResponse.redirect` novo joga
+    // essa limpeza fora, e o navegador fica com um cookie de sessao invalido
+    // que NUNCA e removido: toda rota protegida bate no login e o proprio
+    // login parte de uma sessao corrompida. Era o "deslogou e nao loga mais",
+    // que so saia limpando os cookies do site na mao. Aqui a limpeza viaja
+    // junto com o redirecionamento.
+    response.cookies.getAll().forEach((c) => redirecionamento.cookies.set(c));
+    return redirecionamento;
   }
 
   return response;
