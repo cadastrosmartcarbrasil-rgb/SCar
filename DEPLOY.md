@@ -93,6 +93,52 @@ GOOGLE_MAPS_API_KEY=sua_chave
 
 Sem a chave, o proxy `/api/v1/geo` cai no provedor público automaticamente.
 
+### Se o build parar em `failed to resolve source metadata` / `i/o timeout`
+
+```
+failed to solve: node:20-alpine: ... dial tcp: lookup registry-1.docker.io
+on 127.0.0.53:53: read udp ... i/o timeout
+```
+
+**Isso não é erro do projeto** — o Docker não conseguiu resolver DNS no VPS.
+O `127.0.0.53` é o resolvedor local do sistema (`systemd-resolved`); quando ele
+para de responder, nada que precise de nome de domínio funciona, e o primeiro a
+reclamar é o `FROM node:20-alpine`. Como o build falhou, **o contêiner antigo
+continua no ar**: o site não caiu, só não foi atualizado.
+
+Tudo abaixo roda **dentro do VPS**.
+
+**1) Confirme que é DNS, e não a rede inteira:**
+```bash
+ping -c1 8.8.8.8                      # rede OK? (responde = a rede está viva)
+getent hosts registry-1.docker.io     # nome resolve? (vazio = é DNS mesmo)
+systemctl status systemd-resolved --no-pager | head -5
+```
+
+**2) O conserto que resolve na maioria das vezes:**
+```bash
+systemctl restart systemd-resolved
+getent hosts registry-1.docker.io     # tem de devolver um IP agora
+```
+Resolvendo, repita o deploy normal (`git pull` + `docker compose up -d --build`).
+
+**3) Se o `systemd-resolved` continuar mudo**, aponte um DNS público de forma
+permanente (`/etc/systemd/resolved.conf`):
+```bash
+printf '[Resolve]\nDNS=8.8.8.8 1.1.1.1\nFallbackDNS=9.9.9.9\n' >> /etc/systemd/resolved.conf
+systemctl restart systemd-resolved
+getent hosts registry-1.docker.io
+```
+
+**4) Precisa subir AGORA e o DNS não coopera:** se a imagem base já está no
+servidor (`docker images | grep node`), o **builder antigo** usa a cópia local
+em vez de perguntar ao registro:
+```bash
+DOCKER_BUILDKIT=0 docker compose up -d --build
+```
+Isso é contorno, não conserto — o `npm ci` do build também precisa de rede, e o
+próximo deploy vai esbarrar no mesmo DNS. Feche o item 2 ou 3.
+
 ## 3. Conferência
 
 | Sintoma | Causa provável |
@@ -101,6 +147,7 @@ Sem a chave, o proxy `/api/v1/geo` cai no provedor público automaticamente.
 | Tela abre e quebra ao carregar dados | Falta rodar a migration daquele módulo no Supabase |
 | `not a git repository` | O comando rodou no Windows, não no servidor |
 | `couldn't find remote ref` | Branch errado no `git pull` |
+| `failed to resolve source metadata` / `i/o timeout` | DNS do VPS fora do ar — ver a seção acima; o site **não** caiu |
 
 ## Branch de produção
 
