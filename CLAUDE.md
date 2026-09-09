@@ -111,7 +111,14 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
   contratos, a tela **diz isso** em vez de acusar o dado. Junto veio `mutual_periodicidade()`,
   por causa do que a mesma tela revelou: contrato **Semestral, 6 parcelas, parcela R$ 120,
   total R$ 720** — `valor_mensalidade` (0024) é MENSAL, e importar o total cobraria 6× a mais.
-- **Próxima migration livre: `0065`.** As `0060`, `0061`, `0063` e `0064` já estão no branch de trabalho e
+- **`0065_mutual_inspecionar_campos` é NOVA** — a carga completa (17.611 objetos + 17.616
+  contratos) respondeu a pergunta do valor e abriu outra. **`final_total_value` é a PARCELA**
+  (semestral mediana R$ 164 × mensal R$ 204,50 — fosse o total, o semestral seria ~6×), então a
+  carga grava direto em `valor_mensalidade`. **Mas a unidade não está em `regional` em lugar
+  nenhum:** 3.527 de 3.527 faturáveis sem ela, com os contratos todos capturados. Em vez de
+  chutar um terceiro lugar, entrou `mutual_campos(entidade, caminho)` — o inspetor que lista as
+  chaves do payload, quantas vêm preenchidas e um exemplo.
+- **Próxima migration livre: `0066`.** As `0060`, `0061`, `0063`, `0064` e `0065` já estão no branch de trabalho e
   ainda **não foram aplicadas em produção** (rodar nessa ordem, depois das `0045`..`0059`); a
   `0062` JÁ FOI aplicada.
 - **`.claude/hooks/session-start.sh` é NOVO** — avisa quando a sessão nasce no branch errado e
@@ -215,9 +222,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0064`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **41 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 480 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0065`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **42 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 483 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Todos os portais e páginas
@@ -474,7 +481,7 @@ Consequências que o levantamento original não tinha:
 - **Histórico pago reescreve DRE de mês fechado** (`dre_movimentos`, 0032) e, na convivência, faz
   os dois sistemas contarem a mesma receita. O DRE do SCar começa na data de corte.
 
-## Integração com o Mutual — Fase 1 (0062 + 0063 + 0064): espelho de leitura e diagnóstico
+## Integração com o Mutual — Fase 1 (0062 → 0065): espelho de leitura e diagnóstico
 > Plano completo e de-para campo a campo: **`docs/modulos/integracao-mutual.md`**. Leia antes de
 > tocar neste módulo.
 
@@ -537,6 +544,23 @@ Consequências que o levantamento original não tinha:
   **Lição que vale para o módulo inteiro:** enquanto o endpoint que guarda o dado não foi
   capturado, o indicador tem de dizer *"puxe os contratos"* — acusar ausência de um dado que
   ninguém puxou foi o que gerou centenas de falsos críticos duas vezes seguidas.
+- **✅ RESPONDIDO PELA CARGA COMPLETA: `final_total_value` é a PARCELA, não o total.**
+  `mutual_periodicidade` mostrou o semestral com **mediana R$ 164,00** contra **R$ 204,50** do
+  mensal — mesma ordem de grandeza. Fosse o total do contrato, o semestral estaria em ~6× o
+  mensal. "Semestral" no Mutual é a **vigência** (6 parcelas mensais), não a frequência do boleto:
+  bate com a tela (*parcela R$ 120 · 6× · total R$ 720*). **A carga grava `final_total_value`
+  direto em `veiculos.valor_mensalidade`, sem dividir.**
+- **🔴 A UNIDADE NÃO ESTÁ EM `regional` — NEM NO OBJETO NEM NO CONTRATO.** Com os 17.616
+  contratos capturados, **3.527 de 3.527 faturáveis** seguem sem unidade e as 10 filiais aparecem
+  com "0 objetos". É bloqueante: `regional_id` atravessa RLS, `escopo_regional()` e todos os
+  painéis. **Onde ela mora é pergunta em aberto** — use `mutual_campos('CONTRACT')` para achar o
+  campo em vez de supor.
+- **`mutual_campos(entidade, caminho, amostra)` (0065) é o INSTRUMENTO CONTRA O CHUTE.** Lista as
+  chaves que realmente vêm no payload capturado, quantas chegam preenchidas e um exemplo; aceita
+  objeto aninhado (`vehicle_data`, `person_data`). **Supor onde um campo mora já custou duas
+  rodadas** — o dia de vencimento e a unidade. Antes de dizer "o dado não veio", inspecione.
+  Cuidado de implementação: valor de string sai por `#>> '{}'` (sem as aspas do JSON), senão
+  `""` contaria como preenchido; `{}`, `[]` e `null` também não contam.
 - **⚠️ O CONTRATO TEM PERÍODO — e `valor_mensalidade` (0024) é MENSAL.** A tela do Mutual mostra
   *Semestral · 6 parcelas · parcela R$ 120,00 · total R$ 720,00*. Se `final_total_value` for o
   TOTAL e a carga gravar como mensalidade, o associado recebe boleto de **6× o que paga**.
@@ -557,7 +581,7 @@ Consequências que o levantamento original não tinha:
   caso de a API nunca dizer que acabou.
 - **RPCs:** `mutual_registrar_captura` (só `tem_acesso_global`), `mutual_diagnostico`,
   `mutual_por_status`, `mutual_filiais`, `mutual_quarentena`, `mutual_status_nao_mapeados`,
-  `mutual_periodicidade`, `mutual_resumo_capturas`.
+  `mutual_periodicidade`, `mutual_campos`, `mutual_resumo_capturas`.
 
 ## O que é
 Sistema de gestão para **associação de proteção veicular** (associados, frota, eventos/sinistros,
@@ -1164,6 +1188,15 @@ parcelas x valor mediano/min/max do objeto — e a consulta que responde se `fin
 PARCELA ou o TOTAL, porque `valor_mensalidade` (0024) e MENSAL e a tela do Mutual mostrou contrato
 semestral com 6 parcelas de R$ 120 e total R$ 720. `mutual_meses_periodo` espelha
 `mesesDoPeriodoMutual`, devolvendo null para periodo desconhecido em vez de assumir mensal).
+· `0065_mutual_inspecionar_campos` (a carga completa respondeu a pergunta do valor —
+`final_total_value` e a PARCELA (semestral mediana R$ 164 x mensal R$ 204,50; fosse o total seria
+~6x) — e abriu outra: a UNIDADE nao esta em `regional` nem no objeto nem no contrato, 3.527 de
+3.527 faturaveis sem ela. Em vez de chutar um terceiro lugar, entrou `mutual_campos(entidade,
+caminho, amostra)`: lista as chaves do payload capturado, quantas vem preenchidas e um exemplo,
+inclusive dentro de objeto aninhado. Junto, duas grafias novas do MESMO vocabulario
+(`INDENIZACAO`/`INDENIZAÇAO` -> em_evento, ao lado de `INDENIZADO`; `INATIVO/PAGO` -> inativo);
+`DIFICULDADE FINANCEIRA` fica DE FORA de proposito — sem par obvio, mapear no escuro manda boleto
+para quem nao devia ou tira da base quem ainda paga).
 · `0062_integracao_mutual` (FASE 1 da integracao com o MUTUAL — espelho de LEITURA e diagnostico:
 `mutual_captura` (entidade + id_externo unico, payload jsonb, soft-delete) e `mutual_sincronias`;
 os espelhos em SQL da logica de `src/lib/mutual.ts` (`mutual_texto`, `mutual_status_veiculo`,

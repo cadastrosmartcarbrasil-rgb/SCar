@@ -190,6 +190,10 @@ export function statusVeiculoDoContrato(
       return 'vistoria_pendente';
     case 'SINISTRADO':
     case 'INDENIZADO':
+    // Mesma coisa, outra grafia — veio assim da base real (com e sem cedilha).
+    case 'INDENIZACAO':
+    case 'INDENIZAÇAO':
+    case 'INDENIZAÇÃO':
       return 'em_evento';
     case 'INATIVO':
     case 'CANCELADO':
@@ -203,6 +207,7 @@ export function statusVeiculoDoContrato(
     // Visto na base real e AUSENTE do enum do swagger: o contrato esta se
     // encerrando e o equipamento vai ser recolhido. O enum do contrato deles
     // NAO e exaustivo — por isso `mutual_status_nao_mapeados()` existe.
+    case 'INATIVO/PAGO':
     case 'AGUARDADO A RETIRADA DO RASTREADOR':
       return 'inativo';
     default:

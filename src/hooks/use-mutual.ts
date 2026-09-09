@@ -7,6 +7,7 @@ import type { EntidadeMutual } from '@/lib/mutual';
 import type {
   MutualDiagnostico, MutualPorStatus, MutualFilial,
   MutualQuarentena, MutualResumoCaptura, MutualStatusNaoMapeado, MutualPeriodicidade,
+  MutualCampo,
 } from '@/lib/database.types';
 
 /** O que ja esta na area de captura. */
@@ -133,6 +134,28 @@ export function useMutualPeriodicidade() {
     queryKey: ['mutual', 'periodicidade'],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('mutual_periodicidade', {});
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+/**
+ * As chaves que EXISTEM no payload capturado, com quantas vem preenchidas.
+ *
+ * Existe porque supor onde um campo mora ja custou duas rodadas: o dia de
+ * vencimento (estava no contrato, nao no objeto) e a unidade (nao esta em
+ * `regional` em lugar nenhum — 3.527 de 3.527 faturaveis sem ela, com os
+ * contratos todos capturados). Aqui a pergunta se responde olhando.
+ */
+export function useMutualCampos(entidade: EntidadeMutual, caminho?: string) {
+  const supabase = createClient();
+  return useQuery<MutualCampo[]>({
+    queryKey: ['mutual', 'campos', entidade, caminho ?? null],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('mutual_campos', {
+        p_entidade: entidade, p_caminho: caminho ?? null,
+      });
       if (error) throw error;
       return data ?? [];
     },

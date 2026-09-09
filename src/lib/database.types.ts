@@ -2248,6 +2248,14 @@ export type MutualQuarentena = {
   motivos: string[];
 };
 
+/** 0065: chaves do payload capturado — para NAO adivinhar onde um campo mora. */
+export type MutualCampo = {
+  campo: string;
+  preenchidos: number;
+  vazios: number;
+  exemplo: string | null;
+};
+
 /** 0064: periodicidade da cobranca — parcela ou total? */
 export type MutualPeriodicidade = {
   periodo: string;
@@ -3376,6 +3384,10 @@ export type Database = {
         Returns: MutualStatusNaoMapeado[];
       };
       mutual_periodicidade: { Args: Record<string, never>; Returns: MutualPeriodicidade[] };
+      mutual_campos: {
+        Args: { p_entidade: EntidadeMutual; p_caminho?: string | null; p_amostra?: number };
+        Returns: MutualCampo[];
+      };
       mutual_resumo_capturas: { Args: Record<string, never>; Returns: MutualResumoCaptura[] };
     };
     Enums: {

@@ -4,12 +4,13 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import {
   Database, PlugZap, DownloadCloud, ShieldAlert, Building2, ListChecks, RefreshCw,
+  Search,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   useMutualCapturas, useMutualDiagnostico, useMutualPorStatus, useMutualFiliais,
   useMutualQuarentena, useMutualStatusNaoMapeados, useMutualPeriodicidade,
-  usePingMutual, useCapturaMutual,
+  useMutualCampos, usePingMutual, useCapturaMutual,
 } from '@/hooks/use-mutual';
 import {
   ENTIDADES_INCREMENTAIS, ROTULO_QUARENTENA, ROTULO_PERIODO_MUTUAL, type EntidadeMutual,
@@ -69,6 +70,9 @@ export default function IntegracaoMutualPage() {
   const diagnostico = useMutualDiagnostico();
   const porStatus = useMutualPorStatus();
   const filiais = useMutualFiliais();
+  const [inspecionar, setInspecionar] = useState<EntidadeMutual>('CONTRACT');
+  const [caminho, setCaminho] = useState('');
+  const campos = useMutualCampos(inspecionar, caminho || undefined);
   const [soFaturaveis, setSoFaturaveis] = useState(true);
   const quarentena = useMutualQuarentena(200, soFaturaveis);
   const naoMapeados = useMutualStatusNaoMapeados();
@@ -295,6 +299,66 @@ export default function IntegracaoMutualPage() {
             </div>
           ))}
         </div>
+      </Secao>
+
+      <Secao titulo="O que existe no payload" icone={Search} acao={
+        <div className="flex items-center gap-2">
+          <select
+            className="rounded-lg border border-slate-200 px-2 py-1 text-sm"
+            value={inspecionar}
+            onChange={(e) => { setInspecionar(e.target.value as EntidadeMutual); setCaminho(''); }}
+          >
+            {ENTIDADES.map((e) => <option key={e.chave} value={e.chave}>{e.rotulo}</option>)}
+          </select>
+          <input
+            className="w-40 rounded-lg border border-slate-200 px-2 py-1 text-sm"
+            placeholder="objeto aninhado"
+            value={caminho}
+            onChange={(e) => setCaminho(e.target.value)}
+          />
+        </div>
+      }>
+        <p className="mb-3 text-xs text-slate-500">
+          As chaves que <strong>realmente vem</strong> no que foi capturado, com quantas chegam
+          preenchidas e um exemplo. Serve para achar um campo <strong>sem supor onde ele mora</strong> —
+          supor ja custou duas rodadas aqui (o dia de vencimento estava no contrato, e a unidade nao
+          esta em <code className="text-[11px]">regional</code> em lugar nenhum). Para olhar dentro
+          de um objeto, escreva o nome dele no campo ao lado (ex.:{' '}
+          <code className="text-[11px]">vehicle_data</code>,{' '}
+          <code className="text-[11px]">person_data</code>).
+        </p>
+        {campos.isLoading && <p className="text-sm text-slate-500">Carregando...</p>}
+        {!campos.isLoading && (campos.data ?? []).length === 0 && (
+          <p className="text-sm text-slate-500">
+            Nada capturado nesta entidade ainda — ou o objeto aninhado nao existe.
+          </p>
+        )}
+        {(campos.data ?? []).length > 0 && (
+          <div className="max-h-96 overflow-auto">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-superficie">
+                <tr className="text-left text-xs uppercase tracking-wide text-slate-500">
+                  <th className="pb-2">Campo</th>
+                  <th className="pb-2 text-right">Preenchidos</th>
+                  <th className="pb-2 text-right">Vazios</th>
+                  <th className="pb-2">Exemplo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(campos.data ?? []).map((c) => (
+                  <tr key={c.campo} className="border-t border-slate-100">
+                    <td className="py-1.5 font-medium text-slate-800">{c.campo}</td>
+                    <td className={`py-1.5 text-right tnum ${c.preenchidos > 0 ? 'font-semibold text-slate-900' : 'text-slate-400'}`}>
+                      {c.preenchidos}
+                    </td>
+                    <td className="py-1.5 text-right tnum text-slate-500">{c.vazios}</td>
+                    <td className="py-1.5 truncate text-xs text-slate-600">{c.exemplo ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Secao>
 
       {(periodicidade.data ?? []).length > 0 && (

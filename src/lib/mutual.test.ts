@@ -142,6 +142,22 @@ describe('statusVeiculoDoContrato', () => {
   // O enum do swagger NAO e exaustivo: este apareceu so na primeira leitura da
   // base real (09/09/2026). Antes da 0063 ele caia no `null` e era contado como
   // funil de venda — o lugar errado, porque e contrato ENCERRANDO.
+  // Variacoes de GRAFIA do mesmo vocabulario, vistas na carga completa. Nao e
+  // chute: `INDENIZADO` e `INATIVO` ja estavam mapeados, mudou a escrita.
+  it('as grafias de INDENIZACAO caem no mesmo em_evento de INDENIZADO', () => {
+    expect(statusVeiculoDoContrato('INDENIZACAO')).toBe('em_evento');
+    expect(statusVeiculoDoContrato('INDENIZAÇAO')).toBe('em_evento');
+    expect(statusVeiculoDoContrato('INDENIZAÇÃO')).toBe('em_evento');
+  });
+  it('INATIVO/PAGO e inativo', () => {
+    expect(statusVeiculoDoContrato('INATIVO/PAGO')).toBe('inativo');
+  });
+  // DE FORA de proposito: sem par obvio, pode ser associado renegociando divida
+  // (entra e fatura) ou contrato encerrado (entra como historico). Errar manda
+  // boleto para quem nao devia, ou tira da base quem ainda paga.
+  it('DIFICULDADE FINANCEIRA continua sem mapeamento ate o usuario decidir', () => {
+    expect(statusVeiculoDoContrato('DIFICULDADE FINANCEIRA')).toBeNull();
+  });
   it('AGUARDADO A RETIRADA DO RASTREADOR (visto em producao) vira inativo', () => {
     expect(statusVeiculoDoContrato('AGUARDADO A RETIRADA DO RASTREADOR')).toBe('inativo');
     expect(statusVeiculoDoContrato('aguardado a retirada do rastreador')).toBe('inativo');
