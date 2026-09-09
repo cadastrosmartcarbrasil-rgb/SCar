@@ -719,3 +719,97 @@ alfabética, **tudo o que apareceu foi `/contract/*`**. Portanto **ainda não sa
 `/person/`, `/vehicle/`, `/invoice/`/`/faturas/` e `/event/` também têm `updated_at__gte` —
 e é o que decide se a sincronia incremental vale para **todas** as entidades ou só para a família
 de contrato. **Próxima medição, sem truncar.**
+
+---
+
+## O MAPA DOS 69 ENDPOINTS — e a estratégia de carga que ele impõe
+
+> Medição completa (sem truncar) em 09/09/2026. `INCR` = aceita `updated_at__gte`.
+> **Ressalva:** `PAG` foi detectado procurando `page`/`limit`/`offset`/`page_size`. Um endpoint que
+> pagine por `cursor` ou `per_page` apareceria como "sem paginação" aqui — **confirmar na chamada
+> real** antes de concluir que uma entidade não pagina.
+
+### 🔴 A DESCOBERTA QUE MUDA O DESENHO: a espinha é CONTRACT + INVOICE, não PERSON
+
+| Entidade | INCR | PAG |
+|---|---|---|
+| `/contract/` e toda a família | **SIM** | sim |
+| `/invoice/` e toda a família | **SIM** | sim |
+| `/vehicle/` | **SIM** | *(não declarada)* |
+| `/core/user/` | SIM | sim |
+| **`/person/`** | **NÃO** | **não declarada** |
+| **`/event/`** | **NÃO** | **não declarada** |
+| `/core/address/` | não | não |
+| `/contract/additional_value/` · `/contract/contract_object_product/` | não | sim |
+
+**O associado NÃO é uma fonte varrível.** Não tem filtro por alteração nem paginação declarada —
+`/person/` se comporta como consulta pontual, não como feed. **Consequência: a carga e a sincronia
+são dirigidas por CONTRATO**, não por pessoa:
+
+```
+/contract/?updated_at__gte=<T>   (paginado)
+   -> person_id   -> /person/  por id      (satélite)
+   -> address_id  -> /core/address/ por id (satélite)
+   -> contract_object_vehicle              (tem INCR próprio)
+```
+
+Desenhar a importação "varrendo associados" **não funciona** — descobrir isso agora vale a fase
+inteira de diagnóstico.
+
+### 🟢 O VALOR COBRADO HOJE SAI DA FATURA — e é melhor assim
+A família `/invoice/` é rica **e totalmente incremental e paginada**:
+
+| Endpoint | No SCar |
+|---|---|
+| `/invoice/` | `faturas` |
+| **`/invoice/invoice_product/`** | **`fatura_itens` — é AQUI que mora o valor efetivamente cobrado** |
+| `/invoice/invoice_billet/` | `titulos_financeiros.linha_digitavel` / `url_boleto` |
+| `/invoice/invoice_pix/` | `titulos_financeiros.pix_copia_cola` / `pix_qrcode_url` |
+| `/invoice/invoice_object/` | o vínculo fatura ↔ objeto/veículo |
+| `/invoice/bank/` | `integracoes_bancarias` / `contas_bancarias` |
+
+**Isso responde melhor à decisão de preço congelado do que um campo de cadastro:** o valor a
+congelar em `veiculos.valor_mensalidade` é o da **última fatura emitida**, que é literalmente
+"o que está sendo cobrado hoje" — não uma intenção guardada num cadastro que pode estar
+desatualizada. `/contract/additional_value/` deixa de ser a pista principal e vira conferência.
+
+**Bônus:** `invoice_billet` e `invoice_pix` existirem significa que dá para trazer a **2ª via real**
+do período de convivência, em vez de o portal do associado dizer "o banco ainda não gerou".
+
+### 🔴 Vistoria e Aceite Digital NÃO SÃO LEGÍVEIS
+`/inspection/` e `/digital_acceptance/` aparecem **sem GET** — só escrita. **Não dá para importar o
+histórico de vistorias nem as provas de aceite pela API.** Isso corta parte da Fase 5: a vistoria
+do acervo antigo, se for necessária, terá de vir por outro caminho (exportação, ou fica só no
+Mutual como consulta histórica). Decisão do usuário, mas agora com o fato na mesa.
+
+### 🟡 `/event/` é o caso mais difícil da carga
+Sem `updated_at` e sem paginação declarada, sobrando os filtros de negócio que a tela mostrou
+(`protocol`, `event_status`, `sub_status_id`, `id`). Estratégia provável: **fatiar por
+`event_status`** (são 8 valores) e, se houver, por data de ocorrência. Confirmar no de-para.
+
+### 🟢 Integrações reveladas — uma interessa MUITO ao módulo de Rastreadores
+| Endpoint | O que parece ser |
+|---|---|
+| **`/softruck/contract_objects/`** | **Softruck é plataforma de rastreamento.** O módulo de Rastreadores (0049–0053) tem a fronteira `fornecedores.api_config` / `ultima_comunicacao` **esperando um produtor desde a fase 2** — pode ser esta |
+| `/ativo247/error_notification/` | outra integração (só escrita) |
+| `/zelo/beneficiaries/` | Zelo = benefício/assistência vendido junto; **o SCar não modela beneficiários** |
+| `/split_risk/…insurance_policy/` | divisão de risco / apólice — resseguro |
+| `/redeveiculos/buscar/…` | rede de oficinas/veículos |
+
+### 🟢 As tabelas de domínio estão todas expostas — o de-para fica fácil
+`/vehicle/category/` · `/vehicle/color/` · `/vehicle/type/` · `/vehicle/use_type/` ·
+`/event/event_type/` · `/implemento/implemento_type/` · `/core/cities/` · `/quotation/plan/` ·
+`/person/know_option/`
+
+São listas pequenas: **baixar inteiras e montar o de-para uma vez**, sem incremental. É daqui que
+saem `tipos_veiculo`, `uso_veiculo`, cor e `tipo_evento`.
+
+### 🟢 O de-para de unidade tem endpoint próprio
+`/association/regional/` → **`regionais`** · `/association/consultant/` → `vendedores` ·
+`/association/sale_team/` → equipe de vendas (**não existe no SCar**).
+Cadastros pequenos, sem incremental: carga completa a cada sincronia resolve.
+
+### O que NÃO precisamos importar
+Toda a família `/quotation/` (cotação, FIPE, planos, `generate_contract`, `generate_pdf`,
+`{quotation_token}`) é **venda** — e venda nova nasce no SCar, pelo hotlink e pelo CRM. Curiosidade
+útil: eles também têm token público de cotação, mesma ideia do nosso `leads.token_publico`.
