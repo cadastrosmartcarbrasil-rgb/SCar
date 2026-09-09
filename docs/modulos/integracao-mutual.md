@@ -429,3 +429,111 @@ Legenda: **PK-N** = chave natural (unique) · **OBR** = `not null` · **CHK** = 
    status é obrigatório, não "se der tempo".
 3. **Campo vazio tem de virar `NULL`** em `chassi`, `renavam` e em todo unique nulável. É a mordida
    do `fornecedores.documento` (0051) esperando para acontecer de novo, agora em escala de milhares.
+
+---
+
+## O PREÇO É O QUE SE COBRA HOJE, não o que a tabela calcula (decisão do usuário, 09/09/2026)
+
+> **Regra:** ao importar, vale o **valor cobrado atualmente** de cada veículo. O motor de cálculo
+> (`cotar_plano`, tabela de preços, faixas FIPE) passa a valer **só para contratos novos**.
+
+**Entendido — e o sistema já faz exatamente isso, sem migration.** `valor_mensalidade_veiculo()`
+(0024) tem a precedência pronta:
+
+```sql
+if v.valor_mensalidade is not null and v.valor_mensalidade > 0 then
+  return round(v.valor_mensalidade, 2);      -- <- o valor congelado vence
+end if;
+...
+v_valor := cotar_plano(...)                   -- <- só quem não tem override
+```
+
+Então a carga grava o valor cobrado hoje em **`veiculos.valor_mensalidade`** e pronto: a carteira
+legada mantém o preço para sempre, a venda nova (que nasce sem esse campo) segue o `cotar_plano`.
+**Não é gambiarra — é o campo de override negociado que já existia na ficha.**
+
+Mas a decisão traz cinco consequências, e três são armadilhas de receita:
+
+### ⚠️ 1. R$ 0,00 NÃO congela — vaza para o cálculo
+A condição é `is not null **and > 0**`. Um veículo de **cortesia / isento / comodato** — e base
+legada sempre tem — importado com valor `0` **cai no `cotar_plano` e passa a ser cobrado**.
+O associado que nunca pagou recebe boleto. Isenção **não pode ser representada como zero** neste
+campo: precisa de tratamento próprio na carga (marcar o veículo como não faturável, ou decidir com
+o usuário como a isenção vira dado).
+
+### ⚠️ 2. Sem valor e sem tipo, o veículo para de ser cobrado EM SILÊNCIO
+`gerar_primeira_cobranca_veiculo` faz `if v_val <= 0 then return;` e o lote faz `if v_val > 0 then`
+— **sem erro, sem aviso, sem log**. Um veículo importado sem o valor atual simplesmente some do
+faturamento no cutover, e o furo só aparece no fechamento do mês.
+**Veículo sem valor cobrado atual vai para QUARENTENA** — mesma regra da `data_ativacao`.
+
+### ⚠️ 3. `dia_vencimento` é a mesma classe de problema
+Sem ele, o veículo cai no padrão legado (**dia 10 do mês seguinte**) e o associado recebe boleto
+num dia diferente do que está acostumado há anos. Não quebra nada no sistema — gera ligação no SAC
+e atraso de pagamento. **O dia cobrado hoje vem junto com o valor cobrado hoje.**
+
+### 4. Congelar o preço NÃO dispensa mapear o plano
+Preço e cobertura são coisas diferentes. O `plano_protecao_id` é o que o **SAC**, o **evento/sinistro**
+e a **Assistência 24h** leem (`opcionais_veiculo`, limites por janela flutuante). Veículo importado
+com preço e sem plano vira um atendimento onde ninguém sabe **a que a pessoa tem direito** — o preço
+está certo e a operação está cega. **O plano entra mesmo com o valor congelado.**
+
+### 5. A participação no rateio NÃO fica congelada — e isso é uma decisão à parte
+`calcular_participacao_veiculo` sai da **FIPE atual**, não da mensalidade. Congelar o preço não
+congela o que o associado paga de participação num evento. Provavelmente é o desejado (a participação
+acompanha o valor do veículo), mas é escolha, não consequência automática — **confirmar com o usuário**.
+
+### 6. O reajuste futuro não passa mais pela tabela de preços
+Consequência natural de congelar: subir a tabela **não alcança** a carteira legada, porque o override
+vence. Quando houver reajuste anual, vai precisar de uma **rotina de reajuste da carteira importada**
+(atualização em massa de `valor_mensalidade`, com percentual por unidade/plano e prévia com diff, no
+molde do `precificacao-import`). Não é problema hoje; é trabalho previsto para depois.
+
+---
+
+## Como interligar, na prática (com o token em mãos)
+
+### 🔒 Antes de tudo: NÃO cole o token no chat
+Ele ficaria gravado no histórico da conversa. O token vive em **dois lugares só**: no seu gerenciador
+de senhas e no `.env` do VPS.
+
+### O que você pode fazer HOJE, em ~15 minutos, sem depender de mim
+Rode **de dentro do VPS** (é o IP que a Mutual talvez tenha liberado — testar da sua máquina pode
+falhar por motivo diferente e confundir o diagnóstico). Quatro provas, nesta ordem:
+
+1. **O token funciona?** Uma chamada a qualquer endpoint de listagem. `200` = credencial boa;
+   `401/403` = token ou escopo; **timeout** = IP não liberado.
+2. **Capture o OpenAPI** — é o `.json`/`.yaml` que a página de docs consome (o Redoc/Swagger mostra
+   a URL dele no próprio HTML). Salve em `docs/modulos/mutual-openapi.json` e faça commit:
+   **é ele que destrava o de-para campo a campo.**
+3. **Capture uma amostra** de cada entidade (associado, veículo, título, evento) — 1 ou 2 registros.
+4. **Confira a paginação e o filtro por data** no retorno real, não só na documentação.
+
+> ⚠️ **A amostra do passo 3 tem CPF, nome e endereço de gente real. NÃO comite.** Guarde fora do
+> repositório. **Só o OpenAPI vai para o Git** — ele descreve o formato, não carrega dado de ninguém.
+
+### Depois disso, a Fase 1 vira código
+`MUTUAL_API_BASE`/`MUTUAL_API_TOKEN` no `.env` do VPS → rota `/api/v1/mutual/*` (molde do `/api/fipe`,
+com guard próprio) → staging `mutual_captura` → tela de diagnóstico. **Nada toca produção.**
+
+---
+
+## "Quando estiver 100%, fazemos a importação completa?" — a ordem é o contrário
+
+A carga completa **não é o prêmio do fim: é o pré-requisito do começo.** Não dá para o SAC atender,
+o portal do associado abrir ou o painel da 24h significar alguma coisa com uma amostra de cem
+registros. **O SCar só trabalha "a todo vapor" DEPOIS da carga completa** — por isso ela é a Fase 3,
+com a cobrança desligada pela flag de cobrança externa.
+
+O que acontece no fim **não é uma importação, é o CUTOVER**: uma última reconciliação (puxar o que
+mudou desde a véspera, conferir divergências) e virar a chave — por unidade, não de uma vez.
+
+**E uma recarga completa no fim seria perigosa**, não conservadora: a essa altura o SCar já tem
+**dados próprios** que nunca existiram no Mutual — vendas nascidas no CRM e no hotlink, protocolos,
+OS da 24h, vistorias, o parque de rastreadores. Uma carga cega por cima disso sobrescreveria o que é
+nosso. **É exatamente para isso que serve a tabela de vínculo** (achado nº 1): ela sabe qual linha
+veio do Mutual e qual nasceu aqui — sem ela, "reimportar tudo" é uma operação que não dá para fazer
+com segurança.
+
+**A sequência, então:** amostra (diagnóstico) → **carga completa, sem cobrar** → sincronia incremental
+mantendo o espelho vivo → **cutover por unidade** → o Mutual vira consulta histórica.
