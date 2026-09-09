@@ -63,6 +63,9 @@ export default function IntegracaoMutualPage() {
   const ping = usePingMutual();
   const capturar = useCapturarMutual();
   const [paginas, setPaginas] = useState(5);
+  // De onde continuar em cada entidade. Sem isto, o botao recomeçaria sempre da
+  // pagina 1 e uma base de ~13 mil objetos nunca passaria das primeiras.
+  const [proximas, setProximas] = useState<Partial<Record<EntidadeMutual, number>>>({});
 
   async function testar() {
     const r = await ping.mutateAsync();
@@ -72,17 +75,23 @@ export default function IntegracaoMutualPage() {
   }
 
   async function puxar(entidade: EntidadeMutual) {
-    const r = await capturar.mutateAsync({ entidade, paginas });
+    const inicio = proximas[entidade] ?? 1;
+    const r = await capturar.mutateAsync({ entidade, paginas, pagina_inicial: inicio });
     if (!r.configured) { toast.error('MUTUAL_API_TOKEN nao esta configurada no servidor'); return; }
-    if (r.ok) {
-      toast.success(
-        `${r.registros} registros em ${r.paginas} pagina(s)` +
-        (r.total_remoto ? ` — o Mutual declara ${r.total_remoto} no total` : '') +
-        (r.proxima_pagina ? `. Ha mais: continue da pagina ${r.proxima_pagina}.` : ''),
-      );
-    } else {
-      toast.error(r.erro ?? r.error ?? 'Falha ao consultar o Mutual');
-    }
+    if (!r.ok) { toast.error(r.erro ?? r.error ?? 'Falha ao consultar o Mutual'); return; }
+
+    // Guarda de onde continuar; sem `proxima_pagina`, a entidade acabou.
+    setProximas((p) => {
+      const novo = { ...p };
+      if (r.proxima_pagina) novo[entidade] = r.proxima_pagina;
+      else delete novo[entidade];
+      return novo;
+    });
+    toast.success(
+      `${r.registros} registros em ${r.paginas} pagina(s)` +
+      (r.total_remoto ? ` de ${r.total_remoto} no total` : '') +
+      (r.proxima_pagina ? '. Clique de novo para continuar.' : '. Acabou esta entidade.'),
+    );
   }
 
   const grupos = (diagnostico.data ?? []).reduce<Record<string, MutualDiagnostico[]>>((acc, d) => {
@@ -130,6 +139,9 @@ export default function IntegracaoMutualPage() {
           >
             {[1, 5, 20, 50, 100].map((n) => <option key={n} value={n}>{n}</option>)}
           </select>
+          {Object.keys(proximas).length > 0 && (
+            <Button variant="ghost" onClick={() => setProximas({})}>Recomecar do inicio</Button>
+          )}
         </label>
       }>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -154,6 +166,11 @@ export default function IntegracaoMutualPage() {
                 <p className="mt-2 text-xs tnum text-slate-600">
                   {cap ? `${cap.registros} capturados${cap.total_remoto ? ` de ${cap.total_remoto}` : ''}` : 'nada capturado ainda'}
                 </p>
+                {proximas[e.chave] && (
+                  <p className="mt-1 text-xs font-medium text-cyan-700">
+                    Ha mais — continua da pagina {proximas[e.chave]}
+                  </p>
+                )}
               </button>
             );
           })}
