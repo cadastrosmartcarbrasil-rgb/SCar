@@ -1050,7 +1050,12 @@ nos demais endpoints e o rate limit.**
 
 ## Para rodar em produção
 1. **`0062` no SQL Editor do Supabase**, depois das `0045`..`0061`.
-2. **`.env` do VPS:** `MUTUAL_API_TOKEN` e (opcional) `MUTUAL_API_BASE`.
+2. **`.env` do VPS** — o arquivo `/opt/scar/.env`, o MESMO que já guarda as chaves do Supabase.
+   Acrescente uma linha `MUTUAL_API_TOKEN=<o token>` no fim.
+   > ⚠️ **O `docker-compose.yml` repassa as variáveis UMA A UMA** (não usa `env_file`). Escrever
+   > só no `.env` **não faz a variável chegar no contêiner** — ela precisa estar listada no bloco
+   > `environment:` do serviço `app`. Isso foi corrigido em 09/09/2026; **ao criar env nova,
+   > mexa nos DOIS lugares**, senão a tela diz "não configurado" sem explicar por quê.
 3. `git pull` + `docker compose up -d --build` **dentro do VPS**.
 4. Menu → **Integração Mutual** → *Testar conexão* → *Objetos de contrato* → ler o diagnóstico.
 

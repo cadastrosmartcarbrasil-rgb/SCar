@@ -471,6 +471,10 @@ Consequências que o levantamento original não tinha:
   `MUTUAL_API_TOKEN` + `MUTUAL_API_BASE` no `.env` do VPS, lidos pela rota `/api/v1/mutual` —
   molde do `/api/fipe`, **nunca no navegador**. Sem a env, a tela diz "não configurado" em vez de
   fingir erro da Mutual.
+- **⚠️ ENV NOVA MEXE EM DOIS LUGARES.** O `docker-compose.yml` repassa as variáveis **uma a uma**
+  no bloco `environment:` (não usa `env_file`). Escrever só no `.env` do VPS **não faz a variável
+  chegar no contêiner** — e o sintoma é a tela dizer "não configurado" sem pista nenhuma. Ao criar
+  env nova: `.env` do VPS **+** `docker-compose.yml` **+** `.env.docker.example`/`.env.example`.
 - **A BARRA FINAL É OBRIGATÓRIA** em toda URL do Mutual: a API é Django com `APPEND_SLASH` e
   devolve **301** sem ela. `urlMutual()` já monta assim — não montar URL na mão.
 - **`Authorization: Bearer <token>`** — o prefixo faz parte do valor (está escrito no contrato deles).

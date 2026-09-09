@@ -36,6 +36,10 @@ services:
       # Consulta de placa (opcional).
       PLACA_API_URL: ${PLACA_API_URL:-}
       PLACA_API_KEY: ${PLACA_API_KEY:-}
+      # Integracao com o MUTUAL (sistema atual) - token so no servidor (runtime).
+      # Da LEITURA DA BASE INTEIRA de associados: nunca vai ao navegador.
+      MUTUAL_API_TOKEN: ${MUTUAL_API_TOKEN:-}
+      MUTUAL_API_BASE: ${MUTUAL_API_BASE:-}
 
   caddy:
     image: caddy:2-alpine
