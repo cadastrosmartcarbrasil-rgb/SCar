@@ -23,6 +23,7 @@ import {
   Building2,
   UserRound,
   Satellite,
+  Database,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
@@ -89,9 +90,14 @@ export function Sidebar({ papel, logoUrl }: { papel?: PapelUsuario; logoUrl?: st
   const router = useRouter();
   const supabase = createClient();
   const [aberto, setAberto] = useState(false);
+  // Integracao com o Mutual: consulta e importacao sao da MATRIZ (o banco tambem
+  // exige tem_acesso_global em mutual_registrar_captura).
+  const integracao = ['admin', 'financeiro'].includes(papel ?? '')
+    ? [{ href: '/integracao/mutual', label: 'Integracao Mutual', icon: Database }]
+    : [];
   const gestao = papel === 'admin'
-    ? [...GESTAO, { href: '/configuracoes', label: 'Configuracoes', icon: Settings }]
-    : GESTAO;
+    ? [...GESTAO, ...integracao, { href: '/configuracoes', label: 'Configuracoes', icon: Settings }]
+    : [...GESTAO, ...integracao];
 
   // Portais: o da Franquia para quem gerencia uma unidade; o do Vendedor para
   // o consultor de vendas (o layout de /vendedor confere o cadastro no banco).

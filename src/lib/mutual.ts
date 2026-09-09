@@ -1,0 +1,275 @@
+// ============================================================================
+// Integracao com o MUTUAL (sistema atual) — LOGICA PURA, espelhada dos
+// contratos lidos em docs/modulos/integracao-mutual.md.
+//
+// FASE 1: so leitura e diagnostico. Nada aqui escreve em clientes/veiculos/
+// titulos_financeiros — o destino desta fase e a area de captura (0062).
+//
+// Tudo o que decide (de-para de status, fuso, vazio->NULL, o que e mensalidade)
+// mora AQUI e tem teste. A tela nao decide nada.
+// ============================================================================
+
+import type { StatusVeiculo, TipoPessoa, StatusTitulo } from '@/lib/database.types';
+
+// ---------------------------------------------------------------------------
+// Endpoints
+// ---------------------------------------------------------------------------
+/** As entidades que a Fase 1 captura. Softruck/Zelo/Apoio/SplitRisk ficaram de
+ *  fora por decisao do usuario: a associacao nao tem parceria com elas. */
+export const ENTIDADES_MUTUAL = {
+  CONTRACT_OBJECT: '/contract/contract_object/nested/',
+  PERSON: '/person/',
+  ADDRESS: '/core/address/',
+  INVOICE: '/invoice/',
+  EVENT: '/event/',
+  REGIONAL: '/association/regional/',
+  CONSULTANT: '/association/consultant/',
+  VEHICLE_TYPE: '/vehicle/type/',
+  VEHICLE_COLOR: '/vehicle/color/',
+  VEHICLE_CATEGORY: '/vehicle/category/',
+  VEHICLE_USE_TYPE: '/vehicle/use_type/',
+  EVENT_TYPE: '/event/event_type/',
+} as const;
+
+export type EntidadeMutual = keyof typeof ENTIDADES_MUTUAL;
+
+/** Quais entidades aceitam `updated_at__gte` (medido no swagger, 09/09/2026). */
+export const ENTIDADES_INCREMENTAIS: EntidadeMutual[] = ['CONTRACT_OBJECT', 'INVOICE'];
+
+/** Quais paginam com `page`/`page_size`. PERSON e EVENT nao declaram. */
+export const ENTIDADES_PAGINADAS: EntidadeMutual[] = ['CONTRACT_OBJECT', 'INVOICE', 'ADDRESS'];
+
+/**
+ * Monta a URL da API do Mutual.
+ *
+ * A BARRA FINAL E OBRIGATORIA: a API e Django com APPEND_SLASH e devolve 301
+ * sem ela. Em ~13 mil registros paginados, deixar o cliente depender do
+ * redirecionamento e uma ida e volta extra por pagina — e um 301 em POST pode
+ * virar GET e perder o corpo.
+ */
+export function urlMutual(
+  base: string,
+  entidade: EntidadeMutual,
+  params: Record<string, string | number | undefined | null> = {},
+): string {
+  const raiz = base.replace(/\/+$/, '');
+  const caminho = ENTIDADES_MUTUAL[entidade];
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
+  }
+  const query = qs.toString();
+  return `${raiz}/public_api/v2${caminho}${query ? `?${query}` : ''}`;
+}
+
+/** O contrato manda literalmente `Authorization: Bearer <TOKEN>`. */
+export function cabecalhoMutual(token: string): Record<string, string> {
+  return { Authorization: `Bearer ${token}`, Accept: 'application/json' };
+}
+
+// ---------------------------------------------------------------------------
+// Envelope de resposta
+// ---------------------------------------------------------------------------
+type Registro = Record<string, unknown>;
+
+/** DRF devolve `{count, next, previous, results}`; alguns endpoints devolvem o
+ *  array cru. Aceita os dois sem a tela precisar saber qual e qual. */
+export function extrairLista(json: unknown): Registro[] {
+  if (Array.isArray(json)) return json as Registro[];
+  if (json && typeof json === 'object') {
+    const r = (json as { results?: unknown }).results;
+    if (Array.isArray(r)) return r as Registro[];
+  }
+  return [];
+}
+
+/** Total declarado pelo servidor (`count`), quando houver. */
+export function extrairTotal(json: unknown): number | null {
+  if (json && typeof json === 'object' && !Array.isArray(json)) {
+    const c = (json as { count?: unknown }).count;
+    if (typeof c === 'number') return c;
+  }
+  return null;
+}
+
+/** Ha proxima pagina? `next` do DRF, ou pagina cheia quando nao ha envelope. */
+export function temProximaPagina(json: unknown, tamanhoPagina: number): boolean {
+  if (json && typeof json === 'object' && !Array.isArray(json)) {
+    const n = (json as { next?: unknown }).next;
+    if (n !== undefined) return Boolean(n);
+  }
+  return extrairLista(json).length >= tamanhoPagina;
+}
+
+// ---------------------------------------------------------------------------
+// Normalizacao de valores
+// ---------------------------------------------------------------------------
+/**
+ * Campo vazio vira NULL, nunca ''.
+ * `veiculos.chassi` e `veiculos.renavam` sao UNIQUE NULAVEIS: duas linhas com
+ * string vazia COLIDEM. Foi exatamente o que mordeu em `fornecedores.documento`
+ * (0051) — aqui seria em escala de milhares.
+ */
+export function textoOuNulo(v: unknown): string | null {
+  if (v === null || v === undefined) return null;
+  const s = String(v).trim();
+  return s === '' ? null : s;
+}
+
+/** Decimal do Mutual vem como string ("1234.56"). Vazio/invalido -> null. */
+export function numeroOuNulo(v: unknown): number | null {
+  const s = textoOuNulo(v);
+  if (s === null) return null;
+  const n = Number(s.replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * ISO-8601 UTC -> data local (YYYY-MM-DD).
+ *
+ * O Mutual devolve `2019-08-24T14:15:22Z`; `eventos_sinistro.data_ocorrencia` e
+ * `veiculos.data_ativacao` sao `date`. Cortar a string em 10 caracteres joga o
+ * evento das 21h para o dia SEGUINTE — erro silencioso e classico de
+ * importacao. Aqui a conversao de fuso acontece ANTES do corte.
+ */
+export function dataLocalDeIso(
+  iso: unknown,
+  fuso = 'America/Sao_Paulo',
+): string | null {
+  const s = textoOuNulo(iso);
+  if (s === null) return null;
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return null;
+  const partes = new Intl.DateTimeFormat('en-CA', {
+    timeZone: fuso, year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(d);
+  const get = (t: string) => partes.find((p) => p.type === t)?.value ?? '';
+  const ano = get('year'), mes = get('month'), dia = get('day');
+  return ano && mes && dia ? `${ano}-${mes}-${dia}` : null;
+}
+
+// ---------------------------------------------------------------------------
+// De-para de vocabulario
+// ---------------------------------------------------------------------------
+/** `person_type` vem "1"/"2", nao PF/PJ. */
+export function tipoPessoaMutual(v: unknown): TipoPessoa | null {
+  const s = textoOuNulo(v);
+  if (s === '1') return 'PF';
+  if (s === '2') return 'PJ';
+  return null;
+}
+
+/**
+ * `contract_status` (25 valores) + `contract_object.status` (4) -> `veiculos.status`.
+ *
+ * `null` significa **NAO IMPORTAR**: sao os estados de funil de venda, e venda
+ * nova nasce no SCar (hotlink/CRM). Trazer um `AGUARDANDO_ACEITE` do Mutual
+ * criaria um veiculo que nunca foi vendido.
+ */
+export function statusVeiculoDoContrato(
+  contractStatus: unknown,
+  objectStatus?: unknown,
+): StatusVeiculo | null {
+  const obj = textoOuNulo(objectStatus)?.toUpperCase();
+  // O objeto removido do contrato sai da base, independentemente do contrato.
+  if (obj === 'REMOVIDO') return 'inativo';
+
+  switch (textoOuNulo(contractStatus)?.toUpperCase()) {
+    case 'ATIVO':
+    // Inadimplencia no SCar e DERIVADA dos titulos em aberto (dias_atraso_cliente),
+    // nao um status do cadastro — o veiculo segue ativo e a trava vem do financeiro.
+    case 'INADIMPLENTE':
+      return 'ativo';
+    case 'SUSPENSO':
+      return 'suspenso';
+    case 'PENDENTE_VISTORIA':
+      return 'vistoria_pendente';
+    case 'SINISTRADO':
+    case 'INDENIZADO':
+      return 'em_evento';
+    case 'INATIVO':
+    case 'CANCELADO':
+    case 'CANCELADO_PENDENCIA':
+    case 'CANCELADO_TROCA_TITULARIDADE':
+    case 'NEGADO':
+    case 'RECUSADO':
+    case 'EXPIRADO':
+    case 'SUBSTITUIDO':
+    case 'REMOVIDO':
+      return 'inativo';
+    default:
+      // CRIADO, GERADO_PENDENCIA, AGUARDANDO_ACEITE, PENDENTE_ANALISE,
+      // AUTORIZADO, LINK_PAGAMENTO_ENVIADO, PAGAMENTO_GERADO, PENDENTE,
+      // NEGOCIACAO_PERDIDA, REATIVACAO -> funil de venda.
+      return null;
+  }
+}
+
+/** `invoice_status` (16 valores) -> `status_titulo` (4). */
+export function statusTituloMutual(v: unknown): StatusTitulo {
+  const s = textoOuNulo(v)?.toUpperCase() ?? '';
+  if (s.startsWith('SUCCEEDED') || s === 'DISCOUNTED_REIMBURSEMENT') return 'pago';
+  if (s === 'OVERDUE') return 'vencido';
+  if (s.startsWith('CANCEL') || s === 'FAILED' || s === 'REFUNDED') return 'cancelado';
+  return 'pendente'; // CREATED, PENDING, UPDATED
+}
+
+/**
+ * `invoice_type` tem 20 valores e so tres sao MENSALIDADE.
+ * Sem este filtro, adesao, comissao, repasse e multa de rastreador entrariam
+ * como se fossem mensalidade e a inadimplencia mentiria.
+ */
+const TIPOS_MENSALIDADE = new Set([
+  'MONTHLY_PAYMENT', 'PRO_RATA', 'ACCESSION_MONTHLY_PAYMENT',
+]);
+export function ehMensalidade(invoiceType: unknown): boolean {
+  return TIPOS_MENSALIDADE.has(textoOuNulo(invoiceType)?.toUpperCase() ?? '');
+}
+
+// ---------------------------------------------------------------------------
+// Quarentena — o que impede uma linha de entrar na base
+// ---------------------------------------------------------------------------
+export interface ObjetoMutual {
+  contract_status?: unknown;
+  status?: unknown;
+  final_total_value?: unknown;
+  due_day?: unknown;
+  first_activation_date?: unknown;
+  vehicle_data?: { vehicle_plate?: unknown; vehicle_chassi?: unknown; vehicle_renavam?: unknown } | null;
+  person_data?: { person_cpf_cnpj?: unknown; person_name?: unknown } | null;
+}
+
+export type MotivoQuarentena =
+  | 'SEM_PLACA' | 'SEM_CPF' | 'SEM_NOME'
+  | 'SEM_DATA_ATIVACAO' | 'SEM_VALOR_COBRADO' | 'SEM_DIA_VENCIMENTO';
+
+export const ROTULO_QUARENTENA: Record<MotivoQuarentena, string> = {
+  SEM_PLACA: 'Veiculo sem placa',
+  SEM_CPF: 'Associado sem CPF/CNPJ',
+  SEM_NOME: 'Associado sem nome',
+  SEM_DATA_ATIVACAO: 'Sem data de ativacao (viraria hoje)',
+  SEM_VALOR_COBRADO: 'Sem valor cobrado (pararia de faturar em silencio)',
+  SEM_DIA_VENCIMENTO: 'Sem dia de vencimento (cairia no padrao legado)',
+};
+
+/**
+ * Os impedimentos de uma linha, na ordem de gravidade.
+ *
+ * Vale so para o que SERIA importado: objeto em funil de venda
+ * (`statusVeiculoDoContrato` = null) nao tem o que conferir.
+ */
+export function problemasDoObjeto(o: ObjetoMutual): MotivoQuarentena[] {
+  if (statusVeiculoDoContrato(o.contract_status, o.status) === null) return [];
+  const p: MotivoQuarentena[] = [];
+  if (textoOuNulo(o.vehicle_data?.vehicle_plate) === null) p.push('SEM_PLACA');
+  if (textoOuNulo(o.person_data?.person_cpf_cnpj) === null) p.push('SEM_CPF');
+  if (textoOuNulo(o.person_data?.person_name) === null) p.push('SEM_NOME');
+  if (dataLocalDeIso(o.first_activation_date) === null) p.push('SEM_DATA_ATIVACAO');
+  // O ZERO tambem e problema: `valor_mensalidade_veiculo` (0024) so respeita o
+  // override quando `> 0`, entao um veiculo de CORTESIA importado com 0 cairia
+  // no `cotar_plano` e o associado que nunca pagou receberia boleto.
+  const valor = numeroOuNulo(o.final_total_value);
+  if (valor === null || valor <= 0) p.push('SEM_VALOR_COBRADO');
+  if (textoOuNulo(o.due_day) === null) p.push('SEM_DIA_VENCIMENTO');
+  return p;
+}

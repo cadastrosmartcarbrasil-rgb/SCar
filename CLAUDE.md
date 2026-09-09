@@ -92,8 +92,12 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
   protocolo no SAC). Em base limpa ela é no-op.
 - **`0061_assistencia_painel` é NOVA** — o PAINEL GERENCIAL da 24h como aba da Visão Geral
   (ver seção própria). Só leitura, sobre `acionamentos_assistencia`. Sem ela a aba não abre.
-- **Próxima migration livre: `0062`.** As `0060` e `0061` já estão no branch de trabalho e ainda
-  **não foram aplicadas em produção** (rodar nessa ordem, depois das `0045`..`0059`).
+- **`0062_integracao_mutual` é NOVA** — FASE 1 da integração com o Mutual (o sistema atual):
+  espelho de leitura e diagnóstico. **Não escreve em `clientes`, `veiculos`, `titulos_financeiros`,
+  `faturas` nem `eventos_sinistro`** — cria uma área de captura própria e devolve um relatório.
+  Sem ela a tela `/integracao/mutual` não abre. Ver a seção própria.
+- **Próxima migration livre: `0063`.** As `0060`, `0061` e `0062` já estão no branch de trabalho e
+  ainda **não foram aplicadas em produção** (rodar nessa ordem, depois das `0045`..`0059`).
 - **`.claude/hooks/session-start.sh` é NOVO** — avisa quando a sessão nasce no branch errado e
   instala as dependências. Ele **só roda se estiver no branch que a sessão clonou**; enquanto o
   default do GitHub for o branch morto, uma sessão que caia lá não terá o hook. A correção
@@ -376,9 +380,10 @@ ficha **abre direto nela** — é a primeira pergunta de quem audita. Lógica pu
 5. **SLA / notificações do protocolo** (prazo por prioridade, aviso ao responsável).
 6. **Cotação pelo portal do vendedor** — ele vê o lead, mas monta a cotação só no `/vendas`.
 
-## PRÓXIMO TÓPICO — integração com o MUTUAL (analisado, não iniciado)
-> Levantamento feito ao fim da sessão do painel da 24h; **as perguntas em aberto foram respondidas
-> pelo usuário em 08/09/2026** e viraram plano. **Nada foi construído.**
+## Integração com o MUTUAL — FASE 1 CONSTRUÍDA (migration `0062`)
+> Levantamento feito ao fim da sessão do painel da 24h; as perguntas foram respondidas pelo usuário
+> em 08–09/09/2026, o contrato da API foi lido inteiro e **a Fase 1 (consulta e diagnóstico) está
+> construída**. As fases 2 a 6 (de-para, carga, financeiro, eventos, cutover) seguem no plano.
 > **O PLANO COMPLETO ESTÁ EM `docs/modulos/integracao-mutual.md` — leia-o antes de escrever
 > qualquer linha deste tópico.** O que fica aqui é o resumo e as minas terrestres.
 
@@ -452,6 +457,46 @@ Consequências que o levantamento original não tinha:
   do "consultar primeiro".
 - **Histórico pago reescreve DRE de mês fechado** (`dre_movimentos`, 0032) e, na convivência, faz
   os dois sistemas contarem a mesma receita. O DRE do SCar começa na data de corte.
+
+## Integração com o Mutual — Fase 1 (0062): espelho de leitura e diagnóstico
+> Plano completo e de-para campo a campo: **`docs/modulos/integracao-mutual.md`**. Leia antes de
+> tocar neste módulo.
+
+- **A REGRA DA FASE, sem exceção:** nada escreve em `clientes`, `veiculos`, `titulos_financeiros`,
+  `faturas` ou `eventos_sinistro`. O destino é a área de captura (`mutual_captura`) e o produto é um
+  **relatório**. O risco de verdade só começa na Fase 3 (carga). **Há teste provando isso** — a
+  suite `0062` confere que a operação segue com zero cliente, veículo, título e fatura.
+- **Onde fica:** menu → **Integração Mutual** (`/integracao/mutual`), só para admin/financeiro.
+- **O token é a coisa mais sensível do projeto** (dá leitura da base inteira de associados):
+  `MUTUAL_API_TOKEN` + `MUTUAL_API_BASE` no `.env` do VPS, lidos pela rota `/api/v1/mutual` —
+  molde do `/api/fipe`, **nunca no navegador**. Sem a env, a tela diz "não configurado" em vez de
+  fingir erro da Mutual.
+- **A BARRA FINAL É OBRIGATÓRIA** em toda URL do Mutual: a API é Django com `APPEND_SLASH` e
+  devolve **301** sem ela. `urlMutual()` já monta assim — não montar URL na mão.
+- **`Authorization: Bearer <token>`** — o prefixo faz parte do valor (está escrito no contrato deles).
+- **A carga é dirigida por CONTRATO, não por associado.** `/person/` não tem `updated_at` nem
+  paginação declarada: é consulta pontual, não feed. A espinha é
+  `/contract/contract_object/nested/` (incremental + paginado, já traz veículo e associado).
+- **O valor cobrado hoje sai de `contract_object.final_total_value`**, o dia de
+  `due_day` e a ativação de `first_activation_date` — os três no mesmo objeto. É o que a decisão
+  de **preço congelado** exige (o motor `cotar_plano` passa a valer só para contratos novos).
+- **R$ 0,00 NÃO congela — vaza.** `valor_mensalidade_veiculo` (0024) só respeita o override quando
+  `> 0`; veículo de cortesia importado com zero cairia no `cotar_plano` e o associado que nunca
+  pagou receberia boleto. Por isso o diagnóstico marca valor nulo **ou zero** como CRÍTICO.
+- **Lógica pura testada:** `src/lib/mutual.ts` — `urlMutual`, `statusVeiculoDoContrato` (25 status
+  → 7, com o funil de venda devolvendo `null` = não importar), `tipoPessoaMutual` ("1"/"2"),
+  `dataLocalDeIso` (**converte o fuso ANTES de cortar a hora** — senão evento das 21h vira o dia
+  seguinte), `textoOuNulo` (vazio → NULL, senão `chassi`/`renavam` colidem no unique),
+  `ehMensalidade` (dos 20 `invoice_type`, só 3 são mensalidade) e `problemasDoObjeto` (quarentena).
+- **Espelho no banco, de propósito:** `mutual_status_veiculo`, `mutual_tipo_pessoa` e `mutual_texto`
+  repetem a regra em SQL — mexeu num lado, mexa no outro e nos dois testes (mesma escolha da
+  máquina de estados do rastreador, 0050).
+- **A captura é re-executável:** `unique (entidade, id_externo)` + upsert. Recapturar **atualiza**;
+  e o `uuid_externo` usa `coalesce` para um payload parcial não apagar a chave externa estável.
+- **Softruck, Zelo, Apoio, Split Risk, redeveiculos e Ativo247 estão FORA** — a associação não tem
+  parceria com elas. Só `object_type = VEHICLE` (e `IMPLEMENTOS`) entra.
+- **RPCs:** `mutual_registrar_captura` (só `tem_acesso_global`), `mutual_diagnostico`,
+  `mutual_por_status`, `mutual_filiais`, `mutual_quarentena`, `mutual_resumo_capturas`.
 
 ## O que é
 Sistema de gestão para **associação de proteção veicular** (associados, frota, eventos/sinistros,
@@ -1084,6 +1129,8 @@ remessas bancárias) · Financeiro (contas a pagar/receber + baixas + DRE)
 vendedores, marcas/modelos, tipos de veículo, cotas de participação (V5..V15), tipos de evento,
 produtos, planos/combos (Prata/Ouro/Diamante), **comunicados** (mural interno), contas bancárias,
 integrações bancárias, plano de contas)
+· **Integração Mutual** (`/integracao/mutual`: consulta e diagnóstico dos dados do sistema atual —
+Fase 1, só leitura)
 · **Rastreadores** (`/rastreadores`: parque por IMEI, estoque por unidade/plataforma, instalação no
 veículo, manutenção, painel de divergências com o cadastro da frota e relatórios de custo,
 recuperação e giro).

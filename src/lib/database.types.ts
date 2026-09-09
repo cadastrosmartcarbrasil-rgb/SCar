@@ -2186,6 +2186,76 @@ export type LeadRegional = {
 // ---- Database (formato esperado pelo supabase-js) --------------------------
 // Cada tabela precisa de Row/Insert/Update/Relationships; o schema precisa de
 // Views/Functions/Enums/CompositeTypes com o formato exato.
+// ---- 0062: integracao com o Mutual (Fase 1 - espelho de leitura) -----------
+export type EntidadeMutual =
+  | 'CONTRACT_OBJECT' | 'PERSON' | 'ADDRESS' | 'INVOICE' | 'EVENT'
+  | 'REGIONAL' | 'CONSULTANT'
+  | 'VEHICLE_TYPE' | 'VEHICLE_COLOR' | 'VEHICLE_CATEGORY' | 'VEHICLE_USE_TYPE' | 'EVENT_TYPE';
+
+export type MutualCapturaRow = {
+  id: number;
+  entidade: string;
+  id_externo: string;
+  uuid_externo: string | null;
+  payload: Json;
+  deletado: boolean;
+  capturado_em: string;
+  capturado_por: string | null;
+};
+
+export type MutualSincroniasRow = {
+  id: string;
+  entidade: string;
+  iniciada_em: string;
+  concluida_em: string | null;
+  paginas: number;
+  registros: number;
+  total_remoto: number | null;
+  erro: string | null;
+  executada_por: string | null;
+};
+
+export type SeveridadeDiagnostico = 'OK' | 'ATENCAO' | 'CRITICO';
+
+export type MutualDiagnostico = {
+  grupo: string;
+  indicador: string;
+  valor: number;
+  detalhe: string;
+  severidade: SeveridadeDiagnostico;
+};
+
+export type MutualPorStatus = {
+  contract_status: string | null;
+  status_scar: string;
+  quantidade: number;
+};
+
+export type MutualFilial = {
+  id_externo: string;
+  nome: string | null;
+  cnpj: string | null;
+  objetos: number;
+  ja_existe_id: string | null;
+};
+
+export type MutualQuarentena = {
+  id_externo: string;
+  placa: string | null;
+  associado: string | null;
+  cpf_cnpj: string | null;
+  situacao: string | null;
+  motivos: string[];
+};
+
+export type MutualResumoCaptura = {
+  entidade: string;
+  registros: number;
+  deletados: number;
+  ultima: string | null;
+  total_remoto: number | null;
+};
+
 type Rel<Col extends string, RefRel extends string> = {
   foreignKeyName: string;
   columns: [Col];
@@ -2374,6 +2444,9 @@ export type Database = {
       baixas_financeiras: TableDef<BaixasFinanceirasRow, [Rel<'lancamento_id', 'lancamentos_financeiros'>]>;
       cartoes_cobranca: TableDef<CartoesCobrancaRow, [Rel<'cliente_id', 'clientes'>]>;
       anexos_financeiros: TableDef<AnexosFinanceirosRow, [Rel<'lancamento_id', 'lancamentos_financeiros'>]>;
+      // ---- 0062: integracao com o Mutual (Fase 1) ----
+      mutual_captura: TableDef<MutualCapturaRow, [Rel<'capturado_por', 'usuarios'>]>;
+      mutual_sincronias: TableDef<MutualSincroniasRow, [Rel<'executada_por', 'usuarios'>]>;
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -3267,6 +3340,16 @@ export type Database = {
           | { p_tipo_veiculo: string; p_faixas: Json; p_participacoes: Json; p_adesoes: Json };
         Returns: undefined;
       };
+      // ---- 0062: integracao com o Mutual (Fase 1 - so leitura e diagnostico) ----
+      mutual_registrar_captura: {
+        Args: { p_entidade: EntidadeMutual; p_registros: Json };
+        Returns: number;
+      };
+      mutual_diagnostico: { Args: Record<string, never>; Returns: MutualDiagnostico[] };
+      mutual_por_status: { Args: Record<string, never>; Returns: MutualPorStatus[] };
+      mutual_filiais: { Args: Record<string, never>; Returns: MutualFilial[] };
+      mutual_quarentena: { Args: { p_limite?: number }; Returns: MutualQuarentena[] };
+      mutual_resumo_capturas: { Args: Record<string, never>; Returns: MutualResumoCaptura[] };
     };
     Enums: {
       papel_usuario: PapelUsuario;

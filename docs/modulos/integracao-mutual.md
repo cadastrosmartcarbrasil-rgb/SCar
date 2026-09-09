@@ -1022,3 +1022,43 @@ nos demais endpoints e o rate limit.**
 2. **Rate limit** e o teto real de `page_size` fora de `/quotation/`.
 3. Registros com `deleted = true` **aparecem** nas listagens?
 4. *(otimização)* Um `supplier_id` para `/integrations/contract_objects/` — não é requisito.
+
+---
+
+# ✅ FASE 1 CONSTRUÍDA (migration `0062`, 09/09/2026)
+
+| Peça | Arquivo |
+|---|---|
+| Migration | `supabase/migrations/0062_integracao_mutual.sql` |
+| Suite de banco | `supabase/tests/0062_integracao_mutual.test.sql` |
+| Lógica pura + testes | `src/lib/mutual.ts` · `src/lib/mutual.test.ts` |
+| Proxy (token no servidor) | `src/app/api/v1/mutual/route.ts` |
+| Estado/cache | `src/hooks/use-mutual.ts` |
+| Tela | `src/app/(dashboard)/integracao/mutual/page.tsx` |
+| Menu | `src/components/layout/sidebar.tsx` (admin/financeiro) |
+
+**Validação:** `npm run validate` limpo — tipos, **469 testes** Vitest (27 arquivos), migrations
+`0001..0062` + `schema.sql` e as suites de banco, e o build.
+
+## Dois defeitos que os testes pegaram antes do deploy
+1. **A recaptura apagava o `uuid_externo`.** Um payload parcial (ou de endpoint que não devolve
+   `uuid`) sobrescrevia a chave externa estável com `null`. Corrigido com `coalesce` no `on
+   conflict`: o payload é substituído, a **identidade não**.
+2. **"Objetos capturados" não contava os deletados**, então o indicador mentiria contra o número
+   que a própria sondagem reporta ter trazido. Passou a contar tudo, com o soft-delete em
+   indicador próprio ao lado.
+
+## Para rodar em produção
+1. **`0062` no SQL Editor do Supabase**, depois das `0045`..`0061`.
+2. **`.env` do VPS:** `MUTUAL_API_TOKEN` e (opcional) `MUTUAL_API_BASE`.
+3. `git pull` + `docker compose up -d --build` **dentro do VPS**.
+4. Menu → **Integração Mutual** → *Testar conexão* → *Objetos de contrato* → ler o diagnóstico.
+
+## O que a Fase 1 NÃO faz (e a suite prova)
+Não cria associado, veículo, fatura, título nem boleto. A suite `0062` termina conferindo que
+`clientes`, `veiculos`, `titulos_financeiros` e `faturas` seguem **zerados** depois de toda a
+sondagem. A carga é a Fase 3, e ela começa só quando os números do diagnóstico estiverem na mesa.
+
+## Próximo passo (Fase 2)
+De-para de filiais → `regionais` (tela de correspondência, revisada por humano) e a tabela de
+vínculo `(sistema, entidade, id_externo, uuid_externo, registro_id)`. Migration `0063`.
