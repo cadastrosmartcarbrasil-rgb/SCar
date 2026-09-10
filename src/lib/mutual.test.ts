@@ -199,12 +199,12 @@ describe('ehMensalidade', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 0070 — o status do VEICULO, e nao o do associado
+// 0071 — o status do VEICULO, e nao o do associado
 // ---------------------------------------------------------------------------
 describe('statusVeiculoDoContrato — a disputa contrato x objeto', () => {
   it('O CASO REAL: associado ATIVO (tem outro carro), ESTE veiculo encerrado', () => {
     // O contrato do Mutual guarda varios veiculos, entao `contract_status` fala
-    // do ASSOCIADO. Ate a 0070 este veiculo entrava como faturavel e ia para os
+    // do ASSOCIADO. Ate a 0071 este veiculo entrava como faturavel e ia para os
     // bloqueios cobrando valor e dia que um contrato encerrado nao tem.
     expect(statusVeiculoDoContrato('ATIVO', 'INATIVO')).toBe('inativo');
   });
@@ -221,7 +221,7 @@ describe('statusVeiculoDoContrato — a disputa contrato x objeto', () => {
     expect(statusVeiculoDoContrato('SINISTRADO', 'ATIVO')).toBe('em_evento');
   });
 
-  it('objeto sem status: o contrato manda, como era antes da 0070', () => {
+  it('objeto sem status: o contrato manda, como era antes da 0071', () => {
     expect(statusVeiculoDoContrato('ATIVO')).toBe('ativo');
     expect(statusVeiculoDoContrato('ATIVO', null)).toBe('ativo');
     expect(statusVeiculoDoContrato('ATIVO', '')).toBe('ativo');
@@ -296,7 +296,7 @@ describe('problemasDoObjeto', () => {
     expect(p).toContain('SEM_NOME');
   });
 
-  // 0070: sem placa nao e uma coisa so.
+  // 0071: sem placa nao e uma coisa so.
   it('sem placa mas COM chassi e 0 km — fila operacional, nao dado sujo', () => {
     const p = problemasDoObjeto({
       ...bom, vehicle_data: { vehicle_plate: null, vehicle_chassi: '9BW111' },

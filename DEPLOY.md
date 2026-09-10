@@ -43,8 +43,17 @@ Prompt parecido com `root@smartvida:~#`. É o caso mais comum quando a janela do
 SSH já está aberta:
 
 ```bash
-cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 && docker compose up -d --build
+cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 && DOCKER_BUILDKIT=0 docker compose up -d --build
 ```
+
+> **O `DOCKER_BUILDKIT=0` faz parte do comando — não é contorno de emergência.**
+> O daemon do Docker deste VPS resolve DNS pelo stub do `systemd-resolved`, que
+> já ficou "no ar e mudo": com o BuildKit ligado, o build para em
+> `failed to resolve source metadata` **antes de começar**. Com ele desligado, o
+> builder clássico usa a `node:20-alpine` que já está no cache local e o deploy
+> passa. Nosso `Dockerfile` é genérico (sem `# syntax=`, sem cache mount), então
+> **nada se perde** — só o paralelismo do BuildKit, que aqui não muda nada.
+> O diagnóstico completo, e o conserto definitivo do DNS, estão mais abaixo.
 
 ### (b) Você está no SEU computador
 Prompt do PowerShell (`PS C:\...>`) ou do terminal local. Aí o `ssh` faz parte
@@ -61,7 +70,7 @@ npm run deploy
 Sem os scripts, o equivalente em uma linha:
 
 ```powershell
-ssh root@app.smartvidanet.com.br "cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 && docker compose up -d --build"
+ssh root@app.smartvidanet.com.br "cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 && DOCKER_BUILDKIT=0 docker compose up -d --build"
 ```
 
 > **Não misture os dois.** Rodar a versão com `ssh root@...` **de dentro do
@@ -93,7 +102,9 @@ GOOGLE_MAPS_API_KEY=sua_chave
 
 Sem a chave, o proxy `/api/v1/geo` cai no provedor público automaticamente.
 
-### Se o build parar em `failed to resolve source metadata` / `i/o timeout`
+### Por que o comando leva `DOCKER_BUILDKIT=0` (e o que fazer para não precisar dele)
+
+Sem ele, o build para assim:
 
 ```
 failed to solve: node:20-alpine: ... dial tcp: lookup registry-1.docker.io
@@ -118,7 +129,7 @@ o build estourava.
 Consequência prática: **`getent` funcionando NÃO prova que o Docker vai
 resolver**, e `systemctl restart systemd-resolved` não conserta este caso.
 
-#### O contorno que resolveu (e é o mais rápido)
+#### Por que `DOCKER_BUILDKIT=0` passa
 
 ```bash
 cd /opt/scar && DOCKER_BUILDKIT=0 docker compose up -d --build
@@ -130,9 +141,12 @@ o manifesto ao registro. O `npm ci` roda **dentro do contêiner**, que recebe DN
 próprio do Docker (com o host apontando para `127.0.0.53`, o Docker troca por
 resolvedor público dentro do contêiner). Deploy inteiro sem tocar no servidor.
 
-**É contorno, não conserto:** o `docker compose up -d --build` normal vai parar
-no mesmo lugar na próxima vez. Quem não quiser lembrar disso, aplique o conserto
-abaixo.
+**Isto não conserta o DNS do servidor** — só tira o build da dependência dele.
+Por isso `DOCKER_BUILDKIT=0` virou parte do comando padrão e dos scripts
+(`scripts/deploy.sh` / `deploy.ps1`): sem ele, o `docker compose up -d --build`
+puro vai parar no mesmo lugar na próxima vez. Quem quiser voltar ao comando
+limpo, aplique o conserto abaixo — depois dele o `DOCKER_BUILDKIT=0` fica
+inofensivo, não obrigatório.
 
 #### O conserto (tira o Docker da dependência do stub)
 
@@ -167,7 +181,7 @@ ufw status; iptables -S INPUT | head
 | Tela abre e quebra ao carregar dados | Falta rodar a migration daquele módulo no Supabase |
 | `not a git repository` | O comando rodou no Windows, não no servidor |
 | `couldn't find remote ref` | Branch errado no `git pull` |
-| `failed to resolve source metadata` / `i/o timeout` | DNS do daemon do Docker — ver a seção acima; o site **não** caiu. Saída rápida: `DOCKER_BUILDKIT=0 docker compose up -d --build` |
+| `failed to resolve source metadata` / `i/o timeout` | Faltou o `DOCKER_BUILDKIT=0` no comando (é DNS do daemon do Docker — ver a seção acima). O site **não** caiu: build que falha não substitui o contêiner. |
 
 ## Branch de produção
 

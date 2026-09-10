@@ -22,13 +22,19 @@ if [ "${1:-}" = "--descobrir" ]; then
   exit 0
 fi
 
+# DOCKER_BUILDKIT=0 e PADRAO aqui, nao contorno de emergencia: o daemon do
+# Docker deste VPS resolve DNS pelo stub do systemd-resolved, que ja ficou "no ar
+# e mudo" — e ai o BuildKit para em `failed to resolve source metadata` antes de
+# comecar. O builder classico usa a node:20-alpine do cache local e passa.
+# O Dockerfile e generico (sem `# syntax=`, sem cache mount), entao nada se perde.
+# Diagnostico completo em DEPLOY.md.
 echo "==> $SERVIDOR : $CAMINHO ($BRANCH)"
 ssh "$SERVIDOR" "set -e
   cd $CAMINHO
   git fetch origin $BRANCH
   git checkout $BRANCH
   git pull origin $BRANCH
-  docker compose up -d --build"
+  DOCKER_BUILDKIT=0 docker compose up -d --build"
 
 echo
 echo "Deploy concluido. Atualize a pagina com Ctrl+F5."

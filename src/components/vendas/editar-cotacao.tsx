@@ -6,11 +6,13 @@ import { Lock, Percent, ShieldCheck, Loader2 } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { FormField, Input, Select, MoneyInput } from '@/components/ui/field';
-import { usePlanos, useProdutos } from '@/hooks/use-precificacao';
+import { usePlanos, useProdutos, useProdutosPorPlano } from '@/hooks/use-precificacao';
 import {
   useAtualizarCotacao, useProdutosObrigatorios, useSimularDesconto, useAprovarDesconto,
 } from '@/hooks/use-vendas';
-import { calcularDesconto, podeEditarCotacao, selecaoValida } from '@/lib/crm';
+import { calcularDesconto, podeEditarCotacao } from '@/lib/crm';
+import { avulsosDoVeiculo } from '@/lib/planos';
+import { separarOpcionais } from '@/lib/vistoria';
 import { formatCurrency } from '@/lib/utils';
 import type { CotacoesRow, LeadsRow } from '@/lib/database.types';
 
@@ -25,6 +27,7 @@ export function EditarCotacao({
 }) {
   const { data: planos } = usePlanos();
   const { data: produtos } = useProdutos();
+  const { data: produtosPorPlano } = useProdutosPorPlano();
   const atualizar = useAtualizarCotacao();
   const aprovar = useAprovarDesconto();
 
@@ -46,6 +49,19 @@ export function EditarCotacao({
   const disponiveis = useMemo(
     () => (produtos ?? []).filter((p) => p.status && !idsObrigatorios.includes(p.id)),
     [produtos, idsObrigatorios],
+  );
+
+  // O combo tambem carrega OPCIONAIS (plano_produtos). Eles nao sao
+  // "obrigatorios do produto", entao escapavam da lista travada acima e eram
+  // oferecidos de novo como avulso — o cliente pagaria a parte por algo que ja
+  // esta levando. Aqui eles aparecem marcados, travados e com o selo do plano.
+  const idsDoPlano = useMemo(
+    () => (planoId ? produtosPorPlano?.[planoId] ?? [] : []),
+    [produtosPorPlano, planoId],
+  );
+  const { inclusos: noPlano, avulsos: livres } = useMemo(
+    () => separarOpcionais(disponiveis, idsDoPlano),
+    [disponiveis, idsDoPlano],
   );
 
   const limite = Number(simulacao?.limite_regional ?? 0);
@@ -80,8 +96,9 @@ export function EditarCotacao({
         cotacaoId: cotacao.id,
         fipe,
         planoId: planoId || null,
-        // os obrigatorios voltam sempre para a selecao (trava do plano)
-        opcionaisIds: selecaoValida(opcionais, []),
+        limparPlano: !planoId,
+        // so o que e vendido A PARTE: o combo entra pelo proprio plano
+        opcionaisIds: avulsosDoVeiculo(opcionais, idsDoPlano),
         descontoPercentual: desconto,
       },
       {
@@ -105,7 +122,8 @@ export function EditarCotacao({
         cotacaoId: cotacao.id,
         fipe,
         planoId: planoId || null,
-        opcionaisIds: selecaoValida(opcionais, []),
+        limparPlano: !planoId,
+        opcionaisIds: avulsosDoVeiculo(opcionais, idsDoPlano),
       },
       {
         onSuccess: () => {
@@ -171,11 +189,31 @@ export function EditarCotacao({
           </ul>
         </div>
 
-        {/* Opcionais: livres */}
+        {/* Opcionais: o que ja vem no combo aparece travado, o resto e livre */}
         <div className="rounded-lg border border-slate-200 p-3">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Opcionais</p>
+          {noPlano.length > 0 && (
+            <div className="mb-3">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Ja incluidos neste plano
+              </p>
+              <div className="grid gap-1 sm:grid-cols-2">
+                {noPlano.map((p) => (
+                  <label key={p.id} className="flex items-center gap-2 text-sm text-slate-500">
+                    <input type="checkbox" checked disabled />
+                    {p.nome}
+                    <span className="rounded-full bg-cyan-50 px-1.5 py-px text-[10px] font-bold uppercase text-cyan-700 ring-1 ring-inset ring-cyan-200">
+                      no plano
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            Opcionais a parte
+          </p>
           <div className="grid gap-1 sm:grid-cols-2">
-            {disponiveis.map((p) => (
+            {livres.map((p) => (
               <label key={p.id} className="flex items-center gap-2 text-sm text-slate-600">
                 <input
                   type="checkbox"
@@ -187,7 +225,7 @@ export function EditarCotacao({
                 {p.nome}
               </label>
             ))}
-            {disponiveis.length === 0 && <p className="text-sm text-slate-400">Nenhum opcional disponivel.</p>}
+            {livres.length === 0 && <p className="text-sm text-slate-400">Nenhum opcional disponivel.</p>}
           </div>
         </div>
 

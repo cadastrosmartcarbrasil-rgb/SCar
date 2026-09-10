@@ -3,14 +3,17 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Car, Search, Loader2, Calculator, Bell, Satellite } from 'lucide-react';
+import {
+  Plus, Pencil, Trash2, Car, Search, Loader2, Calculator, Bell, Satellite,
+  ArrowUpRight, ArrowDownRight, ArrowLeftRight, AlertTriangle,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { FormField, Input, Select, MoneyInput } from '@/components/ui/field';
 import { useAssociados } from '@/hooks/use-associados';
 import { useRegionais, useVendedores, useUsuarios, useMarcas, useModelos } from '@/hooks/use-config';
 import { rotuloUnidade } from '@/lib/regional';
-import { useTiposVeiculo, usePlanos, useProdutos } from '@/hooks/use-precificacao';
+import { useTiposVeiculo, usePlanos, useProdutos, useProdutosPorPlano } from '@/hooks/use-precificacao';
 import { useVeiculos, useSaveVeiculo, useExcluirVeiculo } from '@/hooks/use-veiculos';
 import { useEmpresasRastreamento } from '@/hooks/use-rastreamento';
 import {
@@ -22,6 +25,12 @@ import { FipeConsulta } from '@/components/fipe/fipe-consulta';
 import { useFipePorPlaca } from '@/hooks/use-fipe';
 import { formatCurrency } from '@/lib/utils';
 import { normalizarDigitos, validarRastreador, imeiLuhnValido } from '@/lib/rastreador';
+import { separarOpcionais } from '@/lib/vistoria';
+import {
+  ROTULO_SENTIDO, avulsosDoVeiculo, compararTrocaDePlano, mensalidadeCongelada,
+  podeSincronizarMensalidade, sentidoDaTroca,
+  type SentidoTroca, type TrocaDePlano,
+} from '@/lib/planos';
 import type {
   VeiculosRow,
   StatusVeiculo,
@@ -80,6 +89,7 @@ function VeiculosConteudo() {
   const { data: tiposVeiculo } = useTiposVeiculo();
   const { data: planos } = usePlanos();
   const { data: produtos } = useProdutos();
+  const { data: produtosPorPlano } = useProdutosPorPlano();
   const { data: tiposAlerta } = useTiposAlerta();
   const { data: rastreadoras } = useEmpresasRastreamento();
   const salvar = useSaveVeiculo();
@@ -91,8 +101,12 @@ function VeiculosConteudo() {
   const [aberto, setAberto] = useState(false);
   const [form, setForm] = useState<Partial<VeiculosRow>>({});
   const [consultando, setConsultando] = useState(false);
+  // `opcionais` guarda o que foi contratado A PARTE. O que vem dentro do combo
+  // e resolvido pelo plano (aparece marcado e travado) — nao e escolha.
   const [opcionais, setOpcionais] = useState<Set<string>>(new Set());
   const [alertas, setAlertas] = useState<Set<string>>(new Set());
+  const [troca, setTroca] = useState<(TrocaDePlano & { sentido: SentidoTroca; de: string; para: string }) | null>(null);
+  const [valorCotado, setValorCotado] = useState<number | null>(null);
 
   const vProdutos = useVeiculoProdutos(form.id);
   const vAlertas = useVeiculoAlertas(form.id);
@@ -110,14 +124,86 @@ function VeiculosConteudo() {
     const v = (veiculos ?? []).find((x) => x.id === editarId);
     if (!v) return;
     deepLinkTratado.current = editarId;
-    setForm(v);
-    setAberto(true);
+    editar(v);
     router.replace('/veiculos', { scroll: false });
   }, [editarId, veiculos, router]);
 
   const opcionaisDisp = useMemo(() => (produtos ?? []).filter((p) => !p.obrigatorio && p.status), [produtos]);
   const toggleSet = (setter: React.Dispatch<React.SetStateAction<Set<string>>>, id: string) =>
     setter((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
+  // ------------------------------------------------------------- plano/combo
+  // O que o plano escolhido ja carrega. `cotar_plano` (0019) une plano +
+  // avulsos, entao o item do combo nunca pode ser oferecido como escolha: o
+  // atendente marcaria de novo algo que o associado ja leva.
+  const idsDoPlano = useMemo(
+    () => (form.plano_protecao_id ? produtosPorPlano?.[form.plano_protecao_id] ?? [] : []),
+    [produtosPorPlano, form.plano_protecao_id],
+  );
+  const { inclusos, avulsos: opcionaisAvulsos } = useMemo(
+    () => separarOpcionais(opcionaisDisp, idsDoPlano),
+    [opcionaisDisp, idsDoPlano],
+  );
+  const nomeProduto = useMemo(() => new Map((produtos ?? []).map((p) => [p.id, p.nome])), [produtos]);
+  const nivelDoPlano = (id: string | null) =>
+    id ? (planos ?? []).find((p) => p.id === id)?.nivel ?? null : null;
+  const nomeDoPlano = (id: string | null) =>
+    (id ? (planos ?? []).find((p) => p.id === id)?.nome : null) ?? 'Sem plano';
+
+  /** Recotiza no banco (mesma `cotar_plano` do resto do sistema). */
+  function recotizar(planoId: string | null, avulsosIds: string[], aplicar: boolean) {
+    if (!form.tipo_veiculo_id || !(form.valor_fipe ?? 0)) { setValorCotado(null); return; }
+    calcMensal.mutate(
+      { fipe: form.valor_fipe ?? 0, tipoVeiculoId: form.tipo_veiculo_id, planoId, opcionaisIds: avulsosIds },
+      {
+        onSuccess: (valor) => {
+          setValorCotado(valor);
+          if (aplicar) setF({ valor_mensalidade: valor });
+        },
+        onError: () => setValorCotado(null),
+      },
+    );
+  }
+
+  /**
+   * Upgrade/downgrade de plano. O combo novo assume os itens dele; o avulso que
+   * o novo plano passou a incluir para de ser cobrado a parte; e o que a
+   * categoria abaixo NAO cobre mais e anunciado, nunca recolocado sozinho —
+   * remarcar muda o preco, e isso e decisao de quem atende.
+   */
+  function trocarPlano(novoId: string | null) {
+    const anteriorId = form.plano_protecao_id ?? null;
+    if (novoId === anteriorId) return;
+    const idsAntes = anteriorId ? produtosPorPlano?.[anteriorId] ?? [] : [];
+    const idsDepois = novoId ? produtosPorPlano?.[novoId] ?? [] : [];
+    // A selecao gravada pode trazer item do combo anterior (ficha antiga):
+    // ela e limpa antes de comparar, senao viraria "avulso" do nada.
+    const diff = compararTrocaDePlano({
+      avulsos: avulsosDoVeiculo([...opcionais], idsAntes),
+      idsPlanoAnterior: idsAntes,
+      idsPlanoNovo: idsDepois,
+    });
+    setOpcionais(new Set(diff.avulsos));
+    setF({ plano_protecao_id: novoId });
+    setTroca({
+      ...diff,
+      sentido: sentidoDaTroca(nivelDoPlano(anteriorId), nivelDoPlano(novoId)),
+      de: nomeDoPlano(anteriorId),
+      para: nomeDoPlano(novoId),
+    });
+    recotizar(novoId, diff.avulsos, podeSincronizarMensalidade(form.valor_mensalidade, valorCotado));
+  }
+
+  /** Manter, como avulso pago, uma cobertura que o plano novo deixou de ter. */
+  function manterComoAvulso(produtoId: string) {
+    const ids = [...opcionais, produtoId];
+    setOpcionais(new Set(ids));
+    setTroca((t) => (t ? { ...t, perdidos: t.perdidos.filter((id) => id !== produtoId) } : t));
+    recotizar(
+      form.plano_protecao_id ?? null, ids,
+      podeSincronizarMensalidade(form.valor_mensalidade, valorCotado),
+    );
+  }
 
   const nomeUsuario = useMemo(() => new Map((usuarios ?? []).map((u) => [u.id, u.nome])), [usuarios]);
   const nomeAssociado = useMemo(
@@ -145,10 +231,23 @@ function VeiculosConteudo() {
     );
   }, [veiculos, busca]);
 
+  // Abrir outra ficha nao pode herdar a selecao da anterior: o conjunto de
+  // opcionais so e reescrito quando a consulta do novo veiculo responde.
+  function editar(v: VeiculosRow) {
+    setForm(v);
+    setOpcionais(new Set());
+    setAlertas(new Set());
+    setTroca(null);
+    setValorCotado(null);
+    setAberto(true);
+  }
+
   function novo() {
     setForm({ status: 'ativo', uso: 'passeio', data_contrato: undefined });
     setOpcionais(new Set());
     setAlertas(new Set());
+    setTroca(null);
+    setValorCotado(null);
     setAberto(true);
   }
 
@@ -156,7 +255,11 @@ function VeiculosConteudo() {
     calcMensal.mutate(
       { fipe: form.valor_fipe ?? 0, tipoVeiculoId: form.tipo_veiculo_id ?? null, planoId: form.plano_protecao_id ?? null, opcionaisIds: [...opcionais] },
       {
-        onSuccess: (valor) => { setF({ valor_mensalidade: valor }); toast.success(`Mensalidade calculada: ${formatCurrency(valor)}`); },
+        onSuccess: (valor) => {
+          setValorCotado(valor);
+          setF({ valor_mensalidade: valor });
+          toast.success(`Mensalidade calculada: ${formatCurrency(valor)}`);
+        },
         onError: (e) => toast.error(e.message),
       },
     );
@@ -208,7 +311,14 @@ function VeiculosConteudo() {
     // Em veiculo ja cadastrado os alertas sao mantidos pelo painel proprio
     // (abrir/resolver com historico) — salvar NAO pode reescrever o conjunto,
     // senao apaga mensagem, autor e resolucao de cada pendencia.
-    salvar.mutate({ ...form, opcionaisIds: [...opcionais], alertasIds: form.id ? undefined : [...alertas] }, {
+    // veiculo_produtos guarda SO o que foi contratado a parte — o item do combo
+    // ja vem de plano_produtos. Grava-lo aqui faria a ficha mentir (e limpa,
+    // de quebra, o que ficha antiga gravou junto).
+    salvar.mutate({
+      ...form,
+      opcionaisIds: avulsosDoVeiculo([...opcionais], idsDoPlano),
+      alertasIds: form.id ? undefined : [...alertas],
+    }, {
       onSuccess: () => {
         toast.success('Veiculo salvo');
         setAberto(false);
@@ -287,10 +397,7 @@ function VeiculosConteudo() {
                   <td className="px-4 py-2">
                     <div className="flex justify-end gap-1">
                       <button
-                        onClick={() => {
-                          setForm(v);
-                          setAberto(true);
-                        }}
+                        onClick={() => editar(v)}
                         className="rounded p-1.5 text-slate-500 hover:bg-slate-100"
                       >
                         <Pencil className="h-4 w-4" />
@@ -488,21 +595,74 @@ function VeiculosConteudo() {
           <div className="space-y-3 rounded-lg border border-slate-200 p-3">
             <p className="text-sm font-semibold text-slate-700">Plano & Cobranca</p>
             <FormField label="Plano de protecao">
-              <Select value={form.plano_protecao_id ?? ''} onChange={(e) => setF({ plano_protecao_id: e.target.value || null })}>
+              <Select value={form.plano_protecao_id ?? ''} onChange={(e) => trocarPlano(e.target.value || null)}>
                 <option value="">-- Sem plano --</option>
                 {(planos ?? []).filter((p) => p.ativo).map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
               </Select>
             </FormField>
+
+            {/* O que a troca de categoria fez com a cobertura e com o preco */}
+            {troca && <ResumoTroca
+              troca={troca}
+              nome={(id) => nomeProduto.get(id) ?? 'Item'}
+              valorAtual={form.valor_mensalidade ?? null}
+              valorCotado={valorCotado}
+              calculando={calcMensal.isPending}
+              onAplicar={() => valorCotado != null && setF({ valor_mensalidade: valorCotado })}
+              onManter={manterComoAvulso}
+              onFechar={() => setTroca(null)}
+            />}
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-slate-600">Coberturas do plano</p>
+              {inclusos.length > 0 ? (
+                <div className="grid grid-cols-2 gap-1 sm:grid-cols-3">
+                  {inclusos.map((p) => (
+                    <label key={p.id} className="flex items-center gap-2 text-sm text-slate-500">
+                      <input type="checkbox" checked disabled className="h-4 w-4 rounded border-slate-300" />
+                      {p.nome}
+                      <span className="rounded-full bg-cyan-50 px-1.5 py-px text-[10px] font-bold uppercase text-cyan-700 ring-1 ring-inset ring-cyan-200">
+                        no plano
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-400">
+                  {form.plano_protecao_id
+                    ? 'Este plano nao traz opcional amarrado (so os itens obrigatorios da base).'
+                    : 'Sem plano selecionado — tudo o que for marcado abaixo e cobrado a parte.'}
+                </p>
+              )}
+            </div>
+
             <div>
-              <p className="mb-1 text-sm font-medium text-slate-600">Produtos opcionais</p>
+              <p className="mb-1 text-sm font-medium text-slate-600">
+                Opcionais contratados a parte
+                <span className="ml-1 font-normal text-slate-400">(somam a mensalidade)</span>
+              </p>
               <div className="grid grid-cols-2 gap-1 sm:grid-cols-3">
-                {opcionaisDisp.map((p) => (
+                {opcionaisAvulsos.map((p) => (
                   <label key={p.id} className="flex items-center gap-2 text-sm text-slate-700">
-                    <input type="checkbox" checked={opcionais.has(p.id)} onChange={() => toggleSet(setOpcionais, p.id)} className="h-4 w-4 rounded border-slate-300" />
+                    <input
+                      type="checkbox"
+                      checked={opcionais.has(p.id)}
+                      onChange={() => {
+                        const ids = opcionais.has(p.id)
+                          ? [...opcionais].filter((x) => x !== p.id)
+                          : [...opcionais, p.id];
+                        setOpcionais(new Set(ids));
+                        recotizar(
+                          form.plano_protecao_id ?? null, ids,
+                          podeSincronizarMensalidade(form.valor_mensalidade, valorCotado),
+                        );
+                      }}
+                      className="h-4 w-4 rounded border-slate-300"
+                    />
                     {p.nome}
                   </label>
                 ))}
-                {opcionaisDisp.length === 0 && <span className="text-xs text-slate-400">Nenhum opcional cadastrado.</span>}
+                {opcionaisAvulsos.length === 0 && <span className="text-xs text-slate-400">Nenhum opcional cadastrado.</span>}
               </div>
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -518,6 +678,23 @@ function VeiculosConteudo() {
                 <Input type="number" min={1} max={31} value={form.dia_vencimento ?? ''} onChange={(e) => setF({ dia_vencimento: Number(e.target.value) || null })} placeholder="ex.: 10" />
               </FormField>
             </div>
+
+            {/* O faturamento usa o valor GRAVADO (valor_mensalidade_veiculo, 0024):
+                trocar de plano sem atualizar esse campo nao muda um centavo. */}
+            {mensalidadeCongelada(form.valor_mensalidade, valorCotado) && (
+              <p className="flex flex-wrap items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                O valor gravado ({formatCurrency(form.valor_mensalidade ?? 0)}) difere do calculado para este
+                plano ({formatCurrency(valorCotado ?? 0)}). A cobranca usa o gravado.
+                <button
+                  type="button"
+                  onClick={() => valorCotado != null && setF({ valor_mensalidade: valorCotado })}
+                  className="font-semibold underline underline-offset-2"
+                >
+                  Aplicar {formatCurrency(valorCotado ?? 0)}
+                </button>
+              </p>
+            )}
           </div>
 
           {/* Situacao do bem */}
@@ -665,6 +842,91 @@ function VeiculosConteudo() {
           </div>
         </form>
       </Modal>
+    </div>
+  );
+}
+
+/**
+ * O que mudou na troca de categoria, em uma leitura: direcao, o que entrou, o
+ * que saiu, o que deixou de ser cobrado a parte e quanto passa a custar.
+ * Aparece so depois de uma troca — ficha parada nao precisa dele.
+ */
+function ResumoTroca({
+  troca, nome, valorAtual, valorCotado, calculando, onAplicar, onManter, onFechar,
+}: {
+  troca: TrocaDePlano & { sentido: SentidoTroca; de: string; para: string };
+  nome: (id: string) => string;
+  valorAtual: number | null;
+  valorCotado: number | null;
+  calculando: boolean;
+  onAplicar: () => void;
+  onManter: (produtoId: string) => void;
+  onFechar: () => void;
+}) {
+  const Icone = troca.sentido === 'UPGRADE' || troca.sentido === 'ENTRADA'
+    ? ArrowUpRight
+    : troca.sentido === 'DOWNGRADE' || troca.sentido === 'SAIDA'
+      ? ArrowDownRight
+      : ArrowLeftRight;
+
+  return (
+    <div className="space-y-2 rounded-lg border border-cyan-200 bg-cyan-50/60 p-3 text-sm">
+      <div className="flex items-start justify-between gap-2">
+        <p className="flex items-center gap-1.5 font-semibold text-slate-800">
+          <Icone className="h-4 w-4 text-cyan-600" />
+          {ROTULO_SENTIDO[troca.sentido]}: {troca.de} → {troca.para}
+        </p>
+        <button type="button" onClick={onFechar} className="text-xs text-slate-500 hover:underline">
+          fechar
+        </button>
+      </div>
+
+      {troca.ganhos.length > 0 && (
+        <p className="text-xs text-emerald-700">
+          <b>Passa a incluir:</b> {troca.ganhos.map(nome).join(' · ')}
+        </p>
+      )}
+
+      {troca.incorporados.length > 0 && (
+        <p className="text-xs text-emerald-700">
+          <b>Deixa de ser cobrado a parte</b> (agora vem no plano):{' '}
+          {troca.incorporados.map(nome).join(' · ')}
+        </p>
+      )}
+
+      {troca.perdidos.length > 0 && (
+        <div className="space-y-1 text-xs text-rose-700">
+          <b>Cobertura que sai do plano:</b>
+          <div className="flex flex-wrap gap-1">
+            {troca.perdidos.map((id) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => onManter(id)}
+                className="rounded-full bg-superficie px-2 py-0.5 ring-1 ring-inset ring-rose-200 hover:ring-rose-400"
+                title="Manter como opcional contratado a parte"
+              >
+                {nome(id)} <span className="font-semibold">+ manter</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <p className="flex flex-wrap items-center gap-1.5 border-t border-cyan-200 pt-2 text-xs text-slate-700">
+        <b>Mensalidade:</b>
+        {valorAtual != null && <span className="text-slate-500 line-through">{formatCurrency(valorAtual)}</span>}
+        {calculando
+          ? <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" />
+          : valorCotado != null
+            ? <span className="tnum font-semibold text-slate-900">{formatCurrency(valorCotado)}</span>
+            : <span className="text-slate-400">informe categoria de risco e valor FIPE para calcular</span>}
+        {valorCotado != null && valorAtual !== valorCotado && (
+          <button type="button" onClick={onAplicar} className="font-semibold text-cyan-700 underline underline-offset-2">
+            aplicar no cadastro
+          </button>
+        )}
+      </p>
     </div>
   );
 }

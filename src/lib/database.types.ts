@@ -2330,8 +2330,8 @@ export type MutualPeriodicidade = {
 };
 
 /**
- * 0063/0070: o vocabulario do Mutual que o de-para ainda nao reconhece.
- * `origem` diz se veio do CONTRATO ou do OBJETO — desde a 0070 o status do
+ * 0063/0071: o vocabulario do Mutual que o de-para ainda nao reconhece.
+ * `origem` diz se veio do CONTRATO ou do OBJETO — desde a 0071 o status do
  * objeto tambem decide carga, entao palavra nova la classifica veiculo errado.
  */
 export type MutualStatusNaoMapeado = {
@@ -2340,7 +2340,7 @@ export type MutualStatusNaoMapeado = {
   quantidade: number;
 };
 
-/** 0070: contrato x objeto, e quantos mudam de classificacao por causa do objeto. */
+/** 0071: contrato x objeto, e quantos mudam de classificacao por causa do objeto. */
 export type MutualStatusCruzado = {
   contract_status: string | null;
   object_status: string;
@@ -3176,6 +3176,7 @@ export type Database = {
           p_modo_envio?: string | null;
           p_desconto_percentual?: number | null;
           p_desconto_justificativa?: string | null;
+          p_limpar_plano?: boolean;
         };
         Returns: CotacoesRow;
       };

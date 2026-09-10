@@ -1,5 +1,5 @@
 -- ============================================================================
--- SCar :: 0070_mutual_status_do_objeto.sql
+-- SCar :: 0071_mutual_status_do_objeto.sql
 -- CORRETIVA — duas leituras erradas que inflavam a quarentena.
 --
 -- (1) O STATUS QUE MANDAVA ERA O DO ASSOCIADO, NAO O DO VEICULO.
@@ -211,7 +211,7 @@ begin
      and not mutual_e_funil_venda(c.payload->>'contract_status')
    group by 1, 2
   union all
-  -- O status do objeto passou a DECIDIR carga (0070): vocabulario novo aqui e
+  -- O status do objeto passou a DECIDIR carga (0071): vocabulario novo aqui e
   -- veiculo classificado errado, em silencio.
   select 'OBJETO', c.payload->>'status', count(*)::bigint
     from mutual_captura c
@@ -263,7 +263,7 @@ begin
      where c.entidade = 'CONTRACT' and not c.deletado
   ),
   obj as (
-    -- 0070: o status do OBJETO entra na conta. O contrato fala do ASSOCIADO,
+    -- 0071: o status do OBJETO entra na conta. O contrato fala do ASSOCIADO,
     -- que pode estar ativo por causa de OUTRO veiculo.
     select mutual_status_veiculo(o.payload->>'contract_status', o.payload->>'status') as st,
            mutual_texto(o.payload#>>'{vehicle_data,vehicle_plate}')   as placa,
@@ -304,7 +304,7 @@ begin
     from base where st not in ('ativo','em_evento','vistoria_pendente')
   union all
   select 'VOLUME', 'Inativados pelo STATUS DO PROPRIO VEICULO', count(*)::bigint,
-         'O associado segue ativo (tem outro carro), mas ESTE veiculo nao. Antes da 0070 entravam como faturaveis',
+         'O associado segue ativo (tem outro carro), mas ESTE veiculo nao. Antes da 0071 entravam como faturaveis',
          'OK'
     from mutual_captura c
    where c.entidade = 'CONTRACT_OBJECT' and not c.deletado
@@ -341,7 +341,7 @@ begin
               when v_contratos = 0 then 'ATENCAO' else 'CRITICO' end
     from fat where dia is null
   union all
-  -- 0070: sem placa E sem chassi e o unico caso realmente sem saida.
+  -- 0071: sem placa E sem chassi e o unico caso realmente sem saida.
   select 'BLOQUEIO', 'Faturavel sem placa E sem chassi', count(*)::bigint,
          'Nao ha como identificar o veiculo: nem a placa, nem a identidade que sobra no 0 km',
          case when count(*) = 0 then 'OK' else 'CRITICO' end

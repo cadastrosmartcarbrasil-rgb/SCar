@@ -1,4 +1,4 @@
--- Teste funcional da 0070 — o status do VEICULO e o 0 km.
+-- Teste funcional da 0071 — o status do VEICULO e o 0 km.
 --
 -- O que esta suite prova, e que nenhuma outra provava:
 --  (1) o contrato fala do ASSOCIADO. Um associado com DOIS carros, um ativo e
@@ -29,7 +29,7 @@ begin
   assert mutual_status_veiculo('CANCELADO', 'ATIVO') = 'inativo',
     'objeto ATIVO nao pode ressuscitar veiculo de contrato CANCELADO';
 
-  -- Objeto sem status: o contrato manda, como antes da 0070.
+  -- Objeto sem status: o contrato manda, como antes da 0071.
   assert mutual_status_veiculo('ATIVO', null) = 'ativo', 'objeto vazio -> contrato manda';
   assert mutual_status_veiculo('ATIVO', '')   = 'ativo', 'objeto em branco -> contrato manda';
 
@@ -68,7 +68,7 @@ begin
       'vehicle_data', jsonb_build_object('vehicle_plate','ABC1D23','vehicle_chassi','9BW111'),
       'person_data',  jsonb_build_object('person_cpf_cnpj','52998224725','person_name','MARIA')),
     -- 2: o carro que ele ENCERROU. O contrato segue ATIVO por causa do 1.
-    --    Antes da 0070 este entrava como faturavel e cobrava valor e dia.
+    --    Antes da 0071 este entrava como faturavel e cobrava valor e dia.
     jsonb_build_object(
       'id','702','contract_id','C70','contract_status','ATIVO','status','INATIVO',
       'vehicle_data', jsonb_build_object('vehicle_plate','XYZ4E56','vehicle_chassi','9BW222'),
@@ -174,5 +174,5 @@ begin
   select count(*) into n from clientes;  assert n = 0, 'Fase 1 NAO cria cliente';
   select count(*) into n from veiculos;  assert n = 0, 'Fase 1 NAO cria veiculo';
 
-  raise notice '=== TESTES 0070 (status do veiculo e 0 km) PASSARAM ===';
+  raise notice '=== TESTES 0071 (status do veiculo e 0 km) PASSARAM ===';
 end $$;

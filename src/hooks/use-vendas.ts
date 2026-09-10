@@ -294,6 +294,8 @@ export interface AtualizarCotacaoInput {
   modoEnvio?: string | null;
   descontoPercentual?: number | null;
   descontoJustificativa?: string | null;
+  /** Descer ate a cobertura base: sem isto, plano nulo mantem o combo atual. */
+  limparPlano?: boolean;
 }
 
 export function useAtualizarCotacao() {
@@ -311,6 +313,9 @@ export function useAtualizarCotacao() {
         p_modo_envio: i.modoEnvio ?? null,
         p_desconto_percentual: i.descontoPercentual ?? null,
         p_desconto_justificativa: i.descontoJustificativa ?? null,
+        // Sem isto, plano nulo significa "mantem o que esta" (0028) e o
+        // downgrade ate a cobertura base salvava calado, com o combo antigo.
+        p_limpar_plano: i.limparPlano ?? false,
       });
       if (error) throw error;
       return data as CotacoesRow;

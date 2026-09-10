@@ -65,7 +65,7 @@ export function useMutualFiliais() {
 export function useMutualQuarentena(
   limite = 200,
   somenteFaturaveis = true,
-  // 0070: o 0 km (sem placa, com chassi) NAO e problema de dado — e fila
+  // 0071: o 0 km (sem placa, com chassi) NAO e problema de dado — e fila
   // operacional. Fica fora por padrao; a tela tem botao para ver.
   incluirPlacaPendente = false,
 ) {
@@ -101,7 +101,7 @@ export function useMutualStatusNaoMapeados() {
   });
 }
 
-/** 0070: contrato x objeto — o instrumento que mede a mudanca antes da carga. */
+/** 0071: contrato x objeto — o instrumento que mede a mudanca antes da carga. */
 export function useMutualStatusCruzado() {
   const supabase = createClient();
   return useQuery<MutualStatusCruzado[]>({

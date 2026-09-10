@@ -137,14 +137,17 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
   (`Configurações → Vendedores → Importar planilha`). Ver a seção própria: as três decisões que
   moram no banco (todos entram INATIVOS, comissão zerada, nunca cria acesso) e a trava de que
   unidade em branco **não vira matriz**.
-- **`0070_mutual_status_do_objeto` é NOVA e CORRIGE duas leituras erradas** — (1) o status que
+- **`0070_cotacao_troca_plano` é NOVA** — é o DOWNGRADE até a cobertura base na cotação, que a
+  `0028` fazia em silêncio (plano nulo significava "mantém o que está", então "Somente cobertura
+  base" salvava com o combo antigo). Ver "Troca de plano (upgrade / downgrade)".
+- **`0071_mutual_status_do_objeto` é NOVA e CORRIGE duas leituras erradas** — (1) o status que
   mandava era o do **ASSOCIADO**: o contrato do Mutual guarda VÁRIOS veículos, então o associado
   fica ATIVO por causa de OUTRO carro enquanto AQUELE está encerrado, e o veículo morto entrava
   como faturável; (2) **veículo sem placa é 0 KM**, não dado sujo. As duas juntas esvaziam a
   quarentena. Ver a seção própria.
-- **Próxima migration livre: `0071`.** As `0060`, `0061`, `0063`..`0070` já estão no branch de trabalho e
+- **Próxima migration livre: `0072`.** As `0060`, `0061`, `0063`..`0071` já estão no branch de trabalho e
   ainda **não foram aplicadas em produção** (rodar nessa ordem, depois das `0045`..`0059`); a
-  `0062` JÁ FOI aplicada. A `0067`, a `0068` e a `0069` são independentes do Mutual e podem ir junto.
+  `0062` JÁ FOI aplicada. A `0067`, a `0068`, a `0069` e a `0070` são independentes do Mutual e podem ir junto.
 - **`.claude/hooks/session-start.sh` é NOVO** — avisa quando a sessão nasce no branch errado e
   instala as dependências. Ele **só roda se estiver no branch que a sessão clonou**; enquanto o
   default do GitHub for o branch morto, uma sessão que caia lá não terá o hook. A correção
@@ -186,8 +189,15 @@ para testar, aba anônima.
 | Validar tudo antes de commitar | `npm run validate` (tipos → Vitest → migrations+testes de banco+schema → build) |
 | Só os testes de banco | `npm run test:db` · um módulo: `npm run test:db -- 0043` |
 | Regerar o `supabase/schema.sql` | `npm run schema` (rodar SEMPRE após criar/editar migration) |
-| Publicar — **de dentro do VPS** (prompt `root@smartvida:~#`) | `cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 && docker compose up -d --build` |
-| Publicar — **do seu computador** (PowerShell/terminal local) | `ssh root@app.smartvidanet.com.br "cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 && docker compose up -d --build"` |
+| Publicar — **de dentro do VPS** (prompt `root@smartvida:~#`) | `cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 && DOCKER_BUILDKIT=0 docker compose up -d --build` |
+| Publicar — **do seu computador** (PowerShell/terminal local) | `ssh root@app.smartvidanet.com.br "cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 && DOCKER_BUILDKIT=0 docker compose up -d --build"` |
+
+**O `DOCKER_BUILDKIT=0` FAZ PARTE DO COMANDO — nao e contorno de emergencia.** O daemon do Docker
+deste VPS resolve DNS pelo stub do `systemd-resolved`, que ja ficou "no ar e mudo": com o BuildKit
+ligado o build para em `failed to resolve source metadata` ANTES de comecar, e perder tempo com isso
+ja custou uma sessao inteira. Desligado, o builder classico usa a `node:20-alpine` do cache local e
+passa. O nosso `Dockerfile` e generico (sem `# syntax=`, sem cache mount), entao **nada se perde**.
+Nunca ensine o comando sem ele; o conserto definitivo do DNS esta em `DEPLOY.md`.
 
 **O `git pull` roda DENTRO do VPS.** Os dois comandos acima fazem a mesma coisa; o que muda e de
 onde voce digita. **Nao misture:** a versao com `ssh root@...` rodada DE DENTRO do servidor faz a
@@ -246,9 +256,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0070`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **47 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 549 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0071`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **48 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 566 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Todos os portais e páginas
@@ -401,9 +411,9 @@ ficha **abre direto nela** — é a primeira pergunta de quem audita. Lógica pu
    cotação (novo lead)"). Suja o funil e duplica o CPF.
 2. **Desconto só em %** — a negociação real é "quanto fica por R$ 89"; falta o caminho inverso.
    E o campo usa `<input type="number">`, com o mesmo "0 preso na frente" que o `MoneyInput` curou.
-3. **`editar-cotacao.tsx` não separa o que já vem no plano** (o `/vendas/novo` separa, com selo "no
-   plano"), e `selecaoValida(opcionais, [])` com lista vazia é um no-op que promete uma trava que
-   não existe ali.
+3. ~~`editar-cotacao.tsx` não separa o que já vem no plano~~ — **resolvido** junto com a `0070`:
+   ele agora mostra "Já incluídos neste plano" e envia só o avulso; o `selecaoValida(opcionais, [])`
+   (no-op que prometia uma trava inexistente) saiu.
 4. **Dono do lead na ficha** — não mostra consultor/vendedor nem permite reatribuir
    (`atribuir_lead` só está em `/regional/leads`).
 5. **Busca sem acento no banco** — o `ilike` da Lista casa "JOAO" com "JOAO", não com "JOÃO" (o
@@ -593,9 +603,9 @@ Consequências que o levantamento original não tinha:
   com "0 objetos". É bloqueante: `regional_id` atravessa RLS, `escopo_regional()` e todos os
   painéis. **Onde ela mora é pergunta em aberto** — use `mutual_campos('CONTRACT')` para achar o
   campo em vez de supor.
-- **🔴 O STATUS QUE MANDA É O DO VEÍCULO, NÃO O DO ASSOCIADO (0070).** O contrato do Mutual
+- **🔴 O STATUS QUE MANDA É O DO VEÍCULO, NÃO O DO ASSOCIADO (0071).** O contrato do Mutual
   guarda **vários veículos**, então `contract_status` fala do ASSOCIADO: ele fica ATIVO porque tem
-  OUTRO carro, enquanto AQUELE veículo está encerrado. Até a 0070 lia-se só o contrato e o carro
+  OUTRO carro, enquanto AQUELE veículo está encerrado. Até a 0071 lia-se só o contrato e o carro
   morto entrava como **faturável** — indo para os bloqueios ser cobrado por valor, dia de
   vencimento e data de ativação que um contrato encerrado não tem por que ter. **Era isso que
   inflava a quarentena.**
@@ -605,17 +615,17 @@ Consequências que o levantamento original não tinha:
   inativo 0). Consequências que caem de graça: `SINISTRADO` não é apagado por um "ATIVO" genérico
   do objeto, e **funil de venda no contrato descarta a linha** de qualquer jeito — venda nova
   nasce no SCar e o objeto não reabre essa decisão.
-- **A ASSIMETRIA DO DESCONHECIDO (0070) — e ela é deliberada.** Vocabulário novo **no contrato**
+- **A ASSIMETRIA DO DESCONHECIDO (0071) — e ela é deliberada.** Vocabulário novo **no contrato**
   continua sendo `null` (não importar): é decisão PENDENTE, e deixar o objeto resgatar a linha faria
   o veículo entrar com classificação adivinhada, em silêncio — o oposto do que
   `mutual_status_nao_mapeados()` existe para impedir. Vocabulário novo **no objeto** é "sem
   opinião" e o contrato manda: o status do objeto é um REFINAMENTO (só estreita), e refinamento
-  ilegível é nenhum. *Isso foi pego pelas suites `0063` e `0066` quando a primeira versão da 0070
+  ilegível é nenhum. *Isso foi pego pelas suites `0063` e `0066` quando a primeira versão da 0071
   deixou o objeto resgatar contrato desconhecido — o teste antigo fez o trabalho dele.*
-- **`mutual_status_cruzado()` é o instrumento da 0070**: contrato × objeto, com o que mudou de
+- **`mutual_status_cruzado()` é o instrumento da 0071**: contrato × objeto, com o que mudou de
   classificação e quantos. Mudança de LEITURA tem de ser mensurável ANTES da carga — a tela mostra
   só as linhas que mudam, com "antes" riscado ao lado do "agora".
-- **VEÍCULO SEM PLACA É 0 KM, NÃO DADO SUJO (0070).** São carros novos ainda não emplacados.
+- **VEÍCULO SEM PLACA É 0 KM, NÃO DADO SUJO (0071).** São carros novos ainda não emplacados.
   Misturar com "sem CPF" (dado que a origem perdeu) escondia os dois: o 0 km virava alarme falso e
   o problema real sumia no meio da lista. Agora: **sem placa + COM chassi** = grupo
   `PLACA PENDENTE (0 KM)`, fora da quarentena por padrão (botão "Ver os 0 km" na tela);
@@ -624,7 +634,7 @@ Consequências que o levantamento original não tinha:
   (0001). Ele só entra quando essa coluna aceitar a espera; o **chassi** é a identidade natural
   enquanto a placa não vem. A cobrança da placa é operacional — SAC no atendimento, ou aviso
   automático depois da adesão (decisão do usuário, ainda não construída).
-- **`mutual_status_nao_mapeados` passou a ter `origem`** (CONTRATO/OBJETO): desde a 0070 o status
+- **`mutual_status_nao_mapeados` passou a ter `origem`** (CONTRATO/OBJETO): desde a 0071 o status
   do objeto decide carga, então vocabulário novo ali classifica veículo errado em silêncio.
 - **`mutual_campos(entidade, caminho, amostra)` (0065) é o INSTRUMENTO CONTRA O CHUTE.** Lista as
   chaves que realmente vêm no payload capturado, quantas chegam preenchidas e um exemplo; aceita
@@ -1308,7 +1318,7 @@ no banco: **todos entram INATIVOS** por padrao, **comissao entra ZERADA** e **nu
 portal**; (D) reimportar NAO apaga o que a planilha nao traz — comissao e banco configurados na tela
 sobrevivem. `regional_id` nulo e RECUSADO: aqui nulo significa MATRIZ. Espelho puro em
 `src/lib/vendedores-import.ts`).
-· `0070_mutual_status_do_objeto` (CORRETIVA — duas leituras que inflavam a quarentena:
+· `0071_mutual_status_do_objeto` (CORRETIVA — duas leituras que inflavam a quarentena:
 (A) `mutual_status_veiculo` lia `contract_status` e so olhava o `status` do objeto no caso
 `REMOVIDO`. Mas o contrato guarda VARIOS veiculos, entao ele fala do ASSOCIADO: ativo por causa de
 OUTRO carro, com AQUELE veiculo encerrado entrando como faturavel e sendo cobrado por valor e dia
@@ -1345,6 +1355,12 @@ desconhecido que nao seja funil — sem ela, vocabulario novo do Mutual vira vei
 carga, em silencio; (D) `mutual_quarentena` recriada com `p_somente_faturaveis` (muda a
 assinatura, entao e drop + create) e dois indicadores novos: placa fora do padrao e objeto sem
 unidade declarada).
+· `0070_cotacao_troca_plano` (DESCER DE PLANO: `atualizar_cotacao` (0028) resolvia o combo com
+`coalesce(p_plano_id, c.plano_id)`, entao NULO era "mantem o que esta" — bom para upgrade e troca
+lateral, impossivel para o downgrade ate a base: escolher "Somente cobertura base" salvava calado e
+a cotacao seguia cobrando o combo. Novo parametro `p_limpar_plano` (default `false`, entao o
+`aplicar_desconto_cotacao`, que chama por posicao, nao muda). A lista de argumentos muda, entao foi
+DROP + CREATE — sobrecarga deixaria a chamada ambigua.)
 
 ## Módulos (status: todos funcionais)
 Painel/Visão Geral (`/dashboard`, 2 abas: indicadores da operação + **Assistência 24h** — o painel
@@ -1372,8 +1388,10 @@ vez** (FIPE por placa/cascata), contatos e retornos registrados na ficha do lead
 presencial** com o cliente na frente e envio da proposta por WhatsApp, cotação com
 link público `/cotacao/[token]` detalhada/consolidada + print-PDF, esteira com trava de
 Auditoria — só papel `auditoria`/`admin` clica "Autorizar Entrada" e efetiva cliente+veículo)
-· Associados (painel `/associados/[id]` com abas) · Veículos/Contratos (ficha com Plano/Opcionais,
-alertas e **Rastreamento**: IMEI, Nº do chip e rastreadora) · Eventos/Sinistros
+· Associados (painel `/associados/[id]` com abas) · Veículos/Contratos (ficha com Plano —
+**as coberturas do plano já vêm marcadas** e a troca de categoria mostra o que entra, o que sai e
+quanto passa a custar (0071) —, opcionais a parte, alertas e **Rastreamento**: IMEI, Nº do chip e
+rastreadora) · Eventos/Sinistros
 (protocolo, reparo próprio/terceiro, financeiro do evento) · Precificação (simulador + editor de
 tabela FIPE com reajuste % + importação por planilha, uma por tipo de veículo) · Empresa (logo/diretoria/mandatos/documentos) · **Fornecedores** (um cadastro só: peças/serviços,
 prestadores da 24h e rastreadoras, com auto CNPJ/CEP) · **Cobrança** (`/cobrancas`: dashboard + faturas por competência + boletagem em lote +
@@ -1387,6 +1405,41 @@ Fase 1, só leitura)
 · **Rastreadores** (`/rastreadores`: parque por IMEI, estoque por unidade/plataforma, instalação no
 veículo, manutenção, painel de divergências com o cadastro da frota e relatórios de custo,
 recuperação e giro).
+
+## Troca de plano (upgrade / downgrade) — 0070 + `src/lib/planos.ts`
+- **O que estava errado:** a ficha do veiculo listava TODO opcional ativo como escolha do
+  atendente, inclusive os que o plano ja carrega (`plano_produtos`). Um veiculo no Plano Diamante
+  aparecia com as coberturas do proprio Diamante DESMARCADAS — quem abria a ficha nao tinha como
+  saber o que o associado ja tem, e remarcar "para garantir" gravava como avulso algo que ja vinha
+  no combo. Era o mesmo bug que a `0040` corrigiu na tela de venda, ainda de pe no cadastro.
+- **A regra:** `veiculo_produtos` guarda **so o que foi contratado A PARTE**. O que vem no combo e
+  resolvido pelo plano e aparece **marcado, travado e com o selo "no plano"**. Ao salvar,
+  `avulsosDoVeiculo()` tira os itens do plano da lista — o que tambem **limpa ficha antiga** que os
+  gravou junto. O preco nao muda com essa limpeza (`cotar_plano` sempre uniu plano + avulsos); o
+  que muda e a ficha passar a dizer a verdade sobre o que e cobrado a parte.
+- **Subir e descer de categoria** e o mesmo caminho, na tela de veiculos: trocar o plano no seletor
+  dispara `trocarPlano()`, que mostra em uma faixa o que **passa a incluir**, o que **deixa de ser
+  cobrado a parte** (avulso que o novo combo absorveu) e a **cobertura que sai** no downgrade.
+- **O que se perde no downgrade e ANUNCIADO, nunca recolocado sozinho.** Cada item perdido vira um
+  botao "+ manter", que o recontrata como avulso pago. Remarcar muda o preco, e isso e decisao de
+  quem atende — nao da tela.
+- **A armadilha do preco:** `veiculos.valor_mensalidade` e OVERRIDE — `valor_mensalidade_veiculo`
+  (0024) prefere ele ao `cotar_plano`. **Subir de plano sem mexer nesse campo nao muda um centavo
+  do que e faturado.** Por isso a troca recotiza sozinha e a tela avisa em ambar quando o valor
+  gravado diverge do calculado, com um "Aplicar" ao lado. Quando a tela pode sincronizar sozinha e
+  regra pura: `podeSincronizarMensalidade()` — sim com campo vazio ou com valor que bate com a
+  ultima cotacao feita ali; **nao** diante de qualquer divergencia ou de ficha recem-aberta.
+  Valor negociado nao se sobrescreve em silencio.
+- **A troca so vale para o futuro:** `faturas`/`fatura_itens` sao snapshot (0021), entao a
+  competencia ja emitida nao muda — o plano novo entra na proxima geracao de cobranca.
+- **Na cotacao da venda** (`editar-cotacao.tsx`) o mesmo corte foi aplicado: os opcionais do combo
+  aparecem em "Ja incluidos neste plano" e o `p_opcionais_ids` leva so o avulso. E foi la que o
+  downgrade estava quebrado — ver a `0070`.
+- **Logica pura testada:** `src/lib/planos.ts` (`sentidoDaTroca`, `compararTrocaDePlano`,
+  `avulsosDoVeiculo`, `mensalidadeCongelada`, `podeSincronizarMensalidade`). A separacao
+  incluso x avulso reusa `separarOpcionais` de `src/lib/vistoria.ts` — a mesma da tela de venda,
+  nao uma copia. O mapa plano -> produtos vem de `useProdutosPorPlano()` numa consulta so, porque
+  o diff precisa dos itens do plano ANTERIOR e do NOVO no mesmo instante.
 
 ## Motor de cotação e combos (0019) — arquitetura
 - **Cotação Base (Plano Prata)** = Casco + Taxa Admin + Assistência 24h + **Rastreador (regra)**.
@@ -2439,7 +2492,8 @@ no fim — o runner procura por "PASSARAM") e rode `npm run schema`.
 - Push para **`claude/claude-md-opcao-x-98kfj5`** (branch de trabalho E de deploy).
   Consolidar com o branch padrão só com autorização do usuário.
 - **Publicar:** `DEPLOY.md` tem o runbook. Resumo: (A) migrations novas no Supabase
-  SQL Editor, na ordem; (B) `.\scripts\deploy.ps1` (Windows) ou `npm run deploy`.
+  SQL Editor, na ordem; (B) `.\scripts\deploy.ps1` (Windows) ou `npm run deploy` — os dois ja
+  levam o `DOCKER_BUILDKIT=0` embutido.
 - **O `git pull` roda DENTRO do VPS.** Rodar no PowerShell do Windows dá
   `fatal: not a git repository` — foi o erro que mais custou tempo nesta fase.
   Toda janela nova de terminal começa fora do servidor; o `ssh` precisa ser refeito.
@@ -2523,9 +2577,17 @@ no fim — o runner procura por "PASSARAM") e rode `npm run schema`.
 - **Status de PAI e status de FILHO não são a mesma coisa.** `contract_status` do Mutual fala do
   ASSOCIADO (um contrato guarda vários veículos); o veículo encerrado de um associado ativo entrava
   como faturável e ia inflar a quarentena com "sem valor" e "sem vencimento" que contrato encerrado
-  não tem por que ter (0070). **Ao ler status de uma origem hierárquica, pergunte de QUEM ele
+  não tem por que ter (0071). **Ao ler status de uma origem hierárquica, pergunte de QUEM ele
   fala** — e, ao combinar dois, defina explicitamente qual pode PIORAR e qual pode MELHORAR: aqui
   o filho só estreita, nunca ressuscita.
+- **`docker compose up -d --build` SEM `DOCKER_BUILDKIT=0` nao publica neste VPS.** O daemon do
+  Docker le o `/etc/resolv.conf` cru e consulta o stub `127.0.0.53:53`, que aqui ja ficou **no ar e
+  mudo** — o BuildKit para em `failed to resolve source metadata` / `i/o timeout` sem baixar nada.
+  **`getent` respondendo NAO prova que o Docker resolve** (ele passa pelo `systemd-resolved` por
+  D-Bus, outro caminho), e foi essa pista falsa que fez a investigacao render um dia inteiro.
+  Com `DOCKER_BUILDKIT=0` o builder classico usa a imagem do cache local e o deploy passa; o
+  `npm ci` roda dentro do contêiner, que recebe DNS proprio do Docker. Conserto definitivo (apontar
+  o `/etc/resolv.conf` para o uplink do systemd) e o diagnostico completo estao em `DEPLOY.md`.
 - Erro `syntax error near "//"` no SQL Editor = arquivo TypeScript colado por engano; SQL começa com `--`.
 - Trigger com CASE retornando enum: fazer cast `(case ... end)::meu_enum`.
 - Comparar `old.status` (enum) com `''` quebra; usar `is [not] distinct from`.

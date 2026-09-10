@@ -75,7 +75,7 @@ export default function IntegracaoMutualPage() {
   const [caminho, setCaminho] = useState('');
   const campos = useMutualCampos(inspecionar, caminho || undefined);
   const [soFaturaveis, setSoFaturaveis] = useState(true);
-  // 0070: o 0 km (sem placa, com chassi) nao e dado sujo — e fila operacional.
+  // 0071: o 0 km (sem placa, com chassi) nao e dado sujo — e fila operacional.
   // Fica fora da quarentena por padrao; este botao mostra.
   const [verPlacaPendente, setVerPlacaPendente] = useState(false);
   const quarentena = useMutualQuarentena(200, soFaturaveis, verPlacaPendente);
@@ -423,7 +423,7 @@ export default function IntegracaoMutualPage() {
           <p className="mb-3 text-xs text-slate-500">
             O enum do swagger deles <strong>nao e exaustivo</strong>. Estes status vieram da base
             real e hoje <strong>nao entram</strong> — cada um precisa de uma decisao antes da carga,
-            senao vira veiculo faltando na importacao sem ninguem perceber. Desde a 0070 o status
+            senao vira veiculo faltando na importacao sem ninguem perceber. Desde a 0071 o status
             do <strong>veiculo</strong> tambem decide a carga, entao palavra nova ali classifica o
             carro errado.
           </p>
@@ -521,7 +521,7 @@ export default function IntegracaoMutualPage() {
           <p className="mb-3 text-xs leading-relaxed text-slate-500">
             O contrato do Mutual guarda <strong>varios veiculos</strong>, entao o status dele fala
             do <strong>associado</strong>: ele fica ATIVO porque tem OUTRO carro, enquanto AQUELE
-            veiculo esta encerrado. Ate a 0070 lia-se so o contrato, e o carro morto entrava como
+            veiculo esta encerrado. Ate a 0071 lia-se so o contrato, e o carro morto entrava como
             faturavel. Agora vence o <strong>menos vivo dos dois</strong> — o veiculo so consegue
             puxar para baixo, nunca ressuscitar um contrato cancelado.
           </p>

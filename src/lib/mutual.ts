@@ -227,7 +227,7 @@ const VITALIDADE: Record<StatusVeiculo, number> = {
  *
  * O contrato do Mutual guarda VARIOS veiculos, entao `contract_status` fala do
  * ASSOCIADO: ele fica ATIVO porque tem OUTRO carro, enquanto AQUELE veiculo
- * esta encerrado. Ate a 0070 lia-se so o contrato, e o veiculo morto entrava
+ * esta encerrado. Ate a 0071 lia-se so o contrato, e o veiculo morto entrava
  * como vivo — indo para os bloqueios de faturamento cobrar valor e dia de
  * vencimento que um contrato encerrado nao tem por que ter. Era isso que
  * inflava a quarentena.
