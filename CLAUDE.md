@@ -1436,6 +1436,13 @@ recuperação e giro).
   todas as mudanças dela são no-op até a rotina existir. Ao construí-la, ela tem duas passagens e
   as duas já têm onde se apoiar: quem tem título vencido → `inadimplente`; quem tem
   `situacao_inadimplencia_veiculo().tolerancia_vencida` → `inativo`.
+- **O RETORNO É O PAGAMENTO (decisão do usuário, arquivada).** Reconhecido o pagamento do boleto,
+  o CRON **reativa o veículo na base normalmente** — `inadimplente` → `ativo`, sem etapa manual.
+  Duas notas para quem construir a rotina: (1) voltar a `ativo` dispara
+  `trg_veiculo_primeira_cobranca` (0025), que é **idempotente por competência** — já existindo item
+  de fatura naquele mês, ela retorna sem fazer nada; (2) o gatilho pode ser a **baixa do título**
+  (desbloqueio na hora, que é o que importa quando o associado paga e liga pedindo guincho) ou a
+  própria varredura diária (mais simples). Os dois caminhos são válidos; escolher ao construir.
 - **🔴 A DECISÃO QUE IMPORTA: `inadimplente` CONTINUA FATURÁVEL.** Ele entrou em
   `veiculo_faturavel` (0024) ao lado de `ativo`/`em_evento`/`vistoria_pendente`. Deixá-lo de fora
   **parece** o lado conservador e é o contrário: no dia em que o CRON entrasse, a carteira
