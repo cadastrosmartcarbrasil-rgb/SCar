@@ -16,6 +16,8 @@ import { rotuloUnidade } from '@/lib/regional';
 import { useTiposVeiculo, usePlanos, useProdutos, useProdutosPorPlano } from '@/hooks/use-precificacao';
 import { useVeiculos, useSaveVeiculo, useExcluirVeiculo } from '@/hooks/use-veiculos';
 import { useEmpresasRastreamento } from '@/hooks/use-rastreamento';
+import { useEmpresa } from '@/hooks/use-empresa';
+import { DIAS_TOLERANCIA_PADRAO, avisoDeTolerancia, tolerancia } from '@/lib/inadimplencia';
 import {
   useTiposAlerta, useVeiculoProdutos, useVeiculoAlertas, useCalcularMensalidadeVeiculo,
 } from '@/hooks/use-veiculo-ficha';
@@ -58,14 +60,26 @@ const COMBUSTIVEIS: { v: Combustivel; l: string }[] = [
   { v: 'alcool', l: 'Alcool' },
   { v: 'eletrico', l: 'Eletrico (Bateria)' },
 ];
-const STATUS: { v: StatusVeiculo; l: string; cor: string }[] = [
-  { v: 'ativo', l: 'Ativo', cor: 'bg-emerald-50 text-emerald-700' },
-  { v: 'inativo', l: 'Inativo', cor: 'bg-slate-100 text-slate-600' },
-  { v: 'suspenso', l: 'Suspenso', cor: 'bg-amber-50 text-amber-700' },
-  { v: 'excluido', l: 'Excluido', cor: 'bg-rose-50 text-rose-700' },
-  { v: 'baixado', l: 'Baixado', cor: 'bg-slate-100 text-slate-500' },
+// `manual` = aparece no formulario. A lista tem de ser COMPLETA mesmo assim:
+// `statusMeta` cai no primeiro item quando nao acha, entao status ausente daqui
+// era desenhado como "Ativo" — um veiculo bloqueado aparecendo como ativo na
+// lista (acontecia com `em_evento` e `vistoria_pendente`).
+//
+// `inadimplente` NAO e manual de proposito (0072): ele e decidido pelos titulos
+// e a rotina o desfaria na passagem seguinte — ou, pior, inativaria o associado
+// no fim da tolerancia por um clique. Bloqueio manual continua sendo `suspenso`.
+const STATUS: { v: StatusVeiculo; l: string; cor: string; manual: boolean }[] = [
+  { v: 'ativo', l: 'Ativo', cor: 'bg-emerald-50 text-emerald-700', manual: true },
+  { v: 'em_evento', l: 'Em evento', cor: 'bg-cyan-50 text-cyan-700', manual: false },
+  { v: 'vistoria_pendente', l: 'Vistoria pendente', cor: 'bg-sky-50 text-sky-700', manual: false },
+  { v: 'inadimplente', l: 'Inadimplente', cor: 'bg-rose-50 text-rose-700', manual: false },
+  { v: 'suspenso', l: 'Suspenso', cor: 'bg-amber-50 text-amber-700', manual: true },
+  { v: 'inativo', l: 'Inativo', cor: 'bg-slate-100 text-slate-600', manual: true },
+  { v: 'excluido', l: 'Excluido', cor: 'bg-rose-50 text-rose-700', manual: true },
+  { v: 'baixado', l: 'Baixado', cor: 'bg-slate-100 text-slate-500', manual: false },
 ];
-const statusMeta = (s: StatusVeiculo) => STATUS.find((x) => x.v === s) ?? STATUS[0];
+const statusMeta = (s: StatusVeiculo) =>
+  STATUS.find((x) => x.v === s) ?? { v: s, l: s, cor: 'bg-slate-100 text-slate-600', manual: false };
 
 const anoAtual = 2026;
 
@@ -81,6 +95,8 @@ function VeiculosConteudo() {
   const params = useSearchParams();
   const router = useRouter();
   const { data: veiculos, isLoading } = useVeiculos();
+  const { data: empresa } = useEmpresa();
+  const diasTolerancia = empresa?.dias_tolerancia_inadimplencia ?? DIAS_TOLERANCIA_PADRAO;
   const { data: associados } = useAssociados();
   const { data: regionais } = useRegionais();
   const { data: vendedores } = useVendedores();
@@ -377,6 +393,8 @@ function VeiculosConteudo() {
             )}
             {filtrados.map((v) => {
               const meta = statusMeta(v.status);
+              // Quanto tempo ainda ha para cobrar antes de perder o associado.
+              const aviso = avisoDeTolerancia(tolerancia(v, diasTolerancia));
               return (
                 <tr key={v.id} className="border-b border-slate-50 last:border-0">
                   <td className="px-4 py-2 font-mono font-medium text-slate-800">{v.placa}</td>
@@ -393,6 +411,9 @@ function VeiculosConteudo() {
                   <td className="px-4 py-2 text-slate-600">{v.valor_fipe ? formatCurrency(v.valor_fipe) : '-'}</td>
                   <td className="px-4 py-2">
                     <span className={`rounded px-2 py-0.5 text-xs ${meta.cor}`}>{meta.l}</span>
+                    {aviso && (
+                      <span className="mt-0.5 block text-[11px] text-rose-600">{aviso}</span>
+                    )}
                   </td>
                   <td className="px-4 py-2">
                     <div className="flex justify-end gap-1">
@@ -823,7 +844,7 @@ function VeiculosConteudo() {
             </FormField>
             <FormField label="Situacao do contrato">
               <Select value={form.status ?? 'ativo'} onChange={(e) => setF({ status: e.target.value as StatusVeiculo })}>
-                {STATUS.filter((s) => s.v !== 'baixado').map((s) => (
+                {STATUS.filter((s) => s.manual || s.v === form.status).map((s) => (
                   <option key={s.v} value={s.v}>
                     {s.l}
                   </option>

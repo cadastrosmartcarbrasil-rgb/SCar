@@ -183,6 +183,31 @@ export default function EmpresaPage() {
             </CardContent>
           </Card>
 
+          {/* Politica de cobranca */}
+          <Card>
+            <CardContent className="space-y-4 pt-5">
+              <h2 className="text-sm font-semibold text-slate-700">Politica de cobranca</h2>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <FormField label="Tolerancia da inadimplencia (dias)">
+                  <Input
+                    type="number"
+                    min={0}
+                    max={365}
+                    value={form.dias_tolerancia_inadimplencia ?? 20}
+                    onChange={(e) => setF({ dias_tolerancia_inadimplencia: Number(e.target.value) })}
+                  />
+                </FormField>
+                <p className="text-xs text-slate-500 sm:col-span-2 sm:self-center">
+                  Mensalidade em atraso poe o veiculo em <strong>Inadimplente</strong>, que ja
+                  bloqueia todos os beneficios (assistencia 24h, evento, carro reserva). Passados
+                  estes dias sem regularizar, ele vira <strong>Inativo</strong> e a cobranca
+                  encerra. Durante a tolerancia a mensalidade <strong>continua sendo gerada</strong> —
+                  o contrato ainda existe. Use <strong>0</strong> para inativar sem tolerancia.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="flex justify-end">
             <Button type="submit" disabled={salvar.isPending}>{salvar.isPending ? 'Salvando...' : 'Salvar empresa'}</Button>
           </div>

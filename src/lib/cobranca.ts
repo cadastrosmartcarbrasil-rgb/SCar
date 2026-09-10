@@ -55,7 +55,9 @@ export function calcularVencimento(competencia: string, dia: number | null | und
 // ---------------------------------------------------------------------------
 // Quem entra na cobranca do mes
 // ---------------------------------------------------------------------------
-const STATUS_FATURAVEL: StatusVeiculo[] = ['ativo', 'em_evento', 'vistoria_pendente'];
+// `inadimplente` (0072) FATURA: ele ainda tem contrato, so perdeu os
+// beneficios — quem encerra a cobranca e `inativo`, no fim da tolerancia.
+const STATUS_FATURAVEL: StatusVeiculo[] = ['ativo', 'em_evento', 'vistoria_pendente', 'inadimplente'];
 
 export interface VeiculoCobranca {
   id: string;

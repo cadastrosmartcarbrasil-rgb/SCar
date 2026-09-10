@@ -224,7 +224,9 @@ export type GrupoSituacao = 'ATIVO' | 'BLOQUEADO' | 'INATIVO';
 
 export function grupoSituacao(status: StatusVeiculo): GrupoSituacao {
   if (status === 'ativo') return 'ATIVO';
-  if (status === 'suspenso') return 'BLOQUEADO';
+  // `inadimplente` (0072) e bloqueio, nao baixa: conta-lo entre os inativos
+  // esconderia justamente a fatia que uma cobranca recupera.
+  if (status === 'suspenso' || status === 'inadimplente') return 'BLOQUEADO';
   return 'INATIVO';
 }
 

@@ -12,6 +12,7 @@ const COR_STATUS: Record<string, string> = {
   em_evento: 'bg-amber-50 text-amber-800 ring-amber-200',
   vistoria_pendente: 'bg-sky-50 text-sky-700 ring-sky-200',
   suspenso: 'bg-rose-50 text-rose-700 ring-rose-200',
+  inadimplente: 'bg-rose-50 text-rose-700 ring-rose-200',
   inativo: 'bg-slate-100 text-slate-500 ring-slate-200',
   baixado: 'bg-slate-100 text-slate-500 ring-slate-200',
 };

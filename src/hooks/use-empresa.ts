@@ -44,6 +44,9 @@ export function useSaveEmpresa() {
         whatsapp_suporte: e.whatsapp_suporte || null,
         endereco: e.endereco ?? {},
         logo_url: e.logo_url ?? null,
+        // Tolerancia da inadimplencia (0072). Nunca `|| 20`: zero e uma escolha
+        // valida (inativa na primeira passagem) e viraria 20 em silencio.
+        dias_tolerancia_inadimplencia: e.dias_tolerancia_inadimplencia ?? 20,
       };
       const q = e.id
         ? supabase.from('empresa').update(payload).eq('id', e.id).select('*').single()

@@ -217,9 +217,14 @@ export function statusDeTexto(status: unknown): StatusVeiculo | null {
 }
 
 /** Quao VIVO e um status. Maior = mais vivo. Decide a disputa contrato x objeto. */
+// `inadimplente` (0072) empata com `suspenso`: os dois sao BLOQUEIO, nao baixa.
+// Ele nao faz parte do vocabulario do Mutual — `INADIMPLENTE` de la continua
+// virando `ativo` na importacao, porque e a inadimplencia apurada sobre os
+// titulos DELES — entao esta linha existe para o mapa ser exaustivo, nao
+// porque a disputa contrato x objeto chegue a ve-lo.
 const VITALIDADE: Record<StatusVeiculo, number> = {
-  ativo: 4, em_evento: 3, vistoria_pendente: 2, suspenso: 1, inativo: 0,
-  baixado: 0, excluido: 0,
+  ativo: 4, em_evento: 3, vistoria_pendente: 2, suspenso: 1, inadimplente: 1,
+  inativo: 0, baixado: 0, excluido: 0,
 };
 
 /**

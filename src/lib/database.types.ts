@@ -20,7 +20,7 @@ export type StatusCliente =
 export type UsoVeiculo = 'passeio' | 'app' | 'comercial';
 export type StatusVeiculo =
   | 'ativo' | 'suspenso' | 'baixado' | 'inativo' | 'excluido'
-  | 'vistoria_pendente' | 'em_evento';
+  | 'vistoria_pendente' | 'em_evento' | 'inadimplente';
 export type TipoFaturamento = 'AGRUPADO_ASSOCIADO' | 'INDIVIDUAL_VEICULO';
 export type StatusFatura = 'ABERTA' | 'PAGA' | 'CANCELADA';
 export type TipoAtendimento =
@@ -278,6 +278,8 @@ export type VeiculosRow = Timestamps & {
   rastreador_imei: string | null;
   rastreador_chip: string | null;
   empresa_rastreamento_id: string | null;
+  status_desde: string | null;
+  status_motivo: string | null;
 };
 
 export type FaturasRow = Timestamps & {
@@ -1531,6 +1533,17 @@ export type SituacaoAssistencia = {
   motivos: string[];
 };
 
+// Contagem regressiva da tolerancia (RPC situacao_inadimplencia_veiculo, 0072)
+export type SituacaoInadimplencia = {
+  veiculo_id: string;
+  inadimplente: boolean;
+  dias_no_status: number;
+  dias_tolerancia: number;
+  dias_restantes: number | null;
+  vence_em: string | null;
+  tolerancia_vencida: boolean;
+};
+
 // Prestador habilitado (RPC prestadores_do_servico)
 export type PrestadorDoServico = {
   fornecedor_id: string;
@@ -1689,6 +1702,7 @@ export type EmpresaRow = Timestamps & {
   whatsapp_suporte: string | null;
   endereco: Json;
   logo_url: string | null;
+  dias_tolerancia_inadimplencia: number;
 };
 
 export type MandatosRow = Timestamps & {

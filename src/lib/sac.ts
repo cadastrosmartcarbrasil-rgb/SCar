@@ -141,7 +141,13 @@ export function statusVeiculoResumo(status: string, inadimplente: boolean): { la
   if (status === 'suspenso') return { label: 'Suspenso', cor: 'bg-amber-50 text-amber-700' };
   if (status === 'vistoria_pendente') return { label: 'Vistoria pendente', cor: 'bg-amber-50 text-amber-700' };
   if (status === 'em_evento') return { label: 'Em evento', cor: 'bg-cyan-50 text-cyan-700' };
-  if (inadimplente) return { label: 'Inadimplente', cor: 'bg-rose-50 text-rose-700' };
+  // O STATUS vence a inadimplencia derivada dos titulos (0072): quando o
+  // veiculo esta em `inadimplente` os beneficios ja estao bloqueados, e o selo
+  // precisa dizer isso mesmo que os titulos ja tenham sido regularizados e o
+  // CRON ainda nao tenha passado.
+  if (status === 'inadimplente' || inadimplente) {
+    return { label: 'Inadimplente', cor: 'bg-rose-50 text-rose-700' };
+  }
   return { label: 'Ativo', cor: 'bg-emerald-50 text-emerald-700' };
 }
 
@@ -154,10 +160,11 @@ export function ordemStatusVeiculo(status: string): number {
     case 'ativo': return 0;
     case 'em_evento': return 1;
     case 'vistoria_pendente': return 2;
-    case 'suspenso': return 3;
-    case 'inativo': return 4;
-    case 'baixado': return 5;
-    default: return 6; // excluido / desconhecido
+    case 'inadimplente': return 3;   // o unico com prazo correndo: aparece antes
+    case 'suspenso': return 4;
+    case 'inativo': return 5;
+    case 'baixado': return 6;
+    default: return 7; // excluido / desconhecido
   }
 }
 

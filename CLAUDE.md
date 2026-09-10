@@ -145,9 +145,14 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
   fica ATIVO por causa de OUTRO carro enquanto AQUELE está encerrado, e o veículo morto entrava
   como faturável; (2) **veículo sem placa é 0 KM**, não dado sujo. As duas juntas esvaziam a
   quarentena. Ver a seção própria.
-- **Próxima migration livre: `0072`.** As `0060`, `0061`, `0063`..`0071` já estão no branch de trabalho e
+- **`0072_veiculo_inadimplente` é NOVA** — o status **`inadimplente`** do veículo: a TOLERÂNCIA
+  entre "a mensalidade atrasou" e "o contrato acabou". Entra o estado, o **relógio**
+  (`veiculos.status_desde`) e o **parâmetro** (`empresa.dias_tolerancia_inadimplencia`, 20) de que o
+  CRON vai precisar. **A decisão que importa: inadimplente CONTINUA FATURÁVEL** — ver a seção
+  própria. O CRON ainda não existe, então hoje ela é no-op.
+- **Próxima migration livre: `0073`.** As `0060`, `0061`, `0063`..`0072` já estão no branch de trabalho e
   ainda **não foram aplicadas em produção** (rodar nessa ordem, depois das `0045`..`0059`); a
-  `0062` JÁ FOI aplicada. A `0067`, a `0068`, a `0069` e a `0070` são independentes do Mutual e podem ir junto.
+  `0062` JÁ FOI aplicada. A `0067`, a `0068`, a `0069`, a `0070` e a `0072` são independentes do Mutual e podem ir junto.
 - **`.claude/hooks/session-start.sh` é NOVO** — avisa quando a sessão nasce no branch errado e
   instala as dependências. Ele **só roda se estiver no branch que a sessão clonou**; enquanto o
   default do GitHub for o branch morto, uma sessão que caia lá não terá o hook. A correção
@@ -256,9 +261,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0071`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **48 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 566 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0072`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **49 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 575 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Todos os portais e páginas
@@ -1334,6 +1339,21 @@ chassi e 0 KM (grupo `PLACA PENDENTE (0 KM)`, fora da quarentena por padrao), se
 "INATIVO (associado: ATIVO)"; (D) `mutual_status_nao_mapeados` **recriada** com a coluna `origem`
 — o status do OBJETO agora decide carga, entao palavra nova la classifica veiculo errado em
 silencio).
+· `0072_veiculo_inadimplente` (o status `inadimplente` do VEICULO — a tolerancia entre "a
+mensalidade atrasou" e "o contrato acabou": (A) enum `status_veiculo` ganha `inadimplente`;
+(B) **o RELOGIO** — `veiculos.status_desde`/`status_motivo` carimbados por trigger BEFORE a cada
+troca de status (padrao de `rastreadores.status_desde`, 0050), com `clock_timestamp()` e nao
+`now()`, senao duas trocas na mesma transacao nasceriam com o mesmo instante; (C) **o PARAMETRO** —
+`empresa.dias_tolerancia_inadimplencia` (20), lido por `tolerancia_inadimplencia()` e por
+`situacao_inadimplencia_veiculo()`, a contagem regressiva que a TELA mostra hoje e que o CRON vai
+ler amanha; (D) **`veiculo_faturavel` passa a INCLUIR `inadimplente`** — ver a secao propria, e a
+decisao mais perigosa da migration ao contrario do que parece; (E) `ordem_status_veiculo` poe
+`inadimplente` antes de `suspenso` (e o unico com prazo correndo); (F)
+`situacao_assistencia_veiculo` explica o bloqueio em vez de so recusar; (G) o rastreador segue o
+ciclo em DOIS passos — inadimplente suspende (3), sair da base recolhe (4) — e o laco antigo, que
+so pegava equipamento em `ATIVO`, deixaria preso em 3 o que a tolerancia acabara de mover;
+(H) o painel da 24h conta `inadimplente` como BLOQUEADO, nao como inativo. **Nao ha rotina que
+mova ninguem:** nenhum veiculo nasce `inadimplente` hoje, entao tudo isto e no-op ate o CRON).
 · `0062_integracao_mutual` (FASE 1 da integracao com o MUTUAL — espelho de LEITURA e diagnostico:
 `mutual_captura` (entidade + id_externo unico, payload jsonb, soft-delete) e `mutual_sincronias`;
 os espelhos em SQL da logica de `src/lib/mutual.ts` (`mutual_texto`, `mutual_status_veiculo`,
@@ -1388,7 +1408,8 @@ vez** (FIPE por placa/cascata), contatos e retornos registrados na ficha do lead
 presencial** com o cliente na frente e envio da proposta por WhatsApp, cotação com
 link público `/cotacao/[token]` detalhada/consolidada + print-PDF, esteira com trava de
 Auditoria — só papel `auditoria`/`admin` clica "Autorizar Entrada" e efetiva cliente+veículo)
-· Associados (painel `/associados/[id]` com abas) · Veículos/Contratos (ficha com Plano —
+· Associados (painel `/associados/[id]` com abas) · Veículos/Contratos (situação do contrato com
+**Inadimplente** e a contagem regressiva da tolerância (0072); ficha com Plano —
 **as coberturas do plano já vêm marcadas** e a troca de categoria mostra o que entra, o que sai e
 quanto passa a custar (0071) —, opcionais a parte, alertas e **Rastreamento**: IMEI, Nº do chip e
 rastreadora) · Eventos/Sinistros
@@ -1405,6 +1426,59 @@ Fase 1, só leitura)
 · **Rastreadores** (`/rastreadores`: parque por IMEI, estoque por unidade/plataforma, instalação no
 veículo, manutenção, painel de divergências com o cadastro da frota e relatórios de custo,
 recuperação e giro).
+
+## Status do veículo e a INADIMPLÊNCIA (0072)
+- **O ciclo pedido:** mensalidade em atraso → o veículo vai **imediatamente** para
+  `inadimplente`, o que **já bloqueia todos os benefícios** (24h, evento, carro reserva); passados
+  **20 dias** (parâmetro) nesse status sem regularizar, ele vira `inativo` e a cobrança encerra.
+- **⚠️ O CRON NÃO EXISTE AINDA** (decisão do usuário: "construíremos o Cron depois). A 0072 entrega
+  o **estado**, o **relógio** e o **parâmetro**; **nenhum veículo nasce `inadimplente` hoje**, então
+  todas as mudanças dela são no-op até a rotina existir. Ao construí-la, ela tem duas passagens e
+  as duas já têm onde se apoiar: quem tem título vencido → `inadimplente`; quem tem
+  `situacao_inadimplencia_veiculo().tolerancia_vencida` → `inativo`.
+- **🔴 A DECISÃO QUE IMPORTA: `inadimplente` CONTINUA FATURÁVEL.** Ele entrou em
+  `veiculo_faturavel` (0024) ao lado de `ativo`/`em_evento`/`vistoria_pendente`. Deixá-lo de fora
+  **parece** o lado conservador e é o contrário: no dia em que o CRON entrasse, a carteira
+  inadimplente **pararia de ser cobrada em silêncio** — a associação deixaria de emitir boleto
+  exatamente de quem deve. O associado inadimplente segue **contratado**, só bloqueado; quem
+  encerra o contrato é a passagem para `inativo`. **Cobrar quem está na tolerância é o que dá
+  sentido à tolerância.** Há teste dos dois lados (`0072` no banco, `inadimplencia.test.ts` no TS).
+- **O RELÓGIO é `veiculos.status_desde`**, carimbado por trigger BEFORE a cada troca de status, por
+  qualquer caminho — mesma escolha do parque de rastreadores (0050): a aplicação esquece, a trigger
+  não. Sem ele não existe "20 dias inadimplente" para contar. **Não derive o prazo de
+  `dias_atraso_cliente()`**: aquilo conta do boleto mais antigo em aberto, então quem regularizou e
+  recaiu já entraria com o relógio adiantado. Editar a cor do carro **não** reinicia a contagem
+  (o trigger é `update of status`). `status_motivo` recebe o texto via
+  `set_config('scar.motivo_status_veiculo')`, mesmo mecanismo da auditoria da OS 24h.
+- **A TOLERÂNCIA É PARÂMETRO, não número no código:** `empresa.dias_tolerancia_inadimplencia`
+  (padrão 20, `0..365`), editável em `Configurações → Empresa → Política de cobrança`. Fica em
+  `empresa` porque é termo do contrato de adesão, válido para a associação inteira, e a cobrança é
+  toda da matriz (0037), não da franquia. `0` = inativa na primeira passagem. Ela já é **lida hoje**
+  pela contagem regressiva na lista de veículos — parâmetro que ninguém lê é promessa falsa (o
+  gotcha da 0068).
+- **`inadimplente` NÃO aparece no formulário do veículo, de propósito.** Ele é decidido pelos
+  TÍTULOS: marcar na mão seria desfeito na passagem seguinte do CRON — ou, pior, inativaria o
+  associado em 20 dias por um clique. **Bloqueio manual continua sendo `suspenso`**, que já existe.
+  O selo, esse, mostra o status de verdade (ver o gotcha do `statusMeta`).
+- **O rastreador acompanha, em DOIS passos:** veículo → `inadimplente` põe o equipamento em
+  *3 - Inadimplente* (suspende o rastreamento, **não** pede o aparelho de volta); veículo →
+  `inativo`/`suspenso`/`baixado`/`excluido` põe em *4 - Inativo (pedir devolução)*. **O laço antigo
+  só pegava equipamento em `ATIVO`**, então o que a tolerância acabara de mover para 3 nunca
+  chegaria ao recolhimento — buraco fechado na 0072. `sincronizar_rastreadores_inadimplencia` (0053)
+  também passou a devolver a `ATIVO` o equipamento de veículo ainda em `inadimplente` que
+  regularizou.
+- **O painel da 24h conta `inadimplente` como BLOQUEADO**, não como inativo (`assist_painel_resumo`
+  e `grupoSituacao`): juntá-lo aos inativos esconderia justamente a fatia que uma cobrança recupera.
+- **O de-para do Mutual NÃO mudou:** `INADIMPLENTE` de lá continua virando `ativo` na importação
+  (0062/0071). É a inadimplência apurada sobre os títulos **deles**; importar esse veredito
+  bloquearia associados por uma dívida que esta base ainda nem enxerga — e largaria o relógio de 20
+  dias correndo no dia da carga. Quem decide `inadimplente` aqui é o CRON, sobre
+  `titulos_financeiros` daqui. (O comentário da 0062 dizendo "no SCar a inadimplencia e DERIVADA
+  dos titulos" descreve o passado; a decisão de não remapear continua a mesma.)
+- **Lógica pura testada:** `src/lib/inadimplencia.ts` — `STATUS_FATURAVEIS`, `STATUS_BLOQUEADOS`,
+  `diasNoStatus`, `tolerancia`, `avisoDeTolerancia`, `DIAS_TOLERANCIA_PADRAO`. O aviso fala em dias
+  **restantes**, não em dias corridos: o que a operação precisa saber é quanto tempo ainda tem para
+  cobrar antes de perder o associado.
 
 ## Troca de plano (upgrade / downgrade) — 0070 + `src/lib/planos.ts`
 - **O que estava errado:** a ficha do veiculo listava TODO opcional ativo como escolha do
@@ -1705,7 +1779,8 @@ recuperação e giro).
 - **Vencimento:** `veiculos.dia_vencimento` no mês da competência (dia 31 cai no último dia do mês).
   Fatura **agrupada** usa o dia mais frequente entre os veículos do associado. Sem dia definido, cai no
   padrão histórico (dia 10 do mês seguinte).
-- **Quem é cobrado:** `veiculo_faturavel` = status `ativo`/`em_evento`/`vistoria_pendente` **e**
+- **Quem é cobrado:** `veiculo_faturavel` = status `ativo`/`em_evento`/`vistoria_pendente`/
+  **`inadimplente`** (0072 — ele ainda tem contrato, só perdeu os benefícios) **e**
   `data_ativacao <= fim do mês`. Suspenso/inativo/baixado/excluído não geram mensalidade.
 - **Idempotência:** rodar o lote de novo na mesma competência não recria nem altera fatura existente
   (histórico imutável; trocar Agrupado↔Individual só afeta competências futuras).
@@ -2588,6 +2663,13 @@ no fim — o runner procura por "PASSARAM") e rode `npm run schema`.
   Com `DOCKER_BUILDKIT=0` o builder classico usa a imagem do cache local e o deploy passa; o
   `npm ci` roda dentro do contêiner, que recebe DNS proprio do Docker. Conserto definitivo (apontar
   o `/etc/resolv.conf` para o uplink do systemd) e o diagnostico completo estao em `DEPLOY.md`.
+- **Lista de status incompleta na tela vira MENTIRA, não vira erro.** Em `/veiculos`,
+  `statusMeta` caía no PRIMEIRO item do array quando não encontrava o status — e o primeiro é
+  "Ativo". Resultado: `em_evento` e `vistoria_pendente` (que nunca entraram na lista) eram
+  desenhados como **Ativo**, e a 0072 teria feito o mesmo com um veículo bloqueado por
+  inadimplência. Corrigido na 0072: o array é **completo** e ganhou `manual`, que decide o que o
+  FORMULÁRIO oferece — as duas perguntas são diferentes e estavam sendo respondidas pelo mesmo
+  array. **Fallback de rótulo nunca deve escolher um valor plausível; deve mostrar o valor cru.**
 - Erro `syntax error near "//"` no SQL Editor = arquivo TypeScript colado por engano; SQL começa com `--`.
 - Trigger com CASE retornando enum: fazer cast `(case ... end)::meu_enum`.
 - Comparar `old.status` (enum) com `''` quebra; usar `is [not] distinct from`.
