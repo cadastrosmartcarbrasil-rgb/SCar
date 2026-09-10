@@ -3162,6 +3162,7 @@ export type Database = {
           p_modo_envio?: string | null;
           p_desconto_percentual?: number | null;
           p_desconto_justificativa?: string | null;
+          p_limpar_plano?: boolean;
         };
         Returns: CotacoesRow;
       };

@@ -137,9 +137,12 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
   (`Configurações → Vendedores → Importar planilha`). Ver a seção própria: as três decisões que
   moram no banco (todos entram INATIVOS, comissão zerada, nunca cria acesso) e a trava de que
   unidade em branco **não vira matriz**.
-- **Próxima migration livre: `0070`.** As `0060`, `0061`, `0063`..`0069` já estão no branch de trabalho e
+- **`0070_cotacao_troca_plano` é NOVA** — é o DOWNGRADE até a cobertura base na cotação, que a
+  `0028` fazia em silêncio (plano nulo significava "mantém o que está", então "Somente cobertura
+  base" salvava com o combo antigo). Ver "Troca de plano (upgrade / downgrade)".
+- **Próxima migration livre: `0071`.** As `0060`, `0061`, `0063`..`0070` já estão no branch de trabalho e
   ainda **não foram aplicadas em produção** (rodar nessa ordem, depois das `0045`..`0059`); a
-  `0062` JÁ FOI aplicada. A `0067`, a `0068` e a `0069` são independentes do Mutual e podem ir junto.
+  `0062` JÁ FOI aplicada. A `0067`, a `0068`, a `0069` e a `0070` são independentes do Mutual e podem ir junto.
 - **`.claude/hooks/session-start.sh` é NOVO** — avisa quando a sessão nasce no branch errado e
   instala as dependências. Ele **só roda se estiver no branch que a sessão clonou**; enquanto o
   default do GitHub for o branch morto, uma sessão que caia lá não terá o hook. A correção
@@ -396,9 +399,9 @@ ficha **abre direto nela** — é a primeira pergunta de quem audita. Lógica pu
    cotação (novo lead)"). Suja o funil e duplica o CPF.
 2. **Desconto só em %** — a negociação real é "quanto fica por R$ 89"; falta o caminho inverso.
    E o campo usa `<input type="number">`, com o mesmo "0 preso na frente" que o `MoneyInput` curou.
-3. **`editar-cotacao.tsx` não separa o que já vem no plano** (o `/vendas/novo` separa, com selo "no
-   plano"), e `selecaoValida(opcionais, [])` com lista vazia é um no-op que promete uma trava que
-   não existe ali.
+3. ~~`editar-cotacao.tsx` não separa o que já vem no plano~~ — **resolvido** junto com a `0070`:
+   ele agora mostra "Já incluídos neste plano" e envia só o avulso; o `selecaoValida(opcionais, [])`
+   (no-op que prometia uma trava inexistente) saiu.
 4. **Dono do lead na ficha** — não mostra consultor/vendedor nem permite reatribuir
    (`atribuir_lead` só está em `/regional/leads`).
 5. **Busca sem acento no banco** — o `ilike` da Lista casa "JOAO" com "JOAO", não com "JOÃO" (o
@@ -1290,6 +1293,12 @@ desconhecido que nao seja funil — sem ela, vocabulario novo do Mutual vira vei
 carga, em silencio; (D) `mutual_quarentena` recriada com `p_somente_faturaveis` (muda a
 assinatura, entao e drop + create) e dois indicadores novos: placa fora do padrao e objeto sem
 unidade declarada).
+· `0070_cotacao_troca_plano` (DESCER DE PLANO: `atualizar_cotacao` (0028) resolvia o combo com
+`coalesce(p_plano_id, c.plano_id)`, entao NULO era "mantem o que esta" — bom para upgrade e troca
+lateral, impossivel para o downgrade ate a base: escolher "Somente cobertura base" salvava calado e
+a cotacao seguia cobrando o combo. Novo parametro `p_limpar_plano` (default `false`, entao o
+`aplicar_desconto_cotacao`, que chama por posicao, nao muda). A lista de argumentos muda, entao foi
+DROP + CREATE — sobrecarga deixaria a chamada ambigua.)
 
 ## Módulos (status: todos funcionais)
 Painel/Visão Geral (`/dashboard`, 2 abas: indicadores da operação + **Assistência 24h** — o painel
@@ -1317,8 +1326,10 @@ vez** (FIPE por placa/cascata), contatos e retornos registrados na ficha do lead
 presencial** com o cliente na frente e envio da proposta por WhatsApp, cotação com
 link público `/cotacao/[token]` detalhada/consolidada + print-PDF, esteira com trava de
 Auditoria — só papel `auditoria`/`admin` clica "Autorizar Entrada" e efetiva cliente+veículo)
-· Associados (painel `/associados/[id]` com abas) · Veículos/Contratos (ficha com Plano/Opcionais,
-alertas e **Rastreamento**: IMEI, Nº do chip e rastreadora) · Eventos/Sinistros
+· Associados (painel `/associados/[id]` com abas) · Veículos/Contratos (ficha com Plano —
+**as coberturas do plano já vêm marcadas** e a troca de categoria mostra o que entra, o que sai e
+quanto passa a custar (0070) —, opcionais a parte, alertas e **Rastreamento**: IMEI, Nº do chip e
+rastreadora) · Eventos/Sinistros
 (protocolo, reparo próprio/terceiro, financeiro do evento) · Precificação (simulador + editor de
 tabela FIPE com reajuste % + importação por planilha, uma por tipo de veículo) · Empresa (logo/diretoria/mandatos/documentos) · **Fornecedores** (um cadastro só: peças/serviços,
 prestadores da 24h e rastreadoras, com auto CNPJ/CEP) · **Cobrança** (`/cobrancas`: dashboard + faturas por competência + boletagem em lote +
@@ -1332,6 +1343,41 @@ Fase 1, só leitura)
 · **Rastreadores** (`/rastreadores`: parque por IMEI, estoque por unidade/plataforma, instalação no
 veículo, manutenção, painel de divergências com o cadastro da frota e relatórios de custo,
 recuperação e giro).
+
+## Troca de plano (upgrade / downgrade) — 0070 + `src/lib/planos.ts`
+- **O que estava errado:** a ficha do veiculo listava TODO opcional ativo como escolha do
+  atendente, inclusive os que o plano ja carrega (`plano_produtos`). Um veiculo no Plano Diamante
+  aparecia com as coberturas do proprio Diamante DESMARCADAS — quem abria a ficha nao tinha como
+  saber o que o associado ja tem, e remarcar "para garantir" gravava como avulso algo que ja vinha
+  no combo. Era o mesmo bug que a `0040` corrigiu na tela de venda, ainda de pe no cadastro.
+- **A regra:** `veiculo_produtos` guarda **so o que foi contratado A PARTE**. O que vem no combo e
+  resolvido pelo plano e aparece **marcado, travado e com o selo "no plano"**. Ao salvar,
+  `avulsosDoVeiculo()` tira os itens do plano da lista — o que tambem **limpa ficha antiga** que os
+  gravou junto. O preco nao muda com essa limpeza (`cotar_plano` sempre uniu plano + avulsos); o
+  que muda e a ficha passar a dizer a verdade sobre o que e cobrado a parte.
+- **Subir e descer de categoria** e o mesmo caminho, na tela de veiculos: trocar o plano no seletor
+  dispara `trocarPlano()`, que mostra em uma faixa o que **passa a incluir**, o que **deixa de ser
+  cobrado a parte** (avulso que o novo combo absorveu) e a **cobertura que sai** no downgrade.
+- **O que se perde no downgrade e ANUNCIADO, nunca recolocado sozinho.** Cada item perdido vira um
+  botao "+ manter", que o recontrata como avulso pago. Remarcar muda o preco, e isso e decisao de
+  quem atende — nao da tela.
+- **A armadilha do preco:** `veiculos.valor_mensalidade` e OVERRIDE — `valor_mensalidade_veiculo`
+  (0024) prefere ele ao `cotar_plano`. **Subir de plano sem mexer nesse campo nao muda um centavo
+  do que e faturado.** Por isso a troca recotiza sozinha e a tela avisa em ambar quando o valor
+  gravado diverge do calculado, com um "Aplicar" ao lado. Quando a tela pode sincronizar sozinha e
+  regra pura: `podeSincronizarMensalidade()` — sim com campo vazio ou com valor que bate com a
+  ultima cotacao feita ali; **nao** diante de qualquer divergencia ou de ficha recem-aberta.
+  Valor negociado nao se sobrescreve em silencio.
+- **A troca so vale para o futuro:** `faturas`/`fatura_itens` sao snapshot (0021), entao a
+  competencia ja emitida nao muda — o plano novo entra na proxima geracao de cobranca.
+- **Na cotacao da venda** (`editar-cotacao.tsx`) o mesmo corte foi aplicado: os opcionais do combo
+  aparecem em "Ja incluidos neste plano" e o `p_opcionais_ids` leva so o avulso. E foi la que o
+  downgrade estava quebrado — ver a `0070`.
+- **Logica pura testada:** `src/lib/planos.ts` (`sentidoDaTroca`, `compararTrocaDePlano`,
+  `avulsosDoVeiculo`, `mensalidadeCongelada`, `podeSincronizarMensalidade`). A separacao
+  incluso x avulso reusa `separarOpcionais` de `src/lib/vistoria.ts` — a mesma da tela de venda,
+  nao uma copia. O mapa plano -> produtos vem de `useProdutosPorPlano()` numa consulta so, porque
+  o diff precisa dos itens do plano ANTERIOR e do NOVO no mesmo instante.
 
 ## Motor de cotação e combos (0019) — arquitetura
 - **Cotação Base (Plano Prata)** = Casco + Taxa Admin + Assistência 24h + **Rastreador (regra)**.

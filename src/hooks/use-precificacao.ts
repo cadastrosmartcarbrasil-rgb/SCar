@@ -317,6 +317,27 @@ export function usePlanoProdutos(planoId?: string) {
   });
 }
 
+/**
+ * O mapa COMPLETO plano -> produtos, numa consulta so. A tela de veiculos
+ * precisa dos itens do plano ANTERIOR e do NOVO no mesmo instante para dizer o
+ * que se ganha e o que se perde no upgrade/downgrade; buscar um plano por vez
+ * faria a resposta chegar depois da troca. A tabela e pequena (vinculo de
+ * combo), entao vem inteira.
+ */
+export function useProdutosPorPlano() {
+  const supabase = createClient();
+  return useQuery<Record<string, string[]>>({
+    queryKey: ['precificacao', 'produtos-por-plano'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('plano_produtos').select('plano_id, produto_id');
+      if (error) throw error;
+      const mapa: Record<string, string[]> = {};
+      for (const v of data ?? []) (mapa[v.plano_id] ??= []).push(v.produto_id);
+      return mapa;
+    },
+  });
+}
+
 export function useSavePlano() {
   const supabase = createClient();
   const qc = useQueryClient();
@@ -355,6 +376,7 @@ export function useSavePlano() {
     onSuccess: (planoId) => {
       qc.invalidateQueries({ queryKey: ['precificacao', 'planos'] });
       qc.invalidateQueries({ queryKey: ['precificacao', 'plano-produtos', planoId] });
+      qc.invalidateQueries({ queryKey: ['precificacao', 'produtos-por-plano'] });
     },
   });
 }
