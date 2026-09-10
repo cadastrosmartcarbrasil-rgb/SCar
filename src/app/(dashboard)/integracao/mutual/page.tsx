@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import {
   useMutualCapturas, useMutualDiagnostico, useMutualPorStatus, useMutualFiliais,
   useMutualQuarentena, useMutualStatusNaoMapeados, useMutualPeriodicidade,
+  useMutualStatusCruzado,
   useMutualCampos, usePingMutual, useCapturaMutual,
 } from '@/hooks/use-mutual';
 import {
@@ -74,7 +75,11 @@ export default function IntegracaoMutualPage() {
   const [caminho, setCaminho] = useState('');
   const campos = useMutualCampos(inspecionar, caminho || undefined);
   const [soFaturaveis, setSoFaturaveis] = useState(true);
-  const quarentena = useMutualQuarentena(200, soFaturaveis);
+  // 0070: o 0 km (sem placa, com chassi) nao e dado sujo — e fila operacional.
+  // Fica fora da quarentena por padrao; este botao mostra.
+  const [verPlacaPendente, setVerPlacaPendente] = useState(false);
+  const quarentena = useMutualQuarentena(200, soFaturaveis, verPlacaPendente);
+  const cruzado = useMutualStatusCruzado();
   const naoMapeados = useMutualStatusNaoMapeados();
   const periodicidade = useMutualPeriodicidade();
   const ping = usePingMutual();
@@ -418,23 +423,33 @@ export default function IntegracaoMutualPage() {
           <p className="mb-3 text-xs text-slate-500">
             O enum do swagger deles <strong>nao e exaustivo</strong>. Estes status vieram da base
             real e hoje <strong>nao entram</strong> — cada um precisa de uma decisao antes da carga,
-            senao vira veiculo faltando na importacao sem ninguem perceber.
+            senao vira veiculo faltando na importacao sem ninguem perceber. Desde a 0070 o status
+            do <strong>veiculo</strong> tambem decide a carga, entao palavra nova ali classifica o
+            carro errado.
           </p>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs uppercase tracking-wide text-slate-500">
+                  <th className="pb-2">Onde</th>
                   <th className="pb-2">Status no Mutual</th>
                   <th className="pb-2 text-right">Quantidade</th>
-                  <th className="pb-2">Exemplo (placa)</th>
                 </tr>
               </thead>
               <tbody>
                 {(naoMapeados.data ?? []).map((s) => (
-                  <tr key={s.contract_status ?? '-'} className="border-t border-slate-100">
-                    <td className="py-2 text-slate-800">{s.contract_status ?? '(sem status)'}</td>
+                  <tr key={`${s.origem}-${s.status ?? '-'}`} className="border-t border-slate-100">
+                    <td className="py-2">
+                      <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${
+                        s.origem === 'OBJETO'
+                          ? 'bg-amber-100 text-amber-800'
+                          : 'bg-slate-100 text-slate-600'
+                      }`}>
+                        {s.origem === 'OBJETO' ? 'veiculo' : 'associado'}
+                      </span>
+                    </td>
+                    <td className="py-2 text-slate-800">{s.status ?? '(sem status)'}</td>
                     <td className="py-2 text-right tnum text-slate-900">{s.quantidade}</td>
-                    <td className="py-2 tnum text-slate-600">{s.exemplo_placa ?? '—'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -501,14 +516,55 @@ export default function IntegracaoMutualPage() {
         </Secao>
       )}
 
+      {(cruzado.data ?? []).some((c) => c.mudou) && (
+        <Secao titulo="Status do ASSOCIADO x status do VEICULO" icone={ListChecks}>
+          <p className="mb-3 text-xs leading-relaxed text-slate-500">
+            O contrato do Mutual guarda <strong>varios veiculos</strong>, entao o status dele fala
+            do <strong>associado</strong>: ele fica ATIVO porque tem OUTRO carro, enquanto AQUELE
+            veiculo esta encerrado. Ate a 0070 lia-se so o contrato, e o carro morto entrava como
+            faturavel. Agora vence o <strong>menos vivo dos dois</strong> — o veiculo so consegue
+            puxar para baixo, nunca ressuscitar um contrato cancelado.
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs uppercase tracking-wide text-slate-500">
+                  <th className="pb-2">Associado (contrato)</th>
+                  <th className="pb-2">Veiculo (objeto)</th>
+                  <th className="pb-2">Antes</th>
+                  <th className="pb-2">Agora</th>
+                  <th className="pb-2 text-right">Quantidade</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(cruzado.data ?? []).filter((c) => c.mudou).map((c) => (
+                  <tr key={`${c.contract_status}-${c.object_status}`} className="border-t border-slate-100">
+                    <td className="py-2 text-slate-600">{c.contract_status ?? '—'}</td>
+                    <td className="py-2 font-medium text-slate-800">{c.object_status}</td>
+                    <td className="py-2 text-slate-400 line-through">{c.status_pelo_contrato}</td>
+                    <td className="py-2 font-semibold text-slate-900">{c.status_scar}</td>
+                    <td className="py-2 text-right tnum text-slate-900">{c.quantidade}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Secao>
+      )}
+
       {(quarentena.data ?? []).length > 0 && (
         <Secao
           titulo={`Quarentena (${quarentena.data?.length})`}
           icone={ShieldAlert}
           acao={
-            <Button variant="ghost" onClick={() => setSoFaturaveis((v) => !v)}>
-              {soFaturaveis ? 'Ver o acervo inteiro' : 'So a carteira viva'}
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" onClick={() => setVerPlacaPendente((v) => !v)}>
+                {verPlacaPendente ? 'Esconder 0 km' : 'Ver os 0 km'}
+              </Button>
+              <Button variant="ghost" onClick={() => setSoFaturaveis((v) => !v)}>
+                {soFaturaveis ? 'Ver o acervo inteiro' : 'So a carteira viva'}
+              </Button>
+            </div>
           }
         >
           <p className="mb-3 text-xs text-slate-500">
@@ -516,7 +572,13 @@ export default function IntegracaoMutualPage() {
             puxar de novo — a captura e re-executavel.{' '}
             {soFaturaveis
               ? 'Mostrando so a carteira que vai FATURAR: num contrato encerrado, valor e dia de vencimento em branco sao o esperado, nao um problema.'
-              : 'Mostrando o acervo inteiro. No contrato encerrado, valor e vencimento nao contam como motivo — so placa, CPF e nome.'}
+              : 'Mostrando o acervo inteiro. No contrato encerrado, valor e vencimento nao contam como motivo — so identidade, CPF e nome.'}
+          </p>
+          <p className="mb-3 text-xs leading-relaxed text-slate-500">
+            <strong>Veiculo 0 km fica de fora desta lista.</strong> Ele nao tem placa porque ainda
+            nao foi emplacado — corrigir no Mutual nao resolve. Quem resolve e a operacao: o SAC
+            exige a placa no atendimento, ou um aviso a cobra depois da adesao. Ele e identificado
+            pelo <strong>chassi</strong> enquanto isso.
           </p>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

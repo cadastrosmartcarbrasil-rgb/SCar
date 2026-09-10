@@ -163,22 +163,19 @@ export function tipoPessoaMutual(v: unknown): TipoPessoa | null {
   return null;
 }
 
-/**
- * `contract_status` (25 valores) + `contract_object.status` (4) -> `veiculos.status`.
- *
- * `null` significa **NAO IMPORTAR**: sao os estados de funil de venda, e venda
- * nova nasce no SCar (hotlink/CRM). Trazer um `AGUARDANDO_ACEITE` do Mutual
- * criaria um veiculo que nunca foi vendido.
- */
-export function statusVeiculoDoContrato(
-  contractStatus: unknown,
-  objectStatus?: unknown,
-): StatusVeiculo | null {
-  const obj = textoOuNulo(objectStatus)?.toUpperCase();
-  // O objeto removido do contrato sai da base, independentemente do contrato.
-  if (obj === 'REMOVIDO') return 'inativo';
+/** Vocabulario do FUNIL DE VENDA: venda nova nasce no SCar, nao se importa. */
+const FUNIL_DE_VENDA = new Set([
+  'CRIADO', 'GERADO_PENDENCIA', 'AGUARDANDO_ACEITE', 'PENDENTE_ANALISE', 'AUTORIZADO',
+  'LINK_PAGAMENTO_ENVIADO', 'PAGAMENTO_GERADO', 'PENDENTE', 'NEGOCIACAO_PERDIDA', 'REATIVACAO',
+]);
 
-  switch (textoOuNulo(contractStatus)?.toUpperCase()) {
+export function ehFunilDeVenda(status: unknown): boolean {
+  return FUNIL_DE_VENDA.has(textoOuNulo(status)?.toUpperCase() ?? '');
+}
+
+/** UMA palavra de status do Mutual -> status do SCar. `null` = nao reconhecida. */
+export function statusDeTexto(status: unknown): StatusVeiculo | null {
+  switch (textoOuNulo(status)?.toUpperCase()) {
     case 'ATIVO':
     // Inadimplencia no SCar e DERIVADA dos titulos em aberto (dias_atraso_cliente),
     // nao um status do cadastro — o veiculo segue ativo e a trava vem do financeiro.
@@ -202,8 +199,9 @@ export function statusVeiculoDoContrato(
     case 'SUBSTITUIDO':
     case 'REMOVIDO':
     // Visto na base real e AUSENTE do enum do swagger: o contrato esta se
-    // encerrando e o equipamento vai ser recolhido. O enum do contrato deles
-    // NAO e exaustivo — por isso `mutual_status_nao_mapeados()` existe.
+    // encerrando e o equipamento vai ser recolhido. O enum deles NAO e
+    // exaustivo — por isso `mutual_status_nao_mapeados()` existe.
+    case 'AGUARDADO A RETIRADA DO RASTREADOR':
     case 'INATIVO/PAGO':
     // DECISAO DO USUARIO (09/09/2026): indenizado NAO gera mensalidade. Estes
     // estavam em `em_evento`, que E faturavel — 26 veiculos ja indenizados
@@ -212,14 +210,55 @@ export function statusVeiculoDoContrato(
     case 'INDENIZACAO':
     case 'INDENIZAÇAO':
     case 'INDENIZAÇÃO':
-    case 'AGUARDADO A RETIRADA DO RASTREADOR':
       return 'inativo';
     default:
-      // CRIADO, GERADO_PENDENCIA, AGUARDANDO_ACEITE, PENDENTE_ANALISE,
-      // AUTORIZADO, LINK_PAGAMENTO_ENVIADO, PAGAMENTO_GERADO, PENDENTE,
-      // NEGOCIACAO_PERDIDA, REATIVACAO -> funil de venda.
       return null;
   }
+}
+
+/** Quao VIVO e um status. Maior = mais vivo. Decide a disputa contrato x objeto. */
+const VITALIDADE: Record<StatusVeiculo, number> = {
+  ativo: 4, em_evento: 3, vistoria_pendente: 2, suspenso: 1, inativo: 0,
+  baixado: 0, excluido: 0,
+};
+
+/**
+ * O status do VEICULO — e nao o do associado.
+ *
+ * O contrato do Mutual guarda VARIOS veiculos, entao `contract_status` fala do
+ * ASSOCIADO: ele fica ATIVO porque tem OUTRO carro, enquanto AQUELE veiculo
+ * esta encerrado. Ate a 0070 lia-se so o contrato, e o veiculo morto entrava
+ * como vivo — indo para os bloqueios de faturamento cobrar valor e dia de
+ * vencimento que um contrato encerrado nao tem por que ter. Era isso que
+ * inflava a quarentena.
+ *
+ * ⚠️ MAS O OBJETO SO PIORA. Contrato CANCELADO com objeto "ATIVO" e um veiculo
+ * sem cobertura, nao um veiculo ativo. A regra nao e "o objeto vence": e
+ * **vence o MENOS VIVO dos dois**.
+ *
+ * A ASSIMETRIA E DE PROPOSITO:
+ *  . desconhecido no CONTRATO -> `null` (nao importar). Continua valendo a trava
+ *    da 0063: vocabulario novo e DECISAO PENDENTE, e deixar o objeto resgatar a
+ *    linha faria o veiculo entrar com classificacao adivinhada, em silencio —
+ *    exatamente o que `mutual_status_nao_mapeados()` existe para impedir.
+ *  . desconhecido no OBJETO -> sem opiniao, o contrato manda. O status do objeto
+ *    e um REFINAMENTO (so estreita); refinamento ilegivel e nenhum.
+ *
+ * `null` significa NAO IMPORTAR: funil de venda (venda nova nasce no SCar) ou
+ * vocabulario que ainda nao conhecemos.
+ */
+export function statusVeiculoDoContrato(
+  contractStatus: unknown,
+  objectStatus?: unknown,
+): StatusVeiculo | null {
+  // O funil e decisao ja tomada no CONTRATO — o objeto nao a reabre.
+  if (ehFunilDeVenda(contractStatus)) return null;
+
+  const doContrato = statusDeTexto(contractStatus);
+  if (doContrato === null) return null;
+  const doObjeto = statusDeTexto(objectStatus);
+  if (doObjeto === null) return doContrato;
+  return VITALIDADE[doObjeto] < VITALIDADE[doContrato] ? doObjeto : doContrato;
 }
 
 /** `invoice_status` (16 valores) -> `status_titulo` (4). */
@@ -257,17 +296,30 @@ export interface ObjetoMutual {
 }
 
 export type MotivoQuarentena =
-  | 'SEM_PLACA' | 'SEM_CPF' | 'SEM_NOME'
+  | 'PLACA_PENDENTE_0KM' | 'SEM_PLACA_NEM_CHASSI' | 'SEM_CPF' | 'SEM_NOME'
   | 'SEM_DATA_ATIVACAO' | 'SEM_VALOR_COBRADO' | 'SEM_DIA_VENCIMENTO';
 
 export const ROTULO_QUARENTENA: Record<MotivoQuarentena, string> = {
-  SEM_PLACA: 'Veiculo sem placa',
+  PLACA_PENDENTE_0KM: 'Veiculo 0 km — placa ainda nao emplacada',
+  SEM_PLACA_NEM_CHASSI: 'Sem placa E sem chassi (nao ha como identificar o veiculo)',
   SEM_CPF: 'Associado sem CPF/CNPJ',
   SEM_NOME: 'Associado sem nome',
   SEM_DATA_ATIVACAO: 'Sem data de ativacao (viraria hoje)',
   SEM_VALOR_COBRADO: 'Sem valor cobrado (pararia de faturar em silencio)',
   SEM_DIA_VENCIMENTO: 'Sem dia de vencimento (cairia no padrao legado)',
 };
+
+/**
+ * Motivo que e FILA OPERACIONAL, nao correcao de dado.
+ *
+ * O 0 km nao tem placa porque o carro ainda nao foi emplacado — cobrar isso da
+ * origem nao resolve nada. Quem resolve e a operacao: o SAC exige a placa no
+ * atendimento, ou um aviso automatico a cobra 30 dias depois da adesao.
+ * Misturar com "sem CPF" (dado que a origem perdeu) esconde os dois.
+ */
+export function ehFilaOperacional(motivo: MotivoQuarentena): boolean {
+  return motivo === 'PLACA_PENDENTE_0KM';
+}
 
 /**
  * Os impedimentos de uma linha, na ordem de gravidade.
@@ -278,7 +330,13 @@ export const ROTULO_QUARENTENA: Record<MotivoQuarentena, string> = {
 export function problemasDoObjeto(o: ObjetoMutual): MotivoQuarentena[] {
   if (statusVeiculoDoContrato(o.contract_status, o.status) === null) return [];
   const p: MotivoQuarentena[] = [];
-  if (textoOuNulo(o.vehicle_data?.vehicle_plate) === null) p.push('SEM_PLACA');
+  // Sem placa NAO e uma coisa so. Com chassi e 0 km (fila operacional); sem os
+  // dois nao ha identidade nenhuma e ai sim nao ha o que importar.
+  if (textoOuNulo(o.vehicle_data?.vehicle_plate) === null) {
+    p.push(textoOuNulo(o.vehicle_data?.vehicle_chassi) === null
+      ? 'SEM_PLACA_NEM_CHASSI'
+      : 'PLACA_PENDENTE_0KM');
+  }
   if (textoOuNulo(o.person_data?.person_cpf_cnpj) === null) p.push('SEM_CPF');
   if (textoOuNulo(o.person_data?.person_name) === null) p.push('SEM_NOME');
   if (dataLocalDeIso(o.first_activation_date) === null) p.push('SEM_DATA_ATIVACAO');

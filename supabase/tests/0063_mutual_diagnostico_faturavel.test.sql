@@ -100,16 +100,17 @@ begin
   raise notice 'OK bloqueio conta so a carteira viva; o acervo inativo e informativo';
 
   -- (D) status desconhecido nao pode sumir no funil --------------------------
+  -- 0070: a lista ganhou `origem` (CONTRATO/OBJETO).
   select quantidade into n from mutual_status_nao_mapeados()
-   where contract_status = 'VOCABULARIO_NOVO';
+   where origem = 'CONTRATO' and status = 'VOCABULARIO_NOVO';
   assert n = 1, format('status novo tem de aparecer, veio %s', n);
 
   select count(*) into n from mutual_status_nao_mapeados()
-   where contract_status = 'AGUARDANDO_ACEITE';
+   where origem = 'CONTRATO' and status = 'AGUARDANDO_ACEITE';
   assert n = 0, 'funil de venda e conhecido: nao e "nao mapeado"';
 
   select count(*) into n from mutual_status_nao_mapeados()
-   where contract_status = 'AGUARDADO A RETIRADA DO RASTREADOR';
+   where origem = 'CONTRATO' and status = 'AGUARDADO A RETIRADA DO RASTREADOR';
   assert n = 0, 'o status de producao ja esta no de-para desde a 0063';
 
   select valor, severidade into rec from mutual_diagnostico()

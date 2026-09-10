@@ -82,7 +82,7 @@ begin
     format('vocabulario novo tem de pedir decisao, veio "%s"', rec.status_scar);
   -- e ele segue na lista de pendencia ate o usuario decidir
   select quantidade into n from mutual_status_nao_mapeados()
-   where contract_status = 'DIFICULDADE FINANCEIRA';
+   where origem = 'CONTRATO' and status = 'DIFICULDADE FINANCEIRA';
   assert n = 1, 'DIFICULDADE FINANCEIRA continua aguardando decisao';
   raise notice 'OK funil e vocabulario desconhecido deixam de ser a mesma coisa na tela';
 

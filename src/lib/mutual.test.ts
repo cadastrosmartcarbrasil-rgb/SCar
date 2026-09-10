@@ -3,7 +3,7 @@ import {
   urlMutual, cabecalhoMutual, extrairLista, extrairTotal, temProximaPagina,
   textoOuNulo, numeroOuNulo, dataLocalDeIso, tipoPessoaMutual,
   statusVeiculoDoContrato, statusTituloMutual, ehMensalidade, problemasDoObjeto,
-  mesesDoPeriodoMutual,
+  mesesDoPeriodoMutual, ehFilaOperacional, ehFunilDeVenda, statusDeTexto,
 } from './mutual';
 
 const BASE = 'https://smartcar-api.mutualignit.com.br';
@@ -198,6 +198,67 @@ describe('ehMensalidade', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// 0070 — o status do VEICULO, e nao o do associado
+// ---------------------------------------------------------------------------
+describe('statusVeiculoDoContrato — a disputa contrato x objeto', () => {
+  it('O CASO REAL: associado ATIVO (tem outro carro), ESTE veiculo encerrado', () => {
+    // O contrato do Mutual guarda varios veiculos, entao `contract_status` fala
+    // do ASSOCIADO. Ate a 0070 este veiculo entrava como faturavel e ia para os
+    // bloqueios cobrando valor e dia que um contrato encerrado nao tem.
+    expect(statusVeiculoDoContrato('ATIVO', 'INATIVO')).toBe('inativo');
+  });
+
+  it('mas o objeto NAO ressuscita: contrato cancelado e veiculo sem cobertura', () => {
+    expect(statusVeiculoDoContrato('CANCELADO', 'ATIVO')).toBe('inativo');
+    expect(statusVeiculoDoContrato('EXPIRADO', 'ATIVO')).toBe('inativo');
+  });
+
+  it('vence sempre o MENOS VIVO dos dois', () => {
+    expect(statusVeiculoDoContrato('ATIVO', 'SUSPENSO')).toBe('suspenso');
+    expect(statusVeiculoDoContrato('SUSPENSO', 'ATIVO')).toBe('suspenso');
+    // sinistro em andamento nao e apagado por um "ATIVO" generico do objeto
+    expect(statusVeiculoDoContrato('SINISTRADO', 'ATIVO')).toBe('em_evento');
+  });
+
+  it('objeto sem status: o contrato manda, como era antes da 0070', () => {
+    expect(statusVeiculoDoContrato('ATIVO')).toBe('ativo');
+    expect(statusVeiculoDoContrato('ATIVO', null)).toBe('ativo');
+    expect(statusVeiculoDoContrato('ATIVO', '')).toBe('ativo');
+  });
+
+  it('vocabulario desconhecido no objeto NAO apaga a classificacao do contrato', () => {
+    expect(statusVeiculoDoContrato('ATIVO', 'PALAVRA NOVA')).toBe('ativo');
+  });
+
+  it('...mas desconhecido no CONTRATO nao entra, mesmo com objeto conhecido', () => {
+    // A assimetria e deliberada: vocabulario novo no contrato e DECISAO
+    // PENDENTE (0063). Deixar o objeto resgatar a linha faria o veiculo entrar
+    // com classificacao adivinhada, em silencio — o oposto do que a trava quer.
+    expect(statusVeiculoDoContrato('PALAVRA NOVA', 'INATIVO')).toBeNull();
+    expect(statusVeiculoDoContrato('PALAVRA NOVA', 'ATIVO')).toBeNull();
+  });
+
+  it('funil de venda no CONTRATO descarta, aconteca o que acontecer no objeto', () => {
+    // Venda nova nasce no SCar (hotlink/CRM) — o objeto nao reabre essa decisao.
+    expect(statusVeiculoDoContrato('AGUARDANDO_ACEITE', 'ATIVO')).toBeNull();
+    expect(statusVeiculoDoContrato('CRIADO', 'INATIVO')).toBeNull();
+    expect(ehFunilDeVenda('AUTORIZADO')).toBe(true);
+    expect(ehFunilDeVenda('ATIVO')).toBe(false);
+  });
+
+  it('nenhum dos dois reconhecido = nao importar', () => {
+    expect(statusVeiculoDoContrato('PALAVRA NOVA', 'OUTRA NOVA')).toBeNull();
+  });
+
+  it('statusDeTexto le UMA palavra e nao sabe de disputa', () => {
+    expect(statusDeTexto('INADIMPLENTE')).toBe('ativo');
+    expect(statusDeTexto('indenizado')).toBe('inativo');
+    expect(statusDeTexto('')).toBeNull();
+    expect(statusDeTexto(null)).toBeNull();
+  });
+});
+
 describe('problemasDoObjeto', () => {
   const bom = {
     contract_status: 'ATIVO',
@@ -235,9 +296,20 @@ describe('problemasDoObjeto', () => {
     expect(p).toContain('SEM_NOME');
   });
 
-  it('sem placa', () => {
-    expect(problemasDoObjeto({ ...bom, vehicle_data: { vehicle_plate: null } }))
-      .toContain('SEM_PLACA');
+  // 0070: sem placa nao e uma coisa so.
+  it('sem placa mas COM chassi e 0 km — fila operacional, nao dado sujo', () => {
+    const p = problemasDoObjeto({
+      ...bom, vehicle_data: { vehicle_plate: null, vehicle_chassi: '9BW111' },
+    });
+    expect(p).toContain('PLACA_PENDENTE_0KM');
+    expect(p).not.toContain('SEM_PLACA_NEM_CHASSI');
+    expect(ehFilaOperacional('PLACA_PENDENTE_0KM')).toBe(true);
+  });
+
+  it('sem placa E sem chassi nao tem identidade nenhuma', () => {
+    const p = problemasDoObjeto({ ...bom, vehicle_data: { vehicle_plate: null } });
+    expect(p).toContain('SEM_PLACA_NEM_CHASSI');
+    expect(ehFilaOperacional('SEM_PLACA_NEM_CHASSI')).toBe(false);
   });
 
   it('objeto em funil de venda nao e conferido — ele nem seria importado', () => {

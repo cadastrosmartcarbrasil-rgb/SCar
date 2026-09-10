@@ -7,6 +7,7 @@ import type { EntidadeMutual } from '@/lib/mutual';
 import type {
   MutualDiagnostico, MutualPorStatus, MutualFilial,
   MutualQuarentena, MutualResumoCaptura, MutualStatusNaoMapeado, MutualPeriodicidade,
+  MutualStatusCruzado,
   MutualCampo,
 } from '@/lib/database.types';
 
@@ -61,14 +62,21 @@ export function useMutualFiliais() {
   });
 }
 
-export function useMutualQuarentena(limite = 200, somenteFaturaveis = true) {
+export function useMutualQuarentena(
+  limite = 200,
+  somenteFaturaveis = true,
+  // 0070: o 0 km (sem placa, com chassi) NAO e problema de dado — e fila
+  // operacional. Fica fora por padrao; a tela tem botao para ver.
+  incluirPlacaPendente = false,
+) {
   const supabase = createClient();
   return useQuery<MutualQuarentena[]>({
-    queryKey: ['mutual', 'quarentena', limite, somenteFaturaveis],
+    queryKey: ['mutual', 'quarentena', limite, somenteFaturaveis, incluirPlacaPendente],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('mutual_quarentena', {
         p_limite: limite,
         p_somente_faturaveis: somenteFaturaveis,
+        p_incluir_placa_pendente: incluirPlacaPendente,
       });
       if (error) throw error;
       return data ?? [];
@@ -87,6 +95,19 @@ export function useMutualStatusNaoMapeados() {
     queryKey: ['mutual', 'status-nao-mapeados'],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('mutual_status_nao_mapeados', {});
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+/** 0070: contrato x objeto — o instrumento que mede a mudanca antes da carga. */
+export function useMutualStatusCruzado() {
+  const supabase = createClient();
+  return useQuery<MutualStatusCruzado[]>({
+    queryKey: ['mutual', 'status-cruzado'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('mutual_status_cruzado', {});
       if (error) throw error;
       return data ?? [];
     },

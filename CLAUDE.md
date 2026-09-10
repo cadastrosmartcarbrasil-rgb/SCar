@@ -137,7 +137,12 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
   (`Configurações → Vendedores → Importar planilha`). Ver a seção própria: as três decisões que
   moram no banco (todos entram INATIVOS, comissão zerada, nunca cria acesso) e a trava de que
   unidade em branco **não vira matriz**.
-- **Próxima migration livre: `0070`.** As `0060`, `0061`, `0063`..`0069` já estão no branch de trabalho e
+- **`0070_mutual_status_do_objeto` é NOVA e CORRIGE duas leituras erradas** — (1) o status que
+  mandava era o do **ASSOCIADO**: o contrato do Mutual guarda VÁRIOS veículos, então o associado
+  fica ATIVO por causa de OUTRO carro enquanto AQUELE está encerrado, e o veículo morto entrava
+  como faturável; (2) **veículo sem placa é 0 KM**, não dado sujo. As duas juntas esvaziam a
+  quarentena. Ver a seção própria.
+- **Próxima migration livre: `0071`.** As `0060`, `0061`, `0063`..`0070` já estão no branch de trabalho e
   ainda **não foram aplicadas em produção** (rodar nessa ordem, depois das `0045`..`0059`); a
   `0062` JÁ FOI aplicada. A `0067`, a `0068` e a `0069` são independentes do Mutual e podem ir junto.
 - **`.claude/hooks/session-start.sh` é NOVO** — avisa quando a sessão nasce no branch errado e
@@ -241,9 +246,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0069`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **46 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 539 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0070`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **47 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 549 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Todos os portais e páginas
@@ -532,8 +537,9 @@ Consequências que o levantamento original não tinha:
 - **R$ 0,00 NÃO congela — vaza.** `valor_mensalidade_veiculo` (0024) só respeita o override quando
   `> 0`; veículo de cortesia importado com zero cairia no `cotar_plano` e o associado que nunca
   pagou receberia boleto. Por isso o diagnóstico marca valor nulo **ou zero** como CRÍTICO.
-- **Lógica pura testada:** `src/lib/mutual.ts` — `urlMutual`, `statusVeiculoDoContrato` (25 status
-  → 7, com o funil de venda devolvendo `null` = não importar), `tipoPessoaMutual` ("1"/"2"),
+- **Lógica pura testada:** `src/lib/mutual.ts` — `urlMutual`, `statusDeTexto` (uma palavra → um
+  status), `ehFunilDeVenda`, `statusVeiculoDoContrato` (a disputa contrato × objeto pelo menos
+  vivo, com `null` = não importar), `tipoPessoaMutual` ("1"/"2"),
   `dataLocalDeIso` (**converte o fuso ANTES de cortar a hora** — senão evento das 21h vira o dia
   seguinte), `textoOuNulo` (vazio → NULL, senão `chassi`/`renavam` colidem no unique),
   `ehMensalidade` (dos 20 `invoice_type`, só 3 são mensalidade) e `problemasDoObjeto` (quarentena).
@@ -587,6 +593,39 @@ Consequências que o levantamento original não tinha:
   com "0 objetos". É bloqueante: `regional_id` atravessa RLS, `escopo_regional()` e todos os
   painéis. **Onde ela mora é pergunta em aberto** — use `mutual_campos('CONTRACT')` para achar o
   campo em vez de supor.
+- **🔴 O STATUS QUE MANDA É O DO VEÍCULO, NÃO O DO ASSOCIADO (0070).** O contrato do Mutual
+  guarda **vários veículos**, então `contract_status` fala do ASSOCIADO: ele fica ATIVO porque tem
+  OUTRO carro, enquanto AQUELE veículo está encerrado. Até a 0070 lia-se só o contrato e o carro
+  morto entrava como **faturável** — indo para os bloqueios ser cobrado por valor, dia de
+  vencimento e data de ativação que um contrato encerrado não tem por que ter. **Era isso que
+  inflava a quarentena.**
+- **MAS O OBJETO SÓ PIORA, NUNCA RESSUSCITA.** Contrato `CANCELADO` com objeto `ATIVO` é veículo
+  sem cobertura, não veículo ativo. A regra não é "o objeto vence": vence o **MENOS VIVO dos
+  dois** (`mutual_vitalidade`: ativo 4 · em_evento 3 · vistoria_pendente 2 · suspenso 1 ·
+  inativo 0). Consequências que caem de graça: `SINISTRADO` não é apagado por um "ATIVO" genérico
+  do objeto, e **funil de venda no contrato descarta a linha** de qualquer jeito — venda nova
+  nasce no SCar e o objeto não reabre essa decisão.
+- **A ASSIMETRIA DO DESCONHECIDO (0070) — e ela é deliberada.** Vocabulário novo **no contrato**
+  continua sendo `null` (não importar): é decisão PENDENTE, e deixar o objeto resgatar a linha faria
+  o veículo entrar com classificação adivinhada, em silêncio — o oposto do que
+  `mutual_status_nao_mapeados()` existe para impedir. Vocabulário novo **no objeto** é "sem
+  opinião" e o contrato manda: o status do objeto é um REFINAMENTO (só estreita), e refinamento
+  ilegível é nenhum. *Isso foi pego pelas suites `0063` e `0066` quando a primeira versão da 0070
+  deixou o objeto resgatar contrato desconhecido — o teste antigo fez o trabalho dele.*
+- **`mutual_status_cruzado()` é o instrumento da 0070**: contrato × objeto, com o que mudou de
+  classificação e quantos. Mudança de LEITURA tem de ser mensurável ANTES da carga — a tela mostra
+  só as linhas que mudam, com "antes" riscado ao lado do "agora".
+- **VEÍCULO SEM PLACA É 0 KM, NÃO DADO SUJO (0070).** São carros novos ainda não emplacados.
+  Misturar com "sem CPF" (dado que a origem perdeu) escondia os dois: o 0 km virava alarme falso e
+  o problema real sumia no meio da lista. Agora: **sem placa + COM chassi** = grupo
+  `PLACA PENDENTE (0 KM)`, fora da quarentena por padrão (botão "Ver os 0 km" na tela);
+  **sem placa E sem chassi** = `SEM_PLACA_NEM_CHASSI`, aí sim CRÍTICO — não há identidade nenhuma.
+- **⚠️ O 0 km ainda depende de decisão para a CARGA:** `veiculos.placa` é **not null unique**
+  (0001). Ele só entra quando essa coluna aceitar a espera; o **chassi** é a identidade natural
+  enquanto a placa não vem. A cobrança da placa é operacional — SAC no atendimento, ou aviso
+  automático depois da adesão (decisão do usuário, ainda não construída).
+- **`mutual_status_nao_mapeados` passou a ter `origem`** (CONTRATO/OBJETO): desde a 0070 o status
+  do objeto decide carga, então vocabulário novo ali classifica veículo errado em silêncio.
 - **`mutual_campos(entidade, caminho, amostra)` (0065) é o INSTRUMENTO CONTRA O CHUTE.** Lista as
   chaves que realmente vêm no payload capturado, quantas chegam preenchidas e um exemplo; aceita
   objeto aninhado (`vehicle_data`, `person_data`). **Supor onde um campo mora já custou duas
@@ -1269,6 +1308,22 @@ no banco: **todos entram INATIVOS** por padrao, **comissao entra ZERADA** e **nu
 portal**; (D) reimportar NAO apaga o que a planilha nao traz — comissao e banco configurados na tela
 sobrevivem. `regional_id` nulo e RECUSADO: aqui nulo significa MATRIZ. Espelho puro em
 `src/lib/vendedores-import.ts`).
+· `0070_mutual_status_do_objeto` (CORRETIVA — duas leituras que inflavam a quarentena:
+(A) `mutual_status_veiculo` lia `contract_status` e so olhava o `status` do objeto no caso
+`REMOVIDO`. Mas o contrato guarda VARIOS veiculos, entao ele fala do ASSOCIADO: ativo por causa de
+OUTRO carro, com AQUELE veiculo encerrado entrando como faturavel e sendo cobrado por valor e dia
+de vencimento que contrato encerrado nao tem. **A regra NAO virou "o objeto vence"** — objeto
+"ATIVO" em contrato CANCELADO e veiculo sem cobertura. Vence o **MENOS VIVO dos dois**
+(`mutual_vitalidade`), e funil de venda no contrato descarta a linha de qualquer jeito
+(`mutual_e_funil_venda`). O vocabulario saiu para `mutual_status_de_texto` (uma palavra -> um
+status); (B) `mutual_status_cruzado()` — contrato x objeto com quantos MUDAM de classificacao, o
+instrumento que mede a mudanca ANTES da carga; (C) **sem placa deixou de ser dado sujo**: com
+chassi e 0 KM (grupo `PLACA PENDENTE (0 KM)`, fora da quarentena por padrao), sem os dois e
+`SEM_PLACA_NEM_CHASSI` e continua CRITICO. `mutual_quarentena` recriada com
+`p_incluir_placa_pendente` (muda a assinatura) e a situacao passa a mostrar
+"INATIVO (associado: ATIVO)"; (D) `mutual_status_nao_mapeados` **recriada** com a coluna `origem`
+— o status do OBJETO agora decide carga, entao palavra nova la classifica veiculo errado em
+silencio).
 · `0062_integracao_mutual` (FASE 1 da integracao com o MUTUAL — espelho de LEITURA e diagnostico:
 `mutual_captura` (entidade + id_externo unico, payload jsonb, soft-delete) e `mutual_sincronias`;
 os espelhos em SQL da logica de `src/lib/mutual.ts` (`mutual_texto`, `mutual_status_veiculo`,
@@ -2465,6 +2520,12 @@ no fim — o runner procura por "PASSARAM") e rode `npm run schema`.
   construídas sobre um checkbox decorativo, com a tela dizendo que ele revogava acesso.
   **Ao criar flag de situação (`ativo`, `bloqueado`, `suspenso`), escreva no mesmo commit quem a
   LÊ** — e um teste que prove o corte, não só a gravação.
+- **Status de PAI e status de FILHO não são a mesma coisa.** `contract_status` do Mutual fala do
+  ASSOCIADO (um contrato guarda vários veículos); o veículo encerrado de um associado ativo entrava
+  como faturável e ia inflar a quarentena com "sem valor" e "sem vencimento" que contrato encerrado
+  não tem por que ter (0070). **Ao ler status de uma origem hierárquica, pergunte de QUEM ele
+  fala** — e, ao combinar dois, defina explicitamente qual pode PIORAR e qual pode MELHORAR: aqui
+  o filho só estreita, nunca ressuscita.
 - Erro `syntax error near "//"` no SQL Editor = arquivo TypeScript colado por engano; SQL começa com `--`.
 - Trigger com CASE retornando enum: fazer cast `(case ... end)::meu_enum`.
 - Comparar `old.status` (enum) com `''` quebra; usar `is [not] distinct from`.

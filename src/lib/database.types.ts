@@ -2329,11 +2329,25 @@ export type MutualPeriodicidade = {
   valor_maximo: number | null;
 };
 
-/** 0063: o vocabulario do Mutual que o de-para ainda nao reconhece. */
+/**
+ * 0063/0070: o vocabulario do Mutual que o de-para ainda nao reconhece.
+ * `origem` diz se veio do CONTRATO ou do OBJETO — desde a 0070 o status do
+ * objeto tambem decide carga, entao palavra nova la classifica veiculo errado.
+ */
 export type MutualStatusNaoMapeado = {
-  contract_status: string | null;
+  origem: string;
+  status: string | null;
   quantidade: number;
-  exemplo_placa: string | null;
+};
+
+/** 0070: contrato x objeto, e quantos mudam de classificacao por causa do objeto. */
+export type MutualStatusCruzado = {
+  contract_status: string | null;
+  object_status: string;
+  status_scar: string;
+  status_pelo_contrato: string;
+  mudou: boolean;
+  quantidade: number;
 };
 
 export type MutualResumoCaptura = {
@@ -3437,12 +3451,20 @@ export type Database = {
       mutual_por_status: { Args: Record<string, never>; Returns: MutualPorStatus[] };
       mutual_filiais: { Args: Record<string, never>; Returns: MutualFilial[] };
       mutual_quarentena: {
-        Args: { p_limite?: number; p_somente_faturaveis?: boolean };
+        Args: {
+          p_limite?: number;
+          p_somente_faturaveis?: boolean;
+          p_incluir_placa_pendente?: boolean;
+        };
         Returns: MutualQuarentena[];
       };
       mutual_status_nao_mapeados: {
         Args: Record<string, never>;
         Returns: MutualStatusNaoMapeado[];
+      };
+      mutual_status_cruzado: {
+        Args: Record<string, never>;
+        Returns: MutualStatusCruzado[];
       };
       mutual_periodicidade: { Args: Record<string, never>; Returns: MutualPeriodicidade[] };
       mutual_campos: {
