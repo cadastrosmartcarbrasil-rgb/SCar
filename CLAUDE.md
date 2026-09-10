@@ -215,8 +215,24 @@ nenhuma: manda rodar de novo o que já rodou.
 | **Associado** | `/portal` | **`/portal/login`** | cadastro em `clientes` (login = CPF/CNPJ) |
 
 Três dos quatro entram pela MESMA porta `/login`: o destino não é escolhido, é decidido pelo
-cadastro (`src/app/(auth)/login/page.tsx` — gestor com regional → `/regional`; `vendedor_atual()`
-→ `/vendedor`; senão `/dashboard`). Só o associado tem login próprio, porque a chave é o CPF.
+cadastro. A regra vive em **`destinoAposLogin()` (`src/lib/acesso.ts`, testada)** e vai da MAIOR
+responsabilidade para a menor: **acesso global (admin/financeiro) → `/dashboard`**; gestor COM
+regional → `/regional`; `vendedor_atual()` → `/vendedor`; senão `/dashboard`.
+Só o associado tem login próprio, porque a chave é o CPF.
+
+> **A ordem é o conserto de um bug real.** Antes a pergunta "tem cadastro de vendedor?" vinha
+> ANTES de "é da matriz?", então um **admin que também tem ficha em `vendedores`** (o dono que
+> vende, o sócio que testa o hotlink) caía no portal do vendedor — e ficava preso, porque o
+> `/vendedor` não tinha porta de volta, ao contrário do `/regional`. Agora quem administra a
+> empresa entra na empresa, e o portal do vendedor segue acessível pela URL — do mesmo jeito que
+> a matriz visita `/regional`. O `ShellVendedor` também ganhou o atalho de volta, por papel:
+> **"Sistema da matriz"** (admin/financeiro) ou **"Portal da franquia"** (gestor regional).
+> **O destino do login NÃO é controle de acesso** — quem decide o que cada um lê continua sendo a
+> RLS e o `escopo_regional()`. Se alguém "não tem acesso a nada" no `/dashboard`, o problema é o
+> **`usuarios.papel`**, não a rota: o acesso do vendedor é criado por
+> `/api/v1/vendedores/acesso`, que provisiona o login com papel **`consultor_vendas`** — quem for
+> promovido depois precisa ter o papel trocado em `Configurações → Usuários` (a trava da 0054
+> impede promover a si mesmo).
 Públicas, sem sessão: **`/v/<CODIGO>`** (hotlink de venda, vendedor ou franquia) e
 **`/cotacao/<token>`** (a proposta).
 **Todos os portais dividem a sessão do navegador** — logar como associado derruba a de staff;
@@ -1516,6 +1532,20 @@ quem **não** tem acesso global recebe a própria unidade, independentemente do 
 `vendedores`, **não** por papel); `/portal` por `auth_cliente_id()` (é associado, não equipe).
 Consequência que já mordeu: **`authenticated` não é a equipe** — o associado do `/portal` é
 `authenticated` como qualquer atendente (ver "Segurança das RPCs (0052)").
+
+**Uma pessoa pode ter DOIS chapéus, e o login precisa saber qual vence.** Como as chaves são
+diferentes, um `admin` pode ter ficha em `vendedores` (o dono que vende, o sócio que testa o
+hotlink) — e aí ele satisfaz duas portas ao mesmo tempo. A escolha está em
+**`destinoAposLogin()` (`src/lib/acesso.ts`, testada)**: vai da MAIOR responsabilidade para a
+menor, então **acesso global vence o cadastro de vendedor**. Foi bug real — o admin caía no
+`/vendedor` e ficava preso, porque aquele portal não tinha porta de volta. Hoje o `ShellVendedor`
+mostra **"Sistema da matriz"** (admin/financeiro) ou **"Portal da franquia"** (gestor regional).
+
+**Ao diagnosticar "fulano não tem o acesso que deveria", olhe nesta ordem:**
+`usuarios.ativo` (desde a `0068` derruba TUDO, inclusive o portal do vendedor) → `usuarios.papel`
+(o acesso criado por `/api/v1/vendedores/acesso` nasce **`consultor_vendas`**; promover exige
+trocar o papel em `Configurações → Usuários`) → só então a rota. **O destino do login nunca foi
+controle de acesso.**
 
 ### 🔴 PRÓXIMO ASSUNTO: INTEGRIDADE DOS GRUPOS (levantamento inicial já feito)
 Três achados **verificados no `schema.sql`**, que são o ponto de partida — e ainda são

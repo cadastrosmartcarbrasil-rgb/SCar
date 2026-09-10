@@ -12,10 +12,12 @@ export default async function VendedorLayout({ children }: { children: React.Rea
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const [{ data }, { data: empresa }, { data: acessoAtivo }] = await Promise.all([
+  const [{ data }, { data: empresa }, { data: acessoAtivo }, { data: staff }] = await Promise.all([
     supabase.rpc('vendedor_perfil', {}),
     supabase.from('empresa').select('logo_url').limit(1).maybeSingle(),
     supabase.rpc('usuario_acesso_ativo', {}),
+    // O papel na equipe: quem tambem administra precisa de porta de volta.
+    supabase.from('usuarios').select('papel').eq('id', user.id).maybeSingle(),
   ]);
   const perfil = data?.[0] ?? null;
 
@@ -54,6 +56,7 @@ export default async function VendedorLayout({ children }: { children: React.Rea
       unidade={perfil.regional_nome}
       codigo={perfil.codigo}
       logoUrl={empresa?.logo_url ?? null}
+      papelStaff={staff?.papel ?? null}
     >
       {children}
     </ShellVendedor>
