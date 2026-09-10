@@ -382,3 +382,53 @@ export function mesesDoPeriodoMutual(valor: unknown): number | null {
 export const ROTULO_PERIODO_MUTUAL: Record<number, string> = {
   1: 'Mensal', 3: 'Trimestral', 6: 'Semestral', 12: 'Anual',
 };
+
+// ===========================================================================
+// A UNIDADE PELO CONSULTOR (0073) — a corrente e o seu gargalo
+// ===========================================================================
+// `regional` veio vazio em 100%, e o que sobrou foi a corrente
+//   objeto.consultant (CODIGO) -> /association/consultant/ -> vendedor -> unidade.
+// Ela e boa porque o primeiro salto e um join EXATO (codigo, nao nome). Mas sao
+// QUATRO saltos, e a unica leitura util de um funil de quatro degraus e ONDE
+// ele quebra — o total final nao diz o que arrumar.
+
+/** Candidatas para o documento do consultor. Existem para NAO chutar UMA. */
+export const CHAVES_DOC_CONSULTOR = ['cpf_cnpj', 'cpf', 'document', 'documento', 'doc'];
+export const CHAVES_EMAIL_CONSULTOR = ['email', 'e_mail', 'mail'];
+export const CHAVES_NOME_CONSULTOR = ['name', 'nome', 'full_name', 'fantasy_name'];
+
+export interface PassoFunil {
+  passo: number;
+  etapa: string;
+  objetos: number;
+  perdidos: number;
+  detalhe?: string | null;
+}
+
+/**
+ * O degrau que mais perde — o gargalo. E ele que decide o que fazer, nao o
+ * percentual final: "faltam 800" nao e uma tarefa; "800 caem porque o consultor
+ * nao tem CPF no cadastro deles" e.
+ */
+export function gargaloDoFunil(passos: PassoFunil[]): PassoFunil | null {
+  const comPerda = passos.filter((p) => p.passo > 1 && p.perdidos > 0);
+  if (comPerda.length === 0) return null;
+  return comPerda.reduce((pior, p) => (p.perdidos > pior.perdidos ? p : pior));
+}
+
+/** Fracao que chega ao fim (0..1). Base = o primeiro degrau, nao o maior. */
+export function coberturaDoFunil(passos: PassoFunil[]): number {
+  const inicio = passos.find((p) => p.passo === 1)?.objetos ?? 0;
+  if (inicio <= 0) return 0;
+  const fim = passos.reduce((ult, p) => (p.passo > ult.passo ? p : ult), passos[0]);
+  return fim.objetos / inicio;
+}
+
+/**
+ * A tese so se sustenta se a cobertura for alta. O corte de 95% nao e mistico:
+ * abaixo disso o resto vira trabalho manual por associado, e a essa altura o
+ * de-para por NOME de equipe (poucas decisoes) custa menos que a corrente.
+ */
+export function teseDoConsultorSeSustenta(passos: PassoFunil[], minimo = 0.95): boolean {
+  return coberturaDoFunil(passos) >= minimo;
+}

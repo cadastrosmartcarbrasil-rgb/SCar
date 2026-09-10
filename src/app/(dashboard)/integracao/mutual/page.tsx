@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import {
   Database, PlugZap, DownloadCloud, ShieldAlert, Building2, ListChecks, RefreshCw,
-  Search,
+  Search, Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,9 +12,11 @@ import {
   useMutualQuarentena, useMutualStatusNaoMapeados, useMutualPeriodicidade,
   useMutualStatusCruzado,
   useMutualCampos, usePingMutual, useCapturaMutual,
+  useMutualCoberturaConsultor, useMutualConsultoresPendentes,
 } from '@/hooks/use-mutual';
 import {
   ENTIDADES_INCREMENTAIS, ROTULO_QUARENTENA, ROTULO_PERIODO_MUTUAL, type EntidadeMutual,
+  gargaloDoFunil, coberturaDoFunil, teseDoConsultorSeSustenta,
 } from '@/lib/mutual';
 import type { MutualDiagnostico, SeveridadeDiagnostico } from '@/lib/database.types';
 
@@ -68,6 +70,8 @@ function Secao({ titulo, icone: Icone, children, acao }: {
 
 export default function IntegracaoMutualPage() {
   const capturas = useMutualCapturas();
+  const funil = useMutualCoberturaConsultor(true);
+  const pendentes = useMutualConsultoresPendentes(true, 50);
   const diagnostico = useMutualDiagnostico();
   const porStatus = useMutualPorStatus();
   const filiais = useMutualFiliais();
@@ -612,6 +616,84 @@ export default function IntegracaoMutualPage() {
           </div>
         </Secao>
       )}
+      {/* A UNIDADE PELO CONSULTOR (0073) — a corrente e onde ela quebra */}
+      <Secao titulo="A unidade pelo consultor" icone={Users}>
+        <p className="mb-4 text-xs text-slate-500">
+          A unidade nao esta em <code className="tnum">regional</code> em lugar nenhum. A corrente que
+          sobrou e <strong>objeto.consultant (codigo) → consultor → vendedor importado → unidade</strong>.
+          Sao <strong>quatro saltos</strong>: o que decide nao e o total, e <em>onde</em> ela quebra.
+          Puxe <strong>Consultores</strong> antes de ler.
+        </p>
+        {funil.isLoading && <p className="text-sm text-slate-500">Carregando...</p>}
+        {!funil.isLoading && (funil.data ?? []).length > 0 && (() => {
+          const passos = funil.data ?? [];
+          const base = passos[0]?.objetos ?? 0;
+          const gargalo = gargaloDoFunil(passos);
+          const cobertura = coberturaDoFunil(passos);
+          const passa = teseDoConsultorSeSustenta(passos);
+          return (
+            <>
+              <div className={`mb-4 rounded-lg px-3 py-2 text-sm ring-1 ${passa ? TOM.OK : TOM.CRITICO}`}>
+                <strong className="tnum">{(cobertura * 100).toFixed(1)}%</strong> dos veiculos chegam
+                a uma unidade.{' '}
+                {passa
+                  ? 'A tese se sustenta — a carga pode resolver a unidade pelo consultor.'
+                  : 'A tese NAO se sustenta sozinha: o resto viraria trabalho manual por associado.'}
+                {gargalo && (
+                  <> O gargalo esta em <strong>{gargalo.etapa}</strong>, que perde{' '}
+                    <strong className="tnum">{gargalo.perdidos}</strong>.</>
+                )}
+              </div>
+              <ol className="space-y-1">
+                {passos.map((p) => (
+                  <li key={p.passo} className="flex flex-wrap items-baseline gap-x-3 border-b border-slate-100 py-2 last:border-0">
+                    <span className="w-5 text-xs text-slate-400 tnum">{p.passo}</span>
+                    <span className="flex-1 text-sm text-slate-800">{p.etapa}</span>
+                    <span className="tnum text-sm font-semibold text-slate-800">{p.objetos}</span>
+                    <span className="w-28 text-right tnum text-xs text-rose-600">
+                      {p.perdidos > 0 ? `− ${p.perdidos}` : ''}
+                    </span>
+                    <span className="w-14 text-right tnum text-xs text-slate-500">
+                      {base > 0 ? `${((p.objetos / base) * 100).toFixed(0)}%` : ''}
+                    </span>
+                    {p.detalhe && <span className="w-full pl-8 text-xs text-slate-500">{p.detalhe}</span>}
+                  </li>
+                ))}
+              </ol>
+            </>
+          );
+        })()}
+
+        {(pendentes.data ?? []).length > 0 && (
+          <div className="mt-5">
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+              Quem a corrente perde — por volume de veiculos
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="pb-2">Consultor</th><th className="pb-2">Nome</th>
+                    <th className="pb-2">CPF</th><th className="pb-2 text-right">Veiculos</th>
+                    <th className="pb-2">Falta</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(pendentes.data ?? []).map((c) => (
+                    <tr key={c.consultor_id} className="border-t border-slate-100">
+                      <td className="py-2 tnum text-slate-600">{c.consultor_id}</td>
+                      <td className="py-2 text-slate-800">{c.nome ?? '—'}</td>
+                      <td className="py-2 tnum text-slate-600">{c.documento ?? '—'}</td>
+                      <td className="py-2 text-right tnum font-semibold text-slate-800">{c.veiculos}</td>
+                      <td className="py-2 text-xs text-slate-500">{c.motivo}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </Secao>
     </div>
   );
 }

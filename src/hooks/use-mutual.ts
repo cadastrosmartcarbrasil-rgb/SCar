@@ -8,7 +8,7 @@ import type {
   MutualDiagnostico, MutualPorStatus, MutualFilial,
   MutualQuarentena, MutualResumoCaptura, MutualStatusNaoMapeado, MutualPeriodicidade,
   MutualStatusCruzado,
-  MutualCampo,
+  MutualCampo, MutualPassoFunil, MutualConsultorPendente,
 } from '@/lib/database.types';
 
 /** O que ja esta na area de captura. */
@@ -176,6 +176,36 @@ export function useMutualCampos(entidade: EntidadeMutual, caminho?: string) {
     queryFn: async () => {
       const { data, error } = await supabase.rpc('mutual_campos', {
         p_entidade: entidade, p_caminho: caminho ?? null,
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+/** O funil da unidade pelo consultor (0073). Leitura; nao escreve nada. */
+export function useMutualCoberturaConsultor(somenteFaturaveis = true) {
+  const supabase = createClient();
+  return useQuery<MutualPassoFunil[]>({
+    queryKey: ['mutual', 'cobertura-consultor', somenteFaturaveis],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('mutual_cobertura_consultor', {
+        p_somente_faturaveis: somenteFaturaveis,
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+/** Quem a corrente perde, por VOLUME de veiculos — a fila de trabalho. */
+export function useMutualConsultoresPendentes(somenteFaturaveis = true, limite = 50) {
+  const supabase = createClient();
+  return useQuery<MutualConsultorPendente[]>({
+    queryKey: ['mutual', 'consultores-pendentes', somenteFaturaveis, limite],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('mutual_consultores_sem_vendedor', {
+        p_limite: limite, p_somente_faturaveis: somenteFaturaveis,
       });
       if (error) throw error;
       return data ?? [];

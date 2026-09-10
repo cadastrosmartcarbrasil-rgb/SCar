@@ -4,6 +4,7 @@ import {
   textoOuNulo, numeroOuNulo, dataLocalDeIso, tipoPessoaMutual,
   statusVeiculoDoContrato, statusTituloMutual, ehMensalidade, problemasDoObjeto,
   mesesDoPeriodoMutual, ehFilaOperacional, ehFunilDeVenda, statusDeTexto,
+  gargaloDoFunil, coberturaDoFunil, teseDoConsultorSeSustenta, CHAVES_DOC_CONSULTOR,
 } from './mutual';
 
 const BASE = 'https://smartcar-api.mutualignit.com.br';
@@ -335,5 +336,46 @@ describe('mesesDoPeriodoMutual', () => {
     expect(mesesDoPeriodoMutual('QUINZENAL')).toBeNull();
     expect(mesesDoPeriodoMutual('')).toBeNull();
     expect(mesesDoPeriodoMutual(null)).toBeNull();
+  });
+});
+
+describe('a unidade pelo CONSULTOR — o funil (0073)', () => {
+  const funil = (...pares: [number, number][]) =>
+    pares.map(([objetos, perdidos], i) => ({
+      passo: i + 1, etapa: `p${i + 1}`, objetos, perdidos,
+    }));
+
+  it('o gargalo e o degrau que mais PERDE, nao o ultimo', () => {
+    // 1000 -> 990 -> 500 -> 480: o buraco esta no salto 3, e e la que a
+    // operacao tem de mexer. O total final ("48%") nao diz o que fazer.
+    const f = funil([1000, 0], [990, 10], [500, 490], [480, 20]);
+    expect(gargaloDoFunil(f)?.passo).toBe(3);
+  });
+
+  it('o primeiro degrau nunca e o gargalo — ele e a base, nao uma perda', () => {
+    const f = funil([1000, 0], [999, 1]);
+    expect(gargaloDoFunil(f)?.passo).toBe(2);
+  });
+
+  it('sem perda nenhuma nao ha gargalo', () => {
+    expect(gargaloDoFunil(funil([10, 0], [10, 0]))).toBeNull();
+  });
+
+  it('a cobertura mede o FIM contra o COMECO', () => {
+    expect(coberturaDoFunil(funil([1000, 0], [990, 10], [950, 40]))).toBeCloseTo(0.95);
+    expect(coberturaDoFunil([])).toBe(0);
+    expect(coberturaDoFunil(funil([0, 0]))).toBe(0);
+  });
+
+  it('a tese so passa com cobertura alta — abaixo disso o resto vira trabalho manual', () => {
+    expect(teseDoConsultorSeSustenta(funil([1000, 0], [940, 60]))).toBe(false); // 94%
+    expect(teseDoConsultorSeSustenta(funil([1000, 0], [950, 50]))).toBe(true);  // 95% passa raspando
+    expect(teseDoConsultorSeSustenta(funil([1000, 0], [800, 200]), 0.8)).toBe(true);
+  });
+
+  it('as chaves candidatas do consultor incluem as duas grafias de CPF', () => {
+    // Nao chutar UMA chave e a licao das duas rodadas perdidas neste modulo.
+    expect(CHAVES_DOC_CONSULTOR).toContain('cpf_cnpj');
+    expect(CHAVES_DOC_CONSULTOR).toContain('cpf');
   });
 });

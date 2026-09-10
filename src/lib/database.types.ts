@@ -1544,6 +1544,25 @@ export type SituacaoInadimplencia = {
   tolerancia_vencida: boolean;
 };
 
+// Funil objeto -> consultor -> vendedor -> unidade (RPC mutual_cobertura_consultor, 0073)
+export type MutualPassoFunil = {
+  passo: number;
+  etapa: string;
+  objetos: number;
+  perdidos: number;
+  detalhe: string | null;
+};
+
+// A fila de trabalho (RPC mutual_consultores_sem_vendedor, 0073)
+export type MutualConsultorPendente = {
+  consultor_id: string;
+  nome: string | null;
+  documento: string | null;
+  email: string | null;
+  veiculos: number;
+  motivo: string;
+};
+
 // Prestador habilitado (RPC prestadores_do_servico)
 export type PrestadorDoServico = {
   fornecedor_id: string;
@@ -3487,6 +3506,26 @@ export type Database = {
         Returns: MutualCampo[];
       };
       mutual_resumo_capturas: { Args: Record<string, never>; Returns: MutualResumoCaptura[] };
+      // 0073 — a unidade pelo CONSULTOR: o funil e a fila de quem se perde.
+      mutual_cobertura_consultor: {
+        Args: {
+          p_somente_faturaveis?: boolean;
+          p_chaves_doc?: string[];
+          p_chaves_email?: string[];
+          p_chaves_nome?: string[];
+        };
+        Returns: MutualPassoFunil[];
+      };
+      mutual_consultores_sem_vendedor: {
+        Args: {
+          p_limite?: number;
+          p_somente_faturaveis?: boolean;
+          p_chaves_doc?: string[];
+          p_chaves_email?: string[];
+          p_chaves_nome?: string[];
+        };
+        Returns: MutualConsultorPendente[];
+      };
       // 0067 — a unidade com os numeros que dizem se ela esta viva.
       regionais_listar: {
         Args: { p_incluir_inativas?: boolean };

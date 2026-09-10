@@ -150,9 +150,13 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
   (`veiculos.status_desde`) e o **parâmetro** (`empresa.dias_tolerancia_inadimplencia`, 20) de que o
   CRON vai precisar. **A decisão que importa: inadimplente CONTINUA FATURÁVEL** — ver a seção
   própria. O CRON ainda não existe, então hoje ela é no-op.
-- **Próxima migration livre: `0073`.** As `0060`, `0061`, `0063`..`0072` já estão no branch de trabalho e
-  ainda **não foram aplicadas em produção** (rodar nessa ordem, depois das `0045`..`0059`); a
-  `0062` JÁ FOI aplicada. A `0067`, a `0068`, a `0069`, a `0070` e a `0072` são independentes do Mutual e podem ir junto.
+- **`0073_mutual_consultor_regional` é NOVA** — o **instrumento que MEDE** a tese da unidade pelo
+  consultor (`objeto.consultant` → consultor → vendedor importado → `regional_id`). Não carrega
+  nada: conta quantos veículos sobrevivem a CADA um dos quatro saltos e nomeia quem se perde.
+  Ver a seção própria.
+- **Próxima migration livre: `0074`.** As `0060`, `0061`, `0063`..`0072` já estão no branch de trabalho e
+  ainda **não foram aplicadas em produção** (rodar nessa ordem, depois das `0045`..`0059`, com a
+  `0073` por último); a `0062` JÁ FOI aplicada. A `0067`, a `0068`, a `0069`, a `0070` e a `0072` são independentes do Mutual e podem ir junto.
 - **`.claude/hooks/session-start.sh` é NOVO** — avisa quando a sessão nasce no branch errado e
   instala as dependências. Ele **só roda se estiver no branch que a sessão clonou**; enquanto o
   default do GitHub for o branch morto, uma sessão que caia lá não terá o hook. A correção
@@ -261,9 +265,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0072`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **49 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 575 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0073`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **50 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 581 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Todos os portais e páginas
@@ -600,6 +604,10 @@ Consequências que o levantamento original não tinha:
   exatamente o que `gerar_faturas_periodo(comp_inicial, meses, …)` (0025) já faz, com padrão de 6
   meses, na aba **Boletagem em Lote** de `/cobrancas`. **Não é preciso construir nada** — e é a
   confirmação de que `final_total_value` é a parcela mensal.
+- **✅ O CAMINHO DA UNIDADE É O CONSULTOR (0073), e ele é MEDIDO antes de valer.** O objeto traz
+  `consultant` como **código** — join exato com `/association/consultant/`, que já é entidade
+  capturável. Daí o consultor casa com os vendedores importados (0069) e a unidade vem deles. Ver
+  a seção própria: a corrente tem quatro saltos e o funil diz onde ela quebra.
 - **🔴 A UNIDADE NÃO ESTÁ EM `regional` — NEM NO OBJETO NEM NO CONTRATO.** O usuário informou que
   a regional e o consultor ficam na aba **GERAL do ASSOCIADO** e também no **cadastro do veículo** —
   ou seja, procurar em `person_data`/`vehicle_data` do objeto e na entidade `PERSON`, com
@@ -667,7 +675,8 @@ Consequências que o levantamento original não tinha:
   caso de a API nunca dizer que acabou.
 - **RPCs:** `mutual_registrar_captura` (só `tem_acesso_global`), `mutual_diagnostico`,
   `mutual_por_status`, `mutual_filiais`, `mutual_quarentena`, `mutual_status_nao_mapeados`,
-  `mutual_periodicidade`, `mutual_campos`, `mutual_resumo_capturas`.
+  `mutual_periodicidade`, `mutual_campos`, `mutual_resumo_capturas`,
+  `mutual_cobertura_consultor`, `mutual_consultores_sem_vendedor` (0073).
 
 ## O que é
 Sistema de gestão para **associação de proteção veicular** (associados, frota, eventos/sinistros,
@@ -1354,6 +1363,19 @@ ciclo em DOIS passos — inadimplente suspende (3), sair da base recolhe (4) —
 so pegava equipamento em `ATIVO`, deixaria preso em 3 o que a tolerancia acabara de mover;
 (H) o painel da 24h conta `inadimplente` como BLOQUEADO, nao como inativo. **Nao ha rotina que
 mova ninguem:** nenhum veiculo nasce `inadimplente` hoje, entao tudo isto e no-op ate o CRON).
+· `0073_mutual_consultor_regional` (A UNIDADE PELO CONSULTOR — o instrumento, nao a carga:
+`regional` veio vazio em 100%, e a tese que sobrou tem QUATRO saltos
+(`objeto.consultant` CODIGO -> `/association/consultant/` -> documento/e-mail -> `vendedores` ->
+`regional_id`). Tese de quatro saltos nao se aceita pelo desenho; se mede.
+`mutual_cobertura_consultor()` conta quantos veiculos sobrevivem a cada degrau e a quem atribuir
+a perda; `mutual_consultores_sem_vendedor()` da a FILA por volume de veiculos, com o motivo de
+cada um. Helpers `mutual_texto_em`/`mutual_chave_em` (primeira chave nao vazia entre candidatas —
+existem para NAO chutar o nome do campo, licao das duas rodadas perdidas) e
+`mutual_consultor_do_objeto` (objeto manda, contrato e reserva — mesma precedencia do `due_day`
+na 0064). **A chave de reconciliacao e a MESMA da 0069** (documento so digitos manda, e-mail
+minusculo e reserva): medir por chave que a carga nao usa produz numero bonito e falso — por isso
+o casamento por NOME entra como informativo, nunca no funil. Sem `CONSULTANT` capturado o degrau
+diz "puxe Consultores" em vez de acusar o dado, regra da 0064. So leitura).
 · `0062_integracao_mutual` (FASE 1 da integracao com o MUTUAL — espelho de LEITURA e diagnostico:
 `mutual_captura` (entidade + id_externo unico, payload jsonb, soft-delete) e `mutual_sincronias`;
 os espelhos em SQL da logica de `src/lib/mutual.ts` (`mutual_texto`, `mutual_status_veiculo`,
@@ -1426,6 +1448,41 @@ Fase 1, só leitura)
 · **Rastreadores** (`/rastreadores`: parque por IMEI, estoque por unidade/plataforma, instalação no
 veículo, manutenção, painel de divergências com o cadastro da frota e relatórios de custo,
 recuperação e giro).
+
+## A unidade pelo CONSULTOR (0073) — o instrumento, não a carga
+- **O problema:** `regional` veio vazio em **100%** dos objetos e dos contratos. A unidade é
+  bloqueante (`regional_id` atravessa RLS, `escopo_regional()` e todos os painéis).
+- **A tese que sobrou**, e ela é boa: o objeto traz **`consultant` como CÓDIGO**, não como nome —
+  então o primeiro salto é um **join exato**, não casamento por texto que erra em acento,
+  abreviação e homônimo. A corrente é:
+  `objeto.consultant` → `/association/consultant/` → documento/e-mail → `vendedores` (os 379 já
+  importados, com regional decidida na 0069) → `regional_id`.
+- **⚠️ SÃO QUATRO SALTOS, E CADA UM PERDE.** Tese de quatro saltos não se aceita pelo desenho; se
+  mede. Por isso a 0073 **não carrega nada**: ela conta quantos veículos sobrevivem a CADA degrau.
+  Mesmo papel que `mutual_status_cruzado` (0071) teve para a mudança de leitura do status.
+- **O que decide não é o total, é ONDE quebra.** "Faltam 800" não é tarefa; "800 caem porque o
+  consultor não tem CPF no cadastro deles" é. `gargaloDoFunil()` nomeia o degrau que mais perde e
+  a tela abre por ele.
+- **A chave de reconciliação é a MESMA da importação de vendedores (0069):** documento (só
+  dígitos) manda, e-mail (minúsculo) é reserva. **Medir por uma chave que a carga não usa produz
+  número bonito e falso** — por isso o casamento por NOME aparece como *informativo* ("N casariam
+  só por nome"), nunca dentro do funil. Ele responde outra pergunta: vale enriquecer o cadastro?
+- **Não se chuta o nome do campo.** `mutual_texto_em(payload, candidatas[])` devolve o primeiro
+  valor não vazio entre várias chaves e `mutual_chave_em` diz **qual pegou** — sem isso ninguém
+  descobre que o documento veio de `cpf` e não de `cpf_cnpj`, e a próxima sessão chuta de novo.
+  Supor onde um campo mora já custou duas rodadas neste módulo (o dia de vencimento e a unidade).
+- **Sem `CONSULTANT` capturado o funil manda PUXAR**, não acusa o dado (regra da 0064). Acusar
+  ausência de dado que ninguém capturou já gerou centenas de falsos críticos duas vezes aqui.
+- **O corte de 95% (`teseDoConsultorSeSustenta`) não é místico:** abaixo disso o resto vira
+  trabalho manual por associado, e aí o de-para por NOME de equipe (poucas decisões) custa menos
+  que a corrente.
+- **A REGRA DA FASE 1 continua:** nada escreve em `clientes`, `veiculos`, `titulos_financeiros`,
+  `faturas` ou `eventos_sinistro`. Há teste provando.
+- **Onde fica:** `/integracao/mutual`, seção **"A unidade pelo consultor"** — o funil degrau a
+  degrau + a fila "quem a corrente perde", ordenada por VOLUME de veículos (tratar o maior
+  primeiro resolve a maior parte da carteira com o menor número de decisões).
+- **Lógica pura testada:** `src/lib/mutual.ts` — `gargaloDoFunil`, `coberturaDoFunil`,
+  `teseDoConsultorSeSustenta`, `CHAVES_DOC_CONSULTOR`/`_EMAIL_`/`_NOME_`.
 
 ## Status do veículo e a INADIMPLÊNCIA (0072)
 - **O ciclo pedido:** mensalidade em atraso → o veículo vai **imediatamente** para
