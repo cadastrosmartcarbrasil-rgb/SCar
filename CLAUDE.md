@@ -184,8 +184,15 @@ para testar, aba anônima.
 | Validar tudo antes de commitar | `npm run validate` (tipos → Vitest → migrations+testes de banco+schema → build) |
 | Só os testes de banco | `npm run test:db` · um módulo: `npm run test:db -- 0043` |
 | Regerar o `supabase/schema.sql` | `npm run schema` (rodar SEMPRE após criar/editar migration) |
-| Publicar — **de dentro do VPS** (prompt `root@smartvida:~#`) | `cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 && docker compose up -d --build` |
-| Publicar — **do seu computador** (PowerShell/terminal local) | `ssh root@app.smartvidanet.com.br "cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 && docker compose up -d --build"` |
+| Publicar — **de dentro do VPS** (prompt `root@smartvida:~#`) | `cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 && DOCKER_BUILDKIT=0 docker compose up -d --build` |
+| Publicar — **do seu computador** (PowerShell/terminal local) | `ssh root@app.smartvidanet.com.br "cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 && DOCKER_BUILDKIT=0 docker compose up -d --build"` |
+
+**O `DOCKER_BUILDKIT=0` FAZ PARTE DO COMANDO — nao e contorno de emergencia.** O daemon do Docker
+deste VPS resolve DNS pelo stub do `systemd-resolved`, que ja ficou "no ar e mudo": com o BuildKit
+ligado o build para em `failed to resolve source metadata` ANTES de comecar, e perder tempo com isso
+ja custou uma sessao inteira. Desligado, o builder classico usa a `node:20-alpine` do cache local e
+passa. O nosso `Dockerfile` e generico (sem `# syntax=`, sem cache mount), entao **nada se perde**.
+Nunca ensine o comando sem ele; o conserto definitivo do DNS esta em `DEPLOY.md`.
 
 **O `git pull` roda DENTRO do VPS.** Os dois comandos acima fazem a mesma coisa; o que muda e de
 onde voce digita. **Nao misture:** a versao com `ssh root@...` rodada DE DENTRO do servidor faz a
@@ -2430,7 +2437,8 @@ no fim — o runner procura por "PASSARAM") e rode `npm run schema`.
 - Push para **`claude/claude-md-opcao-x-98kfj5`** (branch de trabalho E de deploy).
   Consolidar com o branch padrão só com autorização do usuário.
 - **Publicar:** `DEPLOY.md` tem o runbook. Resumo: (A) migrations novas no Supabase
-  SQL Editor, na ordem; (B) `.\scripts\deploy.ps1` (Windows) ou `npm run deploy`.
+  SQL Editor, na ordem; (B) `.\scripts\deploy.ps1` (Windows) ou `npm run deploy` — os dois ja
+  levam o `DOCKER_BUILDKIT=0` embutido.
 - **O `git pull` roda DENTRO do VPS.** Rodar no PowerShell do Windows dá
   `fatal: not a git repository` — foi o erro que mais custou tempo nesta fase.
   Toda janela nova de terminal começa fora do servidor; o `ssh` precisa ser refeito.
@@ -2511,6 +2519,14 @@ no fim — o runner procura por "PASSARAM") e rode `npm run schema`.
   construídas sobre um checkbox decorativo, com a tela dizendo que ele revogava acesso.
   **Ao criar flag de situação (`ativo`, `bloqueado`, `suspenso`), escreva no mesmo commit quem a
   LÊ** — e um teste que prove o corte, não só a gravação.
+- **`docker compose up -d --build` SEM `DOCKER_BUILDKIT=0` nao publica neste VPS.** O daemon do
+  Docker le o `/etc/resolv.conf` cru e consulta o stub `127.0.0.53:53`, que aqui ja ficou **no ar e
+  mudo** — o BuildKit para em `failed to resolve source metadata` / `i/o timeout` sem baixar nada.
+  **`getent` respondendo NAO prova que o Docker resolve** (ele passa pelo `systemd-resolved` por
+  D-Bus, outro caminho), e foi essa pista falsa que fez a investigacao render um dia inteiro.
+  Com `DOCKER_BUILDKIT=0` o builder classico usa a imagem do cache local e o deploy passa; o
+  `npm ci` roda dentro do contêiner, que recebe DNS proprio do Docker. Conserto definitivo (apontar
+  o `/etc/resolv.conf` para o uplink do systemd) e o diagnostico completo estao em `DEPLOY.md`.
 - Erro `syntax error near "//"` no SQL Editor = arquivo TypeScript colado por engano; SQL começa com `--`.
 - Trigger com CASE retornando enum: fazer cast `(case ... end)::meu_enum`.
 - Comparar `old.status` (enum) com `''` quebra; usar `is [not] distinct from`.

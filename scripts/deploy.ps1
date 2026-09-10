@@ -27,9 +27,13 @@ if ($Descobrir) {
   exit $LASTEXITCODE
 }
 
+# DOCKER_BUILDKIT=0 e PADRAO, nao contorno: o daemon do Docker do VPS resolve DNS
+# pelo stub do systemd-resolved, que ja ficou "no ar e mudo", e o BuildKit para em
+# `failed to resolve source metadata`. O builder classico usa a imagem do cache
+# local e passa; o Dockerfile e generico, entao nada se perde. Ver DEPLOY.md.
 Write-Host "==> $Servidor : $Caminho ($Branch)" -ForegroundColor Cyan
 
-$remoto = "set -e; cd $Caminho; git fetch origin $Branch; git checkout $Branch; git pull origin $Branch; docker compose up -d --build"
+$remoto = "set -e; cd $Caminho; git fetch origin $Branch; git checkout $Branch; git pull origin $Branch; DOCKER_BUILDKIT=0 docker compose up -d --build"
 ssh $Servidor $remoto
 
 if ($LASTEXITCODE -eq 0) {
