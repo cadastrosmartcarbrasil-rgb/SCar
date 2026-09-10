@@ -54,6 +54,36 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
 - **Produção:** `https://app.smartvidanet.com.br` — VPS KingHost, Docker + Caddy (HTTPS auto),
   pasta `/opt/scar`.
 - **Último commit desta fase:** `a468ead`.
+
+### ⏱️ RETOMADA EM 30 SEGUNDOS — os 3 fatos que evitam erro de local e de deploy
+> Esta caixa existe porque errar o LOCAL (branch) e a ORDEM do deploy foi o que mais custou tempo
+> neste projeto. Leia-a antes de qualquer coisa; o resto do arquivo é referência.
+
+**1. ONDE.** Branch `claude/claude-md-opcao-x-98kfj5`, e só ele. Repositório
+`cadastrosmartcarbrasil-rgb/scar`. Confira com `git rev-parse --abbrev-ref HEAD`.
+
+**2. O QUE FALTA SUBIR — a ordem completa, sem interpretação.** Aplicadas em produção:
+`0001`..`0044` e a `0062`. **Pendentes, nesta ordem exata, pelo SQL Editor do Supabase:**
+
+```
+0045 0046 0047 0048 0049 0050 0051 0052 0053 0054 0055 0056 0057 0058 0059
+0060 0061 0063 0064 0065 0066 0067 0068 0069 0070 0071 0072 0073
+```
+(a `0062` está fora da lista porque JÁ FOI; as demais nunca rodaram lá.)
+Dependências que **não** podem ser reordenadas: `0060` antes da `0061` · `0049` → `0050` → `0051`
+na mesma janela · `0063`..`0066` e `0071` depois da `0062` · `0072` e `0073` por último.
+Independentes do Mutual, podem ir juntas: `0067` `0068` `0069` `0070` `0072`.
+
+**3. COMO PUBLICAR.** Migrations primeiro (acima), depois o contêiner:
+```bash
+cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 \
+  && DOCKER_BUILDKIT=0 docker compose up -d --build
+```
+O `git pull` roda **dentro do VPS**. O `DOCKER_BUILDKIT=0` **faz parte do comando** — sem ele o
+build nem começa neste servidor. Runbook completo em `DEPLOY.md`.
+
+**Depois de aplicar, ATUALIZE esta caixa** — uma lista de pendências desatualizada é pior que
+nenhuma: manda rodar de novo o que já rodou.
 - **A migration `0044` JÁ FOI APLICADA em produção** e o Portal do Associado está no ar,
   conferido pelo usuário. As migrations `0001`..`0044` estão todas aplicadas.
 - **`0045_agenda_vendas`, `0046_vendas_duplicidade_aceite`, `0047_vistoria_anexo_peso`,
@@ -1448,6 +1478,66 @@ Fase 1, só leitura)
 · **Rastreadores** (`/rastreadores`: parque por IMEI, estoque por unidade/plataforma, instalação no
 veículo, manutenção, painel de divergências com o cadastro da frota e relatórios de custo,
 recuperação e giro).
+
+## USUÁRIOS E GRUPOS DE ACESSO — o mapa (leia antes de mexer em papel)
+> Tópico próprio porque "quem pode o quê" está espalhado por 8 papéis, 4 portais, ~15 helpers e
+> as policies de toda tabela. **Este é o índice.** A ficha do usuário e o corte do `ativo` estão
+> na seção "Usuário da equipe — ficha e ACESSO (0068)"; aqui é o mapa dos GRUPOS.
+
+### Os 8 papéis (`papel_usuario`) e o que cada um REALMENTE destrava
+`admin` · `gestor_regional` · `consultor_vendas` · `financeiro` · `sinistro` · `cotador` (os seis
+de `0001`) + `auditoria` (`0017`) + `assistencia_24h` (`0026`).
+
+| Papel | O que os helpers concedem hoje |
+|---|---|
+| `admin` | tudo: `is_admin`, `tem_acesso_global`, audita, libera 24h, aprova desconto, publica memo |
+| `financeiro` | `tem_acesso_global` (consolidado da empresa), libera 24h, vê carteira da unidade, publica memo |
+| `gestor_regional` | a própria unidade (`pode_regional`), libera 24h, aprova desconto, cadastra fornecedor, publica memo |
+| `auditoria` | `pode_auditar` (autoriza a entrada na base) + vê a carteira da unidade |
+| `assistencia_24h` | `pode_assistencia` (opera a 24h, cadastra prestador, lança/baixa contas a pagar) |
+| `consultor_vendas` | **só a própria carteira** de leads (0038) — não vê a da unidade |
+| `sinistro` | **apenas** `pode_assistencia`. Ver a pergunta aberta abaixo. |
+| `cotador` | **nada além de `is_staff()`.** Ver a pergunta aberta abaixo. |
+
+### A raiz: 3 funções sustentam tudo
+`is_staff()` · `auth_papel()` · `auth_regional_id()` — e as três exigem **`and ativo`** desde a
+`0068`. Todo o resto deriva delas (`is_admin`, `tem_acesso_global`, `pode_regional`,
+`pode_auditar`, `pode_ver_carteira_regional`, `pode_liberar_assistencia`, `pode_assistencia`,
+`pode_aprovar_desconto`, `pode_cadastrar_fornecedor`, `pode_publicar_memo`, `pode_tratar_lead`).
+**Não crie checagem paralela de `ativo` em RPC nova** — ela já vem de graça.
+
+### O eixo da UNIDADE é `escopo_regional()`, não o parâmetro da tela
+Toda RPC de painel é `security definer` e resolve a unidade por `escopo_regional(p_regional_id)`:
+quem **não** tem acesso global recebe a própria unidade, independentemente do id que passar.
+`regional_id is null` significa **MATRIZ** — nunca "sem unidade" (0067/0069).
+
+### Os 4 portais entram por chaves DIFERENTES
+`/dashboard` e `/regional` pelo **papel**; `/vendedor` por `vendedor_atual()` (cadastro em
+`vendedores`, **não** por papel); `/portal` por `auth_cliente_id()` (é associado, não equipe).
+Consequência que já mordeu: **`authenticated` não é a equipe** — o associado do `/portal` é
+`authenticated` como qualquer atendente (ver "Segurança das RPCs (0052)").
+
+### 🔴 PRÓXIMO ASSUNTO: INTEGRIDADE DOS GRUPOS (levantamento inicial já feito)
+Três achados **verificados no `schema.sql`**, que são o ponto de partida — e ainda são
+PERGUNTAS, não conclusões:
+
+1. **`cotador` não é lido por função nenhuma.** Aparece no enum (`0001`) e no rótulo da tela
+   (`PAPEIS_USUARIO`), e em mais lugar algum. Cadastrar alguém como cotador dá **staff genérico
+   sem nenhuma capacidade nomeada** — e a tela oferece o papel como se ele significasse algo.
+   É o mesmo formato do gotcha do `usuarios.ativo`: *opção que a tela oferece e o banco ignora*.
+2. **`sinistro` só existe dentro de `pode_assistencia()`.** As policies de `eventos_sinistro` são
+   `pode_regional(regional_id)` / `is_admin()` — **nenhuma menciona o papel**. Ou seja: o papel que
+   dá nome ao módulo de eventos não governa o módulo de eventos, e qualquer staff da unidade já
+   opera sinistro. A pergunta é se isso é intencional (a unidade inteira trata evento) ou se o
+   papel deveria restringir.
+3. **`consultor_vendas` é o único papel com restrição de LINHA** (só a carteira dele, 0038). Os
+   demais são "tudo da unidade" ou "tudo da empresa". Vale conferir se algum papel novo precisaria
+   do mesmo corte fino.
+
+**Como conduzir a auditoria (o método, para não virar opinião):** para cada papel, listar (a) os
+helpers que o citam, (b) as policies que o citam, (c) as telas do menu que ele abre. Papel que não
+aparece em (a) nem em (b) não é grupo de acesso — é rótulo. E papel que abre tela sem ter policy
+correspondente é o inverso: promessa na tela, recusa no banco.
 
 ## A unidade pelo CONSULTOR (0073) — o instrumento, não a carga
 - **O problema:** `regional` veio vazio em **100%** dos objetos e dos contratos. A unidade é
