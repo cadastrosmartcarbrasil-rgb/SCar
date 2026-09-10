@@ -1541,6 +1541,27 @@ menor, então **acesso global vence o cadastro de vendedor**. Foi bug real — o
 `/vendedor` e ficava preso, porque aquele portal não tinha porta de volta. Hoje o `ShellVendedor`
 mostra **"Sistema da matriz"** (admin/financeiro) ou **"Portal da franquia"** (gestor regional).
 
+**✅ DECISÃO DO USUÁRIO (10/09/2026): o acúmulo dos dois chapéus é PERMITIDO — não construir
+trava.** Foi avaliado bloquear `admin`/`financeiro` vinculado a cadastro de vendedor, e a decisão
+foi manter como está. Dois motivos: (1) numa associação de proteção veicular o dono e o sócio
+VENDEM, então o arranjo é legítimo, não um erro de cadastro; (2) como `usuarios.email` e
+`vendedores.usuario_id` são únicos, a trava obrigaria a MESMA pessoa a ter **dois logins com
+e-mails diferentes** — pior de administrar e, de quebra, esconderia da tela de Usuários que é a
+mesma pessoa. **Separe os dois problemas:** o desvio de rota era o bug (corrigido em
+`destinoAposLogin`); o acúmulo de papéis não é defeito. Com um login só a pessoa alterna pelos
+atalhos que já existem — **"Meu Portal de Vendas"** na sidebar da matriz (ida) e **"Sistema da
+matriz"** no `ShellVendedor` (volta). A tela de Usuários já marca quem tem cadastro de vendedor
+(`usuarios_listar` devolve `vendedor_codigo`), que é a visibilidade de que a gestão precisa.
+
+**Vendedor NÃO é usuário — são três entidades, e só uma dá acesso:** `usuarios` (perfil no
+sistema; `is_staff()` = ter linha aqui) · `vendedores` (cadastro comercial — comissão, hotlink,
+banco; vive sem login desde a 0035) · `clientes` (associado, só o `/portal`). As três portas de
+entrada de `usuarios` estão fechadas e é assim que deve continuar: a importação da 0069 **nunca
+cria acesso**, `/api/v1/vendedores/acesso` exige admin/financeiro/gestor e nasce
+`consultor_vendas`, e o trigger `fn_handle_new_user` (0002) só provisiona perfil quando o metadata
+traz `papel` — é isso que impede o associado do `/portal` de virar equipe. **Consulta em
+`vendedores` traz gente que não tem perfil nenhum; a lista de perfis é `usuarios_listar`.**
+
 **Ao diagnosticar "fulano não tem o acesso que deveria", olhe nesta ordem:**
 `usuarios.ativo` (desde a `0068` derruba TUDO, inclusive o portal do vendedor) → `usuarios.papel`
 (o acesso criado por `/api/v1/vendedores/acesso` nasce **`consultor_vendas`**; promover exige
