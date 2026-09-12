@@ -123,11 +123,33 @@ function VeiculosConteudo() {
   const [alertas, setAlertas] = useState<Set<string>>(new Set());
   const [troca, setTroca] = useState<(TrocaDePlano & { sentido: SentidoTroca; de: string; para: string }) | null>(null);
   const [valorCotado, setValorCotado] = useState<number | null>(null);
+  // Numero do pedido de cotacao em voo — ver `recotizar`.
+  const pedidoCotacao = useRef(0);
 
   const vProdutos = useVeiculoProdutos(form.id);
   const vAlertas = useVeiculoAlertas(form.id);
-  useEffect(() => { if (vProdutos.data) setOpcionais(new Set(vProdutos.data)); }, [vProdutos.data]);
-  useEffect(() => { if (vAlertas.data) setAlertas(new Set(vAlertas.data)); }, [vAlertas.data]);
+  // Cada abertura de ficha tem uma GERACAO, e e ela que faz o efeito rodar de
+  // novo ao reabrir o MESMO veiculo. Sem ela: `editar()` limpa o conjunto e o
+  // TanStack Query devolve o array do cache com a MESMA referencia, entao o
+  // efeito que dependia so do dado ficava mudo — o formulario seguia vazio e o
+  // Salvar mandava `opcionaisIds: []`, que em `use-veiculos` APAGA
+  // `veiculo_produtos` antes de reinserir. Os opcionais gravados sumiam sem
+  // ninguem ter tocado num checkbox.
+  // De quebra, a guarda impede que um refetch em segundo plano reescreva o que
+  // o atendente ja marcou e ainda nao salvou.
+  const [geracaoFicha, setGeracaoFicha] = useState(0);
+  const produtosDaGeracao = useRef(-1);
+  const alertasDaGeracao = useRef(-1);
+  useEffect(() => {
+    if (!vProdutos.data || produtosDaGeracao.current === geracaoFicha) return;
+    produtosDaGeracao.current = geracaoFicha;
+    setOpcionais(new Set(vProdutos.data));
+  }, [vProdutos.data, geracaoFicha]);
+  useEffect(() => {
+    if (!vAlertas.data || alertasDaGeracao.current === geracaoFicha) return;
+    alertasDaGeracao.current = geracaoFicha;
+    setAlertas(new Set(vAlertas.data));
+  }, [vAlertas.data, geracaoFicha]);
 
   // Atalho do SAC: /veiculos?editar=<id> abre direto a ficha daquele veiculo.
   // O parametro e CONSUMIDO na abertura (ref + router.replace): enquanto ele
@@ -166,17 +188,27 @@ function VeiculosConteudo() {
   const nomeDoPlano = (id: string | null) =>
     (id ? (planos ?? []).find((p) => p.id === id)?.nome : null) ?? 'Sem plano';
 
-  /** Recotiza no banco (mesma `cotar_plano` do resto do sistema). */
+  /**
+   * Recotiza no banco (mesma `cotar_plano` do resto do sistema).
+   *
+   * Cada pedido leva um NUMERO e so o ultimo escreve: marcar dois opcionais em
+   * seguida dispara duas cotacoes, e a resposta atrasada da PRIMEIRA gravava um
+   * `valor_mensalidade` que nao corresponde a selecao em tela — apagando junto o
+   * aviso ambar de "o valor gravado difere do calculado", que e justamente o que
+   * pediria conferencia.
+   */
   function recotizar(planoId: string | null, avulsosIds: string[], aplicar: boolean) {
+    const pedido = ++pedidoCotacao.current;
     if (!form.tipo_veiculo_id || !(form.valor_fipe ?? 0)) { setValorCotado(null); return; }
     calcMensal.mutate(
       { fipe: form.valor_fipe ?? 0, tipoVeiculoId: form.tipo_veiculo_id, planoId, opcionaisIds: avulsosIds },
       {
         onSuccess: (valor) => {
+          if (pedido !== pedidoCotacao.current) return;
           setValorCotado(valor);
           if (aplicar) setF({ valor_mensalidade: valor });
         },
-        onError: () => setValorCotado(null),
+        onError: () => { if (pedido === pedidoCotacao.current) setValorCotado(null); },
       },
     );
   }
@@ -248,30 +280,37 @@ function VeiculosConteudo() {
   }, [veiculos, busca]);
 
   // Abrir outra ficha nao pode herdar a selecao da anterior: o conjunto de
-  // opcionais so e reescrito quando a consulta do novo veiculo responde.
-  function editar(v: VeiculosRow) {
-    setForm(v);
+  // opcionais so e reescrito quando a consulta do novo veiculo responde — e a
+  // GERACAO nova e o que garante essa reescrita mesmo com o dado vindo do cache
+  // (reabrir o mesmo veiculo nao muda a referencia do array).
+  function abrirFicha(dados: Partial<VeiculosRow>) {
+    setForm(dados);
     setOpcionais(new Set());
     setAlertas(new Set());
     setTroca(null);
     setValorCotado(null);
+    pedidoCotacao.current += 1;
+    setGeracaoFicha((g) => g + 1);
     setAberto(true);
+  }
+
+  function editar(v: VeiculosRow) {
+    abrirFicha(v);
   }
 
   function novo() {
-    setForm({ status: 'ativo', uso: 'passeio', data_contrato: undefined });
-    setOpcionais(new Set());
-    setAlertas(new Set());
-    setTroca(null);
-    setValorCotado(null);
-    setAberto(true);
+    abrirFicha({ status: 'ativo', uso: 'passeio', data_contrato: undefined });
   }
 
+  // O botao entra na MESMA fila de `recotizar`: clicar "Calcular" enquanto uma
+  // recotizacao esta no ar nao pode deixar a resposta velha vencer a nova.
   function calcularMensalidade() {
+    const pedido = ++pedidoCotacao.current;
     calcMensal.mutate(
       { fipe: form.valor_fipe ?? 0, tipoVeiculoId: form.tipo_veiculo_id ?? null, planoId: form.plano_protecao_id ?? null, opcionaisIds: [...opcionais] },
       {
         onSuccess: (valor) => {
+          if (pedido !== pedidoCotacao.current) return;
           setValorCotado(valor);
           setF({ valor_mensalidade: valor });
           toast.success(`Mensalidade calculada: ${formatCurrency(valor)}`);
