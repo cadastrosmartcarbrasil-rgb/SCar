@@ -15,7 +15,7 @@ begin
   insert into usuarios (id, nome, email, papel, regional_id) values
     (u_sin,'Analista','sin@t.com','sinistro', r1),
     (u_jur,'Juridico','jur@t.com','auditoria', r1),
-    (u_vis,'Vistoria','vis@t.com','cotador', r1),
+    (u_vis,'Vistoria','vis@t.com','consultor_vendas', r1),
     (u_dir,'Diretoria','dir@t.com','admin', null);
 
   insert into clientes (nome_razao_social, cpf_cnpj, tipo_pessoa, regional_id)

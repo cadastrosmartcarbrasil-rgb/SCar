@@ -15,6 +15,7 @@ import {
   useSolicitarParecer, useResponderParecer,
 } from '@/hooks/use-eventos';
 import { situacaoParecer, resumoPareceres, ordenarPareceres } from '@/lib/protocolos';
+import { podeTratarEvento } from '@/lib/usuario';
 import { PIPELINE_SINISTRO } from '@/types/domain';
 import { formatDate } from '@/lib/utils';
 import type { StatusEvento } from '@/lib/database.types';
@@ -58,6 +59,11 @@ export function TramitacaoEvento({
     () => (usuarios ?? []).filter((u) => u.ativo),
     [usuarios],
   );
+  // Mudar o STATUS do evento e do time de sinistro (0077). Transferir e opinar
+  // continuam de todo staff da unidade — juridico e vistoria opinam no sinistro
+  // sem serem o time dele. Oferecer o seletor a quem o banco vai recusar seria
+  // o mesmo defeito de /precificacao: a tela promete, o banco nega.
+  const podeMudarStatus = podeTratarEvento(perfil?.papel);
   const lista = ordenarPareceres(pareceres ?? []);
   const resumo = resumoPareceres(lista);
 
@@ -124,14 +130,21 @@ export function TramitacaoEvento({
             </Select>
           </FormField>
 
-          <FormField label="Novo status">
-            <Select value={novoStatus} onChange={(e) => setNovoStatus(e.target.value as StatusEvento)}>
-              <option value="">Manter status atual</option>
-              {PIPELINE_SINISTRO.map((c) => (
-                <option key={c.status} value={c.status}>{c.titulo}</option>
-              ))}
-            </Select>
-          </FormField>
+          {podeMudarStatus ? (
+            <FormField label="Novo status">
+              <Select value={novoStatus} onChange={(e) => setNovoStatus(e.target.value as StatusEvento)}>
+                <option value="">Manter status atual</option>
+                {PIPELINE_SINISTRO.map((c) => (
+                  <option key={c.status} value={c.status}>{c.titulo}</option>
+                ))}
+              </Select>
+            </FormField>
+          ) : (
+            <p className="text-xs text-slate-500">
+              Mudar a fase do evento e do time de sinistro. Voce pode transferir
+              o protocolo e registrar parecer.
+            </p>
+          )}
 
           <FormField label="Parecer / observacoes">
             <Textarea

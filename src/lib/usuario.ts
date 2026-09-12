@@ -11,14 +11,25 @@
 
 import { validarCPF } from './documento';
 
-/** PAPEL e PERMISSAO. Nao confundir com `cargo`, que e a funcao na empresa. */
+/**
+ * PAPEL e PERMISSAO. Nao confundir com `cargo`, que e a funcao na empresa.
+ *
+ * `cotador` NAO esta aqui: foi aposentado na 0077. Ele tinha duas ocorrencias
+ * no schema inteiro e nenhuma era codigo (a declaracao do enum e um
+ * comentario), entao oferecia na tela um grupo de acesso que o banco ignorava.
+ * Quem estava nele virou `consultor_vendas`, que e o mesmo acesso na pratica, e
+ * o banco RECUSA o valor por CHECK — tirar so daqui repetiria o defeito, porque
+ * a rota /api/usuarios escreve com service_role.
+ *
+ * Enum no Postgres nao perde valor, entao `cotador` continua existindo no tipo
+ * do banco; o que nao existe mais e caminho para grava-lo.
+ */
 export const PAPEIS_USUARIO = [
   { valor: 'admin', rotulo: 'Administrador', nota: 'acesso global e gestao da equipe' },
   { valor: 'gestor_regional', rotulo: 'Gestor Regional', nota: 'a unidade dele' },
   { valor: 'consultor_vendas', rotulo: 'Consultor de Vendas', nota: 'a carteira dele' },
   { valor: 'financeiro', rotulo: 'Financeiro', nota: 'acesso global ao dinheiro' },
-  { valor: 'sinistro', rotulo: 'Sinistro' },
-  { valor: 'cotador', rotulo: 'Cotador' },
+  { valor: 'sinistro', rotulo: 'Sinistro', nota: 'trata o evento da unidade' },
   { valor: 'auditoria', rotulo: 'Auditoria', nota: 'autoriza a entrada na base' },
   { valor: 'assistencia_24h', rotulo: 'Assistencia 24h' },
 ] as const;
@@ -136,4 +147,22 @@ export function avisoDeDesativacao(u: {
     linhas.push('', 'Ela tambem tem cadastro de VENDEDOR ativo: o portal do vendedor cai junto.');
   }
   return linhas.join('\n');
+}
+
+/**
+ * Espelho de `pode_tratar_evento()` (0077) — a parte que a TELA precisa saber.
+ *
+ * Nao e controle de acesso (quem decide e a policy de `eventos_sinistro` e a
+ * trava dentro de `transferir_protocolo`, que e security definer e por isso
+ * carrega a sua). Serve para o card de tramitacao NAO oferecer um seletor de
+ * status que o banco vai recusar — foi exatamente esse o defeito que a
+ * varredura dos papeis nomeou em /precificacao: promessa na tela, recusa no
+ * banco.
+ *
+ * `financeiro` entra porque tem acesso global (a nota fiscal do evento e
+ * dinheiro e ja aparece no DRE). `auditoria` nao: ela autoriza a entrada na
+ * base, que e outro assunto.
+ */
+export function podeTratarEvento(papel?: string | null): boolean {
+  return ['admin', 'financeiro', 'sinistro', 'gestor_regional'].includes(papel ?? '');
 }

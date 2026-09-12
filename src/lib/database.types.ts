@@ -12,7 +12,10 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 
 // ---- Enums -----------------------------------------------------------------
 export type PapelUsuario =
-  | 'admin' | 'gestor_regional' | 'consultor_vendas' | 'financeiro' | 'sinistro' | 'cotador' | 'auditoria'
+  // `cotador` existe no enum do Postgres (nao da para dropar valor) mas foi
+  // APOSENTADO na 0077 e o banco o recusa por CHECK — fora daqui de proposito,
+  // para o TS recusar junto.
+  | 'admin' | 'gestor_regional' | 'consultor_vendas' | 'financeiro' | 'sinistro' | 'auditoria'
   | 'assistencia_24h';
 export type TipoPessoa = 'PF' | 'PJ';
 export type StatusCliente =

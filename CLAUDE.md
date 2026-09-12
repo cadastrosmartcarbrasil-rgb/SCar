@@ -62,9 +62,14 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
 **1. ONDE.** Branch `claude/claude-md-opcao-x-98kfj5`, e só ele. Repositório
 `cadastrosmartcarbrasil-rgb/scar`. Confira com `git rev-parse --abbrev-ref HEAD`.
 
-**2. O QUE FALTA SUBIR.** Aplicadas em produção: **`0001`..`0075`, todas** (confirmado pelo
-usuário em 12/09/2026). **Nenhuma migration pendente** — o que falta subir é só código, pelo
+**2. O QUE FALTA SUBIR.** Aplicadas em produção: **`0001`..`0075`** (confirmado pelo usuário em
+12/09/2026). **Pendentes, nesta ordem: `0076` e `0077`**, pelo SQL Editor do Supabase, ANTES do
 contêiner (passo 3).
+> ⚠️ **A `0077` MUDA ACESSO — confira ANTES de rodar**, porque ela recusa o que hoje passa:
+> `select nome, email, papel from usuarios where papel::text = 'cotador';` (viram
+> `consultor_vendas`) e `select nome, email from usuarios where papel::text = 'sinistro';`
+> (**perdem a Assistência 24h**; quem opera guincho precisa de `assistencia_24h` ou
+> `gestor_regional`). Ver a seção "A VARREDURA DOS 8 PAPÉIS".
 
 **3. COMO PUBLICAR.** Migrations primeiro (acima), depois o contêiner:
 ```bash
@@ -188,8 +193,11 @@ nenhuma: manda rodar de novo o que já rodou.
 - **`0076_vistoria_link_publico` é NOVA e ainda NÃO foi aplicada** — é a vistoria pelo CELULAR DO
   CLIENTE, a etapa que faltava depois do aceite no hotlink. Sem ela a rota `/vistoria/<token>` não
   abre e o aceite volta a terminar em "o consultor vai combinar a vistoria". Ver a seção própria.
-- **Próxima migration livre: `0077`.** As `0001`..`0075` já foram aplicadas em produção; a `0076`
-  sobe junto com este deploy.
+- **`0077_papeis_cotador_sinistro` é NOVA e MUDA ACESSO** — aposenta o `cotador` e faz o
+  `sinistro` governar o EVENTO (ver a seção própria). Não é cosmética: quem opera a 24h com papel
+  `sinistro` **perde o acionamento**.
+- **Próxima migration livre: `0078`.** As `0001`..`0075` já foram aplicadas em produção; a `0076` e
+  a `0077` sobem com este deploy, nessa ordem.
 - **`.claude/hooks/session-start.sh` é NOVO** — avisa quando a sessão nasce no branch errado e
   instala as dependências. Ele **só roda se estiver no branch que a sessão clonou**; enquanto o
   default do GitHub for o branch morto, uma sessão que caia lá não terá o hook. A correção
@@ -1482,6 +1490,26 @@ errado" de "vencido" e de "venda concluida") e `registrar_foto_vistoria_publica`
 contra o catalogo, marca a origem e carimba `ultima_interacao_em`). `fotos_vistoria_lead`
 **recriada** com `enviado_pelo_cliente` — muda a lista de OUT, entao drop + create, e o
 `where is_staff() or auth.uid() is null` da 0052 foi reescrito junto. Ver a secao propria).
+· `0077_papeis_cotador_sinistro` (A VARREDURA DOS 8 PAPEIS virou decisao: (A) `cotador`
+APOSENTADO — tinha duas ocorrencias no schema inteiro e nenhuma era codigo (a declaracao do enum e
+um comentario), entao oferecia na tela um grupo de acesso que o banco ignorava. Enum nao perde
+valor, entao a aposentadoria e em tres passos: mover quem esta la para `consultor_vendas` (escolha
+NEUTRA em acesso — os dois papeis nao sao citados por helper algum e ficam fora de
+`pode_ver_carteira_regional` juntos), RECUSAR por CHECK (`/api/usuarios` escreve com service_role,
+que ignora RLS) e sair de `PAPEIS_USUARIO` e da union `PapelUsuario`; `memos.papeis` migra junto,
+senao aviso vigente pararia de chegar em silencio; (B) `sinistro` passa a GOVERNAR O EVENTO — ate
+aqui ele existia so dentro de `pode_assistencia()`, ou seja destravava a 24h e nao governava evento
+nenhum. Novo `pode_tratar_evento(regional)` nas policies de `eventos_sinistro` (update),
+`cotacoes_pecas`, `itens_cotacao`, `notas_fiscais_evento` e `anexos_evento` (delete). **Ver e ABRIR
+continuam de todo staff da unidade de proposito: nao existe papel `sac` e e o atendente que
+registra o evento quando o associado liga.** (C) **policy sozinha seria MEIA PORTA**:
+`transferir_protocolo` (0059) e SECURITY DEFINER e nao passa por policy — e e ela que o card
+"Tramitar" chama. A trava foi para dentro dela, com corte mais fino (mudar STATUS exige
+`pode_tratar_evento`; transferir e opinar seguem no staff da unidade, porque juridico e vistoria
+opinam no sinistro sem serem o time dele) e o piso virou `pode_regional` — ate aqui bastava
+`is_staff()` e um atendente de Natal tramitava evento de Cuiaba pela RPC; (D) `sinistro` SAI de
+`pode_assistencia()`. Espelho puro em `podeTratarEvento` (`src/lib/usuario.ts`) para a tela nao
+oferecer o seletor de status a quem o banco recusa).
 · `0070_cotacao_troca_plano` (DESCER DE PLANO: `atualizar_cotacao` (0028) resolvia o combo com
 `coalesce(p_plano_id, c.plano_id)`, entao NULO era "mantem o que esta" — bom para upgrade e troca
 lateral, impossivel para o downgrade ate a base: escolher "Somente cobertura base" salvava calado e
@@ -1541,9 +1569,11 @@ recuperação e giro).
 > as policies de toda tabela. **Este é o índice.** A ficha do usuário e o corte do `ativo` estão
 > na seção "Usuário da equipe — ficha e ACESSO (0068)"; aqui é o mapa dos GRUPOS.
 
-### Os 8 papéis (`papel_usuario`) e o que cada um REALMENTE destrava
-`admin` · `gestor_regional` · `consultor_vendas` · `financeiro` · `sinistro` · `cotador` (os seis
-de `0001`) + `auditoria` (`0017`) + `assistencia_24h` (`0026`).
+### Os papéis VIVOS (`papel_usuario`) e o que cada um REALMENTE destrava
+`admin` · `gestor_regional` · `consultor_vendas` · `financeiro` · `sinistro` (de `0001`;
+**`cotador` saiu na `0077`**) + `auditoria` (`0017`) + `assistencia_24h` (`0026`). **São 7.**
+O enum do Postgres ainda tem `cotador` — valor de enum não se apaga —, mas um CHECK em
+`usuarios.papel` recusa gravá-lo e ele saiu de `PAPEIS_USUARIO` e da union de `PapelUsuario`.
 
 | Papel | O que os helpers concedem hoje |
 |---|---|
@@ -1553,8 +1583,7 @@ de `0001`) + `auditoria` (`0017`) + `assistencia_24h` (`0026`).
 | `auditoria` | `pode_auditar` (autoriza a entrada na base) + vê a carteira da unidade |
 | `assistencia_24h` | `pode_assistencia` (opera a 24h, cadastra prestador, lança/baixa contas a pagar) |
 | `consultor_vendas` | **só a própria carteira** de leads (0038) — não vê a da unidade |
-| `sinistro` | **apenas** `pode_assistencia`. Ver a pergunta aberta abaixo. |
-| `cotador` | **nada além de `is_staff()`.** Ver a pergunta aberta abaixo. |
+| `sinistro` | **`pode_tratar_evento`** (0077): move o evento e gasta nele, na própria unidade. **Não opera mais a 24h.** |
 
 ### A raiz: 3 funções sustentam tudo
 `is_staff()` · `auth_papel()` · `auth_regional_id()` — e as três exigem **`and ativo`** desde a
@@ -1648,6 +1677,9 @@ isso que está no ar. A pergunta para o usuário é se o desenho ainda vale com 
 | `consultor_vendas` | **NENHUM** | só por EXCLUSÃO: fica de fora de `pode_ver_carteira_regional`, o que o limita em `leads_select`/`leads_update` | Meu Portal de Vendas |
 | `cotador` | **NENHUM** | **NENHUMA** | — |
 
+> ⬆️ **A tabela acima é o RETRATO DE ANTES.** As duas últimas linhas foram resolvidas pela `0077`
+> (logo abaixo); `consultor_vendas` continua como está, e é o único papel com restrição de LINHA.
+
 #### 🔴 ACHADO nº 2 — `cotador` é RÓTULO, não grupo de acesso. Confirmado.
 Duas ocorrências em todo o `schema.sql`, e **nenhuma delas é código**: a declaração no enum
 (`0001`) e um comentário na `0003`. Zero helpers, zero policies. Quem for cadastrado como cotador recebe **staff genérico da unidade** — ou seja, o mesmo
@@ -1675,15 +1707,83 @@ todo staff — cotador e consultor de vendas inclusive. Onde isso vira promessa 
   acesso real**. `lanc_all` é `pode_regional`, então cotador/consultor/sinistro com unidade
   definida lançam e baixam de verdade.
 
-#### O que fica decidido e o que é pergunta do usuário
-**Decidido (fato apurado, não opinião):** `cotador` não tem capacidade nomeada nenhuma; `sinistro`
-é sinônimo de `assistencia_24h`; `consultor_vendas` é o ÚNICO papel com restrição de LINHA (0038)
-— todos os outros são "tudo da unidade" ou "tudo da empresa".
-**Pergunta em aberto, para o usuário:** (1) aposentar `cotador` ou dar-lhe policy própria?
-(2) `sinistro` deve RESTRINGIR `eventos_sinistro` (só ele + gestão) ou a unidade inteira trata
-evento mesmo? (3) financeiro da unidade deve continuar aberto a qualquer staff com regional?
-**Nada foi alterado nesta varredura** — mudar helper-raiz mexe em 87 policies de uma vez, e isso
-é decisão, não limpeza.
+#### ✅ O QUE O USUÁRIO DECIDIU (12/09/2026) — construído na `0077`
+**(1) `cotador` APOSENTADO.** **(2) `sinistro` passa a GOVERNAR O EVENTO** — ver a seção própria
+logo abaixo.
+**(3) Continua em aberto:** o financeiro da unidade segue aberto a qualquer staff com regional
+(achado nº 1). Mexer nisso é mexer em `pode_regional()`, ou seja em 87 policies de uma vez — é
+decisão de desenho, não limpeza, e não foi tocado.
+
+## Papéis: `cotador` aposentado e `sinistro` no EVENTO (0077)
+> Decisão do usuário depois da varredura. **Muda acesso em produção** — leia antes de rodar.
+
+### O recorte que sustenta tudo: ABRIR evento é atendimento, TRATAR evento é do time
+Foi o risco real desta migration e é o que decidiu cada linha dela. **Não existe papel `sac`:**
+quem registra o evento quando o associado liga é o atendente, por qualquer papel, pelo VCard
+*Evento* (`/sinistros/novo?placa=`). Restringir o **INSERT** quebraria o caminho mais comum do
+módulo, e restringir o **SELECT** quebraria a lista do SAC, que marca quais veículos já tiveram
+evento. Então o corte ficou onde significa alguma coisa:
+
+| Ação | Quem |
+|---|---|
+| **Ver** e **abrir** evento · anexar · escrever no histórico | staff da unidade (inalterado) |
+| **Mudar a fase** do evento · cotação de peças · itens · **nota fiscal** · apagar anexo | `pode_tratar_evento()` |
+
+`pode_tratar_evento(regional)` = `tem_acesso_global()` **ou** (`sinistro`/`gestor_regional` **e**
+`pode_regional`). `financeiro` entra pelo global — a NF do evento é dinheiro e já vai ao DRE.
+**`auditoria` não entra** (ela autoriza a entrada na base, outro assunto) e **`assistencia_24h`
+também não** — guincho não é sinistro.
+
+### 🔴 POLICY SOZINHA AQUI SERIA MEIA PORTA — e meia porta é pior que nenhuma
+`transferir_protocolo` (0059) é **SECURITY DEFINER**: roda como dona da tabela e **não passa por
+policy nenhuma**. E é ela que o card *Tramitar* chama. Fechar só o `update` direto
+(`use-eventos.ts:198`) deixaria o caminho principal escancarado — uma regra que a própria tela
+contorna sem ninguém notar. A trava foi para **dentro** dela (regra da 0052), e ali o corte é mais
+fino porque o parecer não pode morrer junto:
+- **mudar o status** → `pode_tratar_evento()`;
+- **transferir** e **registrar parecer** → staff da unidade. Jurídico, vistoria e diretoria opinam
+  no sinistro sem serem o time dele, e o evento precisa **voltar** da mão de quem opinou.
+
+**Bônus que caiu junto:** a função só exigia `is_staff()`, então um atendente de Natal tramitava
+evento de Cuiabá pela RPC — a policy da tabela impedia, a RPC não. O piso virou `pode_regional`.
+
+### A tela não oferece o que o banco recusa
+`<TramitacaoEvento>` esconde o seletor *Novo status* para quem não trata, e explica em uma linha o
+que a pessoa ainda pode fazer. Espelho puro em `podeTratarEvento()` (`src/lib/usuario.ts`, testado)
+— **não é controle de acesso**, é para não repetir o defeito que a varredura nomeou em
+`/precificacao` (abre, deixa editar e recusa o salvar).
+
+### `sinistro` saiu da Assistência 24h — e é a outra metade da decisão
+Ele destravava a 24h inteira (abrir acionamento, cadastrar prestador, **lançar e baixar contas a
+pagar** pela policy `lanc_assistencia`) sem nunca ter governado um evento.
+**⚠️ CONFIRA ANTES DO DEPLOY:** quem hoje opera guincho com papel `sinistro` perde o acionamento —
+o papel dessa pessoa é `assistencia_24h` ou `gestor_regional`. Quem tem unidade continua lançando
+no financeiro pela `lanc_all` (`pode_regional`); quem está na **matriz sem unidade**, não — e era
+exatamente esse o alcance largo demais.
+
+### `cotador`: aposentar é TRÊS passos, não um
+Enum no Postgres não perde valor (`alter type ... drop value` não existe). Então:
+1. **mover quem está lá** → `consultor_vendas`;
+2. **o banco RECUSA** o valor (CHECK `chk_papel_vigente`) — tirar só da tela repetiria o defeito,
+   porque `/api/usuarios` escreve com **service_role**, que ignora RLS;
+3. **sair da tela** (`PAPEIS_USUARIO`) **e da union `PapelUsuario`** — aí o TS recusa junto, em
+   tempo de compilação. *Isso não é teoria: ao escrever o teste, o `tsc` barrou uma comparação com
+   `'cotador'` — a trava funcionou antes mesmo de rodar.*
+
+**O destino não é palpite, é NEUTRO em acesso:** nenhum dos dois papéis é citado por helper algum,
+e nas policies os dois se distinguem só por ficarem FORA de `pode_ver_carteira_regional()` —
+juntos. Quem era cotador via os leads que criou; como `consultor_vendas` vê exatamente os mesmos.
+E é o default da coluna desde a `0001`.
+
+**O mural segue as pessoas:** `memos.papeis` com `cotador` viraria ZERO destinatário — a tela da
+gestão marca isso em vermelho (0057), mas um aviso vigente deixaria de chegar a quem continua na
+casa, só com outro rótulo. A troca preserva os demais papéis do endereço e **não duplica** quando
+os dois já estavam lá (por isso o `distinct`; há teste).
+
+### O que a `0077` NÃO fez
+O achado nº 1 da varredura continua de pé: **`pode_regional()` não lê papel**, e são 87 policies.
+Um `consultor_vendas` com unidade segue lançando e baixando no financeiro dela. Mexer ali é
+decisão de desenho sobre 87 policies de uma vez, não limpeza de passagem.
 
 ## A unidade pelo CONSULTOR (0073) — o instrumento, não a carga
 - **O problema:** `regional` veio vazio em **100%** dos objetos e dos contratos. A unidade é

@@ -13,7 +13,7 @@ begin
   insert into usuarios (id, nome, email, papel, regional_id) values
     (u_adm,'Admin','adm@t.com','admin', null),
     (u_24h,'Atendente 24h','ass@t.com','assistencia_24h', r1),
-    (u_cot,'Cotador','cot@t.com','cotador', r1);
+    (u_cot,'Consultor','cot@t.com','consultor_vendas', r1);
 
   perform set_config('request.jwt.claim.sub', u_adm::text, false);
 
@@ -61,7 +61,7 @@ begin
   assert n = 2, 'o time da 24h ve os anexos da OS, veio ' || n;
   raise notice 'OK o atendente da 24h anexa e le';
 
-  -- cotador NAO opera a 24h: le (esta na regional) mas nao escreve
+  -- consultor de vendas NAO opera a 24h: le (esta na regional) mas nao escreve
   perform set_config('request.jwt.claim.sub', u_cot::text, false);
   execute 'set local role authenticated';
   select count(*) into n from acionamento_anexos where acionamento_id = acion;
@@ -89,7 +89,7 @@ begin
     insert into regionais (nome) values ('Smart Litoral') returning id into r2;
     insert into auth.users (id, email) values (u_out, 'fora@t.com');
     insert into usuarios (id, nome, email, papel, regional_id)
-      values (u_out, 'Cotador de fora', 'fora@t.com', 'cotador', r2);
+      values (u_out, 'Consultor de fora', 'fora@t.com', 'consultor_vendas', r2);
     perform set_config('request.jwt.claim.sub', u_out::text, false);
     execute 'set local role authenticated';
     select count(*) into n from acionamento_anexos where acionamento_id = acion;

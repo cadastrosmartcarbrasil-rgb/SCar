@@ -63,7 +63,7 @@ begin
   -- papel diferente nao recebe o script
   -- (a troca de papel passa pelo admin — a trigger da 0054 exige isso)
   perform set_config('request.jwt.claim.sub', u_adm::text, false);
-  update usuarios set papel = 'cotador' where id = u_out;
+  update usuarios set papel = 'consultor_vendas' where id = u_out;
   perform set_config('request.jwt.claim.sub', u_out::text, false);
   select count(*) into n from memos_do_usuario();
   assert n = 1, 'so o comunicado geral sobra para outro papel, veio ' || n;

@@ -75,7 +75,6 @@ export const PAPEIS_MEMO: { valor: string; rotulo: string }[] = [
   { valor: 'consultor_vendas', rotulo: 'Consultor de Vendas' },
   { valor: 'financeiro', rotulo: 'Financeiro' },
   { valor: 'sinistro', rotulo: 'Sinistro' },
-  { valor: 'cotador', rotulo: 'Cotador' },
   { valor: 'auditoria', rotulo: 'Auditoria' },
   { valor: 'assistencia_24h', rotulo: 'Assistencia 24h' },
 ];

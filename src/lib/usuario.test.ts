@@ -6,6 +6,8 @@ import {
   situacaoUsuario,
   tempoDeCasa,
   avisoDeDesativacao,
+  podeTratarEvento,
+  PAPEIS_USUARIO,
 } from './usuario';
 
 const BASE = { nome: 'MARIA SILVA', email: 'maria@smartcar.com.br', papel: 'financeiro' };
@@ -109,5 +111,50 @@ describe('avisoDeDesativacao', () => {
   it('avisa que o portal do vendedor cai junto', () => {
     expect(avisoDeDesativacao({ nome: 'ANA', vendedor_ativo: true })).toContain('portal do vendedor cai junto');
     expect(avisoDeDesativacao({ nome: 'ANA', vendedor_ativo: false })).not.toContain('portal do vendedor');
+  });
+});
+
+describe('podeTratarEvento (espelho de pode_tratar_evento, 0077)', () => {
+  it('o time de sinistro trata, e e a razao de ser do papel', () => {
+    expect(podeTratarEvento('sinistro')).toBe(true);
+  });
+
+  it('gestao trata: gestor responde pela unidade, admin/financeiro sao globais', () => {
+    expect(podeTratarEvento('gestor_regional')).toBe(true);
+    expect(podeTratarEvento('admin')).toBe(true);
+    expect(podeTratarEvento('financeiro')).toBe(true);
+  });
+
+  it('atendente comum ABRE e VE o evento, mas nao muda a fase dele', () => {
+    expect(podeTratarEvento('consultor_vendas')).toBe(false);
+  });
+
+  it('auditoria autoriza a entrada na base, nao trata sinistro', () => {
+    expect(podeTratarEvento('auditoria')).toBe(false);
+  });
+
+  it('guincho nao e sinistro', () => {
+    expect(podeTratarEvento('assistencia_24h')).toBe(false);
+  });
+
+  it('sem papel nao trata', () => {
+    expect(podeTratarEvento(null)).toBe(false);
+    expect(podeTratarEvento(undefined)).toBe(false);
+  });
+});
+
+describe('cotador aposentado (0077)', () => {
+  it('saiu da lista que a tela oferece', () => {
+    // O proprio TS ja recusa `p.valor === 'cotador'` (o valor saiu da union), o
+    // que e a trava em tempo de compilacao. Aqui a assercao e em runtime, para
+    // o dia em que alguem devolver o valor ao tipo sem querer.
+    const valores: string[] = PAPEIS_USUARIO.map((p) => p.valor);
+    expect(valores).not.toContain('cotador');
+    expect(valores).toContain('consultor_vendas');
+  });
+
+  it('o rotulo cai no valor CRU, nunca num papel plausivel', () => {
+    // Regra da casa: fallback de rotulo mostra o valor, nao escolhe um vizinho.
+    expect(rotuloPapel('cotador')).toBe('cotador');
   });
 });
