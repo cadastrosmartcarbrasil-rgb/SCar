@@ -63,16 +63,14 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
 `cadastrosmartcarbrasil-rgb/scar`. Confira com `git rev-parse --abbrev-ref HEAD`.
 
 **2. O QUE FALTA SUBIR — a ordem completa, sem interpretação.** Aplicadas em produção:
-`0001`..`0044` e a `0062`. **Pendentes, nesta ordem exata, pelo SQL Editor do Supabase:**
+**`0001`..`0073`, todas** (confirmado pelo usuário em 12/09/2026). **Pendente, só ela:**
 
 ```
-0045 0046 0047 0048 0049 0050 0051 0052 0053 0054 0055 0056 0057 0058 0059
-0060 0061 0063 0064 0065 0066 0067 0068 0069 0070 0071 0072 0073
+0074
 ```
-(a `0062` está fora da lista porque JÁ FOI; as demais nunca rodaram lá.)
-Dependências que **não** podem ser reordenadas: `0060` antes da `0061` · `0049` → `0050` → `0051`
-na mesma janela · `0063`..`0066` e `0071` depois da `0062` · `0072` e `0073` por último.
-Independentes do Mutual, podem ir juntas: `0067` `0068` `0069` `0070` `0072`.
+A `0074` é CORRETIVA da `0073` e pode ir sozinha, a qualquer momento: é leitura do módulo
+Mutual, não mexe em dado nenhum. Enquanto ela não rodar, o funil da unidade pelo consultor
+mostra número inflado (ver a seção própria) — não decida a carga por ele.
 
 **3. COMO PUBLICAR.** Migrations primeiro (acima), depois o contêiner:
 ```bash
@@ -184,9 +182,13 @@ nenhuma: manda rodar de novo o que já rodou.
   consultor (`objeto.consultant` → consultor → vendedor importado → `regional_id`). Não carrega
   nada: conta quantos veículos sobrevivem a CADA um dos quatro saltos e nomeia quem se perde.
   Ver a seção própria.
-- **Próxima migration livre: `0074`.** As `0060`, `0061`, `0063`..`0072` já estão no branch de trabalho e
-  ainda **não foram aplicadas em produção** (rodar nessa ordem, depois das `0045`..`0059`, com a
-  `0073` por último); a `0062` JÁ FOI aplicada. A `0067`, a `0068`, a `0069`, a `0070` e a `0072` são independentes do Mutual e podem ir junto.
+- **`0074_mutual_consultor_sem_duplicar` é NOVA e é CORRETIVA da `0073`** — o funil que mede a
+  unidade pelo consultor estava **contando o mesmo veículo várias vezes**: `vendedores.email` e
+  `vendedores.nome` não são únicos (só `documento` é, 0069), então o `left join` multiplicava a
+  linha do objeto e o `count(*)` do funil inflava. No cenário do teste: **16 onde existem 5.**
+  Ver a seção própria.
+- **Próxima migration livre: `0075`.** A `0074` é a única que ainda **não foi aplicada em
+  produção**; as `0001`..`0073` já foram.
 - **`.claude/hooks/session-start.sh` é NOVO** — avisa quando a sessão nasce no branch errado e
   instala as dependências. Ele **só roda se estiver no branch que a sessão clonou**; enquanto o
   default do GitHub for o branch morto, uma sessão que caia lá não terá o hook. A correção
@@ -311,9 +313,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0073`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **50 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 581 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0074`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **51 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 587 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Todos os portais e páginas
@@ -1409,6 +1411,20 @@ ciclo em DOIS passos — inadimplente suspende (3), sair da base recolhe (4) —
 so pegava equipamento em `ATIVO`, deixaria preso em 3 o que a tolerancia acabara de mover;
 (H) o painel da 24h conta `inadimplente` como BLOQUEADO, nao como inativo. **Nao ha rotina que
 mova ninguem:** nenhum veiculo nasce `inadimplente` hoje, entao tudo isto e no-op ate o CRON).
+· `0074_mutual_consultor_sem_duplicar` (CORRETIVA da 0073 — o instrumento estava contando
+errado, que e pior que nao existir: ele nao adia a decisao, toma-a com numero falso.
+(A) o `left join vendedores` MULTIPLICAVA a linha do VEICULO: `documento` e unique parcial
+(0069), mas `email` e `nome` NAO sao, entao dois vendedores com o e-mail da franquia (ou dois
+homonimos) faziam cada veiculo daquele consultor virar duas linhas na CTE `passos` — e o funil
+inteiro e `count(*)` sobre ela. No cenario do teste: **16 onde existem 5**, e como a inflacao so
+acontece nas linhas com colisao, `perdidos` (subtracao entre degraus) virava ruido. A correcao
+NAO e `distinct`, que esconderia a colisao: o casamento com o vendedor e propriedade do
+CONSULTOR, nao do veiculo, e passa a ser resolvido uma vez por consultor com `lateral ... limit 1`
+e ordem estavel — de quebra, centenas de linhas em vez de dezenas de milhares. A ambiguidade
+deixa de ser silenciosa: o degrau 5 diz quantos veiculos dependem de um desempate arbitrario;
+(B) `mutual_texto_em`/`mutual_chave_em` prometiam PRECEDENCIA (`cpf_cnpj` antes de `cpf` antes de
+`document`) e entregavam `limit 1` sobre `unnest` SEM `order by` — ordem por acaso. Agora
+`with ordinality` + `order by ord`. So leitura, nenhuma assinatura muda).
 · `0073_mutual_consultor_regional` (A UNIDADE PELO CONSULTOR — o instrumento, nao a carga:
 `regional` veio vazio em 100%, e a tese que sobrou tem QUATRO saltos
 (`objeto.consultant` CODIGO -> `/association/consultant/` -> documento/e-mail -> `vendedores` ->
@@ -1617,6 +1633,18 @@ correspondente é o inverso: promessa na tela, recusa no banco.
 - **O corte de 95% (`teseDoConsultorSeSustenta`) não é místico:** abaixo disso o resto vira
   trabalho manual por associado, e aí o de-para por NOME de equipe (poucas decisões) custa menos
   que a corrente.
+- **⚠️ O FUNIL SÓ VALE COM A `0074` APLICADA.** A `0073` contava o mesmo veículo mais de uma vez
+  quando dois vendedores dividiam o **e-mail** (a unidade que cadastrou a equipe com o e-mail da
+  franquia) ou o **nome** (homônimos): nenhum dos dois é único em `vendedores`, só `documento`
+  (0069), então o `left join` multiplicava a linha do objeto. No cenário do teste da `0074` são
+  **16 onde existem 5** — e a inflação acontece só nas linhas com colisão, então `perdidos`, que é
+  subtração entre degraus, deixa de significar coisa alguma. **Instrumento que conta errado não
+  adia a decisão: toma-a com número falso.** A `0074` resolve o casamento uma vez por CONSULTOR
+  (`lateral ... limit 1`), que é de quem ele é propriedade — não do veículo.
+- **O desempate da chave ambígua é ANUNCIADO, nunca silencioso (0074).** Quando o e-mail do
+  consultor casa com mais de um vendedor, alguém tem de ser escolhido; o degrau 5 passa a dizer
+  **quantos veículos dependem dessa escolha**. Decisão em silêncio neste módulo já custou duas
+  rodadas (o dia de vencimento e a unidade).
 - **A REGRA DA FASE 1 continua:** nada escreve em `clientes`, `veiculos`, `titulos_financeiros`,
   `faturas` ou `eventos_sinistro`. Há teste provando.
 - **Onde fica:** `/integracao/mutual`, seção **"A unidade pelo consultor"** — o funil degrau a
@@ -2854,6 +2882,16 @@ no fim — o runner procura por "PASSARAM") e rode `npm run schema`.
   construídas sobre um checkbox decorativo, com a tela dizendo que ele revogava acesso.
   **Ao criar flag de situação (`ativo`, `bloqueado`, `suspenso`), escreva no mesmo commit quem a
   LÊ** — e um teste que prove o corte, não só a gravação.
+- **`left join` por coluna NÃO ÚNICA multiplica a linha — e um `count(*)` depois dele mente.**
+  O funil do consultor (0073) juntava `vendedores` por `email` e por `nome`, que não têm unique
+  (só `documento` tem, 0069): cada veículo de um consultor com e-mail repetido virava duas linhas
+  e o instrumento de medida passou a contar **16 onde existiam 5**. O pior não é o total inflado,
+  é que a inflação acontece **só nas linhas com colisão** — então toda diferença entre etapas vira
+  ruído. **Antes de contar sobre um join, pergunte se o lado direito é único**; e quando não for,
+  resolva com `lateral ... limit 1` (guardando o fato de haver empate), nunca com `distinct`, que
+  faz a colisão sumir da vista. Melhor ainda: resolva o join no nível de quem ele é propriedade —
+  o vendedor é atributo do CONSULTOR, não do veículo, e uma vez por consultor são centenas de
+  linhas em vez de dezenas de milhares.
 - **Status de PAI e status de FILHO não são a mesma coisa.** `contract_status` do Mutual fala do
   ASSOCIADO (um contrato guarda vários veículos); o veículo encerrado de um associado ativo entrava
   como faturável e ia inflar a quarentena com "sem valor" e "sem vencimento" que contrato encerrado
