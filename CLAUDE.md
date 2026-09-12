@@ -1517,27 +1517,77 @@ quem **não** tem acesso global recebe a própria unidade, independentemente do 
 Consequência que já mordeu: **`authenticated` não é a equipe** — o associado do `/portal` é
 `authenticated` como qualquer atendente (ver "Segurança das RPCs (0052)").
 
-### 🔴 PRÓXIMO ASSUNTO: INTEGRIDADE DOS GRUPOS (levantamento inicial já feito)
-Três achados **verificados no `schema.sql`**, que são o ponto de partida — e ainda são
-PERGUNTAS, não conclusões:
+### 🔴 A VARREDURA DOS 8 PAPÉIS (feita em 12/09/2026) — o resultado
+> Método aplicado: para cada papel, (a) os **helpers** que o citam, (b) as **policies** que o
+> citam, (c) as **telas do menu** que ele abre. Tudo conferido em `supabase/schema.sql` e em
+> `src/components/layout/sidebar.tsx`. Números abaixo são contagem real, não estimativa.
 
-1. **`cotador` não é lido por função nenhuma.** Aparece no enum (`0001`) e no rótulo da tela
-   (`PAPEIS_USUARIO`), e em mais lugar algum. Cadastrar alguém como cotador dá **staff genérico
-   sem nenhuma capacidade nomeada** — e a tela oferece o papel como se ele significasse algo.
-   É o mesmo formato do gotcha do `usuarios.ativo`: *opção que a tela oferece e o banco ignora*.
-2. **`sinistro` só existe dentro de `pode_assistencia()`.** As policies de `eventos_sinistro` são
-   `pode_regional(regional_id)` / `is_admin()` — **nenhuma menciona o papel**. Ou seja: o papel que
-   dá nome ao módulo de eventos não governa o módulo de eventos, e qualquer staff da unidade já
-   opera sinistro. A pergunta é se isso é intencional (a unidade inteira trata evento) ou se o
-   papel deveria restringir.
-3. **`consultor_vendas` é o único papel com restrição de LINHA** (só a carteira dele, 0038). Os
-   demais são "tudo da unidade" ou "tudo da empresa". Vale conferir se algum papel novo precisaria
-   do mesmo corte fino.
+**Como as 515 policies do sistema decidem acesso** (o que cada uma efetivamente chama):
+`tem_acesso_global` **104** · `pode_regional` **87** · `is_staff()` **51** · `pode_assistencia` **19**
+· `pode_auditar` **10** · `is_admin()` **9** · `auth_papel` direto **3** · `pode_ver_carteira_regional` **2**.
 
-**Como conduzir a auditoria (o método, para não virar opinião):** para cada papel, listar (a) os
-helpers que o citam, (b) as policies que o citam, (c) as telas do menu que ele abre. Papel que não
-aparece em (a) nem em (b) não é grupo de acesso — é rótulo. E papel que abre tela sem ter policy
-correspondente é o inverso: promessa na tela, recusa no banco.
+#### 🔴 ACHADO nº 1 — `pode_regional()` NÃO LÊ PAPEL. É o achado que explica todos os outros.
+```sql
+select tem_acesso_global()
+    or (is_staff() and p_regional is not null and auth_regional_id() = p_regional);
+```
+São **87 policies** — o segundo maior bloco do sistema — e nenhuma delas distingue papel algum.
+Consequência medida: `gestor_regional`, `consultor_vendas`, `sinistro`, `cotador` e `auditoria`
+lotados na mesma unidade têm **exatamente o mesmo poder de leitura E ESCRITA** sobre `clientes`,
+`veiculos`, `eventos_sinistro`, `lancamentos_financeiros`, `baixas_financeiras` e
+`titulos_financeiros` daquela unidade. Um cotador lança e baixa título no financeiro da unidade.
+**Não é bug de implementação — é o desenho declarado**: o comentário da `0003` (schema.sql:763)
+diz *"Papeis com acesso REGIONAL: gestor_regional, consultor_vendas, sinistro, cotador"*, e é
+isso que está no ar. A pergunta para o usuário é se o desenho ainda vale com 8 papéis.
+
+#### A matriz dos 8
+| Papel | (a) helpers que o citam | (b) policies que o citam | (c) telas que só ele abre |
+|---|---|---|---|
+| `admin` | `is_admin` · `tem_acesso_global` · `pode_auditar` · `pode_assistencia` · `pode_liberar_assistencia` · `pode_aprovar_desconto` · `pode_cadastrar_fornecedor` · `pode_ver_carteira_regional` · `pode_publicar_memo` | 9 diretas (`is_admin`) + os 104 do global | **Configurações** |
+| `financeiro` | `tem_acesso_global` · `pode_assistencia` · `pode_liberar_assistencia` · `pode_ver_carteira_regional` · `pode_cadastrar_fornecedor` · `pode_publicar_memo` | os 104 do global | — (divide Mutual e Portal da Franquia) |
+| `gestor_regional` | `pode_assistencia` · `pode_liberar_assistencia` · `pode_aprovar_desconto` · `pode_cadastrar_fornecedor` · `pode_ver_carteira_regional` · `pode_publicar_memo` | **2 DIRETAS** (`vendedores_write`) + os 87 regionais | Portal da Franquia |
+| `auditoria` | `pode_auditar` · `pode_ver_carteira_regional` | 10 + 2 | — |
+| `assistencia_24h` | `pode_assistencia` | 19 | — |
+| `sinistro` | **só `pode_assistencia`** | 19 (as MESMAS da 24h) | — |
+| `consultor_vendas` | **NENHUM** | só por EXCLUSÃO: fica de fora de `pode_ver_carteira_regional`, o que o limita em `leads_select`/`leads_update` | Meu Portal de Vendas |
+| `cotador` | **NENHUM** | **NENHUMA** | — |
+
+#### 🔴 ACHADO nº 2 — `cotador` é RÓTULO, não grupo de acesso. Confirmado.
+Uma única ocorrência em todo o `schema.sql`: a declaração no enum (`0001`). Zero helpers, zero
+policies. Quem for cadastrado como cotador recebe **staff genérico da unidade** — ou seja, o mesmo
+que o gestor regional nos 87 regionais, menos os seis helpers nomeados. A tela oferece o papel
+como se ele significasse algo. **É o gotcha do `usuarios.ativo` (0068) outra vez: opção que a tela
+oferece e o banco ignora.**
+
+#### 🔴 ACHADO nº 3 — `sinistro` não governa sinistro. Confirmado.
+As policies de `eventos_sinistro` (schema.sql:908-922) são `pode_regional(regional_id)` para
+select/insert/update e `is_admin()` para delete — **nenhuma menciona o papel**. O papel `sinistro`
+existe em UM lugar só: dentro de `pode_assistencia()`, ao lado de `assistencia_24h`. Traduzindo: o
+papel que dá nome ao módulo de eventos **só destrava a Assistência 24h**, e qualquer staff da
+unidade já opera evento. Hoje `sinistro` e `assistencia_24h` são o MESMO grupo de acesso.
+
+#### ACHADO nº 4 — o menu promete o que o banco recusa (3 telas)
+`OPERACAO` e `GESTAO` no `sidebar.tsx` **não são filtradas por papel**: só `Configurações` (admin),
+`Integração Mutual` (admin/financeiro) e os dois portais têm porteiro. Todo o resto aparece para
+todo staff — cotador e consultor de vendas inclusive. Onde isso vira promessa falsa:
+- **`/precificacao`** — `precos_select` é `is_staff()` (abre e lê), `precos_write` é
+  `tem_acesso_global()` (**salvar falha**). O editor de tabela de preços abre para todo mundo e
+  recusa a gravação de quem não é admin/financeiro.
+- **`/rastreadores`** — `rast_select` é `is_staff()`; a baixa de patrimônio exige
+  `tem_acesso_global()`.
+- **`/financeiro` e `/cobrancas`** — o inverso, e é o mais sério: **não há promessa falsa, há
+  acesso real**. `lanc_all` é `pode_regional`, então cotador/consultor/sinistro com unidade
+  definida lançam e baixam de verdade.
+
+#### O que fica decidido e o que é pergunta do usuário
+**Decidido (fato apurado, não opinião):** `cotador` não tem capacidade nomeada nenhuma; `sinistro`
+é sinônimo de `assistencia_24h`; `consultor_vendas` é o ÚNICO papel com restrição de LINHA (0038)
+— todos os outros são "tudo da unidade" ou "tudo da empresa".
+**Pergunta em aberto, para o usuário:** (1) aposentar `cotador` ou dar-lhe policy própria?
+(2) `sinistro` deve RESTRINGIR `eventos_sinistro` (só ele + gestão) ou a unidade inteira trata
+evento mesmo? (3) financeiro da unidade deve continuar aberto a qualquer staff com regional?
+**Nada foi alterado nesta varredura** — mudar helper-raiz mexe em 87 policies de uma vez, e isso
+é decisão, não limpeza.
 
 ## A unidade pelo CONSULTOR (0073) — o instrumento, não a carga
 - **O problema:** `regional` veio vazio em **100%** dos objetos e dos contratos. A unidade é
