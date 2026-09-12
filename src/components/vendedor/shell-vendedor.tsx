@@ -4,11 +4,12 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { toast } from 'sonner';
 import {
-  Copy, HandCoins, LayoutDashboard, LogOut, Share2, UserRound, Zap,
+  Building2, Copy, HandCoins, LayoutDashboard, LogOut, Share2, UserRound, Zap,
 } from 'lucide-react';
 import { LogoNaCabine } from '@/components/hotlink/marca';
 import { createClient } from '@/lib/supabase/client';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { temAcessoGlobal } from '@/lib/unidade';
 
 const ITENS = [
   { href: '/vendedor', label: 'Painel', icon: LayoutDashboard },
@@ -74,9 +75,12 @@ export function BotoesHotlink({ codigo, compacto }: { codigo: string | null; com
  * Mobile-first de proposito: o vendedor trabalha no celular, entao a navegacao
  * vira barra inferior no telefone e sidebar cockpit no desktop.
  */
-export function ShellVendedor({ nome, unidade, codigo, logoUrl, children }: {
+export function ShellVendedor({ nome, unidade, codigo, logoUrl, papelStaff, children }: {
   nome: string; unidade: string | null; codigo: string | null;
-  logoUrl?: string | null; children: React.ReactNode;
+  logoUrl?: string | null;
+  /** Papel em `usuarios` de quem esta olhando — quem administra tem porta de volta. */
+  papelStaff?: string | null;
+  children: React.ReactNode;
 }) {
   const pathname = usePathname();
 
@@ -87,6 +91,15 @@ export function ShellVendedor({ nome, unidade, codigo, logoUrl, children }: {
 
   const ativo = (href: string) =>
     href === '/vendedor' ? pathname === href : pathname.startsWith(href);
+
+  // Quem tem outro chapeu volta para a casa DELE: a matriz para o painel de
+  // gestao, o gestor para o portal da franquia. O consultor de vendas nao tem
+  // outra casa — para ele o portal e tudo.
+  const outraCasa = temAcessoGlobal(papelStaff ?? '')
+    ? { href: '/dashboard', label: 'Sistema da matriz' }
+    : papelStaff === 'gestor_regional'
+      ? { href: '/regional', label: 'Portal da franquia' }
+      : null;
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
@@ -145,6 +158,17 @@ export function ShellVendedor({ nome, unidade, codigo, logoUrl, children }: {
               {i.label}
             </Link>
           ))}
+          {/* Quem tambem administra a empresa nao pode ficar preso aqui: o
+              portal do vendedor e um dos chapeus dele, nao a casa dele.
+              Mesmo atalho que a sidebar da franquia oferece. */}
+          {outraCasa && (
+            <Link
+              href={outraCasa.href}
+              className="mt-2 flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-white/50 transition hover:bg-white/5 hover:text-white"
+            >
+              <Building2 className="h-4 w-4" /> {outraCasa.label}
+            </Link>
+          )}
         </nav>
       </aside>
 

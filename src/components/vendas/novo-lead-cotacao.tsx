@@ -10,6 +10,7 @@ import { Input, Select, MoneyInput } from '@/components/ui/field';
 import { Button } from '@/components/ui/button';
 import { FipeConsulta } from '@/components/fipe/fipe-consulta';
 import { useFipePorPlaca } from '@/hooks/use-fipe';
+import type { RegistroPlaca } from '@/lib/fipe';
 import { useTiposVeiculo, useProdutos, useCotasParticipacao } from '@/hooks/use-precificacao';
 import {
   useAvisoDeCaptura, useCotacaoComparativa, useProdutosDoPlano, useSalvarCotacao, useSaveLead,
@@ -58,6 +59,12 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
 
   // Veiculo
   const [placa, setPlaca] = useState('');
+  // O REGISTRO do documento (chassi, motor, cor, ano de fabricacao) vem junto
+  // da consulta da placa. Nao tem campo nesta tela de proposito — a captura e
+  // curta, na ordem da conversa — mas e gravado no lead, e o fechamento da
+  // venda ja abre com ele preenchido. Sem isto o vendedor digitaria o chassi a
+  // mao no fim, com o dado na nossa mao desde o comeco.
+  const [registro, setRegistro] = useState<RegistroPlaca | null>(null);
   const [tipoVeiculoId, setTipoVeiculoId] = useState('');
   const [marca, setMarca] = useState('');
   const [modelo, setModelo] = useState('');
@@ -122,6 +129,9 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
   async function consultarPlacaFipe(p: string) {
     const r = await fipePorPlaca.mutateAsync(p).catch(() => null);
     const v = r?.valor ?? null;
+    // O registro vale mesmo quando a avaliacao nao vem (placa fora da FIPE):
+    // chassi e motor nao dependem do preco.
+    if (r?.registro) setRegistro(r.registro);
     if (!v) {
       setMostrarCascata(true);
       toast.message('Placa nao encontrada na FIPE — busque pelo modelo abaixo.');
@@ -173,6 +183,11 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
         codigo_fipe: codigoFipe || null,
         cota_participacao_id: cotaId || null,
         origem_fipe: origemFipe,
+        // Registro do documento, quando a placa trouxe
+        chassi: registro?.chassi ?? null,
+        numero_motor: registro?.numeroMotor ?? null,
+        cor: registro?.cor ?? null,
+        ano_fabricacao: registro?.anoFabricacao ?? null,
       });
       await salvarCotacao.mutateAsync({
         leadId: lead.id,
@@ -261,6 +276,16 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
               setOrigemFipe('API');
             }}
           />
+        )}
+
+        {(registro?.chassi || registro?.numeroMotor) && (
+          <p className="text-[11px] text-slate-400">
+            Do documento:{' '}
+            {registro.chassi && <span className="font-mono">chassi {registro.chassi}</span>}
+            {registro.chassi && registro.numeroMotor && ' · '}
+            {registro.numeroMotor && <span className="font-mono">motor {registro.numeroMotor}</span>}
+            {' '}— vai junto para a ficha da venda.
+          </p>
         )}
 
         <div className="grid grid-cols-2 gap-2">

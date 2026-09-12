@@ -135,6 +135,24 @@ export function mensagemDaProposta(url: string, nome?: string | null): string {
   return `${ola}Segue a sua proposta da Smart Car Brasil: ${url}`;
 }
 
+/**
+ * O convite da vistoria (0076). Diz o que fazer, quanto tempo leva e ate
+ * quando vale — as tres perguntas de quem recebe um link no WhatsApp. Sem o
+ * prazo, o cliente guarda "para depois" e descobre vencido.
+ */
+export function mensagemDaVistoria(
+  url: string, nome?: string | null, expiraEm?: string | Date | null,
+): string {
+  const primeiro = (nome ?? '').trim().split(/\s+/)[0];
+  const ola = primeiro ? `Ola, ${primeiro}! ` : '';
+  const d = expiraEm ? new Date(expiraEm) : null;
+  const prazo = d && !Number.isNaN(d.getTime())
+    ? ` O link vale ate ${d.toLocaleDateString('pt-BR')}.`
+    : '';
+  return `${ola}Para concluir a sua protecao, faltam as fotos do veiculo. `
+    + `E pelo celular mesmo e leva uns 3 minutos: ${url}${prazo}`;
+}
+
 export function linkWhatsApp(texto: string, celular?: string | null): string {
   const numero = numeroWhatsApp(celular);
   return `https://wa.me/${numero ?? ''}?text=${encodeURIComponent(texto)}`;

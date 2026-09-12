@@ -96,10 +96,22 @@ export async function POST(req: Request) {
   });
   if (erroAceite) return NextResponse.json({ error: erroAceite.message }, { status: 400 });
 
+  // 3) A VISTORIA, na hora (0076). Ate aqui a tela de sucesso so prometia que
+  // "o consultor vai combinar a vistoria" — e o cliente, que esta com o carro
+  // na frente e acabou de decidir, ia embora. O link sai junto do aceite.
+  //
+  // Falhar aqui NAO derruba a venda: o aceite ja esta gravado, e o vendedor
+  // reemite o link pela ficha. Devolver erro faria o cliente achar que a
+  // contratacao nao passou.
+  const { data: links } = await admin.rpc('gerar_link_vistoria', {
+    p_lead_id: lead.id, p_dias: 7,
+  });
+
   return NextResponse.json({
     ok: true,
     proposta: cotacao.token,
     mensalidade: cotacao.total_mensalidade,
     adesao: cotacao.taxa_adesao,
+    vistoria: links?.[0]?.token ?? null,
   });
 }

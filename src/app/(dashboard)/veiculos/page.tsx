@@ -123,11 +123,33 @@ function VeiculosConteudo() {
   const [alertas, setAlertas] = useState<Set<string>>(new Set());
   const [troca, setTroca] = useState<(TrocaDePlano & { sentido: SentidoTroca; de: string; para: string }) | null>(null);
   const [valorCotado, setValorCotado] = useState<number | null>(null);
+  // Numero do pedido de cotacao em voo — ver `recotizar`.
+  const pedidoCotacao = useRef(0);
 
   const vProdutos = useVeiculoProdutos(form.id);
   const vAlertas = useVeiculoAlertas(form.id);
-  useEffect(() => { if (vProdutos.data) setOpcionais(new Set(vProdutos.data)); }, [vProdutos.data]);
-  useEffect(() => { if (vAlertas.data) setAlertas(new Set(vAlertas.data)); }, [vAlertas.data]);
+  // Cada abertura de ficha tem uma GERACAO, e e ela que faz o efeito rodar de
+  // novo ao reabrir o MESMO veiculo. Sem ela: `editar()` limpa o conjunto e o
+  // TanStack Query devolve o array do cache com a MESMA referencia, entao o
+  // efeito que dependia so do dado ficava mudo — o formulario seguia vazio e o
+  // Salvar mandava `opcionaisIds: []`, que em `use-veiculos` APAGA
+  // `veiculo_produtos` antes de reinserir. Os opcionais gravados sumiam sem
+  // ninguem ter tocado num checkbox.
+  // De quebra, a guarda impede que um refetch em segundo plano reescreva o que
+  // o atendente ja marcou e ainda nao salvou.
+  const [geracaoFicha, setGeracaoFicha] = useState(0);
+  const produtosDaGeracao = useRef(-1);
+  const alertasDaGeracao = useRef(-1);
+  useEffect(() => {
+    if (!vProdutos.data || produtosDaGeracao.current === geracaoFicha) return;
+    produtosDaGeracao.current = geracaoFicha;
+    setOpcionais(new Set(vProdutos.data));
+  }, [vProdutos.data, geracaoFicha]);
+  useEffect(() => {
+    if (!vAlertas.data || alertasDaGeracao.current === geracaoFicha) return;
+    alertasDaGeracao.current = geracaoFicha;
+    setAlertas(new Set(vAlertas.data));
+  }, [vAlertas.data, geracaoFicha]);
 
   // Atalho do SAC: /veiculos?editar=<id> abre direto a ficha daquele veiculo.
   // O parametro e CONSUMIDO na abertura (ref + router.replace): enquanto ele
@@ -166,17 +188,27 @@ function VeiculosConteudo() {
   const nomeDoPlano = (id: string | null) =>
     (id ? (planos ?? []).find((p) => p.id === id)?.nome : null) ?? 'Sem plano';
 
-  /** Recotiza no banco (mesma `cotar_plano` do resto do sistema). */
+  /**
+   * Recotiza no banco (mesma `cotar_plano` do resto do sistema).
+   *
+   * Cada pedido leva um NUMERO e so o ultimo escreve: marcar dois opcionais em
+   * seguida dispara duas cotacoes, e a resposta atrasada da PRIMEIRA gravava um
+   * `valor_mensalidade` que nao corresponde a selecao em tela — apagando junto o
+   * aviso ambar de "o valor gravado difere do calculado", que e justamente o que
+   * pediria conferencia.
+   */
   function recotizar(planoId: string | null, avulsosIds: string[], aplicar: boolean) {
+    const pedido = ++pedidoCotacao.current;
     if (!form.tipo_veiculo_id || !(form.valor_fipe ?? 0)) { setValorCotado(null); return; }
     calcMensal.mutate(
       { fipe: form.valor_fipe ?? 0, tipoVeiculoId: form.tipo_veiculo_id, planoId, opcionaisIds: avulsosIds },
       {
         onSuccess: (valor) => {
+          if (pedido !== pedidoCotacao.current) return;
           setValorCotado(valor);
           if (aplicar) setF({ valor_mensalidade: valor });
         },
-        onError: () => setValorCotado(null),
+        onError: () => { if (pedido === pedidoCotacao.current) setValorCotado(null); },
       },
     );
   }
@@ -248,30 +280,37 @@ function VeiculosConteudo() {
   }, [veiculos, busca]);
 
   // Abrir outra ficha nao pode herdar a selecao da anterior: o conjunto de
-  // opcionais so e reescrito quando a consulta do novo veiculo responde.
-  function editar(v: VeiculosRow) {
-    setForm(v);
+  // opcionais so e reescrito quando a consulta do novo veiculo responde — e a
+  // GERACAO nova e o que garante essa reescrita mesmo com o dado vindo do cache
+  // (reabrir o mesmo veiculo nao muda a referencia do array).
+  function abrirFicha(dados: Partial<VeiculosRow>) {
+    setForm(dados);
     setOpcionais(new Set());
     setAlertas(new Set());
     setTroca(null);
     setValorCotado(null);
+    pedidoCotacao.current += 1;
+    setGeracaoFicha((g) => g + 1);
     setAberto(true);
+  }
+
+  function editar(v: VeiculosRow) {
+    abrirFicha(v);
   }
 
   function novo() {
-    setForm({ status: 'ativo', uso: 'passeio', data_contrato: undefined });
-    setOpcionais(new Set());
-    setAlertas(new Set());
-    setTroca(null);
-    setValorCotado(null);
-    setAberto(true);
+    abrirFicha({ status: 'ativo', uso: 'passeio', data_contrato: undefined });
   }
 
+  // O botao entra na MESMA fila de `recotizar`: clicar "Calcular" enquanto uma
+  // recotizacao esta no ar nao pode deixar a resposta velha vencer a nova.
   function calcularMensalidade() {
+    const pedido = ++pedidoCotacao.current;
     calcMensal.mutate(
       { fipe: form.valor_fipe ?? 0, tipoVeiculoId: form.tipo_veiculo_id ?? null, planoId: form.plano_protecao_id ?? null, opcionaisIds: [...opcionais] },
       {
         onSuccess: (valor) => {
+          if (pedido !== pedidoCotacao.current) return;
           setValorCotado(valor);
           setF({ valor_mensalidade: valor });
           toast.success(`Mensalidade calculada: ${formatCurrency(valor)}`);
@@ -285,8 +324,13 @@ function VeiculosConteudo() {
     const p = normalizarPlaca(form.placa ?? '');
     if (!placaValida(p)) return toast.error('Placa invalida');
     setConsultando(true);
-    // 1) dados cadastrais da placa (provedor de placa, se configurado)
-    // 2) valor + dados FIPE pela placa (placafipe getplacafipe)
+    // Duas fontes, e elas NAO se sobrepoem:
+    // 1) `/api/placa` — provedor de placa OPCIONAL (env `PLACA_API_URL`), que
+    //    hoje nao esta configurado: devolve `found: false` sem sair para a rede;
+    // 2) a Placa Fipe, que devolve a AVALIACAO (`valor`) **e** o REGISTRO do
+    //    documento (`registro`: chassi, numero do motor, cor, ano de
+    //    fabricacao). O registro ficava sendo descartado pelo proxy — era por
+    //    isso que o chassi "nao vinha" com a consulta dizendo sucesso.
     const [r, fipe] = await Promise.all([
       consultarPlaca(p),
       fipePorPlaca.mutateAsync(p).catch(() => null),
@@ -294,23 +338,32 @@ function VeiculosConteudo() {
     setConsultando(false);
 
     const v = fipe?.valor ?? null;
-    const preencheu = (r && r.found) || !!v;
+    const reg = fipe?.registro ?? null;
+    const preencheu = (r && r.found) || !!v || !!reg;
     if (!preencheu) {
       toast.message('Consulta indisponivel - preencha os dados manualmente.');
       return;
     }
+    // A ordem e a da fonte mais especifica para a mais generica, e o `f.campo`
+    // no fim garante que consulta sem aquele dado NUNCA apaga o que ja estava
+    // digitado — `registroDaPlaca` devolve null em vez de campos vazios
+    // justamente para isto.
     setForm((f) => ({
       ...f,
-      marca: r?.marca ?? v?.marca ?? f.marca,
-      modelo: r?.modelo ?? v?.modelo ?? f.modelo,
-      ano_fabricacao: r?.ano_fabricacao ?? f.ano_fabricacao,
-      ano_modelo: r?.ano_modelo ?? v?.anoModelo ?? f.ano_modelo,
-      cor: r?.cor ?? f.cor,
-      chassi: r?.chassi ?? f.chassi,
+      marca: r?.marca ?? reg?.marca ?? v?.marca ?? f.marca,
+      modelo: r?.modelo ?? v?.modelo ?? reg?.modelo ?? f.modelo,
+      ano_fabricacao: r?.ano_fabricacao ?? reg?.anoFabricacao ?? f.ano_fabricacao,
+      ano_modelo: r?.ano_modelo ?? v?.anoModelo ?? reg?.anoModelo ?? f.ano_modelo,
+      cor: r?.cor ?? reg?.cor ?? f.cor,
+      chassi: r?.chassi ?? reg?.chassi ?? f.chassi,
+      numero_motor: reg?.numeroMotor ?? f.numero_motor,
       valor_fipe: v?.valor ?? f.valor_fipe,
       codigo_fipe: v?.codigoFipe ?? f.codigo_fipe,
-      combustivel: (v?.combustivel as Combustivel) ?? f.combustivel,
+      combustivel: (v?.combustivel as Combustivel) ?? (reg?.combustivel as Combustivel) ?? f.combustivel,
     }));
+    // O `modelo` da FIPE e o comercial completo ("COROLLA XEI 2.0 FLEX 16V
+    // AUT."), mais util na ficha que o abreviado do documento — por isso ele
+    // vem antes do registro, ao contrario da marca.
     toast.success(v ? `Placa + FIPE: ${formatCurrency(v.valor ?? 0)}` : 'Dados da placa preenchidos');
   }
 
@@ -342,6 +395,12 @@ function VeiculosConteudo() {
       onError: (err) => {
         const m = (err as Error).message;
         if (m.includes('rastreador_imei')) return toast.error('IMEI ja cadastrado em outro veiculo');
+        // Com o chassi vindo preenchido pela consulta da placa, a colisao no
+        // unique deixou de ser hipotese: e o carro ja cadastrado com OUTRA
+        // placa (transferencia, clonagem, cadastro duplicado). Dizer "chassi ja
+        // cadastrado" leva a conferir; o texto cru do Postgres, nao.
+        if (m.includes('chassi')) return toast.error('Chassi ja cadastrado em outro veiculo');
+        if (m.includes('renavam')) return toast.error('Renavam ja cadastrado em outro veiculo');
         toast.error(m.includes('placa') ? 'Placa ja cadastrada' : m);
       },
     });
@@ -499,12 +558,20 @@ function VeiculosConteudo() {
             </FormField>
           </div>
 
+          {/* Os tres campos do REGISTRO do documento — os tres vem preenchidos
+              pela consulta da placa (ver `consultar`). */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <FormField label="Renavam">
               <Input value={form.renavam ?? ''} onChange={(e) => setF({ renavam: e.target.value })} />
             </FormField>
-            <FormField label="Chassi" className="sm:col-span-2">
+            <FormField label="Chassi">
               <Input value={form.chassi ?? ''} onChange={(e) => setF({ chassi: e.target.value })} />
+            </FormField>
+            <FormField label="No do motor">
+              <Input
+                value={form.numero_motor ?? ''}
+                onChange={(e) => setF({ numero_motor: e.target.value })}
+              />
             </FormField>
           </div>
 

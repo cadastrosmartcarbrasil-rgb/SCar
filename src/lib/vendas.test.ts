@@ -3,6 +3,7 @@ import {
   ABAS_FECHAMENTO, ORDEM_CHECKLIST, adesaoEntraNoCaixa, agruparChecklist, margemRegional,
   pendencias, pendenciasPorAba, primeiraAbaPendente, progressoChecklist,
   ratearAdesao, validarComissaoVendedor, type ItemChecklist,
+  conferirRegistroDaPlaca,
 } from './vendas';
 
 describe('teto de comissao (regional -> vendedor)', () => {
@@ -136,5 +137,82 @@ describe('abas do fechamento', () => {
   it('ficha vazia nao aponta aba nenhuma', () => {
     expect(primeiraAbaPendente([])).toBeNull();
     expect(pendenciasPorAba([])).toEqual({ associado: 0, veiculo: 0, vistoria: 0, adesao: 0 });
+  });
+});
+
+describe('conferirRegistroDaPlaca — a consulta no fechamento e CONFERENCIA', () => {
+  // O registro real da placa OAW0838 (ver src/lib/fipe.test.ts).
+  const doc = {
+    chassi: '9BRBD3HE1K0445518', numeroMotor: 'M650484', cor: 'PRETA',
+    anoFabricacao: 2019, anoModelo: 2019, marca: 'TOYOTA', modelo: 'COROLLA XEI 20FLEX',
+  };
+
+  it('preenche o que esta VAZIO — o caso do lead que veio sem ficha', () => {
+    const r = conferirRegistroDaPlaca({ marca: 'TOYOTA' }, doc);
+    expect(r.preencher.chassi).toBe('9BRBD3HE1K0445518');
+    expect(r.preencher.numero_motor).toBe('M650484');
+    expect(r.preencher.cor).toBe('PRETA');
+    expect(r.preencher.ano_fabricacao).toBe(2019);
+    expect(r.divergencias).toEqual([]);
+  });
+
+  it('campo IGUAL nao vira preenchimento nem divergencia', () => {
+    const r = conferirRegistroDaPlaca(
+      { chassi: '9BRBD3HE1K0445518', cor: 'PRETA', ano_fabricacao: 2019 }, doc,
+    );
+    expect(r.preencher.chassi).toBeUndefined();
+    expect(r.divergencias.map((d) => d.campo)).not.toContain('chassi');
+  });
+
+  it('compara sem acento, pontuacao e caixa — senao toda consulta acusaria', () => {
+    const r = conferirRegistroDaPlaca(
+      { chassi: '9br-bd3he1.k0445518', cor: 'preta' }, doc,
+    );
+    expect(r.divergencias).toEqual([]);
+  });
+
+  it('campo DIFERENTE nao e sobrescrito: vira divergencia para decidir', () => {
+    // Quem esta fechando leu o documento e digitou. Apagar em silencio troca um
+    // erro por outro que ninguem ve.
+    const r = conferirRegistroDaPlaca({ chassi: '9BWZZZ377VT004251' }, doc);
+    expect(r.preencher.chassi).toBeUndefined();
+    expect(r.divergencias).toHaveLength(1);
+    expect(r.divergencias[0]).toMatchObject({
+      campo: 'chassi', naFicha: '9BWZZZ377VT004251', noDocumento: '9BRBD3HE1K0445518',
+    });
+  });
+
+  it('o MODELO comercial da FIPE nao briga com o abreviado do documento', () => {
+    // "COROLLA XEI 2.0 FLEX 16V AUT." (FIPE) x "COROLLA XEI 20FLEX" (documento):
+    // divergem como texto e sao o mesmo carro. Acusar isso seria ruido em toda
+    // consulta, e ruido constante ensina a ignorar o aviso de verdade.
+    const r = conferirRegistroDaPlaca({ modelo: 'COROLLA XEI 2.0 FLEX 16V AUT.' }, doc);
+    expect(r.divergencias.map((d) => d.campo)).not.toContain('modelo');
+  });
+
+  it('mas modelo de OUTRO carro continua sendo divergencia', () => {
+    const r = conferirRegistroDaPlaca({ modelo: 'GOL 1.0' }, doc);
+    expect(r.divergencias.map((d) => d.campo)).toContain('modelo');
+  });
+
+  it('campo que o documento NAO trouxe nao mexe em nada', () => {
+    const r = conferirRegistroDaPlaca({ cor: 'AZUL' }, { chassi: '9BR1' });
+    expect(r.preencher.cor).toBeUndefined();
+    expect(r.divergencias).toEqual([]);
+    expect(r.preencher.chassi).toBe('9BR1');
+  });
+
+  it('sem registro nenhum a conferencia e vazia — nao limpa a ficha', () => {
+    const r = conferirRegistroDaPlaca({ chassi: '9BR1', cor: 'AZUL' }, null);
+    expect(r.preencher).toEqual({});
+    expect(r.divergencias).toEqual([]);
+  });
+
+  it('o VALOR FIPE nunca entra na conferencia, nem vazio', () => {
+    // A cotacao ja foi aceita e e `leads.valor_fipe` que vai para `veiculos`
+    // (0034). Mexer nele aqui mudaria o FIPE do associado sem mudar o preco.
+    const r = conferirRegistroDaPlaca({}, { ...doc } as never);
+    expect(Object.keys(r.preencher)).not.toContain('valor_fipe');
+    expect(Object.keys(r.preencher)).not.toContain('codigo_fipe');
   });
 });

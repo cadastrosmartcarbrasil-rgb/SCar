@@ -637,6 +637,29 @@ export function useFotosVistoriaLead(leadId?: string) {
 }
 
 /**
+ * O link da vistoria para mandar ao cliente (0076).
+ *
+ * Nao e `useQuery`: gerar o link tem efeito (cria a vistoria, carimba o prazo)
+ * e so acontece quando alguem clica em "Enviar ao cliente". Reemitir com o
+ * link vigente devolve o MESMO token — quem clica duas vezes nao derruba a
+ * mensagem que acabou de mandar no WhatsApp.
+ */
+export function useGerarLinkVistoria() {
+  const supabase = createClient();
+  return useMutation({
+    mutationFn: async (leadId: string) => {
+      const { data, error } = await supabase.rpc('gerar_link_vistoria', {
+        p_lead_id: leadId, p_dias: 7,
+      });
+      if (error) throw error;
+      const l = data?.[0];
+      if (!l) throw new Error('Nao consegui gerar o link da vistoria');
+      return l;
+    },
+  });
+}
+
+/**
  * Itens amarrados ao plano/combo. Sem esta lista a tela oferecia como adicional
  * avulso um produto que ja vinha dentro do combo.
  */

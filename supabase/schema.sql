@@ -30337,3 +30337,828 @@ revoke execute on all functions in schema public from public;
 revoke execute on all functions in schema public from anon;
 grant  execute on all functions in schema public to authenticated;
 grant  execute on all functions in schema public to service_role;
+
+-- >>>>>>>>>>>>>>>>>>>>>>>> migrations/0074_mutual_consultor_sem_duplicar.sql >>>>>>>>>>>>>>>>>>>>>>>>
+
+-- ============================================================================
+-- 0074 — CORRETIVA da 0073: o funil do consultor estava CONTANDO DUAS VEZES
+-- ============================================================================
+-- A 0073 existe para uma coisa so: MEDIR, antes da carga, quantos veiculos
+-- sobrevivem a corrente
+--
+--   objeto.consultant -> /association/consultant/ -> vendedores -> regional_id
+--
+-- Um instrumento de medida que conta errado e pior que nenhum: ele nao adia a
+-- decisao, ele a toma com numero falso. Eram dois defeitos, os dois no lugar
+-- onde ninguem olharia — o JOIN, nao a regra.
+--
+-- (1) O LEFT JOIN COM `vendedores` MULTIPLICAVA A LINHA DO VEICULO.
+--     `vendedores.documento` e unique parcial (0069), mas `email` e `nome` NAO
+--     sao. Dois vendedores com o mesmo e-mail (unidade que cadastrou a equipe
+--     com o e-mail da franquia) ou dois homonimos faziam CADA veiculo daquele
+--     consultor virar duas linhas na CTE `passos` — e como o `n_total` e um
+--     `count(*)` sobre ela, o funil inteiro inflava. Pior: inflava so nas
+--     linhas com colisao, entao `perdidos`, que e subtracao entre degraus,
+--     virava ruido. O funil diria "faltam 800" com 400 reais, ou o contrario.
+--
+--     A correcao nao e `distinct` — isso esconderia a colisao. O casamento com
+--     o vendedor e propriedade do CONSULTOR, nao do veiculo: passa a ser
+--     resolvido UMA vez por consultor (sao centenas, contra dezenas de milhares
+--     de objetos), por `lateral ... limit 1` com ordem estavel. De quebra fica
+--     mais barato.
+--
+--     E a ambiguidade deixa de ser silenciosa: o degrau 5 passa a DIZER quantos
+--     veiculos casaram por uma chave que aponta mais de um vendedor. Escolher um
+--     no desempate e uma decisao — e neste modulo decisao em silencio ja custou
+--     duas rodadas.
+--
+-- (2) `mutual_texto_em`/`mutual_chave_em` NAO GARANTIAM A PRECEDENCIA.
+--     Elas existem justamente para nao chutar o nome do campo: recebem a lista
+--     de candidatas em ORDEM (`cpf_cnpj` antes de `cpf` antes de `document`) e
+--     devolvem a primeira preenchida. So que `limit 1` sobre `unnest` SEM
+--     `order by` nao promete ordem nenhuma — o planejador pode devolver
+--     qualquer linha. Hoje sai na ordem do array por acaso, e "por acaso" e o
+--     tipo de coisa que muda com um `seq_page_cost` diferente e ninguem liga ao
+--     numero que mudou. `with ordinality` + `order by` torna a promessa real.
+--
+-- A REGRA DA FASE CONTINUA: isto e LEITURA. Nada escreve em `clientes`,
+-- `veiculos`, `titulos_financeiros`, `faturas` nem `eventos_sinistro`.
+-- Nenhuma assinatura muda, entao tudo aqui e `create or replace`.
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- Os helpers das chaves candidatas — agora com a ordem PROMETIDA
+-- ----------------------------------------------------------------------------
+create or replace function mutual_texto_em(p_payload jsonb, p_chaves text[])
+returns text
+language sql
+immutable
+as $$
+  select mutual_texto(x.j #>> '{}')
+    from unnest(p_chaves) with ordinality as u(k, ord)
+    cross join lateral (select p_payload -> u.k as j) x
+   where x.j is not null
+     and jsonb_typeof(x.j) not in ('object','array','null')
+     and mutual_texto(x.j #>> '{}') is not null
+   order by u.ord
+   limit 1;
+$$;
+
+comment on function mutual_texto_em(jsonb, text[]) is
+  'Primeiro valor nao vazio entre chaves candidatas, NA ORDEM dada. Existe para NAO chutar o nome do campo.';
+
+create or replace function mutual_chave_em(p_payload jsonb, p_chaves text[])
+returns text
+language sql
+immutable
+as $$
+  select u.k
+    from unnest(p_chaves) with ordinality as u(k, ord)
+    cross join lateral (select p_payload -> u.k as j) x
+   where x.j is not null
+     and jsonb_typeof(x.j) not in ('object','array','null')
+     and mutual_texto(x.j #>> '{}') is not null
+   order by u.ord
+   limit 1;
+$$;
+
+comment on function mutual_chave_em(jsonb, text[]) is
+  'Qual chave candidata pegou, NA ORDEM dada — para a tela dizer de onde o dado saiu.';
+
+-- ============================================================================
+-- O FUNIL — uma linha por veiculo, sempre
+-- ============================================================================
+create or replace function mutual_cobertura_consultor(
+  p_somente_faturaveis boolean default true,
+  p_chaves_doc   text[] default array['cpf_cnpj','cpf','document','documento','doc'],
+  p_chaves_email text[] default array['email','e_mail','mail'],
+  p_chaves_nome  text[] default array['name','nome','full_name','fantasy_name']
+)
+returns table (
+  passo    integer,
+  etapa    text,
+  objetos  bigint,
+  perdidos bigint,     -- em relacao ao passo anterior
+  detalhe  text
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_consultores bigint;
+begin
+  if not is_staff() then
+    raise exception 'Somente a equipe pode ler o diagnostico da integracao';
+  end if;
+
+  select count(*) into v_consultores
+    from mutual_captura where entidade = 'CONSULTANT' and not deletado;
+
+  return query
+  with ct as (
+    select c.id_externo, c.payload
+      from mutual_captura c
+     where c.entidade = 'CONTRACT' and not c.deletado
+  ),
+  cons as (
+    select c.id_externo,
+           mutual_texto_em(c.payload, p_chaves_nome)                                as nome,
+           nullif(regexp_replace(coalesce(mutual_texto_em(c.payload, p_chaves_doc), ''),
+                                 '\D', '', 'g'), '')                                as doc,
+           lower(mutual_texto_em(c.payload, p_chaves_email))                        as email
+      from mutual_captura c
+     where c.entidade = 'CONSULTANT' and not c.deletado
+  ),
+  -- O casamento com o vendedor e propriedade do CONSULTOR, nao do veiculo:
+  -- resolvido UMA vez aqui, e em UMA linha. Era daqui que vinha a contagem
+  -- dobrada — `email` e `nome` nao sao unicos em `vendedores`.
+  -- A precedencia da 0069 e preservada exatamente: o documento manda, e o
+  -- e-mail so entra quando NAO ha documento (documento que nao casa nao cai
+  -- para o e-mail — sao chaves de forca diferente, nao alternativas).
+  cons_v as (
+    select c.id_externo, c.nome, c.doc, c.email,
+           vd.id          as vend_id,
+           vd.regional_id as vend_regional,
+           coalesce(vd.ambiguo, false) as vend_ambiguo,
+           vn.id          as vend_nome
+      from cons c
+      left join lateral (
+        select v.id, v.regional_id, count(*) over () > 1 as ambiguo
+          from vendedores v
+         where (c.doc is not null and v.documento = c.doc)
+            or (c.doc is null and c.email is not null and lower(v.email) = c.email)
+         order by v.id       -- desempate ESTAVEL; o ramo do documento e unico (0069)
+         limit 1
+      ) vd on true
+      left join lateral (
+        select v.id
+          from vendedores v
+         where c.nome is not null
+           and upper(btrim(v.nome)) = upper(btrim(c.nome))
+         order by v.id
+         limit 1
+      ) vn on true
+  ),
+  base as (
+    select o.id_externo,
+           mutual_status_veiculo(o.payload->>'contract_status', o.payload->>'status') as st,
+           mutual_consultor_do_objeto(o.payload, ct.payload)                          as cons_id
+      from mutual_captura o
+      left join ct on ct.id_externo = o.payload->>'contract_id'
+     where o.entidade = 'CONTRACT_OBJECT' and not o.deletado
+  ),
+  alvo as (
+    select * from base
+     where st is not null
+       and (not p_somente_faturaveis or st::text in ('ativo','em_evento','vistoria_pendente'))
+  ),
+  -- Cada salto e uma coluna booleana sobre a MESMA linha: assim "perdidos" e
+  -- subtracao honesta, e nao a diferenca entre duas consultas que filtraram
+  -- universos diferentes. `cons_v` e unica por `id_externo`, entao este join
+  -- nao multiplica o veiculo — que era o defeito da 0073.
+  passos as (
+    select a.id_externo,
+           a.cons_id is not null                                    as tem_cons,
+           c.id_externo is not null                                 as capturado,
+           (c.doc is not null or c.email is not null)               as tem_chave,
+           c.vend_id is not null                                    as casa_vendedor,
+           (c.vend_id is not null and c.vend_regional is not null)  as tem_regional,
+           -- informativo: casaria SO pelo nome? (a carga NAO usa nome — 0069)
+           (c.vend_id is null and c.vend_nome is not null)          as so_por_nome,
+           coalesce(c.vend_ambiguo, false)                          as chave_ambigua
+      from alvo a
+      left join cons_v c on c.id_externo = a.cons_id
+  ),
+  t as (
+    select count(*)                                        as n_total,
+           count(*) filter (where tem_cons)                as n_cons,
+           count(*) filter (where tem_cons and capturado)  as n_capt,
+           count(*) filter (where capturado and tem_chave) as n_chave,
+           count(*) filter (where casa_vendedor)           as n_vend,
+           count(*) filter (where tem_regional)            as n_reg,
+           count(*) filter (where so_por_nome)             as n_nome,
+           count(*) filter (where chave_ambigua)           as n_amb
+      from passos
+  )
+  select 1, 'Objetos considerados', t.n_total, 0::bigint,
+         case when p_somente_faturaveis then 'so a carteira viva (faturaveis)'
+              else 'todo objeto importavel' end
+    from t
+  union all
+  select 2, 'Com codigo de consultor', t.n_cons, t.n_total - t.n_cons,
+         'objeto, com o contrato como reserva' from t
+  union all
+  select 3, 'Consultor CAPTURADO', t.n_capt, t.n_cons - t.n_capt,
+         case when v_consultores = 0
+              then 'NENHUM consultor capturado — puxe "Consultores" antes de ler este funil'
+              else format('%s consultores no espelho', v_consultores) end from t
+  union all
+  select 4, 'Consultor com CPF ou e-mail', t.n_chave, t.n_capt - t.n_chave,
+         'a chave de reconciliacao da 0069 (documento manda, e-mail e reserva)' from t
+  union all
+  select 5, 'Casa com vendedor do SCar', t.n_vend, t.n_chave - t.n_vend,
+         format('%s casariam SO por nome (a carga nao usa nome)%s', t.n_nome,
+                case when t.n_amb > 0
+                     then format(' · %s em chave AMBIGUA (casa em mais de um vendedor; '
+                                 'desempate arbitrario — confira antes da carga)', t.n_amb)
+                     else '' end) from t
+  union all
+  select 6, 'UNIDADE RESOLVIDA', t.n_reg, t.n_vend - t.n_reg,
+         'vendedor importado com regional definida — e este o numero que decide' from t
+  order by 1;
+end;
+$$;
+
+comment on function mutual_cobertura_consultor(boolean, text[], text[], text[]) is
+  'Funil objeto -> consultor -> vendedor -> unidade, UMA linha por veiculo. Mede a tese ANTES da carga; nao escreve nada.';
+
+-- ============================================================================
+-- QUEM SE PERDE — a fila de trabalho, sem consultor repetido
+-- ============================================================================
+-- Mesmo defeito, outro sintoma: aqui a multiplicacao nao inflava contagem (o
+-- `n` ja vinha agregado), mas repetia o consultor na lista — e uma fila que
+-- mostra a mesma pendencia duas vezes faz a equipe trabalhar duas vezes.
+create or replace function mutual_consultores_sem_vendedor(
+  p_limite             integer default 50,
+  p_somente_faturaveis boolean default true,
+  p_chaves_doc   text[] default array['cpf_cnpj','cpf','document','documento','doc'],
+  p_chaves_email text[] default array['email','e_mail','mail'],
+  p_chaves_nome  text[] default array['name','nome','full_name','fantasy_name']
+)
+returns table (
+  consultor_id text,
+  nome         text,
+  documento    text,
+  email        text,
+  veiculos     bigint,
+  motivo       text
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not is_staff() then
+    raise exception 'Somente a equipe pode ler o diagnostico da integracao';
+  end if;
+  return query
+  with ct as (
+    select c.id_externo, c.payload from mutual_captura c
+     where c.entidade = 'CONTRACT' and not c.deletado
+  ),
+  cons as (
+    select c.id_externo,
+           mutual_texto_em(c.payload, p_chaves_nome) as nome,
+           nullif(regexp_replace(coalesce(mutual_texto_em(c.payload, p_chaves_doc), ''),
+                                 '\D', '', 'g'), '') as doc,
+           lower(mutual_texto_em(c.payload, p_chaves_email)) as email
+      from mutual_captura c
+     where c.entidade = 'CONSULTANT' and not c.deletado
+  ),
+  alvo as (
+    select mutual_consultor_do_objeto(o.payload, ct.payload) as cons_id,
+           mutual_status_veiculo(o.payload->>'contract_status', o.payload->>'status') as st
+      from mutual_captura o
+      left join ct on ct.id_externo = o.payload->>'contract_id'
+     where o.entidade = 'CONTRACT_OBJECT' and not o.deletado
+  ),
+  agrupado as (
+    select a.cons_id, count(*)::bigint as n
+      from alvo a
+     where a.st is not null
+       and (not p_somente_faturaveis or a.st::text in ('ativo','em_evento','vistoria_pendente'))
+     group by 1
+  )
+  select coalesce(g.cons_id, '(sem consultor no objeto)'),
+         c.nome, c.doc, c.email, g.n,
+         case
+           when g.cons_id is null      then 'O objeto nao declara consultor'
+           when c.id_externo is null   then 'Codigo nao existe no espelho — puxe "Consultores" ou o cadastro foi apagado la'
+           when c.doc is null and c.email is null
+                                       then 'Consultor sem CPF nem e-mail: nao ha por onde reconciliar'
+           when v.id is null           then 'Nao esta entre os vendedores importados'
+           else                             'Vendedor sem unidade definida'
+         end
+    from agrupado g
+    left join cons c on c.id_externo = g.cons_id
+    -- `limit 1`: um consultor e UMA linha na fila, mesmo que a chave dele
+    -- aponte dois vendedores (e-mail repetido). Ver o cabecalho.
+    left join lateral (
+      select v.id, v.regional_id
+        from vendedores v
+       where (c.doc is not null and v.documento = c.doc)
+          or (c.doc is null and c.email is not null and lower(v.email) = c.email)
+       order by v.id
+       limit 1
+    ) v on true
+   where g.cons_id is null
+      or c.id_externo is null
+      or (c.doc is null and c.email is null)
+      or v.id is null
+      or v.regional_id is null
+   order by g.n desc
+   limit greatest(coalesce(p_limite, 50), 1);
+end;
+$$;
+
+comment on function mutual_consultores_sem_vendedor(integer, boolean, text[], text[], text[]) is
+  'Os consultores que a corrente perde, por VOLUME de veiculos — uma linha por consultor.';
+
+-- ============================================================================
+-- RITO DE SEGURANCA (0052)
+-- ============================================================================
+revoke execute on all functions in schema public from public;
+revoke execute on all functions in schema public from anon;
+grant  execute on all functions in schema public to authenticated;
+grant  execute on all functions in schema public to service_role;
+
+-- >>>>>>>>>>>>>>>>>>>>>>>> migrations/0075_veiculo_numero_motor.sql >>>>>>>>>>>>>>>>>>>>>>>>
+
+-- ============================================================================
+-- 0075 — NUMERO DO MOTOR: o campo que faltava para o registro caber na ficha
+-- ============================================================================
+-- A consulta por placa (Placa Fipe) SEMPRE devolveu o registro do documento no
+-- bloco `informacoes_veiculo` — chassi, cor, municipio e o **numero do motor** —
+-- e o nosso proxy lia so a avaliacao (`fipe[]`) e descartava o resto. Corrigido
+-- do lado da aplicacao (`registroDaPlaca`, com teste sobre o payload real).
+--
+-- Sobrou o que o banco nao tinha: `chassi` e `cor` ja existem em `veiculos`
+-- (0001) e em `leads` (0034), mas **numero do motor nao existia em lugar
+-- nenhum**. Sem coluna, o dado chegaria da API e seria jogado fora de novo, so
+-- que um passo adiante.
+--
+-- Entra nas DUAS pontas de propósito: o veiculo nasce por dois caminhos — o
+-- cadastro direto (`/veiculos`) e a ROTA DA VENDA (lead -> Auditoria ->
+-- `autorizar_entrada_lead`). Uma coluna so em `veiculos` faria o motor existir
+-- no cadastro manual e sumir em toda venda, que e justamente o caminho em que a
+-- placa e consultada primeiro.
+--
+-- ⚠️ NAO E UNIQUE, e isso e decisao, nao esquecimento. Motor se troca (motor
+-- novo no mesmo carro, motor recuperado em outro) e base legada tem repetido e
+-- digitado errado. Um unique aqui recusaria cadastro legitimo no balcao; a
+-- duplicidade que interessa e RELATORIO, no padrao de
+-- `rastreadores_divergencias` (0050), nao constraint.
+-- ============================================================================
+
+alter table veiculos add column if not exists numero_motor text;
+alter table leads    add column if not exists numero_motor text;
+
+comment on column veiculos.numero_motor is
+  'Numero do motor (registro do documento). Vem da consulta por placa; nao e unique — ver 0075.';
+comment on column leads.numero_motor is
+  'Numero do motor capturado na venda; `autorizar_entrada_lead` o leva para o veiculo.';
+
+-- ----------------------------------------------------------------------------
+-- A entrada na base passa a carregar o motor
+-- ----------------------------------------------------------------------------
+-- Recriada a partir da versao da 0034 com UMA mudanca: `numero_motor` no insert
+-- de `veiculos`, normalizado do mesmo jeito que o chassi ali do lado (caixa
+-- alta, vazio vira NULL). O resto do corpo e identico — a assinatura e o
+-- retorno nao mudam, entao `create or replace` basta.
+create or replace function autorizar_entrada_lead(p_lead_id uuid, p_cpf_cnpj text default null)
+returns uuid language plpgsql security definer set search_path = public as $$
+declare
+  l           leads;
+  v_doc       text;
+  v_tipo      tipo_pessoa;
+  v_cliente   uuid;
+  v_veiculo   uuid;
+  v_pendente  text;
+  v_vend      vendedores;
+  v_comissao  numeric := 0;
+  v_lanc      uuid;
+  v_cat       uuid;
+begin
+  if not pode_auditar() then
+    raise exception 'Sem permissao: apenas a Auditoria pode autorizar a entrada na base';
+  end if;
+
+  select * into l from leads where id = p_lead_id for update;
+  if not found then raise exception 'Lead nao encontrado'; end if;
+  if l.status <> 'EM_AUDITORIA' then
+    raise exception 'Lead nao esta Em Auditoria (status atual: %)', l.status;
+  end if;
+  if l.veiculo_id is not null then raise exception 'Lead ja foi convertido'; end if;
+
+  if p_cpf_cnpj is not null then
+    update leads set cpf_cnpj = regexp_replace(p_cpf_cnpj, '[^0-9]', '', 'g')
+     where id = p_lead_id;
+    select * into l from leads where id = p_lead_id;
+  end if;
+
+  -- TRAVA: o veiculo so entra na base com a ficha completa.
+  select string_agg(item, '; ') into v_pendente
+    from checklist_lead(p_lead_id) where not ok;
+  if v_pendente is not null then
+    raise exception 'Cadastro incompleto - falta: %', v_pendente
+      using errcode = 'check_violation';
+  end if;
+
+  v_doc  := regexp_replace(coalesce(l.cpf_cnpj, ''), '[^0-9]', '', 'g');
+  v_tipo := coalesce(l.tipo_pessoa, (case when length(v_doc) > 11 then 'PJ' else 'PF' end)::tipo_pessoa);
+
+  -- Associado: reaproveita pelo documento (atualizando a ficha) ou cria.
+  select id into v_cliente from clientes where cpf_cnpj = v_doc;
+  if v_cliente is null then
+    insert into clientes (tipo_pessoa, nome_razao_social, cpf_cnpj, rg_ie, email, telefone,
+                          endereco, regional_id)
+    values (v_tipo, l.nome, v_doc, l.rg_ie, l.email, l.celular, l.endereco, l.regional_id)
+    returning id into v_cliente;
+  else
+    update clientes set
+      nome_razao_social = coalesce(nullif(l.nome, ''), nome_razao_social),
+      rg_ie             = coalesce(nullif(l.rg_ie, ''), rg_ie),
+      email             = coalesce(nullif(l.email, ''), email),
+      telefone          = coalesce(nullif(l.celular, ''), telefone),
+      endereco          = case when l.endereco = '{}'::jsonb then endereco else l.endereco end
+    where id = v_cliente;
+  end if;
+
+  -- Veiculo oficial, agora com a ficha completa.
+  insert into veiculos (cliente_id, placa, chassi, renavam, numero_motor, marca, modelo,
+                        ano_fabricacao, ano_modelo, cor, valor_fipe, codigo_fipe, combustivel, uso,
+                        tipo_veiculo_id, cota_participacao_id, modelo_id, regional_id,
+                        vendedor_id, plano_protecao_id, status)
+  values (v_cliente, upper(l.placa),
+          nullif(upper(regexp_replace(coalesce(l.chassi, ''), '[^0-9A-Za-z]', '', 'g')), ''),
+          nullif(regexp_replace(coalesce(l.renavam, ''), '[^0-9]', '', 'g'), ''),
+          nullif(upper(btrim(coalesce(l.numero_motor, ''))), ''),
+          l.marca, l.modelo, l.ano_fabricacao, l.ano_modelo, l.cor, l.valor_fipe, l.codigo_fipe,
+          l.combustivel, l.uso, l.tipo_veiculo_id, l.cota_participacao_id, l.modelo_id,
+          l.regional_id, l.vendedor_id, l.plano_id, 'ativo')
+  returning id into v_veiculo;
+
+  -- A vistoria feita na venda passa a ser a vistoria do veiculo.
+  update vistorias set veiculo_id = v_veiculo, status = 'APROVADA'
+   where lead_id = p_lead_id and veiculo_id is null;
+
+  -- ---------------------------------------------------------------- adesao
+  select * into v_vend from vendedores where id = l.vendedor_id;
+  v_comissao := round(coalesce(l.adesao_valor, 0) * coalesce(v_vend.taxa_comissao_adesao, 0), 2);
+
+  if l.adesao_forma::text = 'VENDEDOR_NA_HORA' then
+    -- O dinheiro nunca passou pela associacao: NADA entra no financeiro.
+    -- Fica so o registro da comissao, ja quitada na origem.
+    insert into comissoes_vendas (vendedor_id, veiculo_id, valor_comissao, is_adesao, status_pagamento)
+    values (l.vendedor_id, v_veiculo, coalesce(l.adesao_valor, 0), true, 'pago');
+  else
+    -- Recebido pelo nosso sistema: vira titulo a receber e a comissao do
+    -- vendedor nasce PENDENTE (sai depois, no repasse).
+    select id into v_cat from categorias_dre where codigo_estruturado = '1.1.01';
+    insert into lancamentos_financeiros
+      (tipo, cliente_id, descricao, categoria_dre_id, regional_id, valor_original,
+       data_emissao, data_vencimento, competencia, forma_pagamento_prevista, observacoes)
+    values ('RECEITA', v_cliente,
+            'Taxa de adesao - ' || upper(l.placa),
+            v_cat, l.regional_id, l.adesao_valor,
+            current_date, coalesce(l.adesao_recebida_em, current_date), current_date,
+            (case l.adesao_forma::text when 'BOLETO' then 'BOLETO'
+                                       when 'PIX' then 'PIX'
+                                       else 'CARTAO' end)::forma_pagamento,
+            'Adesao da venda ' || p_lead_id::text)
+    returning id into v_lanc;
+
+    insert into comissoes_vendas (vendedor_id, veiculo_id, valor_comissao, is_adesao, status_pagamento)
+    values (l.vendedor_id, v_veiculo, v_comissao, true, 'pendente');
+  end if;
+
+  update leads set
+    status = 'ATIVO', cliente_id = v_cliente, veiculo_id = v_veiculo,
+    cpf_cnpj = v_doc, auditado_em = now(), auditado_por = auth.uid()
+  where id = p_lead_id;
+
+  return v_veiculo;
+end;
+$$;
+
+-- ============================================================================
+-- RITO DE SEGURANCA (0052)
+-- ============================================================================
+revoke execute on all functions in schema public from public;
+revoke execute on all functions in schema public from anon;
+grant  execute on all functions in schema public to authenticated;
+grant  execute on all functions in schema public to service_role;
+
+-- >>>>>>>>>>>>>>>>>>>>>>>> migrations/0076_vistoria_link_publico.sql >>>>>>>>>>>>>>>>>>>>>>>>
+
+-- ============================================================================
+-- 0076 — A VISTORIA PELO CELULAR DO CLIENTE: link proprio, com prazo
+-- ============================================================================
+-- O que estava quebrado no fluxo: o hotlink cota, o cliente ACEITA na hora — e
+-- a rotina para. A tela de sucesso dizia "seu consultor vai combinar a
+-- vistoria", e o unico jeito de as fotos existirem era alguem LOGADO abrir o
+-- lead: `<FotosVistoria>` so vive no CRM e no portal do vendedor, a RLS de
+-- `vistorias`/`vistoria_anexos` e `to authenticated`, e a policy do bucket
+-- `vendas` exige `is_staff()`. Ou seja: **o cliente nunca teve como enviar
+-- foto**, no exato momento em que ele esta com o carro na frente e decidido.
+--
+-- Aqui entra a capacidade que faltava.
+--
+-- ⚠️ POR QUE UM TOKEN NOVO, E NAO O `leads.token_publico` (0042).
+-- Aquele token e a capacidade de COTAR e CONTRATAR, e o link da proposta
+-- (`/cotacao/<token>`) e feito para ser guardado e reaberto — vai para o
+-- WhatsApp, fica no historico, o cliente reabre meses depois. Pendurar UPLOAD
+-- nele seria transformar um link de leitura, distribuido a vontade, em
+-- permissao de ESCRITA no nosso storage, sem prazo. Capacidades diferentes,
+-- tokens diferentes: este nasce para a vistoria, expira, e morre com a venda.
+--
+-- DECISOES DO USUARIO (12/09/2026), arquivadas para nao reabrir:
+--  1. A foto do CLIENTE VALE como vistoria — completa o `checklist_lead` e o
+--     lead segue para a Auditoria, que confere as imagens antes de autorizar.
+--     A trava continua sendo a Auditoria, nao uma etapa a mais no vendedor.
+--  2. O link vale 7 DIAS. Tempo de achar o carro com luz boa, sem deixar
+--     permissao de upload aberta para sempre. Vencido, o vendedor reemite.
+--
+-- Como a foto do cliente e do vendedor passam a conviver na mesma vistoria,
+-- `vistoria_anexos.enviado_pelo_cliente` diz a ORIGEM — quem audita precisa
+-- saber se a imagem veio de quem esta vendendo o carro ou de quem o comprou.
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- (A) A capacidade: token + prazo na propria vistoria
+-- ----------------------------------------------------------------------------
+alter table vistorias
+  add column if not exists token_publico   uuid,
+  add column if not exists token_expira_em timestamptz;
+
+-- Unique PARCIAL: o token e opcional (vistoria de veiculo, feita internamente,
+-- nunca tem um) e duas linhas com NULL nao podem colidir — mesmo cuidado de
+-- `fornecedores.documento` (0051) e `vendedores.documento` (0069).
+create unique index if not exists uq_vistoria_token_publico
+  on vistorias (token_publico) where token_publico is not null;
+
+alter table vistoria_anexos
+  add column if not exists enviado_pelo_cliente boolean not null default false;
+
+comment on column vistorias.token_publico is
+  'Capacidade do link publico da vistoria. NAO e o `leads.token_publico` (0042) — ver 0076.';
+comment on column vistoria_anexos.enviado_pelo_cliente is
+  'A foto veio pelo link do cliente (true) ou de alguem logado (false). A Auditoria precisa da origem.';
+
+-- ----------------------------------------------------------------------------
+-- (B) Gerar o link — quem trata o lead
+-- ----------------------------------------------------------------------------
+-- REEMITIR NAO INVALIDA O LINK QUE JA ESTA NA MAO DO CLIENTE: enquanto o token
+-- vigente nao venceu, a funcao devolve O MESMO. Girar o token a cada clique do
+-- vendedor quebraria, em silencio, a mensagem que ele acabou de mandar no
+-- WhatsApp — e ninguem entenderia por que "o link parou de funcionar".
+create or replace function gerar_link_vistoria(p_lead_id uuid, p_dias integer default 7)
+returns table (token uuid, expira_em timestamptz, reaproveitado boolean)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_lead   leads;
+  v_vist   vistorias;
+  v_dias   integer := greatest(coalesce(p_dias, 7), 1);
+begin
+  select * into v_lead from leads where id = p_lead_id;
+  if not found then raise exception 'Lead nao encontrado'; end if;
+
+  -- Mesma trava de propriedade do resto da venda (0045): quem pode tratar o
+  -- lead pode convidar o cliente a fotografar o carro dele.
+  --
+  -- `auth.uid() is null` e o caminho PUBLICO (padrao da 0052): a pagina do
+  -- hotlink roda com service_role e chega aqui logo apos o aceite, ja tendo
+  -- provado a posse do atendimento pelo `leads.token_publico`. O `anon` nao
+  -- alcanca esta funcao — o revoke do fim do arquivo tira o execute dele.
+  if auth.uid() is not null and not pode_tratar_lead(p_lead_id) then
+    raise exception 'Sem permissao para gerar o link deste atendimento';
+  end if;
+
+  if v_lead.status::text in ('ATIVO', 'PERDIDO') then
+    raise exception 'Atendimento encerrado (%) — nao ha vistoria a fazer', v_lead.status;
+  end if;
+
+  select * into v_vist from vistorias where lead_id = p_lead_id limit 1;
+  if not found then
+    insert into vistorias (lead_id, tipo, status, data_vistoria)
+    values (p_lead_id, 'inicial', 'PENDENTE', current_date)
+    returning * into v_vist;
+  end if;
+
+  if v_vist.token_publico is not null
+     and v_vist.token_expira_em is not null
+     and v_vist.token_expira_em > now() then
+    return query select v_vist.token_publico, v_vist.token_expira_em, true;
+    return;
+  end if;
+
+  update vistorias
+     set token_publico   = gen_random_uuid(),
+         token_expira_em = now() + make_interval(days => v_dias)
+   where id = v_vist.id
+   returning token_publico, token_expira_em into v_vist.token_publico, v_vist.token_expira_em;
+
+  return query select v_vist.token_publico, v_vist.token_expira_em, false;
+end;
+$$;
+
+comment on function gerar_link_vistoria(uuid, integer) is
+  'Link publico da vistoria (7 dias). Reemitir devolve o MESMO token enquanto vigente — ver 0076.';
+
+-- ----------------------------------------------------------------------------
+-- (C) Abrir o link — o caminho publico
+-- ----------------------------------------------------------------------------
+-- Devolve SEMPRE uma linha, com `valida` e `motivo`: a pagina precisa saber a
+-- diferenca entre "link errado", "link vencido" e "venda ja concluida" para
+-- dizer ao cliente o que fazer. Um `null` generico viraria "algo deu errado",
+-- que e o texto que faz a pessoa ligar para o vendedor.
+create or replace function vistoria_por_token(p_token uuid)
+returns table (
+  valida       boolean,
+  motivo       text,
+  lead_id      uuid,
+  vistoria_id  uuid,
+  nome         text,
+  placa        text,
+  marca        text,
+  modelo       text,
+  expira_em    timestamptz
+)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_vist vistorias;
+  v_lead leads;
+begin
+  -- Caminho publico: roda por service_role, sem sessao (rito da 0052).
+  if not (is_staff() or auth.uid() is null) then
+    raise exception 'Sem permissao';
+  end if;
+
+  select * into v_vist from vistorias where token_publico = p_token;
+  if not found then
+    return query select false, 'LINK_INVALIDO', null::uuid, null::uuid,
+                        null::text, null::text, null::text, null::text, null::timestamptz;
+    return;
+  end if;
+
+  select * into v_lead from leads where id = v_vist.lead_id;
+
+  if v_vist.token_expira_em is null or v_vist.token_expira_em <= now() then
+    return query select false, 'LINK_EXPIRADO', v_lead.id, v_vist.id,
+                        v_lead.nome, v_lead.placa, v_lead.marca, v_lead.modelo, v_vist.token_expira_em;
+    return;
+  end if;
+
+  if v_lead.status::text in ('ATIVO', 'PERDIDO') then
+    return query select false, 'ATENDIMENTO_ENCERRADO', v_lead.id, v_vist.id,
+                        v_lead.nome, v_lead.placa, v_lead.marca, v_lead.modelo, v_vist.token_expira_em;
+    return;
+  end if;
+
+  return query select true, 'OK', v_lead.id, v_vist.id,
+                      v_lead.nome, v_lead.placa, v_lead.marca, v_lead.modelo, v_vist.token_expira_em;
+end;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- (D) Receber a foto — a unica escrita que o link autoriza
+-- ----------------------------------------------------------------------------
+-- O token da ESCRITA e o mesmo da leitura, mas o que ele autoriza e minimo:
+-- inserir UM anexo, numa pose do catalogo, na vistoria daquele lead. Nao ha
+-- parametro de vistoria nem de lead — sao derivados do token, entao nao existe
+-- o que forjar (mesma postura das RPCs do portal do vendedor, 0038).
+create or replace function registrar_foto_vistoria_publica(
+  p_token    uuid,
+  p_tipo     text,
+  p_url      text,
+  p_tamanho  bigint default null,
+  p_arquivo  text default null
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_vist   vistorias;
+  v_lead   leads;
+  v_anexo  uuid;
+begin
+  if not (is_staff() or auth.uid() is null) then
+    raise exception 'Sem permissao';
+  end if;
+
+  select * into v_vist from vistorias where token_publico = p_token;
+  if not found then raise exception 'Link invalido'; end if;
+  if v_vist.token_expira_em is null or v_vist.token_expira_em <= now() then
+    raise exception 'Link expirado';
+  end if;
+
+  select * into v_lead from leads where id = v_vist.lead_id;
+  if v_lead.status::text in ('ATIVO', 'PERDIDO') then
+    raise exception 'Atendimento encerrado';
+  end if;
+
+  -- A POSE tem de existir no catalogo e valer para o tipo do veiculo. Sem
+  -- isto, `tipo` livre encheria a vistoria de codigo que nenhuma tela mostra —
+  -- foto que sobe, nao aparece e nao conta para o checklist.
+  if not exists (
+    select 1 from vistoria_fotos_modelo m
+     where m.codigo = p_tipo and m.ativo
+       and (m.tipo_veiculo_id is null or m.tipo_veiculo_id = v_lead.tipo_veiculo_id)
+  ) then
+    raise exception 'Pose % nao existe no modelo de vistoria', p_tipo;
+  end if;
+
+  insert into vistoria_anexos
+    (vistoria_id, url, tipo, descricao, tamanho_bytes, enviado_pelo_cliente)
+  values
+    (v_vist.id, p_url, p_tipo, p_arquivo, p_tamanho, true)
+  returning id into v_anexo;
+
+  -- Foto que chega e trabalho no lead: renova a protecao (0041) e tira o
+  -- atendimento da fila de "parado" (0045). Sem isto, o cliente faria a
+  -- vistoria e o lead voltaria ao pool por falta de contato.
+  update leads set ultima_interacao_em = now() where id = v_lead.id;
+
+  return v_anexo;
+end;
+$$;
+
+comment on function registrar_foto_vistoria_publica(uuid, text, text, bigint, text) is
+  'Anexo da vistoria enviado pelo link do cliente. Vistoria e lead saem do TOKEN, nunca de parametro.';
+
+-- ----------------------------------------------------------------------------
+-- (E) A ORIGEM aparece para quem AUDITA
+-- ----------------------------------------------------------------------------
+-- Guardar `enviado_pelo_cliente` sem nenhuma funcao que o leia seria repetir o
+-- gotcha do `usuarios.ativo` (0068): campo que a tela promete e o sistema
+-- ignora. Quem confere a vistoria precisa saber se a foto veio de quem VENDE o
+-- carro ou de quem o COMPRA — sao niveis de conferencia diferentes.
+--
+-- Muda a lista de colunas de OUT, entao e DROP + CREATE (o `create or replace`
+-- recusa: "cannot change return type of existing function").
+drop function if exists fotos_vistoria_lead(uuid);
+
+create function fotos_vistoria_lead(p_lead_id uuid)
+returns table (
+  codigo               text,
+  nome                 text,
+  instrucao            text,
+  obrigatorio          boolean,
+  ordem                smallint,
+  anexo_id             uuid,
+  url                  text,
+  enviada              boolean,
+  enviada_em           timestamptz,
+  tamanho_bytes        bigint,
+  arquivo              text,
+  enviado_pelo_cliente boolean
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  -- A trava de acesso da 0052 continua: a consulta so responde a staff; o
+  -- caminho publico (a pagina da vistoria) roda com service_role, sem sessao.
+  -- Recriar a funcao sem reescrever este `where` reabriria o buraco em silencio.
+  select * from (
+  with l as (select * from leads where id = p_lead_id),
+  vist as (
+    select id from vistorias where lead_id = p_lead_id
+     order by created_at desc limit 1
+  ),
+  modelo as (
+    select m.* from vistoria_fotos_modelo m, l
+     where m.ativo
+       and (m.tipo_veiculo_id is null or m.tipo_veiculo_id = l.tipo_veiculo_id)
+  ),
+  -- uma foto por pose: se repetir, vale a mais recente
+  foto as (
+    select distinct on (upper(coalesce(a.tipo, ''))) upper(coalesce(a.tipo, '')) as codigo,
+           a.id, a.url, a.created_at, a.tamanho_bytes, a.descricao, a.enviado_pelo_cliente
+      from vistoria_anexos a
+     where a.vistoria_id = (select id from vist)
+     -- `a.id` desempata: dois anexos gravados na MESMA transacao tem o mesmo
+     -- `created_at` (o default e `now()`), e sem isto a escolha seria arbitraria.
+     order by upper(coalesce(a.tipo, '')), a.created_at desc, a.id desc
+  )
+  select m.codigo, m.nome, m.instrucao, m.obrigatorio, m.ordem,
+         f.id, f.url, f.id is not null,
+         f.created_at, f.tamanho_bytes, f.descricao,
+         coalesce(f.enviado_pelo_cliente, false)
+    from modelo m
+    left join foto f on f.codigo = m.codigo
+   order by m.ordem, m.codigo
+  ) _x where is_staff() or auth.uid() is null;
+$$;
+
+comment on function fotos_vistoria_lead(uuid) is
+  'Poses da vistoria do lead, com a foto mais recente de cada e a ORIGEM (0076).';
+
+-- ============================================================================
+-- RITO DE SEGURANCA (0052)
+-- ============================================================================
+revoke execute on all functions in schema public from public;
+revoke execute on all functions in schema public from anon;
+grant  execute on all functions in schema public to authenticated;
+grant  execute on all functions in schema public to service_role;

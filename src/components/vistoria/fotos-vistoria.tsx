@@ -8,6 +8,7 @@ import {
   useAddFotoVistoria, useFotosVistoriaLead, useRemoverFotoVistoria, useUrlAssinadaVendas,
   useUrlsAssinadasVendas,
 } from '@/hooks/use-vendas';
+import { LinkDaVistoria } from '@/components/vistoria/link-vistoria';
 import { progressoVistoria, proximaPose } from '@/lib/vistoria';
 import { LADO_MAXIMO, tamanhoLegivel } from '@/lib/imagem';
 import { formatDateTime } from '@/lib/utils';
@@ -27,9 +28,12 @@ import type { FotoVistoriaModelo, VistoriaAnexosRow } from '@/lib/database.types
  * sao pedidas quando este componente monta — ou seja, quando a aba da vistoria
  * e aberta, e nao no carregamento da ficha inteira.
  */
-export function FotosVistoria({ leadId, somenteLeitura }: {
+export function FotosVistoria({ leadId, somenteLeitura, celular, nome }: {
   leadId: string;
   somenteLeitura?: boolean;
+  /** Do lead — so para o WhatsApp do link da vistoria (0076) abrir no numero certo. */
+  celular?: string | null;
+  nome?: string | null;
 }) {
   const { data: poses, isLoading } = useFotosVistoriaLead(leadId);
   const addFoto = useAddFotoVistoria(leadId);
@@ -102,6 +106,12 @@ export function FotosVistoria({ leadId, somenteLeitura }: {
           </p>
         )}
       </div>
+
+      {/* O carro nem sempre esta com quem opera o sistema (0076). Quando falta
+          foto, o caminho mais curto e o cliente fotografar do celular dele. */}
+      {!somenteLeitura && !progresso.completa && (
+        <LinkDaVistoria leadId={leadId} celular={celular} nome={nome} />
+      )}
 
       {!somenteLeitura && (
         <p className="text-[11px] leading-snug text-slate-400">
@@ -211,6 +221,13 @@ function ItemPose({ pose, url, carregandoUrl, enviando, somenteLeitura, onEnviar
             {pose.obrigatorio
               ? <span className="rounded-full bg-rose-50 px-1.5 py-px text-[10px] font-bold uppercase text-rose-600 ring-1 ring-inset ring-rose-200">obrigatoria</span>
               : <span className="rounded-full bg-slate-100 px-1.5 py-px text-[10px] font-medium uppercase text-slate-500">opcional</span>}
+            {/* 0076 — a ORIGEM importa para quem audita: foto de quem COMPRA o
+                carro se confere diferente da foto de quem o VENDE. */}
+            {pose.enviado_pelo_cliente && (
+              <span className="rounded-full bg-cyan-50 px-1.5 py-px text-[10px] font-bold uppercase text-cyan-700 ring-1 ring-inset ring-cyan-200">
+                do cliente
+              </span>
+            )}
           </p>
 
           {pose.enviada ? (

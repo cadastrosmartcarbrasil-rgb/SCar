@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { ShieldCheck } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { mensagemDeLogin, ehSessaoCorrompida, destinoDoLogin } from '@/lib/auth-mensagens';
+import { destinoAposLogin } from '@/lib/acesso';
 
 // Login do painel administrativo (staff): e-mail + senha.
 // useSearchParams exige um limite de Suspense para a geracao estatica.
@@ -41,21 +42,19 @@ function LoginForm() {
       return;
     }
 
-    // Cada perfil entra na sua casa: o gestor de franquia no portal da
-    // unidade, o vendedor no portal dele. Um `redirect` explicito na URL
-    // sempre vence.
-    // O `?redirect=` vem da URL: `destinoDoLogin` so deixa passar caminho
-    // interno (ver o porque em auth-mensagens.ts).
-    let destino = destinoDoLogin(params.get('redirect'), '');
+    // Cada perfil entra na sua casa: a matriz no painel de gestao, o gestor de
+    // franquia no portal da unidade, o vendedor no portal dele. A ordem das
+    // perguntas esta em `destinoAposLogin` (testada) — acesso global vence o
+    // cadastro de vendedor.
+    // Um `redirect` explicito na URL sempre vence: `destinoDoLogin` so deixa
+    // passar caminho interno (ver o porque em auth-mensagens.ts).
+    let destino: string = destinoDoLogin(params.get('redirect'), '');
     if (!destino && data.user) {
-      const { data: perfil } = await supabase
-        .from('usuarios').select('papel, regional_id').eq('id', data.user.id).maybeSingle();
-      if (perfil?.papel === 'gestor_regional' && perfil.regional_id) {
-        destino = '/regional';
-      } else {
-        const { data: vendedorId } = await supabase.rpc('vendedor_atual', {});
-        destino = vendedorId ? '/vendedor' : '/dashboard';
-      }
+      const [{ data: perfil }, { data: vendedorId }] = await Promise.all([
+        supabase.from('usuarios').select('papel, regional_id').eq('id', data.user.id).maybeSingle(),
+        supabase.rpc('vendedor_atual', {}),
+      ]);
+      destino = destinoAposLogin(perfil, Boolean(vendedorId));
     }
     setLoading(false);
     router.push(destino || '/dashboard');

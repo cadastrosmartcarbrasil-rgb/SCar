@@ -1,4 +1,7 @@
-import { combustivelEnum, parseValor, type FipeValor } from '@/lib/fipe';
+import {
+  combustivelEnum, parseValor, registroDaPlaca,
+  type FipeValor, type RegistroPlaca,
+} from '@/lib/fipe';
 
 /**
  * Consulta a Placa Fipe DIRETO do servidor.
@@ -23,8 +26,17 @@ export function normalizarValorFipe(raw: unknown): FipeValor {
   };
 }
 
-/** Placa -> valor FIPE. Devolve null quando nao ha token ou a API nao acha. */
-export async function consultarPlacaNoServidor(placa: string): Promise<FipeValor | null> {
+/**
+ * O que a consulta por placa devolve: a AVALIACAO e o REGISTRO do documento.
+ * Sao dois blocos distintos da mesma resposta — ver `registroDaPlaca`.
+ */
+export interface ConsultaPlaca {
+  valor: FipeValor | null;
+  registro: RegistroPlaca | null;
+}
+
+/** Placa -> FIPE + registro. Devolve null quando nao ha token ou a API falha. */
+export async function consultarPlacaNoServidor(placa: string): Promise<ConsultaPlaca | null> {
   const token = process.env.PLACAFIPE_TOKEN;
   if (!token) return null;
   const base = (process.env.PLACAFIPE_BASE || 'https://api.placafipe.com.br').replace(/\/+$/, '');
@@ -40,7 +52,10 @@ export async function consultarPlacaNoServidor(placa: string): Promise<FipeValor
     const data = await res.json();
     const lista = Array.isArray(data?.fipe) ? data.fipe : Array.isArray(data?.dados) ? data.dados : [];
     const opcoes = lista.map(normalizarValorFipe).filter((v: FipeValor) => v.valor != null);
-    return opcoes[0] ?? null;
+    return {
+      valor: opcoes[0] ?? null,
+      registro: registroDaPlaca(data?.informacoes_veiculo ?? data?.veiculo),
+    };
   } catch {
     return null;
   }

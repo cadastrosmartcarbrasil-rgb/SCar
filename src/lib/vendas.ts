@@ -202,3 +202,108 @@ export function primeiraAbaPendente(itens: ItemChecklist[]): AbaFechamento | nul
   const conta = pendenciasPorAba(itens);
   return ABAS_FECHAMENTO.find((a) => conta[a.id] > 0)?.id ?? null;
 }
+
+// ---------------------------------------------------------------------------
+// CONFERIR A PLACA NO FECHAMENTO — o grande validador da venda
+// ---------------------------------------------------------------------------
+// A consulta por placa acontece na CAPTURA e no hotlink, mas o lead pode chegar
+// ao fechamento sem nada disso: capturado antes da consulta existir, digitado a
+// mao, ou vindo de um hotlink em que a placa nao resolveu. E o fechamento e
+// justamente onde chassi, cor e ano de fabricacao passam a ser OBRIGATORIOS
+// para entrar na base — entao e aqui que conferir vale mais.
+//
+// A regra NAO e "sobrescrever com o que a API disse". Quem esta fechando ja
+// digitou, leu o documento, conversou com o cliente: apagar isso em silencio
+// troca um erro por outro, pior, porque ninguem ve. Entao:
+//
+//   campo VAZIO           -> preenche (nao havia decisao a respeitar)
+//   campo IGUAL           -> nada
+//   campo DIFERENTE       -> DIVERGENCIA, mostrada lado a lado, aplicada a
+//                            clique. E o que transforma a consulta em CONFERENCIA.
+//
+// `valor_fipe`/`codigo_fipe` ficam de FORA de propósito: a cotacao ja foi feita
+// e e `l.valor_fipe` que vai para `veiculos` na autorizacao (0034). Atualizar o
+// valor aqui mudaria, em silencio, o FIPE que o associado vai carregar — sem
+// mudar o preco que ele aceitou. Reprecificar e outro ato, na cotacao.
+
+/** Um campo em que a ficha e o documento discordam. */
+export interface DivergenciaPlaca {
+  campo: 'chassi' | 'numero_motor' | 'cor' | 'ano_fabricacao' | 'ano_modelo' | 'marca' | 'modelo';
+  rotulo: string;
+  naFicha: string;
+  noDocumento: string;
+}
+
+export interface ConferenciaPlaca {
+  /** O que estava vazio e pode ser preenchido direto. */
+  preencher: Record<string, string | number>;
+  /** O que estava preenchido e NAO bate — decisao de quem atende. */
+  divergencias: DivergenciaPlaca[];
+}
+
+/** Registro do documento, como `registroDaPlaca` devolve (sem importar o tipo). */
+type RegistroConferido = {
+  chassi?: string | null; numeroMotor?: string | null; cor?: string | null;
+  anoFabricacao?: number | null; anoModelo?: number | null;
+  marca?: string | null; modelo?: string | null;
+};
+
+type FichaConferida = {
+  chassi?: string | null; numero_motor?: string | null; cor?: string | null;
+  ano_fabricacao?: number | null; ano_modelo?: number | null;
+  marca?: string | null; modelo?: string | null;
+};
+
+/** Texto comparavel: sem acento, sem pontuacao, caixa alta. */
+function comparavel(v: unknown): string {
+  return String(v ?? '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase().replace(/[^0-9A-Z]/g, '');
+}
+
+const CAMPOS: {
+  campo: DivergenciaPlaca['campo']; rotulo: string;
+  naFicha: keyof FichaConferida; noRegistro: keyof RegistroConferido;
+}[] = [
+  { campo: 'chassi',         rotulo: 'Chassi',            naFicha: 'chassi',         noRegistro: 'chassi' },
+  { campo: 'numero_motor',   rotulo: 'No do motor',       naFicha: 'numero_motor',   noRegistro: 'numeroMotor' },
+  { campo: 'cor',            rotulo: 'Cor',               naFicha: 'cor',            noRegistro: 'cor' },
+  { campo: 'ano_fabricacao', rotulo: 'Ano de fabricacao', naFicha: 'ano_fabricacao', noRegistro: 'anoFabricacao' },
+  { campo: 'ano_modelo',     rotulo: 'Ano modelo',        naFicha: 'ano_modelo',     noRegistro: 'anoModelo' },
+  { campo: 'marca',          rotulo: 'Marca',             naFicha: 'marca',          noRegistro: 'marca' },
+  { campo: 'modelo',         rotulo: 'Modelo',            naFicha: 'modelo',         noRegistro: 'modelo' },
+];
+
+export function conferirRegistroDaPlaca(
+  ficha: FichaConferida,
+  registro: RegistroConferido | null,
+): ConferenciaPlaca {
+  const r: ConferenciaPlaca = { preencher: {}, divergencias: [] };
+  if (!registro) return r;
+
+  for (const c of CAMPOS) {
+    const doDocumento = registro[c.noRegistro];
+    // O documento nao trouxe o campo: nao ha o que preencher nem o que conferir.
+    if (doDocumento === null || doDocumento === undefined || doDocumento === '') continue;
+
+    const naFicha = ficha[c.naFicha];
+    const vazio = naFicha === null || naFicha === undefined || String(naFicha).trim() === '';
+    if (vazio) { r.preencher[c.naFicha] = doDocumento; continue; }
+
+    // O MODELO diverge por natureza — o comercial da FIPE ("COROLLA XEI 2.0
+    // FLEX 16V AUT.") nunca vai bater com o abreviado do documento ("COROLLA
+    // XEI 20FLEX"). Acusar isso seria ruido em toda consulta; so vale quando um
+    // e prefixo do outro nem de longe.
+    if (comparavel(naFicha) === comparavel(doDocumento)) continue;
+    if (c.campo === 'modelo') {
+      const a = comparavel(naFicha); const b = comparavel(doDocumento);
+      if (a.startsWith(b.slice(0, 6)) || b.startsWith(a.slice(0, 6))) continue;
+    }
+
+    r.divergencias.push({
+      campo: c.campo, rotulo: c.rotulo,
+      naFicha: String(naFicha), noDocumento: String(doDocumento),
+    });
+  }
+  return r;
+}

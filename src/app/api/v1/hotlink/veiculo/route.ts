@@ -29,11 +29,28 @@ export async function POST(req: Request) {
   const { data: tipos } = await admin
     .from('tipos_veiculo').select('id, nome').eq('status', true).order('nome');
 
-  const fipe = await consultarPlacaNoServidor(placa);
+  const consulta = await consultarPlacaNoServidor(placa);
+  const fipe = consulta?.valor ?? null;
+  // O REGISTRO do documento (chassi, motor, cor, ano de fabricacao) vem na
+  // mesma resposta e e gravado no lead: quando o vendedor abrir o fechamento
+  // da venda, esses campos — obrigatorios para a entrada na base (0034) — ja
+  // estao la, em vez de serem digitados a mao no fim.
+  const reg = consulta?.registro ?? null;
 
   // Sem token da FIPE, placa desconhecida ou API fora: nao e erro — o visitante
   // segue informando marca/modelo e o valor de mercado.
   if (!fipe?.valor) {
+    // Mesmo sem avaliacao o registro pode ter vindo: chassi nao depende do preco.
+    if (reg) {
+      await admin.from('leads').update({
+        placa,
+        chassi: reg.chassi,
+        numero_motor: reg.numeroMotor,
+        cor: reg.cor,
+        ano_fabricacao: reg.anoFabricacao,
+        ultima_interacao_em: new Date().toISOString(),
+      }).eq('id', lead.lead_id);
+    }
     return NextResponse.json({
       ok: true,
       encontrado: false,
@@ -57,6 +74,13 @@ export async function POST(req: Request) {
     codigo_fipe: fipe.codigoFipe,
     origem_fipe: 'API',
     tipo_veiculo_id: tipoSugerido,
+    // Registro do documento (quando veio). `?? null` e nao `?? undefined`:
+    // recapturar a mesma placa tem de reescrever o mesmo valor, nao manter
+    // um dado antigo de outra consulta.
+    chassi: reg?.chassi ?? null,
+    numero_motor: reg?.numeroMotor ?? null,
+    cor: reg?.cor ?? null,
+    ano_fabricacao: reg?.anoFabricacao ?? null,
     ultima_interacao_em: new Date().toISOString(),
   }).eq('id', lead.lead_id);
 

@@ -62,17 +62,9 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
 **1. ONDE.** Branch `claude/claude-md-opcao-x-98kfj5`, e só ele. Repositório
 `cadastrosmartcarbrasil-rgb/scar`. Confira com `git rev-parse --abbrev-ref HEAD`.
 
-**2. O QUE FALTA SUBIR — a ordem completa, sem interpretação.** Aplicadas em produção:
-`0001`..`0044` e a `0062`. **Pendentes, nesta ordem exata, pelo SQL Editor do Supabase:**
-
-```
-0045 0046 0047 0048 0049 0050 0051 0052 0053 0054 0055 0056 0057 0058 0059
-0060 0061 0063 0064 0065 0066 0067 0068 0069 0070 0071 0072 0073
-```
-(a `0062` está fora da lista porque JÁ FOI; as demais nunca rodaram lá.)
-Dependências que **não** podem ser reordenadas: `0060` antes da `0061` · `0049` → `0050` → `0051`
-na mesma janela · `0063`..`0066` e `0071` depois da `0062` · `0072` e `0073` por último.
-Independentes do Mutual, podem ir juntas: `0067` `0068` `0069` `0070` `0072`.
+**2. O QUE FALTA SUBIR.** Aplicadas em produção: **`0001`..`0075`, todas** (confirmado pelo
+usuário em 12/09/2026). **Nenhuma migration pendente** — o que falta subir é só código, pelo
+contêiner (passo 3).
 
 **3. COMO PUBLICAR.** Migrations primeiro (acima), depois o contêiner:
 ```bash
@@ -184,9 +176,20 @@ nenhuma: manda rodar de novo o que já rodou.
   consultor (`objeto.consultant` → consultor → vendedor importado → `regional_id`). Não carrega
   nada: conta quantos veículos sobrevivem a CADA um dos quatro saltos e nomeia quem se perde.
   Ver a seção própria.
-- **Próxima migration livre: `0074`.** As `0060`, `0061`, `0063`..`0072` já estão no branch de trabalho e
-  ainda **não foram aplicadas em produção** (rodar nessa ordem, depois das `0045`..`0059`, com a
-  `0073` por último); a `0062` JÁ FOI aplicada. A `0067`, a `0068`, a `0069`, a `0070` e a `0072` são independentes do Mutual e podem ir junto.
+- **`0074_mutual_consultor_sem_duplicar` é NOVA e é CORRETIVA da `0073`** — o funil que mede a
+  unidade pelo consultor estava **contando o mesmo veículo várias vezes**: `vendedores.email` e
+  `vendedores.nome` não são únicos (só `documento` é, 0069), então o `left join` multiplicava a
+  linha do objeto e o `count(*)` do funil inflava. No cenário do teste: **16 onde existem 5.**
+  Ver a seção própria.
+- **`0075_veiculo_numero_motor` é NOVA** — a consulta por placa SEMPRE devolveu o registro do
+  documento (chassi, cor, **número do motor**) e o nosso proxy descartava; corrigido o descarte,
+  faltava onde gravar o motor. A coluna entra em `veiculos` **e** em `leads`, e
+  `autorizar_entrada_lead` passa a carregá-la — ver "Consulta por placa" abaixo.
+- **`0076_vistoria_link_publico` é NOVA e ainda NÃO foi aplicada** — é a vistoria pelo CELULAR DO
+  CLIENTE, a etapa que faltava depois do aceite no hotlink. Sem ela a rota `/vistoria/<token>` não
+  abre e o aceite volta a terminar em "o consultor vai combinar a vistoria". Ver a seção própria.
+- **Próxima migration livre: `0077`.** As `0001`..`0075` já foram aplicadas em produção; a `0076`
+  sobe junto com este deploy.
 - **`.claude/hooks/session-start.sh` é NOVO** — avisa quando a sessão nasce no branch errado e
   instala as dependências. Ele **só roda se estiver no branch que a sessão clonou**; enquanto o
   default do GitHub for o branch morto, uma sessão que caia lá não terá o hook. A correção
@@ -215,10 +218,27 @@ nenhuma: manda rodar de novo o que já rodou.
 | **Associado** | `/portal` | **`/portal/login`** | cadastro em `clientes` (login = CPF/CNPJ) |
 
 Três dos quatro entram pela MESMA porta `/login`: o destino não é escolhido, é decidido pelo
-cadastro (`src/app/(auth)/login/page.tsx` — gestor com regional → `/regional`; `vendedor_atual()`
-→ `/vendedor`; senão `/dashboard`). Só o associado tem login próprio, porque a chave é o CPF.
-Públicas, sem sessão: **`/v/<CODIGO>`** (hotlink de venda, vendedor ou franquia) e
-**`/cotacao/<token>`** (a proposta).
+cadastro. A regra vive em **`destinoAposLogin()` (`src/lib/acesso.ts`, testada)** e vai da MAIOR
+responsabilidade para a menor: **acesso global (admin/financeiro) → `/dashboard`**; gestor COM
+regional → `/regional`; `vendedor_atual()` → `/vendedor`; senão `/dashboard`.
+Só o associado tem login próprio, porque a chave é o CPF.
+
+> **A ordem é o conserto de um bug real.** Antes a pergunta "tem cadastro de vendedor?" vinha
+> ANTES de "é da matriz?", então um **admin que também tem ficha em `vendedores`** (o dono que
+> vende, o sócio que testa o hotlink) caía no portal do vendedor — e ficava preso, porque o
+> `/vendedor` não tinha porta de volta, ao contrário do `/regional`. Agora quem administra a
+> empresa entra na empresa, e o portal do vendedor segue acessível pela URL — do mesmo jeito que
+> a matriz visita `/regional`. O `ShellVendedor` também ganhou o atalho de volta, por papel:
+> **"Sistema da matriz"** (admin/financeiro) ou **"Portal da franquia"** (gestor regional).
+> **O destino do login NÃO é controle de acesso** — quem decide o que cada um lê continua sendo a
+> RLS e o `escopo_regional()`. Se alguém "não tem acesso a nada" no `/dashboard`, o problema é o
+> **`usuarios.papel`**, não a rota: o acesso do vendedor é criado por
+> `/api/v1/vendedores/acesso`, que provisiona o login com papel **`consultor_vendas`** — quem for
+> promovido depois precisa ter o papel trocado em `Configurações → Usuários` (a trava da 0054
+> impede promover a si mesmo).
+Públicas, sem sessão: **`/v/<CODIGO>`** (hotlink de venda, vendedor ou franquia),
+**`/cotacao/<token>`** (a proposta) e **`/vistoria/<token>`** (as fotos do carro pelo celular do
+cliente — 0076, link com prazo).
 **Todos os portais dividem a sessão do navegador** — logar como associado derruba a de staff;
 para testar, aba anônima.
 
@@ -260,6 +280,8 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
    ↓ passo 4: aceite           /api/v1/hotlink/contratar -> `registrar_aceite_venda` (0042/0043)
    |                            grava a prova (quem, CPF, data/hora, IP, user-agent, qual cotacao)
    |                            e deixa o lead em EM_NEGOCIACAO — NAO pula para a auditoria
+   ↓ link da VISTORIA (0076)   /vistoria/<token> sai NO ACEITE — o cliente fotografa no celular
+   |                            dele, 7 dias de prazo; a foto marca a origem e conta no checklist
    ↓ link da proposta          /cotacao/<token> sai pronto na tela (abrir, copiar, WhatsApp)
    ↓ trabalho do vendedor      ajusta opcionais, completa a ficha do associado, CRLV e a VISTORIA
    |                            guiada por poses (0040) — `/vendedor/leads/[id]` ou `<FechamentoVenda>`
@@ -295,13 +317,18 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0073`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **50 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 581 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0076`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **53 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 608 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
-- **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Todos os portais e páginas
-  públicas já leem `empresa.logo_url`; `public/logo-smartcar.svg` é só o fallback desenhado.
+- **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Os portais e páginas públicas
+  leem `empresa.logo_url`; `public/logo-smartcar.svg` é só o fallback desenhado.
+  **⚠️ `/portal/login` ainda passa `url={null}` FIXO** (`src/app/portal/login/page.tsx:46`), então
+  o associado vê o fallback no login — é o mesmo defeito que a vistoria tinha. A correção exige
+  partir a página em server (busca a `empresa`) + client (o formulário), e ela **não foi feita de
+  propósito**: aquele arquivo é o do gotcha "tela de login sob o layout que exige sessão", que já
+  custou um bug real. Mexer ali é tarefa com teste de ida e volta do login, não ajuste de passagem.
 - **Gateway bancário mockado:** `MockGateway` gera linha digitável/PIX fictícios. Ligar o real =
   `AsaasGateway.emitir` (esqueleto pronto) + webhook chamando `registrar_retorno_cobranca`.
 - **`/api/boletos/emitir-lote` é a rotina ANTIGA** (mock) — usar `/api/v1/cobrancas/*`. Pode sair.
@@ -310,6 +337,11 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 - **`RESEND_API_KEY` não configurada no VPS** — boas-vindas ao vendedor e voucher da 24h não
   enviam e-mail (o sistema avisa e devolve o texto, não finge que enviou).
 - **`PLACAFIPE_TOKEN`:** sem ele a página pública cai no valor informado pelo visitante.
+- **`PLACA_API_URL`/`PLACA_API_KEY` NUNCA foram configuradas** — é o provedor de placa OPCIONAL,
+  outro serviço, lido por `/api/placa`. Sem a env a rota devolve `found: false` sem sair para a
+  rede. Hoje **não falta nada por causa disso**: chassi, cor, ano de fabricação e número do motor
+  vêm da própria Placa Fipe (ver "Consulta por placa"). Ela só acrescentaria dado de registro que a
+  Placa Fipe não traz.
 - **Dedução do tipo de veículo pela FIPE** (`tipoVeiculoSugerido`) foi escrita sem ver um retorno
   real da API — confirmar com uma placa de moto e ajustar o mapeamento se preciso.
 - **Devolução de lead parado ao pool é MANUAL** (botão em `/regional/leads`); para rodar sozinha
@@ -1393,6 +1425,20 @@ ciclo em DOIS passos — inadimplente suspende (3), sair da base recolhe (4) —
 so pegava equipamento em `ATIVO`, deixaria preso em 3 o que a tolerancia acabara de mover;
 (H) o painel da 24h conta `inadimplente` como BLOQUEADO, nao como inativo. **Nao ha rotina que
 mova ninguem:** nenhum veiculo nasce `inadimplente` hoje, entao tudo isto e no-op ate o CRON).
+· `0074_mutual_consultor_sem_duplicar` (CORRETIVA da 0073 — o instrumento estava contando
+errado, que e pior que nao existir: ele nao adia a decisao, toma-a com numero falso.
+(A) o `left join vendedores` MULTIPLICAVA a linha do VEICULO: `documento` e unique parcial
+(0069), mas `email` e `nome` NAO sao, entao dois vendedores com o e-mail da franquia (ou dois
+homonimos) faziam cada veiculo daquele consultor virar duas linhas na CTE `passos` — e o funil
+inteiro e `count(*)` sobre ela. No cenario do teste: **16 onde existem 5**, e como a inflacao so
+acontece nas linhas com colisao, `perdidos` (subtracao entre degraus) virava ruido. A correcao
+NAO e `distinct`, que esconderia a colisao: o casamento com o vendedor e propriedade do
+CONSULTOR, nao do veiculo, e passa a ser resolvido uma vez por consultor com `lateral ... limit 1`
+e ordem estavel — de quebra, centenas de linhas em vez de dezenas de milhares. A ambiguidade
+deixa de ser silenciosa: o degrau 5 diz quantos veiculos dependem de um desempate arbitrario;
+(B) `mutual_texto_em`/`mutual_chave_em` prometiam PRECEDENCIA (`cpf_cnpj` antes de `cpf` antes de
+`document`) e entregavam `limit 1` sobre `unnest` SEM `order by` — ordem por acaso. Agora
+`with ordinality` + `order by ord`. So leitura, nenhuma assinatura muda).
 · `0073_mutual_consultor_regional` (A UNIDADE PELO CONSULTOR — o instrumento, nao a carga:
 `regional` veio vazio em 100%, e a tese que sobrou tem QUATRO saltos
 (`objeto.consultant` CODIGO -> `/association/consultant/` -> documento/e-mail -> `vendedores` ->
@@ -1427,6 +1473,15 @@ desconhecido que nao seja funil — sem ela, vocabulario novo do Mutual vira vei
 carga, em silencio; (D) `mutual_quarentena` recriada com `p_somente_faturaveis` (muda a
 assinatura, entao e drop + create) e dois indicadores novos: placa fora do padrao e objeto sem
 unidade declarada).
+· `0076_vistoria_link_publico` (A VISTORIA PELO CELULAR DO CLIENTE — `vistorias.token_publico` +
+`token_expira_em` (unique PARCIAL, porque vistoria de veiculo nao tem token) e
+`vistoria_anexos.enviado_pelo_cliente`; `gerar_link_vistoria` (7 dias; reemitir devolve o MESMO
+token enquanto vigente, senao quebraria a mensagem ja mandada no WhatsApp),
+`vistoria_por_token` (devolve SEMPRE uma linha, com o MOTIVO — a pagina precisa distinguir "link
+errado" de "vencido" e de "venda concluida") e `registrar_foto_vistoria_publica` (valida a pose
+contra o catalogo, marca a origem e carimba `ultima_interacao_em`). `fotos_vistoria_lead`
+**recriada** com `enviado_pelo_cliente` — muda a lista de OUT, entao drop + create, e o
+`where is_staff() or auth.uid() is null` da 0052 foi reescrito junto. Ver a secao propria).
 · `0070_cotacao_troca_plano` (DESCER DE PLANO: `atualizar_cotacao` (0028) resolvia o combo com
 `coalesce(p_plano_id, c.plano_id)`, entao NULO era "mantem o que esta" — bom para upgrade e troca
 lateral, impossivel para o downgrade ate a base: escolher "Somente cobertura base" salvava calado e
@@ -1460,6 +1515,8 @@ vez** (FIPE por placa/cascata), contatos e retornos registrados na ficha do lead
 presencial** com o cliente na frente e envio da proposta por WhatsApp, cotação com
 link público `/cotacao/[token]` detalhada/consolidada + print-PDF, esteira com trava de
 Auditoria — só papel `auditoria`/`admin` clica "Autorizar Entrada" e efetiva cliente+veículo)
+· **Vistoria pelo cliente** (`/vistoria/<token>`: as fotos do carro no celular de quem comprou,
+sem login, liberadas no proprio aceite do hotlink — 0076)
 · Associados (painel `/associados/[id]` com abas) · Veículos/Contratos (situação do contrato com
 **Inadimplente** e a contagem regressiva da tolerância (0072); ficha com Plano —
 **as coberturas do plano já vêm marcadas** e a troca de categoria mostra o que entra, o que sai e
@@ -1517,14 +1574,53 @@ quem **não** tem acesso global recebe a própria unidade, independentemente do 
 Consequência que já mordeu: **`authenticated` não é a equipe** — o associado do `/portal` é
 `authenticated` como qualquer atendente (ver "Segurança das RPCs (0052)").
 
+**Uma pessoa pode ter DOIS chapéus, e o login precisa saber qual vence.** Como as chaves são
+diferentes, um `admin` pode ter ficha em `vendedores` (o dono que vende, o sócio que testa o
+hotlink) — e aí ele satisfaz duas portas ao mesmo tempo. A escolha está em
+**`destinoAposLogin()` (`src/lib/acesso.ts`, testada)**: vai da MAIOR responsabilidade para a
+menor, então **acesso global vence o cadastro de vendedor**. Foi bug real — o admin caía no
+`/vendedor` e ficava preso, porque aquele portal não tinha porta de volta. Hoje o `ShellVendedor`
+mostra **"Sistema da matriz"** (admin/financeiro) ou **"Portal da franquia"** (gestor regional).
+
+**✅ DECISÃO DO USUÁRIO (10/09/2026): o acúmulo dos dois chapéus é PERMITIDO — não construir
+trava.** Foi avaliado bloquear `admin`/`financeiro` vinculado a cadastro de vendedor, e a decisão
+foi manter como está. Dois motivos: (1) numa associação de proteção veicular o dono e o sócio
+VENDEM, então o arranjo é legítimo, não um erro de cadastro; (2) como `usuarios.email` e
+`vendedores.usuario_id` são únicos, a trava obrigaria a MESMA pessoa a ter **dois logins com
+e-mails diferentes** — pior de administrar e, de quebra, esconderia da tela de Usuários que é a
+mesma pessoa. **Separe os dois problemas:** o desvio de rota era o bug (corrigido em
+`destinoAposLogin`); o acúmulo de papéis não é defeito. Com um login só a pessoa alterna pelos
+atalhos que já existem — **"Meu Portal de Vendas"** na sidebar da matriz (ida) e **"Sistema da
+matriz"** no `ShellVendedor` (volta). A tela de Usuários já marca quem tem cadastro de vendedor
+(`usuarios_listar` devolve `vendedor_codigo`), que é a visibilidade de que a gestão precisa.
+
+**Vendedor NÃO é usuário — são três entidades, e só uma dá acesso:** `usuarios` (perfil no
+sistema; `is_staff()` = ter linha aqui) · `vendedores` (cadastro comercial — comissão, hotlink,
+banco; vive sem login desde a 0035) · `clientes` (associado, só o `/portal`). As três portas de
+entrada de `usuarios` estão fechadas e é assim que deve continuar: a importação da 0069 **nunca
+cria acesso**, `/api/v1/vendedores/acesso` exige admin/financeiro/gestor e nasce
+`consultor_vendas`, e o trigger `fn_handle_new_user` (0002) só provisiona perfil quando o metadata
+traz `papel` — é isso que impede o associado do `/portal` de virar equipe. **Consulta em
+`vendedores` traz gente que não tem perfil nenhum; a lista de perfis é `usuarios_listar`.**
+
+**Ao diagnosticar "fulano não tem o acesso que deveria", olhe nesta ordem:**
+`usuarios.ativo` (desde a `0068` derruba TUDO, inclusive o portal do vendedor) → `usuarios.papel`
+(o acesso criado por `/api/v1/vendedores/acesso` nasce **`consultor_vendas`**; promover exige
+trocar o papel em `Configurações → Usuários`) → só então a rota. **O destino do login nunca foi
+controle de acesso.**
+
 ### 🔴 A VARREDURA DOS 8 PAPÉIS (feita em 12/09/2026) — o resultado
 > Método aplicado: para cada papel, (a) os **helpers** que o citam, (b) as **policies** que o
 > citam, (c) as **telas do menu** que ele abre. Tudo conferido em `supabase/schema.sql` e em
 > `src/components/layout/sidebar.tsx`. Números abaixo são contagem real, não estimativa.
 
-**Como as 515 policies do sistema decidem acesso** (o que cada uma efetivamente chama):
+**Como as policies decidem acesso** — contado sobre os **166 `create policy`** do histórico de
+migrations (43 deles depois substituídos por `drop`+`create`, então a leitura é da PROPORÇÃO, não
+do total). Um mesmo `create policy` conta mais de uma vez quando cita o helper no `using` e no
+`with check`:
 `tem_acesso_global` **104** · `pode_regional` **87** · `is_staff()` **51** · `pode_assistencia` **19**
 · `pode_auditar` **10** · `is_admin()` **9** · `auth_papel` direto **3** · `pode_ver_carteira_regional` **2**.
+Conferido no `schema.sql` já com as migrations `0074`–`0076`: **nenhuma delas mexeu neste quadro.**
 
 #### 🔴 ACHADO nº 1 — `pode_regional()` NÃO LÊ PAPEL. É o achado que explica todos os outros.
 ```sql
@@ -1553,8 +1649,8 @@ isso que está no ar. A pergunta para o usuário é se o desenho ainda vale com 
 | `cotador` | **NENHUM** | **NENHUMA** | — |
 
 #### 🔴 ACHADO nº 2 — `cotador` é RÓTULO, não grupo de acesso. Confirmado.
-Uma única ocorrência em todo o `schema.sql`: a declaração no enum (`0001`). Zero helpers, zero
-policies. Quem for cadastrado como cotador recebe **staff genérico da unidade** — ou seja, o mesmo
+Duas ocorrências em todo o `schema.sql`, e **nenhuma delas é código**: a declaração no enum
+(`0001`) e um comentário na `0003`. Zero helpers, zero policies. Quem for cadastrado como cotador recebe **staff genérico da unidade** — ou seja, o mesmo
 que o gestor regional nos 87 regionais, menos os seis helpers nomeados. A tela oferece o papel
 como se ele significasse algo. **É o gotcha do `usuarios.ativo` (0068) outra vez: opção que a tela
 oferece e o banco ignora.**
@@ -1616,6 +1712,18 @@ evento mesmo? (3) financeiro da unidade deve continuar aberto a qualquer staff c
 - **O corte de 95% (`teseDoConsultorSeSustenta`) não é místico:** abaixo disso o resto vira
   trabalho manual por associado, e aí o de-para por NOME de equipe (poucas decisões) custa menos
   que a corrente.
+- **⚠️ O FUNIL SÓ VALE COM A `0074` APLICADA.** A `0073` contava o mesmo veículo mais de uma vez
+  quando dois vendedores dividiam o **e-mail** (a unidade que cadastrou a equipe com o e-mail da
+  franquia) ou o **nome** (homônimos): nenhum dos dois é único em `vendedores`, só `documento`
+  (0069), então o `left join` multiplicava a linha do objeto. No cenário do teste da `0074` são
+  **16 onde existem 5** — e a inflação acontece só nas linhas com colisão, então `perdidos`, que é
+  subtração entre degraus, deixa de significar coisa alguma. **Instrumento que conta errado não
+  adia a decisão: toma-a com número falso.** A `0074` resolve o casamento uma vez por CONSULTOR
+  (`lateral ... limit 1`), que é de quem ele é propriedade — não do veículo.
+- **O desempate da chave ambígua é ANUNCIADO, nunca silencioso (0074).** Quando o e-mail do
+  consultor casa com mais de um vendedor, alguém tem de ser escolhido; o degrau 5 passa a dizer
+  **quantos veículos dependem dessa escolha**. Decisão em silêncio neste módulo já custou duas
+  rodadas (o dia de vencimento e a unidade).
 - **A REGRA DA FASE 1 continua:** nada escreve em `clientes`, `veiculos`, `titulos_financeiros`,
   `faturas` ou `eventos_sinistro`. Há teste provando.
 - **Onde fica:** `/integracao/mutual`, seção **"A unidade pelo consultor"** — o funil degrau a
@@ -2425,6 +2533,70 @@ evento mesmo? (3) financeiro da unidade deve continuar aberto a qualquer staff c
 - **Adesao recebida na hora nao aparece no extrato** (nao passou pelo nosso financeiro) — o texto
   esta na propria tela para nao virar duvida recorrente.
 
+## A VISTORIA PELO CELULAR DO CLIENTE (0076) — o link publico
+- **O buraco que ela fecha, e ele era grande:** o hotlink cotava, o cliente ACEITAVA na hora — e a
+  rotina parava. A tela de sucesso dizia *"seu consultor vai combinar a vistoria"*, e o único jeito
+  de as fotos existirem era alguém **logado** abrir o lead: `<FotosVistoria>` só vive no CRM e no
+  portal do vendedor, a RLS de `vistorias`/`vistoria_anexos` é `to authenticated` e a policy do
+  bucket `vendas` exige `is_staff()`. **O cliente literalmente não tinha como mandar foto**, no
+  exato momento em que está com o carro na frente e decidido.
+- **Onde fica:** `/vistoria/<token>` — pública, no `PUBLIC_PATHS` do middleware, server component
+  com `service_role` no mesmo padrão de `/v/<codigo>` e `/cotacao/<token>`.
+- **A LOGO SAI DE `empresa.logo_url`, como em toda página pública** — a primeira versão não buscou e
+  a tela caiu no `public/logo-smartcar.svg`, que é só o **fallback desenhado**: o cliente via, na
+  hora de fotografar, uma marca diferente da que tinha acabado de ver ao contratar. **Tela pública
+  nova busca `empresa` no server component e passa `logoUrl` adiante** — o `<CabecalhoMarca>` sem
+  `logoUrl` não avisa nada, ele simplesmente desenha o fallback.
+- **⚠️ É UM TOKEN NOVO, e não o `leads.token_publico` (0042).** Aquele é a capacidade de COTAR e
+  CONTRATAR, e o link da proposta é feito para ser **guardado e reaberto** — vai para o WhatsApp,
+  fica no histórico, o cliente reabre meses depois. Pendurar UPLOAD nele transformaria um link de
+  leitura, distribuído à vontade, em permissão de ESCRITA no nosso storage, sem prazo. Capacidades
+  diferentes, tokens diferentes: este nasce para a vistoria, **expira em 7 dias** e morre com a
+  venda.
+- **DECISÕES DO USUÁRIO (12/09/2026), arquivadas:** (1) a foto do cliente **VALE** como vistoria —
+  completa o `checklist_lead` e o lead segue para a Auditoria, que é quem confere as imagens; a
+  trava continua sendo a Auditoria, não uma etapa a mais no vendedor. (2) O link vale **7 dias**.
+- **REEMITIR NÃO DERRUBA O LINK QUE O CLIENTE JÁ TEM.** Enquanto o token vigente não venceu,
+  `gerar_link_vistoria` devolve **o mesmo** e diz `reaproveitado`. Girar o token a cada clique do
+  vendedor quebraria, em silêncio, a mensagem que ele acabou de mandar no WhatsApp — e ninguém
+  entenderia por que "o link parou de funcionar". A tela avisa *"este link já estava valendo"*.
+- **O link sai NO PRÓPRIO ACEITE.** `/api/v1/hotlink/contratar` chama `gerar_link_vistoria` depois
+  de `registrar_aceite_venda` e a tela de sucesso mostra **"Fotografar o meu carro agora"** antes
+  do link da proposta — a proposta ele reabre quando quiser; a foto, não. **Falhar ali não derruba
+  a venda:** o aceite já está gravado, o vendedor reemite pela ficha.
+- **Por isso `gerar_link_vistoria` aceita o caminho público** (`auth.uid() is null`, padrão da
+  0052): a rota do hotlink roda com service_role e já provou a posse do atendimento pelo
+  `token_publico`. Com sessão, a trava é a de sempre — `pode_tratar_lead()` (0045). O `anon` não
+  alcança a função (o revoke da 0052 tira o execute dele).
+- **O upload passa pela NOSSA rota, não pelo Storage direto:** `/api/v1/vistoria/foto` sobe com
+  service_role **depois** de conferir o token, e a linha do anexo vai pela RPC, que confere de novo
+  (prazo, pose, situação do lead). Afrouxar a policy do bucket para aceitar visitante seria abrir
+  escrita anônima no storage. Se a RPC recusar, **o arquivo recém-enviado sai do bucket** — nada de
+  órfão, mesma regra do resto do sistema.
+- **A POSE é validada contra o catálogo** (`vistoria_fotos_modelo`, ativo + tipo do veículo): sem
+  isso, `tipo` livre encheria a vistoria de código que nenhuma tela mostra — foto que sobe, não
+  aparece e não conta para o checklist.
+- **Foto que chega é TRABALHO no lead:** `registrar_foto_vistoria_publica` carimba
+  `leads.ultima_interacao_em`. Sem isso o cliente faria a vistoria e o lead voltaria ao pool por
+  falta de contato (0041/0045).
+- **A ORIGEM aparece para quem audita:** `vistoria_anexos.enviado_pelo_cliente` e
+  `fotos_vistoria_lead` **recriada** devolvendo a coluna (muda a lista de OUT ⇒ drop + create), com
+  o selo **"do cliente"** na lista de poses. Foto de quem COMPRA o carro se confere diferente da
+  foto de quem o VENDE — e guardar o campo sem ninguém lê-lo seria repetir o gotcha do
+  `usuarios.ativo` (0068). **Ao recriar a função, o `where is_staff() or auth.uid() is null` da
+  0052 foi reescrito junto** — recriar sem ele reabriria o buraco em silêncio.
+- **O cliente NÃO apaga foto**, de propósito. Quem errou manda de novo (`fotos_vistoria_lead` fica
+  com a mais recente de cada pose). Botão de excluir na mão de quem não vai auditar só cria o caso
+  de a vistoria voltar a zero na véspera da entrada na base.
+- **Onde a equipe gera o link:** dentro do próprio `<FotosVistoria>` (`<LinkDaVistoria>`), então ele
+  aparece **de uma vez** na aba *Documentos e fotos* do `<FechamentoVenda>` e no
+  `/vendedor/leads/[id]` — some quando a vistoria completa. O link só é gerado **no clique**: criar
+  a vistoria e carimbar o prazo são efeitos, e prazo que começa a correr sozinho vence sem ninguém
+  ter mandado nada.
+- **Lógica pura testada:** `mensagemDaVistoria` (`src/lib/venda-publica.ts`) — o convite diz o que
+  fazer, quanto tempo leva e **até quando vale**; sem o prazo o cliente guarda "para depois" e
+  descobre vencido.
+
 ## Vistoria por modelo de fotos (0040)
 - **A vistoria nao e "mande 4 fotos".** `vistoria_fotos_modelo` define as POSES: cada uma com nome
   e **instrucao de enquadramento** ("de frente, a uns 3 metros, com a placa legivel"). O padrao tem
@@ -2439,6 +2611,9 @@ evento mesmo? (3) financeiro da unidade deve continuar aberto a qualquer staff c
   `capture="environment"` no input — no celular abre a camera traseira direto.
 - **RLS:** `vistorias`/`vistoria_anexos` enxergam o lead tambem por `vendedor_id` (0040). Sem isso o
   lead do hotlink (criado pelo service_role, sem `consultor_id`) tinha dono mas nao tinha vistoria.
+- **O CLIENTE tambem fotografa (0076):** o link `/vistoria/<token>` sai no proprio aceite do
+  hotlink e vale 7 dias. A foto dele entra na MESMA vistoria, marcada com a origem ("do cliente"),
+  e conta no `checklist_lead` — ver a secao propria.
 - **A foto aparece na tela (0047):** cada pose mostra miniatura, data do envio e peso, e o clique
   abre o visor em tela cheia (setas, `Esc`, "abrir original"). As URLs assinadas vêm **em lote**
   (`createSignedUrls`, 10 min) — uma chamada, não uma por foto. Miniatura quebrada avisa em
@@ -2794,6 +2969,65 @@ no fim — o runner procura por "PASSARAM") e rode `npm run schema`.
 - **A confirmar em teste real:** no `fipebycodigo` da cascata, passamos o Value do modelo como
   `codigo_fipe` — se a API esperar o código FIPE textual, ajustar em `/api/fipe` (um ponto só).
 
+## Consulta por PLACA: são DOIS blocos na mesma resposta (0075)
+- **A resposta do `getplacafipe` tem duas partes, e elas respondem perguntas diferentes:**
+  `fipe[]` é a **AVALIAÇÃO** (valor, código FIPE, mês de referência, marca/modelo comercial) e
+  **`informacoes_veiculo` é o REGISTRO do documento** — `chassi`, `motor`, `cor`, `ano`,
+  `municipio`, `uf`, `cilindradas`, `potencia`, `placa_alternativa`.
+- **🔴 O BUG QUE ISSO CORRIGIU: o proxy lia só o primeiro bloco e jogava o segundo fora.** O
+  sintoma era "a consulta funciona mas o chassi não vem" — e vinha, desde sempre. Três campos
+  ficavam vazios **juntos** (chassi, cor e ano de fabricação), porque eram os únicos que não
+  tinham fonte no bloco da avaliação. **Quando um subconjunto exato de campos falha e o resto
+  passa, procure a FONTE comum deles, não o campo.**
+- **`registroDaPlaca()` (`src/lib/fipe.ts`, testada) é quem lê o registro.** Normaliza como o banco
+  espera: chassi só alfanumérico em caixa alta (o mesmo `regexp_replace` de
+  `autorizar_entrada_lead`, 0034) e o resto em CAIXA ALTA, pela convenção de cadastro — dado de
+  fora entra padronizado, como já acontece com o ViaCEP.
+- **Bloco ausente devolve `null`, nunca um objeto de campos vazios.** A tela usa
+  `reg?.campo ?? f.campo`: consulta sem registro **não pode apagar** o que o atendente já digitou.
+- **O payload real está guardado no teste** (`src/lib/fipe.test.ts`, placa OAW0838, 12/09/2026).
+  Foi ele que provou onde o chassi mora — sem amostra real no repositório a próxima sessão chuta o
+  formato de novo, que é o erro que este módulo já cometeu duas vezes no Mutual.
+- **São QUATRO os caminhos que consultam placa, e é preciso mexer nos quatro:**
+  `/veiculos` (botão *Consultar*), a captura da venda (`<NovoLeadCotacao>`, que serve o CRM **e** o
+  portal do vendedor), a página pública do hotlink (`/api/v1/hotlink/veiculo`) e o
+  **`<FechamentoVenda>`**. Na captura os campos não aparecem — a tela é curta de propósito —, mas
+  vão gravados no lead e o fechamento abre com eles prontos; o que foi capturado é mostrado em uma
+  linha discreta, para não virar mágica invisível.
+- **🔴 O FECHAMENTO DA VENDA É O GRANDE VALIDADOR — ele tem consulta PRÓPRIA.** Foi a primeira
+  coisa que faltou no teste em produção: consultar só na captura e no hotlink não basta, porque o
+  lead chega ao fechamento sem nada em três situações comuns — foi criado antes da consulta
+  existir, foi digitado à mão, ou a placa não resolveu na hora. E é ali que chassi, cor e ano de
+  fabricação viram **obrigatórios** para entrar na base, com o cliente ainda na linha. Botão de
+  lupa ao lado da Placa, na aba *Veículo*.
+- **E lá a consulta é CONFERÊNCIA, não sobrescrita** (`conferirRegistroDaPlaca`, em
+  `src/lib/vendas.ts`, testada): campo **vazio** é preenchido; campo **igual** não faz nada; campo
+  **diferente** vira uma linha de divergência, com o valor da ficha riscado ao lado do valor do
+  documento e um botão *usar o do documento*. Quem está fechando leu o CRLV e conversou com o
+  cliente — apagar isso em silêncio troca um erro por outro que ninguém vê. A comparação ignora
+  acento, pontuação e caixa, senão toda consulta acusaria diferença.
+- **O `modelo` é exceção deliberada na comparação:** o comercial da FIPE
+  ("COROLLA XEI 2.0 FLEX 16V AUT.") nunca bate com o abreviado do documento ("COROLLA XEI 20FLEX").
+  Acusar isso seria ruído em toda consulta — e **ruído constante ensina a ignorar o aviso de
+  verdade**. Só diverge quando nem os primeiros caracteres batem (aí é outro carro).
+- **`valor_fipe`/`codigo_fipe` ficam FORA da conferência do fechamento, de propósito.** A cotação
+  já foi aceita, e é `leads.valor_fipe` que vai para `veiculos` em `autorizar_entrada_lead` (0034):
+  atualizar o valor ali mudaria, em silêncio, o FIPE que o associado passa a carregar — sem mudar o
+  preço que ele aceitou. Reprecificar é outro ato, na cotação.
+- **O NÚMERO DO MOTOR não tinha coluna (0075)** — entrou em `veiculos` e em `leads`. Nas duas
+  pontas de propósito: o veículo nasce por dois caminhos (cadastro direto e rota da venda), e uma
+  coluna só em `veiculos` faria o motor sumir em toda venda, justamente o caminho em que a placa é
+  consultada primeiro. **Ele não é `unique`, e não entra no `checklist_lead`:** motor se troca de
+  carro, base legada repete, e nem todo documento traz — duplicidade aqui é relatório (padrão de
+  `rastreadores_divergencias`), não constraint que recusa cadastro no balcão.
+- **Com o chassi vindo preenchido, a colisão no `unique` deixou de ser hipótese:** `/veiculos`
+  passou a traduzir o erro para "Chassi já cadastrado em outro veículo" (e o mesmo para Renavam).
+  É o carro já cadastrado com outra placa — transferência, clonagem ou cadastro duplicado —, e o
+  texto cru do Postgres não levava ninguém a conferir isso.
+- **`/api/placa` é OUTRO provedor, opcional, e nunca foi configurado** (`PLACA_API_URL`). Não
+  confundir: ele continua no código como fonte extra, e sem a env devolve `found: false` sem sair
+  para a rede.
+
 ## Gotchas já resolvidos (não repetir)
 - **Tela de login NUNCA pode ficar sob o layout que exige sessão.** `/portal/login` nasceu em
   `src/app/portal/login/`, herdando o `layout.tsx` do portal — e ficou inalcançável nos DOIS
@@ -2853,6 +3087,23 @@ no fim — o runner procura por "PASSARAM") e rode `npm run schema`.
   construídas sobre um checkbox decorativo, com a tela dizendo que ele revogava acesso.
   **Ao criar flag de situação (`ativo`, `bloqueado`, `suspenso`), escreva no mesmo commit quem a
   LÊ** — e um teste que prove o corte, não só a gravação.
+- **Quando um SUBCONJUNTO EXATO de campos vem vazio e o resto vem certo, o problema é a FONTE.**
+  A consulta de placa preenchia marca, modelo, ano-modelo e valor, e deixava chassi, cor e ano de
+  fabricação em branco — os três, sempre. Não era coincidência nem API incompleta: eram os únicos
+  campos cuja única fonte era um bloco da resposta (`informacoes_veiculo`) que o nosso proxy
+  descartava. **Antes de culpar o provedor, olhe o que os campos que falham têm em comum** — e
+  confira o payload cru, que aqui respondeu em um comando o que tinha virado dois diagnósticos
+  plausíveis e opostos.
+- **`left join` por coluna NÃO ÚNICA multiplica a linha — e um `count(*)` depois dele mente.**
+  O funil do consultor (0073) juntava `vendedores` por `email` e por `nome`, que não têm unique
+  (só `documento` tem, 0069): cada veículo de um consultor com e-mail repetido virava duas linhas
+  e o instrumento de medida passou a contar **16 onde existiam 5**. O pior não é o total inflado,
+  é que a inflação acontece **só nas linhas com colisão** — então toda diferença entre etapas vira
+  ruído. **Antes de contar sobre um join, pergunte se o lado direito é único**; e quando não for,
+  resolva com `lateral ... limit 1` (guardando o fato de haver empate), nunca com `distinct`, que
+  faz a colisão sumir da vista. Melhor ainda: resolva o join no nível de quem ele é propriedade —
+  o vendedor é atributo do CONSULTOR, não do veículo, e uma vez por consultor são centenas de
+  linhas em vez de dezenas de milhares.
 - **Status de PAI e status de FILHO não são a mesma coisa.** `contract_status` do Mutual fala do
   ASSOCIADO (um contrato guarda vários veículos); o veículo encerrado de um associado ativo entrava
   como faturável e ia inflar a quarentena com "sem valor" e "sem vencimento" que contrato encerrado
