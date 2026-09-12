@@ -17,9 +17,12 @@ import { buscarCep } from '@/lib/cep';
 import { formatarDocumento, validarDocumento } from '@/lib/documento';
 import { maskCelular, formatCurrency } from '@/lib/utils';
 import {
-  ABAS_FECHAMENTO, FORMA_ADESAO_ROTULO, pendenciasPorAba, primeiraAbaPendente, progressoChecklist,
-  ratearAdesao, type AbaFechamento, type FormaAdesao,
+  ABAS_FECHAMENTO, FORMA_ADESAO_ROTULO, conferirRegistroDaPlaca, pendenciasPorAba,
+  primeiraAbaPendente, progressoChecklist, ratearAdesao,
+  type AbaFechamento, type ConferenciaPlaca, type FormaAdesao,
 } from '@/lib/vendas';
+import { useFipePorPlaca } from '@/hooks/use-fipe';
+import { normalizarPlaca, placaValida } from '@/lib/placa';
 import type { DadosCrlv } from '@/lib/crlv';
 import type { LeadsRow } from '@/lib/database.types';
 import { FotosVistoria } from '@/components/vistoria/fotos-vistoria';
@@ -72,6 +75,10 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
     lead.status === 'EM_AUDITORIA' ? 'vistoria' : 'associado',
   );
   const [checklistAberto, setChecklistAberto] = useState(false);
+  // Conferencia da placa. Ver `conferirRegistroDaPlaca` para a regra; aqui e so
+  // o que a tela precisa lembrar entre o clique e a decisao do atendente.
+  const fipePorPlaca = useFipePorPlaca();
+  const [conferencia, setConferencia] = useState<ConferenciaPlaca | null>(null);
 
   // As abas espelham os grupos do checklist, entao a pendencia sabe onde mora.
   const itens = checklist ?? [];
@@ -125,6 +132,47 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
       endereco: (Object.keys(end).length ? end : endereco) as LeadsRow['endereco'],
     });
     toast.success(`Associado ja cadastrado: ${cli.nome_razao_social} — ficha reaproveitada.`);
+  }
+
+  /**
+   * Consulta a placa AQUI, no fechamento — que e onde chassi, cor e ano de
+   * fabricacao viram obrigatorios para entrar na base.
+   *
+   * A captura e o hotlink ja consultam, mas o lead pode chegar sem nada: foi
+   * criado antes disso existir, veio digitado a mao, ou a placa nao resolveu na
+   * hora. E o fechamento e o ultimo lugar onde da para conferir o documento com
+   * o cliente ainda na linha.
+   *
+   * NAO sobrescreve o que ja esta preenchido: o que estava vazio entra, o que
+   * diverge aparece lado a lado para quem atende decidir.
+   */
+  async function consultarPlaca() {
+    const p = normalizarPlaca(form.placa ?? '');
+    if (!placaValida(p)) return toast.error('Informe a placa completa antes de consultar');
+    setConferencia(null);
+    const r = await fipePorPlaca.mutateAsync(p).catch(() => null);
+    if (!r?.configured) return toast.error('Consulta de placa nao configurada no servidor');
+    if (!r.registro) {
+      return toast.message('A consulta nao devolveu os dados do documento para esta placa.');
+    }
+    const conf = conferirRegistroDaPlaca(form, r.registro);
+    const preenchidos = Object.keys(conf.preencher).length;
+    if (preenchidos) set(conf.preencher as Partial<LeadsRow>);
+    setConferencia(conf);
+    if (conf.divergencias.length) {
+      toast.warning(`${conf.divergencias.length} campo(s) diferem do documento — confira abaixo.`);
+    } else if (preenchidos) {
+      toast.success(`${preenchidos} campo(s) preenchidos pelo documento.`);
+    } else {
+      toast.success('Ficha confere com o documento.');
+    }
+  }
+
+  /** O atendente decidiu ficar com o que o documento diz, naquele campo. */
+  function usarDoDocumento(d: { campo: string; noDocumento: string }) {
+    const numerico = d.campo === 'ano_fabricacao' || d.campo === 'ano_modelo';
+    set({ [d.campo]: numerico ? Number(d.noDocumento) : d.noDocumento } as Partial<LeadsRow>);
+    setConferencia((c) => (c ? { ...c, divergencias: c.divergencias.filter((x) => x.campo !== d.campo) } : c));
   }
 
   function aplicarCrlv(d: DadosCrlv) {
@@ -318,7 +366,25 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
         <Secao icone={Car} titulo="Veiculo" descricao="Chassi, Renavam e cor sao obrigatorios para o veiculo entrar na base.">
           <div className="grid gap-3 sm:grid-cols-4">
             <FormField label="Placa *">
-              <Input value={form.placa ?? ''} onChange={(e) => set({ placa: e.target.value.toUpperCase() })} maxLength={8} />
+              <div className="flex gap-1.5">
+                <Input
+                  value={form.placa ?? ''}
+                  onChange={(e) => { set({ placa: e.target.value.toUpperCase() }); setConferencia(null); }}
+                  maxLength={8}
+                  className="font-mono uppercase tracking-wider"
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={consultarPlaca}
+                  disabled={fipePorPlaca.isPending}
+                  title="Buscar chassi, motor, cor e ano pelo documento"
+                >
+                  {fipePorPlaca.isPending
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : <Search className="h-4 w-4" />}
+                </Button>
+              </div>
             </FormField>
             <FormField label="Chassi *" className="sm:col-span-2">
               <Input value={form.chassi ?? ''} onChange={(e) => set({ chassi: e.target.value.toUpperCase() })} maxLength={17} placeholder="17 caracteres" />
@@ -336,6 +402,42 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
               />
             </FormField>
           </div>
+          {/* A CONFERENCIA. Divergencia nao se resolve sozinha: cada linha e uma
+              decisao de quem esta com o documento na mao. */}
+          {conferencia && conferencia.divergencias.length > 0 && (
+            <div className="rounded-xl bg-amber-50 px-3 py-2.5 text-[12.5px] ring-1 ring-inset ring-amber-200">
+              <p className="flex items-center gap-1.5 font-semibold text-amber-900">
+                <CircleAlert className="h-4 w-4 shrink-0" />
+                A ficha diverge do documento
+              </p>
+              <ul className="mt-1.5 space-y-1.5">
+                {conferencia.divergencias.map((d) => (
+                  <li key={d.campo} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-amber-900/90">
+                    <span className="font-medium">{d.rotulo}:</span>
+                    <span className="line-through opacity-70">{d.naFicha}</span>
+                    <span aria-hidden>→</span>
+                    <span className="font-semibold">{d.noDocumento}</span>
+                    <button
+                      type="button"
+                      onClick={() => usarDoDocumento(d)}
+                      className="rounded-md bg-amber-200/70 px-2 py-0.5 text-[11.5px] font-semibold hover:bg-amber-200"
+                    >
+                      usar o do documento
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-1.5 text-[11px] text-amber-900/70">
+                Nada foi alterado nesses campos — a escolha e sua.
+              </p>
+            </div>
+          )}
+          {conferencia && conferencia.divergencias.length === 0 && (
+            <p className="flex items-center gap-1.5 text-[12px] text-emerald-700">
+              <ShieldCheck className="h-3.5 w-3.5 shrink-0" /> Conferido com o documento da placa.
+            </p>
+          )}
+
           <div className="grid gap-3 sm:grid-cols-4">
             <FormField label="Marca *"><Input value={form.marca ?? ''} onChange={(e) => set({ marca: e.target.value })} /></FormField>
             <FormField label="Modelo *"><Input value={form.modelo ?? ''} onChange={(e) => set({ modelo: e.target.value })} /></FormField>

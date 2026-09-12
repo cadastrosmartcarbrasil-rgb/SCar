@@ -62,16 +62,9 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
 **1. ONDE.** Branch `claude/claude-md-opcao-x-98kfj5`, e só ele. Repositório
 `cadastrosmartcarbrasil-rgb/scar`. Confira com `git rev-parse --abbrev-ref HEAD`.
 
-**2. O QUE FALTA SUBIR — a ordem completa, sem interpretação.** Aplicadas em produção:
-**`0001`..`0073`, todas** (confirmado pelo usuário em 12/09/2026). **Pendente, só ela:**
-
-```
-0074 0075
-```
-A `0074` é CORRETIVA da `0073` (leitura do módulo Mutual, não mexe em dado) e a `0075` só
-ACRESCENTA a coluna `numero_motor` em `veiculos` e `leads`. As duas são independentes entre si e
-podem ir a qualquer momento; a ordem acima é só a numérica. Enquanto a `0074` não rodar, o funil da
-unidade pelo consultor mostra número inflado (ver a seção própria) — não decida a carga por ele.
+**2. O QUE FALTA SUBIR.** Aplicadas em produção: **`0001`..`0075`, todas** (confirmado pelo
+usuário em 12/09/2026). **Nenhuma migration pendente** — o que falta subir é só código, pelo
+contêiner (passo 3).
 
 **3. COMO PUBLICAR.** Migrations primeiro (acima), depois o contêiner:
 ```bash
@@ -192,8 +185,7 @@ nenhuma: manda rodar de novo o que já rodou.
   documento (chassi, cor, **número do motor**) e o nosso proxy descartava; corrigido o descarte,
   faltava onde gravar o motor. A coluna entra em `veiculos` **e** em `leads`, e
   `autorizar_entrada_lead` passa a carregá-la — ver "Consulta por placa" abaixo.
-- **Próxima migration livre: `0076`.** A `0074` e a `0075` ainda **não foram aplicadas em
-  produção**; as `0001`..`0073` já foram.
+- **Próxima migration livre: `0076`.** As `0001`..`0075` já foram aplicadas em produção.
 - **`.claude/hooks/session-start.sh` é NOVO** — avisa quando a sessão nasce no branch errado e
   instala as dependências. Ele **só roda se estiver no branch que a sessão clonou**; enquanto o
   default do GitHub for o branch morto, uma sessão que caia lá não terá o hook. A correção
@@ -320,7 +312,7 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 ### Estado de validação (fim da fase)
 - **Migrations `0001`..`0075`** + `schema.sql` consolidado aplicam limpos no harness local.
 - **52 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 597 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Vitest: 606 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Todos os portais e páginas
@@ -2852,12 +2844,32 @@ no fim — o runner procura por "PASSARAM") e rode `npm run schema`.
 - **O payload real está guardado no teste** (`src/lib/fipe.test.ts`, placa OAW0838, 12/09/2026).
   Foi ele que provou onde o chassi mora — sem amostra real no repositório a próxima sessão chuta o
   formato de novo, que é o erro que este módulo já cometeu duas vezes no Mutual.
-- **Os TRÊS caminhos que consultam placa preenchem o registro**, e é preciso mexer nos três:
+- **São QUATRO os caminhos que consultam placa, e é preciso mexer nos quatro:**
   `/veiculos` (botão *Consultar*), a captura da venda (`<NovoLeadCotacao>`, que serve o CRM **e** o
-  portal do vendedor) e a página pública do hotlink (`/api/v1/hotlink/veiculo`). Na venda os campos
-  não aparecem na captura — a tela é curta de propósito —, mas vão gravados no lead e o
-  `<FechamentoVenda>` abre com eles prontos; o que foi capturado é mostrado em uma linha discreta,
-  para não virar mágica invisível.
+  portal do vendedor), a página pública do hotlink (`/api/v1/hotlink/veiculo`) e o
+  **`<FechamentoVenda>`**. Na captura os campos não aparecem — a tela é curta de propósito —, mas
+  vão gravados no lead e o fechamento abre com eles prontos; o que foi capturado é mostrado em uma
+  linha discreta, para não virar mágica invisível.
+- **🔴 O FECHAMENTO DA VENDA É O GRANDE VALIDADOR — ele tem consulta PRÓPRIA.** Foi a primeira
+  coisa que faltou no teste em produção: consultar só na captura e no hotlink não basta, porque o
+  lead chega ao fechamento sem nada em três situações comuns — foi criado antes da consulta
+  existir, foi digitado à mão, ou a placa não resolveu na hora. E é ali que chassi, cor e ano de
+  fabricação viram **obrigatórios** para entrar na base, com o cliente ainda na linha. Botão de
+  lupa ao lado da Placa, na aba *Veículo*.
+- **E lá a consulta é CONFERÊNCIA, não sobrescrita** (`conferirRegistroDaPlaca`, em
+  `src/lib/vendas.ts`, testada): campo **vazio** é preenchido; campo **igual** não faz nada; campo
+  **diferente** vira uma linha de divergência, com o valor da ficha riscado ao lado do valor do
+  documento e um botão *usar o do documento*. Quem está fechando leu o CRLV e conversou com o
+  cliente — apagar isso em silêncio troca um erro por outro que ninguém vê. A comparação ignora
+  acento, pontuação e caixa, senão toda consulta acusaria diferença.
+- **O `modelo` é exceção deliberada na comparação:** o comercial da FIPE
+  ("COROLLA XEI 2.0 FLEX 16V AUT.") nunca bate com o abreviado do documento ("COROLLA XEI 20FLEX").
+  Acusar isso seria ruído em toda consulta — e **ruído constante ensina a ignorar o aviso de
+  verdade**. Só diverge quando nem os primeiros caracteres batem (aí é outro carro).
+- **`valor_fipe`/`codigo_fipe` ficam FORA da conferência do fechamento, de propósito.** A cotação
+  já foi aceita, e é `leads.valor_fipe` que vai para `veiculos` em `autorizar_entrada_lead` (0034):
+  atualizar o valor ali mudaria, em silêncio, o FIPE que o associado passa a carregar — sem mudar o
+  preço que ele aceitou. Reprecificar é outro ato, na cotação.
 - **O NÚMERO DO MOTOR não tinha coluna (0075)** — entrou em `veiculos` e em `leads`. Nas duas
   pontas de propósito: o veículo nasce por dois caminhos (cadastro direto e rota da venda), e uma
   coluna só em `veiculos` faria o motor sumir em toda venda, justamente o caminho em que a placa é
