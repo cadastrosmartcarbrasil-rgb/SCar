@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  inferirTipoFipe, linkWhatsApp, mensagemDaProposta, mensagemDeErro, numeroWhatsApp,
+  inferirTipoFipe, linkWhatsApp, mensagemDaProposta, mensagemDaVistoria, mensagemDeErro,
+  numeroWhatsApp,
   ordenarPlanos, placaCompleta, planoSugerido, podeAvancar, tipoVeiculoSugerido,
 } from './venda-publica';
 
@@ -166,5 +167,22 @@ describe('mensagemDaProposta e linkWhatsApp', () => {
   it('sem celular, abre o WhatsApp sem destinatario (a pessoa escolhe)', () => {
     expect(linkWhatsApp('oi')).toBe('https://wa.me/?text=oi');
     expect(linkWhatsApp('oi', '(11) 98888-7777')).toBe('https://wa.me/5511988887777?text=oi');
+  });
+});
+
+describe('mensagemDaVistoria', () => {
+  const url = 'https://x/vistoria/abc';
+
+  it('diz o que fazer, quanto leva e ate quando vale', () => {
+    const m = mensagemDaVistoria(url, 'MARIA SOUZA', '2026-09-19T12:00:00Z');
+    expect(m).toContain('Ola, MARIA!');
+    expect(m).toContain(url);
+    expect(m).toContain('3 minutos');
+    expect(m).toContain('19/09/2026');
+  });
+
+  it('sem prazo, nao inventa data', () => {
+    expect(mensagemDaVistoria(url)).not.toContain('vale ate');
+    expect(mensagemDaVistoria(url, null, 'nao e data')).not.toContain('vale ate');
   });
 });

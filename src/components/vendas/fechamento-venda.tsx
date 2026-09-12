@@ -493,7 +493,7 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
 
           {/* A vistoria e guiada pelo modelo de poses (0040): mesma lista que o
               vendedor ve no celular, e a mesma que o checklist cobra. */}
-          <FotosVistoria leadId={lead.id} />
+          <FotosVistoria leadId={lead.id} celular={lead.celular} nome={lead.nome} />
         </Secao>
 
         )}

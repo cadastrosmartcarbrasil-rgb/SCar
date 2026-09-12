@@ -185,7 +185,11 @@ nenhuma: manda rodar de novo o que já rodou.
   documento (chassi, cor, **número do motor**) e o nosso proxy descartava; corrigido o descarte,
   faltava onde gravar o motor. A coluna entra em `veiculos` **e** em `leads`, e
   `autorizar_entrada_lead` passa a carregá-la — ver "Consulta por placa" abaixo.
-- **Próxima migration livre: `0076`.** As `0001`..`0075` já foram aplicadas em produção.
+- **`0076_vistoria_link_publico` é NOVA e ainda NÃO foi aplicada** — é a vistoria pelo CELULAR DO
+  CLIENTE, a etapa que faltava depois do aceite no hotlink. Sem ela a rota `/vistoria/<token>` não
+  abre e o aceite volta a terminar em "o consultor vai combinar a vistoria". Ver a seção própria.
+- **Próxima migration livre: `0077`.** As `0001`..`0075` já foram aplicadas em produção; a `0076`
+  sobe junto com este deploy.
 - **`.claude/hooks/session-start.sh` é NOVO** — avisa quando a sessão nasce no branch errado e
   instala as dependências. Ele **só roda se estiver no branch que a sessão clonou**; enquanto o
   default do GitHub for o branch morto, uma sessão que caia lá não terá o hook. A correção
@@ -232,8 +236,9 @@ Só o associado tem login próprio, porque a chave é o CPF.
 > `/api/v1/vendedores/acesso`, que provisiona o login com papel **`consultor_vendas`** — quem for
 > promovido depois precisa ter o papel trocado em `Configurações → Usuários` (a trava da 0054
 > impede promover a si mesmo).
-Públicas, sem sessão: **`/v/<CODIGO>`** (hotlink de venda, vendedor ou franquia) e
-**`/cotacao/<token>`** (a proposta).
+Públicas, sem sessão: **`/v/<CODIGO>`** (hotlink de venda, vendedor ou franquia),
+**`/cotacao/<token>`** (a proposta) e **`/vistoria/<token>`** (as fotos do carro pelo celular do
+cliente — 0076, link com prazo).
 **Todos os portais dividem a sessão do navegador** — logar como associado derruba a de staff;
 para testar, aba anônima.
 
@@ -275,6 +280,8 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
    ↓ passo 4: aceite           /api/v1/hotlink/contratar -> `registrar_aceite_venda` (0042/0043)
    |                            grava a prova (quem, CPF, data/hora, IP, user-agent, qual cotacao)
    |                            e deixa o lead em EM_NEGOCIACAO — NAO pula para a auditoria
+   ↓ link da VISTORIA (0076)   /vistoria/<token> sai NO ACEITE — o cliente fotografa no celular
+   |                            dele, 7 dias de prazo; a foto marca a origem e conta no checklist
    ↓ link da proposta          /cotacao/<token> sai pronto na tela (abrir, copiar, WhatsApp)
    ↓ trabalho do vendedor      ajusta opcionais, completa a ficha do associado, CRLV e a VISTORIA
    |                            guiada por poses (0040) — `/vendedor/leads/[id]` ou `<FechamentoVenda>`
@@ -310,9 +317,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0075`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **52 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 606 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0076`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **53 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 608 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Todos os portais e páginas
@@ -1461,6 +1468,15 @@ desconhecido que nao seja funil — sem ela, vocabulario novo do Mutual vira vei
 carga, em silencio; (D) `mutual_quarentena` recriada com `p_somente_faturaveis` (muda a
 assinatura, entao e drop + create) e dois indicadores novos: placa fora do padrao e objeto sem
 unidade declarada).
+· `0076_vistoria_link_publico` (A VISTORIA PELO CELULAR DO CLIENTE — `vistorias.token_publico` +
+`token_expira_em` (unique PARCIAL, porque vistoria de veiculo nao tem token) e
+`vistoria_anexos.enviado_pelo_cliente`; `gerar_link_vistoria` (7 dias; reemitir devolve o MESMO
+token enquanto vigente, senao quebraria a mensagem ja mandada no WhatsApp),
+`vistoria_por_token` (devolve SEMPRE uma linha, com o MOTIVO — a pagina precisa distinguir "link
+errado" de "vencido" e de "venda concluida") e `registrar_foto_vistoria_publica` (valida a pose
+contra o catalogo, marca a origem e carimba `ultima_interacao_em`). `fotos_vistoria_lead`
+**recriada** com `enviado_pelo_cliente` — muda a lista de OUT, entao drop + create, e o
+`where is_staff() or auth.uid() is null` da 0052 foi reescrito junto. Ver a secao propria).
 · `0070_cotacao_troca_plano` (DESCER DE PLANO: `atualizar_cotacao` (0028) resolvia o combo com
 `coalesce(p_plano_id, c.plano_id)`, entao NULO era "mantem o que esta" — bom para upgrade e troca
 lateral, impossivel para o downgrade ate a base: escolher "Somente cobertura base" salvava calado e
@@ -1494,6 +1510,8 @@ vez** (FIPE por placa/cascata), contatos e retornos registrados na ficha do lead
 presencial** com o cliente na frente e envio da proposta por WhatsApp, cotação com
 link público `/cotacao/[token]` detalhada/consolidada + print-PDF, esteira com trava de
 Auditoria — só papel `auditoria`/`admin` clica "Autorizar Entrada" e efetiva cliente+veículo)
+· **Vistoria pelo cliente** (`/vistoria/<token>`: as fotos do carro no celular de quem comprou,
+sem login, liberadas no proprio aceite do hotlink — 0076)
 · Associados (painel `/associados/[id]` com abas) · Veículos/Contratos (situação do contrato com
 **Inadimplente** e a contagem regressiva da tolerância (0072); ficha com Plano —
 **as coberturas do plano já vêm marcadas** e a troca de categoria mostra o que entra, o que sai e
@@ -2456,6 +2474,65 @@ correspondente é o inverso: promessa na tela, recusa no banco.
 - **Adesao recebida na hora nao aparece no extrato** (nao passou pelo nosso financeiro) — o texto
   esta na propria tela para nao virar duvida recorrente.
 
+## A VISTORIA PELO CELULAR DO CLIENTE (0076) — o link publico
+- **O buraco que ela fecha, e ele era grande:** o hotlink cotava, o cliente ACEITAVA na hora — e a
+  rotina parava. A tela de sucesso dizia *"seu consultor vai combinar a vistoria"*, e o único jeito
+  de as fotos existirem era alguém **logado** abrir o lead: `<FotosVistoria>` só vive no CRM e no
+  portal do vendedor, a RLS de `vistorias`/`vistoria_anexos` é `to authenticated` e a policy do
+  bucket `vendas` exige `is_staff()`. **O cliente literalmente não tinha como mandar foto**, no
+  exato momento em que está com o carro na frente e decidido.
+- **Onde fica:** `/vistoria/<token>` — pública, no `PUBLIC_PATHS` do middleware, server component
+  com `service_role` no mesmo padrão de `/v/<codigo>` e `/cotacao/<token>`.
+- **⚠️ É UM TOKEN NOVO, e não o `leads.token_publico` (0042).** Aquele é a capacidade de COTAR e
+  CONTRATAR, e o link da proposta é feito para ser **guardado e reaberto** — vai para o WhatsApp,
+  fica no histórico, o cliente reabre meses depois. Pendurar UPLOAD nele transformaria um link de
+  leitura, distribuído à vontade, em permissão de ESCRITA no nosso storage, sem prazo. Capacidades
+  diferentes, tokens diferentes: este nasce para a vistoria, **expira em 7 dias** e morre com a
+  venda.
+- **DECISÕES DO USUÁRIO (12/09/2026), arquivadas:** (1) a foto do cliente **VALE** como vistoria —
+  completa o `checklist_lead` e o lead segue para a Auditoria, que é quem confere as imagens; a
+  trava continua sendo a Auditoria, não uma etapa a mais no vendedor. (2) O link vale **7 dias**.
+- **REEMITIR NÃO DERRUBA O LINK QUE O CLIENTE JÁ TEM.** Enquanto o token vigente não venceu,
+  `gerar_link_vistoria` devolve **o mesmo** e diz `reaproveitado`. Girar o token a cada clique do
+  vendedor quebraria, em silêncio, a mensagem que ele acabou de mandar no WhatsApp — e ninguém
+  entenderia por que "o link parou de funcionar". A tela avisa *"este link já estava valendo"*.
+- **O link sai NO PRÓPRIO ACEITE.** `/api/v1/hotlink/contratar` chama `gerar_link_vistoria` depois
+  de `registrar_aceite_venda` e a tela de sucesso mostra **"Fotografar o meu carro agora"** antes
+  do link da proposta — a proposta ele reabre quando quiser; a foto, não. **Falhar ali não derruba
+  a venda:** o aceite já está gravado, o vendedor reemite pela ficha.
+- **Por isso `gerar_link_vistoria` aceita o caminho público** (`auth.uid() is null`, padrão da
+  0052): a rota do hotlink roda com service_role e já provou a posse do atendimento pelo
+  `token_publico`. Com sessão, a trava é a de sempre — `pode_tratar_lead()` (0045). O `anon` não
+  alcança a função (o revoke da 0052 tira o execute dele).
+- **O upload passa pela NOSSA rota, não pelo Storage direto:** `/api/v1/vistoria/foto` sobe com
+  service_role **depois** de conferir o token, e a linha do anexo vai pela RPC, que confere de novo
+  (prazo, pose, situação do lead). Afrouxar a policy do bucket para aceitar visitante seria abrir
+  escrita anônima no storage. Se a RPC recusar, **o arquivo recém-enviado sai do bucket** — nada de
+  órfão, mesma regra do resto do sistema.
+- **A POSE é validada contra o catálogo** (`vistoria_fotos_modelo`, ativo + tipo do veículo): sem
+  isso, `tipo` livre encheria a vistoria de código que nenhuma tela mostra — foto que sobe, não
+  aparece e não conta para o checklist.
+- **Foto que chega é TRABALHO no lead:** `registrar_foto_vistoria_publica` carimba
+  `leads.ultima_interacao_em`. Sem isso o cliente faria a vistoria e o lead voltaria ao pool por
+  falta de contato (0041/0045).
+- **A ORIGEM aparece para quem audita:** `vistoria_anexos.enviado_pelo_cliente` e
+  `fotos_vistoria_lead` **recriada** devolvendo a coluna (muda a lista de OUT ⇒ drop + create), com
+  o selo **"do cliente"** na lista de poses. Foto de quem COMPRA o carro se confere diferente da
+  foto de quem o VENDE — e guardar o campo sem ninguém lê-lo seria repetir o gotcha do
+  `usuarios.ativo` (0068). **Ao recriar a função, o `where is_staff() or auth.uid() is null` da
+  0052 foi reescrito junto** — recriar sem ele reabriria o buraco em silêncio.
+- **O cliente NÃO apaga foto**, de propósito. Quem errou manda de novo (`fotos_vistoria_lead` fica
+  com a mais recente de cada pose). Botão de excluir na mão de quem não vai auditar só cria o caso
+  de a vistoria voltar a zero na véspera da entrada na base.
+- **Onde a equipe gera o link:** dentro do próprio `<FotosVistoria>` (`<LinkDaVistoria>`), então ele
+  aparece **de uma vez** na aba *Documentos e fotos* do `<FechamentoVenda>` e no
+  `/vendedor/leads/[id]` — some quando a vistoria completa. O link só é gerado **no clique**: criar
+  a vistoria e carimbar o prazo são efeitos, e prazo que começa a correr sozinho vence sem ninguém
+  ter mandado nada.
+- **Lógica pura testada:** `mensagemDaVistoria` (`src/lib/venda-publica.ts`) — o convite diz o que
+  fazer, quanto tempo leva e **até quando vale**; sem o prazo o cliente guarda "para depois" e
+  descobre vencido.
+
 ## Vistoria por modelo de fotos (0040)
 - **A vistoria nao e "mande 4 fotos".** `vistoria_fotos_modelo` define as POSES: cada uma com nome
   e **instrucao de enquadramento** ("de frente, a uns 3 metros, com a placa legivel"). O padrao tem
@@ -2470,6 +2547,9 @@ correspondente é o inverso: promessa na tela, recusa no banco.
   `capture="environment"` no input — no celular abre a camera traseira direto.
 - **RLS:** `vistorias`/`vistoria_anexos` enxergam o lead tambem por `vendedor_id` (0040). Sem isso o
   lead do hotlink (criado pelo service_role, sem `consultor_id`) tinha dono mas nao tinha vistoria.
+- **O CLIENTE tambem fotografa (0076):** o link `/vistoria/<token>` sai no proprio aceite do
+  hotlink e vale 7 dias. A foto dele entra na MESMA vistoria, marcada com a origem ("do cliente"),
+  e conta no `checklist_lead` — ver a secao propria.
 - **A foto aparece na tela (0047):** cada pose mostra miniatura, data do envio e peso, e o clique
   abre o visor em tela cheia (setas, `Esc`, "abrir original"). As URLs assinadas vêm **em lote**
   (`createSignedUrls`, 10 min) — uma chamada, não uma por foto. Miniatura quebrada avisa em

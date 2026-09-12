@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import {
-  BadgeCheck, Car, CheckCircle2, ChevronRight, Copy, FileText, Loader2, Lock,
+  BadgeCheck, Camera, Car, CheckCircle2, ChevronRight, Copy, FileText, Loader2, Lock,
   MessageCircle, ShieldCheck, User,
 } from 'lucide-react';
 import { maskCelular } from '@/lib/utils';
@@ -49,7 +49,7 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
 
   const [aceite, setAceite] = useState({ nome: '', documento: '', por: 'CLIENTE', marcado: false });
   const [contratado, setContratado] = useState<
-    { mensalidade: number; adesao: number; proposta: string } | null
+    { mensalidade: number; adesao: number; proposta: string; vistoria: string | null } | null
   >(null);
 
   const planoEscolhido = planos.find((p) => p.plano_id === planoId) ?? null;
@@ -150,7 +150,9 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
     setErro(null);
     setEnviando(true);
     try {
-      const r = await chamar<{ mensalidade: number; adesao: number; proposta: string }>(
+      const r = await chamar<{
+        mensalidade: number; adesao: number; proposta: string; vistoria: string | null;
+      }>(
         '/api/v1/hotlink/contratar',
         {
           token, plano_id: planoId, nome: aceite.nome,
@@ -159,6 +161,7 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
       );
       setContratado({
         mensalidade: Number(r.mensalidade), adesao: Number(r.adesao), proposta: r.proposta,
+        vistoria: r.vistoria ?? null,
       });
       setEtapa('fim');
     } catch (err) {
@@ -176,8 +179,9 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
           <CheckCircle2 className="mx-auto h-14 w-14 text-emerald-500" />
           <h2 className="mt-3 text-xl font-semibold text-brand-800">Proposta aceita!</h2>
           <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
-            Recebemos o seu aceite. {vendedor ?? 'Seu consultor'} vai confirmar os ultimos
-            detalhes e combinar a <b>vistoria do veiculo</b>.
+            Recebemos o seu aceite. {contratado.vistoria
+              ? <>Falta so <b>fotografar o seu carro</b> — leva uns 3 minutos, aqui mesmo.</>
+              : <>{vendedor ?? 'Seu consultor'} vai confirmar os ultimos detalhes e combinar a <b>vistoria do veiculo</b>.</>}
           </p>
           <div className="mx-auto mt-5 max-w-xs rounded-xl bg-brand-50 px-4 py-3 text-left">
             <Linha rotulo="Mensalidade" valor={dinheiro(contratado.mensalidade)} destaque />
@@ -186,9 +190,37 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
             )}
           </div>
 
+          {/* A VISTORIA e o proximo passo, e ele acontece AGORA: o cliente esta
+              com o carro na frente e decidido. Mandar isso para depois e o que
+              fazia a venda parar no aceite (0076). Vem antes da proposta de
+              proposito — a proposta ele reabre quando quiser; a foto, nao. */}
+          {contratado.vistoria && (
+            <a
+              href={`/vistoria/${contratado.vistoria}`}
+              className="mx-auto mt-5 flex max-w-xs items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-[14px] font-bold text-white transition hover:bg-emerald-400"
+            >
+              <Camera className="h-4 w-4" /> Fotografar o meu carro agora
+            </a>
+          )}
+
           {/* A proposta fica disponivel na hora, num link proprio: o cliente
               abre, guarda e reabre quando quiser. */}
-          <LinkDaProposta token={contratado.proposta} />
+          {contratado.vistoria
+            ? (
+              <div className="mx-auto mt-3 max-w-xs">
+                <LinkDaProposta token={contratado.proposta} compacto />
+              </div>
+            )
+            : <LinkDaProposta token={contratado.proposta} />}
+
+          {/* Nao prometemos envio automatico: nao ha rotina que mande este link
+              sozinho. O que existe e o vendedor reemitir pela ficha. */}
+          {contratado.vistoria && (
+            <p className="mt-3 text-[11.5px] leading-relaxed text-slate-400">
+              O link das fotos vale por 7 dias. Se sair agora, peca ao seu consultor que
+              reenvie.
+            </p>
+          )}
         </div>
       </Cartao>
     );

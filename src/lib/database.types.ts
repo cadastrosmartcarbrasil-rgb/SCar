@@ -634,6 +634,9 @@ export type VistoriasRow = Timestamps & {
   observacoes: string | null;
   created_by: string | null;
   lead_id: string | null;
+  // 0076 — capacidade do link publico (ver a migration)
+  token_publico: string | null;
+  token_expira_em: string | null;
 };
 export type VistoriaAnexosRow = {
   id: string;
@@ -645,6 +648,8 @@ export type VistoriaAnexosRow = {
   // 0047 — peso do arquivo (teto de 10 MB no banco) e quem enviou
   tamanho_bytes: number | null;
   enviado_por: string | null;
+  // 0076 — a foto veio pelo link do cliente? A Auditoria precisa da origem.
+  enviado_pelo_cliente: boolean;
 };
 
 export type AtendimentosRow = Timestamps & {
@@ -2148,6 +2153,8 @@ export type FotoVistoriaModelo = {
   enviada_em: string | null;
   tamanho_bytes: number | null;
   arquivo: string | null;
+  // 0076 — a origem: foto do CLIENTE (link publico) ou de quem esta logado
+  enviado_pelo_cliente: boolean;
 };
 
 // 0048 :: anexos da OS da assistencia 24h
@@ -3292,6 +3299,29 @@ export type Database = {
       leads_sem_vendedor: {
         Args: { p_regional_id?: string | null };
         Returns: LeadSemVendedor[];
+      };
+      // --- Link publico da VISTORIA (0076): capacidade propria, com prazo.
+      // Nao confundir com `lead_por_token_publico`, que e a da cotacao.
+      vistoria_por_token: {
+        Args: { p_token: string };
+        Returns: {
+          valida: boolean; motivo: string;
+          lead_id: string | null; vistoria_id: string | null;
+          nome: string | null; placa: string | null;
+          marca: string | null; modelo: string | null;
+          expira_em: string | null;
+        }[];
+      };
+      registrar_foto_vistoria_publica: {
+        Args: {
+          p_token: string; p_tipo: string; p_url: string;
+          p_tamanho?: number | null; p_arquivo?: string | null;
+        };
+        Returns: string;
+      };
+      gerar_link_vistoria: {
+        Args: { p_lead_id: string; p_dias?: number };
+        Returns: { token: string; expira_em: string; reaproveitado: boolean }[];
       };
       lead_por_token_publico: {
         Args: { p_token: string };

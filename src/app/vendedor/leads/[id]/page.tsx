@@ -166,7 +166,7 @@ export default function LeadVendedorPage({ params }: { params: Promise<{ id: str
               </Button>
             </div>
           ) : (
-            <FotosVistoria leadId={id} />
+            <FotosVistoria leadId={id} celular={lead.celular} nome={lead.nome} />
           )}
         </CardContent>
       </Card>
