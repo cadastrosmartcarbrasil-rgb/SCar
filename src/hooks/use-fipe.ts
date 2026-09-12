@@ -8,9 +8,11 @@ import {
 
 const STALE = 1000 * 60 * 60; // 1h: tabela FIPE muda mensalmente
 
-// Placa -> dados + valor FIPE (uma chamada). Mutation (dispara ao clicar).
+// Placa -> avaliacao FIPE + REGISTRO do documento (uma chamada).
+// O tipo e DERIVADO de `fipePorPlaca` em vez de repetido: a copia manual daqui
+// ficou para tras quando o `registro` entrou, e o erro so apareceu no tsc.
 export function useFipePorPlaca() {
-  return useMutation<{ configured: boolean; valor: FipeValor | null; opcoes: FipeValor[] }, Error, string>({
+  return useMutation<Awaited<ReturnType<typeof fipePorPlaca>>, Error, string>({
     mutationFn: (placa: string) => fipePorPlaca(placa),
   });
 }

@@ -37,6 +37,11 @@ export default function NovoLeadVendedorPage() {
         codigo_fipe: d.codigo_fipe ?? null,
         cota_participacao_id: d.cota_participacao_id ?? null,
         origem_fipe: d.origem_fipe ?? 'MANUAL',
+        // Registro do documento lido da placa — o mesmo que o CRM grava.
+        chassi: d.chassi ?? null,
+        numero_motor: d.numero_motor ?? null,
+        cor: d.cor ?? null,
+        ano_fabricacao: d.ano_fabricacao ?? null,
       })
       .eq('id', id);
     if (erroFicha) throw erroFicha;

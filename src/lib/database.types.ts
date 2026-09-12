@@ -247,6 +247,7 @@ export type VeiculosRow = Timestamps & {
   placa: string;
   chassi: string | null;
   renavam: string | null;
+  numero_motor: string | null;
   marca: string | null;
   modelo: string | null;
   ano_fabricacao: number | null;
@@ -921,6 +922,7 @@ export type LeadsRow = Timestamps & {
   cliente_existente_id: string | null;
   chassi: string | null;
   renavam: string | null;
+  numero_motor: string | null;
   cor: string | null;
   ano_fabricacao: number | null;
   crlv_qrcode: string | null;

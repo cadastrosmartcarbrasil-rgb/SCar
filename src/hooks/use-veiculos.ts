@@ -46,6 +46,10 @@ export function useSaveVeiculo() {
         placa: (v.placa ?? '').toUpperCase().replace(/[^A-Z0-9]/g, ''),
         renavam: v.renavam || null,
         chassi: v.chassi || null,
+        // Vazio vira NULL, nunca '': `chassi` e unique e string vazia colide
+        // (gotcha de fornecedores.documento, 0051). O motor segue a mesma
+        // regra por consistencia, ainda que hoje nao tenha unique.
+        numero_motor: v.numero_motor || null,
         marca: v.marca || null,
         modelo: v.modelo || null,
         cor: v.cor || null,

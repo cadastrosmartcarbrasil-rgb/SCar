@@ -326,6 +326,15 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
             <FormField label="Renavam *">
               <Input value={form.renavam ?? ''} onChange={(e) => set({ renavam: e.target.value.replace(/\D/g, '') })} maxLength={11} />
             </FormField>
+            {/* Nao entra no checklist de propósito: o motor nao aparece em todo
+                documento e nao pode segurar a entrada na base. Quando a placa
+                foi consultada, ja vem preenchido. */}
+            <FormField label="No do motor">
+              <Input
+                value={form.numero_motor ?? ''}
+                onChange={(e) => set({ numero_motor: e.target.value.toUpperCase() })}
+              />
+            </FormField>
           </div>
           <div className="grid gap-3 sm:grid-cols-4">
             <FormField label="Marca *"><Input value={form.marca ?? ''} onChange={(e) => set({ marca: e.target.value })} /></FormField>

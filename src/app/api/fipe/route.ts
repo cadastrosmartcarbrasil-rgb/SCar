@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { parseValor, combustivelEnum, type FipeItem, type FipeValor } from '@/lib/fipe';
+import {
+  parseValor, combustivelEnum, registroDaPlaca,
+  type FipeItem, type FipeValor,
+} from '@/lib/fipe';
 
 // Proxy server-side da API Placa Fipe (placafipe.com.br). O token NUNCA vai ao
 // browser: injetado aqui, no corpo do POST.
@@ -51,9 +54,20 @@ export async function POST(request: Request) {
 
     switch (action) {
       case 'placa': {
+        // A resposta traz DUAS coisas, e ate aqui so a primeira era lida:
+        // `fipe[]` e a AVALIACAO e `informacoes_veiculo` e o REGISTRO do
+        // documento (chassi, numero do motor, cor, municipio). Descartar o
+        // segundo era o motivo de o chassi "nao vir" com a consulta dizendo
+        // sucesso — o dado sempre chegou.
         const lista = Array.isArray(data?.fipe) ? data.fipe : Array.isArray(data?.dados) ? data.dados : [];
         const opcoes = lista.map(normalizarValor).filter((v: FipeValor) => v.valor != null);
-        return NextResponse.json({ configured: true, valor: opcoes[0] ?? null, opcoes, msg: data?.msg ?? null });
+        return NextResponse.json({
+          configured: true,
+          valor: opcoes[0] ?? null,
+          opcoes,
+          registro: registroDaPlaca(data?.informacoes_veiculo ?? data?.veiculo),
+          msg: data?.msg ?? null,
+        });
       }
       case 'valor': {
         const o = Array.isArray(data?.fipe) ? data.fipe[0] : (data?.dados ?? data);

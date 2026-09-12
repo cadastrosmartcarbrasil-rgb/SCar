@@ -324,8 +324,13 @@ function VeiculosConteudo() {
     const p = normalizarPlaca(form.placa ?? '');
     if (!placaValida(p)) return toast.error('Placa invalida');
     setConsultando(true);
-    // 1) dados cadastrais da placa (provedor de placa, se configurado)
-    // 2) valor + dados FIPE pela placa (placafipe getplacafipe)
+    // Duas fontes, e elas NAO se sobrepoem:
+    // 1) `/api/placa` — provedor de placa OPCIONAL (env `PLACA_API_URL`), que
+    //    hoje nao esta configurado: devolve `found: false` sem sair para a rede;
+    // 2) a Placa Fipe, que devolve a AVALIACAO (`valor`) **e** o REGISTRO do
+    //    documento (`registro`: chassi, numero do motor, cor, ano de
+    //    fabricacao). O registro ficava sendo descartado pelo proxy — era por
+    //    isso que o chassi "nao vinha" com a consulta dizendo sucesso.
     const [r, fipe] = await Promise.all([
       consultarPlaca(p),
       fipePorPlaca.mutateAsync(p).catch(() => null),
@@ -333,23 +338,32 @@ function VeiculosConteudo() {
     setConsultando(false);
 
     const v = fipe?.valor ?? null;
-    const preencheu = (r && r.found) || !!v;
+    const reg = fipe?.registro ?? null;
+    const preencheu = (r && r.found) || !!v || !!reg;
     if (!preencheu) {
       toast.message('Consulta indisponivel - preencha os dados manualmente.');
       return;
     }
+    // A ordem e a da fonte mais especifica para a mais generica, e o `f.campo`
+    // no fim garante que consulta sem aquele dado NUNCA apaga o que ja estava
+    // digitado — `registroDaPlaca` devolve null em vez de campos vazios
+    // justamente para isto.
     setForm((f) => ({
       ...f,
-      marca: r?.marca ?? v?.marca ?? f.marca,
-      modelo: r?.modelo ?? v?.modelo ?? f.modelo,
-      ano_fabricacao: r?.ano_fabricacao ?? f.ano_fabricacao,
-      ano_modelo: r?.ano_modelo ?? v?.anoModelo ?? f.ano_modelo,
-      cor: r?.cor ?? f.cor,
-      chassi: r?.chassi ?? f.chassi,
+      marca: r?.marca ?? reg?.marca ?? v?.marca ?? f.marca,
+      modelo: r?.modelo ?? v?.modelo ?? reg?.modelo ?? f.modelo,
+      ano_fabricacao: r?.ano_fabricacao ?? reg?.anoFabricacao ?? f.ano_fabricacao,
+      ano_modelo: r?.ano_modelo ?? v?.anoModelo ?? reg?.anoModelo ?? f.ano_modelo,
+      cor: r?.cor ?? reg?.cor ?? f.cor,
+      chassi: r?.chassi ?? reg?.chassi ?? f.chassi,
+      numero_motor: reg?.numeroMotor ?? f.numero_motor,
       valor_fipe: v?.valor ?? f.valor_fipe,
       codigo_fipe: v?.codigoFipe ?? f.codigo_fipe,
-      combustivel: (v?.combustivel as Combustivel) ?? f.combustivel,
+      combustivel: (v?.combustivel as Combustivel) ?? (reg?.combustivel as Combustivel) ?? f.combustivel,
     }));
+    // O `modelo` da FIPE e o comercial completo ("COROLLA XEI 2.0 FLEX 16V
+    // AUT."), mais util na ficha que o abreviado do documento — por isso ele
+    // vem antes do registro, ao contrario da marca.
     toast.success(v ? `Placa + FIPE: ${formatCurrency(v.valor ?? 0)}` : 'Dados da placa preenchidos');
   }
 
@@ -381,6 +395,12 @@ function VeiculosConteudo() {
       onError: (err) => {
         const m = (err as Error).message;
         if (m.includes('rastreador_imei')) return toast.error('IMEI ja cadastrado em outro veiculo');
+        // Com o chassi vindo preenchido pela consulta da placa, a colisao no
+        // unique deixou de ser hipotese: e o carro ja cadastrado com OUTRA
+        // placa (transferencia, clonagem, cadastro duplicado). Dizer "chassi ja
+        // cadastrado" leva a conferir; o texto cru do Postgres, nao.
+        if (m.includes('chassi')) return toast.error('Chassi ja cadastrado em outro veiculo');
+        if (m.includes('renavam')) return toast.error('Renavam ja cadastrado em outro veiculo');
         toast.error(m.includes('placa') ? 'Placa ja cadastrada' : m);
       },
     });
@@ -538,12 +558,20 @@ function VeiculosConteudo() {
             </FormField>
           </div>
 
+          {/* Os tres campos do REGISTRO do documento — os tres vem preenchidos
+              pela consulta da placa (ver `consultar`). */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <FormField label="Renavam">
               <Input value={form.renavam ?? ''} onChange={(e) => setF({ renavam: e.target.value })} />
             </FormField>
-            <FormField label="Chassi" className="sm:col-span-2">
+            <FormField label="Chassi">
               <Input value={form.chassi ?? ''} onChange={(e) => setF({ chassi: e.target.value })} />
+            </FormField>
+            <FormField label="No do motor">
+              <Input
+                value={form.numero_motor ?? ''}
+                onChange={(e) => setF({ numero_motor: e.target.value })}
+              />
             </FormField>
           </div>
 

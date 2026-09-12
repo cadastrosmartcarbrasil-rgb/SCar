@@ -66,11 +66,12 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
 **`0001`..`0073`, todas** (confirmado pelo usuário em 12/09/2026). **Pendente, só ela:**
 
 ```
-0074
+0074 0075
 ```
-A `0074` é CORRETIVA da `0073` e pode ir sozinha, a qualquer momento: é leitura do módulo
-Mutual, não mexe em dado nenhum. Enquanto ela não rodar, o funil da unidade pelo consultor
-mostra número inflado (ver a seção própria) — não decida a carga por ele.
+A `0074` é CORRETIVA da `0073` (leitura do módulo Mutual, não mexe em dado) e a `0075` só
+ACRESCENTA a coluna `numero_motor` em `veiculos` e `leads`. As duas são independentes entre si e
+podem ir a qualquer momento; a ordem acima é só a numérica. Enquanto a `0074` não rodar, o funil da
+unidade pelo consultor mostra número inflado (ver a seção própria) — não decida a carga por ele.
 
 **3. COMO PUBLICAR.** Migrations primeiro (acima), depois o contêiner:
 ```bash
@@ -187,7 +188,11 @@ nenhuma: manda rodar de novo o que já rodou.
   `vendedores.nome` não são únicos (só `documento` é, 0069), então o `left join` multiplicava a
   linha do objeto e o `count(*)` do funil inflava. No cenário do teste: **16 onde existem 5.**
   Ver a seção própria.
-- **Próxima migration livre: `0075`.** A `0074` é a única que ainda **não foi aplicada em
+- **`0075_veiculo_numero_motor` é NOVA** — a consulta por placa SEMPRE devolveu o registro do
+  documento (chassi, cor, **número do motor**) e o nosso proxy descartava; corrigido o descarte,
+  faltava onde gravar o motor. A coluna entra em `veiculos` **e** em `leads`, e
+  `autorizar_entrada_lead` passa a carregá-la — ver "Consulta por placa" abaixo.
+- **Próxima migration livre: `0076`.** A `0074` e a `0075` ainda **não foram aplicadas em
   produção**; as `0001`..`0073` já foram.
 - **`.claude/hooks/session-start.sh` é NOVO** — avisa quando a sessão nasce no branch errado e
   instala as dependências. Ele **só roda se estiver no branch que a sessão clonou**; enquanto o
@@ -313,9 +318,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0074`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **51 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 587 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0075`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **52 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 597 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Todos os portais e páginas
@@ -328,6 +333,11 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 - **`RESEND_API_KEY` não configurada no VPS** — boas-vindas ao vendedor e voucher da 24h não
   enviam e-mail (o sistema avisa e devolve o texto, não finge que enviou).
 - **`PLACAFIPE_TOKEN`:** sem ele a página pública cai no valor informado pelo visitante.
+- **`PLACA_API_URL`/`PLACA_API_KEY` NUNCA foram configuradas** — é o provedor de placa OPCIONAL,
+  outro serviço, lido por `/api/placa`. Sem a env a rota devolve `found: false` sem sair para a
+  rede. Hoje **não falta nada por causa disso**: chassi, cor, ano de fabricação e número do motor
+  vêm da própria Placa Fipe (ver "Consulta por placa"). Ela só acrescentaria dado de registro que a
+  Placa Fipe não traz.
 - **Dedução do tipo de veículo pela FIPE** (`tipoVeiculoSugerido`) foi escrita sem ver um retorno
   real da API — confirmar com uma placa de moto e ajustar o mapeamento se preciso.
 - **Devolução de lead parado ao pool é MANUAL** (botão em `/regional/leads`); para rodar sozinha
@@ -2823,6 +2833,45 @@ no fim — o runner procura por "PASSARAM") e rode `npm run schema`.
 - **A confirmar em teste real:** no `fipebycodigo` da cascata, passamos o Value do modelo como
   `codigo_fipe` — se a API esperar o código FIPE textual, ajustar em `/api/fipe` (um ponto só).
 
+## Consulta por PLACA: são DOIS blocos na mesma resposta (0075)
+- **A resposta do `getplacafipe` tem duas partes, e elas respondem perguntas diferentes:**
+  `fipe[]` é a **AVALIAÇÃO** (valor, código FIPE, mês de referência, marca/modelo comercial) e
+  **`informacoes_veiculo` é o REGISTRO do documento** — `chassi`, `motor`, `cor`, `ano`,
+  `municipio`, `uf`, `cilindradas`, `potencia`, `placa_alternativa`.
+- **🔴 O BUG QUE ISSO CORRIGIU: o proxy lia só o primeiro bloco e jogava o segundo fora.** O
+  sintoma era "a consulta funciona mas o chassi não vem" — e vinha, desde sempre. Três campos
+  ficavam vazios **juntos** (chassi, cor e ano de fabricação), porque eram os únicos que não
+  tinham fonte no bloco da avaliação. **Quando um subconjunto exato de campos falha e o resto
+  passa, procure a FONTE comum deles, não o campo.**
+- **`registroDaPlaca()` (`src/lib/fipe.ts`, testada) é quem lê o registro.** Normaliza como o banco
+  espera: chassi só alfanumérico em caixa alta (o mesmo `regexp_replace` de
+  `autorizar_entrada_lead`, 0034) e o resto em CAIXA ALTA, pela convenção de cadastro — dado de
+  fora entra padronizado, como já acontece com o ViaCEP.
+- **Bloco ausente devolve `null`, nunca um objeto de campos vazios.** A tela usa
+  `reg?.campo ?? f.campo`: consulta sem registro **não pode apagar** o que o atendente já digitou.
+- **O payload real está guardado no teste** (`src/lib/fipe.test.ts`, placa OAW0838, 12/09/2026).
+  Foi ele que provou onde o chassi mora — sem amostra real no repositório a próxima sessão chuta o
+  formato de novo, que é o erro que este módulo já cometeu duas vezes no Mutual.
+- **Os TRÊS caminhos que consultam placa preenchem o registro**, e é preciso mexer nos três:
+  `/veiculos` (botão *Consultar*), a captura da venda (`<NovoLeadCotacao>`, que serve o CRM **e** o
+  portal do vendedor) e a página pública do hotlink (`/api/v1/hotlink/veiculo`). Na venda os campos
+  não aparecem na captura — a tela é curta de propósito —, mas vão gravados no lead e o
+  `<FechamentoVenda>` abre com eles prontos; o que foi capturado é mostrado em uma linha discreta,
+  para não virar mágica invisível.
+- **O NÚMERO DO MOTOR não tinha coluna (0075)** — entrou em `veiculos` e em `leads`. Nas duas
+  pontas de propósito: o veículo nasce por dois caminhos (cadastro direto e rota da venda), e uma
+  coluna só em `veiculos` faria o motor sumir em toda venda, justamente o caminho em que a placa é
+  consultada primeiro. **Ele não é `unique`, e não entra no `checklist_lead`:** motor se troca de
+  carro, base legada repete, e nem todo documento traz — duplicidade aqui é relatório (padrão de
+  `rastreadores_divergencias`), não constraint que recusa cadastro no balcão.
+- **Com o chassi vindo preenchido, a colisão no `unique` deixou de ser hipótese:** `/veiculos`
+  passou a traduzir o erro para "Chassi já cadastrado em outro veículo" (e o mesmo para Renavam).
+  É o carro já cadastrado com outra placa — transferência, clonagem ou cadastro duplicado —, e o
+  texto cru do Postgres não levava ninguém a conferir isso.
+- **`/api/placa` é OUTRO provedor, opcional, e nunca foi configurado** (`PLACA_API_URL`). Não
+  confundir: ele continua no código como fonte extra, e sem a env devolve `found: false` sem sair
+  para a rede.
+
 ## Gotchas já resolvidos (não repetir)
 - **Tela de login NUNCA pode ficar sob o layout que exige sessão.** `/portal/login` nasceu em
   `src/app/portal/login/`, herdando o `layout.tsx` do portal — e ficou inalcançável nos DOIS
@@ -2882,6 +2931,13 @@ no fim — o runner procura por "PASSARAM") e rode `npm run schema`.
   construídas sobre um checkbox decorativo, com a tela dizendo que ele revogava acesso.
   **Ao criar flag de situação (`ativo`, `bloqueado`, `suspenso`), escreva no mesmo commit quem a
   LÊ** — e um teste que prove o corte, não só a gravação.
+- **Quando um SUBCONJUNTO EXATO de campos vem vazio e o resto vem certo, o problema é a FONTE.**
+  A consulta de placa preenchia marca, modelo, ano-modelo e valor, e deixava chassi, cor e ano de
+  fabricação em branco — os três, sempre. Não era coincidência nem API incompleta: eram os únicos
+  campos cuja única fonte era um bloco da resposta (`informacoes_veiculo`) que o nosso proxy
+  descartava. **Antes de culpar o provedor, olhe o que os campos que falham têm em comum** — e
+  confira o payload cru, que aqui respondeu em um comando o que tinha virado dois diagnósticos
+  plausíveis e opostos.
 - **`left join` por coluna NÃO ÚNICA multiplica a linha — e um `count(*)` depois dele mente.**
   O funil do consultor (0073) juntava `vendedores` por `email` e por `nome`, que não têm unique
   (só `documento` tem, 0069): cada veículo de um consultor com e-mail repetido virava duas linhas
