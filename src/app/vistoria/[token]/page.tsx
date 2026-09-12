@@ -20,6 +20,13 @@ export default async function VistoriaPublicaPage({ params }: { params: { token:
   const { data: sessoes } = await admin.rpc('vistoria_por_token', { p_token: params.token });
   const s = sessoes?.[0];
 
+  // A logo OFICIAL e a cadastrada em Configuracoes -> Empresa, como em toda
+  // pagina publica (`/v/<codigo>`, `/cotacao/<token>`). Sem buscar aqui, esta
+  // tela cai no `public/logo-smartcar.svg`, que e so o fallback desenhado — e
+  // o cliente ve uma marca diferente da que viu ao contratar.
+  const { data: empresa } = await admin
+    .from('empresa').select('logo_url').limit(1).maybeSingle();
+
   const poses = s?.valida && s.lead_id
     ? (await admin.rpc('fotos_vistoria_lead', { p_lead_id: s.lead_id })).data ?? []
     : [];
@@ -33,6 +40,7 @@ export default async function VistoriaPublicaPage({ params }: { params: { token:
       veiculo={{ placa: s?.placa ?? null, marca: s?.marca ?? null, modelo: s?.modelo ?? null }}
       expiraEm={s?.expira_em ?? null}
       posesIniciais={poses}
+      logoUrl={empresa?.logo_url ?? null}
     />
   );
 }

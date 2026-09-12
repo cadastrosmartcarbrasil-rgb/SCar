@@ -322,8 +322,13 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 - **Vitest: 608 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
-- **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Todos os portais e páginas
-  públicas já leem `empresa.logo_url`; `public/logo-smartcar.svg` é só o fallback desenhado.
+- **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Os portais e páginas públicas
+  leem `empresa.logo_url`; `public/logo-smartcar.svg` é só o fallback desenhado.
+  **⚠️ `/portal/login` ainda passa `url={null}` FIXO** (`src/app/portal/login/page.tsx:46`), então
+  o associado vê o fallback no login — é o mesmo defeito que a vistoria tinha. A correção exige
+  partir a página em server (busca a `empresa`) + client (o formulário), e ela **não foi feita de
+  propósito**: aquele arquivo é o do gotcha "tela de login sob o layout que exige sessão", que já
+  custou um bug real. Mexer ali é tarefa com teste de ida e volta do login, não ajuste de passagem.
 - **Gateway bancário mockado:** `MockGateway` gera linha digitável/PIX fictícios. Ligar o real =
   `AsaasGateway.emitir` (esqueleto pronto) + webhook chamando `registrar_retorno_cobranca`.
 - **`/api/boletos/emitir-lote` é a rotina ANTIGA** (mock) — usar `/api/v1/cobrancas/*`. Pode sair.
@@ -2483,6 +2488,11 @@ correspondente é o inverso: promessa na tela, recusa no banco.
   exato momento em que está com o carro na frente e decidido.
 - **Onde fica:** `/vistoria/<token>` — pública, no `PUBLIC_PATHS` do middleware, server component
   com `service_role` no mesmo padrão de `/v/<codigo>` e `/cotacao/<token>`.
+- **A LOGO SAI DE `empresa.logo_url`, como em toda página pública** — a primeira versão não buscou e
+  a tela caiu no `public/logo-smartcar.svg`, que é só o **fallback desenhado**: o cliente via, na
+  hora de fotografar, uma marca diferente da que tinha acabado de ver ao contratar. **Tela pública
+  nova busca `empresa` no server component e passa `logoUrl` adiante** — o `<CabecalhoMarca>` sem
+  `logoUrl` não avisa nada, ele simplesmente desenha o fallback.
 - **⚠️ É UM TOKEN NOVO, e não o `leads.token_publico` (0042).** Aquele é a capacidade de COTAR e
   CONTRATAR, e o link da proposta é feito para ser **guardado e reaberto** — vai para o WhatsApp,
   fica no histórico, o cliente reabre meses depois. Pendurar UPLOAD nele transformaria um link de

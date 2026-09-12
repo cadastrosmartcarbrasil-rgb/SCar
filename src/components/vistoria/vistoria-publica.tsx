@@ -38,7 +38,7 @@ const MOTIVOS: Record<string, { titulo: string; texto: string }> = {
 };
 
 export function VistoriaPublica({
-  token, valida, motivo, nome, veiculo, expiraEm, posesIniciais,
+  token, valida, motivo, nome, veiculo, expiraEm, posesIniciais, logoUrl,
 }: {
   token: string;
   valida: boolean;
@@ -47,6 +47,8 @@ export function VistoriaPublica({
   veiculo: { placa: string | null; marca: string | null; modelo: string | null };
   expiraEm: string | null;
   posesIniciais: FotoVistoriaModelo[];
+  /** A logo cadastrada em Configuracoes -> Empresa; sem ela cai no fallback. */
+  logoUrl: string | null;
 }) {
   const [poses, setPoses] = useState<FotoVistoriaModelo[]>(posesIniciais);
   const [enviando, setEnviando] = useState<string | null>(null);
@@ -86,7 +88,7 @@ export function VistoriaPublica({
   if (!valida) {
     const m = MOTIVOS[motivo] ?? MOTIVOS.LINK_INVALIDO;
     return (
-      <Pagina>
+      <Pagina logoUrl={logoUrl}>
         <div className="rounded-2xl bg-superficie p-6 text-center shadow-sm">
           <TriangleAlert className="mx-auto h-12 w-12 text-amber-500" />
           <h2 className="mt-3 text-lg font-semibold text-slate-800">{m.titulo}</h2>
@@ -97,7 +99,7 @@ export function VistoriaPublica({
   }
 
   return (
-    <Pagina>
+    <Pagina logoUrl={logoUrl}>
       <div className="rounded-2xl bg-superficie p-5 shadow-sm">
         <h1 className="text-lg font-semibold text-slate-800">
           {nome ? `${nome.split(' ')[0]}, ` : ''}vamos fotografar o seu carro
@@ -207,10 +209,10 @@ export function VistoriaPublica({
   );
 }
 
-function Pagina({ children }: { children: React.ReactNode }) {
+function Pagina({ children, logoUrl }: { children: React.ReactNode; logoUrl: string | null }) {
   return (
     <div className="min-h-screen bg-fundo">
-      <CabecalhoMarca subtitulo="Vistoria do veiculo" />
+      <CabecalhoMarca logoUrl={logoUrl} subtitulo="Vistoria do veiculo" />
       <main className="mx-auto w-full max-w-lg px-4 pb-10">{children}</main>
       <RodapeMarca />
     </div>
