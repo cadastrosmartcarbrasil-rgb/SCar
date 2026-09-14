@@ -273,6 +273,8 @@ export type VeiculosRow = Timestamps & {
   modelo_id: string | null;
   categoria: string | null;
   data_ativacao: string | null;
+  // Dia em que o veiculo deixou a base (0078). Nulo = esta na carteira.
+  data_saida: string | null;
   tipo_faturamento: TipoFaturamento;
   alienado: boolean;
   alienado_financeira: string | null;
@@ -1514,6 +1516,61 @@ export type AssistPainelVeiculo = {
 
 export type AssistPainelSituacao = { situacao: StatusVeiculo; quantidade: number };
 
+// ---------------------------------------------------------------------------
+// Painel executivo das Regionais (0078) — o controle da matriz sobre as
+// unidades. Percentuais voltam como FRACAO (0..1), como no resto do sistema.
+// ---------------------------------------------------------------------------
+export type RegionaisPainelResumo = {
+  veiculos_ativos: number;
+  veiculos_ativos_antes: number;
+  veiculos_inadimplentes: number;
+  veiculos_cancelados: number;
+  veiculos_cancelados_antes: number;
+  veiculos_em_evento: number;
+  veiculos_novos: number;
+  carteira_ativa: number;
+  valor_recebido: number;
+  valor_recebido_antes: number;
+  valor_inadimplente: number;
+  valor_a_receber: number;
+  gasto_eventos: number;
+  gasto_eventos_antes: number;
+  regionais_total: number;
+};
+
+export type RegionaisPainelPonto = {
+  balde: string;
+  fim_balde: string;
+  granularidade: 'DIA' | 'SEMANA' | 'MES';
+  ativos: number;
+  inadimplentes: number;
+  sinistros: number;
+  recebido: number;
+  gasto_eventos: number;
+};
+
+export type RegionaisPainelLinha = {
+  regional_id: string;
+  regional: string;
+  cidade: string;
+  uf: string;
+  ativa: boolean;         // unidade inativada (0067) continua na tabela, marcada
+  veiculos_ativos: number;
+  veiculos_novos: number;
+  veiculos_cancelados: number;
+  veiculos_inadimplentes: number;
+  inadimplencia: number;   // fracao 0..1
+  sinistros: number;
+  recebido: number;
+  gasto_eventos: number;
+  resultado: number;
+  sinistralidade: number;  // fracao 0..1 (1 = consome tudo o que arrecada)
+};
+
+export type IntervaloContasPainel = { conta_de: string | null; conta_ate: string | null };
+
+export type ContaPlanoPainel = { codigo: string; nome: string; tipo: TipoCategoriaDre };
+
 export type ElegibilidadeAssistencia = {
   servico_id: string;
   descricao: string;
@@ -1732,6 +1789,9 @@ export type EmpresaRow = Timestamps & {
   endereco: Json;
   logo_url: string | null;
   dias_tolerancia_inadimplencia: number;
+  // Recorte do plano de contas que alimenta o painel das regionais (0078).
+  painel_conta_de: string | null;
+  painel_conta_ate: string | null;
 };
 
 export type MandatosRow = Timestamps & {
@@ -2963,6 +3023,48 @@ export type Database = {
       elegibilidade_assistencia: {
         Args: { p_veiculo_id: string };
         Returns: ElegibilidadeAssistencia[];
+      };
+      regionais_painel_resumo: {
+        Args: {
+          p_data_inicio: string;
+          p_data_fim: string;
+          p_regional_id?: string | null;
+          p_conta_de?: string | null;
+          p_conta_ate?: string | null;
+        };
+        Returns: RegionaisPainelResumo[];
+      };
+      regionais_painel_serie: {
+        Args: {
+          p_data_inicio: string;
+          p_data_fim: string;
+          p_regional_id?: string | null;
+          p_granularidade?: string | null;
+          p_conta_de?: string | null;
+          p_conta_ate?: string | null;
+        };
+        Returns: RegionaisPainelPonto[];
+      };
+      regionais_painel_comparativo: {
+        Args: {
+          p_data_inicio: string;
+          p_data_fim: string;
+          p_conta_de?: string | null;
+          p_conta_ate?: string | null;
+        };
+        Returns: RegionaisPainelLinha[];
+      };
+      intervalo_contas_painel: {
+        Args: Record<string, never>;
+        Returns: IntervaloContasPainel[];
+      };
+      salvar_intervalo_contas_painel: {
+        Args: { p_conta_de?: string | null; p_conta_ate?: string | null };
+        Returns: undefined;
+      };
+      contas_plano_painel: {
+        Args: Record<string, never>;
+        Returns: ContaPlanoPainel[];
       };
       assist_painel_resumo: {
         Args: { p_data_inicio: string; p_data_fim: string; p_regional_id?: string | null };

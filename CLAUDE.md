@@ -196,8 +196,12 @@ nenhuma: manda rodar de novo o que já rodou.
 - **`0077_papeis_cotador_sinistro` é NOVA e MUDA ACESSO** — aposenta o `cotador` e faz o
   `sinistro` governar o EVENTO (ver a seção própria). Não é cosmética: quem opera a 24h com papel
   `sinistro` **perde o acionamento**.
-- **Próxima migration livre: `0078`.** As `0001`..`0075` já foram aplicadas em produção; a `0076` e
-  a `0077` sobem com este deploy, nessa ordem.
+- **`0078_regionais_painel` é NOVA e ainda NÃO foi aplicada** — o DASHBOARD EXECUTIVO DAS
+  REGIONAIS (ver seção própria). Ela **mexe em estrutura**: cria `veiculos.data_saida` (a data do
+  churn, que não existia) com trigger e backfill pelo `updated_at`, e duas colunas em `empresa`
+  (o recorte do plano de contas). Sem ela a tela `/regionais` não abre.
+- **Próxima migration livre: `0079`.** As `0001`..`0075` já foram aplicadas em produção; a `0076`,
+  a `0077` e a `0078` sobem com este deploy, nessa ordem.
 - **`.claude/hooks/session-start.sh` é NOVO** — avisa quando a sessão nasce no branch errado e
   instala as dependências. Ele **só roda se estiver no branch que a sessão clonou**; enquanto o
   default do GitHub for o branch morto, uma sessão que caia lá não terá o hook. A correção
@@ -325,9 +329,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0076`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **53 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 608 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0078`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **55 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 643 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Os portais e páginas públicas
@@ -1516,6 +1520,30 @@ lateral, impossivel para o downgrade ate a base: escolher "Somente cobertura bas
 a cotacao seguia cobrando o combo. Novo parametro `p_limpar_plano` (default `false`, entao o
 `aplicar_desconto_cotacao`, que chama por posicao, nao muda). A lista de argumentos muda, entao foi
 DROP + CREATE — sobrecarga deixaria a chamada ambigua.)
+· `0078_regionais_painel` (DASHBOARD EXECUTIVO DAS REGIONAIS — a leitura de CIMA que faltava: o
+`/regional` (0036) e a operacao de UMA franquia, e ninguem enxergava quantas unidades existem,
+qual cresce, qual perde carteira e qual gasta com evento mais do que arrecada. (A) **O CHURN GANHA
+DATA:** `veiculos.data_saida` + trigger `trg_veiculo_marca_saida` (mesmo padrao do
+`trg_veiculo_marca_ativacao`, 0025) — antes "cancelados no periodo" so podia ser adivinhado pelo
+`updated_at`, que qualquer correcao de ficha mexe. Saida e DEFINITIVA (inativo/baixado/excluido);
+**SUSPENSO nao e saida** — devedor continua na carteira, e quem mostra isso e a inadimplencia.
+Voltar para a base LIMPA o campo. Backfill do historico pelo `updated_at` (a melhor aproximacao
+que existia, e vale so para o passado); (B) **a carteira e lida por DATA, nao por status**:
+`frota_na_base(data, regional)` = ja ativado e ainda nao saiu NAQUELE dia — e o que permite
+comparar com o periodo anterior, porque `status` sozinho so sabe o agora; (C) **o recorte do plano
+de contas e institucional**: `empresa.painel_conta_de/painel_conta_ate` (nao `localStorage` — o
+recorte muda o "Valor Recebido" que a diretoria le, e dois gestores nao podem ver numeros
+diferentes), com `salvar_intervalo_contas_painel` so para `tem_acesso_global()`,
+`intervalo_contas_painel`, `contas_plano_painel` e `codigo_conta_ordenavel`/`conta_no_intervalo` —
+comparar codigo de conta como TEXTO mente ('1.10.00' < '1.9.99'), entao cada segmento vai para 4
+digitos; (D) as tres RPCs de leitura: `regionais_painel_resumo` (15 indicadores com o periodo
+anterior de mesmo tamanho ao lado), `regionais_painel_serie` (granularidade automatica —
+dia ate 45 dias, semana ate 200, mes acima; `ativos`/`inadimplentes` sao RETRATO no fim do balde e
+`sinistros`/`recebido`/`gasto` sao SOMA do balde) e `regionais_painel_comparativo` (uma linha por
+unidade, com sinistralidade = gasto com evento / recebido). Todas SECURITY DEFINER +
+`escopo_regional` + o rito de revoke da 0052, e com a trava de **staff** por dentro: `authenticated`
+inclui o associado do /portal desde a 0044, entao quem nao e staff recebe o painel VAZIO em vez da
+carteira da empresa).
 
 ## Módulos (status: todos funcionais)
 Painel/Visão Geral (`/dashboard`, 2 abas: indicadores da operação + **Assistência 24h** — o painel
@@ -1535,6 +1563,9 @@ Também: toggle de faturamento Agrupado↔Individual, status financeiro e os opc
 APIs REST em `/api/v1/sac/*` — `busca`, `visao-360`, `veiculo`, `faturamento`, `boleto`, `atendimento`
 — reutilizáveis por Portal do Associado/Assistência 24h/Chatbot)
 · **Protocolos** (`/protocolos`: Central com fila, filtros, histórico, transferência e encerramento)
+· **Regionais** (menu **Regionais**, com dois sub-itens: **Dashboard** (`/regionais`, o painel
+executivo consolidado — ver seção própria) e **Acesso as Regionais** (`/regional`, o portal da
+franquia, que é a operação de UMA unidade por vez))
 · **Portal do Vendedor** (`/vendedor`: painel, leads, comissões e perfil do próprio vendedor — PWA)
 Vendas/CRM (`/vendas` mobile-first: **agenda do dia** no topo (atrasados + retornos de hoje),
 **busca por nome/CPF/placa/telefone** e filtro por consultor, Kanban com "parado há N dias",
@@ -2084,6 +2115,57 @@ decisão de desenho sobre 87 policies de uma vez, não limpeza de passagem.
   o gestor numa sessão efêmera e aplica o desconto com ela, gravando `desconto_aprovado_por`.
   Voltar para dentro do limite limpa a aprovação. Uma trigger garante a regra mesmo fora da UI.
 
+## Dashboard executivo das Regionais (0078) — `/regionais`
+- **Por que existe:** o `/regional` (0036) é a operação de UMA franquia — a matriz entra nela, uma
+  por vez, e isso é de propósito. Faltava a leitura de CIMA: quantas unidades existem, qual cresce,
+  qual perde carteira e **qual gasta com evento mais do que arrecada**. Painel consolidado é o
+  oposto de "entrar numa unidade", então ele mora no sistema da matriz, não dentro do portal.
+- **O menu deixou de ser um link só.** "Portal da Franquia" virou o grupo **Regionais** com
+  **Dashboard** (`/regionais`) e **Acesso as Regionais** (`/regional`) — eram duas coisas
+  diferentes no mesmo item. O grupo nasce ABERTO quando a pessoa está dentro dele; `NavGrupo`/
+  `NavLink`/`Nav` vivem em **escopo de módulo** em `sidebar.tsx`, não dentro do `Sidebar`:
+  componente redefinido a cada render é um TIPO novo, e o React remonta a subárvore — o grupo se
+  fecharia sozinho a cada re-render.
+- **Onde:** `src/app/(dashboard)/regionais/page.tsx` + `src/components/regionais/painel-regionais.tsx`;
+  hooks em `src/hooks/use-regionais-painel.ts`; régua pura (testada) em `src/lib/regionais.ts`.
+- **Filtros:** período com atalhos **Últimos 7 dias · Últimos 30 dias · Mês atual · Ano atual**
+  (padrão: **últimos 30 dias**, que inclui hoje — 29 dias para trás, senão o período teria 31 dias
+  e a comparação com o anterior, que o banco monta do mesmo tamanho, ficaria torta) + **unidade** +
+  a **engrenagem do plano de contas**. Período invertido não consulta: a tela avisa.
+- **Os indicadores, em dois blocos:** *frota* (ativos com variação, inadimplentes com % da
+  carteira, cancelados = churn com variação, em evento) e *financeiro* (carteira ativa, recebido
+  com variação, inadimplente, a receber, gasto em eventos com variação).
+- **O que é do PERÍODO e o que é POSICIONAL** — mesma convenção do `financeiro_resumo`: recebido,
+  gasto, churn e novos são do período; **inadimplência e a receber são retrato de hoje**, porque
+  dinheiro em atraso não tem período. Está escrito no próprio cartão.
+- **A seta de tendência sabe o que é bom.** Carteira subindo é verde; churn, inadimplência e gasto
+  com evento subindo são vermelhos (`direcaoVariacao`). E sem período anterior para comparar ela
+  diz **"sem base de comparação"** em vez de inventar "+100%".
+- **Gráficos:** *frota no período* (área de ativos + linha de inadimplentes + linha de sinistros no
+  eixo da direita) e *recebido × gasto em eventos* (barras + linha de resultado). A granularidade é
+  do banco (dia/semana/mês pelo tamanho do período), não da tela.
+- **Comparativo por regional:** ranking de barras onde a **cor é o risco** (não a unidade) +
+  tabela ordenável por qualquer coluna, com CSV. Em *resultado* o **pior vem primeiro** — quem olha
+  ranking quer o extremo que precisa de decisão no topo.
+- **Risco da unidade** (`riscoRegional`, testado) é a **pior** de duas réguas: sinistralidade acima
+  de 100% (gasta com evento mais do que arrecada) ou inadimplência acima de 25% da carteira;
+  atenção a partir de 0,7 / 15%. **Unidade sem carteira não é "saudável": é `sem_dados`** — verde
+  numa unidade vazia manda a gestão olhar para o lado errado.
+- **O rodapé soma o TOTAL, não a média dos percentuais** (`totaisComparativo`): média de percentual
+  dá o mesmo peso a uma unidade de 12 veículos e a uma de 3.000.
+- **Fonte dos números (se um estiver errado, o erro está no dado, não no painel):** carteira = o
+  `valor_mensalidade` da ficha e, na falta dele, o que o ÚLTIMO título cobrou (não chamamos
+  `cotar_plano` por veículo — o painel varre a carteira inteira); recebido = `dre_movimentos` em
+  regime de CAIXA; **gasto em eventos = a BAIXA** do título ligado a um evento ou ao centro de custo
+  `ASSIST24` (guincho) — nota fiscal não entra para não contar duas vezes o que virou título, mesma
+  regra do `dre_movimentos`.
+- **A engrenagem do plano de contas é institucional**, não do navegador: vive em `empresa`
+  (`painel_conta_de`/`painel_conta_ate`), só admin/financeiro alteram, e mudar o recorte invalida
+  `['regionais','painel']` inteiro. As RPCs caem no que está salvo quando o parâmetro vem nulo —
+  então a tela **não envia** o recorte, e o número é o mesmo para todos.
+- **Isolamento:** gestor de unidade pedindo outra recebe a própria (`escopo_regional`), e no ranking
+  vê só a própria linha. Há teste cobrindo os dois casos e o do não-staff (painel zerado).
+
 ## Painel gerencial da Assistência 24h (0061) — a aba da Visão Geral
 - **Por que existe:** a `0026` resolveu a OPERAÇÃO (abrir, cotar, autorizar OS, pagar o prestador).
   Faltava a leitura de GESTÃO. Assistência é a maior saída de caixa da proteção veicular e ninguém
@@ -2545,6 +2627,9 @@ decisão de desenho sobre 87 policies de uma vez, não limpeza de passagem.
   `pendenciasDaUnidade`, `podeExcluirUnidade`, `avisoDeInativacao`, `rotuloUnidade`.
 
 ## Portal da Franquia (0036) — `/regional`
+- **No menu ele agora se chama `Regionais > Acesso as Regionais`** (0078). O item antigo "Portal da
+  Franquia" era um link só e virou grupo: o irmão dele é o **Dashboard** consolidado (`/regionais`),
+  que é outra coisa — ver a seção "Dashboard executivo das Regionais".
 - **A MATRIZ ESCOLHE A UNIDADE ao entrar.** O sistema de gestão é a matriz; a franquia se
   administra por este portal — e é por aqui que a matriz entra nela. Quem tem acesso global
   (admin/financeiro) cai numa tela **"Selecione a unidade"** (`<SelecionarUnidade>`) listando as

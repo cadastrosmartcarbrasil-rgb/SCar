@@ -24,6 +24,9 @@ import {
   UserRound,
   Satellite,
   Database,
+  ChevronDown,
+  LayoutList,
+  DoorOpen,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
@@ -31,6 +34,10 @@ import { ThemeToggle } from '@/components/ui/theme-toggle';
 import type { PapelUsuario } from '@/lib/database.types';
 
 type Item = { href: string; label: string; icon: React.ElementType };
+/** Item com sub-itens (hoje so Regionais: o painel e a porta das unidades). */
+type Grupo = { label: string; icon: React.ElementType; itens: Item[] };
+type Entrada = Item | Grupo;
+const ehGrupo = (e: Entrada): e is Grupo => 'itens' in e;
 
 const OPERACAO: Item[] = [
   { href: '/dashboard', label: 'Visao Geral', icon: LayoutDashboard },
@@ -85,6 +92,82 @@ function Wordmark() {
   );
 }
 
+const ehAtivo = (pathname: string, href: string) =>
+  pathname === href || pathname.startsWith(href + '/');
+
+function NavLink({ item, pathname, onNav, sub }: {
+  item: Item; pathname: string; onNav?: () => void; sub?: boolean;
+}) {
+  const active = ehAtivo(pathname, item.href);
+  return (
+    <Link
+      href={item.href}
+      onClick={onNav}
+      className={cn(
+        'relative flex items-center gap-3 rounded-[10px] transition',
+        sub ? 'py-2 pl-3 pr-3 text-[13px]' : 'px-3 py-2.5 text-[13.5px]',
+        active
+          ? "bg-cyan-500/15 font-semibold text-white before:absolute before:-left-3 before:top-2 before:bottom-2 before:w-[3px] before:rounded-r before:bg-cyan-400 before:shadow-[0_0_10px_#26aeea] before:content-['']"
+          : 'font-medium text-white/80 hover:bg-white/5 hover:text-white',
+      )}
+    >
+      <item.icon className={cn('shrink-0 opacity-90', sub ? 'h-4 w-4' : 'h-[18px] w-[18px]')} />
+      {item.label}
+    </Link>
+  );
+}
+
+/**
+ * Grupo do menu. Nasce ABERTO quando a pessoa esta dentro dele — esconder o
+ * item que mostra onde ela esta e esconder a propria localizacao.
+ */
+function NavGrupo({ grupo, pathname, onNav }: {
+  grupo: Grupo; pathname: string; onNav?: () => void;
+}) {
+  const dentro = grupo.itens.some((i) => ehAtivo(pathname, i.href));
+  const [aberto, setAberto] = useState(dentro);
+  const mostrar = aberto || dentro;
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setAberto(!mostrar)}
+        aria-expanded={mostrar}
+        className={cn(
+          'flex w-full items-center gap-3 rounded-[10px] px-3 py-2.5 text-[13.5px] transition',
+          dentro ? 'font-semibold text-white' : 'font-medium text-white/80 hover:bg-white/5 hover:text-white',
+        )}
+      >
+        <grupo.icon className="h-[18px] w-[18px] shrink-0 opacity-90" />
+        <span className="flex-1 text-left">{grupo.label}</span>
+        <ChevronDown className={cn('h-4 w-4 shrink-0 transition-transform', mostrar && 'rotate-180')} />
+      </button>
+      {mostrar && (
+        <div className="ml-5 mt-0.5 space-y-0.5 border-l border-white/10 pl-2">
+          {grupo.itens.map((i) => (
+            <NavLink key={i.href} item={i} pathname={pathname} onNav={onNav} sub />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Nav({ pathname, menuGestao, onNav }: {
+  pathname: string; menuGestao: Entrada[]; onNav?: () => void;
+}) {
+  return (
+    <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2">
+      <p className="px-3 pb-1.5 pt-3 text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Operacao</p>
+      {OPERACAO.map((i) => <NavLink key={i.href} item={i} pathname={pathname} onNav={onNav} />)}
+      <p className="px-3 pb-1.5 pt-4 text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Gestao</p>
+      {menuGestao.map((e) => (ehGrupo(e)
+        ? <NavGrupo key={e.label} grupo={e} pathname={pathname} onNav={onNav} />
+        : <NavLink key={e.href} item={e} pathname={pathname} onNav={onNav} />))}
+    </nav>
+  );
+}
+
 export function Sidebar({ papel, logoUrl }: { papel?: PapelUsuario; logoUrl?: string | null }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -99,49 +182,31 @@ export function Sidebar({ papel, logoUrl }: { papel?: PapelUsuario; logoUrl?: st
     ? [...GESTAO, ...integracao, { href: '/configuracoes', label: 'Configuracoes', icon: Settings }]
     : [...GESTAO, ...integracao];
 
-  // Portais: o da Franquia para quem gerencia uma unidade; o do Vendedor para
-  // o consultor de vendas (o layout de /vendedor confere o cadastro no banco).
-  const portais = [
+  // REGIONAIS e um grupo, nao um link: o painel (leitura consolidada de todas
+  // as unidades, /regionais) e a porta de entrada de UMA unidade (/regional,
+  // o portal da franquia) sao coisas diferentes e viviam no mesmo item.
+  // O portal do Vendedor segue link direto (o layout de /vendedor confere o
+  // cadastro no banco).
+  const portais: Entrada[] = [
     ...(['gestor_regional', 'admin', 'financeiro'].includes(papel ?? '')
-      ? [{ href: '/regional', label: 'Portal da Franquia', icon: Building2 }] : []),
+      ? [{
+          label: 'Regionais',
+          icon: Building2,
+          itens: [
+            { href: '/regionais', label: 'Dashboard', icon: LayoutList },
+            { href: '/regional', label: 'Acesso as Regionais', icon: DoorOpen },
+          ],
+        } satisfies Grupo] : []),
     ...(['consultor_vendas', 'admin'].includes(papel ?? '')
       ? [{ href: '/vendedor', label: 'Meu Portal de Vendas', icon: UserRound }] : []),
   ];
-  const menuGestao = [...portais, ...gestao];
+  const menuGestao: Entrada[] = [...portais, ...gestao];
 
   async function sair() {
     await supabase.auth.signOut();
     router.push('/login');
     router.refresh();
   }
-
-  const NavLink = ({ item, onNav }: { item: Item; onNav?: () => void }) => {
-    const active = pathname === item.href || pathname.startsWith(item.href + '/');
-    return (
-      <Link
-        href={item.href}
-        onClick={onNav}
-        className={cn(
-          'relative flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-[13.5px] transition',
-          active
-            ? "bg-cyan-500/15 font-semibold text-white before:absolute before:-left-3 before:top-2 before:bottom-2 before:w-[3px] before:rounded-r before:bg-cyan-400 before:shadow-[0_0_10px_#26aeea] before:content-['']"
-            : 'font-medium text-white/80 hover:bg-white/5 hover:text-white',
-        )}
-      >
-        <item.icon className="h-[18px] w-[18px] shrink-0 opacity-90" />
-        {item.label}
-      </Link>
-    );
-  };
-
-  const Nav = ({ onNav }: { onNav?: () => void }) => (
-    <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2">
-      <p className="px-3 pb-1.5 pt-3 text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Operacao</p>
-      {OPERACAO.map((i) => <NavLink key={i.href} item={i} onNav={onNav} />)}
-      <p className="px-3 pb-1.5 pt-4 text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Gestao</p>
-      {menuGestao.map((i) => <NavLink key={i.href} item={i} onNav={onNav} />)}
-    </nav>
-  );
 
   const mobileLogo = logoUrl ? (
     // eslint-disable-next-line @next/next/no-img-element
@@ -172,7 +237,7 @@ export function Sidebar({ papel, logoUrl }: { papel?: PapelUsuario; logoUrl?: st
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <Nav onNav={() => setAberto(false)} />
+            <Nav pathname={pathname} menuGestao={menuGestao} onNav={() => setAberto(false)} />
             <button onClick={sair} className="flex items-center gap-3 border-t border-white/10 px-5 py-3.5 text-sm text-white/80 hover:text-white">
               <LogOut className="h-4 w-4" /> Sair
             </button>
@@ -185,7 +250,7 @@ export function Sidebar({ papel, logoUrl }: { papel?: PapelUsuario; logoUrl?: st
         <div className="px-4 py-5">
           <Brand logoUrl={logoUrl} />
         </div>
-        <Nav />
+        <Nav pathname={pathname} menuGestao={menuGestao} />
         <button onClick={sair} className="flex items-center gap-3 border-t border-white/10 px-5 py-3.5 text-sm text-white/80 transition hover:text-white">
           <LogOut className="h-4 w-4" /> Sair
         </button>

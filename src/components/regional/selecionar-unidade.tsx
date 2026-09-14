@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowRight, ChevronLeft, Search, Building2 } from 'lucide-react';
+import { ArrowRight, BarChart3, ChevronLeft, Search, Building2 } from 'lucide-react';
 import { LogoSmartCar } from '@/components/hotlink/marca';
 import { COOKIE_UNIDADE, MAX_AGE_UNIDADE } from '@/lib/unidade';
 
@@ -55,7 +55,7 @@ export function SelecionarUnidade({
         <div className="flex flex-col items-center text-center">
           <LogoSmartCar url={logoUrl} className="h-12" />
           <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-700">
-            Portal da Franquia
+            Acesso as Regionais
           </p>
           <h1 className="mt-3 text-xl font-bold uppercase tracking-tight text-slate-900">
             Selecione a unidade
@@ -114,12 +114,22 @@ export function SelecionarUnidade({
           )}
         </ul>
 
-        <Link
-          href="/dashboard"
-          className="mt-5 flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
-        >
-          <ChevronLeft className="h-4 w-4" /> Voltar ao sistema de gestao
-        </Link>
+        <div className="mt-5 grid gap-2">
+          {/* Quem quer COMPARAR unidades nao precisa entrar em nenhuma: o
+              painel consolidado e outra tela (Regionais > Dashboard). */}
+          <Link
+            href="/regionais"
+            className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:border-cyan-400 hover:text-cyan-700"
+          >
+            <BarChart3 className="h-4 w-4" /> Ver o painel de todas as regionais
+          </Link>
+          <Link
+            href="/dashboard"
+            className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+          >
+            <ChevronLeft className="h-4 w-4" /> Voltar ao sistema de gestao
+          </Link>
+        </div>
       </div>
     </main>
   );
