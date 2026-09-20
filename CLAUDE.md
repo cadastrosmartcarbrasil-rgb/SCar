@@ -61,15 +61,18 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
 
 **1. ONDE.** Branch `claude/claude-md-opcao-x-98kfj5`, e só ele. Repositório
 `cadastrosmartcarbrasil-rgb/scar`. Confira com `git rev-parse --abbrev-ref HEAD`.
+**O banco é o projeto Supabase `Scar Software`, ref `asinzcqbbqdglrguqtnr`** (sa-east-1) — ver
+"Qual é o banco" logo abaixo. **Nenhum dos outros três projetos da conta é este sistema.**
 
-**2. O QUE FALTA SUBIR.** Aplicadas em produção: **`0001`..`0075`** (confirmado pelo usuário em
-12/09/2026). **Pendentes, nesta ordem: `0076` e `0077`**, pelo SQL Editor do Supabase, ANTES do
-contêiner (passo 3).
-> ⚠️ **A `0077` MUDA ACESSO — confira ANTES de rodar**, porque ela recusa o que hoje passa:
-> `select nome, email, papel from usuarios where papel::text = 'cotador';` (viram
-> `consultor_vendas`) e `select nome, email from usuarios where papel::text = 'sinistro';`
-> (**perdem a Assistência 24h**; quem opera guincho precisa de `assistencia_24h` ou
-> `gestor_regional`). Ver a seção "A VARREDURA DOS 8 PAPÉIS".
+**2. O QUE FALTA SUBIR.** **Nada.** As migrations **`0001`..`0078`** estão TODAS aplicadas em
+produção — conferido no banco em 20/09/2026, não relatado: as RPCs da `0078` (10/10), da `0076`
+(3/3) e o `pode_tratar_evento` da `0077` existem, e `chk_papel_vigente`, `veiculos.data_saida`,
+`trg_veiculo_marca_saida`, `empresa.painel_conta_de` e `vistorias.token_publico` estão lá.
+**Próxima migration livre: `0079`.**
+> A `0077` (mudança de acesso) já passou: hoje há **0 usuários** em `cotador` e **0** em
+> `sinistro`, então ninguém perdeu a Assistência 24h na virada.
+> O backfill da `0078` não preencheu `data_saida` em ninguém, e isso está CERTO: não há nenhum
+> veículo fora da base (`inativo`/`baixado`/`excluido`) para carimbar.
 
 **3. COMO PUBLICAR.** Migrations primeiro (acima), depois o contêiner:
 ```bash
@@ -78,6 +81,31 @@ cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 \
 ```
 O `git pull` roda **dentro do VPS**. O `DOCKER_BUILDKIT=0` **faz parte do comando** — sem ele o
 build nem começa neste servidor. Runbook completo em `DEPLOY.md`.
+
+### 🗄️ QUAL É O BANCO — o projeto Supabase certo, e como conferir
+**`Scar Software` · ref `asinzcqbbqdglrguqtnr` · `db.asinzcqbbqdglrguqtnr.supabase.co` · sa-east-1.**
+
+A conta tem **quatro** projetos e o nome não basta como prova — errar de banco é a versão pior do
+erro de branch que já custou dois dias aqui. Os outros três (`SmartVida`, `Dashboard`,
+`Smart Tracker`) **não têm nenhuma** das tabelas deste sistema; foi assim que este foi
+identificado, e é assim que se confere de novo em uma consulta:
+
+```sql
+select count(*) from information_schema.tables
+ where table_schema = 'public'
+   and table_name in ('veiculos','leads','clientes','acionamentos_assistencia',
+                      'rastreadores','mutual_captura','memos');   -- 7 aqui, 0 nos outros
+```
+
+**O repositório NÃO guarda o ref** (`supabase/config.toml` tem `project_id = "scar"`, que é o nome
+do projeto LOCAL da CLI, não o remoto) e a env real (`NEXT_PUBLIC_SUPABASE_URL`) vive só no `.env`
+do VPS — no repo é `xxxxxxxxxxxx`. Por isso o ref está escrito aqui: sem ele, a próxima sessão
+adivinha entre quatro bancos de produção.
+
+**Retrato da base em 20/09/2026** (serve para reconhecer o banco e para não confundir volume):
+302.061 capturas do Mutual · 303 vendedores · 4 regionais · 18 leads · 9 veículos · 5 associados ·
+8 usuários. **Os 9 veículos não são erro:** a carteira real ainda está no Mutual e a integração é
+**Fase 1, só leitura** — nada foi importado para `clientes`/`veiculos` ainda.
 
 **Depois de aplicar, ATUALIZE esta caixa** — uma lista de pendências desatualizada é pior que
 nenhuma: manda rodar de novo o que já rodou.
@@ -190,18 +218,18 @@ nenhuma: manda rodar de novo o que já rodou.
   documento (chassi, cor, **número do motor**) e o nosso proxy descartava; corrigido o descarte,
   faltava onde gravar o motor. A coluna entra em `veiculos` **e** em `leads`, e
   `autorizar_entrada_lead` passa a carregá-la — ver "Consulta por placa" abaixo.
-- **`0076_vistoria_link_publico` é NOVA e ainda NÃO foi aplicada** — é a vistoria pelo CELULAR DO
+- **`0076_vistoria_link_publico`** (aplicada) — é a vistoria pelo CELULAR DO
   CLIENTE, a etapa que faltava depois do aceite no hotlink. Sem ela a rota `/vistoria/<token>` não
   abre e o aceite volta a terminar em "o consultor vai combinar a vistoria". Ver a seção própria.
 - **`0077_papeis_cotador_sinistro` é NOVA e MUDA ACESSO** — aposenta o `cotador` e faz o
   `sinistro` governar o EVENTO (ver a seção própria). Não é cosmética: quem opera a 24h com papel
   `sinistro` **perde o acionamento**.
-- **`0078_regionais_painel` é NOVA e ainda NÃO foi aplicada** — o DASHBOARD EXECUTIVO DAS
+- **`0078_regionais_painel`** (aplicada) — o DASHBOARD EXECUTIVO DAS
   REGIONAIS (ver seção própria). Ela **mexe em estrutura**: cria `veiculos.data_saida` (a data do
   churn, que não existia) com trigger e backfill pelo `updated_at`, e duas colunas em `empresa`
   (o recorte do plano de contas). Sem ela a tela `/regionais` não abre.
-- **Próxima migration livre: `0079`.** As `0001`..`0075` já foram aplicadas em produção; a `0076`,
-  a `0077` e a `0078` sobem com este deploy, nessa ordem.
+- **Próxima migration livre: `0079`. Não há migration pendente:** `0001`..`0078` estão aplicadas
+  em produção (conferido no banco em 20/09/2026 — ver a caixa de retomada no topo).
 - **`.claude/hooks/session-start.sh` é NOVO** — avisa quando a sessão nasce no branch errado e
   instala as dependências. Ele **só roda se estiver no branch que a sessão clonou**; enquanto o
   default do GitHub for o branch morto, uma sessão que caia lá não terá o hook. A correção
