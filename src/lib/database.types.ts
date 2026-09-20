@@ -2451,8 +2451,24 @@ export type LeadRegional = {
 // ---- 0062: integracao com o Mutual (Fase 1 - espelho de leitura) -----------
 export type EntidadeMutual =
   | 'CONTRACT_OBJECT' | 'CONTRACT' | 'PERSON' | 'ADDRESS' | 'INVOICE' | 'EVENT'
-  | 'REGIONAL' | 'CONSULTANT'
+  /** 0083 — SALE_TEAM e o nivel que corresponde a `regionais` do SCar. */
+  | 'REGIONAL' | 'SALE_TEAM' | 'CONSULTANT'
   | 'VEHICLE_TYPE' | 'VEHICLE_COLOR' | 'VEHICLE_CATEGORY' | 'VEHICLE_USE_TYPE' | 'EVENT_TYPE';
+
+/** 0083 — uma equipe de vendas do Mutual e o agrupamento dela numa regional. */
+export type MutualEquipeVendas = {
+  id_externo: string;
+  nome: string | null;
+  macrorregiao: string | null;
+  filial_id: string | null;
+  objetos: number;
+  faturaveis: number;
+  consultores: number;
+  /** O de-para REGISTRADO. Varias equipes podem apontar para a mesma regional. */
+  regional_id: string | null;
+  /** false = o id so aparece no contrato; /association/sale_team/ nao foi puxado. */
+  capturada: boolean;
+};
 
 export type MutualCapturaRow = {
   id: number;
@@ -3798,6 +3814,9 @@ export type Database = {
         Returns: MutualPassoFunil[];
       };
       mutual_regional_do_externo: { Args: { p_id_externo: string }; Returns: string | null };
+      // 0083 — a EQUIPE DE VENDAS: o nivel que vira `regionais`.
+      mutual_equipes_vendas: { Args: Record<string, never>; Returns: MutualEquipeVendas[] };
+      mutual_equipe_do_externo: { Args: { p_id_externo: string }; Returns: string | null };
       // 0082 — a ponte id externo -> registro do SCar (a carga e re-executavel).
       vincular_externo: {
         Args: {

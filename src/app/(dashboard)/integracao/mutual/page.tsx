@@ -14,12 +14,14 @@ import {
   useMutualCampos, usePingMutual, useCapturaMutual,
   useMutualCoberturaConsultor, useMutualCoberturaUnidade, useVincularFilial,
   useCobrancaExternaResumo, useDefinirCobrancaExterna,
+  useMutualEquipes, useAgruparEquipe,
 } from '@/hooks/use-mutual';
 import { useRegionais } from '@/hooks/use-config';
 import {
   ENTIDADES_INCREMENTAIS, ROTULO_QUARENTENA, ROTULO_PERIODO_MUTUAL, type EntidadeMutual,
   gargaloDoFunil, coberturaDoFunil, teseSeSustenta, correnteVazia,
   situacaoDePara, filiaisPendentes, carteiraSemDePara,
+  equipesPendentes, carteiraSemAgrupamento, equipesSemNome, porMacrorregiao, consolidacao,
 } from '@/lib/mutual';
 import type { MutualDiagnostico, SeveridadeDiagnostico } from '@/lib/database.types';
 
@@ -35,6 +37,7 @@ const ENTIDADES: { chave: EntidadeMutual; rotulo: string; nota: string }[] = [
   { chave: 'ADDRESS', rotulo: 'Enderecos', nota: 'entidade propria no Mutual' },
   { chave: 'INVOICE', rotulo: 'Faturas', nota: 'o que esta sendo cobrado hoje' },
   { chave: 'EVENT', rotulo: 'Eventos', nota: 'sem filtro por alteracao nem paginacao' },
+  { chave: 'SALE_TEAM', rotulo: 'Equipes de vendas', nota: 'E ESTE o nivel que vira as nossas regionais' },
   { chave: 'CONSULTANT', rotulo: 'Consultores', nota: 'vendedores' },
   { chave: 'VEHICLE_TYPE', rotulo: 'Tipos de veiculo', nota: 'tabela de dominio' },
   { chave: 'VEHICLE_COLOR', rotulo: 'Cores', nota: 'tabela de dominio' },
@@ -79,6 +82,8 @@ export default function IntegracaoMutualPage() {
   const funil = useMutualCoberturaConsultor(true);
   const regionais = useRegionais();
   const vincular = useVincularFilial();
+  const equipes = useMutualEquipes();
+  const agrupar = useAgruparEquipe();
   const cobrancaExterna = useCobrancaExternaResumo();
   const cutover = useDefinirCobrancaExterna();
   const diagnostico = useMutualDiagnostico();
@@ -495,6 +500,118 @@ export default function IntegracaoMutualPage() {
           </div>
         </Secao>
       )}
+
+      {/* AS EQUIPES DE VENDAS (0083) — o nivel que vira as nossas regionais */}
+      <Secao titulo="Equipes de vendas — o agrupamento das unidades" icone={Users}>
+        <p className="mb-3 text-xs leading-relaxed text-slate-500">
+          O Mutual tem <strong>tres niveis</strong> (regional → equipe de vendas → consultor); o
+          SCar tem <strong>um</strong>. A nossa <strong>regional É a equipe de vendas</strong> dele
+          — a macrorregiao abaixo serve só para agrupar a leitura, não vira cadastro. As equipes
+          estão <strong>duplicadas</strong>: escolher a mesma unidade em várias delas é o que as
+          consolida.
+        </p>
+        {equipes.isLoading && <p className="text-sm text-slate-500">Carregando...</p>}
+        {!equipes.isLoading && (equipes.data ?? []).length === 0 && (
+          <div className={`rounded-lg px-3 py-2 text-sm ring-1 ${TOM.ATENCAO}`}>
+            Nenhuma equipe ainda. Puxe <strong>Equipes de vendas</strong> acima — sem isso as
+            equipes aparecem com carteira e sem nome.
+          </div>
+        )}
+        {(equipes.data ?? []).length > 0 && (() => {
+          const lista = equipes.data ?? [];
+          const pendentes = equipesPendentes(lista);
+          const semCarteira = carteiraSemAgrupamento(lista);
+          const semNome = equipesSemNome(lista);
+          const grupos = porMacrorregiao(lista);
+          const consol = consolidacao(lista);
+          return (
+            <>
+              <div className="mb-3 flex flex-wrap gap-2">
+                <span className={`rounded-lg px-3 py-2 text-sm ring-1 ${pendentes.length ? TOM.CRITICO : TOM.OK}`}>
+                  {pendentes.length > 0 ? (
+                    <>
+                      <strong className="tnum">{pendentes.length}</strong> equipes por agrupar,
+                      segurando <strong className="tnum">{semCarteira}</strong> veiculos
+                    </>
+                  ) : (
+                    <>Todas as equipes com carteira estao agrupadas.</>
+                  )}
+                </span>
+                {consol.size > 0 && (
+                  <span className={`rounded-lg px-3 py-2 text-sm ring-1 ${TOM.OK}`}>
+                    <strong className="tnum">{lista.length - pendentes.length}</strong> equipes
+                    consolidadas em <strong className="tnum">{consol.size}</strong>{' '}
+                    {consol.size === 1 ? 'unidade' : 'unidades'}
+                  </span>
+                )}
+                {semNome.length > 0 && (
+                  <span className={`rounded-lg px-3 py-2 text-sm ring-1 ${TOM.ATENCAO}`}>
+                    <strong className="tnum">{semNome.length}</strong> com carteira e{' '}
+                    <strong>sem nome</strong> — puxe as Equipes de vendas
+                  </span>
+                )}
+              </div>
+
+              {grupos.map((g) => (
+                <div key={g.macrorregiao} className="mb-4">
+                  <h3 className="mb-1 flex items-baseline gap-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                    {g.macrorregiao}
+                    <span className="tnum font-normal text-slate-400">
+                      {g.equipes.length} {g.equipes.length === 1 ? 'equipe' : 'equipes'} ·{' '}
+                      {g.faturaveis} faturaveis
+                    </span>
+                  </h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <tbody>
+                        {g.equipes.map((eq) => (
+                          <tr key={eq.id_externo} className="border-t border-slate-100">
+                            <td className="w-12 py-2 tnum text-xs text-slate-400">{eq.id_externo}</td>
+                            <td className="py-2 text-slate-800">
+                              {eq.nome ?? (
+                                <span className="text-slate-400">
+                                  (sem nome — so no contrato)
+                                </span>
+                              )}
+                            </td>
+                            <td className="w-24 py-2 text-right tnum text-xs text-slate-500">
+                              {eq.consultores > 0 ? `${eq.consultores} vend.` : ''}
+                            </td>
+                            <td className="w-24 py-2 text-right tnum font-semibold text-slate-900">
+                              {eq.faturaveis}
+                            </td>
+                            <td className="w-64 py-2 pl-3">
+                              <select
+                                className="w-full rounded border border-slate-200 bg-superficie px-2 py-1 text-xs"
+                                value={eq.regional_id ?? ''}
+                                disabled={agrupar.isPending}
+                                onChange={(ev) => agrupar.mutate({
+                                  idExterno: eq.id_externo,
+                                  regionalId: ev.target.value || null,
+                                })}
+                              >
+                                <option value="">— nao agrupada —</option>
+                                {(regionais.data ?? []).map((r) => (
+                                  <option key={r.id} value={r.id}>{r.nome}</option>
+                                ))}
+                              </select>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
+              {agrupar.isError && (
+                <p className="mt-2 text-xs text-rose-600">
+                  {(agrupar.error as Error)?.message ?? 'Nao foi possivel gravar o agrupamento.'}
+                </p>
+              )}
+            </>
+          );
+        })()}
+      </Secao>
 
       {(filiais.data ?? []).length > 0 && (
         <Secao titulo="Filiais do Mutual — o de-para da unidade" icone={Building2}>

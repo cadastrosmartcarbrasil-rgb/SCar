@@ -67,7 +67,12 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
 **2. O QUE FALTA SUBIR.** **Nada no banco.** As migrations **`0001`..`0081`** estão aplicadas em
 produção — as `0001`..`0078` conferidas no próprio schema em 20/09/2026, e a **`0079`, a `0080` e a
 `0081` rodadas pelo usuário em 20/09/2026**.
-> **⚠️ A `0082_carga_mutual_preparacao` é NOVA e AINDA NÃO FOI APLICADA.** Ela é a preparação da
+> **⚠️ A `0083_mutual_equipe_vendas` é NOVA e AINDA NÃO FOI APLICADA.** Ela põe o de-para no
+> nível CERTO: a nossa `regionais` é a **equipe de vendas** do Mutual (`contract.sales_team_id`),
+> não a filial. Sem ela a tela `/integracao/mutual` quebra (chama `mutual_equipes_vendas`) e
+> `/association/sale_team/` continua sendo recusada pelo CHECK da área de captura.
+> **Próxima migration livre: `0084`.**
+> **A `0082_carga_mutual_preparacao` foi aplicada em 20/09/2026.** Ela é a preparação da
 > carga do Mutual: a unidade passa a sair do **associado** (a corrente do consultor estava vazia),
 > entra a tabela de vínculo e entra o **interruptor da cobrança**. Sem ela a tela
 > `/integracao/mutual` quebra (chama `mutual_cobertura_unidade`) e a carga não tem como rodar sem
@@ -290,9 +295,11 @@ nenhuma: manda rodar de novo o que já rodou.
   seria ambíguo) e mexeu em `valor_mensalidade_veiculo`, `atualizar_cotacao` e
   `autorizar_entrada_lead`. **Nenhum preço mudou ao aplicá-la:** sem adicional cadastrado, o
   `p_regional_id` nulo devolve a matriz pura.
-- **`0082_carga_mutual_preparacao` é NOVA e ainda NÃO foi aplicada** — ver a seção própria. Ela
-  mexe em `veiculo_faturavel` (o interruptor de TODO o faturamento), cria `integracao_vinculos` e
-  reescreve como a unidade do Mutual é lida. **Próxima migration livre: `0083`.**
+- **`0082_carga_mutual_preparacao`** (aplicada em 20/09/2026) — `integracao_vinculos`, o
+  interruptor `cobranca_externa` e a unidade pelo associado. Ver a seção própria.
+- **`0083_mutual_equipe_vendas` é NOVA e ainda NÃO foi aplicada** — o de-para muda de NÍVEL: a
+  nossa `regionais` é a **equipe de vendas** do Mutual. Junto vai a correção de uma medição errada
+  da 0082. **Próxima migration livre: `0084`.**
 - **`.claude/hooks/session-start.sh` é NOVO** — avisa quando a sessão nasce no branch errado e
   instala as dependências. Ele **só roda se estiver no branch que a sessão clonou**; enquanto o
   default do GitHub for o branch morto, uma sessão que caia lá não terá o hook. A correção
@@ -420,9 +427,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0082`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **59 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 690 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0083`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **60 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 695 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Os portais e páginas públicas
@@ -770,7 +777,12 @@ Consequências que o levantamento original não tinha:
   exatamente o que `gerar_faturas_periodo(comp_inicial, meses, …)` (0025) já faz, com padrão de 6
   meses, na aba **Boletagem em Lote** de `/cobrancas`. **Não é preciso construir nada** — e é a
   confirmação de que `final_total_value` é a parcela mensal.
-- **✅ RESPONDIDO (0082): A UNIDADE MORA NO ASSOCIADO — `PERSON.regional_id`, 100% preenchido.**
+- **✅ RESPONDIDO DE VERDADE (0083): A UNIDADE É A `sales_team_id` DO CONTRATO.** O SCar tem UM
+  nível (`regionais`) e o Mutual tem TRÊS (regional → equipe de vendas → consultor). **A nossa
+  regional É a equipe de vendas dele** (decisão do usuário, 20/09/2026). O contrato traz
+  `sales_team_id` em **3.384 de 3.384** faturáveis com contrato. Ver a seção própria — inclusive a
+  correção do que a 0082 mediu errado.
+- **A unidade também está no associado (0082), e ela virou RESERVA** — `PERSON.regional_id`, 100%:
   E a corrente do consultor (0073/0074) estava **vazia**: medido com a base completa em
   20/09/2026, `consultant` vem em branco em **0 de 17.675 objetos e 0 de 17.616 contratos**, ou
   seja o funil dela dá ZERO no segundo degrau. O elo real é
@@ -1667,6 +1679,18 @@ o lado que o chamador MUDOU (texto digitado vence id antigo; id da carga traz o 
 cor desconhecida **ENTRA e e RELATADA** (`cores_nao_reconhecidas`), nunca recusada no balcao; e o
 de-para do Mutual (`mutual_cor_do_externo`, `mutual_cores_nao_mapeadas`) resolve pelo payload de
 `/vehicle/color/` ja capturado, sem chutar o nome da chave).
+· `0083_mutual_equipe_vendas` (A UNIDADE DO SCar E A **EQUIPE DE VENDAS** DO MUTUAL, nao a
+filial: o Mutual tem tres niveis (regional -> sale_team -> consultant) e o SCar tem um, e a decisao
+do usuario e que `regionais` = equipe de vendas — a macrorregiao NAO vira tabela. (A) `SALE_TEAM`
+vira entidade capturavel (`/association/sale_team/`), que nunca foi puxada porque o plano concluiu
+"nao existe no SCar"; (B) `mutual_equipe_do_objeto` (o CONTRATO manda: `sales_team_id` em 97,7%
+dos contratos e em 3.384 de 3.384 faturaveis com contrato; no objeto a chave existe e vem vazia em
+100%) + `mutual_equipe_do_externo` (so o vinculo REGISTRADO); (C) `mutual_equipes_vendas()` — a
+tela do agrupamento, com o peso da carteira, a macrorregiao como cabecalho de leitura e a marca
+`capturada` para a equipe que tem carteira e nao tem nome; (D) `mutual_regional_do_objeto` — a
+EQUIPE manda e a filial do associado e reserva (para os objetos sem contrato); (E)
+`mutual_cobertura_unidade` recriada medindo a corrente certa. **Corrige tambem uma medicao errada
+da 0082:** `contrato.consultant` nao existe — a chave e `consultant_id`, preenchida em 96,4%)
 · `0082_carga_mutual_preparacao` (as TRES pecas que faltavam para a carga do Mutual poder rodar,
 e nenhuma delas carrega nada — ha teste provando que a operacao segue intacta: (A) **a UNIDADE sai
 do ASSOCIADO** — a corrente do consultor (0073/0074) foi medida com a base completa e esta VAZIA
@@ -2028,6 +2052,78 @@ O achado nº 1 da varredura continua de pé: **`pode_regional()` não lê papel*
 Um `consultor_vendas` com unidade segue lançando e baixando no financeiro dela. Mexer ali é
 decisão de desenho sobre 87 policies de uma vez, não limpeza de passagem.
 
+## A UNIDADE É A EQUIPE DE VENDAS (0083) — o de-para no nível certo
+> **Decisão do usuário (20/09/2026):** *"o Mutual separa como regionais e equipe de vendas… o que
+> precisamos agrupar são as equipes de vendas, que a partir de agora serão as regionais… por isso
+> já fizemos o software só considerando regionais, que nada mais é do que o que no Mutual chama de
+> equipe de vendas."*
+
+### Os três níveis deles, o único nível nosso
+```
+Mutual:  regional (macro)  →  sale_team (equipe de vendas)  →  consultant (vendedor)
+SCar:                          regionais                    →  vendedores
+```
+**Achatar foi ESCOLHA, não esquecimento** — "seria muita escrita para fazer a rota como estava".
+A macrorregião (SUDESTE, NORDESTE) vira **cabeçalho de leitura** na tela, nunca tabela.
+
+### 🔴 A 0082 mapeava a camada de CIMA — e ela é larga demais
+`mutual_regional_do_externo` resolve a **filial**, que é a macrorregião. Um único "SUDESTE" junta
+**Ribeirão Preto e a capital**, que são *duas* unidades aqui — então o de-para por filial não
+consegue decidir de quem é a carteira. Medido em 20/09/2026: **7 equipes** no Sudeste, **6** em
+Cuiabá, **3** no Nordeste. Quadriplicado, como o usuário descreveu.
+
+### A corrente: UM salto, por id
+`objeto.contract_id` → `CONTRACT.sales_team_id` → equipe → de-para. No contrato:
+
+| Campo | Preenchido |
+|---|---|
+| `regional_id` | 17.616 de 17.616 (100%) |
+| **`sales_team_id`** | **17.213 de 17.616 (97,7%)** |
+| `consultant_id` | 16.988 de 17.616 (96,4%) |
+| `due_day` | 17.147 de 17.616 |
+
+Na carteira viva: 3.384 dos 3.440 faturáveis têm contrato, e **3.384 desses têm equipe — 100%**.
+
+### 🔴 A CORREÇÃO QUE ESTA MIGRATION CARREGA
+A 0082 registrou como fato medido que `consultant` vinha vazio em *"0 de 17.675 objetos **e 0 de
+17.616 contratos**"*. A metade do objeto está certa. **A do contrato estava errada:** a chave lá
+chama-se **`consultant_id`** (96,4%). `mutual_consultor_do_objeto` (0073) já lê as duas, então o
+funil sempre teria resolvido — quem errou foi a consulta avulsa.
+
+**É a mesma lição que a 0082 escreveu no próprio cabeçalho, aplicada ao contrário:** procurei o
+campo com o nome errado, na entidade certa. A regra fica mais dura: **ausência de chave só vira
+conclusão depois de `mutual_campos` NA ENTIDADE** — consulta avulsa com o nome chutado não conta.
+
+### 🔴 VÁRIAS EQUIPES VIRAM UMA REGIONAL — e é para isso que o `unique` é só externo
+Agrupar é escolher a mesma unidade em várias equipes. A tabela de vínculo (0082) permite isso por
+construção: o `unique` é `(sistema, entidade, id_externo)`, sem nada do lado de cá. **Foi essa
+decisão que tornou o agrupamento uma escolha de tela e não uma migration.**
+
+### A precedência de `mutual_regional_do_objeto`
+1. **A EQUIPE vinculada** — manda sempre.
+2. **A filial do associado** (0082) — só reserva, para os 56 objetos sem contrato. Sem ela eles
+   ficariam sem unidade nenhuma; com ela entram na macrorregião, que é impreciso mas não é vazio.
+
+**A reserva NUNCA vence a equipe.** Há teste com um objeto cuja filial aponta para uma unidade e a
+equipe para outra — quem decide é a equipe.
+
+### A tela (`/integracao/mutual` → "Equipes de vendas")
+- As equipes vêm **agrupadas pela macrorregião**, ordenadas por carteira: é o que torna a
+  duplicação legível ("estas sete são todas do Sudeste").
+- O seletor grava `integracao_vinculos('SALE_TEAM', …)` na hora. Escolher a mesma unidade em duas
+  equipes **é** a consolidação — a faixa no topo conta "N equipes consolidadas em M unidades".
+- **Equipe que aparece só no CONTRATO entra na lista marcada como não capturada**, com o peso e
+  sem o nome. Ela não pode sumir: é justamente uma das que falta agrupar. O `full join` em
+  `mutual_equipes_vendas` existe para isso.
+- `consultores` é coluna porque **equipe sem vendedor é equipe morta** — é o que separa a duplicata
+  viva da que só tem histórico.
+
+### ⚠️ A entidade nova precisa ser PUXADA
+`/association/sale_team/` **nunca foi capturada** — o plano a descartou com "não existe no SCar",
+e o CHECK de `mutual_captura` a recusava. Depois de aplicar a `0083`, puxe **Equipes de vendas**
+na tela; até lá as equipes aparecem com carteira e sem nome.
+**Repare no singular:** o endpoint é `sale_team`, mas o campo do contrato é `sales_team_id`.
+
 ## PREPARAÇÃO DA CARGA DO MUTUAL (0082) — as 3 peças que faltavam
 > Nada aqui carrega dado. A regra da Fase 1 continua de pé e **há teste provando** que `clientes`,
 > `veiculos`, `titulos_financeiros` e `faturas` seguem intactos.
@@ -2038,14 +2134,14 @@ decisão de desenho sobre 87 policies de uma vez, não limpeza de passagem.
   | Onde | Preenchido |
   |---|---|
   | `objeto.consultant` | **0 de 17.675** |
-  | `contrato.consultant` | **0 de 17.616** |
+  | ~~`contrato.consultant`~~ | ~~0 de 17.616~~ — **a medição estava errada: a chave é `consultant_id`, 96,4% (ver 0083)** |
   | `objeto.regional_id` / `contrato.regional` | **0** |
   | **`PERSON.regional_id`** | **12.628 de 12.628 — 100%** |
 
-- **O funil da 0073/0074 dá ZERO no segundo degrau.** O instrumento está certo; a corrente que ele
-  mede não existe nestes dados. As duas funções **não foram apagadas** — provar que uma corrente
-  está vazia é resultado, e elas voltam a valer se o Mutual passar a preencher o campo. O que
-  mudou é quem a tela usa para decidir.
+- **⚠️ A conclusão "o funil do consultor dá ZERO" era falsa** — ver a `0083`. No OBJETO o campo é
+  mesmo vazio, mas no CONTRATO ele existe como `consultant_id` e a função já lia as duas chaves.
+  As duas funções seguem no banco. O que continua valendo: **quem decide a unidade hoje é a equipe
+  de vendas (0083)**, não o consultor nem a filial.
 - **A corrente real tem DOIS saltos, por id:**
   `objeto.person_data.person_id` → `PERSON` → `regional_id` → filial. **Cobertura: 3.409 de 3.440
   = 99,1%** da carteira viva, acima do corte de 95% que o próprio módulo fixou na 0073.
@@ -2121,12 +2217,15 @@ sem de-para), a **data de corte do financeiro e dos eventos**, e o de-para de **
 (3 linhas), **`plan_id`** e das **41 marcas** que não casam por nome.
 
 ## A unidade pelo CONSULTOR (0073) — o instrumento, não a carga
-> **⛔ MEDIDO E VAZIO (0082).** Esta corrente **não existe nestes dados**: `consultant` vem em
-> branco em **0 de 17.675 objetos e 0 de 17.616 contratos**, então o funil abaixo dá ZERO no
-> segundo degrau. A unidade em uso hoje sai do **associado** — ver "PREPARAÇÃO DA CARGA DO MUTUAL
-> (0082)". O que está escrito aqui continua valendo como **método** (medir antes de aceitar uma
-> corrente, nomear o gargalo, não casar por nome) e as funções seguem no banco para o dia em que o
-> Mutual preencher o campo. **Não construa a carga sobre ela.**
+> **⚠️ CORREÇÃO (0083): esta corrente NÃO está vazia — a 0082 mediu a chave errada.**
+> O que a 0082 escreveu ("`consultant` em branco em 0 de 17.675 objetos **e 0 de 17.616
+> contratos**") só vale para o **objeto**. No **contrato** a chave chama-se **`consultant_id`**, e
+> ela vem preenchida em **16.988 de 17.616 (96,4%)**. `mutual_consultor_do_objeto` já procura as
+> duas chaves, então o funil daqui sempre teria resolvido; quem errou foi a consulta avulsa que
+> concluiu o contrário — e errou exatamente como a lição que a própria 0082 escreveu no cabeçalho.
+> **Ainda assim, não construa a carga sobre ela:** o caminho em uso é `contract.sales_team_id`
+> (0083), que é um salto por id e cai direto no nível de `regionais`. Esta seção continua valendo
+> como **método** e as funções seguem no banco.
 
 - **O problema:** `regional` veio vazio em **100%** dos objetos e dos contratos. A unidade é
   bloqueante (`regional_id` atravessa RLS, `escopo_regional()` e todos os painéis).

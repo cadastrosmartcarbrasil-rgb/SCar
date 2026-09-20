@@ -155,19 +155,24 @@ begin
   assert v_id = 1, format('a filial 5 tem 1 associado; veio %s', v_id);
 
   -- ==========================================================================
-  -- (E) O FUNIL — a perda tem de ser subtracao honesta entre degraus
+  -- (E) O FUNIL passou a medir a EQUIPE DE VENDAS (0083)
   -- ==========================================================================
+  -- A 0082 media a unidade pela FILIAL do associado. A 0083 descobriu que a
+  -- filial e a MACRORREGIAO do Mutual (um "SUDESTE" junta Ribeirao Preto e a
+  -- capital, que sao DUAS unidades aqui) e que o nivel equivalente a
+  -- `regionais` e a EQUIPE DE VENDAS, no `contract.sales_team_id`.
+  --
+  -- O resolvedor da filial (secao A) continua valendo e segue testado acima —
+  -- ele virou a RESERVA de `mutual_regional_do_objeto`. O que mudou foi o
+  -- funil: neste cenario os contratos nao tem `sales_team_id`, entao ele para
+  -- no degrau 3, e isso e o comportamento CERTO.
   select objetos into n from mutual_cobertura_unidade(true) where passo = 1;
   assert n = 4, format('4 objetos faturaveis no cenario; o funil viu %s', n);
+  select objetos into n from mutual_cobertura_unidade(true) where passo = 2;
+  assert n = 4, format('os 4 tem contrato capturado (9001); veio %s', n);
   select objetos into n from mutual_cobertura_unidade(true) where passo = 3;
-  assert n = 3, format('3 com associado capturado (P9 nao existe); veio %s', n);
-  select objetos into n from mutual_cobertura_unidade(true) where passo = 4;
-  assert n = 1, format('so P1 tem unidade declarada; veio %s', n);
-  select perdidos into n from mutual_cobertura_unidade(true) where passo = 3;
-  assert n = 1, format('o degrau 3 perde exatamente 1 (o associado nao capturado); veio %s', n);
-  -- O degrau 6 so anda com o de-para REGISTRADO.
-  select objetos into n from mutual_cobertura_unidade(true) where passo = 6;
-  assert n = 1, format('a filial 5 esta vinculada, entao 1 passa; veio %s', n);
+  assert n = 0,
+    format('sem sales_team_id no contrato, NENHUM chega a equipe — e correto; veio %s', n);
 
   -- ==========================================================================
   -- (F) A QUARENTENA separa os TRES motivos da unidade

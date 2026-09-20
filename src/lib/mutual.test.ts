@@ -6,8 +6,10 @@ import {
   mesesDoPeriodoMutual, ehFilaOperacional, ehFunilDeVenda, statusDeTexto,
   gargaloDoFunil, coberturaDoFunil, teseDoConsultorSeSustenta, CHAVES_DOC_CONSULTOR,
   correnteVazia, situacaoDePara, filiaisPendentes, carteiraSemDePara,
+  equipesPendentes, carteiraSemAgrupamento, equipesSemNome, porMacrorregiao,
+  consolidacao,
 } from './mutual';
-import type { PassoFunil, FilialMutual } from './mutual';
+import type { PassoFunil, FilialMutual, EquipeVendas } from './mutual';
 
 const BASE = 'https://smartcar-api.mutualignit.com.br';
 
@@ -429,5 +431,55 @@ describe('situacaoDePara / filiaisPendentes', () => {
   it('tudo vinculado: fila vazia e nenhuma carteira pendente', () => {
     expect(filiaisPendentes([f('5', 'A', 10, 'r', null)])).toEqual([]);
     expect(carteiraSemDePara([f('5', 'A', 10, 'r', null)])).toBe(0);
+  });
+});
+
+// ===========================================================================
+// 0083 — a equipe de vendas e o agrupamento
+// ===========================================================================
+describe('equipes de vendas (0083)', () => {
+  const e = (id: string, nome: string | null, macro: string | null, fat: number,
+             reg: string | null, capturada = true): EquipeVendas =>
+    ({ id_externo: id, nome, macrorregiao: macro, faturaveis: fat,
+       consultores: 0, regional_id: reg, capturada });
+
+  const cenario: EquipeVendas[] = [
+    e('4',  'RIBEIRAO A', 'Regional Sudeste', 863, 'rib'),
+    e('21', 'RIBEIRAO B', 'SUDESTE',          733, 'rib'),
+    e('3',  'CAPITAL A',  'Regional Sudeste', 479, null),
+    e('23', 'CAPITAL B',  'SUDESTE',          366, null),
+    e('5',  'NATAL',      'Regional Nordeste', 266, null),
+    e('99', null,         'SUDESTE',            12, null, false),
+  ];
+
+  it('a fila vem por VOLUME e so com o que falta agrupar', () => {
+    expect(equipesPendentes(cenario).map((x) => x.id_externo))
+      .toEqual(['3', '23', '5', '99']);
+    expect(carteiraSemAgrupamento(cenario)).toBe(479 + 366 + 266 + 12);
+  });
+
+  it('equipe COM carteira e SEM nome aparece — e ela que falta capturar', () => {
+    expect(equipesSemNome(cenario).map((x) => x.id_externo)).toEqual(['99']);
+    // ...e uma equipe nao capturada mas VAZIA nao vira tarefa de ninguem.
+    expect(equipesSemNome([e('77', null, null, 0, null, false)])).toEqual([]);
+  });
+
+  it('a macrorregiao agrupa a leitura, ordenada pelo peso', () => {
+    const grupos = porMacrorregiao(cenario);
+    expect(grupos.map((g) => g.macrorregiao))
+      .toEqual(['Regional Sudeste', 'SUDESTE', 'Regional Nordeste']);
+    expect(grupos[0].faturaveis).toBe(863 + 479);
+    expect(grupos[1].equipes.map((x) => x.id_externo)).toEqual(['21', '23', '99']);
+  });
+
+  it('macrorregiao ausente vira um grupo proprio, nao some', () => {
+    const grupos = porMacrorregiao([e('1', 'X', null, 5, null)]);
+    expect(grupos[0].macrorregiao).toBe('(sem macrorregiao)');
+  });
+
+  it('VARIAS equipes numa regional so — a consolidacao que o usuario quer', () => {
+    const c = consolidacao(cenario);
+    expect(c.get('rib')).toBe(2);
+    expect(c.size).toBe(1);
   });
 });

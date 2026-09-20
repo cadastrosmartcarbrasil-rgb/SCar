@@ -27,6 +27,11 @@ export const ENTIDADES_MUTUAL = {
   INVOICE: '/invoice/',
   EVENT: '/event/',
   REGIONAL: '/association/regional/',
+  // 0083: a EQUIPE DE VENDAS e o nivel que corresponde a `regionais` do SCar.
+  // O plano original a descartou ("nao existe no SCar") — decisao do usuario em
+  // 20/09/2026 inverteu isso: `regionais` = equipe de vendas, e a macrorregiao
+  // (REGIONAL) vira so agrupamento de leitura. Repare no singular `sale_team`.
+  SALE_TEAM: '/association/sale_team/',
   CONSULTANT: '/association/consultant/',
   VEHICLE_TYPE: '/vehicle/type/',
   VEHICLE_COLOR: '/vehicle/color/',
@@ -493,4 +498,81 @@ export function filiaisPendentes(filiais: FilialMutual[]): FilialMutual[] {
 /** Quantos veiculos faturaveis ainda dependem de uma decisao de de-para. */
 export function carteiraSemDePara(filiais: FilialMutual[]): number {
   return filiaisPendentes(filiais).reduce((s, f) => s + f.faturaveis, 0);
+}
+
+// ===========================================================================
+// 0083 — a EQUIPE DE VENDAS: o nivel do Mutual que vira `regionais` no SCar
+// ===========================================================================
+
+export interface EquipeVendas {
+  id_externo: string;
+  nome: string | null;
+  macrorregiao: string | null;
+  faturaveis: number;
+  consultores: number;
+  regional_id: string | null;
+  capturada: boolean;
+}
+
+/**
+ * A fila do agrupamento, por VOLUME de carteira viva — mesma ordem da fila de
+ * filiais (0082), de consultores (0073) e de cores (0080): tratar a que mais
+ * pesa resolve a maior parte da base com a menor decisao.
+ */
+export function equipesPendentes(equipes: EquipeVendas[]): EquipeVendas[] {
+  return equipes
+    .filter((e) => !e.regional_id)
+    .sort((a, b) => b.faturaveis - a.faturaveis
+      || (a.nome ?? a.id_externo).localeCompare(b.nome ?? b.id_externo));
+}
+
+/** Quantos veiculos faturaveis ainda dependem de uma decisao de agrupamento. */
+export function carteiraSemAgrupamento(equipes: EquipeVendas[]): number {
+  return equipesPendentes(equipes).reduce((s, e) => s + e.faturaveis, 0);
+}
+
+/**
+ * 🔴 Equipe que aparece no CONTRATO e nao esta no cadastro: tem carteira e nao
+ * tem nome. Ela nao pode sumir da tela — e justamente uma das que faltam
+ * agrupar, e sem `/association/sale_team/` puxado ninguem sabe qual e.
+ */
+export function equipesSemNome(equipes: EquipeVendas[]): EquipeVendas[] {
+  return equipes.filter((e) => !e.capturada && e.faturaveis > 0);
+}
+
+/**
+ * As equipes agrupadas pela MACRORREGIAO do Mutual.
+ *
+ * A macrorregiao nao vira tabela no SCar (decisao do usuario: a rota de tres
+ * niveis seria muita escrita). Mas ela e o que torna a duplicacao legivel na
+ * tela — "estas sete sao todas do Sudeste" — entao serve como CABECALHO de
+ * leitura, nunca como destino de carga.
+ */
+export function porMacrorregiao(
+  equipes: EquipeVendas[],
+): { macrorregiao: string; equipes: EquipeVendas[]; faturaveis: number }[] {
+  const mapa = new Map<string, EquipeVendas[]>();
+  for (const e of equipes) {
+    const chave = e.macrorregiao ?? '(sem macrorregiao)';
+    mapa.set(chave, [...(mapa.get(chave) ?? []), e]);
+  }
+  return [...mapa.entries()]
+    .map(([macrorregiao, lista]) => ({
+      macrorregiao,
+      equipes: [...lista].sort((a, b) => b.faturaveis - a.faturaveis),
+      faturaveis: lista.reduce((s, e) => s + e.faturaveis, 0),
+    }))
+    .sort((a, b) => b.faturaveis - a.faturaveis);
+}
+
+/**
+ * Quantas equipes do Mutual ja foram agrupadas em cada regional do SCar.
+ * E a leitura que confirma a consolidacao: "7 equipes viraram 2 unidades".
+ */
+export function consolidacao(equipes: EquipeVendas[]): Map<string, number> {
+  const mapa = new Map<string, number>();
+  for (const e of equipes) {
+    if (e.regional_id) mapa.set(e.regional_id, (mapa.get(e.regional_id) ?? 0) + 1);
+  }
+  return mapa;
 }

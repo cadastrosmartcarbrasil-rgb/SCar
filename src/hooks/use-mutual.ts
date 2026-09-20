@@ -9,7 +9,7 @@ import type {
   MutualQuarentena, MutualResumoCaptura, MutualStatusNaoMapeado, MutualPeriodicidade,
   MutualStatusCruzado,
   MutualCampo, MutualPassoFunil, MutualConsultorPendente,
-  CobrancaExternaResumo,
+  CobrancaExternaResumo, MutualEquipeVendas,
 } from '@/lib/database.types';
 
 /** O que ja esta na area de captura. */
@@ -404,5 +404,48 @@ export function useDefinirCobrancaExterna() {
       void qc.invalidateQueries({ queryKey: ['veiculos'] });
       void qc.invalidateQueries({ queryKey: ['cobrancas'] });
     },
+  });
+}
+
+/**
+ * 0083 — as EQUIPES DE VENDAS do Mutual. E este o nivel que corresponde a
+ * `regionais` do SCar; a filial (REGIONAL) e a macrorregiao acima dele.
+ */
+export function useMutualEquipes() {
+  const supabase = createClient();
+  return useQuery<MutualEquipeVendas[]>({
+    queryKey: ['mutual', 'equipes-vendas'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('mutual_equipes_vendas', {});
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+/**
+ * O agrupamento: VARIAS equipes do Mutual podem apontar para a MESMA regional
+ * — e e exatamente para isso que o `unique` do vinculo e so do lado externo
+ * (0082). `regionalId` nulo desfaz o agrupamento daquela equipe.
+ */
+export function useAgruparEquipe() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ idExterno, regionalId }: { idExterno: string; regionalId: string | null }) => {
+      if (regionalId) {
+        const { error } = await supabase.rpc('vincular_externo', {
+          p_entidade: 'SALE_TEAM', p_id_externo: idExterno,
+          p_tabela: 'regionais', p_registro_id: regionalId,
+        });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.rpc('desvincular_externo', {
+          p_entidade: 'SALE_TEAM', p_id_externo: idExterno,
+        });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['mutual'] }); },
   });
 }
