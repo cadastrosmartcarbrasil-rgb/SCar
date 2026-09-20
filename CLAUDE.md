@@ -107,6 +107,44 @@ adivinha entre quatro bancos de produção.
 8 usuários. **Os 9 veículos não são erro:** a carteira real ainda está no Mutual e a integração é
 **Fase 1, só leitura** — nada foi importado para `clientes`/`veiculos` ainda.
 
+#### ⛔ DECISÃO DO USUÁRIO (20/09/2026): migration SÓ pelo SQL Editor. Nunca por ferramenta.
+**O agente lê o banco; quem escreve schema é você, pelo SQL Editor do Supabase.** Vale para
+`apply_migration` do MCP, para `supabase db push` e para qualquer caminho que aplique DDL sozinho.
+
+**O motivo é concreto, não cautela genérica:** `supabase_migrations.schema_migrations` está
+**VAZIA** — as `0001`..`0078` entraram pelo SQL Editor, que não registra nada ali. Aplicar a
+próxima por ferramenta faria ela ser a **primeira linha** da tabela, e o banco passaria a dizer
+que a história começa na `0079`, com setenta e oito migrations invisíveis. Um `db push` ou
+`db reset` depois disso lê "só falta a 0079" — é a mesma família de erro do branch morto: um
+registro que mente com confiança.
+
+Consequência prática: o runbook do `DEPLOY.md` **não muda**. O agente pode escrever a migration,
+validar no harness local (`npm run validate`) e te entregar o arquivo; **rodar é seu**, e é assim
+que você vê cada DDL antes de ela tocar a produção.
+
+**Se um dia quiser inverter** (passar a usar ferramenta), o passo obrigatório ANTES é preencher a
+`schema_migrations` com as `0001`..`0078` como já aplicadas — senão a inconsistência acima nasce
+no mesmo instante.
+
+#### O que a varredura de segurança acusou — e por que 2 dos 4 não são problema
+Conferido em 20/09/2026 (`get_advisors`, tipo `security`). **Nenhum aviso de RLS** — nada de
+tabela exposta sem policy, que seria o grave num sistema cuja espinha é RLS.
+
+| Aviso | Leitura |
+|---|---|
+| 200 `SECURITY DEFINER` chamáveis por `authenticated` | **É o desenho da `0052`**, não um furo: o `execute` foi concedido de propósito e a trava vive DENTRO de cada função (`is_staff() or auth.uid() is null`). O linter não tem como saber. |
+| 96 funções sem `search_path` fixo | **As 96 são `SECURITY INVOKER`** (rodam com o privilégio de quem chama, então search_path mutável não escala nada). **As 200 `SECURITY DEFINER` têm `search_path` setado — todas.** A convenção se sustentou. |
+| `pg_trgm` e `unaccent` no schema `public` | Pequeno. E revela que o **`unaccent` JÁ ESTÁ INSTALADO** — é a pendência "busca sem acento no banco" listada aqui; falta só usar a extensão no `ilike` da Lista + índice. |
+| Proteção contra senha vazada desligada | Toggle no painel (Auth), não SQL. Pesa mais aqui que em outro sistema: a senha de primeiro acesso do associado é o próprio CPF. |
+
+A consulta que separa o barulho do sinal, para repetir depois de mexer em função:
+```sql
+select count(*) filter (where prosecdef)                        as secdef,
+       count(*) filter (where prosecdef and proconfig is null)  as secdef_SEM_search_path
+  from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+ where n.nspname = 'public' and p.prokind = 'f';   -- a segunda coluna tem de ser ZERO
+```
+
 **Depois de aplicar, ATUALIZE esta caixa** — uma lista de pendências desatualizada é pior que
 nenhuma: manda rodar de novo o que já rodou.
 - **A migration `0044` JÁ FOI APLICADA em produção** e o Portal do Associado está no ar,
@@ -3161,6 +3199,10 @@ no fim — o runner procura por "PASSARAM") e rode `npm run schema`.
 - **Publicar:** `DEPLOY.md` tem o runbook. Resumo: (A) migrations novas no Supabase
   SQL Editor, na ordem; (B) `.\scripts\deploy.ps1` (Windows) ou `npm run deploy` — os dois ja
   levam o `DOCKER_BUILDKIT=0` embutido.
+- **QUEM APLICA MIGRATION E O USUARIO, pelo SQL Editor** (decisao de 20/09/2026). O agente
+  escreve, valida no harness local e entrega o arquivo — nao aplica por ferramenta. O porque
+  esta em "Qual e o banco"; em uma linha: a `schema_migrations` do Supabase esta vazia, e
+  aplicar por ferramenta faria o banco jurar que a historia comeca na proxima migration.
 - **O `git pull` roda DENTRO do VPS.** Rodar no PowerShell do Windows dá
   `fatal: not a git repository` — foi o erro que mais custou tempo nesta fase.
   Toda janela nova de terminal começa fora do servidor; o `ssh` precisa ser refeito.
