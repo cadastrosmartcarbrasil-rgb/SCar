@@ -22,6 +22,7 @@ import {
   useTiposAlerta, useVeiculoProdutos, useVeiculoAlertas, useCalcularMensalidadeVeiculo,
 } from '@/hooks/use-veiculo-ficha';
 import { AlertasVeiculo } from '@/components/veiculos/alertas-veiculo';
+import { CampoCor } from '@/components/cores/campo-cor';
 import { consultarPlaca, normalizarPlaca, placaValida } from '@/lib/placa';
 import { FipeConsulta } from '@/components/fipe/fipe-consulta';
 import { useFipePorPlaca } from '@/hooks/use-fipe';
@@ -577,7 +578,7 @@ function VeiculosConteudo() {
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <FormField label="Cor">
-              <Input value={form.cor ?? ''} onChange={(e) => setF({ cor: e.target.value })} />
+              <CampoCor value={form.cor} onChange={(cor) => setF({ cor })} />
             </FormField>
             <FormField label="Ano fab.">
               <Input

@@ -256,6 +256,7 @@ export type VeiculosRow = Timestamps & {
   ano_fabricacao: number | null;
   ano_modelo: number | null;
   cor: string | null;
+  cor_id: string | null;
   uso: UsoVeiculo;
   valor_fipe: number | null;
   regional_id: string | null;
@@ -864,6 +865,49 @@ export type ComunicacoesRow = {
   created_at: string;
 };
 
+export type CoresRow = {
+  id: string;
+  nome: string;
+  hex: string | null;
+  ordem: number;
+  ativo: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+/** 0080 — o catalogo para a tela, com apelidos e o uso de cada cor. */
+export type CorListada = {
+  id: string;
+  nome: string;
+  hex: string | null;
+  ordem: number;
+  ativo: boolean;
+  apelidos: string[];
+  veiculos: number;
+  leads: number;
+};
+
+/** 0080 — a fila de trabalho: o texto que o catalogo nao reconheceu. */
+export type CorNaoReconhecida = {
+  cor: string;
+  veiculos: number;
+  leads: number;
+  total: number;
+};
+
+/** 0080 — a cor do Mutual que o nosso catalogo ainda nao sabe ler. */
+export type MutualCorNaoMapeada = {
+  id_externo: string;
+  descricao: string | null;
+  situacao: string;
+};
+
+export type CorApelidosRow = {
+  id: string;
+  cor_id: string;
+  apelido: string;
+};
+
 export type MarcasRow = {
   id: string;
   nome: string;
@@ -938,6 +982,7 @@ export type LeadsRow = Timestamps & {
   renavam: string | null;
   numero_motor: string | null;
   cor: string | null;
+  cor_id: string | null;
   ano_fabricacao: number | null;
   crlv_qrcode: string | null;
   crlv_url: string | null;
@@ -2499,6 +2544,7 @@ export type Database = {
           Rel<'regional_id', 'regionais'>,
           Rel<'cota_participacao_id', 'cotas_participacao'>,
           Rel<'modelo_id', 'modelos'>,
+          Rel<'cor_id', 'cores'>,
           Rel<'empresa_rastreamento_id', 'fornecedores'>,
         ]
       >;
@@ -2528,6 +2574,8 @@ export type Database = {
       email_templates: TableDef<EmailTemplatesRow>;
       integracoes_bancarias: TableDef<IntegracoesBancariasRow, [Rel<'regional_id', 'regionais'>]>;
       marcas: TableDef<MarcasRow>;
+      cores: TableDef<CoresRow>;
+      cor_apelidos: TableDef<CorApelidosRow, [Rel<'cor_id', 'cores'>]>;
       modelos: TableDef<
         ModelosRow,
         [Rel<'marca_id', 'marcas'>, Rel<'cota_participacao_id', 'cotas_participacao'>]
@@ -2542,6 +2590,7 @@ export type Database = {
           Rel<'cota_participacao_id', 'cotas_participacao'>,
           Rel<'cliente_id', 'clientes'>,
           Rel<'veiculo_id', 'veiculos'>,
+          Rel<'cor_id', 'cores'>,
         ]
       >;
       cotacoes: TableDef<CotacoesRow, [Rel<'lead_id', 'leads'>]>;
@@ -3671,6 +3720,17 @@ export type Database = {
       regionais_listar: {
         Args: { p_incluir_inativas?: boolean };
         Returns: RegionalListada[];
+      };
+      // 0080 — catalogo de cores do veiculo.
+      cores_listar: {
+        Args: { p_incluir_inativas?: boolean };
+        Returns: CorListada[];
+      };
+      cores_nao_reconhecidas: { Args: Record<string, never>; Returns: CorNaoReconhecida[] };
+      cor_do_texto: { Args: { p_texto: string }; Returns: string | null };
+      mutual_cores_nao_mapeadas: {
+        Args: Record<string, never>;
+        Returns: MutualCorNaoMapeada[];
       };
       // 0068 — a equipe com a ficha e o vinculo de vendedor.
       usuarios_listar: {

@@ -100,7 +100,12 @@ begin
   select * into rec from veiculos where id = veic;
   assert rec.chassi = '9BWZZZ377VT004251', 'chassi nao migrou';
   assert rec.renavam = '12345678901', 'renavam nao migrou';
-  assert rec.cor = 'Prata' and rec.ano_fabricacao = 2020, 'ficha do veiculo incompleta';
+  -- 0080: a cor nasce CANONIZADA pelo catalogo. O lead foi cadastrado como
+  -- 'Prata' e o veiculo tem de gravar 'PRATA' — se voltar a 'Prata', o trigger
+  -- `trg_veiculo_cor` parou de rodar e as cores voltam a divergir.
+  assert rec.cor = 'PRATA' and rec.ano_fabricacao = 2020, 'ficha do veiculo incompleta';
+  assert rec.cor_id = (select id from cores where nome = 'PRATA'),
+    'a entrada na base tem de resolver a cor do catalogo';
   assert rec.vendedor_id = v_id, 'vendedor nao vinculado ao veiculo';
   assert rec.plano_protecao_id = pl, 'plano nao vinculado';
 

@@ -28,6 +28,7 @@ import type { LeadsRow } from '@/lib/database.types';
 import { FotosVistoria } from '@/components/vistoria/fotos-vistoria';
 import { ChecklistEntrada } from './checklist-entrada';
 import { LeitorCrlv } from './leitor-crlv';
+import { CampoCor } from '@/components/cores/campo-cor';
 
 type Endereco = { cep?: string; logradouro?: string; numero?: string; complemento?: string; bairro?: string; cidade?: string; uf?: string };
 
@@ -449,7 +450,7 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
             </FormField>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
-            <FormField label="Cor *"><Input value={form.cor ?? ''} onChange={(e) => set({ cor: e.target.value })} /></FormField>
+            <FormField label="Cor *"><CampoCor value={form.cor} onChange={(cor) => set({ cor })} /></FormField>
             <FormField label="Valor FIPE *">
               <MoneyInput value={form.valor_fipe ?? null} onChange={(v) => set({ valor_fipe: v })} />
             </FormField>

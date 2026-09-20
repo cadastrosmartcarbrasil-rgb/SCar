@@ -64,9 +64,11 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
 **O banco é o projeto Supabase `Scar Software`, ref `asinzcqbbqdglrguqtnr`** (sa-east-1) — ver
 "Qual é o banco" logo abaixo. **Nenhum dos outros três projetos da conta é este sistema.**
 
-**2. O QUE FALTA SUBIR.** **Nada no banco.** As migrations **`0001`..`0079`** estão aplicadas em
-produção — as `0001`..`0078` conferidas no próprio schema em 20/09/2026, e a **`0079` rodada pelo
-usuário em 20/09/2026**. **Próxima migration livre: `0080`.**
+**2. O QUE FALTA SUBIR.** **A `0080` (catálogo de cores) — ver a seção própria.** As
+migrations **`0001`..`0079`** estão aplicadas em produção — as `0001`..`0078` conferidas no próprio
+schema em 20/09/2026, e a **`0079` rodada pelo usuário em 20/09/2026**. A **`0080` está escrita e
+validada no harness, e AINDA NÃO FOI RODADA**: sem ela a aba `Configurações → Cores` não abre e o
+campo Cor das duas fichas nasce vazio (ele lê `cores_listar`). **Próxima migration livre: `0081`.**
 > Se precisar reconferir a `0079` sem abrir o SQL Editor, é uma linha:
 > `select busca_texto, busca_digitos from leads limit 1;` — as duas colunas existem e vêm
 > preenchidas.
@@ -269,8 +271,12 @@ nenhuma: manda rodar de novo o que já rodou.
   (o recorte do plano de contas). Sem ela a tela `/regionais` não abre.
 - **`0079_busca_leads_sem_acento`** (aplicada em 20/09/2026) — liga o `unaccent` na busca da Lista
   de `/vendas` e, no mesmo movimento, conserta a busca por telefone. Ver a seção própria.
-- **Próxima migration livre: `0080`. Não há migration pendente:** `0001`..`0079` estão aplicadas em
-  produção (ver a caixa de retomada no topo).
+- **`0080_cores_veiculo` é NOVA e ainda NÃO foi aplicada** — o CATÁLOGO DE CORES: `veiculos.cor` e
+  `leads.cor` deixam de ser texto livre e passam por um vocabulário só (ver a seção própria). Ela
+  **reescreve dado existente** (backfill canonizando o que já está gravado), então leia a seção
+  antes de rodar.
+- **Próxima migration livre: `0081`.** `0001`..`0079` estão aplicadas em produção (ver a caixa de
+  retomada no topo); a `0080` está entregue e pendente.
 - **`.claude/hooks/session-start.sh` é NOVO** — avisa quando a sessão nasce no branch errado e
   instala as dependências. Ele **só roda se estiver no branch que a sessão clonou**; enquanto o
   default do GitHub for o branch morto, uma sessão que caia lá não terá o hook. A correção
@@ -398,9 +404,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0079`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **56 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 648 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0080`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **57 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 663 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Os portais e páginas públicas
@@ -817,6 +823,11 @@ Consequências que o levantamento original não tinha:
   O cache do TanStack só é invalidado **no fim** — o diagnóstico é consulta cara e refazê-lo a cada
   bloco deixaria a tela mais lenta que a própria carga. `PAGINA_MAXIMA` (5.000) é o freio para o
   caso de a API nunca dizer que acabou.
+- **✅ A COR JÁ TEM DE-PARA (0080).** `/vehicle/color/` é entidade capturável desde a 0062 e agora
+  `mutual_cor_do_externo(id)` resolve `vehicle_color_id` → `cores`, pelo payload, com
+  `mutual_texto_em` (nada de chutar a chave). `mutual_cores_nao_mapeadas()` é a fila do vocabulário
+  novo, e ela aparece em `Configurações → Cores`. Vale a regra da 0064: **vazio sem ter capturado
+  a entidade não prova nada**.
 - **RPCs:** `mutual_registrar_captura` (só `tem_acesso_global`), `mutual_diagnostico`,
   `mutual_por_status`, `mutual_filiais`, `mutual_quarentena`, `mutual_status_nao_mapeados`,
   `mutual_periodicidade`, `mutual_campos`, `mutual_resumo_capturas`,
@@ -1628,6 +1639,18 @@ DOIS argumentos (dicionario fixo). Indice GIN/trigrama nas duas. Escolha registr
 em vez de RPC de busca, para a consulta seguir `select('*')` e a RLS de `leads` (0038) continuar
 valendo sem uma segunda copia dentro de um `security definer`. A Lista tambem passou a procurar a
 MARCA, que so o Kanban procurava).
+· `0080_cores_veiculo` (O CATALOGO DE CORES — `veiculos.cor`/`leads.cor` eram TEXTO LIVRE escrito por
+tres caminhos que nunca combinaram (digitacao, consulta por placa 0075, carga do Mutual), e por isso
+PRATA/Prata/prata metalico eram quatro cores para o banco: `cores` (as 16 do CRLV, com hex de
+amostra) + `cor_apelidos` (unique no APELIDO, para um apelido nao apontar para duas cores);
+`cor_normalizada` (reusa o `texto_sem_acento` da 0079) e `cor_do_texto` em QUATRO degraus (nome,
+apelido, primeira palavra como nome, primeira palavra como apelido); `veiculos.cor_id`/`leads.cor_id`
+opcionais AO LADO do texto (o que `modelo_id` fez na 0016 — trocar a coluna obrigaria a mexer em todo
+leitor que ja existe); o trigger `fn_padronizar_cor` canoniza na escrita por QUALQUER caminho e vale
+o lado que o chamador MUDOU (texto digitado vence id antigo; id da carga traz o texto do catalogo);
+cor desconhecida **ENTRA e e RELATADA** (`cores_nao_reconhecidas`), nunca recusada no balcao; e o
+de-para do Mutual (`mutual_cor_do_externo`, `mutual_cores_nao_mapeadas`) resolve pelo payload de
+`/vehicle/color/` ja capturado, sem chutar o nome da chave).
 
 ## Módulos (status: todos funcionais)
 Painel/Visão Geral (`/dashboard`, 2 abas: indicadores da operação + **Assistência 24h** — o painel
@@ -1670,7 +1693,7 @@ tabela FIPE com reajuste % + importação por planilha, uma por tipo de veículo
 prestadores da 24h e rastreadoras, com auto CNPJ/CEP) · **Cobrança** (`/cobrancas`: dashboard + faturas por competência + boletagem em lote +
 remessas bancárias) · Financeiro (contas a pagar/receber + baixas + DRE)
 · Configurações (regionais, usuários,
-vendedores, marcas/modelos, tipos de veículo, cotas de participação (V5..V15), tipos de evento,
+vendedores, marcas/modelos, **cores do veículo**, tipos de veículo, cotas de participação (V5..V15), tipos de evento,
 produtos, planos/combos (Prata/Ouro/Diamante), **comunicados** (mural interno), contas bancárias,
 integrações bancárias, plano de contas)
 · **Integração Mutual** (`/integracao/mutual`: consulta e diagnóstico dos dados do sistema atual —
@@ -1678,6 +1701,66 @@ Fase 1, só leitura)
 · **Rastreadores** (`/rastreadores`: parque por IMEI, estoque por unidade/plataforma, instalação no
 veículo, manutenção, painel de divergências com o cadastro da frota e relatórios de custo,
 recuperação e giro).
+
+## Catálogo de CORES do veículo (0080) — `Configurações → Cores`
+> **Cuidado com o nome:** isto **não é a paleta visual** do sistema (essa vive em `globals.css` /
+> `tema.ts` e, no white-label, irá para `empresa`). Aqui é a cor do **carro**.
+
+- **O defeito:** `veiculos.cor` e `leads.cor` eram **texto livre** escrito por três caminhos que
+  nunca combinaram entre si — a digitação na ficha, a **consulta por placa** (0075, que traz a cor
+  do registro do documento) e, a partir da Fase 3, a **carga do Mutual** (`vehicle_color_id` de
+  `/vehicle/color/`). Resultado: `PRATA`, `Prata`, `prata metalico` e `PRATA METÁLICO` são quatro
+  cores para o banco, e **todo filtro, contagem e relatório por cor mente**.
+- **O vocabulário é o do DOCUMENTO (DENATRAN), não uma paleta comercial.** O CRLV tem **dezesseis**
+  cores e só essas — e é do CRLV que a consulta por placa lê. Semear "PRATA PÉROLA" no catálogo
+  seria criar vocabulário que o documento não tem.
+- **🔴 `cor` CONTINUA SENDO TEXTO, e é ELE que é padronizado.** Trocar a coluna por `cor_id`
+  obrigaria a mexer em todo leitor que já existe (`autorizar_entrada_lead` 0034/0075, o SAC, o
+  portal, a ficha) por um ganho que o trigger já entrega. `cor_id` entra **ao lado**, opcional —
+  exatamente o que `modelos.id` → `veiculos.modelo_id` fez na 0016.
+- **🔴 COR DESCONHECIDA ENTRA E É RELATADA, NUNCA RECUSADA.** Recusar no balcão, com o cliente na
+  frente, uma cor que o documento traz e o catálogo ainda não conhece é trocar um dado impreciso
+  por **nenhuma venda**. Mesma escolha do `numero_motor` (0075): divergência aqui é **relatório**
+  (`cores_nao_reconhecidas()`), não constraint. A fila aparece na própria tela, ordenada por
+  **volume** — tratar a que mais pesa resolve a maior parte da base com a menor decisão.
+- **Apelido é TABELA, não array.** O `unique` é no **apelido**, não no par: é ele que impede
+  `GRAFITE` apontar para CINZA e para PRETO ao mesmo tempo. Array em coluna não dá essa garantia.
+- **A primeira palavra é fallback deliberado.** `cor_do_texto` tem quatro degraus — nome, apelido,
+  primeira palavra como nome, primeira palavra como apelido. "PRATA METALICO", "AZUL ESCURO",
+  "BRANCO PÉROLA": a primeira palavra já é uma cor do catálogo. **Não é busca aproximada** — só
+  casa quando a palavra É um nome ou apelido cadastrado, então "XPTO" continua desconhecido.
+- **O trigger vale para o lado que o chamador MUDOU.** Quem **digitou** a cor manda sobre o `cor_id`
+  antigo (é quem está com o documento na mão); quem gravou só o **`cor_id`** (a carga, uma API)
+  recebe o texto do catálogo. Sem essa distinção um dos dois caminhos seria desfeito em silêncio —
+  e foi exatamente o que a primeira versão do trigger fez, pego pela suíte antes de sair daqui.
+- **O que não resolve fica como veio, em caixa alta e COM acento.** A fila de revisão é lida por
+  gente; tirar o acento ali não ajudaria ninguém. Vazio vira **NULL, nunca `''`** (a mordida de
+  `fornecedores.documento`, 0051).
+- **A tela usa SELETOR, e isso não é a trava.** `<CampoCor>` (`src/components/cores/campo-cor.tsx`)
+  é compartilhado por `/veiculos` e pelo `<FechamentoVenda>` — evita o erro de digitação. A trava é
+  o **trigger**, porque a placa e a carga escrevem por fora de qualquer tela.
+- **A cor JÁ GRAVADA que não está no catálogo continua na lista** (`opcoesDeCor`). Sem isso, abrir
+  uma ficha antiga mostraria o campo em branco e o primeiro "salvar" apagaria a cor em silêncio —
+  a mesma mordida que a 0067 documentou nas unidades inativas.
+- **Excluir cor em uso é bloqueado na tela**, porque a FK é `on delete set null`: apagar uma cor
+  usada limparia a cor da ficha de todo mundo sem aviso. Quem sai de circulação é **inativada** —
+  e cor inativa sai do de-para, mas o vínculo antigo continua de pé.
+- **O de-para do MUTUAL já está pronto** (`mutual_cor_do_externo`, `mutual_cores_nao_mapeadas`):
+  resolve pelo payload de `/vehicle/color/` **já capturado**, com `mutual_texto_em` (0073) — não se
+  chuta o nome da chave, que neste módulo já custou duas rodadas. E vale a regra da 0064:
+  **enquanto ninguém puxou a entidade, a tela manda PUXAR em vez de acusar o dado** — lista vazia
+  sem captura não prova nada.
+- **⚠️ A migration REESCREVE DADO EXISTENTE.** O backfill canoniza o que já está em `veiculos.cor` e
+  `leads.cor`. Ele é explícito (não "update cor = cor" deixando o trigger agir: `update of` dispara
+  pela **menção** da coluna, então o trigger cairia no ramo do id e o backfill não aconteceria).
+  Os triggers de `veiculos` que importam são todos `update of status`, então o UPDATE em massa
+  **não acorda** cobrança, ativação nem saída.
+- **Lógica pura testada:** `src/lib/cores.ts` — `corNormalizada`, `corDoTexto`,
+  `corComoSeraGravada` (o que o banco gravaria, para a tela não prometer diferente), `opcoesDeCor`.
+  Suíte de banco em `supabase/tests/0080_cores_veiculo.test.sql`.
+- **A suíte da 0034 foi ajustada junto, e isso é sinal, não dano:** ela afirmava
+  `rec.cor = 'Prata'` e passou a exigir `'PRATA'` + `cor_id` resolvido. **Se voltar a 'Prata', o
+  trigger parou de rodar.**
 
 ## USUÁRIOS E GRUPOS DE ACESSO — o mapa (leia antes de mexer em papel)
 > Tópico próprio porque "quem pode o quê" está espalhado por 8 papéis, 4 portais, ~15 helpers e
