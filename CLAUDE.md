@@ -64,11 +64,12 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
 **O banco é o projeto Supabase `Scar Software`, ref `asinzcqbbqdglrguqtnr`** (sa-east-1) — ver
 "Qual é o banco" logo abaixo. **Nenhum dos outros três projetos da conta é este sistema.**
 
-**2. O QUE FALTA SUBIR.** **A `0080` (catálogo de cores) — ver a seção própria.** As
-migrations **`0001`..`0079`** estão aplicadas em produção — as `0001`..`0078` conferidas no próprio
-schema em 20/09/2026, e a **`0079` rodada pelo usuário em 20/09/2026**. A **`0080` está escrita e
-validada no harness, e AINDA NÃO FOI RODADA**: sem ela a aba `Configurações → Cores` não abre e o
-campo Cor das duas fichas nasce vazio (ele lê `cores_listar`). **Próxima migration livre: `0081`.**
+**2. O QUE FALTA SUBIR.** **Nada no banco.** As migrations **`0001`..`0080`** estão aplicadas em
+produção — as `0001`..`0078` conferidas no próprio schema em 20/09/2026, e a **`0079` e a `0080`
+rodadas pelo usuário em 20/09/2026**. **Próxima migration livre: `0081`.**
+> Para reconferir a `0080` sem abrir o SQL Editor é uma linha:
+> `select count(*) from cores;` — tem de vir **16** (as cores do CRLV).
+> E `select cor, cor_id from veiculos where cor is not null;` mostra o texto já canonizado.
 > Se precisar reconferir a `0079` sem abrir o SQL Editor, é uma linha:
 > `select busca_texto, busca_digitos from leads limit 1;` — as duas colunas existem e vêm
 > preenchidas.
@@ -271,12 +272,11 @@ nenhuma: manda rodar de novo o que já rodou.
   (o recorte do plano de contas). Sem ela a tela `/regionais` não abre.
 - **`0079_busca_leads_sem_acento`** (aplicada em 20/09/2026) — liga o `unaccent` na busca da Lista
   de `/vendas` e, no mesmo movimento, conserta a busca por telefone. Ver a seção própria.
-- **`0080_cores_veiculo` é NOVA e ainda NÃO foi aplicada** — o CATÁLOGO DE CORES: `veiculos.cor` e
-  `leads.cor` deixam de ser texto livre e passam por um vocabulário só (ver a seção própria). Ela
-  **reescreve dado existente** (backfill canonizando o que já está gravado), então leia a seção
-  antes de rodar.
-- **Próxima migration livre: `0081`.** `0001`..`0079` estão aplicadas em produção (ver a caixa de
-  retomada no topo); a `0080` está entregue e pendente.
+- **`0080_cores_veiculo`** (aplicada em 20/09/2026) — o CATÁLOGO DE CORES: `veiculos.cor` e
+  `leads.cor` deixam de ser texto livre e passam por um vocabulário só. Ela **reescreveu dado
+  existente** (backfill canonizando o que já estava gravado). Ver a seção própria.
+- **Próxima migration livre: `0081`. Não há migration pendente:** `0001`..`0080` estão aplicadas em
+  produção (ver a caixa de retomada no topo).
 - **`.claude/hooks/session-start.sh` é NOVO** — avisa quando a sessão nasce no branch errado e
   instala as dependências. Ele **só roda se estiver no branch que a sessão clonou**; enquanto o
   default do GitHub for o branch morto, uma sessão que caia lá não terá o hook. A correção
