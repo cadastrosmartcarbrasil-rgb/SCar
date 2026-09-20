@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { X } from 'lucide-react';
+import { useFecharNoFundo } from '@/hooks/use-fechar-no-fundo';
 
 // Modal simples (dialog) para formularios de cadastro/edicao.
 //
@@ -32,6 +33,12 @@ export function Modal({
   children: React.ReactNode;
   tamanho?: keyof typeof LARGURA;
 }) {
+  // O fundo so fecha quando o GESTO INTEIRO aconteceu nele. Sem isso,
+  // selecionar o texto de um campo arrastando para fora fechava o cadastro e
+  // perdia a ficha inteira — o `click` nasce no fundo porque ele e o ancestral
+  // comum do mousedown e do mouseup. Ver `src/lib/overlay.ts`.
+  const fundo = useFecharNoFundo(onClose);
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose();
@@ -45,8 +52,13 @@ export function Modal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 pt-16"
-      onClick={onClose}
+      {...fundo}
     >
+      {/* O `stopPropagation` NAO e o que conserta a selecao de texto (o clique
+          do arrasto nasce no fundo e nem passa por aqui) — quem conserta e o
+          `useFecharNoFundo` acima. Ele fica porque o modal e renderizado DENTRO
+          da arvore da pagina: sem ele, um clique no formulario borbulharia ate
+          um ancestral clicavel (uma linha de tabela, um cartao). */}
       <div
         className={`w-full ${LARGURA[tamanho]} rounded-xl bg-superficie shadow-xl`}
         onClick={(e) => e.stopPropagation()}

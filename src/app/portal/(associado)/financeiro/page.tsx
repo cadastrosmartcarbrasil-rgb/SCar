@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { usePortalFinanceiro, usePortalTitulos, useSegundaVia } from '@/hooks/use-portal';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { PortalSegundaVia, PortalTitulo } from '@/lib/database.types';
+import { useFecharNoFundo } from '@/hooks/use-fechar-no-fundo';
 
 const SELO: Record<string, { rotulo: string; classe: string }> = {
   pago: { rotulo: 'Pago', classe: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
@@ -148,6 +149,7 @@ function Indicador({ rotulo, valor, nota, tom = 'neutro' }: {
 
 /** 2a via: mostra o que o banco ja devolveu, e diz quando ainda nao ha nada. */
 function ModalSegundaVia({ titulo, onClose }: { titulo: PortalTitulo; onClose: () => void }) {
+  const fundo = useFecharNoFundo(onClose);
   const segunda = useSegundaVia();
   const [dados, setDados] = useState<PortalSegundaVia | null>(null);
   const [copiado, setCopiado] = useState<string | null>(null);
@@ -171,7 +173,10 @@ function ModalSegundaVia({ titulo, onClose }: { titulo: PortalTitulo; onClose: (
 
   return (
     <div className="fixed inset-0 z-40 grid place-items-end bg-black/50 p-0 sm:place-items-center sm:p-4"
-      onClick={onClose}>
+      {...fundo}>
+      {/* Aqui o defeito doia em dobro: este painel existe para o associado
+          COPIAR a linha digitavel e o PIX, entao selecionar texto e o uso
+          principal — e era ele que fechava a tela. */}
       <div
         className="w-full max-w-md rounded-t-2xl bg-superficie p-5 sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}

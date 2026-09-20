@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { ChevronLeft, ChevronRight, ExternalLink, Loader2, X } from 'lucide-react';
+import { useFecharNoFundo } from '@/hooks/use-fechar-no-fundo';
 
 export interface ImagemDoVisor {
   /** Chave estavel do item (codigo da pose, id do anexo...). */
@@ -31,6 +32,9 @@ export function VisorImagens({ imagens, id, onTrocar, onFechar, onAbrirOriginal 
 }) {
   const i = Math.max(0, imagens.findIndex((im) => im.id === id));
   const atual = imagens[i];
+  // Mesmo defeito do Modal: o titulo e a legenda sao texto selecionavel, e
+  // arrastar a selecao para fora fechava o visor.
+  const fundo = useFecharNoFundo(onFechar);
 
   useEffect(() => {
     function tecla(e: KeyboardEvent) {
@@ -47,7 +51,7 @@ export function VisorImagens({ imagens, id, onTrocar, onFechar, onAbrirOriginal 
   return (
     <div
       className="fixed inset-0 z-50 flex flex-col bg-black/85 p-3 sm:p-6"
-      onClick={onFechar}
+      {...fundo}
       role="dialog"
       aria-modal="true"
       aria-label={`Foto ${atual.titulo}`}

@@ -406,7 +406,7 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 ### Estado de validação (fim da fase)
 - **Migrations `0001`..`0080`** + `schema.sql` consolidado aplicam limpos no harness local.
 - **57 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 663 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Vitest: 668 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Os portais e páginas públicas
@@ -2579,6 +2579,36 @@ decisão de desenho sobre 87 policies de uma vez, não limpeza de passagem.
   desenhada no claro.
 - **Ao criar tela nova:** use os tokens (`bg-superficie`, `bg-fundo`, `text-slate-*`, `bg-acao`)
   e **não escreva hex cru** — é o mesmo cuidado que o white-label vai exigir.
+
+## Fechar pelo fundo: o gesto, não o clique (o bug da seleção de texto)
+- **O sintoma, relatado em produção:** num cadastro longo, selecionar o texto de um campo com o
+  mouse e **soltar o botão fora do modal** fechava tudo, sem salvar, com a ficha inteira
+  preenchida. Acontecia em qualquer formulário do sistema.
+- **🔴 A CAUSA NÃO ERA UM `onClick` NO LUGAR ERRADO — era o modelo de evento.** O navegador
+  dispara o `click` no **ancestral comum** do `mousedown` e do `mouseup`. Quando a seleção começa
+  no campo e termina no fundo, esse ancestral **é o próprio fundo**: o evento nasce ali, então o
+  `stopPropagation()` do conteúdo nunca roda — ele não é ignorado, ele não é nem visitado.
+  Por isso "fechar quando o clique for no fundo" está errado por construção.
+- **A regra certa é sobre o GESTO:** só fecha quando o botão **desceu no fundo E subiu no fundo**.
+  Arrastar de dentro para fora (selecionar texto) e de fora para dentro deixam de fechar.
+- **Não olhe só o fim do gesto.** Numa seleção, o `mouseup` pode ser entregue ao fundo (o cursor
+  está lá) **ou** ao campo de origem (quando o navegador captura o ponteiro) — os dois casos
+  existem no mundo real e os dois têm de não fechar. Exigir também o **início** cobre os dois.
+- **Onde mora:** `deveFecharPeloFundo` (`src/lib/overlay.ts`, com os quatro gestos em teste) +
+  `useFecharNoFundo` (`src/hooks/use-fechar-no-fundo.ts`), que devolve as props para espalhar no
+  elemento de fundo. **Overlay novo usa o hook e NUNCA `onClick={onClose}` no fundo.**
+  Usa eventos de **ponteiro**, então vale para mouse, toque e caneta de uma vez.
+- **Aplicado em três lugares**, que é o sistema inteiro: `<Modal>` (`src/components/ui/modal.tsx`
+  — 77 usos em 33 arquivos, todo cadastro do sistema), o painel de 2ª via do **portal do associado**
+  (`portal/(associado)/financeiro`) e o `<VisorImagens>`. **O drawer do menu no celular já era
+  imune** e não foi tocado: o fundo dele é um elemento IRMÃO do painel, então o ancestral comum do
+  arrasto é o invólucro, que não tem handler.
+- **⚠️ O `stopPropagation()` do conteúdo FICA, e não é ele que conserta isto.** Ele existe por
+  outro motivo: o modal é renderizado **dentro da árvore da página**, então sem ele um clique no
+  formulário borbulharia até um ancestral clicável (uma linha de tabela, um cartão).
+- **O `Esc` continua fechando**, que é o comportamento esperado de um modal. Se um dia isso também
+  custar um cadastro, o caminho é o `<Modal>` saber que o formulário está sujo e pedir confirmação
+  — mudança maior, em todos os formulários, e não foi feita.
 
 ## Largura das telas e dos modais (responsivo de verdade)
 - **O sistema é responsivo para o celular, mas no PC ele tem de USAR a largura.** O erro clássico
