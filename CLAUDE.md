@@ -64,10 +64,14 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
 **O banco é o projeto Supabase `Scar Software`, ref `asinzcqbbqdglrguqtnr`** (sa-east-1) — ver
 "Qual é o banco" logo abaixo. **Nenhum dos outros três projetos da conta é este sistema.**
 
-**2. O QUE FALTA SUBIR.** **A `0081` (adicional de risco por regional) — ver a seção própria.**
-Ela é a primeira migration que muda PREÇO, então leia antes de rodar. As migrations
-**`0001`..`0080`** estão aplicadas em produção — as `0001`..`0078` conferidas no próprio schema em 20/09/2026, e a **`0079` e a `0080`
-rodadas pelo usuário em 20/09/2026**. **Próxima migration livre: `0082`.**
+**2. O QUE FALTA SUBIR.** **Nada no banco.** As migrations **`0001`..`0081`** estão aplicadas em
+produção — as `0001`..`0078` conferidas no próprio schema em 20/09/2026, e a **`0079`, a `0080` e a
+`0081` rodadas pelo usuário em 20/09/2026**. **Próxima migration livre: `0082`.**
+> Para reconferir a `0081` sem abrir o SQL Editor, o que importa é que o motor ficou INTACTO:
+> `select (cotar_plano(50000, (select id from tipos_veiculo where nome ilike 'passeio%' limit 1))
+>          ->>'valor_total_mensalidade')::numeric;` — tem de dar o MESMO valor de antes dela.
+> E `select count(*) from regional_adicional_risco;` mostra quantos adicionais já foram cadastrados
+> (zero logo depois de rodar: nenhuma unidade cobra a mais até alguém preencher a grade).
 > Para reconferir a `0080` sem abrir o SQL Editor é uma linha:
 > `select count(*) from cores;` — tem de vir **16** (as cores do CRLV).
 > E `select cor, cor_id from veiculos where cor is not null;` mostra o texto já canonizado.
@@ -276,12 +280,13 @@ nenhuma: manda rodar de novo o que já rodou.
 - **`0080_cores_veiculo`** (aplicada em 20/09/2026) — o CATÁLOGO DE CORES: `veiculos.cor` e
   `leads.cor` deixam de ser texto livre e passam por um vocabulário só. Ela **reescreveu dado
   existente** (backfill canonizando o que já estava gravado). Ver a seção própria.
-- **`0081_adicional_risco_regional` é NOVA e ainda NÃO foi aplicada** — o preço deixa de ser só
-  nacional (ver a seção própria). Ela **derruba e recria `calcular_mensalidade` e `cotar_plano`**
-  (overload seria ambíguo) e mexe em `valor_mensalidade_veiculo`, `atualizar_cotacao` e
-  `autorizar_entrada_lead`. É a primeira migration que muda preço: leia a seção antes de rodar.
-- **Próxima migration livre: `0082`.** `0001`..`0080` estão aplicadas em produção (ver a caixa de
-  retomada no topo); a `0081` está entregue e pendente.
+- **`0081_adicional_risco_regional`** (aplicada em 20/09/2026) — o preço deixa de ser só nacional
+  (ver a seção própria). Ela **derrubou e recriou `calcular_mensalidade` e `cotar_plano`** (overload
+  seria ambíguo) e mexeu em `valor_mensalidade_veiculo`, `atualizar_cotacao` e
+  `autorizar_entrada_lead`. **Nenhum preço mudou ao aplicá-la:** sem adicional cadastrado, o
+  `p_regional_id` nulo devolve a matriz pura.
+- **Próxima migration livre: `0082`. Não há migration pendente:** `0001`..`0081` estão aplicadas em
+  produção (ver a caixa de retomada no topo).
 - **`.claude/hooks/session-start.sh` é NOVO** — avisa quando a sessão nasce no branch errado e
   instala as dependências. Ele **só roda se estiver no branch que a sessão clonou**; enquanto o
   default do GitHub for o branch morto, uma sessão que caia lá não terá o hook. A correção
