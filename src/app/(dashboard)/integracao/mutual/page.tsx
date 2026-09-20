@@ -12,11 +12,14 @@ import {
   useMutualQuarentena, useMutualStatusNaoMapeados, useMutualPeriodicidade,
   useMutualStatusCruzado,
   useMutualCampos, usePingMutual, useCapturaMutual,
-  useMutualCoberturaConsultor, useMutualConsultoresPendentes,
+  useMutualCoberturaConsultor, useMutualCoberturaUnidade, useVincularFilial,
+  useCobrancaExternaResumo, useDefinirCobrancaExterna,
 } from '@/hooks/use-mutual';
+import { useRegionais } from '@/hooks/use-config';
 import {
   ENTIDADES_INCREMENTAIS, ROTULO_QUARENTENA, ROTULO_PERIODO_MUTUAL, type EntidadeMutual,
-  gargaloDoFunil, coberturaDoFunil, teseDoConsultorSeSustenta,
+  gargaloDoFunil, coberturaDoFunil, teseSeSustenta, correnteVazia,
+  situacaoDePara, filiaisPendentes, carteiraSemDePara,
 } from '@/lib/mutual';
 import type { MutualDiagnostico, SeveridadeDiagnostico } from '@/lib/database.types';
 
@@ -70,8 +73,14 @@ function Secao({ titulo, icone: Icone, children, acao }: {
 
 export default function IntegracaoMutualPage() {
   const capturas = useMutualCapturas();
+  // 0082: a unidade sai do ASSOCIADO. O funil do consultor fica so para o
+  // aviso de "corrente vazia" — ele mede um campo que vem em branco em 100%.
+  const funilUnidade = useMutualCoberturaUnidade(true);
   const funil = useMutualCoberturaConsultor(true);
-  const pendentes = useMutualConsultoresPendentes(true, 50);
+  const regionais = useRegionais();
+  const vincular = useVincularFilial();
+  const cobrancaExterna = useCobrancaExternaResumo();
+  const cutover = useDefinirCobrancaExterna();
   const diagnostico = useMutualDiagnostico();
   const porStatus = useMutualPorStatus();
   const filiais = useMutualFiliais();
@@ -488,35 +497,93 @@ export default function IntegracaoMutualPage() {
       )}
 
       {(filiais.data ?? []).length > 0 && (
-        <Secao titulo="Filiais do Mutual" icone={Building2}>
-          <p className="mb-3 text-xs text-slate-500">
-            A correspondencia com as nossas unidades e <strong>manual</strong> (Fase 2): criar
-            regional e criar tenant. Abaixo, so o palpite por CNPJ ou nome.
+        <Secao titulo="Filiais do Mutual — o de-para da unidade" icone={Building2}>
+          <p className="mb-3 text-xs leading-relaxed text-slate-500">
+            A unidade do Mutual mora no <strong>associado</strong> (<code className="tnum">PERSON.regional_id</code>),
+            e e por ele que a carteira abaixo foi contada. Escolher a unidade do SCar aqui
+            <strong> registra a decisao</strong> — e so ela vale na carga. O
+            <strong> palpite</strong> por CNPJ/nome aparece ao lado para acelerar a escolha e
+            <strong> nunca</strong> carrega carteira sozinho: <code className="tnum">regional_id</code> atravessa
+            a RLS e todos os paineis.
           </p>
+          {(() => {
+            const lista = filiais.data ?? [];
+            const pendentes = filiaisPendentes(lista);
+            const semDePara = carteiraSemDePara(lista);
+            return pendentes.length > 0 ? (
+              <div className={`mb-3 rounded-lg px-3 py-2 text-sm ring-1 ${TOM.CRITICO}`}>
+                <strong className="tnum">{pendentes.length}</strong>{' '}
+                {pendentes.length === 1 ? 'filial ainda sem de-para' : 'filiais ainda sem de-para'},
+                segurando <strong className="tnum">{semDePara}</strong> veiculos da carteira viva.
+                A lista esta ordenada por volume: tratar a maior primeiro resolve a maior parte
+                da base com a menor decisao.
+              </div>
+            ) : (
+              <div className={`mb-3 rounded-lg px-3 py-2 text-sm ring-1 ${TOM.OK}`}>
+                Todas as filiais com carteira estao mapeadas.
+              </div>
+            );
+          })()}
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs uppercase tracking-wide text-slate-500">
                   <th className="pb-2">Filial</th><th className="pb-2">CNPJ</th>
-                  <th className="pb-2 text-right">Objetos</th><th className="pb-2">Unidade no SCar</th>
+                  <th className="pb-2 text-right">Associados</th>
+                  <th className="pb-2 text-right">Objetos</th>
+                  <th className="pb-2 text-right">Faturaveis</th>
+                  <th className="pb-2">Unidade no SCar</th>
                 </tr>
               </thead>
               <tbody>
-                {(filiais.data ?? []).map((f) => (
-                  <tr key={f.id_externo} className="border-t border-slate-100">
-                    <td className="py-2 text-slate-800">{f.nome ?? '(sem nome)'}</td>
-                    <td className="py-2 tnum text-slate-600">{f.cnpj ?? '—'}</td>
-                    <td className="py-2 text-right tnum text-slate-900">{f.objetos}</td>
-                    <td className="py-2">
-                      <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ring-1 ${f.ja_existe_id ? TOM.OK : TOM.ATENCAO}`}>
-                        {f.ja_existe_id ? 'ha candidata' : 'sem correspondencia'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {(filiais.data ?? []).map((f) => {
+                  const sit = situacaoDePara(f);
+                  return (
+                    <tr key={f.id_externo} className="border-t border-slate-100">
+                      <td className="py-2 text-slate-800">{f.nome ?? '(sem nome)'}</td>
+                      <td className="py-2 tnum text-slate-600">{f.cnpj ?? '—'}</td>
+                      <td className="py-2 text-right tnum text-slate-600">{f.associados}</td>
+                      <td className="py-2 text-right tnum text-slate-600">{f.objetos}</td>
+                      <td className="py-2 text-right tnum font-semibold text-slate-900">{f.faturaveis}</td>
+                      <td className="py-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <select
+                            className="rounded border border-slate-200 bg-superficie px-2 py-1 text-xs"
+                            value={f.regional_id ?? ''}
+                            disabled={vincular.isPending}
+                            onChange={(e) => vincular.mutate({
+                              idExterno: f.id_externo,
+                              regionalId: e.target.value || null,
+                            })}
+                          >
+                            <option value="">— nao mapeada —</option>
+                            {(regionais.data ?? []).map((r) => (
+                              <option key={r.id} value={r.id}>{r.nome}</option>
+                            ))}
+                          </select>
+                          {sit === 'palpite' && (
+                            <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ring-1 ${TOM.ATENCAO}`}>
+                              palpite: {(regionais.data ?? []).find((r) => r.id === f.palpite_id)?.nome ?? '—'}
+                            </span>
+                          )}
+                          {sit === 'vinculada' && (
+                            <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ring-1 ${TOM.OK}`}>
+                              decidida
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
+          {vincular.isError && (
+            <p className="mt-2 text-xs text-rose-600">
+              {(vincular.error as Error)?.message ?? 'Nao foi possivel gravar o de-para.'}
+            </p>
+          )}
         </Secao>
       )}
 
@@ -616,29 +683,30 @@ export default function IntegracaoMutualPage() {
           </div>
         </Secao>
       )}
-      {/* A UNIDADE PELO CONSULTOR (0073) — a corrente e onde ela quebra */}
-      <Secao titulo="A unidade pelo consultor" icone={Users}>
-        <p className="mb-4 text-xs text-slate-500">
-          A unidade nao esta em <code className="tnum">regional</code> em lugar nenhum. A corrente que
-          sobrou e <strong>objeto.consultant (codigo) → consultor → vendedor importado → unidade</strong>.
-          Sao <strong>quatro saltos</strong>: o que decide nao e o total, e <em>onde</em> ela quebra.
-          Puxe <strong>Consultores</strong> antes de ler.
+      {/* A UNIDADE PELO ASSOCIADO (0082) — a corrente que existe */}
+      <Secao titulo="A unidade pelo associado" icone={Users}>
+        <p className="mb-4 text-xs leading-relaxed text-slate-500">
+          A unidade do Mutual mora no <strong>associado</strong>:{' '}
+          <code className="tnum">objeto.person_data.person_id → PERSON.regional_id</code>. Sao{' '}
+          <strong>dois saltos, por id</strong> — nao casamento por texto. O que decide nao e o
+          total, e <em>onde</em> a corrente quebra. Puxe <strong>Associados</strong> e{' '}
+          <strong>Filiais</strong> antes de ler.
         </p>
-        {funil.isLoading && <p className="text-sm text-slate-500">Carregando...</p>}
-        {!funil.isLoading && (funil.data ?? []).length > 0 && (() => {
-          const passos = funil.data ?? [];
+        {funilUnidade.isLoading && <p className="text-sm text-slate-500">Carregando...</p>}
+        {!funilUnidade.isLoading && (funilUnidade.data ?? []).length > 0 && (() => {
+          const passos = funilUnidade.data ?? [];
           const base = passos[0]?.objetos ?? 0;
           const gargalo = gargaloDoFunil(passos);
           const cobertura = coberturaDoFunil(passos);
-          const passa = teseDoConsultorSeSustenta(passos);
+          const passa = teseSeSustenta(passos);
           return (
             <>
               <div className={`mb-4 rounded-lg px-3 py-2 text-sm ring-1 ${passa ? TOM.OK : TOM.CRITICO}`}>
-                <strong className="tnum">{(cobertura * 100).toFixed(1)}%</strong> dos veiculos chegam
-                a uma unidade.{' '}
+                <strong className="tnum">{(cobertura * 100).toFixed(1)}%</strong> dos veiculos
+                chegam a uma unidade do SCar.{' '}
                 {passa
-                  ? 'A tese se sustenta — a carga pode resolver a unidade pelo consultor.'
-                  : 'A tese NAO se sustenta sozinha: o resto viraria trabalho manual por associado.'}
+                  ? 'A corrente se sustenta — a carga pode resolver a unidade sozinha.'
+                  : 'O resto viraria trabalho manual por associado.'}
                 {gargalo && (
                   <> O gargalo esta em <strong>{gargalo.etapa}</strong>, que perde{' '}
                     <strong className="tnum">{gargalo.perdidos}</strong>.</>
@@ -664,34 +732,86 @@ export default function IntegracaoMutualPage() {
           );
         })()}
 
-        {(pendentes.data ?? []).length > 0 && (
-          <div className="mt-5">
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
-              Quem a corrente perde — por volume de veiculos
-            </h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="text-xs uppercase tracking-wide text-slate-500">
-                  <tr>
-                    <th className="pb-2">Consultor</th><th className="pb-2">Nome</th>
-                    <th className="pb-2">CPF</th><th className="pb-2 text-right">Veiculos</th>
-                    <th className="pb-2">Falta</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(pendentes.data ?? []).map((c) => (
-                    <tr key={c.consultor_id} className="border-t border-slate-100">
-                      <td className="py-2 tnum text-slate-600">{c.consultor_id}</td>
-                      <td className="py-2 text-slate-800">{c.nome ?? '—'}</td>
-                      <td className="py-2 tnum text-slate-600">{c.documento ?? '—'}</td>
-                      <td className="py-2 text-right tnum font-semibold text-slate-800">{c.veiculos}</td>
-                      <td className="py-2 text-xs text-slate-500">{c.motivo}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+        {/* A corrente do CONSULTOR (0073/0074): medida, e vazia. O aviso e
+            calculado, nao escrito a mao — no dia em que o Mutual preencher
+            `consultant` ele some sozinho. */}
+        {correnteVazia(funil.data ?? []) && (
+          <div className="mt-5 rounded-lg bg-fundo px-3 py-2 text-xs leading-relaxed text-slate-500 ring-1 ring-slate-200">
+            <strong className="text-slate-700">A corrente pelo consultor esta vazia.</strong>{' '}
+            O funil da 0073/0074 media{' '}
+            <code className="tnum">objeto.consultant → consultor → vendedor → unidade</code>, mas o
+            campo <code className="tnum">consultant</code> vem em branco em{' '}
+            <strong className="tnum">{(funil.data ?? [])[0]?.objetos ?? 0}</strong> de{' '}
+            <strong className="tnum">{(funil.data ?? [])[0]?.objetos ?? 0}</strong> objetos: ele para
+            no segundo degrau. Corrente vazia nao e corrente que vaza — nao ha cadastro a
+            enriquecer, o dado nao vem. O instrumento continua no banco
+            (<code className="tnum">mutual_cobertura_consultor</code>) para o caso de o Mutual
+            passar a preencher o campo.
           </div>
+        )}
+      </Secao>
+
+      {/* O INTERRUPTOR DA COBRANCA (0082) */}
+      <Secao titulo="Cobranca externa — o cutover por unidade" icone={Building2}>
+        <p className="mb-3 text-xs leading-relaxed text-slate-500">
+          Veiculo marcado como <strong>cobranca externa</strong> segue <strong>ativo</strong> e com
+          todos os beneficios (24h, evento, portal) — so <strong>nao gera fatura aqui</strong>,
+          porque a mensalidade dele e cobrada no Mutual. E o que impede a carga de emitir boleto
+          para quem ja paga do outro lado. Trazer a cobranca para o SCar e o{' '}
+          <strong>cutover</strong> daquela unidade, e exige motivo.
+        </p>
+        {(cobrancaExterna.data ?? []).length === 0 && (
+          <p className="text-sm text-slate-500">Nenhum veiculo em cobranca externa hoje.</p>
+        )}
+        {(cobrancaExterna.data ?? []).length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs uppercase tracking-wide text-slate-500">
+                  <th className="pb-2">Unidade</th>
+                  <th className="pb-2 text-right">Cobrados por fora</th>
+                  <th className="pb-2 text-right">Cobrados aqui</th>
+                  <th className="pb-2 text-right">Carteira</th>
+                  <th className="pb-2" />
+                </tr>
+              </thead>
+              <tbody>
+                {(cobrancaExterna.data ?? []).map((c) => (
+                  <tr key={c.regional_id ?? 'matriz'} className="border-t border-slate-100">
+                    <td className="py-2 text-slate-800">{c.regional}</td>
+                    <td className="py-2 text-right tnum font-semibold text-slate-900">{c.externos}</td>
+                    <td className="py-2 text-right tnum text-slate-600">{c.proprios}</td>
+                    <td className="py-2 text-right tnum text-slate-600">{c.total}</td>
+                    <td className="py-2 text-right">
+                      {c.externos > 0 && (
+                        <button
+                          type="button"
+                          className="rounded border border-slate-200 px-2 py-1 text-xs text-slate-700 hover:bg-fundo disabled:opacity-50"
+                          disabled={cutover.isPending}
+                          onClick={() => {
+                            const motivo = window.prompt(
+                              `Trazer a cobranca de ${c.externos} veiculo(s) de "${c.regional}" para o SCar.\n`
+                              + 'A partir daqui eles passam a gerar boleto AQUI. Informe o motivo:',
+                            );
+                            if (motivo && motivo.trim()) {
+                              cutover.mutate({ regionalId: c.regional_id, externa: false, motivo });
+                            }
+                          }}
+                        >
+                          Trazer a cobranca para ca
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {cutover.isError && (
+          <p className="mt-2 text-xs text-rose-600">
+            {(cutover.error as Error)?.message ?? 'Nao foi possivel mudar a cobranca.'}
+          </p>
         )}
       </Secao>
     </div>

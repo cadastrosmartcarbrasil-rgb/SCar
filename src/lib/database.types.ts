@@ -248,6 +248,9 @@ export type VeiculosRow = Timestamps & {
   /** 0081 — o adicional carimbado na ENTRADA. O faturamento usa este, nao o cadastro. */
   valor_adicional_regional: number;
   regional_preco_id: string | null;
+  /** 0082 — a mensalidade e cobrada FORA do SCar. Nao e bloqueio: so nao gera fatura aqui. */
+  cobranca_externa: boolean;
+  cobranca_externa_desde: string | null;
   id: string;
   cliente_id: string;
   placa: string;
@@ -2495,7 +2498,30 @@ export type MutualFilial = {
   nome: string | null;
   cnpj: string | null;
   objetos: number;
-  ja_existe_id: string | null;
+  /** 0082 — a carteira VIVA da filial. E este numero que decide o de-para. */
+  faturaveis: number;
+  associados: number;
+  /** O de-para REGISTRADO (integracao_vinculos). E o unico que a carga usa. */
+  regional_id: string | null;
+  /** Casamento por CNPJ/nome. SO para a tela sugerir — nunca carrega carteira. */
+  palpite_id: string | null;
+};
+
+/** 0082 — vinculo apontando para registro que nao existe mais (nao ha FK). */
+export type VinculoOrfao = {
+  sistema: string;
+  entidade: string;
+  tabela: string;
+  quantidade: number;
+};
+
+/** 0082 — quantos veiculos cada unidade ainda cobra por fora. */
+export type CobrancaExternaResumo = {
+  regional_id: string | null;
+  regional: string;
+  externos: number;
+  proprios: number;
+  total: number;
 };
 
 export type MutualQuarentena = {
@@ -3764,6 +3790,43 @@ export type Database = {
           p_chaves_nome?: string[];
         };
         Returns: MutualConsultorPendente[];
+      };
+      // 0082 — a unidade pelo ASSOCIADO. Substitui o funil do consultor, que
+      // mede uma corrente vazia (`consultant` vem em branco em 100%).
+      mutual_cobertura_unidade: {
+        Args: { p_somente_faturaveis?: boolean };
+        Returns: MutualPassoFunil[];
+      };
+      mutual_regional_do_externo: { Args: { p_id_externo: string }; Returns: string | null };
+      // 0082 — a ponte id externo -> registro do SCar (a carga e re-executavel).
+      vincular_externo: {
+        Args: {
+          p_entidade: string;
+          p_id_externo: string;
+          p_tabela: string;
+          p_registro_id: string;
+          p_sistema?: string;
+          p_observacao?: string | null;
+        };
+        Returns: number;
+      };
+      desvincular_externo: {
+        Args: { p_entidade: string; p_id_externo: string; p_sistema?: string };
+        Returns: boolean;
+      };
+      registro_do_externo: {
+        Args: { p_entidade: string; p_id_externo: string; p_sistema?: string };
+        Returns: string | null;
+      };
+      vinculos_orfaos: { Args: Record<string, never>; Returns: VinculoOrfao[] };
+      // 0082 — o interruptor da cobranca (o cutover por unidade).
+      definir_cobranca_externa_regional: {
+        Args: { p_regional_id: string | null; p_externa: boolean; p_motivo?: string | null };
+        Returns: number;
+      };
+      cobranca_externa_resumo: {
+        Args: Record<string, never>;
+        Returns: CobrancaExternaResumo[];
       };
       // 0067 — a unidade com os numeros que dizem se ela esta viva.
       regionais_listar: {

@@ -66,7 +66,12 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
 
 **2. O QUE FALTA SUBIR.** **Nada no banco.** As migrations **`0001`..`0081`** estão aplicadas em
 produção — as `0001`..`0078` conferidas no próprio schema em 20/09/2026, e a **`0079`, a `0080` e a
-`0081` rodadas pelo usuário em 20/09/2026**. **Próxima migration livre: `0082`.**
+`0081` rodadas pelo usuário em 20/09/2026**.
+> **⚠️ A `0082_carga_mutual_preparacao` é NOVA e AINDA NÃO FOI APLICADA.** Ela é a preparação da
+> carga do Mutual: a unidade passa a sair do **associado** (a corrente do consultor estava vazia),
+> entra a tabela de vínculo e entra o **interruptor da cobrança**. Sem ela a tela
+> `/integracao/mutual` quebra (chama `mutual_cobertura_unidade`) e a carga não tem como rodar sem
+> emitir boleto para quem já paga no Mutual. **Próxima migration livre: `0083`.**
 > Para reconferir a `0081` sem abrir o SQL Editor, o que importa é que o motor ficou INTACTO:
 > `select (cotar_plano(50000, (select id from tipos_veiculo where nome ilike 'passeio%' limit 1))
 >          ->>'valor_total_mensalidade')::numeric;` — tem de dar o MESMO valor de antes dela.
@@ -285,8 +290,9 @@ nenhuma: manda rodar de novo o que já rodou.
   seria ambíguo) e mexeu em `valor_mensalidade_veiculo`, `atualizar_cotacao` e
   `autorizar_entrada_lead`. **Nenhum preço mudou ao aplicá-la:** sem adicional cadastrado, o
   `p_regional_id` nulo devolve a matriz pura.
-- **Próxima migration livre: `0082`. Não há migration pendente:** `0001`..`0081` estão aplicadas em
-  produção (ver a caixa de retomada no topo).
+- **`0082_carga_mutual_preparacao` é NOVA e ainda NÃO foi aplicada** — ver a seção própria. Ela
+  mexe em `veiculo_faturavel` (o interruptor de TODO o faturamento), cria `integracao_vinculos` e
+  reescreve como a unidade do Mutual é lida. **Próxima migration livre: `0083`.**
 - **`.claude/hooks/session-start.sh` é NOVO** — avisa quando a sessão nasce no branch errado e
   instala as dependências. Ele **só roda se estiver no branch que a sessão clonou**; enquanto o
   default do GitHub for o branch morto, uma sessão que caia lá não terá o hook. A correção
@@ -414,9 +420,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0081`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **58 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 684 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0082`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **59 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 690 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Os portais e páginas públicas
@@ -764,18 +770,14 @@ Consequências que o levantamento original não tinha:
   exatamente o que `gerar_faturas_periodo(comp_inicial, meses, …)` (0025) já faz, com padrão de 6
   meses, na aba **Boletagem em Lote** de `/cobrancas`. **Não é preciso construir nada** — e é a
   confirmação de que `final_total_value` é a parcela mensal.
-- **✅ O CAMINHO DA UNIDADE É O CONSULTOR (0073), e ele é MEDIDO antes de valer.** O objeto traz
-  `consultant` como **código** — join exato com `/association/consultant/`, que já é entidade
-  capturável. Daí o consultor casa com os vendedores importados (0069) e a unidade vem deles. Ver
-  a seção própria: a corrente tem quatro saltos e o funil diz onde ela quebra.
-- **🔴 A UNIDADE NÃO ESTÁ EM `regional` — NEM NO OBJETO NEM NO CONTRATO.** O usuário informou que
-  a regional e o consultor ficam na aba **GERAL do ASSOCIADO** e também no **cadastro do veículo** —
-  ou seja, procurar em `person_data`/`vehicle_data` do objeto e na entidade `PERSON`, com
-  `mutual_campos`, **sem chutar o nome do campo**. Com os 17.616
-  contratos capturados, **3.527 de 3.527 faturáveis** seguem sem unidade e as 10 filiais aparecem
-  com "0 objetos". É bloqueante: `regional_id` atravessa RLS, `escopo_regional()` e todos os
-  painéis. **Onde ela mora é pergunta em aberto** — use `mutual_campos('CONTRACT')` para achar o
-  campo em vez de supor.
+- **✅ RESPONDIDO (0082): A UNIDADE MORA NO ASSOCIADO — `PERSON.regional_id`, 100% preenchido.**
+  E a corrente do consultor (0073/0074) estava **vazia**: medido com a base completa em
+  20/09/2026, `consultant` vem em branco em **0 de 17.675 objetos e 0 de 17.616 contratos**, ou
+  seja o funil dela dá ZERO no segundo degrau. O elo real é
+  `objeto.person_data.person_id → PERSON → regional_id`: **dois saltos, join exato por id**, com
+  **99,1% de cobertura** na carteira viva (3.409 de 3.440). Ver a seção própria.
+  **⚠️ Os números antigos deste arquivo ("3.527 de 3.527 faturáveis sem unidade", "as 10 filiais
+  com 0 objetos") eram o SINTOMA de ler o lugar errado**, não a realidade da base.
 - **🔴 O STATUS QUE MANDA É O DO VEÍCULO, NÃO O DO ASSOCIADO (0071).** O contrato do Mutual
   guarda **vários veículos**, então `contract_status` fala do ASSOCIADO: ele fica ATIVO porque tem
   OUTRO carro, enquanto AQUELE veículo está encerrado. Até a 0071 lia-se só o contrato e o carro
@@ -838,6 +840,10 @@ Consequências que o levantamento original não tinha:
   `mutual_texto_em` (nada de chutar a chave). `mutual_cores_nao_mapeadas()` é a fila do vocabulário
   novo, e ela aparece em `Configurações → Cores`. Vale a regra da 0064: **vazio sem ter capturado
   a entidade não prova nada**.
+- **RPCs (0082):** `mutual_regional_externa`, `mutual_chaves_regional`,
+  `mutual_regional_do_externo`, `mutual_cobertura_unidade`, `vincular_externo`,
+  `desvincular_externo`, `registro_do_externo`, `vinculos_orfaos`,
+  `definir_cobranca_externa_regional`, `cobranca_externa_resumo`.
 - **RPCs:** `mutual_registrar_captura` (só `tem_acesso_global`), `mutual_diagnostico`,
   `mutual_por_status`, `mutual_filiais`, `mutual_quarentena`, `mutual_status_nao_mapeados`,
   `mutual_periodicidade`, `mutual_campos`, `mutual_resumo_capturas`,
@@ -1661,6 +1667,23 @@ o lado que o chamador MUDOU (texto digitado vence id antigo; id da carga traz o 
 cor desconhecida **ENTRA e e RELATADA** (`cores_nao_reconhecidas`), nunca recusada no balcao; e o
 de-para do Mutual (`mutual_cor_do_externo`, `mutual_cores_nao_mapeadas`) resolve pelo payload de
 `/vehicle/color/` ja capturado, sem chutar o nome da chave).
+· `0082_carga_mutual_preparacao` (as TRES pecas que faltavam para a carga do Mutual poder rodar,
+e nenhuma delas carrega nada — ha teste provando que a operacao segue intacta: (A) **a UNIDADE sai
+do ASSOCIADO** — a corrente do consultor (0073/0074) foi medida com a base completa e esta VAZIA
+(`consultant` em branco em 0 de 17.675 objetos), enquanto `PERSON.regional_id` vem em 12.628 de
+12.628; entra `mutual_regional_externa` (o resolvedor de linha, que a carga vai usar),
+`mutual_chaves_regional` (as chaves candidatas em UM lugar), `mutual_cobertura_unidade` (o funil
+de 6 degraus que substitui o do consultor) e `mutual_diagnostico`/`mutual_filiais`/
+`mutual_quarentena` recriadas lendo o associado — `mutual_filiais` contava ZERO em todas, porque
+agrupava por um campo vazio; (B) **`integracao_vinculos`** — a ponte id externo -> registro do
+SCar, sem a qual a segunda carga DUPLICA (CPF e corrigido, placa e transferida), com `unique` SO
+do lado externo de proposito (dois ids do Mutual podem virar UM cliente) + `vincular_externo`,
+`desvincular_externo`, `registro_do_externo`, `vinculos_orfaos` e `mutual_regional_do_externo`,
+que resolve a filial SO pelo vinculo REGISTRADO — o palpite por CNPJ/nome fica em
+`mutual_filiais.palpite_id`, so para a tela; (C) **`veiculos.cobranca_externa`** — o interruptor
+que impede a carga de faturar quem ja paga no outro sistema: uma condicao dentro de
+`veiculo_faturavel` fecha os 4 caminhos de fatura da 0025 E o trigger da entrada na base, com
+`definir_cobranca_externa_regional` (o cutover) e `cobranca_externa_resumo`)
 · `0081_adicional_risco_regional` (ADICIONAL DE RISCO POR REGIONAL — o preco deixa de ser so
 nacional SEM duplicar tabela: a matriz continua sendo a UNICA tabela de preco e cada regional
 cadastra UM valor em R$ por TIPO DE VEICULO, somado UMA VEZ a mensalidade de qualquer faixa FIPE
@@ -2005,7 +2028,106 @@ O achado nº 1 da varredura continua de pé: **`pode_regional()` não lê papel*
 Um `consultor_vendas` com unidade segue lançando e baixando no financeiro dela. Mexer ali é
 decisão de desenho sobre 87 policies de uma vez, não limpeza de passagem.
 
+## PREPARAÇÃO DA CARGA DO MUTUAL (0082) — as 3 peças que faltavam
+> Nada aqui carrega dado. A regra da Fase 1 continua de pé e **há teste provando** que `clientes`,
+> `veiculos`, `titulos_financeiros` e `faturas` seguem intactos.
+
+### (A) 🔴 A UNIDADE MORA NO ASSOCIADO — e a corrente do consultor estava VAZIA
+- **O que foi medido**, com tudo capturado, em 20/09/2026:
+
+  | Onde | Preenchido |
+  |---|---|
+  | `objeto.consultant` | **0 de 17.675** |
+  | `contrato.consultant` | **0 de 17.616** |
+  | `objeto.regional_id` / `contrato.regional` | **0** |
+  | **`PERSON.regional_id`** | **12.628 de 12.628 — 100%** |
+
+- **O funil da 0073/0074 dá ZERO no segundo degrau.** O instrumento está certo; a corrente que ele
+  mede não existe nestes dados. As duas funções **não foram apagadas** — provar que uma corrente
+  está vazia é resultado, e elas voltam a valer se o Mutual passar a preencher o campo. O que
+  mudou é quem a tela usa para decidir.
+- **A corrente real tem DOIS saltos, por id:**
+  `objeto.person_data.person_id` → `PERSON` → `regional_id` → filial. **Cobertura: 3.409 de 3.440
+  = 99,1%** da carteira viva, acima do corte de 95% que o próprio módulo fixou na 0073.
+- **🔴 A LIÇÃO, E ELA É NOVA NESTE MÓDULO: o erro não foi chutar o NOME da chave.** Era
+  `regional_id` mesmo — ela existe no objeto e no contrato, sempre vazia. Foi procurá-la na
+  **ENTIDADE errada**. `mutual_campos` (0065) só responde sobre a entidade que você perguntou:
+  **antes de concluir que um dado "não veio", inspecione também as entidades VIZINHAS.**
+- **QUATRO lugares leem a unidade** — `mutual_regional_externa` (o resolvedor de linha, que a
+  carga vai usar), `mutual_diagnostico`, `mutual_quarentena` e `mutual_filiais` — e a precedência
+  (**associado manda; objeto e contrato são reserva**) tem de ser a mesma nos quatro. **Há teste do
+  espelho** comparando o resolvedor com o join do diagnóstico objeto a objeto. *Isso não é teoria:
+  ao escrever, três dos quatro nasceram divergentes e foram pegos pela suíte.*
+- **`mutual_filiais` contava ZERO em todas as 10 filiais**, porque agrupava por `objeto.regional`.
+  Agora conta pelo associado e devolve `faturaveis` e `associados` — os números que decidem o
+  de-para. `ja_existe_id` virou **`palpite_id`**, e o nome é a entrega.
+- **O diagnóstico ganhou o grupo `UNIDADE` com TRÊS motivos separados** (sem unidade · associado
+  não capturado · filial sem de-para). Motivo junto é fila que ninguém trabalha: são três tarefas,
+  de três pessoas diferentes.
+- **A regra da 0064 vale aqui, e eu a esqueci na primeira versão:** enquanto `/person/` ou
+  `/regional/` não foram puxados, a quarentena fica **calada** em vez de acusar a carteira inteira
+  — quem manda PUXAR é o diagnóstico e o funil. Sem essa trava, toda linha viraria
+  `ASSOCIADO_NAO_CAPTURADO`, que é o mesmo falso alarme em massa que já afogou o sinal real duas
+  vezes neste módulo (0063 e 0064). **Foi a suíte da 0062 que pegou.**
+
+### (B) `integracao_vinculos` — sem ela a segunda carga DUPLICA
+- **Nenhuma tabela da operação guarda id externo:** tudo é chave natural (`cpf_cnpj`, `placa`). E
+  "a primeira carga nunca é a definitiva" — CPF é corrigido, placa é transferida, e registro em
+  quarentena não tem linha onde pendurar id.
+- **🔴 O `unique` é SÓ do lado externo, de propósito.** Um id do Mutual aponta para UM registro;
+  mas **dois ids do Mutual podem apontar para o MESMO registro** — é o associado repetido (mesmo
+  CPF duas vezes) virando um cliente só, caso que o próprio diagnóstico já conta. Um unique do
+  lado de cá recusaria exatamente a reconciliação que a tabela existe para permitir.
+- **`registro_id` não tem FK** (aponta para tabelas diferentes conforme `tabela`), então quem
+  vigia é `vinculos_orfaos()`. E `tabela` tem **allow-list** por CHECK: sem ela um erro de
+  digitação cria vínculo que nunca resolve nada e ninguém descobre.
+- **O primeiro uso é HOJE, não na Fase 3:** o de-para das 10 filiais mora aqui, e a tela de
+  `/integracao/mutual` grava nele.
+- **🔴 SÓ A DECISÃO REGISTRADA CARREGA CARTEIRA.** `mutual_regional_do_externo` lê **apenas** o
+  vínculo. O palpite por CNPJ/nome continua em `mutual_filiais.palpite_id`, rotulado, para
+  acelerar a escolha de quem olha — e nunca entra na carga: `regional_id` atravessa RLS,
+  `escopo_regional()` e todos os painéis, e uma filial de 4.712 associados posta na unidade errada
+  por homonímia é um estrago que ninguém vê acontecer. Mesma postura do preço na 0081.
+
+### (C) 🔴 `veiculos.cobranca_externa` — o interruptor que desarma a mina nº 1
+- **O risco, intacto até aqui:** `trg_veiculo_primeira_cobranca` (0025) roda `after insert`.
+  Carregar 3.440 veículos ativos geraria **3.440 faturas do mês** — cobrar de novo quem já paga
+  no Mutual.
+- **UMA condição cobre CINCO caminhos.** Os quatro pontos de geração de fatura (0025, linhas
+  49/206/237/317) e `gerar_primeira_cobranca_veiculo` passam **todos** por `veiculo_faturavel`
+  (0024). A condição vive lá dentro — e virar a flag por unidade **é o cutover**.
+- **A GUC `scar.importacao` não resolveria**, e por isso não foi o caminho: ela é **local à
+  transação**, então protege a janela da carga e não protege o lote rodado três meses depois. A
+  flag protege os dois, porque vive no DADO e não na sessão.
+- **🔴 COBRANÇA EXTERNA NÃO É BLOQUEIO.** O associado segue **ativo** e com todos os benefícios —
+  24h, evento, carro reserva, portal. Só a mensalidade não é emitida aqui. Quem bloqueia benefício
+  é `inadimplente`/`suspenso` (0072), que são outra coisa. Efeito colateral desejado: sem título
+  nosso, `dias_atraso_cliente()` dá zero e a 24h não recusa o associado por uma dívida que esta
+  base nem enxerga. **Há teste.**
+- **Ela NÃO aparece no formulário do veículo**, pela mesma razão que `inadimplente` não aparece
+  (0072): é decisão de cutover por unidade, não marcação de atendente. Quem vira é
+  `definir_cobranca_externa_regional` — só a matriz, e **trazer a cobrança para cá exige motivo**
+  (é o movimento perigoso: a partir dali a unidade passa a emitir boleto aqui).
+- **Mas o selo APARECE na lista de `/veiculos`**, porque o veículo fica ativo e sem boleto: sem o
+  selo, "cadê a cobrança?" vira chamado.
+- **Hoje é no-op:** `default false`, nenhum veículo nasce com ela, e há teste de regressão
+  provando que a carteira que já existe continua faturando igual.
+
+### O que a 0082 NÃO faz
+Ela prepara; **não carrega**. Continuam em aberto, e são decisões suas: as **9 placas e 9 chassis
+repetidos** (as duas colunas são `unique` — a carga para no meio), os **25 veículos 0 km** sem
+placa (`veiculos.placa` é `not null`), o status **`DIFICULDADE FINANCEIRA`** (11 objetos, único
+sem de-para), a **data de corte do financeiro e dos eventos**, e o de-para de **`VEHICLE_TYPE`**
+(3 linhas), **`plan_id`** e das **41 marcas** que não casam por nome.
+
 ## A unidade pelo CONSULTOR (0073) — o instrumento, não a carga
+> **⛔ MEDIDO E VAZIO (0082).** Esta corrente **não existe nestes dados**: `consultant` vem em
+> branco em **0 de 17.675 objetos e 0 de 17.616 contratos**, então o funil abaixo dá ZERO no
+> segundo degrau. A unidade em uso hoje sai do **associado** — ver "PREPARAÇÃO DA CARGA DO MUTUAL
+> (0082)". O que está escrito aqui continua valendo como **método** (medir antes de aceitar uma
+> corrente, nomear o gargalo, não casar por nome) e as funções seguem no banco para o dia em que o
+> Mutual preencher o campo. **Não construa a carga sobre ela.**
+
 - **O problema:** `regional` veio vazio em **100%** dos objetos e dos contratos. A unidade é
   bloqueante (`regional_id` atravessa RLS, `escopo_regional()` e todos os painéis).
 - **A tese que sobrou**, e ela é boa: o objeto traz **`consultant` como CÓDIGO**, não como nome —
@@ -3621,6 +3743,15 @@ no fim — o runner procura por "PASSARAM") e rode `npm run schema`.
   descartava. **Antes de culpar o provedor, olhe o que os campos que falham têm em comum** — e
   confira o payload cru, que aqui respondeu em um comando o que tinha virado dois diagnósticos
   plausíveis e opostos.
+- **Campo vazio não prova que o dado não existe: pode estar na ENTIDADE vizinha.** A unidade do
+  Mutual foi procurada em `objeto.regional_id` e `contrato.regional_id` — as duas existem, as duas
+  vêm vazias em 100% — e a conclusão foi "o dado não veio", que custou a corrente inventada do
+  consultor (0073/0074, quatro saltos por texto) e duas sessões. Ela estava em
+  **`PERSON.regional_id`, preenchida em 100%**, a uma chave estrangeira de distância. **O nome da
+  chave estava certo o tempo todo; o lugar é que não.** `mutual_campos` (0065) só responde sobre a
+  entidade que você perguntou — quando um campo vem vazio em toda a base, **inspecione as
+  entidades vizinhas antes de concluir**, e prefira uma corrente de dois saltos por id a uma de
+  quatro por texto.
 - **`left join` por coluna NÃO ÚNICA multiplica a linha — e um `count(*)` depois dele mente.**
   O funil do consultor (0073) juntava `vendedores` por `email` e por `nome`, que não têm unique
   (só `documento` tem, 0069): cada veículo de um consultor com e-mail repetido virava duas linhas

@@ -5,7 +5,9 @@ import {
   statusVeiculoDoContrato, statusTituloMutual, ehMensalidade, problemasDoObjeto,
   mesesDoPeriodoMutual, ehFilaOperacional, ehFunilDeVenda, statusDeTexto,
   gargaloDoFunil, coberturaDoFunil, teseDoConsultorSeSustenta, CHAVES_DOC_CONSULTOR,
+  correnteVazia, situacaoDePara, filiaisPendentes, carteiraSemDePara,
 } from './mutual';
+import type { PassoFunil, FilialMutual } from './mutual';
 
 const BASE = 'https://smartcar-api.mutualignit.com.br';
 
@@ -377,5 +379,55 @@ describe('a unidade pelo CONSULTOR — o funil (0073)', () => {
     // Nao chutar UMA chave e a licao das duas rodadas perdidas neste modulo.
     expect(CHAVES_DOC_CONSULTOR).toContain('cpf_cnpj');
     expect(CHAVES_DOC_CONSULTOR).toContain('cpf');
+  });
+});
+
+// ===========================================================================
+// 0082 — a unidade pelo associado, e o de-para das filiais
+// ===========================================================================
+describe('correnteVazia', () => {
+  const p = (passo: number, objetos: number, perdidos = 0): PassoFunil =>
+    ({ passo, etapa: `e${passo}`, objetos, perdidos });
+
+  it('corrente VAZIA: o primeiro salto morre inteiro', () => {
+    // Foi o caso medido do `consultant`: 0 de 17.675 objetos.
+    expect(correnteVazia([p(1, 3440), p(2, 0, 3440), p(3, 0)])).toBe(true);
+  });
+
+  it('corrente que VAZA nao e corrente vazia — sao tratamentos diferentes', () => {
+    expect(correnteVazia([p(1, 3440), p(2, 3440), p(3, 3409, 31)])).toBe(false);
+  });
+
+  it('funil sem dado nenhum nao e "corrente vazia": nao ha o que concluir', () => {
+    expect(correnteVazia([p(1, 0), p(2, 0)])).toBe(false);
+    expect(correnteVazia([])).toBe(false);
+  });
+});
+
+describe('situacaoDePara / filiaisPendentes', () => {
+  const f = (id: string, nome: string, faturaveis: number,
+             regional_id: string | null, palpite_id: string | null): FilialMutual =>
+    ({ id_externo: id, nome, faturaveis, regional_id, palpite_id });
+
+  it('PALPITE nao e VINCULADA — e a distincao que impede carregar por homonimia', () => {
+    expect(situacaoDePara(f('5', 'APROVES', 10, null, 'uuid-palpite'))).toBe('palpite');
+    expect(situacaoDePara(f('5', 'APROVES', 10, 'uuid-real', 'uuid-palpite'))).toBe('vinculada');
+    expect(situacaoDePara(f('5', 'APROVES', 10, null, null))).toBe('sem_correspondencia');
+  });
+
+  it('a fila vem por VOLUME de carteira viva: a maior decisao primeiro', () => {
+    const lista = [
+      f('8', 'RONDONIA', 3, null, null),
+      f('5', 'APROVES', 1200, null, 'p'),
+      f('7', 'SUDESTE', 800, 'ja-vinculada', null),
+      f('6', 'NORDESTE', 400, null, null),
+    ];
+    expect(filiaisPendentes(lista).map((x) => x.id_externo)).toEqual(['5', '6', '8']);
+    expect(carteiraSemDePara(lista)).toBe(1603);
+  });
+
+  it('tudo vinculado: fila vazia e nenhuma carteira pendente', () => {
+    expect(filiaisPendentes([f('5', 'A', 10, 'r', null)])).toEqual([]);
+    expect(carteiraSemDePara([f('5', 'A', 10, 'r', null)])).toBe(0);
   });
 });

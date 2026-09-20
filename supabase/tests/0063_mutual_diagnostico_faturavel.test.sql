@@ -129,7 +129,10 @@ begin
   -- conta segue a mesma regra dos bloqueios: a CARTEIRA VIVA de um lado (aqui
   -- 201 e 202, os dois com unidade) e o acervo encerrado do outro (o 205).
   select valor into n from mutual_diagnostico()
-   where indicador = 'Faturavel sem unidade (contrato e objeto)';
+   -- 0082: a unidade deixou de ser procurada no contrato/objeto (vazios em
+   -- 100% na base real) e passou a sair do ASSOCIADO — dai o indicador ter
+   -- perdido o sufixo e mudado para o grupo UNIDADE.
+   where indicador = 'Faturavel sem unidade';
   assert n = 0, format('os faturaveis declaram unidade, veio %s', n);
   select valor into n from mutual_diagnostico()
    where grupo = 'ACERVO INATIVO' and indicador = 'Sem unidade';

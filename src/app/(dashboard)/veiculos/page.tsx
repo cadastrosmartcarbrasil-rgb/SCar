@@ -474,6 +474,17 @@ function VeiculosConteudo() {
                     {aviso && (
                       <span className="mt-0.5 block text-[11px] text-rose-600">{aviso}</span>
                     )}
+                    {/* 0082: o veiculo esta ATIVO e nao tem boleto nosso. Sem este
+                        selo, "cade a cobranca?" vira chamado — o veiculo parece
+                        normal em tudo o mais. */}
+                    {v.cobranca_externa && (
+                      <span
+                        className="mt-0.5 block text-[11px] text-slate-500"
+                        title="A mensalidade deste veiculo e cobrada no sistema anterior. Ele mantem todos os beneficios."
+                      >
+                        cobranca externa
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-2">
                     <div className="flex justify-end gap-1">

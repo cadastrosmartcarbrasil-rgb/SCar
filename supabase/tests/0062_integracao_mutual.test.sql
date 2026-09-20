@@ -180,7 +180,12 @@ begin
   select * into rec from mutual_filiais() where id_externo = '7';
   -- 101,102,103,104 declaram regional '7'; o do funil e o deletado nao declaram.
   assert rec.objetos = 4, format('4 objetos na filial 7, veio %s', rec.objetos);
-  assert rec.ja_existe_id = r_mt, 'casou com a regional existente pelo CNPJ';
+  -- 0082: `ja_existe_id` virou `palpite_id`, e o nome e a entrega. Ele casa
+  -- por CNPJ/nome e serve SO para a tela sugerir; a carga usa o vinculo
+  -- registrado (mutual_regional_do_externo), que aqui ainda nao existe.
+  assert rec.palpite_id = r_mt, 'o PALPITE casa com a regional existente pelo CNPJ';
+  assert rec.regional_id is null,
+    'sem vinculo registrado a filial NAO resolve — palpite nao carrega carteira';
   raise notice 'OK filiais sugerem o de-para SEM criar regional nenhuma';
 
   -- (G) TRAVAS -----------------------------------------------------------------

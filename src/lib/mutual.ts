@@ -430,5 +430,67 @@ export function coberturaDoFunil(passos: PassoFunil[]): number {
  * de-para por NOME de equipe (poucas decisoes) custa menos que a corrente.
  */
 export function teseDoConsultorSeSustenta(passos: PassoFunil[], minimo = 0.95): boolean {
+  return teseSeSustenta(passos, minimo);
+}
+
+/**
+ * A tese so se sustenta se a cobertura for alta. O corte de 95% nao e mistico:
+ * abaixo disso o resto vira trabalho manual por associado.
+ */
+export function teseSeSustenta(passos: PassoFunil[], minimo = 0.95): boolean {
   return coberturaDoFunil(passos) >= minimo;
+}
+
+/**
+ * A corrente NAO EXISTE nestes dados — distinto de "ela vaza".
+ *
+ * Vazamento e perda ao longo dos degraus e se trata enriquecendo cadastro;
+ * corrente vazia e o primeiro salto morrer inteiro, e ai nao ha o que
+ * enriquecer: o campo simplesmente nao vem. Foi o caso do `consultant`
+ * (0 de 17.675 objetos, medido em 20/09/2026) e e o que impede alguem de
+ * ler "0%" como "quase la".
+ */
+export function correnteVazia(passos: PassoFunil[]): boolean {
+  const inicio = passos.find((p) => p.passo === 1)?.objetos ?? 0;
+  const segundo = passos.find((p) => p.passo === 2);
+  return inicio > 0 && segundo !== undefined && segundo.objetos === 0;
+}
+
+/** O estado do de-para de uma filial do Mutual. */
+export type SituacaoDePara = 'vinculada' | 'palpite' | 'sem_correspondencia';
+
+export interface FilialMutual {
+  id_externo: string;
+  nome: string | null;
+  faturaveis: number;
+  regional_id: string | null;
+  palpite_id: string | null;
+}
+
+/**
+ * 🔴 `palpite` NAO e `vinculada`. O casamento por CNPJ/nome acelera a decisao
+ * de quem olha e NUNCA carrega carteira: `regional_id` atravessa RLS,
+ * `escopo_regional()` e todos os paineis, e uma filial de milhares de
+ * associados posta na unidade errada por homonimia e um estrago que ninguem
+ * ve acontecer. Mesma postura do preco na 0081.
+ */
+export function situacaoDePara(f: FilialMutual): SituacaoDePara {
+  if (f.regional_id) return 'vinculada';
+  return f.palpite_id ? 'palpite' : 'sem_correspondencia';
+}
+
+/**
+ * A fila do de-para, por VOLUME de carteira viva. Tratar a filial que mais
+ * pesa resolve a maior parte da base com o menor numero de decisoes — a
+ * mesma ordem que a fila de consultores (0073) e a de cores (0080) usam.
+ */
+export function filiaisPendentes(filiais: FilialMutual[]): FilialMutual[] {
+  return filiais
+    .filter((f) => !f.regional_id)
+    .sort((a, b) => b.faturaveis - a.faturaveis || (a.nome ?? '').localeCompare(b.nome ?? ''));
+}
+
+/** Quantos veiculos faturaveis ainda dependem de uma decisao de de-para. */
+export function carteiraSemDePara(filiais: FilialMutual[]): number {
+  return filiaisPendentes(filiais).reduce((s, f) => s + f.faturaveis, 0);
 }

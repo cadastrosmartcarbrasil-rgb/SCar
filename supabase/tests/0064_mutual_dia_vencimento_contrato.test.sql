@@ -70,7 +70,9 @@ begin
 
   -- a unidade segue o mesmo caminho
   select valor into n from mutual_diagnostico()
-   where indicador = 'Faturavel sem unidade (contrato e objeto)';
+   -- 0082: a unidade agora sai do ASSOCIADO; o indicador mudou de nome e de
+   -- grupo junto. O dia de vencimento, esse, continua vindo do CONTRATO.
+   where indicador = 'Faturavel sem unidade';
   assert n = 1, format('so o 302 fica sem unidade, veio %s', n);
 
   -- e o objeto orfao e apontado como tal

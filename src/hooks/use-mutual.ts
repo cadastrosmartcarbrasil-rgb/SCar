@@ -9,6 +9,7 @@ import type {
   MutualQuarentena, MutualResumoCaptura, MutualStatusNaoMapeado, MutualPeriodicidade,
   MutualStatusCruzado,
   MutualCampo, MutualPassoFunil, MutualConsultorPendente,
+  CobrancaExternaResumo,
 } from '@/lib/database.types';
 
 /** O que ja esta na area de captura. */
@@ -322,4 +323,86 @@ export function useCapturaMutual() {
   }, [qc]);
 
   return { puxarTudo, parar, progresso, rodando };
+}
+
+/**
+ * 0082 — o funil da UNIDADE pelo ASSOCIADO. Substitui o do consultor como
+ * instrumento: `consultant` vem vazio em 100% dos objetos e dos contratos.
+ */
+export function useMutualCoberturaUnidade(somenteFaturaveis = true) {
+  const supabase = createClient();
+  return useQuery<MutualPassoFunil[]>({
+    queryKey: ['mutual', 'cobertura-unidade', somenteFaturaveis],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('mutual_cobertura_unidade', {
+        p_somente_faturaveis: somenteFaturaveis,
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+/**
+ * O de-para da filial. `regionalId` nulo DESFAZ o vinculo — e nao existe
+ * "vincular a matriz" aqui de proposito: neste sistema `regional_id` nulo
+ * SIGNIFICA matriz (0067/0069), entao um de-para para nulo seria
+ * indistinguivel de "ninguem decidiu ainda".
+ */
+export function useVincularFilial() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ idExterno, regionalId }: { idExterno: string; regionalId: string | null }) => {
+      if (regionalId) {
+        const { error } = await supabase.rpc('vincular_externo', {
+          p_entidade: 'REGIONAL', p_id_externo: idExterno,
+          p_tabela: 'regionais', p_registro_id: regionalId,
+        });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.rpc('desvincular_externo', {
+          p_entidade: 'REGIONAL', p_id_externo: idExterno,
+        });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['mutual'] }); },
+  });
+}
+
+/** Quantos veiculos cada unidade ainda cobra por FORA do SCar. */
+export function useCobrancaExternaResumo() {
+  const supabase = createClient();
+  return useQuery<CobrancaExternaResumo[]>({
+    queryKey: ['mutual', 'cobranca-externa'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('cobranca_externa_resumo', {});
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+/** O CUTOVER de uma unidade. Trazer a cobranca para ca exige motivo. */
+export function useDefinirCobrancaExterna() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      { regionalId, externa, motivo }:
+      { regionalId: string | null; externa: boolean; motivo?: string },
+    ) => {
+      const { data, error } = await supabase.rpc('definir_cobranca_externa_regional', {
+        p_regional_id: regionalId, p_externa: externa, p_motivo: motivo ?? null,
+      });
+      if (error) throw error;
+      return data ?? 0;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['mutual'] });
+      void qc.invalidateQueries({ queryKey: ['veiculos'] });
+      void qc.invalidateQueries({ queryKey: ['cobrancas'] });
+    },
+  });
 }
