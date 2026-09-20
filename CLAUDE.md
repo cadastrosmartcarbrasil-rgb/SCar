@@ -3442,6 +3442,18 @@ sem de-para), a **data de corte do financeiro e dos eventos**, e o de-para de **
 - **A regra que a service_role tem de respeitar vive no BANCO.** A rota `/api/usuarios` usa
   service_role (para mexer em `auth.users`), e service_role ignora RLS: por isso a trava do último
   admin é trigger, não checagem na rota. A rota só dá a mensagem bonita.
+- **⚠️ O TESTE DA 0052 MEDE 0 LOCALMENTE E 223 EM PRODUÇÃO — e os 223 não são nossos.**
+  Conferido em 20/09/2026, depois da 0082: as funções expostas ao `anon` em produção são
+  **todas de extensão** — `btree_gist` (188, da 0081), `pg_trgm` (31) e `unaccent` (4, da 0079).
+  **Zero são nossas:** o ACL de toda RPC do sistema é `{postgres=X, authenticated=X,
+  service_role=X}`, sem PUBLIC e sem `anon`. A diferença é de DONO: no harness local quem cria a
+  extensão é o mesmo papel que roda o `revoke`, então ele alcança; em produção a extensão pertence
+  ao `supabase_admin` e o `revoke` do SQL Editor (rodando como `postgres`) **passa por ela em
+  silêncio** — REVOKE em objeto de outro dono avisa e segue, não falha. São funções de suporte de
+  operador (`gbt_int_consistent`, `similarity`, `unaccent`), não leem dado nosso e são a interface
+  normal das extensões. **A invariante que importa — nenhuma RPC nossa chamável pela chave do
+  navegador — vale em produção.** Ao reconferir, não olhe o total: agrupe por extensão
+  (`pg_depend`/`pg_extension`) e confira que a linha "(nossa)" não aparece.
 - **Login do portal tem freio** (`src/lib/rate-limit.ts`, testado): 5 tentativas por documento e
   30 por IP a cada 10 min; acertar a senha zera o contador do documento. É o alvo óbvio do sistema
   porque a senha do primeiro acesso é o próprio CPF. O contador vive na memória do processo —
