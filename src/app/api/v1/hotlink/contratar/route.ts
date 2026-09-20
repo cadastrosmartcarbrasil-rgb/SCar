@@ -45,10 +45,17 @@ export async function POST(req: Request) {
   }
 
   // 1) Snapshot da cotacao escolhida (mesmo formato do CRM).
+  // 0081 — a MESMA unidade que precificou a tela de planos. Cotar aqui sem ela
+  // gravaria no aceite um valor menor do que o visitante acabou de ver.
+  const { data: regionalPreco } = await admin.rpc('regional_preco_do_lead', {
+    p_lead_id: lead.id,
+  });
+
   const [cot, part] = await Promise.all([
     admin.rpc('cotar_plano', {
       p_fipe: lead.valor_fipe, p_tipo_veiculo_id: lead.tipo_veiculo_id,
       p_plano_id: planoId, p_avulsos_ids: [],
+      p_regional_id: regionalPreco ?? null,
     }),
     admin.rpc('calcular_participacao', {
       p_fipe: lead.valor_fipe, p_tipo_veiculo_id: lead.tipo_veiculo_id,
@@ -76,6 +83,9 @@ export async function POST(req: Request) {
       participacao: Number(part.data ?? calc.franquia_participacao ?? 0),
       taxa_adesao: Number(calc.taxa_adesao ?? 0),
       modo_envio: 'DETALHADA',
+      // 0081 — a prova do preco aceito, congelada.
+      regional_id: (calc.regional_id as string | null) ?? null,
+      valor_adicional_regional: Number(calc.adicional_regional ?? 0),
     })
     .select('id, token, total_mensalidade, taxa_adesao')
     .single();

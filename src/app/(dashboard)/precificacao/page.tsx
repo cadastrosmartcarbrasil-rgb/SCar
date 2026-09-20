@@ -10,6 +10,7 @@ import { useTiposVeiculo, useProdutos, useSimularPreco, useCotasParticipacao, us
 import { TabelaPrecosEditor } from '@/components/precificacao/tabela-precos-editor';
 import { ImportarTabela } from '@/components/precificacao/importar-tabela';
 import { formatCurrency } from '@/lib/utils';
+import { useRegionais } from '@/hooks/use-config';
 
 type Aba = 'simulador' | 'tabela' | 'importar';
 
@@ -45,11 +46,13 @@ function Simulador() {
   const { data: produtos } = useProdutos();
   const { data: cotas } = useCotasParticipacao();
   const { data: planos } = usePlanos();
+  const { data: regionais } = useRegionais();
   const simular = useSimularPreco();
 
   const [tipoVeiculoId, setTipoVeiculoId] = useState('');
   const [fipe, setFipe] = useState<number | ''>('');
   const [cotaId, setCotaId] = useState('');
+  const [regionalId, setRegionalId] = useState('');
   const [planoId, setPlanoId] = useState('');
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [resultado, setResultado] = useState<ResultadoSimulacao | null>(null);
@@ -69,7 +72,13 @@ function Simulador() {
     if (!tipoVeiculoId) return toast.error('Selecione o tipo de veiculo');
     if (fipe === '' || Number(fipe) <= 0) return toast.error('Informe o valor FIPE');
     simular.mutate(
-      { fipe: Number(fipe), tipoVeiculoId, produtosIds: [...selecionados], planoId: planoId || null, cotaId: cotaId || null },
+      {
+        fipe: Number(fipe), tipoVeiculoId, produtosIds: [...selecionados],
+        planoId: planoId || null, cotaId: cotaId || null,
+        // Sem unidade escolhida o simulador mostra o preco da MATRIZ — que e
+        // a referencia, nao um caso particular.
+        regionalId: regionalId || null,
+      },
       {
         onSuccess: (r) => setResultado(r),
         onError: (e) => toast.error(e.message),
@@ -115,6 +124,14 @@ function Simulador() {
                   <option value="">Sem combo (base + avulsos)</option>
                   {(planos ?? []).filter((p) => p.ativo).map((p) => (
                     <option key={p.id} value={p.id}>{p.nome}</option>
+                  ))}
+                </Select>
+              </FormField>
+              <FormField label="Unidade (adicional de risco)">
+                <Select value={regionalId} onChange={(e) => setRegionalId(e.target.value)}>
+                  <option value="">Matriz — sem adicional</option>
+                  {(regionais ?? []).filter((r) => r.ativo).map((r) => (
+                    <option key={r.id} value={r.id}>{r.nome}</option>
                   ))}
                 </Select>
               </FormField>
@@ -196,6 +213,14 @@ function Simulador() {
                         <td className="py-1.5">
                           {i.nome}
                           {!i.obrigatorio && <span className="ml-1 text-xs text-brand-500">(add)</span>}
+                          {/* O adicional nao e um produto: ele e uma regra da
+                              unidade sobre a tabela. O selo evita que alguem o
+                              procure em Configuracoes -> Produtos. */}
+                          {i.categoria === 'ADICIONAL_REGIONAL' && (
+                            <span className="ml-1 rounded bg-cyan-50 px-1 py-0.5 text-[10px] font-medium text-cyan-700">
+                              regional
+                            </span>
+                          )}
                         </td>
                         <td className="py-1.5 text-slate-500">{i.fornecedor}</td>
                         <td className="py-1.5 text-right font-medium">{formatCurrency(i.valor)}</td>
@@ -207,6 +232,22 @@ function Simulador() {
                 <div className="space-y-1 rounded-lg bg-slate-50 p-3 text-sm">
                   <Linha label="Subtotal Taxa Administrativa" valor={resultado.calculo.subtotal_taxa_admin} />
                   <Linha label="Subtotal Beneficios (parceiros)" valor={resultado.calculo.subtotal_beneficios_parceiros} />
+                  {(resultado.calculo.adicional_regional ?? 0) > 0 && (
+                    <>
+                      <div className="my-1 border-t border-slate-200" />
+                      <Linha
+                        label="Tabela da matriz"
+                        valor={
+                          resultado.calculo.valor_total_mensalidade -
+                          (resultado.calculo.adicional_regional ?? 0)
+                        }
+                      />
+                      <Linha
+                        label="Adicional de risco da unidade"
+                        valor={resultado.calculo.adicional_regional ?? 0}
+                      />
+                    </>
+                  )}
                   <div className="my-1 border-t border-slate-200" />
                   <div className="flex items-center justify-between text-base font-semibold text-brand-700">
                     <span>Mensalidade total</span>
@@ -217,6 +258,11 @@ function Simulador() {
                 <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
                   Taxa de adesao (cobranca unica):{' '}
                   <strong>{formatCurrency(resultado.adesao)}</strong>
+                  {(resultado.calculo.adicional_regional ?? 0) > 0 && (
+                    <span className="block text-xs opacity-80">
+                      O adicional de risco nao incide sobre a adesao.
+                    </span>
+                  )}
                 </div>
 
                 <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">

@@ -65,15 +65,17 @@ export function useSimularPreco() {
   return useMutation<
     ResultadoSimulacao,
     Error,
-    { fipe: number; tipoVeiculoId: string; produtosIds: string[]; planoId?: string | null; cotaId?: string | null }
+    { fipe: number; tipoVeiculoId: string; produtosIds: string[]; planoId?: string | null; cotaId?: string | null; regionalId?: string | null }
   >({
-    mutationFn: async ({ fipe, tipoVeiculoId, produtosIds, planoId, cotaId }) => {
+    mutationFn: async ({ fipe, tipoVeiculoId, produtosIds, planoId, cotaId, regionalId }) => {
       const [cot, part] = await Promise.all([
         supabase.rpc('cotar_plano', {
           p_fipe: fipe,
           p_tipo_veiculo_id: tipoVeiculoId,
           p_plano_id: planoId ?? null,
           p_avulsos_ids: produtosIds,
+          // 0081 — null = matriz pura, que e o comportamento historico.
+          p_regional_id: regionalId ?? null,
         }),
         supabase.rpc('calcular_participacao', {
           p_fipe: fipe,

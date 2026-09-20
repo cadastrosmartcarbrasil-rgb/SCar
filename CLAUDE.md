@@ -64,9 +64,10 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
 **O banco é o projeto Supabase `Scar Software`, ref `asinzcqbbqdglrguqtnr`** (sa-east-1) — ver
 "Qual é o banco" logo abaixo. **Nenhum dos outros três projetos da conta é este sistema.**
 
-**2. O QUE FALTA SUBIR.** **Nada no banco.** As migrations **`0001`..`0080`** estão aplicadas em
-produção — as `0001`..`0078` conferidas no próprio schema em 20/09/2026, e a **`0079` e a `0080`
-rodadas pelo usuário em 20/09/2026**. **Próxima migration livre: `0081`.**
+**2. O QUE FALTA SUBIR.** **A `0081` (adicional de risco por regional) — ver a seção própria.**
+Ela é a primeira migration que muda PREÇO, então leia antes de rodar. As migrations
+**`0001`..`0080`** estão aplicadas em produção — as `0001`..`0078` conferidas no próprio schema em 20/09/2026, e a **`0079` e a `0080`
+rodadas pelo usuário em 20/09/2026**. **Próxima migration livre: `0082`.**
 > Para reconferir a `0080` sem abrir o SQL Editor é uma linha:
 > `select count(*) from cores;` — tem de vir **16** (as cores do CRLV).
 > E `select cor, cor_id from veiculos where cor is not null;` mostra o texto já canonizado.
@@ -275,8 +276,12 @@ nenhuma: manda rodar de novo o que já rodou.
 - **`0080_cores_veiculo`** (aplicada em 20/09/2026) — o CATÁLOGO DE CORES: `veiculos.cor` e
   `leads.cor` deixam de ser texto livre e passam por um vocabulário só. Ela **reescreveu dado
   existente** (backfill canonizando o que já estava gravado). Ver a seção própria.
-- **Próxima migration livre: `0081`. Não há migration pendente:** `0001`..`0080` estão aplicadas em
-  produção (ver a caixa de retomada no topo).
+- **`0081_adicional_risco_regional` é NOVA e ainda NÃO foi aplicada** — o preço deixa de ser só
+  nacional (ver a seção própria). Ela **derruba e recria `calcular_mensalidade` e `cotar_plano`**
+  (overload seria ambíguo) e mexe em `valor_mensalidade_veiculo`, `atualizar_cotacao` e
+  `autorizar_entrada_lead`. É a primeira migration que muda preço: leia a seção antes de rodar.
+- **Próxima migration livre: `0082`.** `0001`..`0080` estão aplicadas em produção (ver a caixa de
+  retomada no topo); a `0081` está entregue e pendente.
 - **`.claude/hooks/session-start.sh` é NOVO** — avisa quando a sessão nasce no branch errado e
   instala as dependências. Ele **só roda se estiver no branch que a sessão clonou**; enquanto o
   default do GitHub for o branch morto, uma sessão que caia lá não terá o hook. A correção
@@ -404,9 +409,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0080`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **57 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 668 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0081`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **58 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 684 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Os portais e páginas públicas
@@ -1651,6 +1656,18 @@ o lado que o chamador MUDOU (texto digitado vence id antigo; id da carga traz o 
 cor desconhecida **ENTRA e e RELATADA** (`cores_nao_reconhecidas`), nunca recusada no balcao; e o
 de-para do Mutual (`mutual_cor_do_externo`, `mutual_cores_nao_mapeadas`) resolve pelo payload de
 `/vehicle/color/` ja capturado, sem chutar o nome da chave).
+· `0081_adicional_risco_regional` (ADICIONAL DE RISCO POR REGIONAL — o preco deixa de ser so
+nacional SEM duplicar tabela: a matriz continua sendo a UNICA tabela de preco e cada regional
+cadastra UM valor em R$ por TIPO DE VEICULO, somado UMA VEZ a mensalidade de qualquer faixa FIPE
+daquele tipo. `regional_adicional_risco` (vigencia com EXCLUDE gist, valor >= 0) +
+`adicional_risco_regional(regional, tipo, data)`; `calcular_mensalidade` e `cotar_plano` ganham
+`p_regional_id` — **DROP + CREATE, nao overload**, porque o ultimo argumento ja tinha default e
+duas versoes deixariam a chamada ambigua; a soma acontece DEPOIS do laco de produtos, senao +R$5
+viraria +R$10 numa faixa de 2 produtos; SO mensalidade — adesao e participacao INTACTAS; o
+snapshot congela a prova (`cotacoes.regional_id/valor_adicional_regional`,
+`veiculos.valor_adicional_regional/regional_preco_id`) e `valor_mensalidade_veiculo` soma o valor
+CARIMBADO, nunca o cadastro de hoje; quem precifica e o ASSOCIADO (`regional_preco_do_lead`), com
+`divergencia_regional_preco` para a tela avisar quando o vendedor e de outra unidade).
 
 ## Módulos (status: todos funcionais)
 Painel/Visão Geral (`/dashboard`, 2 abas: indicadores da operação + **Assistência 24h** — o painel
@@ -2124,6 +2141,81 @@ decisão de desenho sobre 87 policies de uma vez, não limpeza de passagem.
   incluso x avulso reusa `separarOpcionais` de `src/lib/vistoria.ts` — a mesma da tela de venda,
   nao uma copia. O mapa plano -> produtos vem de `useProdutosPorPlano()` numa consulta so, porque
   o diff precisa dos itens do plano ANTERIOR e do NOVO no mesmo instante.
+
+## ADICIONAL DE RISCO POR REGIONAL (0081) — `Precificação → Tabela de Preços`
+> **Primeira migration que muda PREÇO.** Leia antes de rodar.
+
+- **O problema:** `tabela_precos_faixa`, `participacao_faixa` e `adesao_faixa` são chaveadas só por
+  `tipo_veiculo_id` — o preço era nacional. São Paulo e Natal têm risco diferente.
+- **A solução:** a tabela da MATRIZ continua sendo a **única tabela de preço do sistema**. Cada
+  regional cadastra **um valor em R$ por TIPO DE VEÍCULO**, somado à mensalidade de **qualquer
+  faixa FIPE** daquele tipo. *"Natal · Moto · +R$ 5,00"* é **uma linha** que cobre as 46 faixas de
+  Moto. Sem linha = preço da matriz, intacto.
+- **🔴 ONDE FICA, e por quê:** o painel vive em **Precificação → Tabela de Preços**, ao lado da
+  **regra do rastreador** (0019) — não em Configurações → Regionais. É a mesma natureza de coisa:
+  uma regra que sobe por cima da matriz inteira de um tipo. E quem decide o preço de Moto está
+  olhando a tabela de Moto; mandá-lo ao cadastro de unidades é trocar de assunto no meio.
+  **Decisão do usuário (20/09/2026)** — o desenho original pedia Configurações → Regionais.
+- **🔴 UMA VEZ, NÃO POR PRODUTO.** A soma acontece **depois** do laço de produtos e da regra do
+  rastreador. Dentro do laço, +R$ 5,00 viraria **+R$ 10,00** numa faixa de 2 produtos — e o erro
+  passaria despercebido, porque o número continua parecendo plausível. Há teste dos dois lados.
+- **🔴 É DROP + CREATE, NÃO OVERLOAD.** `calcular_mensalidade` e `cotar_plano` já tinham DEFAULT no
+  último argumento; criar uma versão com um argumento a mais (também com default) faria
+  `calcular_mensalidade(fipe, tipo)` casar com as DUAS e o Postgres recusa com *"function is not
+  unique"*. Mesma mordida que a 0070 documentou. **As chamadas antigas seguem idênticas** — o
+  default `null` significa MATRIZ PURA, e há teste de regressão provando isso.
+- **SÓ MENSALIDADE.** `calcular_adesao`, `calcular_participacao`, `adesao_faixa`,
+  `participacao_faixa` e `substituir_tabela_precos` **não foram tocados**, e o `taxa_adesao` do
+  retorno continua vindo do `calcular_adesao` puro. Há teste.
+- **✅ VALOR É SEMPRE >= 0 (decisão do usuário).** O desenho original previa valor negativo com
+  piso/teto na matriz; o usuário avaliou e disse que *adicional é adicional*. Com isso caíram o
+  piso, o teto e a confirmação de negativo. Liberar depois é trocar **um** CHECK — mas aí a alçada
+  volta a ser assunto, porque negativo é desconto.
+- **✅ A COMISSÃO NÃO FOI TOCADA (decisão do usuário).** O desenho mandava tirar o adicional da base
+  de `regionais.taxa_comissao_recorrente` — mas **essa taxa é só TETO, nunca multiplica valor
+  nenhum**. Quem vira dinheiro é `vendedores.taxa_comissao_recorrente`, em `fn_calcular_comissao`
+  (0002), sobre o título pago; tirar dali mexeria no bolso do VENDEDOR. O usuário optou por deixar
+  a comissão sobre o valor cheio. **Há teste que falha se `fn_calcular_comissao` mudar.**
+- **🔴 O VEÍCULO NA BASE NÃO FLUTUA — e o override é o que impede COBRAR DUAS VEZES.**
+  `valor_mensalidade_veiculo` (0024) devolve `veiculos.valor_mensalidade` quando ele existe e
+  **nunca chama o `cotar_plano`**. São dois nascimentos:
+  | Caminho | `valor_mensalidade` | O que acontece |
+  |---|---|---|
+  | Venda (`autorizar_entrada_lead`) | **não grava** | cai no `cotar_plano` (matriz) **+ o adicional carimbado** |
+  | Cadastro manual em `/veiculos` | **grava** o calculado | o override **já inclui** o adicional — somar de novo cobraria em dobro |
+  Então o adicional entra **só no caminho sem override**. E a soma usa o valor **gravado no
+  veículo**, nunca uma consulta nova: reajustar o cadastro **não retroage** no faturamento de quem
+  já está na base. Há teste dos dois.
+- **O snapshot é a prova do cálculo.** `cotacoes.regional_id` + `valor_adicional_regional` (gravados
+  na cotação do CRM **e** na do hotlink) e `veiculos.valor_adicional_regional` + `regional_preco_id`
+  (carimbados por `autorizar_entrada_lead` **a partir da cotação**, não do cadastro de hoje: se a
+  unidade reajustou entre o aceite e a auditoria, cobrar o novo quebraria o aceite).
+- **QUEM PRECIFICA É O ASSOCIADO** (`regional_preco_do_lead`): `clientes.regional_id` quando ele já
+  existe, senão a do próprio lead. **Não existe de-para CEP → regional neste sistema** (conferido:
+  nenhuma faixa de CEP, UF ou abrangência por unidade), então inventar um na cotação seria preço
+  por palpite. `divergencia_regional_preco` diz quando o vendedor é de outra unidade, e
+  `<DivergenciaRegional>` mostra isso no fechamento da venda.
+- **⚠️ A ALÇADA BLOQUEANTE DA DIVERGÊNCIA NÃO FOI CONSTRUÍDA.** O desenho pedia exigir a mesma
+  alçada do desconto (0028) para prosseguir. Hoje o sistema **avisa e não trava** — e a razão é que
+  não há dinheiro se perdendo: o preço segue o do associado, que é o correto para o risco. Travar
+  exigiria decidir o que exatamente a alçada gateia (o salvar da ficha? a autorização da
+  Auditoria?). Decisão em aberto.
+- **O adicional aparece DISCRIMINADO, nunca embutido:** linha própria no `detalhamento_produtos`
+  (categoria `ADICIONAL_REGIONAL`, `produto_id` null), então ele já sai na cotação pública
+  `/cotacao/<token>` de graça. No simulador há "Tabela da matriz" e "Adicional de risco da unidade"
+  em linhas separadas. **`produtos_obrigatorios_cotacao` (0028) já descarta item sem `produto_id`**,
+  então o adicional não vira "item obrigatório que sumiu"; e `opcionais_veiculo` (0029) chama o
+  `cotar_plano` **sem** regional, então ele não aparece como opcional contratado no SAC.
+- **Preço é da MATRIZ:** leitura por `tem_acesso_global() or pode_regional()`, escrita **só admin**.
+  O gestor lê o próprio adicional e não edita nem o dele. Há teste.
+- **Duas vigências sobrepostas são recusadas pelo BANCO** (`EXCLUDE ... using gist` com
+  `daterange` + `btree_gist`): com duas linhas vigentes, o `limit 1` escolheria por acaso — e preço
+  decidido por acaso é o pior desfecho possível aqui. Trocar o adicional **encerra** o anterior em
+  vez de apagar: histórico de preço é prova.
+- **Lógica pura testada:** `src/lib/adicional-risco.ts` — `mensalidadeComAdicional`,
+  `adicionalVigente` (meio-aberta `[início, fim)`, igual ao `daterange` do banco),
+  `temAdicional` (null ≠ R$ 0,00), `resumoDaGrade`, `avisoDeReajuste`, `textoDaDivergencia`.
+  Suíte de banco em `supabase/tests/0081_adicional_risco_regional.test.sql`.
 
 ## Motor de cotação e combos (0019) — arquitetura
 - **Cotação Base (Plano Prata)** = Casco + Taxa Admin + Assistência 24h + **Rastreador (regra)**.

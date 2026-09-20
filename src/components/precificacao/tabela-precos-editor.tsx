@@ -9,6 +9,7 @@ import {
   useTiposVeiculo, useProdutos, useTabelaPrecos, useParticipacoes, useAdesoes, useSalvarTabela,
   useSalvarRegraRastreador,
 } from '@/hooks/use-precificacao';
+import { AdicionalRiscoRegional } from './adicional-risco';
 
 interface Banda {
   fipe_minimo: number;
@@ -202,6 +203,10 @@ export function TabelaPrecosEditor() {
           </p>
         </div>
       )}
+
+      {/* O adicional de risco e da MESMA natureza da regra acima: uma regra que
+          sobe por cima da matriz inteira deste tipo. Por isso mora aqui. */}
+      {tipoId && <AdicionalRiscoRegional tipoVeiculoId={tipoId} />}
 
       {!tipoId ? (
         <p className="text-sm text-slate-400">Selecione um tipo de veiculo para editar a matriz de precos.</p>

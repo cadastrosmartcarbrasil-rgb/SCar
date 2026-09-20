@@ -28,6 +28,7 @@ import type { LeadsRow } from '@/lib/database.types';
 import { FotosVistoria } from '@/components/vistoria/fotos-vistoria';
 import { ChecklistEntrada } from './checklist-entrada';
 import { LeitorCrlv } from './leitor-crlv';
+import { DivergenciaRegional } from './divergencia-regional';
 import { CampoCor } from '@/components/cores/campo-cor';
 
 type Endereco = { cep?: string; logradouro?: string; numero?: string; complemento?: string; bairro?: string; cidade?: string; uf?: string };
@@ -201,6 +202,10 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
       <div className="space-y-4">
+        {/* 0081 — quem precifica e a unidade do ASSOCIADO. Quando o vendedor e
+            de outra, o valor muda entre a cotacao e o fechamento; dizer isso
+            aqui e o que impede o "por que o preco subiu?". */}
+        <DivergenciaRegional leadId={lead.id} />
         {/* ------------------------------------------------------------------
             Barra de pendencias + abas.
             A ficha inteira numa coluna so obrigava a rolar muito — e quem

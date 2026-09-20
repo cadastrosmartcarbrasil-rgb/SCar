@@ -52,7 +52,14 @@ export async function POST(req: Request) {
     ultima_interacao_em: new Date().toISOString(),
   }).eq('id', lead.lead_id);
 
-  // 3) Um preco por plano ativo.
+  // 3) QUEM PRECIFICA (0081): a unidade do associado quando ele ja existe,
+  //    senao a do proprio lead. Sem isso o hotlink cotaria pela matriz e o
+  //    valor mudaria sozinho no fechamento da venda.
+  const { data: regionalPreco } = await admin.rpc('regional_preco_do_lead', {
+    p_lead_id: lead.lead_id,
+  });
+
+  // 4) Um preco por plano ativo.
   const { data: planos } = await admin
     .from('planos_protecao')
     .select('id, nome, descricao_comercial, nivel')
@@ -63,6 +70,7 @@ export async function POST(req: Request) {
   for (const p of planos ?? []) {
     const { data, error } = await admin.rpc('cotar_plano', {
       p_fipe: valorFipe, p_tipo_veiculo_id: tipoVeiculoId, p_plano_id: p.id, p_avulsos_ids: [],
+      p_regional_id: regionalPreco ?? null,
     });
     if (error) continue;
     const c = data as unknown as CotacaoPlano;

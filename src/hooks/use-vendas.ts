@@ -193,8 +193,13 @@ export function useSalvarCotacao() {
   >({
     mutationFn: async ({ leadId, fipe, tipoVeiculoId, cotaId, planoId, produtosIds, modoEnvio }) => {
       const { data: { user } } = await supabase.auth.getUser();
+      // 0081 — quem precifica e a unidade do ASSOCIADO (a do lead enquanto ele
+      // nao existe). Sem isso o CRM gravaria a cotacao pelo preco da matriz.
+      const { data: regionalPreco } = await supabase.rpc('regional_preco_do_lead', {
+        p_lead_id: leadId!,
+      });
       const [cot, part] = await Promise.all([
-        supabase.rpc('cotar_plano', { p_fipe: fipe, p_tipo_veiculo_id: tipoVeiculoId, p_plano_id: planoId ?? null, p_avulsos_ids: produtosIds }),
+        supabase.rpc('cotar_plano', { p_fipe: fipe, p_tipo_veiculo_id: tipoVeiculoId, p_plano_id: planoId ?? null, p_avulsos_ids: produtosIds, p_regional_id: regionalPreco ?? null }),
         supabase.rpc('calcular_participacao', { p_fipe: fipe, p_tipo_veiculo_id: tipoVeiculoId, p_cota_id: cotaId ?? null }),
       ]);
       if (cot.error) throw cot.error;
@@ -215,6 +220,8 @@ export function useSalvarCotacao() {
         participacao: Number(part.data ?? calc.franquia_participacao ?? 0),
         taxa_adesao: Number(calc.taxa_adesao ?? 0),
         modo_envio: modoEnvio ?? 'DETALHADA',
+        regional_id: (calc.regional_id as string | null) ?? null,
+        valor_adicional_regional: Number(calc.adicional_regional ?? 0),
         created_by: user?.id ?? null,
       }).select('*').single();
       if (error) throw error;

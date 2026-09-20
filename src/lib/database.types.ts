@@ -245,6 +245,9 @@ export type PlanosProtecaoRow = Timestamps & {
 };
 
 export type VeiculosRow = Timestamps & {
+  /** 0081 — o adicional carimbado na ENTRADA. O faturamento usa este, nao o cadastro. */
+  valor_adicional_regional: number;
+  regional_preco_id: string | null;
   id: string;
   cliente_id: string;
   placa: string;
@@ -865,6 +868,41 @@ export type ComunicacoesRow = {
   created_at: string;
 };
 
+/** 0081 — uma linha por regional no painel de Precificacao -> Tabela. */
+export type AdicionalRiscoLinha = {
+  regional_id: string;
+  regional_nome: string;
+  regional_ativa: boolean;
+  adicional_id: string | null;
+  valor: number | null;
+  justificativa: string | null;
+  vigencia_inicio: string | null;
+  vigencia_fim: string | null;
+  veiculos: number;
+};
+
+/** 0081 — vendeu uma unidade, o associado e de outra. */
+export type DivergenciaRegionalPreco = {
+  regional_preco_id: string | null;
+  regional_preco_nome: string | null;
+  regional_lead_id: string | null;
+  regional_lead_nome: string | null;
+  divergente: boolean;
+};
+
+export type RegionalAdicionalRiscoRow = {
+  id: string;
+  regional_id: string;
+  tipo_veiculo_id: string;
+  valor: number;
+  justificativa: string | null;
+  vigencia_inicio: string;
+  vigencia_fim: string | null;
+  status: boolean;
+  created_at: string;
+  created_by: string | null;
+};
+
 export type CoresRow = {
   id: string;
   nome: string;
@@ -1015,6 +1053,9 @@ export type LeadsRow = Timestamps & {
 };
 
 export type CotacoesRow = {
+  /** 0081 — quem precificou e quanto foi o adicional, congelados. */
+  regional_id: string | null;
+  valor_adicional_regional: number;
   id: string;
   lead_id: string;
   fipe: number;
@@ -1903,6 +1944,9 @@ export interface CotacaoPlano {
   valor_total_mensalidade: number;
   taxa_adesao: number;
   franquia_participacao: number;
+  /** 0081 — o adicional da regional, DISCRIMINADO (nunca embutido). 0 = matriz pura. */
+  adicional_regional?: number;
+  regional_id?: string | null;
 }
 
 export type HistoricoProtocoloRow = {
@@ -2575,6 +2619,10 @@ export type Database = {
       integracoes_bancarias: TableDef<IntegracoesBancariasRow, [Rel<'regional_id', 'regionais'>]>;
       marcas: TableDef<MarcasRow>;
       cores: TableDef<CoresRow>;
+      regional_adicional_risco: TableDef<
+        RegionalAdicionalRiscoRow,
+        [Rel<'regional_id', 'regionais'>, Rel<'tipo_veiculo_id', 'tipos_veiculo'>]
+      >;
       cor_apelidos: TableDef<CorApelidosRow, [Rel<'cor_id', 'cores'>]>;
       modelos: TableDef<
         ModelosRow,
@@ -2971,6 +3019,7 @@ export type Database = {
           p_tipo_veiculo_id: string;
           p_plano_id?: string | null;
           p_avulsos_ids?: string[];
+          p_regional_id?: string | null;   // 0081 — null = matriz pura
         };
         Returns: CotacaoPlano;
       };
@@ -3727,6 +3776,29 @@ export type Database = {
         Returns: CorListada[];
       };
       cores_nao_reconhecidas: { Args: Record<string, never>; Returns: CorNaoReconhecida[] };
+      // 0081 — adicional de risco por regional.
+      adicionais_risco_do_tipo: {
+        Args: { p_tipo_veiculo_id: string };
+        Returns: AdicionalRiscoLinha[];
+      };
+      salvar_adicional_risco: {
+        Args: {
+          p_regional_id: string;
+          p_tipo_veiculo_id: string;
+          p_valor: number | null;
+          p_justificativa?: string | null;
+        };
+        Returns: string | null;
+      };
+      adicional_risco_regional: {
+        Args: { p_regional_id: string | null; p_tipo_veiculo_id: string; p_data?: string };
+        Returns: number;
+      };
+      regional_preco_do_lead: { Args: { p_lead_id: string }; Returns: string | null };
+      divergencia_regional_preco: {
+        Args: { p_lead_id: string };
+        Returns: DivergenciaRegionalPreco[];
+      };
       cor_do_texto: { Args: { p_texto: string }; Returns: string | null };
       mutual_cores_nao_mapeadas: {
         Args: Record<string, never>;
