@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
-import { filtroBuscaLeads } from '@/lib/crm';
+import { camposGravaveisDoLead, filtroBuscaLeads } from '@/lib/crm';
 import { comprimirImagem, validarArquivo } from '@/lib/imagem';
 import type {
   AvisoCaptura,
@@ -142,13 +142,16 @@ export function useSaveLead() {
   return useMutation<LeadsRow, Error, Partial<LeadsRow>>({
     mutationFn: async (lead) => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (lead.id) {
-        const { id, created_at, updated_at, ...patch } = lead;
-        const { data, error } = await supabase.from('leads').update(patch).eq('id', id).select('*').single();
+      // `camposGravaveisDoLead` tira o que o banco mantem sozinho — as colunas
+      // GERADAS da 0079 inclusive, que o Postgres recusa em escrita.
+      const { id, ...resto } = lead;
+      const campos = camposGravaveisDoLead(resto);
+      if (id) {
+        const { data, error } = await supabase.from('leads').update(campos).eq('id', id).select('*').single();
         if (error) throw error;
         return data;
       }
-      const payload = { ...lead, consultor_id: lead.consultor_id ?? user?.id ?? null, created_by: user?.id ?? null };
+      const payload = { ...campos, consultor_id: campos.consultor_id ?? user?.id ?? null, created_by: user?.id ?? null };
       const { data, error } = await supabase.from('leads').insert(payload).select('*').single();
       if (error) throw error;
       return data;
@@ -410,7 +413,11 @@ export function useSalvarFichaLead() {
   const supabase = createClient();
   const qc = useQueryClient();
   return useMutation<void, Error, { id: string } & Partial<LeadsRow>>({
-    mutationFn: async ({ id, ...patch }) => {
+    // O <FechamentoVenda> manda a ficha INTEIRA (`{ id: lead.id, ...form }`, e o
+    // form nasce do lead recem-lido), entao as colunas GERADAS da 0079 viriam
+    // junto — e o Postgres recusa escrita nelas.
+    mutationFn: async ({ id, ...resto }) => {
+      const patch = camposGravaveisDoLead(resto);
       const { error } = await supabase.from('leads').update(patch).eq('id', id);
       if (error) throw error;
     },

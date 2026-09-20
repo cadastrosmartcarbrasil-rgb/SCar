@@ -183,15 +183,22 @@ export function acoesDoLead(status: StatusLead): AcaoLead[] {
 }
 
 // ---------------------------------------------------------------------------
-// Busca de leads (0046)
+// Busca de leads (0046, corrigida na 0079)
 //
-// Duas telas, duas formas de filtrar, de proposito:
+// Duas telas, duas formas de FILTRAR, de proposito:
 //   . a LISTA busca no banco (`filtroBuscaLeads`), porque ela nao carrega tudo;
 //   . o KANBAN filtra o que ja esta na tela (`leadCasaComBusca`), que responde
 //     a cada tecla e nao refaz a consulta a cada letra.
-// Diferenca conhecida: em JS da para ignorar acento; no `ilike` do Postgres,
-// nao (exigiria a extensao `unaccent`). Por isso a lista casa "JOAO" com
-// "JOAO", e o Kanban casa tambem com "JOÃO".
+//
+// O que a 0079 acertou e que as duas agora dao o MESMO RESULTADO. Ate ali a
+// Lista nao achava "JOÃO" quando se digitava "joao" (o `ilike` compara byte a
+// byte) e nao achava telefone gravado com mascara — e o Kanban achava os dois.
+// Quem procura nao tem como saber que a resposta depende da aba aberta.
+//
+// A correcao mora NO BANCO, em duas colunas GERADAS (`leads.busca_texto` e
+// `leads.busca_digitos`): a coluna ja nasce normalizada, e aqui so normalizamos
+// o TERMO do mesmo jeito. Por isso os dois lados usam `semAcento` — mexeu num,
+// mexa no outro.
 // ---------------------------------------------------------------------------
 
 /** Tira o que quebraria o filtro `or` do PostgREST (virgula, parenteses, curinga). */
@@ -206,23 +213,50 @@ export function semAcento(v: string): string {
 /**
  * Filtro `or` do PostgREST para a busca da lista. `null` = termo curto demais,
  * nao vale consultar (e nao vale trazer a tabela inteira de volta).
+ *
+ * Roda contra as colunas GERADAS da 0079, nunca contra `nome`/`celular` crus:
+ * e isso que faz acento e mascara pararem de importar. O piso de 2 caracteres
+ * fica: o indice de trigrama so vale de 3 em diante, mas recusar 2 seria trocar
+ * uma consulta lenta por nenhuma resposta.
  */
 export function filtroBuscaLeads(bruto: string): string | null {
-  const texto = seguroParaFiltro(bruto);
+  const texto = seguroParaFiltro(semAcento(bruto));
   const digitos = (bruto ?? '').replace(/\D/g, '');
-  const alfanumerico = texto.replace(/[^a-zA-Z0-9]/g, '');
+  const alfanumerico = texto.replace(/[^a-z0-9]/g, '');
   const partes: string[] = [];
 
-  if (texto.length >= 2) {
-    partes.push(`nome.ilike.*${texto}*`);
-    partes.push(`modelo.ilike.*${texto}*`);
-    if (alfanumerico.length >= 3) partes.push(`placa.ilike.*${alfanumerico}*`);
+  if (texto.length >= 2) partes.push(`busca_texto.ilike.*${texto}*`);
+  // Placa digitada com separador ("ABC-1D23") nao casa com a gravada
+  // ("ABC1D23"), entao a forma so-alfanumerica entra como alternativa — e so
+  // quando ela REALMENTE difere, para nao mandar a mesma condicao duas vezes.
+  if (alfanumerico.length >= 3 && alfanumerico !== texto) {
+    partes.push(`busca_texto.ilike.*${alfanumerico}*`);
   }
-  if (digitos.length >= 3) {
-    partes.push(`celular.ilike.*${digitos}*`);
-    partes.push(`cpf_cnpj.ilike.*${digitos}*`);
-  }
+  if (digitos.length >= 3) partes.push(`busca_digitos.ilike.*${digitos}*`);
+
   return partes.length > 0 ? partes.join(',') : null;
+}
+
+/**
+ * Colunas de `leads` que o BANCO manda e a aplicacao nao grava.
+ *
+ * `busca_texto`/`busca_digitos` sao GERADAS (0079): o Postgres recusa escrita
+ * nelas. Como elas voltam no `select('*')` e o `<FechamentoVenda>` reenvia a
+ * ficha inteira, sem esta limpeza o botao "Salvar ficha" quebraria por uma
+ * coluna que a tela nem sabe que existe. `id` fica de fora da lista porque quem
+ * grava precisa dele para saber ONDE gravar.
+ */
+export const CAMPOS_NAO_GRAVAVEIS_LEAD = [
+  'busca_texto', 'busca_digitos', 'created_at', 'updated_at',
+] as const;
+
+/** Tira do patch o que o banco mantem sozinho. Preserva o resto como esta. */
+export function camposGravaveisDoLead<T extends Record<string, unknown>>(
+  lead: T,
+): Omit<T, (typeof CAMPOS_NAO_GRAVAVEIS_LEAD)[number]> {
+  const saida = { ...lead };
+  for (const campo of CAMPOS_NAO_GRAVAVEIS_LEAD) delete saida[campo];
+  return saida;
 }
 
 export interface LeadBuscavel {

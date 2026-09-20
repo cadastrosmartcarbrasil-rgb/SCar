@@ -64,11 +64,15 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
 **O banco é o projeto Supabase `Scar Software`, ref `asinzcqbbqdglrguqtnr`** (sa-east-1) — ver
 "Qual é o banco" logo abaixo. **Nenhum dos outros três projetos da conta é este sistema.**
 
-**2. O QUE FALTA SUBIR.** **Nada.** As migrations **`0001`..`0078`** estão TODAS aplicadas em
+**2. O QUE FALTA SUBIR.** **A `0079`, e só ela.** As `0001`..`0078` estão TODAS aplicadas em
 produção — conferido no banco em 20/09/2026, não relatado: as RPCs da `0078` (10/10), da `0076`
 (3/3) e o `pode_tratar_evento` da `0077` existem, e `chk_papel_vigente`, `veiculos.data_saida`,
 `trg_veiculo_marca_saida`, `empresa.painel_conta_de` e `vistorias.token_publico` estão lá.
-**Próxima migration livre: `0079`.**
+**Próxima migration livre: `0080`.**
+> A **`0079_busca_leads_sem_acento`** cria duas colunas GERADAS em `leads` e dois índices de
+> trigrama. **Rodar ANTES do contêiner:** sem ela a busca da Lista de `/vendas` consulta coluna
+> que não existe e a tela quebra ao digitar. Ela é pesada por um instante (recalcula as duas
+> colunas em toda a tabela de leads) e depois some do caminho.
 > A `0077` (mudança de acesso) já passou: hoje há **0 usuários** em `cotador` e **0** em
 > `sinistro`, então ninguém perdeu a Assistência 24h na virada.
 > O backfill da `0078` não preencheu `data_saida` em ninguém, e isso está CERTO: não há nenhum
@@ -134,7 +138,7 @@ tabela exposta sem policy, que seria o grave num sistema cuja espinha é RLS.
 |---|---|
 | 200 `SECURITY DEFINER` chamáveis por `authenticated` | **É o desenho da `0052`**, não um furo: o `execute` foi concedido de propósito e a trava vive DENTRO de cada função (`is_staff() or auth.uid() is null`). O linter não tem como saber. |
 | 96 funções sem `search_path` fixo | **As 96 são `SECURITY INVOKER`** (rodam com o privilégio de quem chama, então search_path mutável não escala nada). **As 200 `SECURITY DEFINER` têm `search_path` setado — todas.** A convenção se sustentou. |
-| `pg_trgm` e `unaccent` no schema `public` | Pequeno. E revela que o **`unaccent` JÁ ESTÁ INSTALADO** — é a pendência "busca sem acento no banco" listada aqui; falta só usar a extensão no `ilike` da Lista + índice. |
+| `pg_trgm` e `unaccent` no schema `public` | Pequeno, e **as duas passaram a ser USADAS na `0079`** (busca da Lista de vendas). Movê-las de schema hoje quebraria as colunas geradas de `leads` — não é uma limpeza de passagem. |
 | Proteção contra senha vazada desligada | Toggle no painel (Auth), não SQL. Pesa mais aqui que em outro sistema: a senha de primeiro acesso do associado é o próprio CPF. |
 
 A consulta que separa o barulho do sinal, para repetir depois de mexer em função:
@@ -266,8 +270,11 @@ nenhuma: manda rodar de novo o que já rodou.
   REGIONAIS (ver seção própria). Ela **mexe em estrutura**: cria `veiculos.data_saida` (a data do
   churn, que não existia) com trigger e backfill pelo `updated_at`, e duas colunas em `empresa`
   (o recorte do plano de contas). Sem ela a tela `/regionais` não abre.
-- **Próxima migration livre: `0079`. Não há migration pendente:** `0001`..`0078` estão aplicadas
-  em produção (conferido no banco em 20/09/2026 — ver a caixa de retomada no topo).
+- **`0079_busca_leads_sem_acento` é NOVA e ainda NÃO foi aplicada** — liga o `unaccent` na busca da
+  Lista de `/vendas` e, no mesmo movimento, conserta a busca por telefone. Ver a seção própria.
+  Sem ela a Lista quebra ao digitar (consulta coluna inexistente).
+- **Próxima migration livre: `0080`.** As `0001`..`0078` estão aplicadas em produção (conferido no
+  banco em 20/09/2026 — ver a caixa de retomada no topo).
 - **`.claude/hooks/session-start.sh` é NOVO** — avisa quando a sessão nasce no branch errado e
   instala as dependências. Ele **só roda se estiver no branch que a sessão clonou**; enquanto o
   default do GitHub for o branch morto, uma sessão que caia lá não terá o hook. A correção
@@ -395,9 +402,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0078`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **55 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 643 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0079`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **56 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 648 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Os portais e páginas públicas
@@ -565,8 +572,9 @@ ficha **abre direto nela** — é a primeira pergunta de quem audita. Lógica pu
    (no-op que prometia uma trava inexistente) saiu.
 4. **Dono do lead na ficha** — não mostra consultor/vendedor nem permite reatribuir
    (`atribuir_lead` só está em `/regional/leads`).
-5. **Busca sem acento no banco** — o `ilike` da Lista casa "JOAO" com "JOAO", não com "JOÃO" (o
-   Kanban casa, porque filtra em JS). O certo seria a extensão `unaccent` + índice.
+5. ~~**Busca sem acento no banco**~~ — **resolvido na `0079`** (ver a seção própria). E o que
+   apareceu junto era maior: a busca por TELEFONE também falhava, porque o `<FechamentoVenda>`
+   grava o celular mascarado e a consulta procurava por dígitos.
 
 ### Próximos passos oferecidos (o usuário escolhe)
 1. **Rastreadores — fase 3:** integração com a plataforma da rastreadora (posição, status de
@@ -1611,6 +1619,20 @@ unidade, com sinistralidade = gasto com evento / recebido). Todas SECURITY DEFIN
 inclui o associado do /portal desde a 0044, entao quem nao e staff recebe o painel VAZIO em vez da
 carteira da empresa).
 
+· `0079_busca_leads_sem_acento` (A BUSCA DA LISTA DE `/vendas` PARA DE DEPENDER DA ABA ABERTA:
+o Kanban filtra em JS e achava "JOÃO" digitando "joao"; a Lista filtra no banco e nao achava,
+porque `ilike` compara byte a byte. **E o acento era a metade menor** — a busca por telefone e CPF
+procura por DIGITOS, mas `leads.celular` nem sempre esta em digitos: a captura grava limpo e o
+`<FechamentoVenda>` grava MASCARADO (`maskCelular`), entao nesses leads o telefone nao achava nada.
+A correcao e a mesma para os dois: normalizar a COLUNA, nao so o termo. Duas colunas GERADAS
+(`leads.busca_texto` = nome+marca+modelo+placa sem acento; `leads.busca_digitos` = celular+cpf so
+com digito), que nao saem de sincronia porque ninguem as escreve. Coluna gerada exige IMMUTABLE e o
+`unaccent` do contrib e STABLE, entao entrou o embrulho `texto_sem_acento(text)` com a forma de
+DOIS argumentos (dicionario fixo). Indice GIN/trigrama nas duas. Escolha registrada: coluna gerada
+em vez de RPC de busca, para a consulta seguir `select('*')` e a RLS de `leads` (0038) continuar
+valendo sem uma segunda copia dentro de um `security definer`. A Lista tambem passou a procurar a
+MARCA, que so o Kanban procurava).
+
 ## Módulos (status: todos funcionais)
 Painel/Visão Geral (`/dashboard`, 2 abas: indicadores da operação + **Assistência 24h** — o painel
 gerencial da 0061, ver seção própria)
@@ -2165,6 +2187,50 @@ decisão de desenho sobre 87 policies de uma vez, não limpeza de passagem.
   **encerramento com solução obrigatória**.
 - **Dashboard:** banner clicável "Protocolos em aberto" (abertos, em atendimento, alta/urgente,
   meus, parados +7 dias) via `resumo_protocolos`, com `refetchInterval` de 60s.
+
+## Busca da Lista de vendas — acento e máscara (0079)
+- **O defeito não era "o acento não funciona": era a Lista e o Kanban darem RESPOSTAS
+  DIFERENTES.** As duas filtram de formas distintas de propósito (a Lista no banco, porque não
+  carrega tudo; o Kanban em JS, para responder a cada tecla) — mas isso vazava para o resultado:
+  digitando "joao" o Kanban achava "JOÃO" e a Lista não, porque `ilike` compara byte a byte. Quem
+  procura o associado não tem como saber que a resposta depende da aba aberta.
+- **🔴 E O ACENTO ERA A METADE MENOR.** A mesma consulta procurava telefone e CPF por **dígitos**
+  (`celular.ilike.*65999998888*`), mas `leads.celular` nem sempre está em dígitos: a captura grava
+  limpo (`replace(/\D/g,'')`) e o **`<FechamentoVenda>` grava MASCARADO** (`maskCelular`, e o
+  telefone copiado do cadastro do associado vem como está lá). Nesses leads a busca por telefone
+  não achava **nada** — e é o campo que o atendente usa com o cliente na linha.
+- **A correção é a mesma para os dois: normalizar a COLUNA, não só o termo.** Duas colunas
+  **geradas** (`generated always as … stored`) em `leads`:
+  `busca_texto` (nome + marca + modelo + placa, minúsculo e sem acento) e
+  `busca_digitos` (celular + cpf_cnpj, só dígito). Elas **não podem sair de sincronia** porque
+  ninguém as escreve — o Postgres recalcula a cada gravação. O oposto de um cache que a aplicação
+  precisa lembrar de atualizar.
+- **Por que coluna gerada e não uma RPC de busca:** manter a consulta como
+  `from('leads').select('*')` preserva a **RLS de `leads` (0038)** — o `consultor_vendas` continua
+  vendo só a própria carteira sem que nada disso seja reimplementado dentro de um `security
+  definer`. Busca que vira RPC vira também uma segunda cópia da regra de visibilidade.
+- **⚠️ `unaccent` do contrib é STABLE, e coluna gerada exige IMMUTABLE.** Daí o embrulho
+  `texto_sem_acento(text)`, no padrão documentado: usa a forma de **dois argumentos**
+  (`'public.unaccent'::regdictionary`), que fixa o dicionário em vez de deixá-lo depender do
+  `search_path`. A de um argumento **não serve**. A ressalva real é pequena: se o arquivo de
+  dicionário do servidor mudasse, o já gravado não seria recalculado — e ele não muda.
+- **A MARCA passou a ser procurável na Lista.** Ela procurava nome/modelo/placa e ignorava marca,
+  então "Fiat" achava no Kanban e não na Lista. Juntar tudo em `busca_texto` alinhou o escopo.
+- **Índice é GIN/trigrama** (`pg_trgm`), porque a busca é por pedaço (`%termo%`) e btree não serve
+  com curinga na frente. Ele **vale a partir de 3 caracteres**; com 2 o planejador cai em
+  varredura — e o piso de 2 da tela **fica**, porque recusar 2 caracteres seria trocar uma consulta
+  lenta por nenhuma resposta.
+- **A placa digitada com separador continua casando:** "ABC-1D23" vira `abc1d23` e entra como
+  condição alternativa, mas **só quando difere** do termo — senão a mesma condição iria duas vezes.
+- **🔴 O EFEITO COLATERAL QUE QUASE PASSOU: coluna gerada RECUSA escrita, e o
+  `<FechamentoVenda>` reenvia a ficha inteira** (`{ id: lead.id, ...form }`, e o form nasce do lead
+  recém-lido, que agora traz as duas colunas). Sem limpeza, "Salvar ficha" quebraria — por uma
+  coluna que a tela nem sabe que existe. A regra virou `camposGravaveisDoLead()`
+  (`src/lib/crm.ts`, testada), usada pelos **dois** hooks que gravam lead. **Ao adicionar coluna
+  gerada numa tabela que a UI reenvia inteira, o filtro de escrita faz parte da entrega.**
+- **Lógica pura testada:** `semAcento`, `filtroBuscaLeads`, `leadCasaComBusca` e
+  `camposGravaveisDoLead` (`src/lib/crm.ts`) — os dois lados usam `semAcento`, então **mexeu num,
+  mexa no outro**. Suíte de banco em `supabase/tests/0079_*.test.sql`.
 
 ## CRM de Vendas (0028) — Kanban, cotação editável e desconto
 - **Visualização:** `/vendas` alterna **Kanban ↔ Lista** (a escolha fica no `localStorage`). Colunas:

@@ -898,6 +898,10 @@ export type CotasParticipacaoRow = {
 export type LeadsRow = Timestamps & {
   id: string;
   nome: string;
+  // GERADAS pelo banco (0079) — alimentam a busca da Lista de /vendas. Nunca
+  // enviar em insert/update: o Postgres recusa escrita em coluna gerada.
+  busca_texto: string;
+  busca_digitos: string;
   celular: string;
   email: string | null;
   cpf_cnpj: string | null;

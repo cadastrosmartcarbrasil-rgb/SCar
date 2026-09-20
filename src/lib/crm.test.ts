@@ -14,6 +14,7 @@ import {
   removeuObrigatorio,
   calcularDesconto,
   acoesDoLead,
+  camposGravaveisDoLead,
   filtroBuscaLeads,
   leadCasaComBusca,
 } from './crm';
@@ -175,29 +176,85 @@ describe('filtroBuscaLeads', () => {
     expect(filtroBuscaLeads('  ')).toBeNull();
   });
 
-  it('busca por nome e modelo', () => {
+  it('busca nome, marca e modelo numa coluna so (0079)', () => {
     const f = filtroBuscaLeads('silva') ?? '';
-    expect(f).toContain('nome.ilike.*silva*');
-    expect(f).toContain('modelo.ilike.*silva*');
+    expect(f).toContain('busca_texto.ilike.*silva*');
+    // nao sobra nenhuma condicao contra a coluna CRUA — era ela que trazia o
+    // acento de volta
+    expect(f).not.toContain('nome.ilike');
+    expect(f).not.toContain('modelo.ilike');
+  });
+
+  it('🔴 O ACENTO DEIXA DE IMPORTAR: o termo chega ao banco normalizado', () => {
+    // era o defeito: "JOÃO" ia cru para o `ilike` e nao achava "JOAO"
+    expect(filtroBuscaLeads('JOÃO') ?? '').toContain('busca_texto.ilike.*joao*');
+    expect(filtroBuscaLeads('conceição') ?? '').toContain('busca_texto.ilike.*conceicao*');
+    // e as duas grafias produzem o MESMO filtro — que e o ponto
+    expect(filtroBuscaLeads('JOÃO')).toBe(filtroBuscaLeads('joao'));
   });
 
   it('procura CPF e celular pelos digitos, com ou sem mascara', () => {
     const f = filtroBuscaLeads('111.444.777-35') ?? '';
-    expect(f).toContain('cpf_cnpj.ilike.*11144477735*');
-    expect(f).toContain('celular.ilike.*11144477735*');
+    expect(f).toContain('busca_digitos.ilike.*11144477735*');
+    // a coluna gerada ja e so digito, entao uma condicao responde pelos dois
+    // campos — e acha tambem o lead gravado com mascara pelo <FechamentoVenda>
+    expect(f).not.toContain('cpf_cnpj.ilike');
+    expect(f).not.toContain('celular.ilike');
   });
 
-  it('procura placa pelo alfanumerico', () => {
-    expect(filtroBuscaLeads('ABC1D23') ?? '').toContain('placa.ilike.*ABC1D23*');
+  it('procura placa, com e sem separador', () => {
+    expect(filtroBuscaLeads('ABC1D23') ?? '').toContain('busca_texto.ilike.*abc1d23*');
+    // digitada com hifen, a forma alfanumerica entra como alternativa
+    const f = filtroBuscaLeads('ABC-1D23') ?? '';
+    expect(f).toContain('busca_texto.ilike.*abc1d23*');
+  });
+
+  it('nao repete a condicao quando o alfanumerico e igual ao termo', () => {
+    const f = filtroBuscaLeads('silva') ?? '';
+    expect(f.split(',').length).toBe(1);
   });
 
   it('neutraliza o que quebraria o filtro do PostgREST', () => {
     const f = filtroBuscaLeads('joao,(x)"') ?? '';
     // parenteses, aspas e a virgula do TERMO nao podem sobrar no filtro
     expect(f).not.toMatch(/[()"]/);
-    expect(f).toContain('nome.ilike.*joao x*');
-    // 3 condicoes (nome, modelo, placa) = 2 virgulas, todas separadoras
-    expect(f.split(',').length).toBe(3);
+    expect(f).toContain('busca_texto.ilike.*joao x*');
+    // so as virgulas SEPARADORAS sobram: aqui, texto + alfanumerico
+    expect(f.split(',').length).toBe(2);
+  });
+});
+
+describe('camposGravaveisDoLead — o que o banco mantem sozinho', () => {
+  // Regressao: as colunas GERADAS da 0079 voltam no `select('*')` e o
+  // <FechamentoVenda> reenvia a ficha inteira. Se elas passarem, o Postgres
+  // recusa o update e o botao "Salvar ficha" quebra em producao.
+  const fichaLida = {
+    nome: 'JOÃO DA SILVA', celular: '65999998888', placa: 'ABC1D23',
+    busca_texto: 'joao da silva abc1d23', busca_digitos: '65999998888',
+    created_at: '2026-09-01T00:00:00Z', updated_at: '2026-09-20T00:00:00Z',
+  };
+
+  it('tira as colunas geradas e os carimbos de tempo', () => {
+    const p = camposGravaveisDoLead(fichaLida) as Record<string, unknown>;
+    expect('busca_texto' in p).toBe(false);
+    expect('busca_digitos' in p).toBe(false);
+    expect('created_at' in p).toBe(false);
+    expect('updated_at' in p).toBe(false);
+  });
+
+  it('preserva TODO o resto, inclusive valor nulo', () => {
+    const p = camposGravaveisDoLead({ ...fichaLida, cpf_cnpj: null }) as Record<string, unknown>;
+    expect(p.nome).toBe('JOÃO DA SILVA');
+    expect(p.placa).toBe('ABC1D23');
+    // nulo e uma gravacao legitima ("apagar o campo"), nao ausencia
+    expect('cpf_cnpj' in p).toBe(true);
+    expect(p.cpf_cnpj).toBeNull();
+  });
+
+  it('nao muta o objeto recebido', () => {
+    const copia = { ...fichaLida };
+    camposGravaveisDoLead(copia);
+    expect(copia.busca_texto).toBe('joao da silva abc1d23');
   });
 });
 
