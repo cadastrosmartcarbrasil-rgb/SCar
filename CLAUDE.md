@@ -64,15 +64,12 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
 **O banco é o projeto Supabase `Scar Software`, ref `asinzcqbbqdglrguqtnr`** (sa-east-1) — ver
 "Qual é o banco" logo abaixo. **Nenhum dos outros três projetos da conta é este sistema.**
 
-**2. O QUE FALTA SUBIR.** **A `0079`, e só ela.** As `0001`..`0078` estão TODAS aplicadas em
-produção — conferido no banco em 20/09/2026, não relatado: as RPCs da `0078` (10/10), da `0076`
-(3/3) e o `pode_tratar_evento` da `0077` existem, e `chk_papel_vigente`, `veiculos.data_saida`,
-`trg_veiculo_marca_saida`, `empresa.painel_conta_de` e `vistorias.token_publico` estão lá.
-**Próxima migration livre: `0080`.**
-> A **`0079_busca_leads_sem_acento`** cria duas colunas GERADAS em `leads` e dois índices de
-> trigrama. **Rodar ANTES do contêiner:** sem ela a busca da Lista de `/vendas` consulta coluna
-> que não existe e a tela quebra ao digitar. Ela é pesada por um instante (recalcula as duas
-> colunas em toda a tabela de leads) e depois some do caminho.
+**2. O QUE FALTA SUBIR.** **Nada no banco.** As migrations **`0001`..`0079`** estão aplicadas em
+produção — as `0001`..`0078` conferidas no próprio schema em 20/09/2026, e a **`0079` rodada pelo
+usuário em 20/09/2026**. **Próxima migration livre: `0080`.**
+> Se precisar reconferir a `0079` sem abrir o SQL Editor, é uma linha:
+> `select busca_texto, busca_digitos from leads limit 1;` — as duas colunas existem e vêm
+> preenchidas.
 > A `0077` (mudança de acesso) já passou: hoje há **0 usuários** em `cotador` e **0** em
 > `sinistro`, então ninguém perdeu a Assistência 24h na virada.
 > O backfill da `0078` não preencheu `data_saida` em ninguém, e isso está CERTO: não há nenhum
@@ -270,11 +267,10 @@ nenhuma: manda rodar de novo o que já rodou.
   REGIONAIS (ver seção própria). Ela **mexe em estrutura**: cria `veiculos.data_saida` (a data do
   churn, que não existia) com trigger e backfill pelo `updated_at`, e duas colunas em `empresa`
   (o recorte do plano de contas). Sem ela a tela `/regionais` não abre.
-- **`0079_busca_leads_sem_acento` é NOVA e ainda NÃO foi aplicada** — liga o `unaccent` na busca da
-  Lista de `/vendas` e, no mesmo movimento, conserta a busca por telefone. Ver a seção própria.
-  Sem ela a Lista quebra ao digitar (consulta coluna inexistente).
-- **Próxima migration livre: `0080`.** As `0001`..`0078` estão aplicadas em produção (conferido no
-  banco em 20/09/2026 — ver a caixa de retomada no topo).
+- **`0079_busca_leads_sem_acento`** (aplicada em 20/09/2026) — liga o `unaccent` na busca da Lista
+  de `/vendas` e, no mesmo movimento, conserta a busca por telefone. Ver a seção própria.
+- **Próxima migration livre: `0080`. Não há migration pendente:** `0001`..`0079` estão aplicadas em
+  produção (ver a caixa de retomada no topo).
 - **`.claude/hooks/session-start.sh` é NOVO** — avisa quando a sessão nasce no branch errado e
   instala as dependências. Ele **só roda se estiver no branch que a sessão clonou**; enquanto o
   default do GitHub for o branch morto, uma sessão que caia lá não terá o hook. A correção
