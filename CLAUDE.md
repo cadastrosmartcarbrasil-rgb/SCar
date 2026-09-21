@@ -64,14 +64,15 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
 **O banco é o projeto Supabase `Scar Software`, ref `asinzcqbbqdglrguqtnr`** (sa-east-1) — ver
 "Qual é o banco" logo abaixo. **Nenhum dos outros três projetos da conta é este sistema.**
 
-**2. O QUE FALTA SUBIR.** **Nada no banco.** As migrations **`0001`..`0081`** estão aplicadas em
-produção — as `0001`..`0078` conferidas no próprio schema em 20/09/2026, e a **`0079`, a `0080` e a
-`0081` rodadas pelo usuário em 20/09/2026**.
-> **⚠️ A `0083_mutual_equipe_vendas` é NOVA e AINDA NÃO FOI APLICADA.** Ela põe o de-para no
-> nível CERTO: a nossa `regionais` é a **equipe de vendas** do Mutual (`contract.sales_team_id`),
-> não a filial. Sem ela a tela `/integracao/mutual` quebra (chama `mutual_equipes_vendas`) e
-> `/association/sale_team/` continua sendo recusada pelo CHECK da área de captura.
-> **Próxima migration livre: `0084`.**
+**2. O QUE FALTA SUBIR.** **Nada no banco.** As migrations **`0001`..`0083`** estão aplicadas em
+produção — as `0001`..`0078` conferidas no próprio schema em 20/09/2026, a **`0079`..`0082` rodadas
+pelo usuário em 20/09/2026** e a **`0083` conferida no banco em 21/09/2026** (as funções
+`mutual_equipes_vendas`, `mutual_equipe_do_objeto` e `mutual_regional_do_objeto` existem).
+**Próxima migration livre: `0084`.**
+> **⚠️ O QUE FALTA É O CONTÊINER, NÃO O BANCO.** A tela da `0083` (seção *Equipes de vendas*) só
+> aparece depois do `docker compose up -d --build` com o commit da fase. Na build anterior a
+> seção de unidades não renderiza nada — era o defeito que a `0082` corrigiu.
+> **O agrupamento em si JÁ ESTÁ GRAVADO** (19 vínculos, 21/09/2026): ver a seção da `0083`.
 > **A `0082_carga_mutual_preparacao` foi aplicada em 20/09/2026.** Ela é a preparação da
 > carga do Mutual: a unidade passa a sair do **associado** (a corrente do consultor estava vazia),
 > entra a tabela de vínculo e entra o **interruptor da cobrança**. Sem ela a tela
@@ -297,9 +298,10 @@ nenhuma: manda rodar de novo o que já rodou.
   `p_regional_id` nulo devolve a matriz pura.
 - **`0082_carga_mutual_preparacao`** (aplicada em 20/09/2026) — `integracao_vinculos`, o
   interruptor `cobranca_externa` e a unidade pelo associado. Ver a seção própria.
-- **`0083_mutual_equipe_vendas` é NOVA e ainda NÃO foi aplicada** — o de-para muda de NÍVEL: a
-  nossa `regionais` é a **equipe de vendas** do Mutual. Junto vai a correção de uma medição errada
-  da 0082. **Próxima migration livre: `0084`.**
+- **`0083_mutual_equipe_vendas`** (aplicada; conferida no banco em 21/09/2026) — o de-para muda de
+  NÍVEL: a nossa `regionais` é a **equipe de vendas** do Mutual. Junto vai a correção de uma medição
+  errada da 0082. **As 19 equipes já estão agrupadas nas 4 unidades** — ver a seção própria.
+  **Próxima migration livre: `0084`.**
 - **`.claude/hooks/session-start.sh` é NOVO** — avisa quando a sessão nasce no branch errado e
   instala as dependências. Ele **só roda se estiver no branch que a sessão clonou**; enquanto o
   default do GitHub for o branch morto, uma sessão que caia lá não terá o hook. A correção
@@ -2123,6 +2125,40 @@ equipe para outra — quem decide é a equipe.
 e o CHECK de `mutual_captura` a recusava. Depois de aplicar a `0083`, puxe **Equipes de vendas**
 na tela; até lá as equipes aparecem com carteira e sem nome.
 **Repare no singular:** o endpoint é `sale_team`, mas o campo do contrato é `sales_team_id`.
+**Mas o AGRUPAMENTO não depende dela:** `integracao_vinculos` guarda o **id** da equipe e não tem
+FK para `mutual_captura`, então o de-para vale com a entidade ainda não puxada — capturar depois só
+preenche o NOME na tela. Foi assim que as 19 foram registradas antes do deploy.
+
+### ✅ O AGRUPAMENTO JÁ ESTÁ REGISTRADO (21/09/2026) — 19 equipes → 4 unidades
+**A unidade deixou de ser bloqueio: `mutual_regional_do_objeto` resolve 3.463 de 3.463 faturáveis,
+100%, sem nenhum "sem unidade".** As 19 linhas estão em `integracao_vinculos` (ids 1..19), gravadas
+por `vincular_externo` — dado, não schema, então **não há migration para rodar**.
+
+| Unidade | Equipes do Mutual | Veículos |
+|---|---|---:|
+| **RIBEIRÃO PRETO** | 4 · 21 · 10 | 1.669 |
+| **SÃO PAULO 1** | 3 · 23 · 11 | 852 |
+| **SMART CAR MATRIZ** | 2 · 15 · 6 · 16 · 47 · 1 · 25 · 19 · 38 · 33 | 493 |
+| **GRANDE NATAL** | 5 · 17 · 24 | 449 |
+
+**Como a divisão do Sudeste foi decidida — e ela NÃO foi palpite.** As quatro equipes que pesam
+(4, 21, 3, 23) estavam todas sob rótulos genéricos ("Regional Sudeste" × "SUDESTE"), que não
+separam interior de capital. A prova saiu da **cidade do ASSOCIADO**
+(`objeto.person_data.person_id → PERSON → address_id → ADDRESS.city`):
+
+- equipe **4** → Ribeirão Preto **689**, Serrana 23, Sertãozinho 11
+- equipe **21** → Ribeirão Preto **590**, Barrinha 24, Sertãozinho 16
+- equipe **3** → São Paulo **245**, Guarulhos 68, Santo André 32
+- equipe **23** → São Paulo **179**, Guarulhos 43, Campinas 32
+
+**`ADDRESS` é a entidade que responde "de quem é a carteira".** Ela estava capturada (44.935
+linhas, `city` em 41.296) e nunca tinha sido usada para nada — é a mesma lição da 0082 escrita de
+novo: **o dado que decide costuma estar na entidade VIZINHA**, não na que se está olhando.
+
+**Onde a evidência era fraca, está dito:** as equipes 1, 10, 11, 19, 24, 25, 33 e 38 têm de 1 a 2
+veículos cada. Foram para o destino que a cidade indicava e, na dúvida, para a matriz. Trocar
+qualquer uma é **uma linha** — pela tela ou por `vincular_externo`, e a carteira inteira segue
+junto na próxima leitura.
 
 ## PREPARAÇÃO DA CARGA DO MUTUAL (0082) — as 3 peças que faltavam
 > Nada aqui carrega dado. A regra da Fase 1 continua de pé e **há teste provando** que `clientes`,
