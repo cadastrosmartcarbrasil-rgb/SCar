@@ -307,3 +307,76 @@ export function conferirRegistroDaPlaca(
   }
   return r;
 }
+
+// ---------------------------------------------------------------------------
+// O ACEITE APONTA PARA UMA COTACAO — e a tela precisa dizer QUAL
+// ---------------------------------------------------------------------------
+// `leads.aceite_cotacao_id` (0042) existe desde sempre e nenhuma tela lia. O
+// banner verde dizia "Proposta aceita pelo cliente" com quem, quando e de que
+// IP — nunca O QUE foi aceito. Isso passa despercebido enquanto ha uma cotacao
+// so; quebra quando ha duas.
+//
+// E ha duas com facilidade: a recaptura pelo hotlink (DUPLICADO, 0041/0043)
+// continua NO MESMO lead, entao um teste feito hoje cria uma cotacao nova num
+// atendimento cujo aceite e de semanas atras. Foi exatamente o caso real:
+// aceite de 09/09 sobre R$ 153, cotacao nova de 28/09 com R$ 135, e o banner
+// afirmando "aceita" logo acima do valor que ninguem aceitou.
+//
+// Mandar isso para a Auditoria e mandar um aceite que prova OUTRO preco.
+
+export interface CotacaoDoAceite {
+  id: string;
+  created_at: string;
+  total_mensalidade: number;
+  total_com_desconto: number | null;
+}
+
+export interface SituacaoAceite {
+  /** A cotacao que o cliente realmente aceitou. `null` = o vinculo se perdeu. */
+  aceita: CotacaoDoAceite | null;
+  /** Cotacoes criadas DEPOIS do aceite — nenhuma delas foi aceita. */
+  posteriores: CotacaoDoAceite[];
+  /**
+   * Ha cotacao mais nova que a aceita: o que esta na tela nao e o que foi
+   * consentido. E o aviso que impede a venda de seguir com a prova errada.
+   */
+  divergente: boolean;
+  /**
+   * O aceite existe mas nao da para dizer a que cotacao se refere (vinculo
+   * nulo ou cotacao apagada). Nao e o mesmo que "esta tudo certo" — a tela
+   * tem de pedir conferencia em vez de afirmar.
+   */
+  semVinculo: boolean;
+}
+
+/** O valor que vale: com desconto quando houver, senao o cheio. */
+export function valorDaCotacao(c: CotacaoDoAceite): number {
+  return c.total_com_desconto ?? c.total_mensalidade;
+}
+
+export function situacaoDoAceite(
+  lead: { aceite_em: string | null; aceite_cotacao_id: string | null },
+  cotacoes: CotacaoDoAceite[],
+): SituacaoAceite | null {
+  if (!lead.aceite_em) return null;
+
+  const aceita = cotacoes.find((c) => c.id === lead.aceite_cotacao_id) ?? null;
+
+  // Sem a cotacao aceita nao ha regua para comparar: qualquer outra seria
+  // "posterior" por acaso. Melhor pedir conferencia do que apontar divergencia
+  // que talvez nao exista.
+  if (!aceita) {
+    return { aceita: null, posteriores: [], divergente: false, semVinculo: true };
+  }
+
+  // Empate no instante conta como posterior: duas cotacoes gravadas no mesmo
+  // `created_at` (o default e `now()`) so podem ser separadas pelo id, e o
+  // lado seguro e avisar. Mesmo desempate do `distinct on` da vistoria (0047).
+  const posteriores = cotacoes
+    .filter((c) => c.id !== aceita.id
+      && (c.created_at > aceita.created_at
+        || (c.created_at === aceita.created_at && c.id > aceita.id)))
+    .sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+
+  return { aceita, posteriores, divergente: posteriores.length > 0, semVinculo: false };
+}

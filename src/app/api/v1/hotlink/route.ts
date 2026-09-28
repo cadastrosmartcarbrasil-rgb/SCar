@@ -45,11 +45,25 @@ export async function POST(req: Request) {
   // `token` e a capacidade das chamadas seguintes (cotar/contratar): sem ele
   // um `lead_id` adivinhavel deixaria qualquer um pendurar proposta no
   // atendimento de outra pessoa.
+  // O atendimento em que a captura caiu JA PODE TER ACEITE. Acontece na
+  // recaptura (DUPLICADO, 0041/0043): a pessoa volta pelo link dentro da
+  // janela de protecao e continua NO MESMO lead — que, se ja fechou, tem uma
+  // proposta consentida. Deixa-la cotar de novo ali produz uma cotacao nova
+  // que ninguem aceitou pendurada num aceite antigo, de outro preco.
+  //
+  // A consulta e pelo token que acabou de sair, entao nao expoe lead alheio.
+  // Falhar aqui nao derruba a captura: o lead ja esta gravado, e o pior caso
+  // e a tela seguir como antes.
+  const { data: sessoes } = await admin.rpc('lead_por_token_publico', {
+    p_token: r.token_publico,
+  });
+
   return NextResponse.json({
     ok: true,
     tipo: r.tipo,
     vendedor: r.vendedor_nome,
     mensagem: r.mensagem,
     token: r.token_publico,
+    ja_aceito: Boolean(sessoes?.[0]?.aceito),
   });
 }

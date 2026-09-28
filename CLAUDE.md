@@ -431,7 +431,7 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 ### Estado de validação (fim da fase)
 - **Migrations `0001`..`0083`** + `schema.sql` consolidado aplicam limpos no harness local.
 - **60 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 695 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Vitest: 702 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Os portais e páginas públicas
@@ -3469,6 +3469,33 @@ sem de-para), a **data de corte do financeiro e dos eventos**, e o de-para de **
 - Espelho puro em `src/lib/atribuicao.ts` (`protecaoAtiva`, `deveVoltarAoPool`,
   `diasDeProtecaoRestantes`, `ROTULO_CAPTURA`) com testes.
 
+## O ACEITE APONTA PARA UMA COTAÇÃO — e a tela tem de dizer QUAL
+- **O defeito, pego num teste real (28/09/2026):** o banner verde de `/vendas/[id]` dizia
+  *"Proposta aceita pelo cliente"* com quem, quando e de que IP — **nunca O QUE foi aceito**.
+  `leads.aceite_cotacao_id` existe desde a `0042` e **nenhuma tela lia**.
+- **Por que isso não é teórico:** a recaptura pelo hotlink (**DUPLICADO**, 0041/0043) continua
+  **no mesmo lead**. Um teste feito hoje por `/v/RODNM` caiu num atendimento de 09/09 (mesmo
+  celular e placa, 19 dias dentro dos 30 de proteção) e criou ali uma cotação de **R$ 135** — ao
+  lado de um aceite de **R$ 153**, de 19 dias antes. O banner afirmava "aceita" logo acima do
+  valor que ninguém aceitou. **A data de 09/09 estava certa; o que mentia era o banner.**
+- **Mandar assim para a Auditoria é entregar prova de consentimento de OUTRO preço.**
+- **A regra pura é `situacaoDoAceite(lead, cotacoes)`** (`src/lib/vendas.ts`, testada): devolve a
+  cotação aceita, as **posteriores** a ela e `divergente`. Empate no `created_at` conta como
+  posterior — duas cotações gravadas no mesmo instante só se separam pelo id, e o lado seguro é
+  avisar (mesmo desempate do `distinct on` da vistoria, 0047).
+- **`semVinculo` não é "está tudo certo".** Aceite sem cotação correspondente faz a tela **pedir
+  conferência**, não afirmar — e **não** inventa divergência, porque sem a cotação aceita não há
+  régua para comparar e qualquer outra seria "posterior" por acaso.
+- **O banner fica ÂMBAR quando diverge**, diz o valor aceito, quantas cotações entraram depois, o
+  valor da mais recente, e manda colher aceite novo ou voltar à cotação aceita.
+- **A página pública PARA quando o atendimento já tem aceite** (`ja_aceito`, resolvido na rota de
+  captura por `lead_por_token_publico` com o token recém-emitido — sem migration, sem expor lead
+  alheio). **Isso não contradiz o "a cotação nunca é interrompida" da 0043:** lá o motivo de não
+  parar era não jogar fora a intenção de compra de quem **ainda não fechou**; quem já fechou tem o
+  oposto — cotar de novo é o que fabrica a divergência. Falhar a consulta não derruba a captura.
+- **Medido na base antes de entregar:** 11 leads com aceite, **1** com cotação posterior (o próprio
+  teste) e **nenhum** já em Auditoria ou na base — o teste pegou antes de custar uma venda.
+
 ## Página pública do hotlink (0042) — a vitrine da venda
 - **É a tela que o possível associado vê**, então segue o site (www.smartcarbrasil.com.br): logo
   centralizada no branco, faixa navy, hero com o **corte diagonal** da marca, ciano como acento e
@@ -3930,6 +3957,12 @@ no fim — o runner procura por "PASSARAM") e rode `npm run schema`.
   inadimplência. Corrigido na 0072: o array é **completo** e ganhou `manual`, que decide o que o
   FORMULÁRIO oferece — as duas perguntas são diferentes e estavam sendo respondidas pelo mesmo
   array. **Fallback de rótulo nunca deve escolher um valor plausível; deve mostrar o valor cru.**
+- **Coluna que o banco preenche e nenhuma tela lê é o mesmo gotcha do `usuarios.ativo`, do outro
+  lado.** `leads.aceite_cotacao_id` era gravado corretamente pela `0042` e ficou 34 migrations sem
+  nenhum leitor — então o banner do aceite afirmava "proposta aceita" sem saber de QUAL proposta
+  falava, e só apareceu quando um lead teve duas cotações. **Ao gravar uma referência (`*_id` para
+  o registro que originou o fato), escreva no mesmo commit a tela que a MOSTRA** — senão o dado
+  certo fica no banco enquanto a tela conta outra história.
 - Erro `syntax error near "//"` no SQL Editor = arquivo TypeScript colado por engano; SQL começa com `--`.
 - Trigger com CASE retornando enum: fazer cast `(case ... end)::meu_enum`.
 - Comparar `old.status` (enum) com `''` quebra; usar `is [not] distinct from`.

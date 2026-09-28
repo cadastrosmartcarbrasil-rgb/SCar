@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import {
   ArrowLeft, Phone, Mail, Car, Copy, ChevronLeft, ChevronRight, CheckCircle2, XCircle, ShieldCheck,
-  Loader2, ExternalLink, Handshake, MessageCircle, Pencil, Percent, RotateCcw,
+  Loader2, ExternalLink, Handshake, MessageCircle, Pencil, Percent, RotateCcw, TriangleAlert,
 } from 'lucide-react';
 import { EditarCotacao } from '@/components/vendas/editar-cotacao';
 import {
@@ -25,7 +25,7 @@ import { ModalPerda } from '@/components/vendas/modal-perda';
 import { AceitePresencial } from '@/components/vendas/aceite-presencial';
 import { linkWhatsApp, mensagemDaProposta } from '@/lib/venda-publica';
 import { useChecklistLead } from '@/hooks/use-vendas';
-import { pendencias } from '@/lib/vendas';
+import { pendencias, situacaoDoAceite, valorDaCotacao } from '@/lib/vendas';
 
 export default function LeadDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -49,6 +49,8 @@ export default function LeadDetailPage() {
   const podeAuditar = papel === 'auditoria' || papel === 'admin';
   // Um caminho so, igual ao do Kanban: os dois chamam `mover_lead_status`.
   const acoes = acoesDoLead(lead.status);
+  // `aceite_cotacao_id` (0042) existia e nenhuma tela lia — ver `situacaoDoAceite`.
+  const aceite = situacaoDoAceite(lead, cotacoes ?? []);
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
   function mudar(acao: (typeof acoes)[number]) {
@@ -115,18 +117,55 @@ export default function LeadDetailPage() {
       {/* Aceite do cliente: a venda ja foi fechada, mas o lead SEGUE
           trabalhavel — opcionais, ficha do associado, CRLV e vistoria ainda
           passam pelo vendedor antes da Auditoria. */}
-      {lead.aceite_em && (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-          <p className="flex items-center gap-1.5 text-[13px] font-bold text-emerald-800">
-            <CheckCircle2 className="h-4 w-4" /> Proposta aceita pelo cliente
+      {aceite && (
+        <div className={`rounded-2xl border p-4 ${
+          aceite.divergente || aceite.semVinculo
+            ? 'border-amber-300 bg-amber-50'
+            : 'border-emerald-200 bg-emerald-50'}`}>
+          <p className={`flex items-center gap-1.5 text-[13px] font-bold ${
+            aceite.divergente || aceite.semVinculo ? 'text-amber-900' : 'text-emerald-800'}`}>
+            {aceite.divergente || aceite.semVinculo
+              ? <TriangleAlert className="h-4 w-4" />
+              : <CheckCircle2 className="h-4 w-4" />}
+            {aceite.divergente
+              ? 'O aceite e de OUTRA cotacao'
+              : aceite.semVinculo
+                ? 'Aceite registrado — confira a qual cotacao ele se refere'
+                : 'Proposta aceita pelo cliente'}
           </p>
-          <p className="mt-1 text-[12px] leading-relaxed text-emerald-900/80">
+
+          <p className={`mt-1 text-[12px] leading-relaxed ${
+            aceite.divergente || aceite.semVinculo ? 'text-amber-900/80' : 'text-emerald-900/80'}`}>
             {lead.aceite_nome} ({lead.aceite_documento}) aceitou em{' '}
             {formatDate(lead.aceite_em)}
+            {/* O QUE foi aceito — sem isto o banner afirma "aceita" sobre um
+                valor que ninguem consentiu (o caso do lead recapturado). */}
+            {aceite.aceita && <> <b>{formatCurrency(valorDaCotacao(aceite.aceita))}/mes</b></>}
             {lead.aceite_por === 'VENDEDOR' ? ', com aceite colhido pelo vendedor' : ', pelo proprio celular'}.
-            {lead.aceite_ip && <span className="text-emerald-900/50"> IP {lead.aceite_ip}.</span>}
+            {lead.aceite_ip && <span className="opacity-60"> IP {lead.aceite_ip}.</span>}
           </p>
-          <p className="mt-1.5 text-[11.5px] text-emerald-900/70">
+
+          {aceite.divergente && (
+            <p className="mt-2 rounded-lg bg-amber-100/70 px-3 py-2 text-[12px] leading-relaxed text-amber-900">
+              Depois do aceite {aceite.posteriores.length === 1 ? 'entrou' : 'entraram'}{' '}
+              <b>{aceite.posteriores.length}</b>{' '}
+              {aceite.posteriores.length === 1 ? 'cotacao nova' : 'cotacoes novas'}
+              {aceite.posteriores[0] && <> (a mais recente, <b>{formatCurrency(valorDaCotacao(aceite.posteriores[0]))}/mes</b>, de {formatDate(aceite.posteriores[0].created_at)})</>}
+              {' '}— e o cliente <b>nao aceitou</b> {aceite.posteriores.length === 1 ? 'ela' : 'nenhuma delas'}.
+              Mandar assim para a Auditoria e entregar uma prova de consentimento de outro preco.
+              Colha um aceite novo ou volte a cotacao aceita antes de seguir.
+            </p>
+          )}
+
+          {aceite.semVinculo && (
+            <p className="mt-2 rounded-lg bg-amber-100/70 px-3 py-2 text-[12px] leading-relaxed text-amber-900">
+              O registro do aceite nao aponta para nenhuma cotacao desta lista. Confirme com o
+              cliente o valor combinado antes de mandar para a Auditoria.
+            </p>
+          )}
+
+          <p className={`mt-1.5 text-[11.5px] ${
+            aceite.divergente || aceite.semVinculo ? 'text-amber-900/70' : 'text-emerald-900/70'}`}>
             Ajuste os opcionais e complete a ficha abaixo. Quando estiver tudo certo, mande para a
             Auditoria.
           </p>

@@ -3,7 +3,7 @@ import {
   ABAS_FECHAMENTO, ORDEM_CHECKLIST, adesaoEntraNoCaixa, agruparChecklist, margemRegional,
   pendencias, pendenciasPorAba, primeiraAbaPendente, progressoChecklist,
   ratearAdesao, validarComissaoVendedor, type ItemChecklist,
-  conferirRegistroDaPlaca,
+  conferirRegistroDaPlaca, situacaoDoAceite, valorDaCotacao,
 } from './vendas';
 
 describe('teto de comissao (regional -> vendedor)', () => {
@@ -214,5 +214,68 @@ describe('conferirRegistroDaPlaca — a consulta no fechamento e CONFERENCIA', (
     const r = conferirRegistroDaPlaca({}, { ...doc } as never);
     expect(Object.keys(r.preencher)).not.toContain('valor_fipe');
     expect(Object.keys(r.preencher)).not.toContain('codigo_fipe');
+  });
+});
+
+describe('situacaoDoAceite — o banner tem de dizer O QUE foi aceito', () => {
+  const cot = (id: string, created_at: string, total: number, desconto: number | null = null) =>
+    ({ id, created_at, total_mensalidade: total, total_com_desconto: desconto });
+
+  const semAceite = { aceite_em: null, aceite_cotacao_id: null };
+  const aceiteEm = (id: string) => ({ aceite_em: '2026-09-09T17:16:41Z', aceite_cotacao_id: id });
+
+  it('sem aceite, nao ha situacao nenhuma', () => {
+    expect(situacaoDoAceite(semAceite, [cot('a', '2026-09-09T17:16:41Z', 153)])).toBeNull();
+  });
+
+  it('uma cotacao so, aceita: nada a avisar', () => {
+    const s = situacaoDoAceite(aceiteEm('a'), [cot('a', '2026-09-09T17:16:41Z', 153)])!;
+    expect(s.aceita?.id).toBe('a');
+    expect(s.divergente).toBe(false);
+    expect(s.semVinculo).toBe(false);
+  });
+
+  // O caso real: recaptura pelo hotlink (DUPLICADO) criou cotacao nova num
+  // atendimento cujo aceite era de 19 dias antes, com OUTRO preco.
+  it('cotacao criada DEPOIS do aceite levanta a divergencia', () => {
+    const s = situacaoDoAceite(aceiteEm('a'), [
+      cot('b', '2026-09-28T20:17:28Z', 135),
+      cot('a', '2026-09-09T17:16:41Z', 153),
+    ])!;
+    expect(s.aceita?.total_mensalidade).toBe(153);
+    expect(s.divergente).toBe(true);
+    expect(s.posteriores.map((c) => c.id)).toEqual(['b']);
+  });
+
+  it('cotacao ANTERIOR ao aceite nao e divergencia — foi so a negociacao', () => {
+    const s = situacaoDoAceite(aceiteEm('b'), [
+      cot('a', '2026-09-01T10:00:00Z', 180),
+      cot('b', '2026-09-09T17:16:41Z', 153),
+    ])!;
+    expect(s.divergente).toBe(false);
+    expect(s.posteriores).toHaveLength(0);
+  });
+
+  it('vinculo perdido pede conferencia, e NAO inventa divergencia', () => {
+    const s = situacaoDoAceite(
+      { aceite_em: '2026-09-09T17:16:41Z', aceite_cotacao_id: null },
+      [cot('b', '2026-09-28T20:17:28Z', 135)],
+    )!;
+    expect(s.semVinculo).toBe(true);
+    expect(s.aceita).toBeNull();
+    expect(s.divergente).toBe(false);
+  });
+
+  it('empate no instante conta como posterior (o lado seguro e avisar)', () => {
+    const s = situacaoDoAceite(aceiteEm('a'), [
+      cot('a', '2026-09-09T17:16:41Z', 153),
+      cot('b', '2026-09-09T17:16:41Z', 135),
+    ])!;
+    expect(s.divergente).toBe(true);
+  });
+
+  it('o valor que vale e o com desconto, quando houver', () => {
+    expect(valorDaCotacao(cot('a', '2026-09-09T17:16:41Z', 153, 120))).toBe(120);
+    expect(valorDaCotacao(cot('a', '2026-09-09T17:16:41Z', 153))).toBe(153);
   });
 });

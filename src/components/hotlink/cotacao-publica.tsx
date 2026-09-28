@@ -36,6 +36,16 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
   const [contato, setContato] = useState({ nome: '', celular: '', email: '', placa: '' });
   const [token, setToken] = useState<string | null>(null);
   const [avisoCaptura, setAvisoCaptura] = useState<string | null>(null);
+  /**
+   * O atendimento em que a captura caiu JA TEM proposta aceita (recaptura
+   * dentro da janela de protecao, 0041/0043). Aqui a cotacao PARA — e isso nao
+   * contradiz a regra do 0043 de "nunca interromper": la o motivo de nao parar
+   * era nao jogar fora a intencao de compra de quem ainda nao fechou. Quem ja
+   * fechou tem o oposto — cotar de novo cria uma cotacao que ninguem aceitou
+   * pendurada num aceite de outro preco, que e o defeito que esta correcao
+   * existe para impedir.
+   */
+  const [jaAceito, setJaAceito] = useState(false);
 
   const [tipoVeiculoId, setTipoVeiculoId] = useState('');
   const [valorInformado, setValorInformado] = useState('');
@@ -70,14 +80,17 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
     setErro(null);
     setEnviando(true);
     try {
-      const r = await chamar<{ token: string; tipo: string; mensagem: string; vendedor: string | null }>(
-        '/api/v1/hotlink', { ...contato, codigo },
-      );
+      const r = await chamar<{
+        token: string; tipo: string; mensagem: string;
+        vendedor: string | null; ja_aceito?: boolean;
+      }>('/api/v1/hotlink', { ...contato, codigo });
       setToken(r.token);
       // Ser da base ou ja estar em atendimento NAO interrompe a cotacao: e
       // informacao para a equipe, e a intencao de compra existe agora.
       setAvisoCaptura(r.tipo === 'NOVO' ? null : r.mensagem);
       setAceite((a) => ({ ...a, nome: contato.nome }));
+      // ... mas atendimento com proposta JA ACEITA e outra coisa: ver `jaAceito`.
+      if (r.ja_aceito) { setJaAceito(true); return; }
       setEtapa('veiculo');
     } catch (err) {
       setErro((err as Error).message);
@@ -221,6 +234,29 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
               reenvie.
             </p>
           )}
+        </div>
+      </Cartao>
+    );
+  }
+
+  // ------------------------------------------------- ja fechou conosco
+  if (jaAceito) {
+    return (
+      <Cartao>
+        <div className="px-6 py-10 text-center">
+          <BadgeCheck className="mx-auto h-14 w-14 text-emerald-500" />
+          <h2 className="mt-3 text-xl font-semibold text-brand-800">
+            Voce ja tem uma proposta aceita
+          </h2>
+          <p className="mt-1.5 text-[13px] leading-relaxed text-slate-500">
+            Encontramos um atendimento seu com a proposta <b>ja aceita</b>. Nao precisa cotar de
+            novo — {vendedor ?? 'seu consultor'} esta com ele e vai dar sequencia.
+          </p>
+          <p className="mt-4 text-[12px] leading-relaxed text-slate-400">
+            Se voce quer mudar o plano ou cotar <b>outro veiculo</b>, fale com{' '}
+            {vendedor ?? 'seu consultor'}: a alteracao e feita no atendimento que ja existe, para a
+            sua proposta nao ficar com dois valores diferentes.
+          </p>
         </div>
       </Cartao>
     );
