@@ -2470,6 +2470,78 @@ export type MutualEquipeVendas = {
   capturada: boolean;
 };
 
+/** 0084 — o de-para de /vehicle/type/ com o PESO da carteira. */
+export type MutualTipoVeiculoExterno = {
+  id_externo: string;
+  nome: string | null;
+  /** false = o id so aparece no objeto; /vehicle/type/ nao foi puxado. */
+  capturado: boolean;
+  veiculos: number;
+  faturaveis: number;
+  /** O de-para REGISTRADO — nunca palpite. */
+  regional_id: string | null;
+  tipo_nome: string | null;
+};
+
+/** 0084 — uma linha da carga, ja saneada, com o motivo da recusa quando ha. */
+export type MutualCargaLinha = {
+  id_objeto: string;
+  id_pessoa: string | null;
+  acao: 'CRIAR' | 'ATUALIZAR' | 'RECUSADO';
+  /** null = entra. Preenchido = recusada, e o texto diz por que. */
+  problema: string | null;
+  status: StatusVeiculo | null;
+  placa: string | null;
+  chassi: string | null;
+  renavam: string | null;
+  marca: string | null;
+  modelo: string | null;
+  ano_fabricacao: number | null;
+  ano_modelo: number | null;
+  cor_id: string | null;
+  cor: string | null;
+  uso: string | null;
+  valor_fipe: number | null;
+  codigo_fipe: string | null;
+  /** A PARCELA mensal (0065). NULL, nunca zero — zero vaza para o cotar_plano. */
+  valor_mensalidade: number | null;
+  dia_vencimento: number | null;
+  data_ativacao: string | null;
+  /** true = a data saiu do created_at, nao do first_activation_date. */
+  ativacao_estimada: boolean;
+  tipo_veiculo_id: string | null;
+  plano_id: string | null;
+  nome: string | null;
+  cpf_cnpj: string | null;
+  tipo_pessoa: 'PF' | 'PJ' | null;
+  email: string | null;
+  telefone: string | null;
+  data_nascimento: string | null;
+  nome_mae: string | null;
+  endereco: Record<string, string | undefined>;
+  cliente_id: string | null;
+  veiculo_id: string | null;
+};
+
+/** 0084 — o resultado da carga (ou da simulacao, quando p_confirmar e false). */
+export type MutualCargaResultado = {
+  clientes_criados: number;
+  clientes_atualizados: number;
+  veiculos_criados: number;
+  veiculos_atualizados: number;
+  recusados: number;
+  mensagem: string;
+};
+
+/** 0084 — o resultado do desfazer. */
+export type MutualDesfazerResultado = {
+  veiculos_removidos: number;
+  clientes_removidos: number;
+  /** Veiculos com movimento do SCar em cima: nao sao apagados. */
+  preservados: number;
+  mensagem: string;
+};
+
 export type MutualCapturaRow = {
   id: number;
   entidade: string;
@@ -3817,6 +3889,38 @@ export type Database = {
       // 0083 — a EQUIPE DE VENDAS: o nivel que vira `regionais`.
       mutual_equipes_vendas: { Args: Record<string, never>; Returns: MutualEquipeVendas[] };
       mutual_equipe_do_externo: { Args: { p_id_externo: string }; Returns: string | null };
+      // 0084 — A CARGA. `mutual_carga_linhas` e a fonte unica: a previa agrega
+      // sobre ela e a execucao percorre ela.
+      mutual_tipos_veiculo_externos: {
+        Args: Record<string, never>;
+        Returns: MutualTipoVeiculoExterno[];
+      };
+      mutual_carga_linhas: {
+        Args: {
+          p_regional_id: string;
+          p_incluir_inativos?: boolean;
+          p_somente_problemas?: boolean;
+          p_limite?: number | null;
+        };
+        Returns: MutualCargaLinha[];
+      };
+      mutual_carga_previa: {
+        Args: { p_regional_id: string; p_incluir_inativos?: boolean };
+        Returns: MutualDiagnostico[];
+      };
+      mutual_executar_carga: {
+        Args: {
+          p_regional_id: string;
+          p_incluir_inativos?: boolean;
+          p_confirmar?: boolean;
+        };
+        Returns: MutualCargaResultado[];
+      };
+      mutual_desfazer_carga: {
+        Args: { p_regional_id: string; p_confirmar?: boolean };
+        Returns: MutualDesfazerResultado[];
+      };
+      veiculo_tem_movimento: { Args: { p_veiculo_id: string }; Returns: boolean };
       // 0082 — a ponte id externo -> registro do SCar (a carga e re-executavel).
       vincular_externo: {
         Args: {

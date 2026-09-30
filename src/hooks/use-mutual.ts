@@ -10,6 +10,8 @@ import type {
   MutualStatusCruzado,
   MutualCampo, MutualPassoFunil, MutualConsultorPendente,
   CobrancaExternaResumo, MutualEquipeVendas,
+  MutualTipoVeiculoExterno, MutualCargaLinha, MutualCargaResultado,
+  MutualDesfazerResultado,
 } from '@/lib/database.types';
 
 /** O que ja esta na area de captura. */
@@ -447,5 +449,143 @@ export function useAgruparEquipe() {
       }
     },
     onSuccess: () => { void qc.invalidateQueries({ queryKey: ['mutual'] }); },
+  });
+}
+
+// ============================================================================
+// 0084 — A CARGA
+// ============================================================================
+
+/** O de-para de /vehicle/type/ com o peso da carteira ao lado. */
+export function useMutualTiposVeiculo() {
+  const supabase = createClient();
+  return useQuery<MutualTipoVeiculoExterno[]>({
+    queryKey: ['mutual', 'tipos-veiculo-externos'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('mutual_tipos_veiculo_externos', {});
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+/** Registra (ou desfaz) o de-para de uma entidade de catalogo do Mutual. */
+export function useVincularCatalogo(entidade: 'VEHICLE_TYPE' | 'PLAN', tabela: string) {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ idExterno, registroId }: { idExterno: string; registroId: string | null }) => {
+      if (registroId) {
+        const { error } = await supabase.rpc('vincular_externo', {
+          p_entidade: entidade, p_id_externo: idExterno,
+          p_tabela: tabela, p_registro_id: registroId,
+        });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.rpc('desvincular_externo', {
+          p_entidade: entidade, p_id_externo: idExterno,
+        });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['mutual'] }); },
+  });
+}
+
+/**
+ * A previa da carga de UMA unidade. `regionalId` nulo NAO consulta: aqui nulo
+ * significaria MATRIZ (0067/0069), e a RPC recusa de proposito.
+ */
+export function useCargaPrevia(regionalId: string | null, incluirInativos = false) {
+  const supabase = createClient();
+  return useQuery<MutualDiagnostico[]>({
+    queryKey: ['mutual', 'carga', 'previa', regionalId, incluirInativos],
+    enabled: !!regionalId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('mutual_carga_previa', {
+        p_regional_id: regionalId as string, p_incluir_inativos: incluirInativos,
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+/** As linhas da carga — todas, ou so as recusadas (a fila de trabalho). */
+export function useCargaLinhas(
+  regionalId: string | null,
+  incluirInativos = false,
+  somenteProblemas = false,
+  limite: number | null = 300,
+) {
+  const supabase = createClient();
+  return useQuery<MutualCargaLinha[]>({
+    queryKey: ['mutual', 'carga', 'linhas', regionalId, incluirInativos, somenteProblemas, limite],
+    enabled: !!regionalId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('mutual_carga_linhas', {
+        p_regional_id: regionalId as string,
+        p_incluir_inativos: incluirInativos,
+        p_somente_problemas: somenteProblemas,
+        p_limite: limite,
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+/**
+ * A execucao. `confirmar` false e SIMULACAO e nao escreve nada — o mesmo
+ * parametro serve aos dois para nao existirem duas rotinas divergindo.
+ */
+export function useExecutarCarga() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<MutualCargaResultado, Error, {
+    regionalId: string; incluirInativos?: boolean; confirmar?: boolean;
+  }>({
+    mutationFn: async ({ regionalId, incluirInativos = false, confirmar = false }) => {
+      const { data, error } = await supabase.rpc('mutual_executar_carga', {
+        p_regional_id: regionalId,
+        p_incluir_inativos: incluirInativos,
+        p_confirmar: confirmar,
+      });
+      if (error) throw error;
+      return (data ?? [])[0];
+    },
+    onSuccess: (_d, vars) => {
+      if (!vars.confirmar) return;
+      // A carga mexe na operacao inteira: invalidar so ['mutual'] deixaria o
+      // SAC, a lista de veiculos e os paineis mostrando a base de antes.
+      for (const k of [['mutual'], ['veiculos'], ['clientes'], ['cobrancas'],
+                       ['regionais'], ['dashboard']]) {
+        void qc.invalidateQueries({ queryKey: k });
+      }
+    },
+  });
+}
+
+/** O caminho de volta. Preserva o veiculo que ja tem trabalho do SCar em cima. */
+export function useDesfazerCarga() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<MutualDesfazerResultado, Error, {
+    regionalId: string; confirmar?: boolean;
+  }>({
+    mutationFn: async ({ regionalId, confirmar = false }) => {
+      const { data, error } = await supabase.rpc('mutual_desfazer_carga', {
+        p_regional_id: regionalId, p_confirmar: confirmar,
+      });
+      if (error) throw error;
+      return (data ?? [])[0];
+    },
+    onSuccess: (_d, vars) => {
+      if (!vars.confirmar) return;
+      for (const k of [['mutual'], ['veiculos'], ['clientes'], ['cobrancas'],
+                       ['regionais'], ['dashboard']]) {
+        void qc.invalidateQueries({ queryKey: k });
+      }
+    },
   });
 }

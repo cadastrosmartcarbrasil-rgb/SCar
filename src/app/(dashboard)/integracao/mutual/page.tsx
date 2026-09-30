@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import {
   Database, PlugZap, DownloadCloud, ShieldAlert, Building2, ListChecks, RefreshCw,
-  Search, Users,
+  Search, Users, Upload,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,6 +23,7 @@ import {
   situacaoDePara, filiaisPendentes, carteiraSemDePara,
   equipesPendentes, carteiraSemAgrupamento, equipesSemNome, porMacrorregiao, consolidacao,
 } from '@/lib/mutual';
+import { CargaMutual } from '@/components/integracao/carga-mutual';
 import type { MutualDiagnostico, SeveridadeDiagnostico } from '@/lib/database.types';
 
 // FASE 1 da integracao com o MUTUAL: consulta e diagnostico.
@@ -866,6 +867,11 @@ export default function IntegracaoMutualPage() {
             passar a preencher o campo.
           </div>
         )}
+      </Secao>
+
+      {/* A CARGA (0084) */}
+      <Secao titulo="Carga da carteira — por unidade" icone={Upload}>
+        <CargaMutual />
       </Secao>
 
       {/* O INTERRUPTOR DA COBRANCA (0082) */}

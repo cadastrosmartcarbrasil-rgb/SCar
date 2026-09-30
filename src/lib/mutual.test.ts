@@ -8,7 +8,10 @@ import {
   correnteVazia, situacaoDePara, filiaisPendentes, carteiraSemDePara,
   equipesPendentes, carteiraSemAgrupamento, equipesSemNome, porMacrorregiao,
   consolidacao,
+  placaMutual, chassiMutual, renavamMutual, resumoDaCarga, recusasPorMotivo,
+  filaAntesDoCutover, cutoverLiberado, tiposPendentes,
 } from './mutual';
+import type { LinhaCarga, TipoVeiculoExterno } from './mutual';
 import type { PassoFunil, FilialMutual, EquipeVendas } from './mutual';
 
 const BASE = 'https://smartcar-api.mutualignit.com.br';
@@ -481,5 +484,136 @@ describe('equipes de vendas (0083)', () => {
     const c = consolidacao(cenario);
     expect(c.get('rib')).toBe(2);
     expect(c.size).toBe(1);
+  });
+});
+
+// ============================================================================
+// 0084 — A CARGA
+// ============================================================================
+describe('saneamento da carga (espelho do SQL da 0084)', () => {
+  it('a placa sai alfanumerica em caixa alta, nos dois padroes', () => {
+    expect(placaMutual('aaa-1a11')).toBe('AAA1A11');
+    expect(placaMutual('ABC 1234')).toBe('ABC1234');
+  });
+
+  it('placa fora do padrao e vazia dao null — nao string vazia', () => {
+    expect(placaMutual('ABC')).toBeNull();
+    expect(placaMutual('')).toBeNull();
+    expect(placaMutual(null)).toBeNull();
+    expect(placaMutual('12345678')).toBeNull();
+  });
+
+  it('o chassi vale so com 17 alfanumericos', () => {
+    expect(chassiMutual('9bwzzz377vt000001')).toBe('9BWZZZ377VT000001');
+    expect(chassiMutual('000')).toBeNull();
+    expect(chassiMutual('')).toBeNull();
+  });
+
+  // O placeholder da base real: se ele passasse, as 3 linhas colidiriam
+  // entre si no unique e a carga pararia no meio.
+  it('renavam placeholder vira null, nunca zero-string', () => {
+    expect(renavamMutual('00328938998')).toBe('00328938998');
+    expect(renavamMutual('0')).toBeNull();
+    expect(renavamMutual('000000000000')).toBeNull();
+    expect(renavamMutual('00000000000')).toBeNull();
+    expect(renavamMutual('2012')).toBeNull();
+  });
+});
+
+const linha = (over: Partial<LinhaCarga> = {}): LinhaCarga => ({
+  acao: 'CRIAR', problema: null, id_pessoa: 'P1',
+  valor_mensalidade: 189.9, dia_vencimento: 15,
+  tipo_veiculo_id: 't1', plano_id: 'p1', ativacao_estimada: false,
+  ...over,
+});
+
+describe('resumoDaCarga', () => {
+  // Foi um bug real da 0084: contar linhas em vez de pessoas previa 2
+  // associados para 2 veiculos do mesmo dono, e a execucao estourava no
+  // unique de cpf_cnpj.
+  it('conta ASSOCIADO por pessoa, nao por linha', () => {
+    const r = resumoDaCarga([linha(), linha(), linha({ id_pessoa: 'P2' })]);
+    expect(r.criar).toBe(3);
+    expect(r.associados).toBe(2);
+  });
+
+  it('a recusada nao entra em nenhuma das contas de entrada', () => {
+    const r = resumoDaCarga([
+      linha(),
+      linha({ acao: 'RECUSADO', problema: 'SEM PLACA (0 km...)', id_pessoa: 'P9' }),
+    ]);
+    expect(r.criar).toBe(1);
+    expect(r.recusadas).toBe(1);
+    expect(r.associados).toBe(1);
+  });
+});
+
+describe('recusasPorMotivo', () => {
+  // O texto do banco nomeia a placa e o chassi da linha, entao agrupar pelo
+  // texto cru daria uma familia por linha — fila que ninguem trabalha.
+  it('agrupa por FAMILIA e ordena por volume', () => {
+    const l = [
+      linha({ problema: 'SEM PLACA (0 km ou placa fora do padrao)... Chassi: AAA' }),
+      linha({ problema: 'SEM PLACA (0 km ou placa fora do padrao)... Chassi: BBB' }),
+      linha({ problema: 'CPF/CNPJ invalido (11111111111) — o banco recusa' }),
+      linha(),
+    ];
+    expect(recusasPorMotivo(l)).toEqual([
+      { motivo: 'Sem placa (0 km)', quantidade: 2 },
+      { motivo: 'CPF/CNPJ invalido', quantidade: 1 },
+    ]);
+  });
+
+  it('colisao de placa e de chassi caem na mesma familia', () => {
+    const l = [
+      linha({ problema: 'Placa AAA1A11 ja cadastrada em outro veiculo do SCar' }),
+      linha({ problema: 'Chassi 9BW ja cadastrado em outro veiculo do SCar' }),
+    ];
+    expect(recusasPorMotivo(l)).toEqual([
+      { motivo: 'Ja cadastrado em outro veiculo', quantidade: 2 },
+    ]);
+  });
+});
+
+describe('filaAntesDoCutover', () => {
+  // Estes campos NAO bloqueiam a carga: com cobranca_externa ligada o
+  // veiculo nao e faturado aqui, e ficar fora da base seria pior.
+  it('conta o que falta para faturar AQUI, so entre as que entram', () => {
+    const f = filaAntesDoCutover([
+      linha({ valor_mensalidade: null }),
+      linha({ dia_vencimento: null, plano_id: null }),
+      linha({ ativacao_estimada: true }),
+      linha({ problema: 'SEM PLACA ...', valor_mensalidade: null }),
+    ]);
+    expect(f.semValor).toBe(1);
+    expect(f.semDia).toBe(1);
+    expect(f.semPlano).toBe(1);
+    expect(f.ativacaoEstimada).toBe(1);
+  });
+
+  it('o cutover fica bloqueado enquanto falta valor ou dia', () => {
+    expect(cutoverLiberado([linha()])).toBe(true);
+    expect(cutoverLiberado([linha(), linha({ valor_mensalidade: null })])).toBe(false);
+    expect(cutoverLiberado([linha(), linha({ dia_vencimento: null })])).toBe(false);
+    // Tipo e plano ausentes nao bloqueiam a CARGA nem o cutover do boleto:
+    // quem decide o valor cobrado e o override, ja carimbado.
+    expect(cutoverLiberado([linha({ plano_id: null, tipo_veiculo_id: null })])).toBe(true);
+  });
+});
+
+describe('tiposPendentes', () => {
+  const t = (o: Partial<TipoVeiculoExterno>): TipoVeiculoExterno => ({
+    id_externo: '1', nome: 'CARRO', capturado: true, faturaveis: 10,
+    regional_id: null, ...o,
+  });
+
+  it('so os sem de-para, com carteira, do mais pesado para o mais leve', () => {
+    const r = tiposPendentes([
+      t({ id_externo: '1', faturaveis: 10 }),
+      t({ id_externo: '2', faturaveis: 90 }),
+      t({ id_externo: '3', faturaveis: 50, regional_id: 'tv1' }),
+      t({ id_externo: '4', faturaveis: 0 }),
+    ]);
+    expect(r.map((x) => x.id_externo)).toEqual(['2', '1']);
   });
 });

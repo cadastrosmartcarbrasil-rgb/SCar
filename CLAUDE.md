@@ -64,11 +64,19 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
 **O banco é o projeto Supabase `Scar Software`, ref `asinzcqbbqdglrguqtnr`** (sa-east-1) — ver
 "Qual é o banco" logo abaixo. **Nenhum dos outros três projetos da conta é este sistema.**
 
-**2. O QUE FALTA SUBIR.** **Nada no banco.** As migrations **`0001`..`0083`** estão aplicadas em
-produção — as `0001`..`0078` conferidas no próprio schema em 20/09/2026, a **`0079`..`0082` rodadas
+**2. O QUE FALTA SUBIR.** **A `0084` (a CARGA do Mutual) — ela é NOVA e ainda não foi rodada.**
+As migrations **`0001`..`0083`** estão aplicadas em produção — as `0001`..`0078` conferidas no próprio schema em 20/09/2026, a **`0079`..`0082` rodadas
 pelo usuário em 20/09/2026** e a **`0083` conferida no banco em 21/09/2026** (as funções
 `mutual_equipes_vendas`, `mutual_equipe_do_objeto` e `mutual_regional_do_objeto` existem).
-**Próxima migration livre: `0084`.**
+**A `0084_carga_mutual` é NOVA** — é a carga da carteira, por unidade. Sem ela a seção
+*Carga da carteira* de `/integracao/mutual` não abre (chama `mutual_carga_previa`).
+**Próxima migration livre: `0085`.**
+
+> **🔴 A `0084` NÃO carrega nada por si.** Ela cria o instrumento; quem carrega é o botão na tela,
+> por unidade e com confirmação. Rodar a migration é seguro e reversível — o risco começa no
+> clique, e mesmo ali `mutual_desfazer_carga` é o caminho de volta.
+> **O PILOTO DECIDIDO (30/09/2026): SMART CAR MATRIZ — 481 veículos / 436 associados.** Ver a
+> seção própria; o lote foi medido e está limpo (0 colisão de placa, 0 CPF inválido).
 > **⚠️ O QUE FALTA É O CONTÊINER, NÃO O BANCO.** A tela da `0083` (seção *Equipes de vendas*) só
 > aparece depois do `docker compose up -d --build` com o commit da fase. Na build anterior a
 > seção de unidades não renderiza nada — era o defeito que a `0082` corrigiu.
@@ -302,6 +310,9 @@ nenhuma: manda rodar de novo o que já rodou.
   NÍVEL: a nossa `regionais` é a **equipe de vendas** do Mutual. Junto vai a correção de uma medição
   errada da 0082. **As 19 equipes já estão agrupadas nas 4 unidades** — ver a seção própria.
   **Próxima migration livre: `0084`.**
+- **`0084_carga_mutual` é NOVA e é a PRIMEIRA que escreve em `clientes`/`veiculos`** — a carga da
+  carteira do Mutual, por unidade, re-executável pelo vínculo (0082). Todo veículo entra com
+  `cobranca_externa = true`, então nenhuma fatura é gerada. Ver a seção própria.
 - **`.claude/hooks/session-start.sh` é NOVO** — avisa quando a sessão nasce no branch errado e
   instala as dependências. Ele **só roda se estiver no branch que a sessão clonou**; enquanto o
   default do GitHub for o branch morto, uma sessão que caia lá não terá o hook. A correção
@@ -429,9 +440,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0083`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **60 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 702 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0084`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **61 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 713 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Os portais e páginas públicas
@@ -1693,6 +1704,17 @@ tela do agrupamento, com o peso da carteira, a macrorregiao como cabecalho de le
 EQUIPE manda e a filial do associado e reserva (para os objetos sem contrato); (E)
 `mutual_cobertura_unidade` recriada medindo a corrente certa. **Corrige tambem uma medicao errada
 da 0082:** `contrato.consultant` nao existe — a chave e `consultant_id`, preenchida em 96,4%)
+· `0084_carga_mutual` (A CARGA — Fase 3, por UNIDADE, re-executavel. QUATRO funcoes:
+`mutual_carga_linhas` (a LEITURA, uma linha por objeto, ja saneada, com a acao CRIAR/ATUALIZAR/
+RECUSADO e o MOTIVO da recusa — e a FONTE UNICA: a previa agrega sobre ela e a execucao percorre
+ela, entao nao ha duas leituras para divergir, que foi o preco que a 0082 pagou com quatro lugares
+lendo a unidade de formas diferentes), `mutual_carga_previa`, `mutual_executar_carga` (sem
+`p_confirmar` nao escreve nada) e `mutual_desfazer_carga` (o caminho de volta pelo vinculo, que
+PRESERVA o veiculo com movimento — `veiculo_tem_movimento`). Saneadores `mutual_placa`,
+`mutual_chassi`, `mutual_renavam`, `mutual_ano`, `mutual_data`, `mutual_uso_veiculo`; de-para por
+vinculo em `mutual_tipo_veiculo_do_externo`/`mutual_plano_do_externo` +
+`mutual_tipos_veiculo_externos` (a tela, com o PESO da carteira). Nenhum veiculo e faturado: todos
+entram com `cobranca_externa`, e e por ela que passam as 5 rotas de fatura da 0025)
 · `0082_carga_mutual_preparacao` (as TRES pecas que faltavam para a carga do Mutual poder rodar,
 e nenhuma delas carrega nada — ha teste provando que a operacao segue intacta: (A) **a UNIDADE sai
 do ASSOCIADO** — a corrente do consultor (0073/0074) foi medida com a base completa e esta VAZIA
@@ -1767,8 +1789,9 @@ remessas bancárias) · Financeiro (contas a pagar/receber + baixas + DRE)
 vendedores, marcas/modelos, **cores do veículo**, tipos de veículo, cotas de participação (V5..V15), tipos de evento,
 produtos, planos/combos (Prata/Ouro/Diamante), **comunicados** (mural interno), contas bancárias,
 integrações bancárias, plano de contas)
-· **Integração Mutual** (`/integracao/mutual`: consulta e diagnóstico dos dados do sistema atual —
-Fase 1, só leitura)
+· **Integração Mutual** (`/integracao/mutual`: consulta, diagnóstico, o agrupamento das equipes de
+vendas em unidades, o interruptor da cobrança externa e a **carga da carteira por unidade** —
+0084, com prévia, fila de trabalho por motivo e desfazer)
 · **Rastreadores** (`/rastreadores`: parque por IMEI, estoque por unidade/plataforma, instalação no
 veículo, manutenção, painel de divergências com o cadastro da frota e relatórios de custo,
 recuperação e giro).
@@ -2159,6 +2182,158 @@ novo: **o dado que decide costuma estar na entidade VIZINHA**, não na que se es
 veículos cada. Foram para o destino que a cidade indicava e, na dúvida, para a matriz. Trocar
 qualquer uma é **uma linha** — pela tela ou por `vincular_externo`, e a carteira inteira segue
 junto na próxima leitura.
+
+## A CARGA DO MUTUAL (0084) — o piloto da MATRIZ, e as decisões que moram nela
+> **Primeira migration que escreve em `clientes` e `veiculos`.** A Fase 1 leu e diagnosticou
+> (0062..0066, 0071); a 0082/0083 prepararam (o vínculo, o interruptor e a unidade pela equipe de
+> vendas). Esta é a Fase 3. **Rodar a migration é seguro:** ela cria o instrumento, não carrega
+> nada — quem carrega é o botão, por unidade e com confirmação.
+
+### ✅ DECISÃO DO USUÁRIO (30/09/2026): o piloto é SMART CAR MATRIZ, e só ela
+*"Vamos fazer uma migração de um conjunto de bases pequenas da Smart Car Brasil, que é justamente
+a matriz… trabalharmos Outubro todo com essa base migrada e ver se tudo funciona ok para então em
+Dezembro migrarmos toda a base."*
+
+**O tamanho, medido em 30/09/2026 por `mutual_regional_do_objeto` (a equipe de vendas, 0083):**
+
+| Unidade | Objetos que entram | **Faturáveis** | Associados |
+|---|---:|---:|---:|
+| RIBEIRÃO PRETO | 5.099 | 1.187 | 1.012 |
+| SÃO PAULO 1 | 2.195 | 839 | 775 |
+| **SMART CAR MATRIZ** | **5.245** | **481** | **436** |
+| GRANDE NATAL | 2.592 | 443 | 385 |
+| *(sem equipe agrupada)* | 2.526 | 92 | 84 |
+
+### 🔴 "E SE SUBIRMOS TUDO, TEREMOS PROBLEMAS?" — a resposta medida
+**Cobrança em dobro: NÃO, em nenhum dos dois casos.** `veiculo_faturavel` lê
+`not v.cobranca_externa` (0082) e `gerar_primeira_cobranca_veiculo` retorna cedo quando ela é
+falsa — então as 5 rotas de fatura da 0025 estão fechadas por construção. **Há teste.**
+Mas há quatro riscos que **escalam com o volume**, e são eles que respondem à pergunta:
+
+1. **DERIVA — o maior, e ele não tem conserto automático hoje.** O Mutual continua sendo o
+   sistema que manda por meses. Toda venda, cancelamento, troca de placa e indenização feita lá
+   depois da carga **só chega aqui quando alguém recapturar e rodar a carga de novo** — e essa
+   rotina não está agendada. Com 481 veículos é um piloto que todo mundo sabe que é cópia; com
+   3.042 vira "a base", e as pessoas passam a confiar num retrato que envelhece em silêncio.
+2. **Os 92 faturáveis SEM EQUIPE AGRUPADA cairiam na MATRIZ.** Aqui `regional_id is null`
+   significa matriz (0067/0069): carregar tudo jogaria a carteira de unidades desconhecidas dentro
+   do escopo da matriz, atravessando RLS, `escopo_regional()` e todos os painéis. No piloto por
+   unidade eles simplesmente não entram. **É por isto que `p_regional_id` é obrigatório.**
+3. **CUSTO DE DESFAZER.** `mutual_desfazer_carga` preserva quem já tem movimento — e em outubro
+   vai ter. Desfazer 481 é uma decisão; desfazer 3.042 veículos + 3.700 associados depois de dois
+   meses de atendimento é uma reconciliação manual. E `clientes.matricula` é sequence: número
+   queimado não volta.
+4. **O piloto não ganha nada com volume.** O objetivo é VERIFICAR o sistema — SAC, portal, 24h,
+   evento, cobrança. 481 veículos exercitam exatamente as mesmas telas que 3.042. Os 2.561 a mais
+   não acrescentam cobertura de teste nenhuma e acrescentam os três riscos acima.
+
+**Conclusão: matriz só, como planejado.** E o desenho não cobra nada por isso — a carga é por
+unidade e re-executável, então acrescentar Ribeirão Preto em dezembro é **escolher outra unidade
+no seletor**, não outra migration.
+
+### O lote da matriz, medido antes de escrever uma linha (e ele está LIMPO)
+| | |
+|---|---:|
+| Faturáveis | **481** |
+| Placa repetida · chassi repetido | **0** · **0** *(depois do saneamento)* |
+| CPF/CNPJ inválido ou ausente | **0** |
+| Colisão com a base atual (placa/chassi/CPF) | **0** |
+| Sem placa (0 km) | **8** *(2 deles sem chassi também)* |
+| Sem valor de mensalidade | **3** |
+| Sem dia de vencimento | **0** |
+| Sem `first_activation_date` (cai no `created_at`) | **15** |
+| Cor resolvida no catálogo · endereço capturado | 478/481 · 480/481 |
+
+**O saneamento é o que torna esse lote limpo.** Sem ele há **4 grupos de renavam repetido** — e
+eles não são dados: são `"0"`, `"000000000000"`, `"00000000000000"` e `"2012"` (o ano no campo
+errado). **Placeholder não é dado: é ausência escrita com confiança**, e como `renavam` é `unique`
+e nulável, as três primeiras colidiriam entre si e a carga pararia no meio.
+
+### As decisões que moram na migration
+1. **`cobranca_externa = true` SEMPRE, e não é parâmetro.** É o que desarma a mina nº 1 **no
+   DADO**, não na sessão (a GUC `scar.importacao` é local à transação e não protegeria o lote
+   rodado três meses depois). Ligar a cobrança aqui é o cutover, e ele tem função própria
+   (`definir_cobranca_externa_regional`, 0082). **Por isso a RE-EXECUÇÃO NÃO MEXE nesse campo:**
+   depois do cutover, rodar a carga de novo não pode desligar o faturamento em silêncio. Há teste.
+2. **`data_ativacao` NUNCA é "hoje".** Escada `first_activation_date` → `contrato.created_at` →
+   `objeto.created_at`; sem nenhuma das três, **recusa**. `trg_veiculo_marca_ativacao` (0025)
+   carimba `current_date` no nulo, e isso contaminaria `veiculo_faturavel`, o tempo de casa e o
+   painel da 24h. Quando vem do fallback a linha **anuncia** (`ativacao_estimada`) — mesma postura
+   do backfill da 0078 com o `updated_at`.
+3. **Sem placa é RECUSA, não invenção**, e a recusa **nomeia o chassi** para a operação cobrar a
+   placa. Fabricar placa cria registro que ninguém acha e que colide no dia em que a real chegar.
+4. **Valor zero vira NULL, nunca zero.** `valor_mensalidade_veiculo` (0024) só respeita o override
+   quando `> 0`, então zero **vaza** para o `cotar_plano`. Null é a verdade ("não sei"); zero é
+   mentira ("é de graça").
+5. **O de-para de tipo de veículo e de plano sai do VÍNCULO REGISTRADO**, nunca de palpite (mesma
+   postura da 0082 com as filiais e da 0081 com o preço). O Mutual tem **3** tipos (CARRO, MOTO,
+   CAMINHÃO) e o SCar tem **7**: *"CARRO"* não decide entre Passeio e Pick-up/Van. Os dois são
+   nuláveis e **não bloqueiam** — com a cobrança externa ligada o preço não é recalculado aqui.
+6. **`p_incluir_inativos` nasce FALSE.** O acervo histórico da matriz são mais 4.764 veículos e
+   3.165 associados que nunca apareceriam numa tela. Ele entra depois, pela mesma função.
+7. **A re-execução atualiza o que o MUTUAL é dono e não toca no que o SCar preencheu.** Status,
+   valor, dia, ativação e a ficha vêm de lá a cada rodada (é o que *"quem manda é o Mutual"*
+   significa); `plano_protecao_id`, rastreador, `alienado`, `tipo_faturamento`, cota, km, vendedor
+   e `cobranca_externa` são daqui. Há teste dos dois lados.
+8. **`sexo` NÃO é importado.** O Mutual manda `gender` "1"/"2" e não diz qual é qual. Adivinhar o
+   sexo de 436 pessoas para preencher campo que nenhuma tela usa é o registro que mente com
+   confiança.
+
+### 🔴 O DEFEITO DE DESENHO QUE O TESTE PEGOU: o que já foi carregado NUNCA sai do lote
+A primeira versão filtrava o lote só pelo status (`p_incluir_inativos`), e aí um veículo que
+virasse **SUSPENSO ou INATIVO no Mutual depois da carga** saía do filtro — e a ficha daqui ficaria
+`ativo` **para sempre**. Numa convivência em que quem manda é o outro sistema, isso é a base
+mentindo em silêncio, que é o pior desfecho possível. **`p_incluir_inativos` governa o que ENTRA,
+não o que continua sendo MANTIDO:** objeto com vínculo fica no lote em qualquer status, e é por
+ele que **o cancelamento feito no Mutual chega aqui** na rodada seguinte. Há teste do ciclo
+inteiro (ativo → suspenso → inativo com `data_saida` → ativo).
+
+### As outras duas mordidas, para não repetir
+- **`cliente_id` da leitura é um RETRATO de antes do laço.** No segundo veículo do mesmo associado
+  ele ainda vinha nulo e o insert estourava no `unique` de `cpf_cnpj`. O vínculo é **re-resolvido
+  a cada volta**, e o laço é ordenado por documento para o cliente ser tratado uma vez por pessoa.
+- **Associado se conta por PESSOA, não por linha.** A simulação previa 2 associados para 2
+  veículos do mesmo dono. Vale para o SQL e para o `resumoDaCarga` do TS — os dois com teste.
+- **Nada de `create temp table` dentro de plpgsql.** `on commit drop` destrói o OID que o plano em
+  cache guardou, e a **segunda** chamada na mesma sessão morre com *"relation with OID … does not
+  exist"*. O desfazer usa CTEs. (Foi a mordida da primeira versão da 0078.)
+
+### O caminho de volta existe, e ele PARA no que já tem trabalho em cima
+`mutual_desfazer_carga(regional, confirmar)` remove pelo **vínculo**, nunca por "tudo que foi
+criado hoje". `veiculo_tem_movimento()` preserva o veículo com protocolo, evento, acionamento,
+rastreador, vistoria, item de fatura ou título: dali em diante a linha deixou de ser só uma cópia
+do Mutual. **Piloto sem desfazer não é piloto — é produção sem plano.**
+
+### Onde fica e como se usa
+`/integracao/mutual` → seção **Carga da carteira — por unidade**
+(`src/components/integracao/carga-mutual.tsx`). A ordem da tela é a ordem da decisão:
+o **de-para do tipo de veículo** (3 escolhas, com o peso da carteira ao lado) → a **unidade** →
+os **4 indicadores** → a **fila de trabalho agrupada por MOTIVO** (motivo junto é fila que ninguém
+trabalha: "8 sem placa" e "3 com CPF inválido" são duas tarefas de duas pessoas) → **o que falta
+para o CUTOVER, não para a carga** → o botão.
+
+- **A fila do cutover é separada da recusa de propósito.** Valor, dia e plano **não impedem** o
+  veículo de entrar — ficar fora da base seria pior (não apareceria no SAC, no portal nem na 24h).
+  Mas no dia do cutover mensalidade nula cai no `cotar_plano` e, sem plano, dá R$ 0,00.
+  `cutoverLiberado()` diz quando essa fila está vazia.
+- **Lógica pura testada:** `src/lib/mutual.ts` — `placaMutual`, `chassiMutual`, `renavamMutual`
+  (espelhos exatos do SQL: **mexeu num lado, mexa no outro e nos dois testes**), `resumoDaCarga`,
+  `recusasPorMotivo`, `familiaDaRecusa`, `filaAntesDoCutover`, `cutoverLiberado`, `tiposPendentes`.
+  Suíte de banco em `supabase/tests/0084_carga_mutual.test.sql`.
+
+### O que a 0084 NÃO faz (e é decisão sua)
+- **Não agenda a re-execução.** Durante a convivência a deriva só é corrigida por
+  *recapturar + rodar de novo*. Rodando manualmente uma vez por semana em outubro, o piloto se
+  mantém; para virar rotina precisa de agendamento no Supabase (mesma pendência da devolução de
+  lead ao pool).
+- **Não traz financeiro nem evento.** `INVOICE` (205.752 linhas) e `EVENT` (2.885) estão
+  capturados e **fora da carga**: histórico pago reescreve DRE de mês fechado e, na convivência,
+  faz os dois sistemas contarem a mesma receita. **A data de corte do financeiro continua em
+  aberto** — e enquanto o cutover não acontece, ela não é urgente.
+- **Não resolve os 8 veículos 0 km da matriz.** `veiculos.placa` é `not null`; eles entram quando
+  a placa chegar. A cobrança da placa é operacional.
+- **`DIFICULDADE FINANCEIRA`** (11 objetos na base toda) segue sem de-para: o usuário nomeou três
+  status e esse não estava. Os objetos ficam de fora, contados.
 
 ## PREPARAÇÃO DA CARGA DO MUTUAL (0082) — as 3 peças que faltavam
 > Nada aqui carrega dado. A regra da Fase 1 continua de pé e **há teste provando** que `clientes`,

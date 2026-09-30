@@ -576,3 +576,146 @@ export function consolidacao(equipes: EquipeVendas[]): Map<string, number> {
   }
   return mapa;
 }
+
+// ============================================================================
+// 0084 — A CARGA
+// ============================================================================
+// Estes tres saneadores sao ESPELHO EXATO de `mutual_placa`, `mutual_chassi` e
+// `mutual_renavam` (0084). Eles vivem aqui para a tela poder dizer, ANTES de
+// consultar, o que o banco vai gravar — e por isso: mexeu num lado, mexa no
+// outro e nos dois testes (mesma escolha da maquina de estados do rastreador,
+// 0050, e do de-para de status do Mutual).
+
+/**
+ * A placa como o SCar guarda: alfanumerico em caixa alta, no padrao de 7
+ * (ABC1234 antigo ou ABC1D23 Mercosul). Fora do padrao devolve `null`, e a
+ * linha e recusada — `veiculos.placa` e `not null unique`, entao inventar
+ * placa cria registro que ninguem acha e que colide quando a real chegar.
+ */
+export function placaMutual(valor?: string | null): string | null {
+  const limpo = (valor ?? '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+  return /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/.test(limpo) ? limpo : null;
+}
+
+/** Chassi com 17 alfanumericos ou `null`. Vazio NUNCA vira `''` (unique). */
+export function chassiMutual(valor?: string | null): string | null {
+  const limpo = (valor ?? '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+  return /^[A-Z0-9]{17}$/.test(limpo) ? limpo : null;
+}
+
+/**
+ * Renavam com 9 a 11 digitos, nunca so zeros, ou `null`.
+ *
+ * O placeholder da base legada ("0", "000000000000", e ate "2012", o ano no
+ * campo errado) e o que criava as 4 colisoes de unique medidas na matriz.
+ * Placeholder nao e dado: e ausencia escrita com confianca.
+ */
+export function renavamMutual(valor?: string | null): string | null {
+  const so = (valor ?? '').replace(/\D/g, '');
+  return /^[0-9]{9,11}$/.test(so) && !/^0+$/.test(so) ? so : null;
+}
+
+export interface LinhaCarga {
+  acao: 'CRIAR' | 'ATUALIZAR' | 'RECUSADO';
+  problema: string | null;
+  id_pessoa: string | null;
+  valor_mensalidade: number | null;
+  dia_vencimento: number | null;
+  tipo_veiculo_id: string | null;
+  plano_id: string | null;
+  ativacao_estimada: boolean;
+}
+
+/** O que a carga faria, contado como a tela mostra. */
+export function resumoDaCarga(linhas: LinhaCarga[]) {
+  const entram = linhas.filter((l) => !l.problema);
+  return {
+    criar: entram.filter((l) => l.acao === 'CRIAR').length,
+    atualizar: entram.filter((l) => l.acao === 'ATUALIZAR').length,
+    recusadas: linhas.length - entram.length,
+    // O associado se conta por PESSOA, nao por linha: dois veiculos do mesmo
+    // associado sao UM cliente. Contar linhas aqui foi um bug real da 0084.
+    associados: new Set(entram.map((l) => l.id_pessoa).filter(Boolean)).size,
+  };
+}
+
+/**
+ * As recusas agrupadas pelo MOTIVO, ordenadas por volume.
+ *
+ * Motivo junto e fila que ninguem trabalha (licao da 0082): "8 sem placa" e
+ * "3 com CPF invalido" sao duas tarefas, de duas pessoas diferentes. E tratar
+ * a que mais pesa resolve a maior parte do lote com a menor decisao.
+ */
+export function recusasPorMotivo(
+  linhas: LinhaCarga[],
+): { motivo: string; quantidade: number }[] {
+  const mapa = new Map<string, number>();
+  for (const l of linhas) {
+    if (!l.problema) continue;
+    mapa.set(familiaDaRecusa(l.problema), (mapa.get(familiaDaRecusa(l.problema)) ?? 0) + 1);
+  }
+  return [...mapa.entries()]
+    .map(([motivo, quantidade]) => ({ motivo, quantidade }))
+    .sort((a, b) => b.quantidade - a.quantidade);
+}
+
+/**
+ * A familia da recusa: o texto do banco nomeia a PLACA e o CHASSI da linha
+ * (que e o que a operacao precisa para cobrar o dado), entao agrupar pelo
+ * texto cru daria uma "familia" por linha.
+ */
+export function familiaDaRecusa(problema: string): string {
+  if (problema.startsWith('SEM PLACA')) return 'Sem placa (0 km)';
+  if (problema.startsWith('CPF/CNPJ invalido')) return 'CPF/CNPJ invalido';
+  if (problema.startsWith('Associado sem CPF')) return 'Associado sem CPF/CNPJ';
+  if (problema.startsWith('Associado sem nome')) return 'Associado sem nome';
+  if (problema.startsWith('Sem data de ativacao')) return 'Sem data de ativacao';
+  if (problema.includes('repetid')) return 'Repetido dentro do lote';
+  if (problema.includes('ja cadastrad')) return 'Ja cadastrado em outro veiculo';
+  return problema;
+}
+
+/**
+ * 🔴 A FILA QUE BLOQUEIA O CUTOVER — nao a carga.
+ *
+ * Valor, dia de vencimento e plano NAO impedem o veiculo de entrar: com
+ * `cobranca_externa` ligada ele nao e faturado aqui, e ficar de fora da base
+ * seria pior (nao apareceria no SAC, no portal nem na 24h). Mas no dia em que
+ * a unidade passar a faturar AQUI, `valor_mensalidade` nulo cai no
+ * `cotar_plano` e sem plano isso da R$ 0,00 — associado que nunca recebe
+ * boleto. Por isso a fila e mostrada como pre-requisito do CUTOVER.
+ */
+export function filaAntesDoCutover(linhas: LinhaCarga[]) {
+  const entram = linhas.filter((l) => !l.problema);
+  return {
+    semValor: entram.filter((l) => l.valor_mensalidade === null).length,
+    semDia: entram.filter((l) => l.dia_vencimento === null).length,
+    semPlano: entram.filter((l) => !l.plano_id).length,
+    semTipo: entram.filter((l) => !l.tipo_veiculo_id).length,
+    ativacaoEstimada: entram.filter((l) => l.ativacao_estimada).length,
+  };
+}
+
+/** O cutover esta liberado quando nada essencial a cobranca esta faltando. */
+export function cutoverLiberado(linhas: LinhaCarga[]): boolean {
+  const f = filaAntesDoCutover(linhas);
+  return f.semValor === 0 && f.semDia === 0;
+}
+
+export interface TipoVeiculoExterno {
+  id_externo: string;
+  nome: string | null;
+  capturado: boolean;
+  faturaveis: number;
+  regional_id: string | null;
+}
+
+/**
+ * Os tipos do Mutual que ainda nao tem de-para, com carteira, ordenados por
+ * peso. Mesma postura de `filiaisPendentes`: a decisao mais pesada primeiro.
+ */
+export function tiposPendentes(tipos: TipoVeiculoExterno[]): TipoVeiculoExterno[] {
+  return tipos
+    .filter((t) => !t.regional_id && t.faturaveis > 0)
+    .sort((a, b) => b.faturaveis - a.faturaveis);
+}
