@@ -64,8 +64,11 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
 **O banco é o projeto Supabase `Scar Software`, ref `asinzcqbbqdglrguqtnr`** (sa-east-1) — ver
 "Qual é o banco" logo abaixo. **Nenhum dos outros três projetos da conta é este sistema.**
 
-**2. O QUE FALTA SUBIR.** **A `0084` (a CARGA do Mutual) — ela é NOVA e ainda não foi rodada.**
-As migrations **`0001`..`0083`** estão aplicadas em produção — as `0001`..`0078` conferidas no próprio schema em 20/09/2026, a **`0079`..`0082` rodadas
+**2. O QUE FALTA SUBIR.** **Nada no banco.** As migrations **`0001`..`0084`** estão aplicadas em
+produção — a **`0084` (a CARGA) foi rodada e CONFERIDA em 01/10/2026**: as 14 funções existem e o
+rito da 0052 se manteve (0 RPCs nossas abertas ao `anon`; as 223 são de extensão, como documentado).
+**A carga em si NÃO foi executada** — 9 veículos e 5 associados, nenhum com `cobranca_externa`.
+As migrations **`0001`..`0083`** estavam aplicadas em produção — as `0001`..`0078` conferidas no próprio schema em 20/09/2026, a **`0079`..`0082` rodadas
 pelo usuário em 20/09/2026** e a **`0083` conferida no banco em 21/09/2026** (as funções
 `mutual_equipes_vendas`, `mutual_equipe_do_objeto` e `mutual_regional_do_objeto` existem).
 **A `0084_carga_mutual` é NOVA** — é a carga da carteira, por unidade. Sem ela a seção
@@ -75,8 +78,16 @@ pelo usuário em 20/09/2026** e a **`0083` conferida no banco em 21/09/2026** (a
 > **🔴 A `0084` NÃO carrega nada por si.** Ela cria o instrumento; quem carrega é o botão na tela,
 > por unidade e com confirmação. Rodar a migration é seguro e reversível — o risco começa no
 > clique, e mesmo ali `mutual_desfazer_carga` é o caminho de volta.
-> **O PILOTO DECIDIDO (30/09/2026): SMART CAR MATRIZ — 481 veículos / 436 associados.** Ver a
-> seção própria; o lote foi medido e está limpo (0 colisão de placa, 0 CPF inválido).
+> **O PILOTO DECIDIDO (30/09/2026): SMART CAR MATRIZ.** Medido em 01/10/2026, já pelas funções da
+> 0084 em produção: dos 481 faturáveis, **473 entram** (431 associados) e **8 são recusados** — os
+> 8 são os 0 km sem placa, e **só eles**. Zero CPF inválido, zero colisão, zero sem data de ativação.
+>
+> **⚠️ FALTAM DOIS CLIQUES ANTES DE CARREGAR** (nenhum dos dois bloqueia, mas os dois mudam o que
+> a base vai dizer): **`SALE_TEAM` tem ZERO linhas capturadas** (as 19 equipes aparecem com
+> carteira e sem nome) e o **de-para do tipo de veículo não foi registrado** — são 3 decisões
+> (`1`=390 carros · `2`=75 motos · `3`=14 caminhões, 2 sem tipo), na própria tela.
+>
+> **🔴 E O DE-PARA DO PLANO É IMPRATICÁVEL HOJE — ver a seção da 0084.**
 > **⚠️ O QUE FALTA É O CONTÊINER, NÃO O BANCO.** A tela da `0083` (seção *Equipes de vendas*) só
 > aparece depois do `docker compose up -d --build` com o commit da fase. Na build anterior a
 > seção de unidades não renderiza nada — era o defeito que a `0082` corrigiu.
@@ -2320,6 +2331,30 @@ para o CUTOVER, não para a carga** → o botão.
   (espelhos exatos do SQL: **mexeu num lado, mexa no outro e nos dois testes**), `resumoDaCarga`,
   `recusasPorMotivo`, `familiaDaRecusa`, `filaAntesDoCutover`, `cutoverLiberado`, `tiposPendentes`.
   Suíte de banco em `supabase/tests/0084_carga_mutual.test.sql`.
+
+### 🔴 CONFERIDO EM PRODUÇÃO (01/10/2026) — e o de-para do PLANO é impraticável hoje
+A migration passou e o lote está como medido. Mas a conferência achou duas coisas:
+
+**1. `PLAN` NÃO É ENTIDADE CAPTURÁVEL — e são 42 ids distintos só na matriz.**
+A 0084 criou `mutual_plano_do_externo` e o de-para por vínculo, mas **não criou a tela nem abriu
+a entidade**: `chk_mutual_entidade` (0062) não aceita `'PLAN'`, então `/plan/` não pode ser puxado
+e os 42 ids **não têm nome** — são números (`48`=114 veículos, `88`=110, `41`=44, e uma cauda de
+39 valores com 1 a 21 cada). Contra **5 planos** no SCar (Essencial, Prata, Ouro, Diamante, Roubo
+e Furto). **Mapear 42 números sem nome não é uma decisão, é um palpite** — exatamente o que a
+postura da 0082 (só a decisão REGISTRADA carrega dado) manda não fazer.
+Resolver é uma `0085` pequena: `'PLAN'` na allow-list + `mutual_planos_externos()` no molde de
+`mutual_tipos_veiculo_externos()` (nome + peso da carteira) + a seção na tela.
+
+**2. 🔴 CORREÇÃO DE UM TEXTO MEU: o plano NÃO bloqueia o cutover do boleto.**
+A tela e a seção acima diziam *"no dia do cutover mensalidade nula cai no `cotar_plano` e, sem
+plano, dá R$ 0,00"*. Isso vale **só para quem está sem `valor_mensalidade`** — e a carga grava o
+override em todos, exceto 3. `valor_mensalidade_veiculo` (0024) prefere o override e **nunca chama
+o `cotar_plano`**, então 470 dos 473 são faturados pelo valor carimbado, com ou sem plano.
+**`cutoverLiberado()` já estava certo** (olha valor e dia, não plano); o texto é que exagerava.
+O que o plano realmente custa: **a ficha do SAC mostra cobertura incompleta** (`opcionais_veiculo`,
+0029, chama `cotar_plano` e com plano nulo devolve só a base + avulsos), então o atendente não vê
+o que o associado tem direito. Isso é motivo para resolver o plano **antes de outubro virar
+atendimento real**, não antes de carregar.
 
 ### O que a 0084 NÃO faz (e é decisão sua)
 - **Não agenda a re-execução.** Durante a convivência a deriva só é corrigida por
