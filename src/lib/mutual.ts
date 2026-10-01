@@ -9,7 +9,10 @@
 // mora AQUI e tem teste. A tela nao decide nada.
 // ============================================================================
 
-import type { StatusVeiculo, TipoPessoa, StatusTitulo } from '@/lib/database.types';
+import type {
+  StatusVeiculo, TipoPessoa, StatusTitulo,
+  EntidadeMutual as EntidadeMutualDoBanco,
+} from '@/lib/database.types';
 
 // ---------------------------------------------------------------------------
 // Endpoints
@@ -33,6 +36,13 @@ export const ENTIDADES_MUTUAL = {
   // (REGIONAL) vira so agrupamento de leitura. Repare no singular `sale_team`.
   SALE_TEAM: '/association/sale_team/',
   CONSULTANT: '/association/consultant/',
+  // 0085: o PLANO. ⚠️ ESTE CAMINHO E UM PALPITE — o swagger do Mutual nao foi
+  // alcancavel quando a 0085 foi escrita, e ele segue o padrao das outras
+  // entidades de contrato. Puxar e um clique e um 404 responde em dois
+  // segundos; trocar o caminho e ESTA LINHA, porque nada de schema depende
+  // dele: o de-para de plano funciona sem a captura (padrao da 0083, em que
+  // as 19 equipes foram agrupadas antes de SALE_TEAM existir). A tela avisa.
+  PLAN: '/contract/plan/',
   VEHICLE_TYPE: '/vehicle/type/',
   VEHICLE_COLOR: '/vehicle/color/',
   VEHICLE_CATEGORY: '/vehicle/category/',
@@ -41,6 +51,16 @@ export const ENTIDADES_MUTUAL = {
 } as const;
 
 export type EntidadeMutual = keyof typeof ENTIDADES_MUTUAL;
+
+// 🔴 AFIRMACAO DE COMPILACAO: esta lista e a uniao `EntidadeMutual` de
+// `database.types.ts` tem de ser a MESMA, nos dois sentidos. Sem isto, abrir
+// uma entidade nova aqui e esquecer a uniao de la (ou o contrario) compila e
+// so quebra na chamada — foi assim que a 0085 quase perdeu `CONTRACT` do
+// `chk_mutual_entidade`. Se o tsc apontar aqui, falta sincronizar as tres
+// copias: o CHECK do banco, a uniao de `database.types.ts` e este objeto.
+type Igual<A, B> = [A] extends [B] ? ([B] extends [A] ? true : never) : never;
+const _entidadesSincronizadas: Igual<EntidadeMutual, EntidadeMutualDoBanco> = true;
+void _entidadesSincronizadas;
 
 /** Quais entidades aceitam `updated_at__gte` (medido no swagger, 09/09/2026). */
 export const ENTIDADES_INCREMENTAIS: EntidadeMutual[] = ['CONTRACT_OBJECT', 'CONTRACT', 'INVOICE'];
@@ -707,7 +727,10 @@ export interface TipoVeiculoExterno {
   nome: string | null;
   capturado: boolean;
   faturaveis: number;
-  regional_id: string | null;
+  /** O `tipos_veiculo.id` escolhido. **Chamava-se `regional_id` na 0084** e
+   *  guardava um tipo de veiculo — nome que mente e a familia de erro mais
+   *  caro deste projeto (o branch "espelhado", a `schema_migrations` vazia). */
+  destino_id: string | null;
 }
 
 /**
@@ -716,6 +739,74 @@ export interface TipoVeiculoExterno {
  */
 export function tiposPendentes(tipos: TipoVeiculoExterno[]): TipoVeiculoExterno[] {
   return tipos
-    .filter((t) => !t.regional_id && t.faturaveis > 0)
+    .filter((t) => !t.destino_id && t.faturaveis > 0)
     .sort((a, b) => b.faturaveis - a.faturaveis);
+}
+
+// ---------------------------------------------------------------------------
+// De-para do PLANO (0085)
+// ---------------------------------------------------------------------------
+export interface PlanoExterno {
+  id_externo: string;
+  nome: string | null;
+  capturado: boolean;
+  veiculos: number;
+  faturaveis: number;
+  /** Quanto da carteira faturavel esta coberta ATE esta linha, na ordem de
+   *  peso. E ela que diz ONDE PARAR. */
+  cobertura_acumulada: number | null;
+  mensalidade_mediana: number | null;
+  fipe_min: number | null;
+  fipe_max: number | null;
+  tipos: string | null;
+  destino_id: string | null;
+  plano_nome: string | null;
+}
+
+/** Os `plan_id` sem de-para que PESAM, do maior para o menor. */
+export function planosPendentes(planos: PlanoExterno[]): PlanoExterno[] {
+  return planos
+    .filter((p) => !p.destino_id && p.faturaveis > 0)
+    .sort((a, b) => b.faturaveis - a.faturaveis);
+}
+
+/**
+ * Quantos ids, do topo para baixo, bastam para cobrir `alvo`% da carteira
+ * faturavel.
+ *
+ * E o numero que torna este de-para entregavel: medido em 01/10/2026, **17 de
+ * 42 ids cobrem 90%** dos 481 faturaveis da matriz (26 de 91 na base viva
+ * inteira). Sem ele a tela e uma lista de 42 numeros de peso aparentemente
+ * igual, e a resposta natural e "inviavel" — que foi a conclusao errada que
+ * esta funcao existe para desfazer.
+ *
+ * Conta sobre os FATURAVEIS (nao sobre `cobertura_acumulada`, que o banco
+ * calcula na ordem dele) para a tela nao depender da ordenacao da RPC.
+ */
+export function idsPara90Pct(planos: PlanoExterno[], alvo = 90): number {
+  const total = planos.reduce((s, p) => s + Math.max(0, p.faturaveis), 0);
+  if (total <= 0) return 0;
+  const ordenado = [...planos]
+    .filter((p) => p.faturaveis > 0)
+    .sort((a, b) => b.faturaveis - a.faturaveis);
+  let acum = 0;
+  for (let i = 0; i < ordenado.length; i += 1) {
+    acum += ordenado[i].faturaveis;
+    if ((acum * 100) / total >= alvo) return i + 1;
+  }
+  return ordenado.length;
+}
+
+/**
+ * A faixa de FIPE de um `plan_id` e PERFIL, nunca identificacao.
+ *
+ * Foi medido que dentro do MESMO id a FIPE varia de 6x a 14x (1.111x no id 48),
+ * ou seja o id e combo comercial e nao faixa de preco — a hipotese contraria
+ * quase virou afirmacao a partir de uma amostra pequena. Esta funcao devolve
+ * o quociente para a tela poder DESCONFIAR: faixa larga = plano genérico.
+ */
+export function amplitudeFipe(plano: PlanoExterno): number | null {
+  const { fipe_min: min, fipe_max: max } = plano;
+  if (min === null || max === null || min <= 0) return null;
+  return max / min;
 }

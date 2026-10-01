@@ -2449,10 +2449,18 @@ export type LeadRegional = {
 // Cada tabela precisa de Row/Insert/Update/Relationships; o schema precisa de
 // Views/Functions/Enums/CompositeTypes com o formato exato.
 // ---- 0062: integracao com o Mutual (Fase 1 - espelho de leitura) -----------
+/** ⚠️ Esta lista e a TERCEIRA copia da mesma allow-list (as outras sao o
+ *  `chk_mutual_entidade` do banco e `ENTIDADES_MUTUAL` em `src/lib/mutual.ts`,
+ *  que tem o caminho de cada uma). Redigitar allow-list derruba em silencio o
+ *  que se esquecer — aconteceu com `CONTRACT` na 0085. Por isso `mutual.ts`
+ *  tem uma afirmacao de COMPILACAO de que as duas do cliente batem, e a suite
+ *  `0085` afirma a do banco entidade por entidade. Mexeu numa, mexa nas tres. */
 export type EntidadeMutual =
   | 'CONTRACT_OBJECT' | 'CONTRACT' | 'PERSON' | 'ADDRESS' | 'INVOICE' | 'EVENT'
   /** 0083 — SALE_TEAM e o nivel que corresponde a `regionais` do SCar. */
   | 'REGIONAL' | 'SALE_TEAM' | 'CONSULTANT'
+  /** 0085 — o nome dos `plan_id`. */
+  | 'PLAN'
   | 'VEHICLE_TYPE' | 'VEHICLE_COLOR' | 'VEHICLE_CATEGORY' | 'VEHICLE_USE_TYPE' | 'EVENT_TYPE';
 
 /** 0083 — uma equipe de vendas do Mutual e o agrupamento dela numa regional. */
@@ -2478,9 +2486,29 @@ export type MutualTipoVeiculoExterno = {
   capturado: boolean;
   veiculos: number;
   faturaveis: number;
-  /** O de-para REGISTRADO — nunca palpite. */
-  regional_id: string | null;
+  /** O de-para REGISTRADO — nunca palpite. **Chamava-se `regional_id` na 0084
+   *  e guardava um `tipos_veiculo.id`; renomeado na 0085.** */
+  destino_id: string | null;
   tipo_nome: string | null;
+};
+
+/** 0085 — o de-para de `plan_id` com o peso e a COBERTURA ACUMULADA. */
+export type MutualPlanoExterno = {
+  id_externo: string;
+  nome: string | null;
+  /** false = o id so aparece no objeto; /plan/ nao foi puxado (ou o caminho
+   *  palpitado esta errado — ver ENTIDADES_MUTUAL.PLAN). */
+  capturado: boolean;
+  veiculos: number;
+  faturaveis: number;
+  cobertura_acumulada: number | null;
+  /** PERFIL, nao identificacao: a FIPE varia 6x a 14x dentro do mesmo id. */
+  mensalidade_mediana: number | null;
+  fipe_min: number | null;
+  fipe_max: number | null;
+  tipos: string | null;
+  destino_id: string | null;
+  plano_nome: string | null;
 };
 
 /** 0084 — uma linha da carga, ja saneada, com o motivo da recusa quando ha. */
@@ -3894,6 +3922,10 @@ export type Database = {
       mutual_tipos_veiculo_externos: {
         Args: Record<string, never>;
         Returns: MutualTipoVeiculoExterno[];
+      };
+      mutual_planos_externos: {
+        Args: { p_regional_id?: string | null };
+        Returns: MutualPlanoExterno[];
       };
       mutual_carga_linhas: {
         Args: {

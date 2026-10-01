@@ -10,8 +10,9 @@ import {
   consolidacao,
   placaMutual, chassiMutual, renavamMutual, resumoDaCarga, recusasPorMotivo,
   filaAntesDoCutover, cutoverLiberado, tiposPendentes,
+  planosPendentes, idsPara90Pct, amplitudeFipe, ENTIDADES_MUTUAL,
 } from './mutual';
-import type { LinhaCarga, TipoVeiculoExterno } from './mutual';
+import type { LinhaCarga, TipoVeiculoExterno, PlanoExterno } from './mutual';
 import type { PassoFunil, FilialMutual, EquipeVendas } from './mutual';
 
 const BASE = 'https://smartcar-api.mutualignit.com.br';
@@ -604,16 +605,124 @@ describe('filaAntesDoCutover', () => {
 describe('tiposPendentes', () => {
   const t = (o: Partial<TipoVeiculoExterno>): TipoVeiculoExterno => ({
     id_externo: '1', nome: 'CARRO', capturado: true, faturaveis: 10,
-    regional_id: null, ...o,
+    destino_id: null, ...o,
   });
 
   it('so os sem de-para, com carteira, do mais pesado para o mais leve', () => {
     const r = tiposPendentes([
       t({ id_externo: '1', faturaveis: 10 }),
       t({ id_externo: '2', faturaveis: 90 }),
-      t({ id_externo: '3', faturaveis: 50, regional_id: 'tv1' }),
+      t({ id_externo: '3', faturaveis: 50, destino_id: 'tv1' }),
       t({ id_externo: '4', faturaveis: 0 }),
     ]);
     expect(r.map((x) => x.id_externo)).toEqual(['2', '1']);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// De-para do PLANO (0085)
+// ---------------------------------------------------------------------------
+const plano = (o: Partial<PlanoExterno>): PlanoExterno => ({
+  id_externo: '48', nome: null, capturado: false, veiculos: 10, faturaveis: 10,
+  cobertura_acumulada: null, mensalidade_mediana: null,
+  fipe_min: null, fipe_max: null, tipos: null,
+  destino_id: null, plano_nome: null, ...o,
+});
+
+describe('planosPendentes', () => {
+  it('so os sem de-para, com carteira, do mais pesado para o mais leve', () => {
+    const r = planosPendentes([
+      plano({ id_externo: '41', faturaveis: 44 }),
+      plano({ id_externo: '48', faturaveis: 114 }),
+      plano({ id_externo: '88', faturaveis: 110, destino_id: 'p1' }),
+      plano({ id_externo: '99', faturaveis: 0 }),
+    ]);
+    expect(r.map((x) => x.id_externo)).toEqual(['48', '41']);
+  });
+});
+
+describe('idsPara90Pct', () => {
+  it('conta quantos ids do topo bastam para cobrir 90% dos faturaveis', () => {
+    // 90 + 5 + 3 + 2 = 100. O primeiro ja cobre 90%.
+    expect(idsPara90Pct([
+      plano({ id_externo: 'a', faturaveis: 90 }),
+      plano({ id_externo: 'b', faturaveis: 5 }),
+      plano({ id_externo: 'c', faturaveis: 3 }),
+      plano({ id_externo: 'd', faturaveis: 2 }),
+    ])).toBe(1);
+  });
+
+  it('nao depende da ordem em que a RPC devolveu', () => {
+    const fora = [
+      plano({ id_externo: 'd', faturaveis: 2 }),
+      plano({ id_externo: 'a', faturaveis: 90 }),
+      plano({ id_externo: 'c', faturaveis: 3 }),
+      plano({ id_externo: 'b', faturaveis: 5 }),
+    ];
+    expect(idsPara90Pct(fora)).toBe(1);
+  });
+
+  it('carteira repartida miudo exige MAIS decisoes — e e esse o numero que decide', () => {
+    // 10 ids de 10 cada: 9 cobrem 90%.
+    const dez = Array.from({ length: 10 }, (_, i) =>
+      plano({ id_externo: String(i), faturaveis: 10 }));
+    expect(idsPara90Pct(dez)).toBe(9);
+  });
+
+  it('ignora os ids SEM carteira — eles nao sao decisao', () => {
+    expect(idsPara90Pct([
+      plano({ id_externo: 'a', faturaveis: 100 }),
+      plano({ id_externo: 'b', faturaveis: 0 }),
+      plano({ id_externo: 'c', faturaveis: 0 }),
+    ])).toBe(1);
+  });
+
+  it('lista vazia (ou sem nenhum faturavel) e ZERO, nao divisao por zero', () => {
+    expect(idsPara90Pct([])).toBe(0);
+    expect(idsPara90Pct([plano({ faturaveis: 0 })])).toBe(0);
+  });
+
+  it('o alvo e parametro: 100% exige todos os ids com carteira', () => {
+    const quatro = [
+      plano({ id_externo: 'a', faturaveis: 90 }),
+      plano({ id_externo: 'b', faturaveis: 5 }),
+      plano({ id_externo: 'c', faturaveis: 3 }),
+      plano({ id_externo: 'd', faturaveis: 2 }),
+    ];
+    expect(idsPara90Pct(quatro, 100)).toBe(4);
+  });
+});
+
+describe('amplitudeFipe', () => {
+  it('a faixa larga e o sinal de plano generico — foi o que desmentiu a hipotese de faixa de preco', () => {
+    // O id 48 medido na base: de R$ 100 a R$ 111.140 de FIPE.
+    expect(amplitudeFipe(plano({ fipe_min: 100, fipe_max: 111_140 }))).toBeCloseTo(1111.4, 1);
+  });
+  it('faixa estreita devolve numero pequeno', () => {
+    expect(amplitudeFipe(plano({ fipe_min: 50_000, fipe_max: 60_000 }))).toBeCloseTo(1.2, 5);
+  });
+  it('sem dado nao inventa amplitude (e nao divide por zero)', () => {
+    expect(amplitudeFipe(plano({ fipe_min: null, fipe_max: 100 }))).toBeNull();
+    expect(amplitudeFipe(plano({ fipe_min: 100, fipe_max: null }))).toBeNull();
+    expect(amplitudeFipe(plano({ fipe_min: 0, fipe_max: 100 }))).toBeNull();
+  });
+});
+
+describe('ENTIDADES_MUTUAL — a allow-list do banco e a do cliente andam JUNTAS', () => {
+  it('PLAN existe e termina com barra (a API e Django)', () => {
+    expect(ENTIDADES_MUTUAL.PLAN.endsWith('/')).toBe(true);
+    expect(urlMutual(BASE, 'PLAN')).toBe(`${BASE}/public_api/v2${ENTIDADES_MUTUAL.PLAN}`);
+  });
+
+  it('as 15 entidades da `chk_mutual_entidade` estao TODAS aqui', () => {
+    // 🔴 Guarda contra o erro que a suite 0085 pegou no banco: redigitar uma
+    // allow-list derruba em SILENCIO o que se esquecer (foi `CONTRACT`, que
+    // guarda o dia de vencimento e a sales_team_id). Vale dos dois lados.
+    const noBanco = [
+      'CONTRACT_OBJECT', 'CONTRACT', 'PERSON', 'ADDRESS', 'INVOICE', 'EVENT',
+      'REGIONAL', 'SALE_TEAM', 'CONSULTANT', 'PLAN',
+      'VEHICLE_TYPE', 'VEHICLE_COLOR', 'VEHICLE_CATEGORY', 'VEHICLE_USE_TYPE', 'EVENT_TYPE',
+    ];
+    expect(Object.keys(ENTIDADES_MUTUAL).sort()).toEqual([...noBanco].sort());
   });
 });

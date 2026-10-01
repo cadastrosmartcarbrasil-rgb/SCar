@@ -2,16 +2,17 @@
 
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Upload, Undo2, Car, AlertTriangle } from 'lucide-react';
+import { Upload, Undo2, Car, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
-  useMutualTiposVeiculo, useVincularCatalogo,
+  useMutualTiposVeiculo, useMutualPlanos, useVincularCatalogo,
   useCargaPrevia, useCargaLinhas, useExecutarCarga, useDesfazerCarga,
 } from '@/hooks/use-mutual';
 import { useRegionais } from '@/hooks/use-config';
 import { usePlanos, useTiposVeiculo } from '@/hooks/use-precificacao';
 import {
   resumoDaCarga, recusasPorMotivo, filaAntesDoCutover, cutoverLiberado, tiposPendentes,
+  planosPendentes, idsPara90Pct, amplitudeFipe,
 } from '@/lib/mutual';
 import type { SeveridadeDiagnostico } from '@/lib/database.types';
 
@@ -33,10 +34,12 @@ export function CargaMutual() {
   const planos = usePlanos();
   const tiposExternos = useMutualTiposVeiculo();
   const vincularTipo = useVincularCatalogo('VEHICLE_TYPE', 'tipos_veiculo');
+  const vincularPlano = useVincularCatalogo('PLAN', 'planos_protecao');
 
   const [unidade, setUnidade] = useState<string>('');
   const [inativos, setInativos] = useState(false);
 
+  const planosExternos = useMutualPlanos(unidade || null);
   const previa = useCargaPrevia(unidade || null, inativos);
   const linhas = useCargaLinhas(unidade || null, inativos, false, null);
   const executar = useExecutarCarga();
@@ -51,9 +54,13 @@ export function CargaMutual() {
   const pendentes = tiposPendentes(
     (tiposExternos.data ?? []).map((t) => ({
       id_externo: t.id_externo, nome: t.nome, capturado: t.capturado,
-      faturaveis: t.faturaveis, regional_id: t.regional_id,
+      faturaveis: t.faturaveis, destino_id: t.destino_id,
     })),
   );
+
+  const listaPlanos = planosExternos.data ?? [];
+  const planosFalta = planosPendentes(listaPlanos);
+  const idsAte90 = idsPara90Pct(listaPlanos);
 
   const nomeUnidade = (regionais.data ?? []).find((r) => r.id === unidade)?.nome ?? '';
 
@@ -99,7 +106,7 @@ export function CargaMutual() {
               </span>
               <select
                 className="rounded border border-slate-200 px-2 py-1 text-xs"
-                value={t.regional_id ?? ''}
+                value={t.destino_id ?? ''}
                 disabled={vincularTipo.isPending}
                 onChange={(e) => {
                   vincularTipo.mutate(
@@ -116,10 +123,105 @@ export function CargaMutual() {
             </div>
           ))}
         </div>
-        {(planos.data ?? []).length === 0 && (
-          <p className="mt-2 text-xs text-amber-700">
-            Nenhum plano de protecao cadastrado: o de-para de plano fica para depois.
+      </div>
+
+      {/* ------------------------------------------------ o de-para do PLANO (0085) */}
+      <div className="rounded-xl border border-slate-200/80 p-4">
+        <h3 className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+          <ShieldCheck className="h-4 w-4 text-cyan-600" aria-hidden /> Plano / cobertura — o de-para
+        </h3>
+        <p className="mb-3 text-xs leading-relaxed text-slate-500">
+          O plano <strong>nao decide o boleto</strong>: a carga carimba o valor que o Mutual cobra
+          hoje e <code className="tnum">valor_mensalidade_veiculo</code> prefere esse valor. O que
+          ele decide e a <strong>cobertura que a ficha do SAC mostra</strong> — sem de-para, o
+          atendente nao ve a que o associado tem direito. Por isso ele importa{' '}
+          <strong>antes de outubro virar atendimento real</strong>, nao antes de carregar.
+        </p>
+        <p className="mb-3 text-xs leading-relaxed text-slate-500">
+          A mensalidade e a FIPE abaixo sao <strong>perfil, nao identificacao</strong>: foi medido
+          que a FIPE varia de 6x a 14x dentro do mesmo id, logo o id e combo comercial e nao faixa
+          de preco. Faixa muito larga e sinal de plano genérico.
+        </p>
+        {!planosExternos.data && planosExternos.isLoading && (
+          <p className="text-xs text-slate-500">Lendo os planos da carteira…</p>
+        )}
+        {listaPlanos.length === 0 && !planosExternos.isLoading && (
+          <p className="text-xs text-slate-500">
+            Nenhum <code className="tnum">plan_id</code> na carteira deste recorte.
           </p>
+        )}
+        {listaPlanos.length > 0 && (
+          <>
+            <p className="mb-2 text-xs text-slate-600">
+              {listaPlanos.length} id(s) na carteira
+              {unidade ? ` de ${nomeUnidade}` : ' (base inteira)'} ·{' '}
+              <strong>{idsAte90} deles cobrem 90%</strong> dos veiculos faturaveis — e onde parar.
+              {planosFalta.length > 0 && (
+                <>
+                  {' '}Faltam <strong>{planosFalta.length}</strong> com carteira
+                  {' '}({planosFalta.reduce((acc, p) => acc + p.faturaveis, 0)} faturaveis).
+                </>
+              )}
+            </p>
+            {!listaPlanos.some((p) => p.capturado) && (
+              <p className="mb-2 text-xs text-amber-700">
+                <code className="tnum">/plan/</code> ainda nao foi capturado, entao os ids aparecem
+                sem nome — e o caminho desse endpoint e um <strong>palpite</strong> (o swagger nao
+                foi conferido). Puxar e um clique: um 404 ja responde. O de-para funciona do mesmo
+                jeito; capturar so preenche o nome.
+              </p>
+            )}
+            <div className="space-y-2">
+              {listaPlanos.map((p) => {
+                const amplitude = amplitudeFipe(p);
+                return (
+                  <div key={p.id_externo} className="flex flex-wrap items-center gap-2 text-sm">
+                    <span className="min-w-[9rem] text-slate-800">
+                      {p.nome ?? `(id ${p.id_externo})`}
+                      {!p.capturado && (
+                        <span className="ml-1 text-xs text-amber-700">· sem nome</span>
+                      )}
+                    </span>
+                    <span className="tnum text-xs text-slate-500">
+                      {p.faturaveis} faturaveis · {p.veiculos} no total
+                      {p.cobertura_acumulada !== null && ` · acumulado ${p.cobertura_acumulada}%`}
+                    </span>
+                    <span className="tnum text-xs text-slate-400">
+                      {p.mensalidade_mediana !== null && `mediana R$ ${p.mensalidade_mediana}`}
+                      {p.tipos && ` · tipo ${p.tipos}`}
+                      {amplitude !== null && amplitude >= 6 && (
+                        <span className="ml-1 text-amber-700">
+                          · FIPE {amplitude.toFixed(0)}x (generico)
+                        </span>
+                      )}
+                    </span>
+                    <select
+                      className="rounded border border-slate-200 px-2 py-1 text-xs"
+                      value={p.destino_id ?? ''}
+                      disabled={vincularPlano.isPending}
+                      onChange={(e) => {
+                        vincularPlano.mutate(
+                          { idExterno: p.id_externo, registroId: e.target.value || null },
+                          { onError: (err) => toast.error((err as Error).message) },
+                        );
+                      }}
+                    >
+                      <option value="">— sem de-para —</option>
+                      {(planos.data ?? []).map((pl) => (
+                        <option key={pl.id} value={pl.id}>{pl.nome}</option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              })}
+            </div>
+            {(planos.data ?? []).length === 0 && (
+              <p className="mt-2 text-xs text-amber-700">
+                Nenhum plano de protecao cadastrado aqui — cadastre em{' '}
+                <strong>Configuracoes → Planos</strong> antes de escolher o destino.
+              </p>
+            )}
+          </>
         )}
       </div>
 

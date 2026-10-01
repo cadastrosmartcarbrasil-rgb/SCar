@@ -40,6 +40,7 @@ const ENTIDADES: { chave: EntidadeMutual; rotulo: string; nota: string }[] = [
   { chave: 'EVENT', rotulo: 'Eventos', nota: 'sem filtro por alteracao nem paginacao' },
   { chave: 'SALE_TEAM', rotulo: 'Equipes de vendas', nota: 'E ESTE o nivel que vira as nossas regionais' },
   { chave: 'CONSULTANT', rotulo: 'Consultores', nota: 'vendedores' },
+  { chave: 'PLAN', rotulo: 'Planos', nota: 'o nome dos plan_id — ⚠️ caminho PALPITADO, um 404 ja responde' },
   { chave: 'VEHICLE_TYPE', rotulo: 'Tipos de veiculo', nota: 'tabela de dominio' },
   { chave: 'VEHICLE_COLOR', rotulo: 'Cores', nota: 'tabela de dominio' },
   { chave: 'VEHICLE_CATEGORY', rotulo: 'Categorias', nota: 'tabela de dominio' },

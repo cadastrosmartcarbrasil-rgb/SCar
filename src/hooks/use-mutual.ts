@@ -10,7 +10,8 @@ import type {
   MutualStatusCruzado,
   MutualCampo, MutualPassoFunil, MutualConsultorPendente,
   CobrancaExternaResumo, MutualEquipeVendas,
-  MutualTipoVeiculoExterno, MutualCargaLinha, MutualCargaResultado,
+  MutualTipoVeiculoExterno,
+  MutualPlanoExterno, MutualCargaLinha, MutualCargaResultado,
   MutualDesfazerResultado,
 } from '@/lib/database.types';
 
@@ -463,6 +464,27 @@ export function useMutualTiposVeiculo() {
     queryKey: ['mutual', 'tipos-veiculo-externos'],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('mutual_tipos_veiculo_externos', {});
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+/**
+ * O de-para do PLANO (0085), com o peso da carteira DA UNIDADE escolhida.
+ *
+ * `unidade` nula = a base inteira. Passar a unidade importa: ordenar pelo
+ * volume da base toda poria no topo um plano que nao pesa nada na unidade que
+ * se esta carregando.
+ */
+export function useMutualPlanos(unidade: string | null) {
+  const supabase = createClient();
+  return useQuery<MutualPlanoExterno[]>({
+    queryKey: ['mutual', 'planos-externos', unidade],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('mutual_planos_externos', {
+        p_regional_id: unidade,
+      });
       if (error) throw error;
       return data ?? [];
     },

@@ -64,7 +64,12 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
 **O banco é o projeto Supabase `Scar Software`, ref `asinzcqbbqdglrguqtnr`** (sa-east-1) — ver
 "Qual é o banco" logo abaixo. **Nenhum dos outros três projetos da conta é este sistema.**
 
-**2. O QUE FALTA SUBIR.** **Nada no banco.** As migrations **`0001`..`0084`** estão aplicadas em
+**2. O QUE FALTA SUBIR.** **A `0085_mutual_de_para_plano`** — o de-para do PLANO, que a conferência
+da 0084 mostrou faltando. Sem ela a seção *Plano / cobertura* de `/integracao/mutual` não abre
+(chama `mutual_planos_externos`) e a carteira carregada fica **sem plano**, então a ficha do SAC
+mostra cobertura incompleta. Ela **não carrega nem muda preço** — abre `'PLAN'` na allow-list de
+`mutual_captura`, cria a tela do de-para e renomeia uma coluna cujo nome mentia. Ver a seção própria.
+As migrations **`0001`..`0084`** estão aplicadas em
 produção — a **`0084` (a CARGA) foi rodada e CONFERIDA em 01/10/2026**: as 14 funções existem e o
 rito da 0052 se manteve (0 RPCs nossas abertas ao `anon`; as 223 são de extensão, como documentado).
 **A carga em si NÃO foi executada** — 9 veículos e 5 associados, nenhum com `cobranca_externa`.
@@ -73,7 +78,7 @@ pelo usuário em 20/09/2026** e a **`0083` conferida no banco em 21/09/2026** (a
 `mutual_equipes_vendas`, `mutual_equipe_do_objeto` e `mutual_regional_do_objeto` existem).
 **A `0084_carga_mutual` é NOVA** — é a carga da carteira, por unidade. Sem ela a seção
 *Carga da carteira* de `/integracao/mutual` não abre (chama `mutual_carga_previa`).
-**Próxima migration livre: `0085`.**
+**Próxima migration livre: `0086`.**
 
 > **🔴 A `0084` NÃO carrega nada por si.** Ela cria o instrumento; quem carrega é o botão na tela,
 > por unidade e com confirmação. Rodar a migration é seguro e reversível — o risco começa no
@@ -87,7 +92,10 @@ pelo usuário em 20/09/2026** e a **`0083` conferida no banco em 21/09/2026** (a
 > carteira e sem nome) e o **de-para do tipo de veículo não foi registrado** — são 3 decisões
 > (`1`=390 carros · `2`=75 motos · `3`=14 caminhões, 2 sem tipo), na própria tela.
 >
-> **🔴 E O DE-PARA DO PLANO É IMPRATICÁVEL HOJE — ver a seção da 0084.**
+> **🔴 O DE-PARA DO PLANO deixou de ser impraticável — é a `0085`, ainda por rodar.** Ele **não
+> bloqueia a carga nem o boleto** (a carga carimba o valor que o Mutual cobra e o override vence),
+> mas sem ele a ficha do SAC mostra cobertura incompleta. São **17 escolhas** para cobrir 90% da
+> carteira da matriz, e a tela diz onde parar. Ver a seção da 0085.
 > **⚠️ O QUE FALTA É O CONTÊINER, NÃO O BANCO.** A tela da `0083` (seção *Equipes de vendas*) só
 > aparece depois do `docker compose up -d --build` com o commit da fase. Na build anterior a
 > seção de unidades não renderiza nada — era o defeito que a `0082` corrigiu.
@@ -451,9 +459,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0084`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **61 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 713 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0085`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **62 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 725 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Os portais e páginas públicas
@@ -1726,6 +1734,16 @@ PRESERVA o veiculo com movimento — `veiculo_tem_movimento`). Saneadores `mutua
 vinculo em `mutual_tipo_veiculo_do_externo`/`mutual_plano_do_externo` +
 `mutual_tipos_veiculo_externos` (a tela, com o PESO da carteira). Nenhum veiculo e faturado: todos
 entram com `cobranca_externa`, e e por ela que passam as 5 rotas de fatura da 0025)
+· `0085_mutual_de_para_plano` (o de-para do PLANO que a 0084 deixou faltando: `'PLAN'` entra na
+allow-list `chk_mutual_entidade` (0062) — era ela que RECUSAVA `/plan/` e deixava os `plan_id`
+como numeros sem nome —, `mutual_planos_externos(regional)` e a tela do de-para **com a COBERTURA
+ACUMULADA** (e ela que diz onde parar: 17 dos 42 ids cobrem 90% dos 481 faturaveis da matriz) e
+`mutual_tipos_veiculo_externos` recriada trocando `regional_id` por **`destino_id`** — a coluna
+guardava um `tipos_veiculo.id` e o nome mentia. So leitura: nao carrega, nao muda preco e nao
+toca em `veiculos`. **Duas hipoteses medidas e DESCARTADAS antes:** (1) "o preco identifica o
+plano" — a amostra da matriz sugeria `plan_id` = faixa de preco, e a base viva inteira desmente
+(a FIPE varia 6x a 14x dentro do MESMO id, 1.111x no id 48; e combo comercial, nao faixa);
+(2) "sao 42 decisoes, inviavel" — falso, e e o que torna isto entregavel)
 · `0082_carga_mutual_preparacao` (as TRES pecas que faltavam para a carga do Mutual poder rodar,
 e nenhuma delas carrega nada — ha teste provando que a operacao segue intacta: (A) **a UNIDADE sai
 do ASSOCIADO** — a corrente do consultor (0073/0074) foi medida com a base completa e esta VAZIA
@@ -1801,8 +1819,9 @@ vendedores, marcas/modelos, **cores do veículo**, tipos de veículo, cotas de p
 produtos, planos/combos (Prata/Ouro/Diamante), **comunicados** (mural interno), contas bancárias,
 integrações bancárias, plano de contas)
 · **Integração Mutual** (`/integracao/mutual`: consulta, diagnóstico, o agrupamento das equipes de
-vendas em unidades, o interruptor da cobrança externa e a **carga da carteira por unidade** —
-0084, com prévia, fila de trabalho por motivo e desfazer)
+vendas em unidades, o interruptor da cobrança externa, o **de-para de tipo de veículo e de plano**
+— 0084/0085, com o peso da carteira e a cobertura acumulada — e a **carga da carteira por
+unidade** — 0084, com prévia, fila de trabalho por motivo e desfazer)
 · **Rastreadores** (`/rastreadores`: parque por IMEI, estoque por unidade/plataforma, instalação no
 veículo, manutenção, painel de divergências com o cadastro da frota e relatórios de custo,
 recuperação e giro).
@@ -2342,8 +2361,8 @@ e os 42 ids **não têm nome** — são números (`48`=114 veículos, `88`=110, 
 39 valores com 1 a 21 cada). Contra **5 planos** no SCar (Essencial, Prata, Ouro, Diamante, Roubo
 e Furto). **Mapear 42 números sem nome não é uma decisão, é um palpite** — exatamente o que a
 postura da 0082 (só a decisão REGISTRADA carrega dado) manda não fazer.
-Resolver é uma `0085` pequena: `'PLAN'` na allow-list + `mutual_planos_externos()` no molde de
-`mutual_tipos_veiculo_externos()` (nome + peso da carteira) + a seção na tela.
+**✅ RESOLVIDO PELA `0085`** — e ao escrevê-la a frase acima virou meia verdade: **17 dos 42 ids
+cobrem 90%** da carteira faturável da matriz. Ver a seção própria.
 
 **2. 🔴 CORREÇÃO DE UM TEXTO MEU: o plano NÃO bloqueia o cutover do boleto.**
 A tela e a seção acima diziam *"no dia do cutover mensalidade nula cai no `cotar_plano` e, sem
@@ -2369,6 +2388,78 @@ atendimento real**, não antes de carregar.
   a placa chegar. A cobrança da placa é operacional.
 - **`DIFICULDADE FINANCEIRA`** (11 objetos na base toda) segue sem de-para: o usuário nomeou três
   status e esse não estava. Os objetos ficam de fora, contados.
+
+## O DE-PARA DO PLANO (0085) — `/integracao/mutual` → *Plano / cobertura*
+> Só leitura. **Não carrega, não muda preço, não toca em `veiculos`.** Ela abre a entidade,
+> cria a tela do de-para e conserta um nome de coluna que mentia.
+
+### 🔴 O QUE O PLANO CUSTA — e NÃO é o boleto
+`valor_mensalidade_veiculo` (0024) prefere o **override** e **nunca chama o `cotar_plano`** nesse
+ramo. A carga grava `final_total_value` em todos menos 3, então **470 dos 473 são faturados pelo
+valor carimbado, com ou sem plano**. O que o plano decide é a **cobertura que a ficha do SAC
+mostra** (`opcionais_veiculo`, 0029, chama o `cotar_plano` e com plano nulo devolve só a base +
+avulsos): sem ele o atendente não vê a que o associado tem direito. **Logo: resolver antes de
+outubro virar atendimento real, não antes de carregar.** `cutoverLiberado()` já estava certo em
+olhar valor e dia, não plano.
+
+### 🔴 DUAS HIPÓTESES MEDIDAS E DESCARTADAS — as duas quase viraram afirmação
+1. **"O preço identifica o plano, então o nome é dispensável."** Na amostra da MATRIZ a
+   mensalidade mediana separava os ids limpo (48 → R$ 196 · 88 → R$ 213 · 41 → R$ 120) e a FIPE
+   mediana acompanhava — o que sugeria `plan_id` = **faixa de preço**, equivalente à nossa
+   `tabela_precos_faixa`. **A base viva inteira desmente:** dentro do MESMO `plan_id` a FIPE varia
+   de **6× a 14×** (e **1.111×** no id 48). O id é **combo comercial**, e a mensalidade varia com a
+   FIPE dentro dele — então ela não o identifica. *É a lição do módulo repetida: amostra pequena
+   sugeriu padrão que a base inteira nega.*
+2. **"São 42 decisões, inviável."** Falso, e é o que torna isto entregável: **17 ids cobrem 90%**
+   dos 481 faturáveis da matriz (na base viva inteira, **26 de 91** cobrem 90% dos 3.041). Por
+   isso a RPC devolve **`cobertura_acumulada`**: a tela diz **onde parar**. Sem essa coluna a tela
+   é uma lista de 42 números de peso aparentemente igual, e a resposta natural é "inviável" — a
+   conclusão errada que esta migration existe para desfazer.
+
+### O perfil é PERFIL, nunca identificação
+`mensalidade_mediana`, `fipe_min` e `fipe_max` entram para **reconhecer** ("este é de moto") e para
+**desconfiar**: faixa larga é plano genérico — o id 48 vai de R$ 100 a R$ 111.140 de FIPE.
+`amplitudeFipe()` é esse quociente, e a tela marca "genérico" a partir de 6×.
+**A mediana é `percentile_cont`, que INTERPOLA** (mesma escolha da 0064): a mediana de
+200/210/220/240 é 215, um valor que não existe na amostra. Serve para perfil; não é um preço real.
+
+### ⚠️ O ENDPOINT `/plan/` NÃO FOI CONFIRMADO NO SWAGGER
+O swagger do Mutual não é alcançável do ambiente onde a 0085 foi escrita. O caminho em
+`ENTIDADES_MUTUAL.PLAN` (`/contract/plan/`) segue o padrão das outras entidades de contrato e
+**a tela diz que é um palpite** — puxar é um clique e um 404 responde em dois segundos. Trocar o
+caminho é **uma linha** em `src/lib/mutual.ts`: nada de schema depende dele.
+**E o de-para NÃO depende da captura.** `integracao_vinculos` (0082) guarda o id e não tem FK para
+`mutual_captura`, então os 42 ids aparecem na tela **com o peso da carteira mesmo sem nome** —
+exatamente como as 19 equipes de vendas foram agrupadas antes de `SALE_TEAM` ser puxada (0083).
+Capturar depois só preenche o NOME.
+
+### O peso é DA UNIDADE escolhida, de propósito
+`mutual_planos_externos(p_regional_id)` nulo = a base inteira; com unidade, o peso é o daquela
+unidade. Ordenar pelo volume da base toda poria no topo um plano que não pesa nada na unidade que
+se está carregando — e a carga roda **por unidade**.
+
+### 🔴 `regional_id` → `destino_id`: o nome mentia
+A 0084 devolvia o de-para do TIPO DE VEÍCULO numa coluna chamada **`regional_id`** que guarda um
+`tipos_veiculo.id`. Nome que mente é a família de erro que este projeto já pagou caro (o branch
+"espelhado", a `schema_migrations` vazia): a próxima sessão lê `regional_id`, conclui unidade e
+constrói em cima. Muda a lista de OUT, então é **DROP + CREATE**, e o rename foi junto em
+`src/lib/mutual.ts`, `database.types.ts` e na tela.
+
+### 🔴 A ALLOW-LIST TEM TRÊS CÓPIAS — e redigitar derruba em silêncio o que esquecer
+`chk_mutual_entidade` (banco) · `EntidadeMutual` (`database.types.ts`) · `ENTIDADES_MUTUAL`
+(`src/lib/mutual.ts`, que tem o caminho de cada uma). **A primeira versão desta migration omitiu
+`'CONTRACT'`** ao reescrever o CHECK — e o contrato é justamente quem guarda o dia de vencimento
+(0064) e a `sales_team_id` (0083): a captura dele pararia de funcionar e o sintoma apareceria dias
+depois, na carga. **A suíte pegou.** Desde então existem duas guardas, e elas são a entrega:
+- a suíte `0085` insere **uma linha por entidade**, afirmando a lista INTEIRA, não só a nova;
+- `src/lib/mutual.ts` tem uma **afirmação de COMPILAÇÃO** (`_entidadesSincronizadas`) de que as
+  duas cópias do cliente são iguais nos dois sentidos — divergir **quebra o `tsc`**, não a tela.
+**Mexeu numa, mexa nas três.**
+
+### Lógica pura testada
+`src/lib/mutual.ts` — `planosPendentes`, **`idsPara90Pct`** (quantas decisões cobrem o alvo; conta
+sobre os faturáveis, não sobre `cobertura_acumulada`, para não depender da ordenação da RPC),
+`amplitudeFipe`. Suíte de banco em `supabase/tests/0085_mutual_de_para_plano.test.sql`.
 
 ## PREPARAÇÃO DA CARGA DO MUTUAL (0082) — as 3 peças que faltavam
 > Nada aqui carrega dado. A regra da Fase 1 continua de pé e **há teste provando** que `clientes`,
