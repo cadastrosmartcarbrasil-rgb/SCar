@@ -64,11 +64,17 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
 **O banco é o projeto Supabase `Scar Software`, ref `asinzcqbbqdglrguqtnr`** (sa-east-1) — ver
 "Qual é o banco" logo abaixo. **Nenhum dos outros três projetos da conta é este sistema.**
 
-**2. O QUE FALTA SUBIR.** **A `0085_mutual_de_para_plano`** — o de-para do PLANO, que a conferência
-da 0084 mostrou faltando. Sem ela a seção *Plano / cobertura* de `/integracao/mutual` não abre
-(chama `mutual_planos_externos`) e a carteira carregada fica **sem plano**, então a ficha do SAC
-mostra cobertura incompleta. Ela **não carrega nem muda preço** — abre `'PLAN'` na allow-list de
-`mutual_captura`, cria a tela do de-para e renomeia uma coluna cujo nome mentia. Ver a seção própria.
+**2. O QUE FALTA SUBIR.** **Nada no banco.** As migrations **`0001`..`0085`** estão aplicadas —
+a **`0085` (de-para do PLANO) foi rodada e CONFERIDA em 01/10/2026**: as 7 funções do módulo
+existem com `search_path` fixo, a allow-list de `mutual_captura` tem as **15 entidades** (conferidas
+uma a uma, `CONTRACT` inclusive), `mutual_tipos_veiculo_externos`/`mutual_planos_externos` devolvem
+**`destino_id`** e o rito da 0052 se manteve — **0 RPCs nossas abertas ao `anon`**; as 223 são de
+extensão (`btree_gist` 188 · `pg_trgm` 31 · `unaccent` 4), como documentado.
+**Só falta CLICAR:** puxar `PLAN` e `SALE_TEAM` (as duas com **0 linhas capturadas**) e registrar
+o de-para — **0 vínculos de `PLAN` e 0 de `VEHICLE_TYPE`** gravados até agora.
+**Próxima migration livre: `0086`** — e ela tem UM conserto pendente de passagem: o
+`comment on function mutual_planos_externos` diz *"17 ids cobrem 90%"*, e **o número é 18**
+(ver a seção da 0085). A migration não foi reescrita porque é append-only.
 As migrations **`0001`..`0084`** estão aplicadas em
 produção — a **`0084` (a CARGA) foi rodada e CONFERIDA em 01/10/2026**: as 14 funções existem e o
 rito da 0052 se manteve (0 RPCs nossas abertas ao `anon`; as 223 são de extensão, como documentado).
@@ -78,7 +84,6 @@ pelo usuário em 20/09/2026** e a **`0083` conferida no banco em 21/09/2026** (a
 `mutual_equipes_vendas`, `mutual_equipe_do_objeto` e `mutual_regional_do_objeto` existem).
 **A `0084_carga_mutual` é NOVA** — é a carga da carteira, por unidade. Sem ela a seção
 *Carga da carteira* de `/integracao/mutual` não abre (chama `mutual_carga_previa`).
-**Próxima migration livre: `0086`.**
 
 > **🔴 A `0084` NÃO carrega nada por si.** Ela cria o instrumento; quem carrega é o botão na tela,
 > por unidade e com confirmação. Rodar a migration é seguro e reversível — o risco começa no
@@ -88,14 +93,17 @@ pelo usuário em 20/09/2026** e a **`0083` conferida no banco em 21/09/2026** (a
 > 8 são os 0 km sem placa, e **só eles**. Zero CPF inválido, zero colisão, zero sem data de ativação.
 >
 > **⚠️ FALTAM DOIS CLIQUES ANTES DE CARREGAR** (nenhum dos dois bloqueia, mas os dois mudam o que
-> a base vai dizer): **`SALE_TEAM` tem ZERO linhas capturadas** (as 19 equipes aparecem com
-> carteira e sem nome) e o **de-para do tipo de veículo não foi registrado** — são 3 decisões
+> a base vai dizer) — **reconferido em 01/10/2026, os dois continuam pendentes:**
+> **`SALE_TEAM` tem ZERO linhas capturadas** (as 19 equipes aparecem com
+> carteira e sem nome) e o **de-para do tipo de veículo não foi registrado** (ZERO vínculos de
+> `VEHICLE_TYPE`) — são 3 decisões
 > (`1`=390 carros · `2`=75 motos · `3`=14 caminhões, 2 sem tipo), na própria tela.
 >
-> **🔴 O DE-PARA DO PLANO deixou de ser impraticável — é a `0085`, ainda por rodar.** Ele **não
-> bloqueia a carga nem o boleto** (a carga carimba o valor que o Mutual cobra e o override vence),
-> mas sem ele a ficha do SAC mostra cobertura incompleta. São **17 escolhas** para cobrir 90% da
-> carteira da matriz, e a tela diz onde parar. Ver a seção da 0085.
+> **🔴 O DE-PARA DO PLANO deixou de ser impraticável — a `0085` está NO AR, e falta decidir.** Ele
+> **não bloqueia a carga nem o boleto** (a carga carimba o valor que o Mutual cobra e o override
+> vence), mas sem ele a ficha do SAC mostra cobertura incompleta. Medido em produção: **42 ids com
+> carteira na matriz, e 18 deles cobrem 90%** dos 481 faturáveis — a tela diz onde parar.
+> **Hoje há ZERO de-para de plano registrado.** Ver a seção da 0085.
 > **⚠️ O QUE FALTA É O CONTÊINER, NÃO O BANCO.** A tela da `0083` (seção *Equipes de vendas*) só
 > aparece depois do `docker compose up -d --build` com o commit da fase. Na build anterior a
 > seção de unidades não renderiza nada — era o defeito que a `0082` corrigiu.
@@ -1737,7 +1745,7 @@ entram com `cobranca_externa`, e e por ela que passam as 5 rotas de fatura da 00
 · `0085_mutual_de_para_plano` (o de-para do PLANO que a 0084 deixou faltando: `'PLAN'` entra na
 allow-list `chk_mutual_entidade` (0062) — era ela que RECUSAVA `/plan/` e deixava os `plan_id`
 como numeros sem nome —, `mutual_planos_externos(regional)` e a tela do de-para **com a COBERTURA
-ACUMULADA** (e ela que diz onde parar: 17 dos 42 ids cobrem 90% dos 481 faturaveis da matriz) e
+ACUMULADA** (e ela que diz onde parar: 18 dos 42 ids cobrem 90% dos 481 faturaveis da matriz) e
 `mutual_tipos_veiculo_externos` recriada trocando `regional_id` por **`destino_id`** — a coluna
 guardava um `tipos_veiculo.id` e o nome mentia. So leitura: nao carrega, nao muda preco e nao
 toca em `veiculos`. **Duas hipoteses medidas e DESCARTADAS antes:** (1) "o preco identifica o
@@ -2361,7 +2369,7 @@ e os 42 ids **não têm nome** — são números (`48`=114 veículos, `88`=110, 
 39 valores com 1 a 21 cada). Contra **5 planos** no SCar (Essencial, Prata, Ouro, Diamante, Roubo
 e Furto). **Mapear 42 números sem nome não é uma decisão, é um palpite** — exatamente o que a
 postura da 0082 (só a decisão REGISTRADA carrega dado) manda não fazer.
-**✅ RESOLVIDO PELA `0085`** — e ao escrevê-la a frase acima virou meia verdade: **17 dos 42 ids
+**✅ RESOLVIDO PELA `0085`** — e ao escrevê-la a frase acima virou meia verdade: **18 dos 42 ids
 cobrem 90%** da carteira faturável da matriz. Ver a seção própria.
 
 **2. 🔴 CORREÇÃO DE UM TEXTO MEU: o plano NÃO bloqueia o cutover do boleto.**
@@ -2410,8 +2418,8 @@ olhar valor e dia, não plano.
    de **6× a 14×** (e **1.111×** no id 48). O id é **combo comercial**, e a mensalidade varia com a
    FIPE dentro dele — então ela não o identifica. *É a lição do módulo repetida: amostra pequena
    sugeriu padrão que a base inteira nega.*
-2. **"São 42 decisões, inviável."** Falso, e é o que torna isto entregável: **17 ids cobrem 90%**
-   dos 481 faturáveis da matriz (na base viva inteira, **26 de 91** cobrem 90% dos 3.041). Por
+2. **"São 42 decisões, inviável."** Falso, e é o que torna isto entregável: **18 ids cobrem 90%**
+   dos 481 faturáveis da matriz (na base viva inteira, **29 de 91** cobrem 90% dos 3.041). Por
    isso a RPC devolve **`cobertura_acumulada`**: a tela diz **onde parar**. Sem essa coluna a tela
    é uma lista de 42 números de peso aparentemente igual, e a resposta natural é "inviável" — a
    conclusão errada que esta migration existe para desfazer.
@@ -2460,6 +2468,33 @@ depois, na carga. **A suíte pegou.** Desde então existem duas guardas, e elas 
 `src/lib/mutual.ts` — `planosPendentes`, **`idsPara90Pct`** (quantas decisões cobrem o alvo; conta
 sobre os faturáveis, não sobre `cobertura_acumulada`, para não depender da ordenação da RPC),
 `amplitudeFipe`. Suíte de banco em `supabase/tests/0085_mutual_de_para_plano.test.sql`.
+
+### ✅ CONFERIDA EM PRODUÇÃO (01/10/2026) — e um número meu estava errado
+O banco está como esperado: as 7 funções do módulo existem como `security definer` com
+`search_path` fixo, a allow-list tem as **15 entidades** (conferidas **uma a uma** pela guarda da
+suíte — `CONTRACT` inclusive), as duas RPCs devolvem **`destino_id`**, e o rito da 0052 se manteve:
+**0 RPCs nossas abertas ao `anon`**; as 223 são de extensão.
+
+**🔴 CORREÇÃO DE UM NÚMERO MEU: são 18 ids, não 17 — e 29 na base inteira, não 26.**
+Medido na carteira real com a regra certa (*a primeira posição cujo acumulado alcança o alvo*):
+a posição 17 cobre **89,81%** e a 18 cobre **90,64%**. Não é arredondamento — conferi a fração
+exata, sem `numeric(5,1)`. O erro foi meu, numa consulta avulsa anterior à migration, com uma
+contagem acumulada frouxa (`count(cob <= 90) + 1`).
+**A conclusão não muda** ("é entregável, e a tela diz onde parar"), mas o número mudou — e número
+errado escrito com confiança é justamente a família de erro que este arquivo persegue.
+**`idsPara90Pct` sempre esteve certa:** ela é a régua, e foi contra ela que o SQL foi conferido.
+
+⚠️ **O cabeçalho da migration e o `comment on function` dela ainda dizem 17/26.** A `0085` já está
+aplicada e **migration é append-only** — não foi reescrita de propósito, porque o arquivo é o
+registro do que rodou. O texto do comentário no banco sai **na próxima migration**, de passagem;
+está anotado na caixa de estado do topo.
+
+### O que falta CLICAR (medido em 01/10/2026 — zero progresso até agora)
+- **`PLAN` tem 0 linhas capturadas** → puxar *Planos* na tela (e é aí que o palpite do `/plan/`
+  é confirmado ou vira 404 em dois segundos).
+- **0 vínculos de `PLAN`** → as 18 decisões que cobrem 90% da matriz. Os três maiores são
+  `48` (114 faturáveis · 23,7%), `88` (110 · 46,6%) e `41` (44 · 55,7%).
+- **0 vínculos de `VEHICLE_TYPE`** → as 3 decisões da 0084, que continuam pendentes.
 
 ## PREPARAÇÃO DA CARGA DO MUTUAL (0082) — as 3 peças que faltavam
 > Nada aqui carrega dado. A regra da Fase 1 continua de pé e **há teste provando** que `clientes`,

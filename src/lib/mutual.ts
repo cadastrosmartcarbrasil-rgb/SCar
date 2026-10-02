@@ -774,11 +774,16 @@ export function planosPendentes(planos: PlanoExterno[]): PlanoExterno[] {
  * Quantos ids, do topo para baixo, bastam para cobrir `alvo`% da carteira
  * faturavel.
  *
- * E o numero que torna este de-para entregavel: medido em 01/10/2026, **17 de
- * 42 ids cobrem 90%** dos 481 faturaveis da matriz (26 de 91 na base viva
- * inteira). Sem ele a tela e uma lista de 42 numeros de peso aparentemente
- * igual, e a resposta natural e "inviavel" — que foi a conclusao errada que
- * esta funcao existe para desfazer.
+ * E o numero que torna este de-para entregavel. **CONFERIDO em producao com a
+ * 0085 no ar (01/10/2026): 18 de 42 ids cobrem 90%** dos 481 faturaveis da
+ * matriz, e 29 de 91 cobrem 90% dos 3.041 da base viva inteira. Sem ele a tela
+ * e uma lista de 42 numeros de peso aparentemente igual, e a resposta natural e
+ * "inviavel" — a conclusao errada que esta funcao existe para desfazer.
+ *
+ * ⚠️ O cabecalho da migration 0085 e o `comment on function` dela dizem 17/26:
+ * foi um off-by-one meu, medido com a regra errada antes de a migration subir
+ * (a posicao 17 cobre 89,81%, nao 90%). A migration e append-only e NAO foi
+ * reescrita; o texto do comentario no banco sai na proxima migration.
  *
  * Conta sobre os FATURAVEIS (nao sobre `cobertura_acumulada`, que o banco
  * calcula na ordem dele) para a tela nao depender da ordenacao da RPC.
