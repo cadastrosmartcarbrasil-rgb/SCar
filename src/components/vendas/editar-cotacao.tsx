@@ -6,7 +6,8 @@ import { Lock, Percent, ShieldCheck, Loader2 } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { FormField, Input, Select, MoneyInput } from '@/components/ui/field';
-import { usePlanos, useProdutos, useProdutosPorPlano } from '@/hooks/use-precificacao';
+import { usePlanos, useProdutos, useProdutosPorPlano, useTiposPorProduto } from '@/hooks/use-precificacao';
+import { produtosParaTipo } from '@/lib/produtos';
 import {
   useAtualizarCotacao, useProdutosObrigatorios, useSimularDesconto, useAprovarDesconto,
 } from '@/hooks/use-vendas';
@@ -28,6 +29,7 @@ export function EditarCotacao({
   const { data: planos } = usePlanos();
   const { data: produtos } = useProdutos();
   const { data: produtosPorPlano } = useProdutosPorPlano();
+  const { data: tiposPorProduto } = useTiposPorProduto();
   const atualizar = useAtualizarCotacao();
   const aprovar = useAprovarDesconto();
 
@@ -46,9 +48,14 @@ export function EditarCotacao({
   );
 
   // Opcionais disponiveis = produtos ativos que NAO sao obrigatorios do pacote.
+  // So o que atende o tipo do veiculo (0089). O que ja esta na cotacao e nao
+  // atende fica na lista, marcado, para nao sumir calado.
   const disponiveis = useMemo(
-    () => (produtos ?? []).filter((p) => p.status && !idsObrigatorios.includes(p.id)),
-    [produtos, idsObrigatorios],
+    () => produtosParaTipo(
+      (produtos ?? []).filter((p) => p.status && !idsObrigatorios.includes(p.id)),
+      cotacao.tipo_veiculo_id, tiposPorProduto, opcionais,
+    ),
+    [produtos, idsObrigatorios, cotacao.tipo_veiculo_id, tiposPorProduto, opcionais],
   );
 
   // O combo tambem carrega OPCIONAIS (plano_produtos). Eles nao sao
@@ -223,6 +230,11 @@ export function EditarCotacao({
                   }
                 />
                 {p.nome}
+                {p.foraDoTipo && (
+                  <span className="rounded bg-amber-100 px-1.5 py-px text-[10px] uppercase text-amber-800">
+                    nao atende este tipo — nao e cobrado
+                  </span>
+                )}
               </label>
             ))}
             {livres.length === 0 && <p className="text-sm text-slate-400">Nenhum opcional disponivel.</p>}

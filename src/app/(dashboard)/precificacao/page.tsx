@@ -6,7 +6,8 @@ import { Calculator, Loader2, Table2, Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FormField, Input, Select } from '@/components/ui/field';
-import { useTiposVeiculo, useProdutos, useSimularPreco, useCotasParticipacao, usePlanos, type ResultadoSimulacao } from '@/hooks/use-precificacao';
+import { useTiposVeiculo, useProdutos, useSimularPreco, useCotasParticipacao, usePlanos, useTiposPorProduto, type ResultadoSimulacao } from '@/hooks/use-precificacao';
+import { produtosParaTipo } from '@/lib/produtos';
 import { TabelaPrecosEditor } from '@/components/precificacao/tabela-precos-editor';
 import { ImportarTabela } from '@/components/precificacao/importar-tabela';
 import { formatCurrency } from '@/lib/utils';
@@ -44,6 +45,7 @@ export default function PrecificacaoPage() {
 function Simulador() {
   const { data: tipos } = useTiposVeiculo();
   const { data: produtos } = useProdutos();
+  const { data: tiposPorProduto } = useTiposPorProduto();
   const { data: cotas } = useCotasParticipacao();
   const { data: planos } = usePlanos();
   const { data: regionais } = useRegionais();
@@ -57,8 +59,13 @@ function Simulador() {
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [resultado, setResultado] = useState<ResultadoSimulacao | null>(null);
 
-  const opcionais = useMemo(() => (produtos ?? []).filter((p) => !p.obrigatorio && p.status), [produtos]);
-  const obrigatorios = useMemo(() => (produtos ?? []).filter((p) => p.obrigatorio && p.status), [produtos]);
+  // So o que atende o tipo escolhido (0089) — e o que o motor vai cobrar.
+  const doTipo = useMemo(
+    () => produtosParaTipo((produtos ?? []).filter((p) => p.status), tipoVeiculoId, tiposPorProduto),
+    [produtos, tipoVeiculoId, tiposPorProduto],
+  );
+  const opcionais = useMemo(() => doTipo.filter((p) => !p.obrigatorio), [doTipo]);
+  const obrigatorios = useMemo(() => doTipo.filter((p) => p.obrigatorio), [doTipo]);
 
   function toggle(id: string) {
     setSelecionados((s) => {

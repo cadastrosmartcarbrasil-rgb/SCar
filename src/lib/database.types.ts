@@ -2861,6 +2861,11 @@ export type Database = {
       participacao_faixa: TableDef<ParticipacaoFaixaRow, [Rel<'tipo_veiculo_id', 'tipos_veiculo'>]>;
       adesao_faixa: TableDef<AdesaoFaixaRow, [Rel<'tipo_veiculo_id', 'tipos_veiculo'>]>;
       plano_produtos: TableDef<{ plano_id: string; produto_id: string }>;
+      /** 0089 — para quais tipos o produto se aplica. Sem linha = todos os tipos. */
+      produto_tipos_veiculo: TableDef<
+        { produto_id: string; tipo_veiculo_id: string; created_at: string },
+        [Rel<'produto_id', 'produtos'>, Rel<'tipo_veiculo_id', 'tipos_veiculo'>]
+      >;
       empresa: TableDef<EmpresaRow>;
       mandatos: TableDef<MandatosRow, [Rel<'empresa_id', 'empresa'>]>;
       diretoria: TableDef<DiretoriaRow, [Rel<'mandato_id', 'mandatos'>]>;

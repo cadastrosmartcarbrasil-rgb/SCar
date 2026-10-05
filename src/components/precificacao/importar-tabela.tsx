@@ -10,13 +10,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select } from '@/components/ui/field';
 import {
-  useAdesoes, useParticipacoes, useProdutos, useSalvarTabela, useTabelaPrecos, useTiposVeiculo,
+  useAdesoes, useParticipacoes, useProdutos, useSalvarTabela, useTabelaPrecos, useTiposVeiculo, useTiposPorProduto,
 } from '@/hooks/use-precificacao';
 import {
   compararTabelas, gerarModeloCsv, interpretarPlanilha, matrizDeCsv,
   type BandaImportada, type ProdutoColuna, type ResultadoImportacao,
 } from '@/lib/precificacao-import';
 import { formatCurrency } from '@/lib/utils';
+import { produtoAtendeTipo } from '@/lib/produtos';
 import { baixarCsv } from '@/components/financeiro/ui-financeiro';
 
 /** Le .xlsx com o exceljs (import dinamico: nao pesa no bundle da pagina). */
@@ -52,6 +53,7 @@ async function matrizDeXlsx(arquivo: File): Promise<string[][]> {
 export function ImportarTabela() {
   const { data: tipos } = useTiposVeiculo();
   const { data: produtos } = useProdutos();
+  const { data: tiposPorProduto } = useTiposPorProduto();
   const [tipoId, setTipoId] = useState('');
 
   const { data: tabela } = useTabelaPrecos(tipoId || undefined);
@@ -66,9 +68,10 @@ export function ImportarTabela() {
   // Mesma regra do editor: so os obrigatorios que variam por faixa viram coluna.
   const colunasProduto: ProdutoColuna[] = useMemo(
     () => (produtos ?? [])
-      .filter((p) => p.metodo_preco === 'FAIXA_FIPE' && p.status && p.obrigatorio)
+      .filter((p) => p.metodo_preco === 'FAIXA_FIPE' && p.status && p.obrigatorio
+        && produtoAtendeTipo(p.id, tipoId, tiposPorProduto))
       .map((p) => ({ id: p.id, nome: p.nome })),
-    [produtos],
+    [produtos, tipoId, tiposPorProduto],
   );
 
   // Tabela em vigor, no mesmo formato do arquivo — base da comparacao.

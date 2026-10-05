@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
+import type { TiposPorProduto } from '@/lib/produtos';
 import type {
   TiposVeiculoRow,
   ProdutosRow,
@@ -48,6 +49,21 @@ export function useProdutos() {
       const { data, error } = await supabase.from('produtos').select('*').order('categoria').order('nome');
       if (error) throw error;
       return data ?? [];
+    },
+  });
+}
+
+/** 0089 — produto_id -> tipos de veiculo a que ele se aplica (ausente = todos). */
+export function useTiposPorProduto() {
+  const supabase = createClient();
+  return useQuery<TiposPorProduto>({
+    queryKey: ['precificacao', 'tipos-por-produto'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('produto_tipos_veiculo').select('produto_id, tipo_veiculo_id');
+      if (error) throw error;
+      const mapa: TiposPorProduto = {};
+      for (const v of data ?? []) (mapa[v.produto_id] ??= []).push(v.tipo_veiculo_id);
+      return mapa;
     },
   });
 }
@@ -239,7 +255,8 @@ export function useSaveProduto() {
   const supabase = createClient();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (p: Partial<ProdutosRow>) => {
+    // `tiposIds` vazio = o produto vale para TODOS os tipos (0089).
+    mutationFn: async (p: Partial<ProdutosRow> & { tiposIds?: string[] }) => {
       const payload = {
         nome: p.nome,
         fornecedor_nome: p.fornecedor_nome || 'Interno',
@@ -250,15 +267,33 @@ export function useSaveProduto() {
         categoria: p.categoria || 'BENEFICIO',
         status: p.status ?? true,
       };
-      if (p.id) {
-        const { error } = await supabase.from('produtos').update(payload).eq('id', p.id);
+      let produtoId = p.id;
+      if (produtoId) {
+        const { error } = await supabase.from('produtos').update(payload).eq('id', produtoId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('produtos').insert(payload);
+        const { data, error } = await supabase.from('produtos').insert(payload).select('id').single();
         if (error) throw error;
+        produtoId = data.id;
+      }
+      if (p.tiposIds) {
+        // Substitui os tipos do produto (mesmo padrao de plano_produtos).
+        const { error: delErr } = await supabase.from('produto_tipos_veiculo').delete().eq('produto_id', produtoId);
+        if (delErr) throw delErr;
+        if (p.tiposIds.length > 0) {
+          const { error: insErr } = await supabase
+            .from('produto_tipos_veiculo')
+            .insert(p.tiposIds.map((t) => ({ produto_id: produtoId!, tipo_veiculo_id: t })));
+          if (insErr) throw insErr;
+        }
       }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['precificacao', 'produtos'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['precificacao', 'produtos'] });
+      qc.invalidateQueries({ queryKey: ['precificacao', 'tipos-por-produto'] });
+      // O preco muda junto: comparativo, simulacao e obrigatorios da cotacao.
+      qc.invalidateQueries({ queryKey: ['vendas'] });
+    },
   });
 }
 

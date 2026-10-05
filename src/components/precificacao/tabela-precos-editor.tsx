@@ -6,10 +6,11 @@ import { Plus, Trash2, Save, Percent, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/field';
 import {
-  useTiposVeiculo, useProdutos, useTabelaPrecos, useParticipacoes, useAdesoes, useSalvarTabela,
+  useTiposVeiculo, useProdutos, useTabelaPrecos, useParticipacoes, useAdesoes, useSalvarTabela, useTiposPorProduto,
   useSalvarRegraRastreador,
 } from '@/hooks/use-precificacao';
 import { AdicionalRiscoRegional } from './adicional-risco';
+import { produtoAtendeTipo } from '@/lib/produtos';
 
 interface Banda {
   fipe_minimo: number;
@@ -23,6 +24,7 @@ interface Banda {
 export function TabelaPrecosEditor() {
   const { data: tipos } = useTiposVeiculo();
   const { data: produtos } = useProdutos();
+  const { data: tiposPorProduto } = useTiposPorProduto();
   const [tipoId, setTipoId] = useState('');
   const { data: tabela } = useTabelaPrecos(tipoId || undefined);
   const { data: participacoes } = useParticipacoes(tipoId || undefined);
@@ -44,8 +46,10 @@ export function TabelaPrecosEditor() {
   // variam por faixa (Protecao Casco e Taxa Administrativa). Opcionais (RCF,
   // vidros, etc.) e o Rastreador (regra) nao ocupam coluna aqui.
   const faixaProdutos = useMemo(
-    () => (produtos ?? []).filter((p) => p.metodo_preco === 'FAIXA_FIPE' && p.status && p.obrigatorio),
-    [produtos],
+    // So o produto que atende ESTE tipo vira coluna (0089): o motor nao cobra o resto.
+    () => (produtos ?? []).filter((p) => p.metodo_preco === 'FAIXA_FIPE' && p.status && p.obrigatorio
+      && produtoAtendeTipo(p.id, tipoId, tiposPorProduto)),
+    [produtos, tipoId, tiposPorProduto],
   );
 
   const [bandas, setBandas] = useState<Banda[]>([]);

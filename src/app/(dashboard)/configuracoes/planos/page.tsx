@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { FormField, Input } from '@/components/ui/field';
 import {
-  usePlanos, useProdutos, usePlanoProdutos, useSavePlano, useDeletePlano,
+  usePlanos, useProdutos, usePlanoProdutos, useSavePlano, useDeletePlano, useTiposVeiculo, useTiposPorProduto,
 } from '@/hooks/use-precificacao';
+import { rotuloTiposDoProduto } from '@/lib/produtos';
 import type { PlanosProtecaoRow } from '@/lib/database.types';
 
 interface Edicao {
@@ -24,6 +25,9 @@ interface Edicao {
 export default function PlanosPage() {
   const { data: planos, isLoading } = usePlanos();
   const { data: produtos } = useProdutos();
+  const { data: tipos } = useTiposVeiculo();
+  const { data: tiposPorProduto } = useTiposPorProduto();
+  const nomeDoTipo = (id: string) => (tipos ?? []).find((t) => t.id === id)?.nome;
   const salvar = useSavePlano();
   const excluir = useDeletePlano();
 
@@ -163,10 +167,16 @@ export default function PlanosPage() {
                       {p.nome}
                       <span className="rounded bg-slate-100 px-1.5 text-[10px] uppercase text-slate-500">{p.categoria}</span>
                     </span>
+                    {tiposPorProduto?.[p.id]?.length ? (
+                      <span className="text-[11px] text-slate-500">so {rotuloTiposDoProduto(p.id, tiposPorProduto, nomeDoTipo)}</span>
+                    ) : null}
                   </label>
                 ))}
               </div>
-              <p className="mt-1 text-xs text-slate-400">A cotacao base entra automaticamente; marque apenas os adicionais.</p>
+              <p className="mt-1 text-xs text-slate-400">
+                A cotacao base entra automaticamente; marque apenas os adicionais. O plano pode servir
+                varios tipos de veiculo: cada veiculo so leva (e so paga) o opcional que atende o tipo dele.
+              </p>
             </div>
 
             <label className="flex items-start gap-2 rounded-lg border border-slate-200 p-2 text-sm text-slate-600">

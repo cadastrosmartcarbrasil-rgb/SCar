@@ -96,7 +96,15 @@ mostra a seção *Categoria do veículo* em `/integracao/mutual`.
 Mutual: Taxa Adm 25 + terceiros 20 + rastreador 35 + 24h 23 − 6 = R$ 97, sem casco) e o plano
 **RASTREAMENTO**. Default `false`: nenhum plano muda ao aplicar; o boleto dos migrados não muda
 (override). Depois de rodar: marcar *Sem proteção de casco* no RASTREAMENTO e no plano de moto, em
-`Configurações → Planos`. **Próxima migration livre: `0089`.**
+`Configurações → Planos`.
+**🔴 A `0089_produto_tipo_veiculo` também é NOVA e AINDA NÃO FOI RODADA** (roda depois da 0088). Pedido
+do usuário: *"ao cadastrar produtos, deixar claro para qual tipo de veículo se aplica… não parabrisa
+para motos"*. Cria `produto_tipos_veiculo` (sem linha = TODOS os tipos, então é no-op ao aplicar) e
+recria `calcular_mensalidade` (produção conferida idêntica à 0081, md5 igual, em 05/10) com UMA
+condição: produto que não atende o tipo não entra no motor — nem da base, nem do plano, nem avulso.
+As telas (Produtos, Planos, captura da venda, edição da cotação, ficha do veículo, simulador, tabela
+de preços e importação) só oferecem o que atende o tipo; regra pura em `src/lib/produtos.ts`.
+**Próxima migration livre: `0090`.**
 **Próxima migration livre era `0088`.** As **`0001`..`0086`** estão aplicadas — a **`0086` foi rodada e
 CONFERIDA em 05/10/2026**: o comentário de `mutual_planos_externos` diz 18/42 e 29/91 (sem "17" nem
 "26"), a função segue `security definer` com `search_path=public`, fechada ao `anon`; 0 `security
@@ -496,9 +504,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0088`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **65 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 755 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0089`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **66 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 764 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Os portais e páginas públicas
@@ -1799,6 +1807,15 @@ obrigatorios da cotacao, o snapshot da venda e o hotlink. Casco amarrado ao plan
 Taxa Adm, 24h e a regra do rastreador ficam; adesao e participacao nao foram tocadas (o que fazer com
 a participacao de quem nao tem casco e decisao a parte — o retorno anuncia `sem_casco`). Default
 false; override do veiculo continua mandando no boleto)
+· `0089_produto_tipo_veiculo` (PRODUTO POR TIPO DE VEICULO: `produto_tipos_veiculo (produto_id,
+tipo_veiculo_id)` com FK nas duas pontas — TABELA, nao array, para apagar um tipo nao deixar produto
+restrito a ninguem. SEM LINHA = TODOS OS TIPOS (no-op ao aplicar). `produto_atende_tipo` e SECURITY
+DEFINER porque o motor tambem roda para o associado do /portal, que a RLS da tabela nao deixa ler.
+`calcular_mensalidade` com o corpo da 0081 + UMA condicao no laco: a regra vale NO MOTOR, entao
+parabrisa amarrado ao Ouro some do preco e da ficha do SAC da moto no Ouro, e o mesmo plano segue
+servindo carro e moto. Boleto: so muda veiculo SEM override (3 na base em 05/10). Espelho puro em
+`src/lib/produtos.ts` (`produtoAtendeTipo`, `produtosParaTipo` — que MANTEM na tela o avulso ja
+gravado, marcado "nao atende este tipo", para o salvar nao apaga-lo calado)
 · `0082_carga_mutual_preparacao` (as TRES pecas que faltavam para a carga do Mutual poder rodar,
 e nenhuma delas carrega nada — ha teste provando que a operacao segue intacta: (A) **a UNIDADE sai
 do ASSOCIADO** — a corrente do consultor (0073/0074) foi medida com a base completa e esta VAZIA

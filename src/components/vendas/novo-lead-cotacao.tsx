@@ -11,7 +11,8 @@ import { Button } from '@/components/ui/button';
 import { FipeConsulta } from '@/components/fipe/fipe-consulta';
 import { useFipePorPlaca } from '@/hooks/use-fipe';
 import type { RegistroPlaca } from '@/lib/fipe';
-import { useTiposVeiculo, useProdutos, useCotasParticipacao } from '@/hooks/use-precificacao';
+import { useTiposVeiculo, useProdutos, useCotasParticipacao, useTiposPorProduto } from '@/hooks/use-precificacao';
+import { produtosParaTipo } from '@/lib/produtos';
 import {
   useAvisoDeCaptura, useCotacaoComparativa, useProdutosDoPlano, useSalvarCotacao, useSaveLead,
   type PlanoComparado,
@@ -51,6 +52,7 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
 }) {
   const { data: tipos } = useTiposVeiculo();
   const { data: produtos } = useProdutos();
+  const { data: tiposPorProduto } = useTiposPorProduto();
   const { data: cotas } = useCotasParticipacao();
   const fipePorPlaca = useFipePorPlaca();
   const salvarLead = useSaveLead();
@@ -102,7 +104,12 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
 
   const { data: doPlano } = useProdutosDoPlano(escolhido?.plano_id ?? null);
   const idsDoPlano = useMemo(() => (doPlano ?? []).map((p) => p.produto_id), [doPlano]);
-  const opcionais = useMemo(() => (produtos ?? []).filter((p) => !p.obrigatorio && p.status), [produtos]);
+  // So o que atende o tipo do veiculo (0089): sem parabrisa para moto. O motor
+  // ignora o resto de qualquer jeito; aqui e para a tela nao oferecer.
+  const opcionais = useMemo(
+    () => produtosParaTipo((produtos ?? []).filter((p) => !p.obrigatorio && p.status), tipoVeiculoId, tiposPorProduto),
+    [produtos, tipoVeiculoId, tiposPorProduto],
+  );
   const { inclusos, avulsos } = useMemo(
     () => separarOpcionais(opcionais, idsDoPlano),
     [opcionais, idsDoPlano],

@@ -13,7 +13,8 @@ import { FormField, Input, Select, MoneyInput } from '@/components/ui/field';
 import { useAssociados } from '@/hooks/use-associados';
 import { useRegionais, useVendedores, useUsuarios, useMarcas, useModelos } from '@/hooks/use-config';
 import { rotuloUnidade } from '@/lib/regional';
-import { useTiposVeiculo, usePlanos, useProdutos, useProdutosPorPlano } from '@/hooks/use-precificacao';
+import { useTiposVeiculo, usePlanos, useProdutos, useProdutosPorPlano, useTiposPorProduto } from '@/hooks/use-precificacao';
+import { produtoAtendeTipo, produtosParaTipo } from '@/lib/produtos';
 import { useVeiculos, useSaveVeiculo, useExcluirVeiculo } from '@/hooks/use-veiculos';
 import { useEmpresasRastreamento } from '@/hooks/use-rastreamento';
 import { useEmpresa } from '@/hooks/use-empresa';
@@ -107,6 +108,7 @@ function VeiculosConteudo() {
   const { data: planos } = usePlanos();
   const { data: produtos } = useProdutos();
   const { data: produtosPorPlano } = useProdutosPorPlano();
+  const { data: tiposPorProduto } = useTiposPorProduto();
   const { data: tiposAlerta } = useTiposAlerta();
   const { data: rastreadoras } = useEmpresasRastreamento();
   const salvar = useSaveVeiculo();
@@ -167,7 +169,16 @@ function VeiculosConteudo() {
     router.replace('/veiculos', { scroll: false });
   }, [editarId, veiculos, router]);
 
-  const opcionaisDisp = useMemo(() => (produtos ?? []).filter((p) => !p.obrigatorio && p.status), [produtos]);
+  // So o que atende o tipo do veiculo (0089). Avulso ja gravado que nao atende
+  // continua na lista, marcado — esconder faria o proximo "salvar" apaga-lo calado.
+  const opcionaisDisp = useMemo(
+    () => produtosParaTipo(
+      (produtos ?? []).filter((p) => !p.obrigatorio && p.status),
+      form.tipo_veiculo_id, tiposPorProduto, opcionais,
+    ),
+    [produtos, form.tipo_veiculo_id, tiposPorProduto, opcionais],
+  );
+  const atendeOTipo = (id: string) => produtoAtendeTipo(id, form.tipo_veiculo_id, tiposPorProduto);
   const toggleSet = (setter: React.Dispatch<React.SetStateAction<Set<string>>>, id: string) =>
     setter((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
@@ -223,8 +234,9 @@ function VeiculosConteudo() {
   function trocarPlano(novoId: string | null) {
     const anteriorId = form.plano_protecao_id ?? null;
     if (novoId === anteriorId) return;
-    const idsAntes = anteriorId ? produtosPorPlano?.[anteriorId] ?? [] : [];
-    const idsDepois = novoId ? produtosPorPlano?.[novoId] ?? [] : [];
+    // So o que o motor cobra deste tipo de veiculo (0089) entra na comparacao.
+    const idsAntes = (anteriorId ? produtosPorPlano?.[anteriorId] ?? [] : []).filter(atendeOTipo);
+    const idsDepois = (novoId ? produtosPorPlano?.[novoId] ?? [] : []).filter(atendeOTipo);
     // A selecao gravada pode trazer item do combo anterior (ficha antiga):
     // ela e limpa antes de comparar, senao viraria "avulso" do nada.
     const diff = compararTrocaDePlano({
@@ -760,6 +772,11 @@ function VeiculosConteudo() {
                       className="h-4 w-4 rounded border-slate-300"
                     />
                     {p.nome}
+                    {p.foraDoTipo && (
+                      <span className="rounded bg-amber-100 px-1.5 py-px text-[10px] uppercase text-amber-800">
+                        nao atende este tipo — nao e cobrado
+                      </span>
+                    )}
                   </label>
                 ))}
                 {opcionaisAvulsos.length === 0 && <span className="text-xs text-slate-400">Nenhum opcional cadastrado.</span>}

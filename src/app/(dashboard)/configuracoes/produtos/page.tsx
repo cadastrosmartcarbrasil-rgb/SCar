@@ -6,7 +6,8 @@ import { Plus, Pencil, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { FormField, Input, MoneyInput, Select } from '@/components/ui/field';
-import { useProdutos, useSaveProduto } from '@/hooks/use-precificacao';
+import { useProdutos, useSaveProduto, useTiposVeiculo, useTiposPorProduto } from '@/hooks/use-precificacao';
+import { rotuloTiposDoProduto } from '@/lib/produtos';
 import { formatCurrency } from '@/lib/utils';
 import type { ProdutosRow, MetodoPreco } from '@/lib/database.types';
 
@@ -22,16 +23,34 @@ export default function ProdutosPage() {
   const salvar = useSaveProduto();
   const [aberto, setAberto] = useState(false);
   const [ed, setEd] = useState<Partial<ProdutosRow> | null>(null);
+  // 0089 — tipos a que o produto se aplica. Vazio = todos.
+  const [tiposSel, setTiposSel] = useState<Set<string>>(new Set());
+  const { data: tipos } = useTiposVeiculo();
+  const { data: tiposPorProduto } = useTiposPorProduto();
+  const nomeDoTipo = (id: string) => (tipos ?? []).find((t) => t.id === id)?.nome;
+
+  function abrir(p: Partial<ProdutosRow>) {
+    setEd(p);
+    setTiposSel(new Set(p.id ? tiposPorProduto?.[p.id] ?? [] : []));
+    setAberto(true);
+  }
+
+  function alternarTipo(id: string) {
+    setTiposSel((atual) => {
+      const n = new Set(atual);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+  }
 
   function novo() {
-    setEd({ nome: '', fornecedor_nome: 'Interno', metodo_preco: 'FIXO', categoria: 'BENEFICIO', obrigatorio: false, status: true });
-    setAberto(true);
+    abrir({ nome: '', fornecedor_nome: 'Interno', metodo_preco: 'FIXO', categoria: 'BENEFICIO', obrigatorio: false, status: true });
   }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!ed?.nome) return toast.error('Informe o nome');
-    salvar.mutate(ed, {
+    salvar.mutate({ ...ed, tiposIds: [...tiposSel] }, {
       onSuccess: () => {
         toast.success('Produto salvo');
         setAberto(false);
@@ -52,7 +71,8 @@ export default function ProdutosPage() {
       <div className="flex items-center justify-between">
         <p className="text-sm text-slate-500">
           Produtos/beneficios que compoem a mensalidade. Itens obrigatorios entram na cota base;
-          opcionais sao adicionais.
+          opcionais sao adicionais. Cada produto diz a quais <strong>tipos de veiculo</strong> se aplica:
+          a cotacao, a ficha e o preco so levam o que atende o tipo (sem parabrisa para moto).
         </p>
         <Button onClick={novo}>
           <Plus className="h-4 w-4" /> Novo Produto
@@ -65,6 +85,7 @@ export default function ProdutosPage() {
             <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
               <th className="px-4 py-2">Produto</th>
               <th className="px-4 py-2">Categoria</th>
+              <th className="px-4 py-2">Tipos de veiculo</th>
               <th className="px-4 py-2">Fornecedor</th>
               <th className="px-4 py-2">Preco</th>
               <th className="px-4 py-2">Tipo</th>
@@ -74,7 +95,7 @@ export default function ProdutosPage() {
           <tbody>
             {isLoading && (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={7} className="px-4 py-6 text-center text-slate-400">
                   Carregando...
                 </td>
               </tr>
@@ -87,6 +108,9 @@ export default function ProdutosPage() {
                   </span>
                 </td>
                 <td className="px-4 py-2 text-slate-600">{p.categoria}</td>
+                <td className="px-4 py-2 text-xs text-slate-600">
+                  {rotuloTiposDoProduto(p.id, tiposPorProduto, nomeDoTipo)}
+                </td>
                 <td className="px-4 py-2 text-slate-600">{p.fornecedor_nome}</td>
                 <td className="px-4 py-2 text-slate-600">{preco(p)}</td>
                 <td className="px-4 py-2">
@@ -96,10 +120,7 @@ export default function ProdutosPage() {
                 </td>
                 <td className="px-4 py-2 text-right">
                   <button
-                    onClick={() => {
-                      setEd(p);
-                      setAberto(true);
-                    }}
+                    onClick={() => abrir(p)}
                     className="rounded p-1.5 text-slate-500 hover:bg-slate-100"
                   >
                     <Pencil className="h-4 w-4" />
@@ -109,7 +130,7 @@ export default function ProdutosPage() {
             ))}
             {!isLoading && (produtos ?? []).length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={7} className="px-4 py-6 text-center text-slate-400">
                   Nenhum produto.
                 </td>
               </tr>
@@ -161,6 +182,27 @@ export default function ProdutosPage() {
               Os valores por faixa FIPE ficam na matriz de precos (importada da planilha).
             </p>
           )}
+          <div>
+            <p className="mb-1 text-sm font-medium text-slate-600">Tipos de veiculo atendidos</p>
+            <div className="grid grid-cols-2 gap-1 rounded-lg border border-slate-200 p-2 sm:grid-cols-3">
+              {(tipos ?? []).map((t) => (
+                <label key={t.id} className="flex items-center gap-2 rounded px-2 py-1 text-sm text-slate-700 hover:bg-slate-50">
+                  <input
+                    type="checkbox"
+                    checked={tiposSel.has(t.id)}
+                    onChange={() => alternarTipo(t.id)}
+                    className="h-4 w-4 rounded border-slate-300"
+                  />
+                  {t.nome}
+                </label>
+              ))}
+            </div>
+            <p className="mt-1 text-xs text-slate-500">
+              {tiposSel.size === 0
+                ? 'Nenhum marcado: o produto vale para TODOS os tipos.'
+                : 'So os tipos marcados recebem este produto — na cotacao, no plano e na ficha do veiculo.'}
+            </p>
+          </div>
           <div className="flex items-center gap-6 pt-1">
             <label className="flex items-center gap-2 text-sm text-slate-600">
               <input type="checkbox" checked={ed?.obrigatorio ?? false} onChange={(e) => setEd((p) => ({ ...p, obrigatorio: e.target.checked }))} className="h-4 w-4 rounded border-slate-300" />
