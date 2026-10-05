@@ -77,7 +77,7 @@ extensão (`btree_gist` 188 · `pg_trgm` 31 · `unaccent` 4), como documentado.
 > | Unidade (equipe de vendas) | ✅ 19 vínculos desde 21/09 |
 > | `PLAN` | ✅ **Captura esgotada (05/10, 2ª rodada): 18 planos**, 16 casam com os `plan_id` dos contratos. **A API não tem mais o que dar:** o swagger só declara `/quotation/plan/` (GET, por veículo) e `/quotation/plan/select_plan/` (POST — é ESCRITA, não usar); não há GET por id. Na matriz: **163 de 474 faturáveis têm nome** — 88 *V6 Automóvel MT* (108), **41 *Moto MT* (44)**, 43, 46, 42, 45, 86, 98. **O 48 (112) segue sem nome** e só sai da tela do Mutual (contrato 20224) ou da decisão direta |
 > | De-para `VEHICLE_TYPE` | ❌ 0 de 3 decisões |
-> | De-para `PLAN` | ❌ 0 de 42 (18 cobrem 90%) |
+> | De-para `PLAN` | 🟡 **1 de 42** — `48` → *DIESEL MIGRADO MUTUAL* (112 carros da matriz, 05/10). **Caminhões (planos 140/53/66/70) ficam SEM plano por decisão.** Pendentes: `88`→Ouro? `41`→Prata? `45`→Roubo e Furto? `46`→sem plano? |
 > | **Carga da MATRIZ** | ❌ **não executada** — prévia: **470 veículos / 428 associados entram, 8 recusados (0 km)** |
 >
 > **🔴 Nenhum dos dois de-paras bloqueia a carga.** `mutual_executar_carga` grava
@@ -2550,8 +2550,11 @@ listadas as filiais" de semanas antes). O banco estava são o tempo todo.
   (`caminhosDoSwagger`). **Se não houver detalhe por id, o nome do legado sai da TELA do Mutual**
   (abrir um contrato daquele plano) — o de-para não depende do nome capturado.
   **Regra: erro do Mutual sempre leva o corpo da recusa** — "HTTP 400" sozinho manda chutar.
-- **0 vínculos de `PLAN`** → as 18 decisões que cobrem 90% da matriz. Os três maiores são
-  `48` (114 faturáveis · 23,8%), `88` (108 · 46,4%) e `41` (44 · 55,6%).
+- **1 vínculo de `PLAN` (05/10/2026):** `48` → **DIESEL MIGRADO MUTUAL** (plano-balde criado pelo
+  usuário, 0 produtos, para ajustar caso a caso). ⚠️ Apesar do nome, os 112 da matriz no 48 são
+  **todos `vehicle_type` 1 (CARRO)** — Onix, HB20, Strada, Gol; na base viva o 48 tem 544 faturáveis.
+  **Caminhões da matriz (13, nos planos 140/53/66/70) ficam SEM plano por decisão do usuário.**
+  Faltam `88` (108), `41` (44) e a cauda — as 18 decisões que cobrem 90% da matriz.
 - **0 vínculos de `VEHICLE_TYPE`** → as 3 decisões da 0084, que continuam pendentes.
 - **Nenhum dos dois impede a CARGA** — ver a caixa de estado do topo.
 
