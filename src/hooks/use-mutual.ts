@@ -3,7 +3,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
-import type { EntidadeMutual } from '@/lib/mutual';
+import type { EntidadeMutual, SondagemCaminho } from '@/lib/mutual';
 import type {
   MutualDiagnostico, MutualPorStatus, MutualFilial,
   MutualQuarentena, MutualResumoCaptura, MutualStatusNaoMapeado, MutualPeriodicidade,
@@ -14,6 +14,20 @@ import type {
   MutualPlanoExterno, MutualCargaLinha, MutualCargaResultado,
   MutualDesfazerResultado,
 } from '@/lib/database.types';
+
+// =====================================================================
+// 🔴 POR QUE ESTES HOOKS TEM `ativo`
+// =====================================================================
+// Medido em producao em 02/10/2026: cada leitura deste modulo varre os ~17,7
+// mil objetos capturados e custa 2,4 a 4,4 segundos SOZINHA. A tela disparava
+// ~18 delas no mount, e sob essa contencao TODAS estouravam o
+// `statement_timeout` de 8s do papel `authenticated` — os logs mostram 12 a 13
+// cancelamentos por rajada e HTTP 500 em cada RPC. O resultado em tela nao era
+// um erro: era o estado vazio de cada secao (ver `mensagemDeFalhaDeLeitura`).
+//
+// Entao diagnostico NAO carrega sozinho: carrega quando a secao e ABERTA. As
+// leituras que sao TRABALHO (o que esta capturado, as equipes, as filiais, o
+// cutover) seguem eager, porque sem elas a tela nao serve para nada.
 
 /** O que ja esta na area de captura. */
 export function useMutualCapturas() {
@@ -29,7 +43,7 @@ export function useMutualCapturas() {
 }
 
 /** O relatorio de qualidade — o produto da Fase 1. */
-export function useMutualDiagnostico() {
+export function useMutualDiagnostico(ativo = true) {
   const supabase = createClient();
   return useQuery<MutualDiagnostico[]>({
     queryKey: ['mutual', 'diagnostico'],
@@ -38,10 +52,11 @@ export function useMutualDiagnostico() {
       if (error) throw error;
       return data ?? [];
     },
+    enabled: ativo,
   });
 }
 
-export function useMutualPorStatus() {
+export function useMutualPorStatus(ativo = true) {
   const supabase = createClient();
   return useQuery<MutualPorStatus[]>({
     queryKey: ['mutual', 'status'],
@@ -50,11 +65,12 @@ export function useMutualPorStatus() {
       if (error) throw error;
       return data ?? [];
     },
+    enabled: ativo,
   });
 }
 
 /** As filiais do Mutual + o palpite de de-para. NAO cria regional nenhuma. */
-export function useMutualFiliais() {
+export function useMutualFiliais(ativo = true) {
   const supabase = createClient();
   return useQuery<MutualFilial[]>({
     queryKey: ['mutual', 'filiais'],
@@ -63,6 +79,7 @@ export function useMutualFiliais() {
       if (error) throw error;
       return data ?? [];
     },
+    enabled: ativo,
   });
 }
 
@@ -72,6 +89,7 @@ export function useMutualQuarentena(
   // 0071: o 0 km (sem placa, com chassi) NAO e problema de dado — e fila
   // operacional. Fica fora por padrao; a tela tem botao para ver.
   incluirPlacaPendente = false,
+  ativo = true,
 ) {
   const supabase = createClient();
   return useQuery<MutualQuarentena[]>({
@@ -85,6 +103,7 @@ export function useMutualQuarentena(
       if (error) throw error;
       return data ?? [];
     },
+    enabled: ativo,
   });
 }
 
@@ -93,7 +112,7 @@ export function useMutualQuarentena(
  * swagger NAO e exaustivo — `AGUARDADO A RETIRADA DO RASTREADOR` so apareceu
  * na base real. Sem esta lista, status desconhecido some como "funil de venda".
  */
-export function useMutualStatusNaoMapeados() {
+export function useMutualStatusNaoMapeados(ativo = true) {
   const supabase = createClient();
   return useQuery<MutualStatusNaoMapeado[]>({
     queryKey: ['mutual', 'status-nao-mapeados'],
@@ -102,11 +121,12 @@ export function useMutualStatusNaoMapeados() {
       if (error) throw error;
       return data ?? [];
     },
+    enabled: ativo,
   });
 }
 
 /** 0071: contrato x objeto — o instrumento que mede a mudanca antes da carga. */
-export function useMutualStatusCruzado() {
+export function useMutualStatusCruzado(ativo = true) {
   const supabase = createClient();
   return useQuery<MutualStatusCruzado[]>({
     queryKey: ['mutual', 'status-cruzado'],
@@ -115,6 +135,7 @@ export function useMutualStatusCruzado() {
       if (error) throw error;
       return data ?? [];
     },
+    enabled: ativo,
   });
 }
 
@@ -141,6 +162,23 @@ async function chamar(body: Record<string, unknown>): Promise<RespostaMutual> {
   return (await res.json()) as RespostaMutual;
 }
 
+/**
+ * O PROVADOR DE CAMINHO — o fim do palpite de `/plan/`.
+ *
+ * A 0085 abriu a entidade `PLAN` com `/contract/plan/`, deduzido do padrao das
+ * outras entidades de contrato, e a tela respondeu **HTTP 404**. Em vez de
+ * chutar a proxima, isto bate em cada candidata e devolve o status: a tela
+ * nomeia a que responde e `ENTIDADES_MUTUAL.PLAN` passa a ser ela — uma linha,
+ * porque nada de schema depende do caminho (o de-para de plano funciona com a
+ * entidade ainda nao capturada, padrao da 0083).
+ */
+export function useSondarCaminhos() {
+  return useMutation({
+    mutationFn: async (caminhos?: string[]) =>
+      (await chamar({ action: 'sondar', caminhos })) as RespostaMutual & { sondagens?: SondagemCaminho[] },
+  });
+}
+
 /** Testa a conexao sem gravar nada. */
 export function usePingMutual() {
   return useMutation<RespostaMutual, Error, void>({
@@ -153,7 +191,7 @@ export function usePingMutual() {
  * a PARCELA ou o TOTAL do contrato. `veiculos.valor_mensalidade` (0024) e
  * MENSAL: trocar um pelo outro cobra 6x a mais num contrato semestral.
  */
-export function useMutualPeriodicidade() {
+export function useMutualPeriodicidade(ativo = true) {
   const supabase = createClient();
   return useQuery<MutualPeriodicidade[]>({
     queryKey: ['mutual', 'periodicidade'],
@@ -162,6 +200,7 @@ export function useMutualPeriodicidade() {
       if (error) throw error;
       return data ?? [];
     },
+    enabled: ativo,
   });
 }
 
@@ -173,7 +212,7 @@ export function useMutualPeriodicidade() {
  * `regional` em lugar nenhum — 3.527 de 3.527 faturaveis sem ela, com os
  * contratos todos capturados). Aqui a pergunta se responde olhando.
  */
-export function useMutualCampos(entidade: EntidadeMutual, caminho?: string) {
+export function useMutualCampos(entidade: EntidadeMutual, caminho?: string, ativo = true) {
   const supabase = createClient();
   return useQuery<MutualCampo[]>({
     queryKey: ['mutual', 'campos', entidade, caminho ?? null],
@@ -184,11 +223,12 @@ export function useMutualCampos(entidade: EntidadeMutual, caminho?: string) {
       if (error) throw error;
       return data ?? [];
     },
+    enabled: ativo,
   });
 }
 
 /** O funil da unidade pelo consultor (0073). Leitura; nao escreve nada. */
-export function useMutualCoberturaConsultor(somenteFaturaveis = true) {
+export function useMutualCoberturaConsultor(somenteFaturaveis = true, ativo = true) {
   const supabase = createClient();
   return useQuery<MutualPassoFunil[]>({
     queryKey: ['mutual', 'cobertura-consultor', somenteFaturaveis],
@@ -199,6 +239,7 @@ export function useMutualCoberturaConsultor(somenteFaturaveis = true) {
       if (error) throw error;
       return data ?? [];
     },
+    enabled: ativo,
   });
 }
 
@@ -332,7 +373,7 @@ export function useCapturaMutual() {
  * 0082 — o funil da UNIDADE pelo ASSOCIADO. Substitui o do consultor como
  * instrumento: `consultant` vem vazio em 100% dos objetos e dos contratos.
  */
-export function useMutualCoberturaUnidade(somenteFaturaveis = true) {
+export function useMutualCoberturaUnidade(somenteFaturaveis = true, ativo = true) {
   const supabase = createClient();
   return useQuery<MutualPassoFunil[]>({
     queryKey: ['mutual', 'cobertura-unidade', somenteFaturaveis],
@@ -343,6 +384,7 @@ export function useMutualCoberturaUnidade(somenteFaturaveis = true) {
       if (error) throw error;
       return data ?? [];
     },
+    enabled: ativo,
   });
 }
 

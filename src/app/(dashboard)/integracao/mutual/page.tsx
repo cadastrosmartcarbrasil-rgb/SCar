@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import {
   Database, PlugZap, DownloadCloud, ShieldAlert, Building2, ListChecks, RefreshCw,
-  Search, Users, Upload,
+  Search, Users, Upload, ChevronDown, ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,7 +14,7 @@ import {
   useMutualCampos, usePingMutual, useCapturaMutual,
   useMutualCoberturaConsultor, useMutualCoberturaUnidade, useVincularFilial,
   useCobrancaExternaResumo, useDefinirCobrancaExterna,
-  useMutualEquipes, useAgruparEquipe,
+  useMutualEquipes, useAgruparEquipe, useSondarCaminhos,
 } from '@/hooks/use-mutual';
 import { useRegionais } from '@/hooks/use-config';
 import {
@@ -22,8 +22,10 @@ import {
   gargaloDoFunil, coberturaDoFunil, teseSeSustenta, correnteVazia,
   situacaoDePara, filiaisPendentes, carteiraSemDePara,
   equipesPendentes, carteiraSemAgrupamento, equipesSemNome, porMacrorregiao, consolidacao,
+  caminhoQueRespondeu, ENTIDADES_MUTUAL, type SondagemCaminho,
 } from '@/lib/mutual';
 import { CargaMutual } from '@/components/integracao/carga-mutual';
+import { ErroLeitura } from '@/components/integracao/erro-leitura';
 import type { MutualDiagnostico, SeveridadeDiagnostico } from '@/lib/database.types';
 
 // FASE 1 da integracao com o MUTUAL: consulta e diagnostico.
@@ -60,49 +62,91 @@ const TOM: Record<SeveridadeDiagnostico, string> = {
   CRITICO: 'bg-red-50 text-red-700 ring-red-200',
 };
 
-function Secao({ titulo, icone: Icone, children, acao }: {
+/**
+ * `aberta`/`onAlternar` ausentes = secao sempre aberta (o TRABALHO da tela).
+ * Presentes = secao de DIAGNOSTICO, que nasce fechada e so consulta o banco
+ * quando alguem a abre — ver o cabecalho de `use-mutual.ts`. O estado e de
+ * sessao, de proposito: persistir "aberta" faria a proxima visita disparar a
+ * varredura de novo, que e exatamente o problema que isto conserta.
+ */
+function Secao({ titulo, icone: Icone, children, acao, aberta, onAlternar, custo }: {
   titulo: string; icone: React.ElementType; children: React.ReactNode; acao?: React.ReactNode;
+  aberta?: boolean; onAlternar?: () => void; custo?: string;
 }) {
+  const dobravel = typeof aberta === 'boolean' && !!onAlternar;
+  const mostrar = !dobravel || aberta;
   return (
     <section className="rounded-2xl border border-slate-200/80 bg-superficie p-5">
-      <header className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-700">
-          <Icone className="h-4 w-4 text-cyan-600" aria-hidden /> {titulo}
+      <header className={`flex items-center justify-between gap-3 ${mostrar ? 'mb-4' : ''}`}>
+        <h2 className="flex min-w-0 items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-700">
+          {dobravel ? (
+            <button
+              type="button"
+              onClick={onAlternar}
+              aria-expanded={aberta}
+              className="flex min-w-0 items-center gap-2 text-left hover:text-cyan-700"
+            >
+              {aberta
+                ? <ChevronDown className="h-4 w-4 shrink-0 text-cyan-600" aria-hidden />
+                : <ChevronRight className="h-4 w-4 shrink-0 text-cyan-600" aria-hidden />}
+              <span className="truncate">{titulo}</span>
+            </button>
+          ) : (
+            <>
+              <Icone className="h-4 w-4 shrink-0 text-cyan-600" aria-hidden /> {titulo}
+            </>
+          )}
         </h2>
-        {acao}
+        {mostrar && acao}
       </header>
-      {children}
+      {mostrar ? children : (
+        <button
+          type="button"
+          onClick={onAlternar}
+          className="text-left text-xs leading-relaxed text-slate-500 hover:text-cyan-700"
+        >
+          Fechada — nao consulta o banco. {custo ?? 'Abra para medir.'}
+        </button>
+      )}
     </section>
   );
 }
 
 export default function IntegracaoMutualPage() {
+  // Quais secoes de DIAGNOSTICO estao abertas. Nascem fechadas e so entao
+  // consultam o banco — ver <Secao> e o cabecalho de `use-mutual.ts`.
+  const [abertas, setAbertas] = useState<Record<string, boolean>>({});
+  const ab = (k: string) => !!abertas[k];
+  const alternar = (k: string) => setAbertas((a) => ({ ...a, [k]: !a[k] }));
+
   const capturas = useMutualCapturas();
   // 0082: a unidade sai do ASSOCIADO. O funil do consultor fica so para o
   // aviso de "corrente vazia" — ele mede um campo que vem em branco em 100%.
-  const funilUnidade = useMutualCoberturaUnidade(true);
-  const funil = useMutualCoberturaConsultor(true);
+  const funilUnidade = useMutualCoberturaUnidade(true, ab('unidade'));
+  const funil = useMutualCoberturaConsultor(true, ab('unidade'));
   const regionais = useRegionais();
   const vincular = useVincularFilial();
   const equipes = useMutualEquipes();
   const agrupar = useAgruparEquipe();
   const cobrancaExterna = useCobrancaExternaResumo();
   const cutover = useDefinirCobrancaExterna();
-  const diagnostico = useMutualDiagnostico();
-  const porStatus = useMutualPorStatus();
-  const filiais = useMutualFiliais();
+  const diagnostico = useMutualDiagnostico(ab('diagnostico'));
+  const porStatus = useMutualPorStatus(ab('porstatus'));
+  const filiais = useMutualFiliais(ab('filiais'));
   const [inspecionar, setInspecionar] = useState<EntidadeMutual>('CONTRACT');
   const [caminho, setCaminho] = useState('');
-  const campos = useMutualCampos(inspecionar, caminho || undefined);
+  const campos = useMutualCampos(inspecionar, caminho || undefined, ab('campos'));
   const [soFaturaveis, setSoFaturaveis] = useState(true);
   // 0071: o 0 km (sem placa, com chassi) nao e dado sujo — e fila operacional.
   // Fica fora da quarentena por padrao; este botao mostra.
   const [verPlacaPendente, setVerPlacaPendente] = useState(false);
-  const quarentena = useMutualQuarentena(200, soFaturaveis, verPlacaPendente);
-  const cruzado = useMutualStatusCruzado();
-  const naoMapeados = useMutualStatusNaoMapeados();
-  const periodicidade = useMutualPeriodicidade();
+  const quarentena = useMutualQuarentena(200, soFaturaveis, verPlacaPendente, ab('quarentena'));
+  const cruzado = useMutualStatusCruzado(ab('cruzado'));
+  const naoMapeados = useMutualStatusNaoMapeados(ab('naomapeados'));
+  const periodicidade = useMutualPeriodicidade(ab('periodicidade'));
   const ping = usePingMutual();
+  const sondar = useSondarCaminhos();
+  const [sondagens, setSondagens] = useState<SondagemCaminho[] | null>(null);
   const { puxarTudo, parar, progresso, rodando } = useCapturaMutual();
   const [paginas, setPaginas] = useState(5);
   // De onde continuar em cada entidade. Sem isto, o botao recomeçaria sempre da
@@ -114,6 +158,16 @@ export default function IntegracaoMutualPage() {
     if (!r.configured) { toast.error('MUTUAL_API_TOKEN nao esta configurada no servidor'); return; }
     if (r.ok) toast.success(`Conexao OK (HTTP ${r.http}) — ${r.registros} registros na amostra`);
     else toast.error(`Falhou: HTTP ${r.http ?? '-'} ${r.erro ?? ''}`);
+  }
+
+  async function descobrirPlano() {
+    const r = await sondar.mutateAsync(undefined);
+    if (!r.configured) { toast.error('MUTUAL_API_TOKEN nao esta configurada no servidor'); return; }
+    const lista = r.sondagens ?? [];
+    setSondagens(lista);
+    const achou = caminhoQueRespondeu(lista);
+    if (achou) toast.success(`O caminho dos planos e ${achou.caminho} (HTTP ${achou.http})`);
+    else toast.error('Nenhuma candidata respondeu — veja a lista e os status abaixo.');
   }
 
   async function puxar(entidade: EntidadeMutual) {
@@ -216,6 +270,51 @@ export default function IntegracaoMutualPage() {
           parou.
         </p>
 
+        {/* O PROVADOR DO CAMINHO DOS PLANOS — 0085 palpitou, a tela deu 404. */}
+        <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50/60 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs leading-relaxed text-amber-800">
+              <strong>Planos:</strong> o caminho{' '}
+              <code className="tnum">{ENTIDADES_MUTUAL.PLAN}</code> foi um{' '}
+              <strong>palpite</strong> e respondeu <strong>HTTP 404</strong>. O provador bate em
+              cada candidata e diz qual existe — sem gravar nada.
+            </p>
+            <Button variant="ghost" onClick={() => void descobrirPlano()} disabled={sondar.isPending}>
+              {sondar.isPending ? 'Sondando...' : 'Descobrir o caminho'}
+            </Button>
+          </div>
+          {sondagens && (
+            <ul className="mt-2 space-y-1">
+              {sondagens.map((x) => {
+                const existe = x.http !== null && x.http >= 200 && x.http < 300;
+                return (
+                  <li key={x.caminho} className="flex items-center gap-2 text-xs">
+                    <span className={`rounded px-1.5 py-0.5 font-semibold tnum ring-1 ${
+                      existe ? TOM.OK : x.http === 301 || x.http === 302 ? TOM.ATENCAO : TOM.CRITICO
+                    }`}>
+                      {x.http ?? 'erro'}
+                    </span>
+                    <code className="tnum text-slate-700">{x.caminho}</code>
+                    {existe && (
+                      <span className="text-slate-500">
+                        respondeu — {x.registros ?? 0} registro(s) na amostra
+                      </span>
+                    )}
+                    {x.erro && <span className="text-slate-500">{x.erro}</span>}
+                  </li>
+                );
+              })}
+              {caminhoQueRespondeu(sondagens) && (
+                <li className="pt-1 text-xs leading-relaxed text-slate-600">
+                  Anote o caminho: trocar <code className="tnum">ENTIDADES_MUTUAL.PLAN</code> em{' '}
+                  <code className="tnum">src/lib/mutual.ts</code> e <strong>uma linha</strong> — nada
+                  de schema depende dele, e o de-para de plano ja funciona sem a captura.
+                </li>
+              )}
+            </ul>
+          )}
+        </div>
+
         {progresso && (
           <div className="mb-3 rounded-xl border border-cyan-200 bg-cyan-50/60 p-3">
             <p className="text-sm font-medium text-slate-800">
@@ -288,13 +387,20 @@ export default function IntegracaoMutualPage() {
         </div>
       )}
 
-      <Secao titulo="Diagnostico" icone={ListChecks} acao={
+      <Secao
+        titulo="Diagnostico"
+        icone={ListChecks}
+        aberta={ab('diagnostico')}
+        onAlternar={() => alternar('diagnostico')}
+        custo="O relatorio de qualidade: varre objetos, contratos e associados."
+        acao={
         <Button variant="ghost" onClick={() => void diagnostico.refetch()}>
           <RefreshCw className="h-4 w-4" aria-hidden />
         </Button>
       }>
+        <ErroLeitura q={diagnostico} />
         {diagnostico.isLoading && <p className="text-sm text-slate-500">Carregando...</p>}
-        {!diagnostico.isLoading && (diagnostico.data ?? []).length === 0 && (
+        {!diagnostico.isLoading && !diagnostico.isError && (diagnostico.data ?? []).length === 0 && (
           <p className="text-sm text-slate-500">
             Sem dados ainda. Puxe ao menos os <strong>Objetos de contrato</strong> acima.
           </p>
@@ -326,7 +432,13 @@ export default function IntegracaoMutualPage() {
         </div>
       </Secao>
 
-      <Secao titulo="O que existe no payload" icone={Search} acao={
+      <Secao
+        titulo="O que existe no payload"
+        icone={Search}
+        aberta={ab('campos')}
+        onAlternar={() => alternar('campos')}
+        custo="Abre o payload da entidade escolhida chave por chave."
+        acao={
         <div className="flex items-center gap-2">
           <select
             className="rounded-lg border border-slate-200 px-2 py-1 text-sm"
@@ -352,8 +464,9 @@ export default function IntegracaoMutualPage() {
           <code className="text-[11px]">vehicle_data</code>,{' '}
           <code className="text-[11px]">person_data</code>).
         </p>
+        <ErroLeitura q={campos} />
         {campos.isLoading && <p className="text-sm text-slate-500">Carregando...</p>}
-        {!campos.isLoading && (campos.data ?? []).length === 0 && (
+        {!campos.isLoading && !campos.isError && (campos.data ?? []).length === 0 && (
           <p className="text-sm text-slate-500">
             Nada capturado nesta entidade ainda — ou o objeto aninhado nao existe.
           </p>
@@ -386,8 +499,20 @@ export default function IntegracaoMutualPage() {
         )}
       </Secao>
 
-      {(periodicidade.data ?? []).length > 0 && (
-        <Secao titulo="Periodicidade da cobranca" icone={ListChecks}>
+      {(() => { const temLinhas = (periodicidade.data ?? []).length > 0; return (
+      <Secao
+        titulo="Periodicidade da cobranca"
+        icone={ListChecks}
+        aberta={ab('periodicidade')}
+        onAlternar={() => alternar('periodicidade')}
+        custo="Cruza periodo x parcelas x valor de todos os objetos capturados."
+      >
+        <ErroLeitura q={periodicidade} />
+        {periodicidade.isLoading && <p className="text-sm text-slate-500">Carregando...</p>}
+        {!periodicidade.isError && !periodicidade.isLoading && !temLinhas && (
+          <p className="text-sm text-slate-500">Nada a mostrar: puxe <strong>Contratos</strong> e <strong>Objetos de contrato</strong> acima.</p>
+        )}
+        {temLinhas && (<>
           <p className="mb-3 text-xs text-slate-500">
             No SCar, <code className="text-[11px]">valor_mensalidade</code> e{' '}
             <strong>mensal</strong>. No Mutual o contrato tem periodo (a tela mostra
@@ -435,11 +560,24 @@ export default function IntegracaoMutualPage() {
               </tbody>
             </table>
           </div>
-        </Secao>
-      )}
+        </>)}
+      </Secao>
+      ); })()}
 
-      {(naoMapeados.data ?? []).length > 0 && (
-        <Secao titulo="Status que o de-para NAO reconhece" icone={ShieldAlert}>
+      {(() => { const temLinhas = (naoMapeados.data ?? []).length > 0; return (
+      <Secao
+        titulo="Status que o de-para NAO reconhece"
+        icone={ShieldAlert}
+        aberta={ab('naomapeados')}
+        onAlternar={() => alternar('naomapeados')}
+        custo="Varre o vocabulario de contrato e de objeto da base inteira."
+      >
+        <ErroLeitura q={naoMapeados} />
+        {naoMapeados.isLoading && <p className="text-sm text-slate-500">Carregando...</p>}
+        {!naoMapeados.isError && !naoMapeados.isLoading && !temLinhas && (
+          <p className="text-sm text-slate-500">Nenhum status fora do de-para — o vocabulario capturado esta todo reconhecido.</p>
+        )}
+        {temLinhas && (<>
           <p className="mb-3 text-xs text-slate-500">
             O enum do swagger deles <strong>nao e exaustivo</strong>. Estes status vieram da base
             real e hoje <strong>nao entram</strong> — cada um precisa de uma decisao antes da carga,
@@ -475,11 +613,24 @@ export default function IntegracaoMutualPage() {
               </tbody>
             </table>
           </div>
-        </Secao>
-      )}
+        </>)}
+      </Secao>
+      ); })()}
 
-      {(porStatus.data ?? []).length > 0 && (
-        <Secao titulo="Situacao dos contratos (de-para)" icone={ListChecks}>
+      {(() => { const temLinhas = (porStatus.data ?? []).length > 0; return (
+      <Secao
+        titulo="Situacao dos contratos (de-para)"
+        icone={ListChecks}
+        aberta={ab('porstatus')}
+        onAlternar={() => alternar('porstatus')}
+        custo="Agrupa os ~17,7 mil objetos por status do contrato e do objeto."
+      >
+        <ErroLeitura q={porStatus} />
+        {porStatus.isLoading && <p className="text-sm text-slate-500">Carregando...</p>}
+        {!porStatus.isError && !porStatus.isLoading && !temLinhas && (
+          <p className="text-sm text-slate-500">Nada a mostrar: puxe <strong>Objetos de contrato</strong> acima.</p>
+        )}
+        {temLinhas && (<>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -500,8 +651,9 @@ export default function IntegracaoMutualPage() {
               </tbody>
             </table>
           </div>
-        </Secao>
-      )}
+        </>)}
+      </Secao>
+      ); })()}
 
       {/* AS EQUIPES DE VENDAS (0083) — o nivel que vira as nossas regionais */}
       <Secao titulo="Equipes de vendas — o agrupamento das unidades" icone={Users}>
@@ -512,8 +664,9 @@ export default function IntegracaoMutualPage() {
           estão <strong>duplicadas</strong>: escolher a mesma unidade em várias delas é o que as
           consolida.
         </p>
+        <ErroLeitura q={equipes} />
         {equipes.isLoading && <p className="text-sm text-slate-500">Carregando...</p>}
-        {!equipes.isLoading && (equipes.data ?? []).length === 0 && (
+        {!equipes.isLoading && !equipes.isError && (equipes.data ?? []).length === 0 && (
           <div className={`rounded-lg px-3 py-2 text-sm ring-1 ${TOM.ATENCAO}`}>
             Nenhuma equipe ainda. Puxe <strong>Equipes de vendas</strong> acima — sem isso as
             equipes aparecem com carteira e sem nome.
@@ -615,8 +768,20 @@ export default function IntegracaoMutualPage() {
         })()}
       </Secao>
 
-      {(filiais.data ?? []).length > 0 && (
-        <Secao titulo="Filiais do Mutual — o de-para da unidade" icone={Building2}>
+      {(() => { const temLinhas = (filiais.data ?? []).length > 0; return (
+      <Secao
+        titulo="Filiais do Mutual — o de-para da unidade"
+        icone={Building2}
+        aberta={ab('filiais')}
+        onAlternar={() => alternar('filiais')}
+        custo="Conta a carteira de cada filial pelo associado (0082). A EQUIPE (0083) e quem decide a unidade hoje; esta e a reserva."
+      >
+        <ErroLeitura q={filiais} />
+        {filiais.isLoading && <p className="text-sm text-slate-500">Carregando...</p>}
+        {!filiais.isError && !filiais.isLoading && !temLinhas && (
+          <p className="text-sm text-slate-500">Nenhuma filial ainda. Puxe <strong>Filiais</strong> e <strong>Associados</strong> acima — a unidade e contada pelo associado (0082).</p>
+        )}
+        {temLinhas && (<>
           <p className="mb-3 text-xs leading-relaxed text-slate-500">
             A unidade do Mutual mora no <strong>associado</strong> (<code className="tnum">PERSON.regional_id</code>),
             e e por ele que a carteira abaixo foi contada. Escolher a unidade do SCar aqui
@@ -703,11 +868,24 @@ export default function IntegracaoMutualPage() {
               {(vincular.error as Error)?.message ?? 'Nao foi possivel gravar o de-para.'}
             </p>
           )}
-        </Secao>
-      )}
+        </>)}
+      </Secao>
+      ); })()}
 
-      {(cruzado.data ?? []).some((c) => c.mudou) && (
-        <Secao titulo="Status do ASSOCIADO x status do VEICULO" icone={ListChecks}>
+      {(() => { const temLinhas = (cruzado.data ?? []).some((c) => c.mudou); return (
+      <Secao
+        titulo="Status do ASSOCIADO x status do VEICULO"
+        icone={ListChecks}
+        aberta={ab('cruzado')}
+        onAlternar={() => alternar('cruzado')}
+        custo="Compara contrato x objeto linha a linha na base inteira."
+      >
+        <ErroLeitura q={cruzado} />
+        {cruzado.isLoading && <p className="text-sm text-slate-500">Carregando...</p>}
+        {!cruzado.isError && !cruzado.isLoading && !temLinhas && (
+          <p className="text-sm text-slate-500">Nenhuma linha muda de classificacao: o status do objeto nao estreita o do contrato em nenhum caso capturado.</p>
+        )}
+        {temLinhas && (<>
           <p className="mb-3 text-xs leading-relaxed text-slate-500">
             O contrato do Mutual guarda <strong>varios veiculos</strong>, entao o status dele fala
             do <strong>associado</strong>: ele fica ATIVO porque tem OUTRO carro, enquanto AQUELE
@@ -739,13 +917,17 @@ export default function IntegracaoMutualPage() {
               </tbody>
             </table>
           </div>
-        </Secao>
-      )}
+        </>)}
+      </Secao>
+      ); })()}
 
-      {(quarentena.data ?? []).length > 0 && (
-        <Secao
-          titulo={`Quarentena (${quarentena.data?.length})`}
+      {(() => { const temLinhas = (quarentena.data ?? []).length > 0; return (
+      <Secao
+          titulo={`Quarentena${quarentena.data ? ` (${quarentena.data.length})` : ''}`}
           icone={ShieldAlert}
+          aberta={ab('quarentena')}
+          onAlternar={() => alternar('quarentena')}
+          custo="Reavalia placa, chassi, CPF, valor e vencimento de cada objeto."
           acao={
             <div className="flex items-center gap-1">
               <Button variant="ghost" onClick={() => setVerPlacaPendente((v) => !v)}>
@@ -757,6 +939,12 @@ export default function IntegracaoMutualPage() {
             </div>
           }
         >
+        <ErroLeitura q={quarentena} />
+        {quarentena.isLoading && <p className="text-sm text-slate-500">Carregando...</p>}
+        {!quarentena.isError && !quarentena.isLoading && !temLinhas && (
+          <p className="text-sm text-slate-500">Nada em quarentena com os filtros atuais.</p>
+        )}
+        {temLinhas && (<>
           <p className="mb-3 text-xs text-slate-500">
             Linhas que <strong>nao entrariam</strong> na base como estao. Corrigir no Mutual e
             puxar de novo — a captura e re-executavel.{' '}
@@ -800,10 +988,18 @@ export default function IntegracaoMutualPage() {
               </tbody>
             </table>
           </div>
-        </Secao>
-      )}
+        </>)}
+      </Secao>
+      ); })()}
+
       {/* A UNIDADE PELO ASSOCIADO (0082) — a corrente que existe */}
-      <Secao titulo="A unidade pelo associado" icone={Users}>
+      <Secao
+        titulo="A unidade pelo associado"
+        icone={Users}
+        aberta={ab('unidade')}
+        onAlternar={() => alternar('unidade')}
+        custo="Mede o funil da unidade degrau a degrau (dois funis)."
+      >
         <p className="mb-4 text-xs leading-relaxed text-slate-500">
           A unidade do Mutual mora no <strong>associado</strong>:{' '}
           <code className="tnum">objeto.person_data.person_id → PERSON.regional_id</code>. Sao{' '}
@@ -811,6 +1007,7 @@ export default function IntegracaoMutualPage() {
           total, e <em>onde</em> a corrente quebra. Puxe <strong>Associados</strong> e{' '}
           <strong>Filiais</strong> antes de ler.
         </p>
+        <ErroLeitura q={funilUnidade} />
         {funilUnidade.isLoading && <p className="text-sm text-slate-500">Carregando...</p>}
         {!funilUnidade.isLoading && (funilUnidade.data ?? []).length > 0 && (() => {
           const passos = funilUnidade.data ?? [];
@@ -871,7 +1068,13 @@ export default function IntegracaoMutualPage() {
       </Secao>
 
       {/* A CARGA (0084) */}
-      <Secao titulo="Carga da carteira — por unidade" icone={Upload}>
+      <Secao
+        titulo="Carga da carteira — por unidade"
+        icone={Upload}
+        aberta={ab('carga')}
+        onAlternar={() => alternar('carga')}
+        custo="O de-para de tipo e de plano, a previa e a fila de trabalho. Abrir e deliberado: e aqui que a carteira entra."
+      >
         <CargaMutual />
       </Secao>
 
@@ -884,7 +1087,8 @@ export default function IntegracaoMutualPage() {
           para quem ja paga do outro lado. Trazer a cobranca para o SCar e o{' '}
           <strong>cutover</strong> daquela unidade, e exige motivo.
         </p>
-        {(cobrancaExterna.data ?? []).length === 0 && (
+        <ErroLeitura q={cobrancaExterna} />
+        {!cobrancaExterna.isError && (cobrancaExterna.data ?? []).length === 0 && (
           <p className="text-sm text-slate-500">Nenhum veiculo em cobranca externa hoje.</p>
         )}
         {(cobrancaExterna.data ?? []).length > 0 && (

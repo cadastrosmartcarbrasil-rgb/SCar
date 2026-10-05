@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import {
-  ENTIDADES_MUTUAL, ENTIDADES_PAGINADAS, urlMutual, cabecalhoMutual,
-  extrairLista, extrairTotal, temProximaPagina, type EntidadeMutual,
+  ENTIDADES_MUTUAL, ENTIDADES_PAGINADAS, urlMutual, urlMutualCaminho, cabecalhoMutual,
+  extrairLista, extrairTotal, temProximaPagina, CANDIDATAS_PLANO,
+  type EntidadeMutual, type SondagemCaminho,
 } from '@/lib/mutual';
 import type { Json } from '@/lib/database.types';
 
@@ -23,7 +24,8 @@ const BASE_PADRAO = 'https://smartcar-api.mutualignit.com.br';
 const PAGE_SIZE_PADRAO = 500;   // teto declarado no contrato (/quotation/)
 
 interface Body {
-  action?: 'ping' | 'capturar';
+  action?: 'ping' | 'capturar' | 'sondar';
+  caminhos?: string[];          // 'sondar': candidatas a testar (default: as do plano)
   entidade?: EntidadeMutual;
   paginas?: number;             // quantas paginas puxar nesta chamada
   pagina_inicial?: number;
@@ -75,6 +77,48 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { configured: true, ok: false, erro: (e as Error).message }, { status: 502 });
     }
+  }
+
+  // --- sondar: QUAL caminho existe? ----------------------------------------
+  // 🔴 ESTA ROTA EXISTE PARA NAO PALPITAR DE NOVO. A 0085 abriu a entidade
+  // `PLAN` com o caminho `/contract/plan/` deduzido do padrao das outras, e a
+  // propria tela respondeu HTTP 404. O swagger nao e alcancavel de todo
+  // ambiente, entao a resposta sai de um TESTE: ela bate em cada candidata com
+  // `page_size=1` e devolve o status de cada uma.
+  //
+  // Ela NAO grava nada e NAO precisa que o caminho seja uma entidade nossa —
+  // ver `urlMutualCaminho`. **200 com zero registro conta como existir**:
+  // dominio vazio e um resultado legitimo, 404 e um caminho que nao existe, e
+  // confundir os dois foi o erro original.
+  if (action === 'sondar') {
+    const candidatas = (body.caminhos && body.caminhos.length > 0 ? body.caminhos : CANDIDATAS_PLANO)
+      .slice(0, 12)
+      .filter((c) => typeof c === 'string' && /^[\w/_-]+\/?$/.test(c));
+    if (candidatas.length === 0) {
+      return NextResponse.json({ error: 'nenhum caminho valido para sondar' }, { status: 400 });
+    }
+
+    const sondagens: SondagemCaminho[] = [];
+    for (const caminho of candidatas) {
+      const url = urlMutualCaminho(base, caminho, { page: 1, page_size: 1 });
+      try {
+        const res = await fetch(url, {
+          headers: cabecalhoMutual(token),
+          cache: 'no-store',
+          // `manual` para o 301 do APPEND_SLASH aparecer como 301 em vez de ser
+          // seguido em silencio — um caminho que so responde depois do redirect
+          // e um caminho escrito errado, e a tela precisa saber disso.
+          redirect: 'manual',
+        });
+        const texto = await res.text();
+        let registros: number | null = null;
+        try { registros = extrairLista(JSON.parse(texto)).length; } catch { /* HTML/vazio */ }
+        sondagens.push({ caminho, http: res.status, registros });
+      } catch (e) {
+        sondagens.push({ caminho, http: null, registros: null, erro: (e as Error).message });
+      }
+    }
+    return NextResponse.json({ configured: true, ok: true, sondagens });
   }
 
   // --- capturar: puxa paginas e grava na area de captura -------------------

@@ -81,14 +81,32 @@ export function urlMutual(
   entidade: EntidadeMutual,
   params: Record<string, string | number | undefined | null> = {},
 ): string {
+  return urlMutualCaminho(base, ENTIDADES_MUTUAL[entidade], params);
+}
+
+/**
+ * A mesma montagem, para um caminho que ainda NAO e uma entidade nossa.
+ *
+ * Existe por causa do provador de `/plan/` (ver `CANDIDATAS_PLANO`): sondar um
+ * caminho candidato nao pode exigir abri-lo antes em `ENTIDADES_MUTUAL`, senao
+ * a allow-list do banco (`chk_mutual_entidade`) e as tres copias dela entrariam
+ * no caminho de uma simples pergunta. **A barra final continua obrigatoria** —
+ * a API e Django com `APPEND_SLASH` e devolve 301 sem ela, e um 301 lido como
+ * "nao existe" seria o mesmo palpite outra vez.
+ */
+export function urlMutualCaminho(
+  base: string,
+  caminho: string,
+  params: Record<string, string | number | undefined | null> = {},
+): string {
   const raiz = base.replace(/\/+$/, '');
-  const caminho = ENTIDADES_MUTUAL[entidade];
+  const rota = `/${caminho.replace(/^\/+/, '')}`.replace(/\/*$/, '/');
   const qs = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) {
     if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
   }
   const query = qs.toString();
-  return `${raiz}/public_api/v2${caminho}${query ? `?${query}` : ''}`;
+  return `${raiz}/public_api/v2${rota}${query ? `?${query}` : ''}`;
 }
 
 /** O contrato manda literalmente `Authorization: Bearer <TOKEN>`. */
@@ -814,4 +832,113 @@ export function amplitudeFipe(plano: PlanoExterno): number | null {
   const { fipe_min: min, fipe_max: max } = plano;
   if (min === null || max === null || min <= 0) return null;
   return max / min;
+}
+
+// =====================================================================
+// O ERRO DE LEITURA — e por que ele precisa de regua propria
+// =====================================================================
+/**
+ * 🔴 ERRO DE LEITURA NUNCA PODE VIRAR ESTADO VAZIO.
+ *
+ * Isto nasceu de um defeito real, medido em producao em 02/10/2026: TODAS as
+ * leituras de `/integracao/mutual` voltavam **HTTP 500** (estouro do
+ * `statement_timeout` de 8s do papel `authenticated`), e a tela:
+ *
+ *  - dizia *"Nenhuma equipe ainda. Puxe Equipes de vendas acima"* com as
+ *    **52 equipes JA capturadas** — mandando repetir o que ja estava feito;
+ *  - e, nas seis secoes que so renderizam com `data.length > 0`
+ *    (Periodicidade, Status nao reconhecidos, Situacao dos contratos,
+ *    **Filiais do Mutual**, Status cruzado, Quarentena), **desaparecia
+ *    inteira** — foi isso que, semanas antes, virou o relato
+ *    *"nao estao sendo listadas as filiais"*.
+ *
+ * Estado vazio e uma AFIRMACAO sobre o dado ("nao ha nada"); falha e uma
+ * afirmacao sobre a CONSULTA ("nao sei"). Trocar a segunda pela primeira e a
+ * familia de erro que este projeto persegue: um registro que mente com
+ * confianca. A mensagem do timeout diz o que fazer, porque ela e a unica que o
+ * usuario pode resolver sozinho (fechar as outras secoes e tentar de novo).
+ */
+export function mensagemDeFalhaDeLeitura(erro: unknown): string {
+  // ⚠️ O supabase-js NAO devolve `Error`: ele devolve um objeto
+  // `{ code, message, details, hint }`. Tratar so `instanceof Error` faz todo
+  // erro do PostgREST virar "[object Object]" — o teste pegou isto.
+  const bruto = textoDoErro(erro);
+  const codigo = erro && typeof erro === 'object' && 'code' in erro
+    ? String((erro as { code?: unknown }).code ?? '') : '';
+  const texto = `${bruto} ${codigo}`.toLowerCase();
+
+  // 57014: o Postgres cancelou por tempo. E o caso comum nesta tela, porque
+  // cada diagnostico varre os ~17,7 mil objetos capturados.
+  if (texto.includes('statement timeout') || texto.includes('57014') || texto.includes('canceling statement')) {
+    return 'A consulta passou do tempo limite (8s) e o banco a cancelou. '
+      + 'Nao e falta de dado: e o tamanho da varredura. Feche as secoes de diagnostico '
+      + 'que nao estiver usando e abra uma por vez.';
+  }
+  if (texto.includes('somente a equipe')) {
+    return 'Esta leitura e so para a equipe (admin ou financeiro).';
+  }
+  if (texto.includes('permission denied')) {
+    return 'Sem permissao para esta leitura no banco.';
+  }
+  if (texto.includes('could not find the function') || texto.includes('schema cache')) {
+    return 'A funcao nao existe no banco ainda — falta rodar a migration desta secao.';
+  }
+  return bruto || 'A leitura falhou e o banco nao disse por que.';
+}
+
+/** O texto de um erro, seja ele `Error`, objeto do PostgREST ou string. */
+function textoDoErro(erro: unknown): string {
+  if (!erro) return '';
+  if (erro instanceof Error) return erro.message;
+  if (typeof erro === 'string') return erro;
+  if (typeof erro === 'object') {
+    const o = erro as { message?: unknown; details?: unknown; hint?: unknown };
+    const partes = [o.message, o.details, o.hint]
+      .filter((x): x is string => typeof x === 'string' && x.length > 0);
+    if (partes.length > 0) return partes.join(' — ');
+    return '';
+  }
+  return String(erro);
+}
+
+// =====================================================================
+// O ENDPOINT DO PLANO — o palpite da 0085 virou 404
+// =====================================================================
+/**
+ * `/contract/plan/` devolveu **HTTP 404** (medido em 02/10/2026), ou seja o
+ * palpite da 0085 esta errado. O swagger do Mutual nao e alcancavel do
+ * ambiente onde isto foi escrito, entao a resposta nao sai de leitura de
+ * documentacao: ela sai de um TESTE.
+ *
+ * Estas sao as candidatas, na ordem em que o padrao dos endpoints que JA
+ * funcionam as sugere (`/association/...` para cadastro, `/contract/...` para
+ * o que pende do contrato, `/core/...` para dominio compartilhado — foi assim
+ * que `ADDRESS` acabou em `/core/address/`). O provador bate em cada uma e a
+ * tela nomeia a que responde 200; `ENTIDADES_MUTUAL.PLAN` passa a ser ESSA, e
+ * trocar e uma linha.
+ */
+export const CANDIDATAS_PLANO: string[] = [
+  '/contract/plan/',
+  '/plan/',
+  '/association/plan/',
+  '/core/plan/',
+  '/contract/contract_plan/',
+  '/association/contract_plan/',
+  '/product/plan/',
+  '/plan/plan/',
+];
+
+/** O veredito de uma rodada do provador, para a tela nao ter de interpretar HTTP. */
+export type SondagemCaminho = { caminho: string; http: number | null; registros: number | null; erro?: string };
+
+/**
+ * A primeira candidata que respondeu de verdade.
+ *
+ * **200 com zero registro CONTA**, e isso e deliberado: entidade de dominio
+ * vazia no Mutual e um resultado legitimo ("existe e nao tem nada"), enquanto
+ * 404 e "este caminho nao existe". Confundir os dois foi o que fez a 0085
+ * nascer com um palpite; aqui a distincao e o produto.
+ */
+export function caminhoQueRespondeu(sondagens: SondagemCaminho[]): SondagemCaminho | null {
+  return sondagens.find((s) => s.http !== null && s.http >= 200 && s.http < 300) ?? null;
 }

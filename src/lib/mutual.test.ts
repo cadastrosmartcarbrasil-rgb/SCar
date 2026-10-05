@@ -11,6 +11,7 @@ import {
   placaMutual, chassiMutual, renavamMutual, resumoDaCarga, recusasPorMotivo,
   filaAntesDoCutover, cutoverLiberado, tiposPendentes,
   planosPendentes, idsPara90Pct, amplitudeFipe, ENTIDADES_MUTUAL,
+  mensagemDeFalhaDeLeitura, urlMutualCaminho, caminhoQueRespondeu, CANDIDATAS_PLANO,
 } from './mutual';
 import type { LinhaCarga, TipoVeiculoExterno, PlanoExterno } from './mutual';
 import type { PassoFunil, FilialMutual, EquipeVendas } from './mutual';
@@ -724,5 +725,92 @@ describe('ENTIDADES_MUTUAL — a allow-list do banco e a do cliente andam JUNTAS
       'VEHICLE_TYPE', 'VEHICLE_COLOR', 'VEHICLE_CATEGORY', 'VEHICLE_USE_TYPE', 'EVENT_TYPE',
     ];
     expect(Object.keys(ENTIDADES_MUTUAL).sort()).toEqual([...noBanco].sort());
+  });
+});
+
+describe('mensagemDeFalhaDeLeitura — erro de leitura nunca vira estado vazio', () => {
+  it('traduz o estouro do statement_timeout para algo que a pessoa possa fazer', () => {
+    const m = mensagemDeFalhaDeLeitura(
+      new Error('canceling statement due to statement timeout'));
+    expect(m).toContain('tempo limite');
+    // A mensagem tem de dizer que NAO e falta de dado: foi essa confusao que
+    // fez a tela mandar "Puxe Equipes de vendas" com 52 equipes capturadas.
+    expect(m).toContain('Nao e falta de dado');
+    expect(m).toContain('uma por vez');
+  });
+
+  it('reconhece o codigo 57014 e a grafia curta', () => {
+    expect(mensagemDeFalhaDeLeitura({ code: '57014', message: 'statement timeout' }))
+      .toContain('tempo limite');
+    expect(mensagemDeFalhaDeLeitura(new Error('57014'))).toContain('tempo limite');
+  });
+
+  it('separa falta de permissao de falta de migration', () => {
+    expect(mensagemDeFalhaDeLeitura(new Error('Somente a equipe pode ler o diagnostico')))
+      .toContain('so para a equipe');
+    expect(mensagemDeFalhaDeLeitura(new Error('permission denied for function x')))
+      .toContain('Sem permissao');
+    expect(mensagemDeFalhaDeLeitura(
+      new Error('Could not find the function public.mutual_x in the schema cache')))
+      .toContain('falta rodar a migration');
+  });
+
+  it('erro desconhecido passa o texto do banco, nunca uma frase inventada', () => {
+    expect(mensagemDeFalhaDeLeitura(new Error('deu pau no 42P01'))).toBe('deu pau no 42P01');
+    expect(mensagemDeFalhaDeLeitura(null)).toContain('nao disse por que');
+    expect(mensagemDeFalhaDeLeitura(undefined)).toContain('nao disse por que');
+  });
+});
+
+describe('urlMutualCaminho — o provador de caminho', () => {
+  it('mantem a barra final obrigatoria (Django APPEND_SLASH devolve 301 sem ela)', () => {
+    expect(urlMutualCaminho('https://x.com', '/plan/'))
+      .toBe('https://x.com/public_api/v2/plan/');
+    expect(urlMutualCaminho('https://x.com', 'plan'))
+      .toBe('https://x.com/public_api/v2/plan/');
+    expect(urlMutualCaminho('https://x.com/', '//contract/plan'))
+      .toBe('https://x.com/public_api/v2/contract/plan/');
+  });
+
+  it('monta a query sem deixar parametro vazio entrar', () => {
+    expect(urlMutualCaminho('https://x.com', '/plan/', { page: 1, page_size: 1, nada: '' }))
+      .toBe('https://x.com/public_api/v2/plan/?page=1&page_size=1');
+  });
+
+  it('e o mesmo resultado de urlMutual para uma entidade conhecida', () => {
+    expect(urlMutualCaminho('https://x.com', ENTIDADES_MUTUAL.PERSON))
+      .toBe(urlMutual('https://x.com', 'PERSON'));
+  });
+});
+
+describe('caminhoQueRespondeu — 200 com zero registro CONTA como existir', () => {
+  it('escolhe a primeira candidata 2xx, mesmo sem registro nenhum', () => {
+    const r = caminhoQueRespondeu([
+      { caminho: '/contract/plan/', http: 404, registros: null },
+      { caminho: '/plan/', http: 200, registros: 0 },
+      { caminho: '/association/plan/', http: 200, registros: 7 },
+    ]);
+    // Dominio vazio e um resultado legitimo ("existe e nao tem nada"); 404 e
+    // "este caminho nao existe". Confundir os dois foi o erro da 0085.
+    expect(r?.caminho).toBe('/plan/');
+  });
+
+  it('301 do APPEND_SLASH nao conta como achado', () => {
+    expect(caminhoQueRespondeu([{ caminho: '/plan', http: 301, registros: null }])).toBeNull();
+  });
+
+  it('devolve null quando nenhuma respondeu', () => {
+    expect(caminhoQueRespondeu([])).toBeNull();
+    expect(caminhoQueRespondeu([
+      { caminho: '/a/', http: 404, registros: null },
+      { caminho: '/b/', http: null, registros: null, erro: 'timeout' },
+    ])).toBeNull();
+  });
+
+  it('a lista de candidatas comeca pelo caminho que a 0085 palpitou', () => {
+    // Deliberado: se ele voltar a funcionar um dia, e o primeiro a ser aceito.
+    expect(CANDIDATAS_PLANO[0]).toBe('/contract/plan/');
+    expect(new Set(CANDIDATAS_PLANO).size).toBe(CANDIDATAS_PLANO.length);
+    for (const c of CANDIDATAS_PLANO) expect(c).toMatch(/^\/[\w/_-]*\/$/);
   });
 });

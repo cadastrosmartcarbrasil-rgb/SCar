@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Upload, Undo2, Car, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ErroLeitura } from '@/components/integracao/erro-leitura';
 import {
   useMutualTiposVeiculo, useMutualPlanos, useVincularCatalogo,
   useCargaPrevia, useCargaLinhas, useExecutarCarga, useDesfazerCarga,
@@ -92,6 +93,7 @@ export function CargaMutual() {
             {pendentes.reduce((s, t) => s + t.faturaveis, 0)} veiculos faturaveis.
           </p>
         )}
+        <ErroLeitura q={tiposExternos} />
         <div className="space-y-2">
           {(tiposExternos.data ?? []).map((t) => (
             <div key={t.id_externo} className="flex flex-wrap items-center gap-2 text-sm">
@@ -142,10 +144,11 @@ export function CargaMutual() {
           que a FIPE varia de 6x a 14x dentro do mesmo id, logo o id e combo comercial e nao faixa
           de preco. Faixa muito larga e sinal de plano genérico.
         </p>
+        <ErroLeitura q={planosExternos} />
         {!planosExternos.data && planosExternos.isLoading && (
           <p className="text-xs text-slate-500">Lendo os planos da carteira…</p>
         )}
-        {listaPlanos.length === 0 && !planosExternos.isLoading && (
+        {listaPlanos.length === 0 && !planosExternos.isLoading && !planosExternos.isError && (
           <p className="text-xs text-slate-500">
             Nenhum <code className="tnum">plan_id</code> na carteira deste recorte.
           </p>

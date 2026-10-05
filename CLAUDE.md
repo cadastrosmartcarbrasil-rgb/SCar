@@ -70,11 +70,23 @@ existem com `search_path` fixo, a allow-list de `mutual_captura` tem as **15 ent
 uma a uma, `CONTRACT` inclusive), `mutual_tipos_veiculo_externos`/`mutual_planos_externos` devolvem
 **`destino_id`** e o rito da 0052 se manteve — **0 RPCs nossas abertas ao `anon`**; as 223 são de
 extensão (`btree_gist` 188 · `pg_trgm` 31 · `unaccent` 4), como documentado.
-**Só falta CLICAR:** puxar `PLAN` e `SALE_TEAM` (as duas com **0 linhas capturadas**) e registrar
-o de-para — **0 vínculos de `PLAN` e 0 de `VEHICLE_TYPE`** gravados até agora.
-**Próxima migration livre: `0086`** — e ela tem UM conserto pendente de passagem: o
-`comment on function mutual_planos_externos` diz *"17 ids cobrem 90%"*, e **o número é 18**
-(ver a seção da 0085). A migration não foi reescrita porque é append-only.
+> **📍 ESTADO DA MIGRAÇÃO DO MUTUAL — medido em produção em 05/10/2026**
+> | Etapa | Situação |
+> |---|---|
+> | Captura | ✅ completa — `SALE_TEAM` puxada em 02/10 (**52**), `CONTRACT_OBJECT` 17.741, `CONTRACT` 17.658 |
+> | Unidade (equipe de vendas) | ✅ 19 vínculos desde 21/09 |
+> | `PLAN` | ❌ **`/contract/plan/` dá 404** (4 tentativas em 02/10). Caminho real a descobrir pelo botão *Descobrir o caminho* (commit desta fase) |
+> | De-para `VEHICLE_TYPE` | ❌ 0 de 3 decisões |
+> | De-para `PLAN` | ❌ 0 de 42 (18 cobrem 90%) |
+> | **Carga da MATRIZ** | ❌ **não executada** — prévia: **470 veículos / 428 associados entram, 8 recusados (0 km)** |
+>
+> **🔴 Nenhum dos dois de-paras bloqueia a carga.** `mutual_executar_carga` grava
+> `coalesce(v.plano_protecao_id, r.plano_id)` e o mesmo para o tipo: carregar AGORA e registrar o
+> de-para depois **preenche os nulos na re-execução**. A semana de 28/09 parou porque a tela
+> mentia (timeout virando "Puxe Equipes de vendas" com 52 capturadas) e porque o `/plan/` deu 404 —
+> e o caminho crítico passou a ser tratado como se dependesse do plano, e não depende.
+**Próxima migration livre: `0087`.** A `0086` (só o `comment on function` da 0085: 18 ids, não 17)
+é NOVA e **não bloqueia nada** — roda quando quiser.
 As migrations **`0001`..`0084`** estão aplicadas em
 produção — a **`0084` (a CARGA) foi rodada e CONFERIDA em 01/10/2026**: as 14 funções existem e o
 rito da 0052 se manteve (0 RPCs nossas abertas ao `anon`; as 223 são de extensão, como documentado).
@@ -467,9 +479,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0085`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **62 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 725 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0086`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **63 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 736 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Os portais e páginas públicas
@@ -1752,6 +1764,9 @@ toca em `veiculos`. **Duas hipoteses medidas e DESCARTADAS antes:** (1) "o preco
 plano" — a amostra da matriz sugeria `plan_id` = faixa de preco, e a base viva inteira desmente
 (a FIPE varia 6x a 14x dentro do MESMO id, 1.111x no id 48; e combo comercial, nao faixa);
 (2) "sao 42 decisoes, inviavel" — falso, e e o que torna isto entregavel)
+· `0086_mutual_comentario_cobertura` (so o `comment on function mutual_planos_externos`: 18 dos 42
+ids cobrem 90% da matriz, nao 17; 29 dos 91 na base viva, nao 26. Nenhuma funcao, tabela, policy ou
+permissao muda — a 0085 e append-only e o texto errado saiu aqui)
 · `0082_carga_mutual_preparacao` (as TRES pecas que faltavam para a carga do Mutual poder rodar,
 e nenhuma delas carrega nada — ha teste provando que a operacao segue intacta: (A) **a UNIDADE sai
 do ASSOCIADO** — a corrente do consultor (0073/0074) foi medida com a base completa e esta VAZIA
@@ -2489,12 +2504,33 @@ aplicada e **migration é append-only** — não foi reescrita de propósito, po
 registro do que rodou. O texto do comentário no banco sai **na próxima migration**, de passagem;
 está anotado na caixa de estado do topo.
 
-### O que falta CLICAR (medido em 01/10/2026 — zero progresso até agora)
-- **`PLAN` tem 0 linhas capturadas** → puxar *Planos* na tela (e é aí que o palpite do `/plan/`
-  é confirmado ou vira 404 em dois segundos).
+**→ Corrigido pela `0086`** (só o comentário; nenhuma função muda).
+
+### 🔴 A TELA ESTAVA MENTINDO (02/10/2026) — erro de leitura nunca vira estado vazio
+`/integracao/mutual` disparava ~18 leituras pesadas ao abrir (2,4–4,4 s cada, sozinhas). Juntas,
+passavam do `statement_timeout` de **8 s** do `authenticated`, o PostgREST devolvia 500, o hook
+dava erro e a seção desenhava o estado VAZIO — inclusive *"Nenhuma equipe ainda. Puxe Equipes de
+vendas"* ao lado de *"52 capturados"*, e seis seções que simplesmente sumiam (foi o "não estão sendo
+listadas as filiais" de semanas antes). O banco estava são o tempo todo.
+- **`<ErroLeitura q={query}>`** (`src/components/integracao/erro-leitura.tsx`) + 
+  `mensagemDeFalhaDeLeitura` (`src/lib/mutual.ts`, testada). **Regra: toda seção que lê o banco
+  mostra o erro antes do vazio.** O supabase-js devolve `{code, message}`, não `Error` — tratar só
+  `instanceof Error` faz tudo virar "[object Object]" (o teste pegou).
+- **As seções de diagnóstico nascem FECHADAS** (`<Secao aberta onAlternar>`) e só consultam ao
+  abrir — os hooks ganharam `ativo` → `enabled`.
+- **`alter function … set statement_timeout` NÃO resolve:** o timer é armado no início do
+  statement; mudá-lo dentro da função não o rearma (medido). O alívio real seria o de-para como
+  TABELA/join (**75 ms × 1.235 ms** de `mutual_status_veiculo`), ~13 funções — decisão à parte.
+- **O sondador de caminho** (`action: 'sondar'` em `/api/v1/mutual`, `CANDIDATAS_PLANO`) testa
+  candidatos com `page_size=1`, sem gravar e sem seguir redirect. É ele que acha o `/plan/` real;
+  trocar `ENTIDADES_MUTUAL.PLAN` é **uma linha**.
+
+### O que falta CLICAR (medido em 05/10/2026)
+- **`PLAN`: `/contract/plan/` deu 404** → *Descobrir o caminho* na seção *Puxar dados*.
 - **0 vínculos de `PLAN`** → as 18 decisões que cobrem 90% da matriz. Os três maiores são
-  `48` (114 faturáveis · 23,7%), `88` (110 · 46,6%) e `41` (44 · 55,7%).
+  `48` (114 faturáveis · 23,8%), `88` (108 · 46,4%) e `41` (44 · 55,6%).
 - **0 vínculos de `VEHICLE_TYPE`** → as 3 decisões da 0084, que continuam pendentes.
+- **Nenhum dos dois impede a CARGA** — ver a caixa de estado do topo.
 
 ## PREPARAÇÃO DA CARGA DO MUTUAL (0082) — as 3 peças que faltavam
 > Nada aqui carrega dado. A regra da Fase 1 continua de pé e **há teste provando** que `clientes`,
