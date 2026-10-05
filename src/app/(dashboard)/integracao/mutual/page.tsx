@@ -270,14 +270,13 @@ export default function IntegracaoMutualPage() {
           parou.
         </p>
 
-        {/* O PROVADOR DO CAMINHO DOS PLANOS — 0085 palpitou, a tela deu 404. */}
+        {/* O PROVADOR DO CAMINHO DOS PLANOS — confirma o caminho em uso antes de puxar. */}
         <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50/60 p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs leading-relaxed text-amber-800">
-              <strong>Planos:</strong> o caminho{' '}
-              <code className="tnum">{ENTIDADES_MUTUAL.PLAN}</code> foi um{' '}
-              <strong>palpite</strong> e respondeu <strong>HTTP 404</strong>. O provador bate em
-              cada candidata e diz qual existe — sem gravar nada.
+              <strong>Planos:</strong> o caminho em uso e{' '}
+              <code className="tnum">{ENTIDADES_MUTUAL.PLAN}</code>, o do contrato da API. As
+              outras candidatas ja deram 404. O provador confirma qual existe — sem gravar nada.
             </p>
             <Button variant="ghost" onClick={() => void descobrirPlano()} disabled={sondar.isPending}>
               {sondar.isPending ? 'Sondando...' : 'Descobrir o caminho'}

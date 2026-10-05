@@ -75,7 +75,7 @@ extensão (`btree_gist` 188 · `pg_trgm` 31 · `unaccent` 4), como documentado.
 > |---|---|
 > | Captura | ✅ completa — `SALE_TEAM` puxada em 02/10 (**52**), `CONTRACT_OBJECT` 17.741, `CONTRACT` 17.658 |
 > | Unidade (equipe de vendas) | ✅ 19 vínculos desde 21/09 |
-> | `PLAN` | ❌ **`/contract/plan/` dá 404** (4 tentativas em 02/10). Caminho real a descobrir pelo botão *Descobrir o caminho* (commit desta fase) |
+> | `PLAN` | ⏳ **O caminho é `/quotation/plan/`** — estava no `docs/modulos/integracao-mutual.md` desde 09/09; a 0085 palpitou `/contract/plan/` e o provador mediu 404 nas 8 candidatas em 05/10. Corrigido; falta deploy + puxar *Planos* |
 > | De-para `VEHICLE_TYPE` | ❌ 0 de 3 decisões |
 > | De-para `PLAN` | ❌ 0 de 42 (18 cobrem 90%) |
 > | **Carga da MATRIZ** | ❌ **não executada** — prévia: **470 veículos / 428 associados entram, 8 recusados (0 km)** |
@@ -2451,7 +2451,15 @@ olhar valor e dia, não plano.
 **A mediana é `percentile_cont`, que INTERPOLA** (mesma escolha da 0064): a mediana de
 200/210/220/240 é 215, um valor que não existe na amostra. Serve para perfil; não é um preço real.
 
-### ⚠️ O ENDPOINT `/plan/` NÃO FOI CONFIRMADO NO SWAGGER
+### 🔴 O ENDPOINT É `/quotation/plan/` — e ele ESTAVA NO REPOSITÓRIO (corrigido em 05/10/2026)
+O texto abaixo é o registro do erro. O swagger foi lido inteiro em 09/09 e
+`docs/modulos/integracao-mutual.md` lista `/quotation/plan/` entre "as tabelas de domínio". A 0085
+palpitou sem consultar o próprio `docs/`, e custou uma semana: 4 capturas com 404, um provador de
+8 candidatas — todas 404. **Antes de chutar caminho do Mutual, `grep` em `docs/`.**
+Ao capturar, conferir que os `plan_id` do contrato casam com os ids de `/quotation/plan/`
+(`capturado` em `mutual_planos_externos`): se não casarem, é outro catálogo com o mesmo nome.
+
+### (histórico) ⚠️ O ENDPOINT `/plan/` NÃO FOI CONFIRMADO NO SWAGGER
 O swagger do Mutual não é alcançável do ambiente onde a 0085 foi escrita. O caminho em
 `ENTIDADES_MUTUAL.PLAN` (`/contract/plan/`) segue o padrão das outras entidades de contrato e
 **a tela diz que é um palpite** — puxar é um clique e um 404 responde em dois segundos. Trocar o
@@ -2531,7 +2539,7 @@ listadas as filiais" de semanas antes). O banco estava são o tempo todo.
   trocar `ENTIDADES_MUTUAL.PLAN` é **uma linha**.
 
 ### O que falta CLICAR (medido em 05/10/2026)
-- **`PLAN`: `/contract/plan/` deu 404** → *Descobrir o caminho* na seção *Puxar dados*.
+- **`PLAN`: o caminho é `/quotation/plan/`** → depois do deploy, puxar *Planos* em *Puxar dados*.
 - **0 vínculos de `PLAN`** → as 18 decisões que cobrem 90% da matriz. Os três maiores são
   `48` (114 faturáveis · 23,8%), `88` (108 · 46,4%) e `41` (44 · 55,6%).
 - **0 vínculos de `VEHICLE_TYPE`** → as 3 decisões da 0084, que continuam pendentes.

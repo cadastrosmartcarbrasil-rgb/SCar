@@ -807,9 +807,11 @@ describe('caminhoQueRespondeu — 200 com zero registro CONTA como existir', () 
     ])).toBeNull();
   });
 
-  it('a lista de candidatas comeca pelo caminho que a 0085 palpitou', () => {
-    // Deliberado: se ele voltar a funcionar um dia, e o primeiro a ser aceito.
-    expect(CANDIDATAS_PLANO[0]).toBe('/contract/plan/');
+  it('a lista de candidatas comeca pelo caminho do swagger, que e o da entidade', () => {
+    // O provador tem de confirmar PRIMEIRO o caminho em uso — senao ele aceita
+    // outro e a tela diz "use este" para um endpoint que a captura nao chama.
+    expect(CANDIDATAS_PLANO[0]).toBe('/quotation/plan/');
+    expect(CANDIDATAS_PLANO[0]).toBe(ENTIDADES_MUTUAL.PLAN);
     expect(new Set(CANDIDATAS_PLANO).size).toBe(CANDIDATAS_PLANO.length);
     for (const c of CANDIDATAS_PLANO) expect(c).toMatch(/^\/[\w/_-]*\/$/);
   });

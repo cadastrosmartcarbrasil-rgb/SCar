@@ -13,7 +13,7 @@ import { useRegionais } from '@/hooks/use-config';
 import { usePlanos, useTiposVeiculo } from '@/hooks/use-precificacao';
 import {
   resumoDaCarga, recusasPorMotivo, filaAntesDoCutover, cutoverLiberado, tiposPendentes,
-  planosPendentes, idsPara90Pct, amplitudeFipe,
+  planosPendentes, idsPara90Pct, amplitudeFipe, ENTIDADES_MUTUAL,
 } from '@/lib/mutual';
 import type { SeveridadeDiagnostico } from '@/lib/database.types';
 
@@ -168,10 +168,9 @@ export function CargaMutual() {
             </p>
             {!listaPlanos.some((p) => p.capturado) && (
               <p className="mb-2 text-xs text-amber-700">
-                <code className="tnum">/plan/</code> ainda nao foi capturado, entao os ids aparecem
-                sem nome — e o caminho desse endpoint e um <strong>palpite</strong> (o swagger nao
-                foi conferido). Puxar e um clique: um 404 ja responde. O de-para funciona do mesmo
-                jeito; capturar so preenche o nome.
+                <code className="tnum">{ENTIDADES_MUTUAL.PLAN}</code> ainda nao foi capturado,
+                entao os ids aparecem sem nome. Puxe <strong>Planos</strong> em Puxar dados. O
+                de-para funciona do mesmo jeito; capturar so preenche o nome.
               </p>
             )}
             <div className="space-y-2">

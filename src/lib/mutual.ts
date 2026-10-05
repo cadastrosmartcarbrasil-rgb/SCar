@@ -36,13 +36,14 @@ export const ENTIDADES_MUTUAL = {
   // (REGIONAL) vira so agrupamento de leitura. Repare no singular `sale_team`.
   SALE_TEAM: '/association/sale_team/',
   CONSULTANT: '/association/consultant/',
-  // 0085: o PLANO. ⚠️ ESTE CAMINHO E UM PALPITE — o swagger do Mutual nao foi
-  // alcancavel quando a 0085 foi escrita, e ele segue o padrao das outras
-  // entidades de contrato. Puxar e um clique e um 404 responde em dois
-  // segundos; trocar o caminho e ESTA LINHA, porque nada de schema depende
-  // dele: o de-para de plano funciona sem a captura (padrao da 0083, em que
-  // as 19 equipes foram agrupadas antes de SALE_TEAM existir). A tela avisa.
-  PLAN: '/contract/plan/',
+  // O PLANO mora em `/quotation/plan/` — e isto estava escrito no
+  // docs/modulos/integracao-mutual.md desde 09/09/2026 (swagger lido inteiro,
+  // secao "As tabelas de dominio estao todas expostas"). A 0085 palpitou
+  // `/contract/plan/` sem consultar o proprio repositorio, e o provador mediu
+  // 404 nas 8 candidatas em 05/10/2026. LICAO: antes de chutar um caminho do
+  // Mutual, `grep` no docs/ — o contrato inteiro ja foi lido uma vez.
+  // Nenhum schema depende disto: o de-para funciona sem a captura (0083/0085).
+  PLAN: '/quotation/plan/',
   VEHICLE_TYPE: '/vehicle/type/',
   VEHICLE_COLOR: '/vehicle/color/',
   VEHICLE_CATEGORY: '/vehicle/category/',
@@ -918,6 +919,9 @@ function textoDoErro(erro: unknown): string {
  * trocar e uma linha.
  */
 export const CANDIDATAS_PLANO: string[] = [
+  // O do swagger (docs/modulos/integracao-mutual.md) vem PRIMEIRO; as demais
+  // ficam como registro do que ja foi medido 404 em 05/10/2026.
+  '/quotation/plan/',
   '/contract/plan/',
   '/plan/',
   '/association/plan/',
