@@ -76,7 +76,7 @@ extensão (`btree_gist` 188 · `pg_trgm` 31 · `unaccent` 4), como documentado.
 > | Captura | ✅ completa — `SALE_TEAM` puxada em 02/10 (**52**), `CONTRACT_OBJECT` 17.741, `CONTRACT` 17.658 |
 > | Unidade (equipe de vendas) | ✅ 19 vínculos desde 21/09 |
 > | `PLAN` | ✅ **Captura esgotada (05/10, 2ª rodada): 18 planos**, 16 casam com os `plan_id` dos contratos. **A API não tem mais o que dar:** o swagger só declara `/quotation/plan/` (GET, por veículo) e `/quotation/plan/select_plan/` (POST — é ESCRITA, não usar); não há GET por id. Na matriz: **163 de 474 faturáveis têm nome** — 88 *V6 Automóvel MT* (108), **41 *Moto MT* (44)**, 43, 46, 42, 45, 86, 98. **O 48 (112) segue sem nome** e só sai da tela do Mutual (contrato 20224) ou da decisão direta |
-> | De-para do TIPO | 🟡 **`0087` escrita, NÃO aplicada** — o tipo passa a sair da **CATEGORIA** do Mutual (44 categorias, 100% preenchida), por **par categoria/tipo** (a categoria PASSEIO junta carro e moto). O de-para por `VEHICLE_TYPE` vira reserva. 0 vínculos ainda |
+> | De-para do TIPO | ✅ **`0087` aplicada e conferida (05/10)** — o tipo sai da **CATEGORIA** do Mutual, por **par categoria/tipo**. **23 vínculos gravados** (decisão do usuário, FRETE → Caminhão Pesado): na matriz **467 entram, TODOS com tipo** — Passeio 300 · Pick-up/Van 83 · Moto 71 · Caminhão Pesado 8 · Diesel Leve 5. Sem vínculo (0 faturáveis na matriz): V15/V5/V12 pickups, TAXI, PICKUP-TAXI, LOCADORA, CAMINHONETE, SUV, roubo e furto, 99/UBER — decidir antes de dezembro. `VEHICLE_TYPE` (reserva) segue com 0 |
 > | De-para `PLAN` | 🟡 **1 de 42** — `48` → *DIESEL MIGRADO MUTUAL* (112 carros da matriz, 05/10). **Caminhões (planos 140/53/66/70) ficam SEM plano por decisão.** Pendentes: `88`→Ouro? `41`→Prata? `45`→Roubo e Furto? `46`→sem plano? |
 > | **Carga da MATRIZ** | ❌ **não executada** — prévia: **470 veículos / 428 associados entram, 8 recusados (0 km)** |
 >
@@ -85,7 +85,7 @@ extensão (`btree_gist` 188 · `pg_trgm` 31 · `unaccent` 4), como documentado.
 > de-para depois **preenche os nulos na re-execução**. A semana de 28/09 parou porque a tela
 > mentia (timeout virando "Puxe Equipes de vendas" com 52 capturadas) e porque o `/plan/` deu 404 —
 > e o caminho crítico passou a ser tratado como se dependesse do plano, e não depende.
-**🆕 A `0087_mutual_categoria_veiculo` é NOVA e precisa ser rodada no SQL Editor** (só funções: recria
+**✅ A `0087_mutual_categoria_veiculo` foi rodada e CONFERIDA em 05/10/2026** (funções com `search_path`, 0 RPCs nossas ao `anon`; a seção por unidade leva ~6 s, perto do teto de 8 s da tela). Texto original: (só funções: recria
 `mutual_carga_linhas` trocando UMA linha — conferido em 05/10 que a versão em produção é idêntica à
 da 0084, salvo `\r\n` — e cria `mutual_categorias_veiculo`). Depois dela, o deploy do contêiner
 mostra a seção *Categoria do veículo* em `/integracao/mutual`.
