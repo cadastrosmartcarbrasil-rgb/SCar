@@ -12,7 +12,7 @@ import type {
   MutualCampo, MutualPassoFunil, MutualConsultorPendente,
   CobrancaExternaResumo, MutualEquipeVendas,
   MutualTipoVeiculoExterno,
-  MutualPlanoExterno, MutualCargaLinha, MutualCargaResultado,
+  MutualPlanoExterno, MutualCategoriaVeiculo, MutualCargaLinha, MutualCargaResultado,
   MutualDesfazerResultado,
 } from '@/lib/database.types';
 
@@ -541,8 +541,29 @@ export function useMutualPlanos(unidade: string | null) {
   });
 }
 
+/**
+ * 0087 — o de-para por CATEGORIA, com o peso da unidade. A chave e o PAR
+ * categoria/tipo: a categoria PASSEIO do Mutual junta carro e moto.
+ */
+export function useMutualCategorias(unidade: string | null) {
+  const supabase = createClient();
+  return useQuery<MutualCategoriaVeiculo[]>({
+    queryKey: ['mutual', 'categorias-veiculo', unidade],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('mutual_categorias_veiculo', {
+        p_regional_id: unidade,
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
 /** Registra (ou desfaz) o de-para de uma entidade de catalogo do Mutual. */
-export function useVincularCatalogo(entidade: 'VEHICLE_TYPE' | 'PLAN', tabela: string) {
+export function useVincularCatalogo(
+  entidade: 'VEHICLE_TYPE' | 'VEHICLE_CATEGORY' | 'PLAN',
+  tabela: string,
+) {
   const supabase = createClient();
   const qc = useQueryClient();
   return useMutation({

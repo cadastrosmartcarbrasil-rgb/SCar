@@ -6,7 +6,7 @@ import { Upload, Undo2, Car, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ErroLeitura } from '@/components/integracao/erro-leitura';
 import {
-  useMutualTiposVeiculo, useMutualPlanos, useVincularCatalogo,
+  useMutualTiposVeiculo, useMutualPlanos, useMutualCategorias, useVincularCatalogo,
   useCargaPrevia, useCargaLinhas, useExecutarCarga, useDesfazerCarga,
 } from '@/hooks/use-mutual';
 import { useRegionais } from '@/hooks/use-config';
@@ -14,6 +14,7 @@ import { usePlanos, useTiposVeiculo } from '@/hooks/use-precificacao';
 import {
   resumoDaCarga, recusasPorMotivo, filaAntesDoCutover, cutoverLiberado, tiposPendentes,
   planosPendentes, idsPara90Pct, amplitudeFipe, ENTIDADES_MUTUAL,
+  agruparCategoriasPorTipo, categoriasSemTipo, cotaDaCategoria,
 } from '@/lib/mutual';
 import type { SeveridadeDiagnostico } from '@/lib/database.types';
 
@@ -35,12 +36,19 @@ export function CargaMutual() {
   const planos = usePlanos();
   const tiposExternos = useMutualTiposVeiculo();
   const vincularTipo = useVincularCatalogo('VEHICLE_TYPE', 'tipos_veiculo');
+  const vincularCategoria = useVincularCatalogo('VEHICLE_CATEGORY', 'tipos_veiculo');
   const vincularPlano = useVincularCatalogo('PLAN', 'planos_protecao');
 
   const [unidade, setUnidade] = useState<string>('');
   const [inativos, setInativos] = useState(false);
 
   const planosExternos = useMutualPlanos(unidade || null);
+  const categorias = useMutualCategorias(unidade || null);
+  const listaCategorias = categorias.data ?? [];
+  const gruposCategoria = useMemo(
+    () => agruparCategoriasPorTipo(categorias.data ?? []), [categorias.data],
+  );
+  const semTipo = categoriasSemTipo(listaCategorias);
   const previa = useCargaPrevia(unidade || null, inativos);
   const linhas = useCargaLinhas(unidade || null, inativos, false, null);
   const executar = useExecutarCarga();
@@ -75,16 +83,106 @@ export function CargaMutual() {
         ate o cutover daquela unidade.
       </p>
 
-      {/* ------------------------------------------------ o de-para do catalogo */}
+      {/* ------------------------------------------------ o de-para por CATEGORIA (0087) */}
       <div className="rounded-xl border border-slate-200/80 p-4">
         <h3 className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
-          <Car className="h-4 w-4 text-cyan-600" aria-hidden /> Tipo de veiculo — o de-para
+          <Car className="h-4 w-4 text-cyan-600" aria-hidden /> Categoria do veiculo — o de-para
+        </h3>
+        <p className="mb-3 text-xs leading-relaxed text-slate-500">
+          A <strong>categoria</strong> do Mutual decide o tipo com mais precisao que o tipo
+          (&quot;V6 / pickups/vans&quot; × &quot;V5 / automovel comum&quot;). Escolher o mesmo
+          tipo em varias categorias <strong>e o agrupamento</strong>, como nas equipes de vendas.
+          Cada linha e o <strong>par categoria + tipo</strong>: a categoria PASSEIO do Mutual junta
+          carros e motos, e as duas metades se decidem separadas. Categoria sem de-para entra pelo
+          tipo (a reserva, mais abaixo); so fica sem tipo quem nao tem nenhum dos dois.
+        </p>
+        <p className="mb-3 text-xs leading-relaxed text-slate-500">
+          O selo <span className="tnum">V5</span>/<span className="tnum">V6</span>… e a{' '}
+          <strong>cota de participacao</strong> que o nome da categoria carrega. Ele so aparece
+          aqui para informar: a carga <strong>nao grava a cota</strong> — e decisao a parte.
+        </p>
+        <ErroLeitura q={categorias} />
+        {!categorias.data && categorias.isLoading && (
+          <p className="text-xs text-slate-500">Lendo as categorias da carteira…</p>
+        )}
+        {listaCategorias.length > 0 && (
+          <p className="mb-2 text-xs text-slate-600">
+            {listaCategorias.length} categoria(s)
+            {unidade ? ` em ${nomeUnidade}` : ' na base inteira'} ·{' '}
+            {listaCategorias.filter((c) => c.destino_id).length} com de-para
+            {semTipo.length > 0 && (
+              <span className="text-amber-700">
+                {' '}· {semTipo.length} entrariam SEM tipo
+                ({semTipo.reduce((acc, c) => acc + c.faturaveis, 0)} faturaveis)
+              </span>
+            )}
+          </p>
+        )}
+        <div className="space-y-3">
+          {gruposCategoria.map((g) => (
+            <div key={g.tipo}>
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                {g.tipo} <span className="tnum font-normal">· {g.faturaveis} faturaveis</span>
+              </p>
+              <div className="space-y-1.5">
+                {g.itens.map((c) => {
+                  const cota = cotaDaCategoria(c.categoria_nome);
+                  return (
+                    <div key={c.chave} className="flex flex-wrap items-center gap-2 text-sm">
+                      <span className="min-w-[14rem] text-slate-800">
+                        {c.categoria_nome ?? `(categoria ${c.categoria_id})`}
+                        {cota && (
+                          <span className="ml-1 rounded bg-slate-100 px-1 text-[11px] text-slate-600 tnum">
+                            {cota.especial ? 'ESP ' : ''}{cota.codigo}
+                          </span>
+                        )}
+                        {!c.capturada && (
+                          <span className="ml-1 text-xs text-amber-700">· nao capturada</span>
+                        )}
+                      </span>
+                      <span className="tnum text-xs text-slate-500">
+                        {c.faturaveis} faturaveis · {c.veiculos} no total
+                      </span>
+                      <select
+                        className="rounded border border-slate-200 px-2 py-1 text-xs"
+                        value={c.destino_id ?? ''}
+                        disabled={vincularCategoria.isPending}
+                        onChange={(e) => {
+                          vincularCategoria.mutate(
+                            { idExterno: c.chave, registroId: e.target.value || null },
+                            { onError: (err) => toast.error((err as Error).message) },
+                          );
+                        }}
+                      >
+                        <option value="">— sem de-para —</option>
+                        {(tipos.data ?? []).map((tv) => (
+                          <option key={tv.id} value={tv.id}>{tv.nome}</option>
+                        ))}
+                      </select>
+                      {!c.destino_id && (
+                        <span className={`text-xs ${c.reserva_id ? 'text-slate-400' : 'text-amber-700'}`}>
+                          {c.reserva_id ? `entra como ${c.reserva_nome} (pelo tipo)` : 'entra sem tipo'}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ------------------------------------------------ o de-para do TIPO — a reserva */}
+      <div className="rounded-xl border border-slate-200/80 p-4">
+        <h3 className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+          <Car className="h-4 w-4 text-cyan-600" aria-hidden /> Tipo de veiculo — a reserva
         </h3>
         <p className="mb-3 text-xs leading-relaxed text-slate-500">
           O Mutual tem <strong>tres</strong> tipos (CARRO, MOTO, CAMINHAO) e o SCar tem{' '}
-          <strong>sete</strong>: &quot;CARRO&quot; nao decide entre Passeio e Pick-up / Van, entao
-          a escolha e de quem conhece a carteira — a carga nunca chuta. Sem o de-para o veiculo
-          entra igual, so sem tipo, e isso <strong>nao afeta a cobranca</strong> enquanto a
+          <strong>sete</strong>. Este de-para so vale para a categoria que ficou{' '}
+          <strong>sem</strong> de-para acima — a categoria sempre vence. Sem nenhum dos dois o
+          veiculo entra igual, so sem tipo, e isso <strong>nao afeta a cobranca</strong> enquanto a
           cobranca externa esta ligada.
         </p>
         {pendentes.length > 0 && (

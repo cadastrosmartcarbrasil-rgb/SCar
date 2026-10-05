@@ -76,7 +76,7 @@ extensão (`btree_gist` 188 · `pg_trgm` 31 · `unaccent` 4), como documentado.
 > | Captura | ✅ completa — `SALE_TEAM` puxada em 02/10 (**52**), `CONTRACT_OBJECT` 17.741, `CONTRACT` 17.658 |
 > | Unidade (equipe de vendas) | ✅ 19 vínculos desde 21/09 |
 > | `PLAN` | ✅ **Captura esgotada (05/10, 2ª rodada): 18 planos**, 16 casam com os `plan_id` dos contratos. **A API não tem mais o que dar:** o swagger só declara `/quotation/plan/` (GET, por veículo) e `/quotation/plan/select_plan/` (POST — é ESCRITA, não usar); não há GET por id. Na matriz: **163 de 474 faturáveis têm nome** — 88 *V6 Automóvel MT* (108), **41 *Moto MT* (44)**, 43, 46, 42, 45, 86, 98. **O 48 (112) segue sem nome** e só sai da tela do Mutual (contrato 20224) ou da decisão direta |
-> | De-para `VEHICLE_TYPE` | ❌ 0 de 3 decisões |
+> | De-para do TIPO | 🟡 **`0087` escrita, NÃO aplicada** — o tipo passa a sair da **CATEGORIA** do Mutual (44 categorias, 100% preenchida), por **par categoria/tipo** (a categoria PASSEIO junta carro e moto). O de-para por `VEHICLE_TYPE` vira reserva. 0 vínculos ainda |
 > | De-para `PLAN` | 🟡 **1 de 42** — `48` → *DIESEL MIGRADO MUTUAL* (112 carros da matriz, 05/10). **Caminhões (planos 140/53/66/70) ficam SEM plano por decisão.** Pendentes: `88`→Ouro? `41`→Prata? `45`→Roubo e Furto? `46`→sem plano? |
 > | **Carga da MATRIZ** | ❌ **não executada** — prévia: **470 veículos / 428 associados entram, 8 recusados (0 km)** |
 >
@@ -85,7 +85,11 @@ extensão (`btree_gist` 188 · `pg_trgm` 31 · `unaccent` 4), como documentado.
 > de-para depois **preenche os nulos na re-execução**. A semana de 28/09 parou porque a tela
 > mentia (timeout virando "Puxe Equipes de vendas" com 52 capturadas) e porque o `/plan/` deu 404 —
 > e o caminho crítico passou a ser tratado como se dependesse do plano, e não depende.
-**Próxima migration livre: `0087`.** As **`0001`..`0086`** estão aplicadas — a **`0086` foi rodada e
+**🆕 A `0087_mutual_categoria_veiculo` é NOVA e precisa ser rodada no SQL Editor** (só funções: recria
+`mutual_carga_linhas` trocando UMA linha — conferido em 05/10 que a versão em produção é idêntica à
+da 0084, salvo `\r\n` — e cria `mutual_categorias_veiculo`). Depois dela, o deploy do contêiner
+mostra a seção *Categoria do veículo* em `/integracao/mutual`.
+**Próxima migration livre: `0088`.** As **`0001`..`0086`** estão aplicadas — a **`0086` foi rodada e
 CONFERIDA em 05/10/2026**: o comentário de `mutual_planos_externos` diz 18/42 e 29/91 (sem "17" nem
 "26"), a função segue `security definer` com `search_path=public`, fechada ao `anon`; 0 `security
 definer` sem `search_path` e **0 RPCs nossas abertas ao `anon`**. (A primeira tentativa rodou num dos
@@ -484,9 +488,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0086`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **63 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 748 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0087`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **64 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 755 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Os portais e páginas públicas
@@ -1772,6 +1776,14 @@ plano" — a amostra da matriz sugeria `plan_id` = faixa de preco, e a base viva
 · `0086_mutual_comentario_cobertura` (so o `comment on function mutual_planos_externos`: 18 dos 42
 ids cobrem 90% da matriz, nao 17; 29 dos 91 na base viva, nao 26. Nenhuma funcao, tabela, policy ou
 permissao muda — a 0085 e append-only e o texto errado saiu aqui)
+· `0087_mutual_categoria_veiculo` (o TIPO DE VEICULO sai da CATEGORIA do Mutual, pedido do usuario:
+`vehicle_category` vem em 100% dos objetos e `/vehicle/category/` (44 categorias) estava capturada
+desde a 0062 sem uso. **A chave e o PAR `'<categoria>/<tipo>'`** porque a categoria 26 "PASSEIO"
+junta 1.950 carros e 1.054 motos. Precedencia de `mutual_tipo_veiculo_do_objeto`: o vinculo da
+categoria manda, o de `VEHICLE_TYPE` (0084) e reserva, sem os dois e nulo. `mutual_carga_linhas`
+recriada trocando so a linha do `tipo_id`; `mutual_categorias_veiculo(regional)` e a tela, com peso
+da unidade, cobertura acumulada, destino e reserva. A COTA (V5..V15) que o nome da categoria carrega
+so e MOSTRADA — a carga nao grava cota, decisao a parte)
 · `0082_carga_mutual_preparacao` (as TRES pecas que faltavam para a carga do Mutual poder rodar,
 e nenhuma delas carrega nada — ha teste provando que a operacao segue intacta: (A) **a UNIDADE sai
 do ASSOCIADO** — a corrente do consultor (0073/0074) foi medida com a base completa e esta VAZIA
@@ -2555,7 +2567,15 @@ listadas as filiais" de semanas antes). O banco estava são o tempo todo.
   **todos `vehicle_type` 1 (CARRO)** — Onix, HB20, Strada, Gol; na base viva o 48 tem 544 faturáveis.
   **Caminhões da matriz (13, nos planos 140/53/66/70) ficam SEM plano por decisão do usuário.**
   Faltam `88` (108), `41` (44) e a cauda — as 18 decisões que cobrem 90% da matriz.
-- **0 vínculos de `VEHICLE_TYPE`** → as 3 decisões da 0084, que continuam pendentes.
+- **O tipo de veículo passou a sair da CATEGORIA (`0087`, pedido do usuário em 05/10/2026).** A
+  categoria do Mutual já diz "V6 / pickups/vans" × "V5 / automóvel comum" × "Caminhão Leve" — é
+  o mesmo movimento das equipes de vendas (0083): **agrupar várias categorias num tipo do SCar**,
+  pela tela, seção *Categoria do veículo*, agrupada pelo tipo do Mutual. **A chave é o PAR
+  categoria/tipo** (`26/1` PASSEIO·CARRO × `26/2` PASSEIO·MOTO). Categoria sem vínculo cai no
+  de-para por `VEHICLE_TYPE` (reserva) — que segue com 0 vínculos. **Matriz (473 objetos):** V5
+  automóvel comum 206 · Motocicleta 63 · PASSEIO 38 · V6 pickups 29 · Especial v6 automóvel 25 ·
+  V6 automóvel 22 · Especial v10 pickups 21 · V10 pickups 16 · … · caminhões em 5 categorias
+  (Caminhão Leve 4, FRETE 3, CAMINHÕES PESADOS 3, Caminhão Pesado 2, VANS-CAMINHÃO 3/4 1).
 - **Nenhum dos dois impede a CARGA** — ver a caixa de estado do topo.
 
 ## PREPARAÇÃO DA CARGA DO MUTUAL (0082) — as 3 peças que faltavam

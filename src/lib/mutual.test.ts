@@ -14,7 +14,10 @@ import {
   mensagemDeFalhaDeLeitura, urlMutualCaminho, caminhoQueRespondeu, CANDIDATAS_PLANO,
   resumoDoCorpo, parametrosDoSwagger, veiculosPorPlano, listaDePlanos, somarDiagnosticoPlanos,
   caminhosDoSwagger, caminhoDeDetalhe, caminhoComId,
+  chaveCategoria, tipoEfetivoDaCategoria, categoriasSemTipo, agruparCategoriasPorTipo,
+  cotaDaCategoria,
 } from './mutual';
+import type { CategoriaExterna } from './mutual';
 import type { LinhaCarga, TipoVeiculoExterno, PlanoExterno } from './mutual';
 import type { PassoFunil, FilialMutual, EquipeVendas } from './mutual';
 
@@ -928,5 +931,76 @@ describe('captura de planos por veiculo (/quotation/plan/ exige vehicle_id)', ()
     expect(s).toMatchObject({ planos_nos_contratos: 109, ja_capturados: 20, consultados: 18,
       recebidos: 36, chaves: ['id', 'name'] });
     expect(s.recusas).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 0087 — de-para por CATEGORIA
+// ---------------------------------------------------------------------------
+const cat = (o: Partial<CategoriaExterna> & { chave: string }): CategoriaExterna => ({
+  categoria_nome: null, tipo_mutual: 'CARRO', faturaveis: 0, veiculos: 0,
+  destino_id: null, reserva_id: null, ...o,
+});
+
+describe('chaveCategoria (espelho de mutual_chave_categoria)', () => {
+  it('e o PAR categoria/tipo — PASSEIO carro e PASSEIO moto sao duas chaves', () => {
+    expect(chaveCategoria('26', '1')).toBe('26/1');
+    expect(chaveCategoria('26', '2')).toBe('26/2');
+  });
+  it('tipo vazio vira ? e categoria vazia nao tem chave', () => {
+    expect(chaveCategoria(' 26 ', '')).toBe('26/?');
+    expect(chaveCategoria('', '1')).toBeNull();
+    expect(chaveCategoria(null, '1')).toBeNull();
+  });
+});
+
+describe('tipoEfetivoDaCategoria', () => {
+  it('a categoria manda, o tipo e reserva, sem os dois e nulo', () => {
+    expect(tipoEfetivoDaCategoria({ destino_id: 'pickup', reserva_id: 'passeio' })).toBe('pickup');
+    expect(tipoEfetivoDaCategoria({ destino_id: null, reserva_id: 'passeio' })).toBe('passeio');
+    expect(tipoEfetivoDaCategoria({ destino_id: null, reserva_id: null })).toBeNull();
+  });
+});
+
+describe('categoriasSemTipo', () => {
+  it('so conta quem entraria SEM tipo e tem carteira — reserva nao e pendencia', () => {
+    const r = categoriasSemTipo([
+      cat({ chave: '21/1', faturaveis: 200, reserva_id: 'passeio' }),
+      cat({ chave: '5/3', faturaveis: 4 }),
+      cat({ chave: '33/3', faturaveis: 9 }),
+      cat({ chave: '99/1', faturaveis: 0 }),
+      cat({ chave: '24/1', faturaveis: 30, destino_id: 'pickup' }),
+    ]);
+    expect(r.map((c) => c.chave)).toEqual(['33/3', '5/3']);
+  });
+});
+
+describe('agruparCategoriasPorTipo', () => {
+  it('agrupa pelo tipo do Mutual, grupos e itens pelo peso', () => {
+    const g = agruparCategoriasPorTipo([
+      cat({ chave: '5/3', tipo_mutual: 'CAMINHAO', faturaveis: 4 }),
+      cat({ chave: '21/1', faturaveis: 206 }),
+      cat({ chave: '8/2', tipo_mutual: 'MOTO', faturaveis: 63 }),
+      cat({ chave: '24/1', faturaveis: 29 }),
+      cat({ chave: '26/2', tipo_mutual: 'MOTO', faturaveis: 10 }),
+      cat({ chave: '7/?', tipo_mutual: null, faturaveis: 1 }),
+    ]);
+    expect(g.map((x) => x.tipo)).toEqual(['CARRO', 'MOTO', 'CAMINHAO', 'SEM TIPO NO MUTUAL']);
+    expect(g[0].faturaveis).toBe(235);
+    expect(g[0].itens.map((i) => i.chave)).toEqual(['21/1', '24/1']);
+    expect(g[1].itens.map((i) => i.chave)).toEqual(['8/2', '26/2']);
+  });
+});
+
+describe('cotaDaCategoria', () => {
+  it('le a cota do nome pelo parser da 0016', () => {
+    expect(cotaDaCategoria('V5 / automóvel comum')).toEqual({ codigo: 'V5', especial: false });
+    expect(cotaDaCategoria('Especial v10 pickups/vans/utilitários')).toEqual({ codigo: 'V10', especial: true });
+    expect(cotaDaCategoria('ESPECIAL V15 PICKUPS/VANS/UTILITáRIOS')).toEqual({ codigo: 'V15', especial: true });
+  });
+  it('categoria sem V-numero nao inventa cota', () => {
+    expect(cotaDaCategoria('PASSEIO')).toBeNull();
+    expect(cotaDaCategoria('Caminhão Leve')).toBeNull();
+    expect(cotaDaCategoria(null)).toBeNull();
   });
 });

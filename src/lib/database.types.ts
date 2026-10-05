@@ -2511,6 +2511,28 @@ export type MutualPlanoExterno = {
   plano_nome: string | null;
 };
 
+/** 0087 — o de-para por CATEGORIA do Mutual, por PAR categoria/tipo (a
+ *  categoria "PASSEIO" junta carro e moto), com o peso da unidade. */
+export type MutualCategoriaVeiculo = {
+  /** '<categoria>/<tipo>' — e a chave gravada em `integracao_vinculos`. */
+  chave: string;
+  categoria_id: string;
+  categoria_nome: string | null;
+  tipo_id: string | null;
+  /** O tipo do Mutual (CARRO/MOTO/CAMINHAO) — o cabecalho do agrupamento. */
+  tipo_mutual: string | null;
+  capturada: boolean;
+  veiculos: number;
+  faturaveis: number;
+  cobertura_acumulada: number | null;
+  /** O vinculo da CATEGORIA — manda. */
+  destino_id: string | null;
+  destino_nome: string | null;
+  /** O que o vinculo do TIPO daria sem ele — a reserva. */
+  reserva_id: string | null;
+  reserva_nome: string | null;
+};
+
 /** 0084 — uma linha da carga, ja saneada, com o motivo da recusa quando ha. */
 export type MutualCargaLinha = {
   id_objeto: string;
@@ -3926,6 +3948,10 @@ export type Database = {
       mutual_planos_externos: {
         Args: { p_regional_id?: string | null };
         Returns: MutualPlanoExterno[];
+      };
+      mutual_categorias_veiculo: {
+        Args: { p_regional_id?: string | null };
+        Returns: MutualCategoriaVeiculo[];
       };
       mutual_carga_linhas: {
         Args: {

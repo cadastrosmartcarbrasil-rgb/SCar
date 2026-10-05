@@ -13,6 +13,7 @@ import type {
   StatusVeiculo, TipoPessoa, StatusTitulo,
   EntidadeMutual as EntidadeMutualDoBanco,
 } from '@/lib/database.types';
+import { parseCategoriaSGA } from '@/lib/participacao';
 
 // ---------------------------------------------------------------------------
 // Endpoints
@@ -760,6 +761,80 @@ export function tiposPendentes(tipos: TipoVeiculoExterno[]): TipoVeiculoExterno[
   return tipos
     .filter((t) => !t.destino_id && t.faturaveis > 0)
     .sort((a, b) => b.faturaveis - a.faturaveis);
+}
+
+// ---------------------------------------------------------------------------
+// De-para por CATEGORIA (0087)
+// ---------------------------------------------------------------------------
+/** Uma linha do de-para por categoria (o par categoria/tipo do Mutual). */
+export interface CategoriaExterna {
+  chave: string;
+  categoria_nome: string | null;
+  tipo_mutual: string | null;
+  faturaveis: number;
+  veiculos: number;
+  destino_id: string | null;
+  reserva_id: string | null;
+}
+
+/** Espelho de `mutual_chave_categoria`: '<categoria>/<tipo>', tipo vazio = '?'. */
+export function chaveCategoria(categoria: string | null | undefined, tipo: string | null | undefined): string | null {
+  const c = (categoria ?? '').trim();
+  if (!c) return null;
+  const t = (tipo ?? '').trim();
+  return `${c}/${t || '?'}`;
+}
+
+/**
+ * O tipo que a CARGA vai gravar, na precedencia de `mutual_tipo_veiculo_do_objeto`:
+ * o vinculo da categoria manda, o do tipo e reserva, e sem os dois e nulo.
+ */
+export function tipoEfetivoDaCategoria(c: Pick<CategoriaExterna, 'destino_id' | 'reserva_id'>): string | null {
+  return c.destino_id ?? c.reserva_id ?? null;
+}
+
+/**
+ * As que ainda ENTRARIAM SEM TIPO: sem vinculo da categoria E sem reserva do
+ * tipo, com carteira faturavel. Categoria sem vinculo mas com reserva nao e
+ * pendencia — ela entra pelo tipo; so pode ficar mais precisa.
+ */
+export function categoriasSemTipo<T extends CategoriaExterna>(lista: T[]): T[] {
+  return lista
+    .filter((c) => c.faturaveis > 0 && !tipoEfetivoDaCategoria(c))
+    .sort((a, b) => b.faturaveis - a.faturaveis);
+}
+
+/**
+ * Agrupa as categorias pelo TIPO do Mutual (CARRO, MOTO, CAMINHAO) — o
+ * cabecalho de leitura, como a macrorregiao fez para as equipes (0083). Os
+ * grupos e as linhas vem pelo peso, maior primeiro.
+ */
+export function agruparCategoriasPorTipo<T extends CategoriaExterna>(
+  lista: T[],
+): { tipo: string; faturaveis: number; veiculos: number; itens: T[] }[] {
+  const grupos = new Map<string, T[]>();
+  for (const c of lista) {
+    const k = c.tipo_mutual ?? 'SEM TIPO NO MUTUAL';
+    grupos.set(k, [...(grupos.get(k) ?? []), c]);
+  }
+  return [...grupos.entries()]
+    .map(([tipo, itens]) => ({
+      tipo,
+      faturaveis: itens.reduce((s, i) => s + i.faturaveis, 0),
+      veiculos: itens.reduce((s, i) => s + i.veiculos, 0),
+      itens: [...itens].sort((a, b) => b.faturaveis - a.faturaveis || b.veiculos - a.veiculos),
+    }))
+    .sort((a, b) => b.faturaveis - a.faturaveis || b.veiculos - a.veiculos || (a.tipo < b.tipo ? -1 : 1));
+}
+
+/**
+ * A cota de participacao que o NOME da categoria carrega ("V6 / automovel
+ * comum", "Especial v10 pickups"), pelo MESMO parser da 0016. So para a tela
+ * mostrar o que vem junto — a carga NAO grava a cota (decisao a parte).
+ */
+export function cotaDaCategoria(nome: string | null | undefined): { codigo: string; especial: boolean } | null {
+  const p = parseCategoriaSGA(nome);
+  return p.codigoCota ? { codigo: p.codigoCota, especial: p.especial } : null;
 }
 
 // ---------------------------------------------------------------------------
