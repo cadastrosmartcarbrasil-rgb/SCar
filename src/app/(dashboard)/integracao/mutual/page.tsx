@@ -346,7 +346,22 @@ export default function IntegracaoMutualPage() {
               {diagPlanos.planos_nos_contratos} plano(s) citados nos contratos ·{' '}
               {diagPlanos.consultados} veiculo(s) consultados · {diagPlanos.recebidos} plano(s)
               recebidos · {diagPlanos.ja_capturados} ja estavam capturados
+              {diagPlanos.consultados_por_id ? ` · ${diagPlanos.consultados_por_id} consultado(s) por id` : ''}
             </p>
+            <p className="mt-1">
+              Consulta por id do plano:{' '}
+              {diagPlanos.caminho_detalhe
+                ? <code className="tnum">{diagPlanos.caminho_detalhe}</code>
+                : 'o contrato da API nao declara — planos antigos so saem se algum veiculo ainda puder contrata-los.'}
+            </p>
+            {diagPlanos.swagger_planos && diagPlanos.swagger_planos.length > 0 && (
+              <p className="mt-1">
+                O contrato da API fala de plano em:{' '}
+                {diagPlanos.swagger_planos.map((x) => (
+                  <code key={x.caminho} className="mr-2 tnum">{x.caminho} ({x.metodos.join('/')})</code>
+                ))}
+              </p>
+            )}
             {diagPlanos.sem_id > 0 && (
               <p className="mt-1 text-red-700">
                 {diagPlanos.sem_id} plano(s) vieram SEM <code>id</code> — esses nao casam com o{' '}
@@ -362,7 +377,8 @@ export default function IntegracaoMutualPage() {
               <ul className="mt-1 space-y-0.5">
                 {diagPlanos.recusas.map((x) => (
                   <li key={x.vehicle_id}>
-                    Recusou o veiculo <span className="tnum">{x.vehicle_id}</span> (HTTP {x.http ?? '-'})
+                    Recusou {x.vehicle_id.startsWith('plano') ? 'o ' : 'o veiculo '}
+                    <span className="tnum">{x.vehicle_id}</span> (HTTP {x.http ?? '-'})
                     {x.detalhe ? <>: <span className="font-mono">{x.detalhe}</span></> : null}
                   </li>
                 ))}

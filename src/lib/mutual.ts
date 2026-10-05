@@ -1036,7 +1036,11 @@ export type ParPlanoVeiculo = {
 };
 
 /** O veiculo escolhido para representar um `plan_id` na consulta. */
-export type RepresentantePlano = { plan_id: string; vehicle_id: string; peso: number };
+export type RepresentantePlano = {
+  plan_id: string; vehicle_id: string; peso: number;
+  /** Ate 2 veiculos de reserva: o Mutual recusa veiculo que ele nao acha mais ("Veiculo nao encontrado"). */
+  reservas: string[];
+};
 
 /**
  * Um veiculo por `plan_id`, do plano mais pesado para o mais leve.
@@ -1047,25 +1051,26 @@ export type RepresentantePlano = { plan_id: string; vehicle_id: string; peso: nu
  * bloco recalcula a lista: ordem instavel pularia ou repetiria planos.
  */
 export function veiculosPorPlano(pares: ParPlanoVeiculo[]): RepresentantePlano[] {
-  const grupos = new Map<string, { peso: number; ativo: string | null; qualquer: string | null }>();
-  const maior = (a: string | null, b: string) =>
-    a === null || compararIds(b, a) > 0 ? b : a;
+  const grupos = new Map<string, { peso: number; ativos: Set<string>; outros: Set<string> }>();
   for (const p of pares) {
     const plano = (p.plan_id ?? '').trim();
     const veiculo = (p.vehicle_id ?? '').trim();
     if (!plano) continue;
-    const g = grupos.get(plano) ?? { peso: 0, ativo: null, qualquer: null };
+    const g = grupos.get(plano) ?? { peso: 0, ativos: new Set<string>(), outros: new Set<string>() };
     g.peso += 1;
     if (veiculo) {
-      g.qualquer = maior(g.qualquer, veiculo);
-      if ((p.status ?? '').trim().toUpperCase() === 'ATIVO') g.ativo = maior(g.ativo, veiculo);
+      if ((p.status ?? '').trim().toUpperCase() === 'ATIVO') g.ativos.add(veiculo);
+      else g.outros.add(veiculo);
     }
     grupos.set(plano, g);
   }
+  const desc = (x: Set<string>) => Array.from(x).sort((a, b) => compararIds(b, a));
   const out: RepresentantePlano[] = [];
   for (const [plan_id, g] of Array.from(grupos.entries())) {
-    const vehicle_id = g.ativo ?? g.qualquer;
-    if (vehicle_id) out.push({ plan_id, vehicle_id, peso: g.peso });
+    const ativos = desc(g.ativos);
+    const candidatos = [...ativos, ...desc(g.outros).filter((v) => !g.ativos.has(v))];
+    if (candidatos.length === 0) continue;
+    out.push({ plan_id, vehicle_id: candidatos[0], peso: g.peso, reservas: candidatos.slice(1, 3) });
   }
   return out.sort((a, b) => b.peso - a.peso || compararIds(a.plan_id, b.plan_id));
 }
@@ -1112,6 +1117,12 @@ export type DiagnosticoPlanos = {
   chaves: string[];
   /** As primeiras recusas do Mutual, com o motivo. */
   recusas: { vehicle_id: string; http: number | null; detalhe: string }[];
+  /** O caminho de detalhe por id que o swagger declara para o plano (null = nao ha). */
+  caminho_detalhe?: string | null;
+  /** Consultas pelo caminho de detalhe (por id do plano, nao por veiculo). */
+  consultados_por_id?: number;
+  /** Os caminhos do swagger que falam de plano — para a proxima decisao nao ser palpite. */
+  swagger_planos?: { caminho: string; metodos: string[] }[];
 };
 
 /**
@@ -1131,5 +1142,42 @@ export function somarDiagnosticoPlanos(
     sem_id: acc.sem_id + d.sem_id,
     chaves: acc.chaves.length > 0 ? acc.chaves : [...d.chaves],
     recusas: [...acc.recusas, ...d.recusas].slice(0, 5),
+    caminho_detalhe: d.caminho_detalhe !== undefined ? d.caminho_detalhe : acc.caminho_detalhe,
+    consultados_por_id: (acc.consultados_por_id ?? 0) + (d.consultados_por_id ?? 0),
+    swagger_planos: d.swagger_planos?.length ? d.swagger_planos : acc.swagger_planos,
   };
+}
+
+/** Os caminhos do swagger que contem `filtro` (sem o basePath), com os metodos de cada um. */
+export function caminhosDoSwagger(swagger: unknown, filtro: string): { caminho: string; metodos: string[] }[] {
+  if (!swagger || typeof swagger !== 'object') return [];
+  const sw = swagger as { basePath?: string; paths?: Record<string, Record<string, unknown>> };
+  const base = (sw.basePath ?? '').replace(/\/+$/, '');
+  const f = filtro.toLowerCase();
+  return Object.entries(sw.paths ?? {})
+    .map(([k, v]) => ({
+      caminho: base && k.startsWith(base) ? k.slice(base.length) || '/' : k,
+      metodos: Object.keys(v ?? {}).filter((m) => ['get', 'post', 'put', 'patch', 'delete'].includes(m)),
+    }))
+    .filter((x) => x.caminho.toLowerCase().includes(f))
+    .sort((a, b) => (a.caminho < b.caminho ? -1 : a.caminho > b.caminho ? 1 : 0));
+}
+
+/**
+ * O caminho de DETALHE (GET por id) de uma lista, se o contrato o declara:
+ * para `/quotation/plan/` procura `/quotation/plan/{algo}/`. Sem ele, `null` —
+ * e a captura nao tenta adivinhar.
+ */
+export function caminhoDeDetalhe(swagger: unknown, caminhoLista: string): string | null {
+  const lista = `/${caminhoLista.replace(/^\/+|\/+$/g, '')}/`;
+  const achou = caminhosDoSwagger(swagger, lista).find((x) => {
+    const resto = `/${x.caminho.replace(/^\/+|\/+$/g, '')}/`.slice(lista.length);
+    return /^\{[^/}]+\}\/?$/.test(resto) && x.metodos.includes('get');
+  });
+  return achou ? achou.caminho : null;
+}
+
+/** Troca o `{parametro}` do caminho de detalhe pelo id. */
+export function caminhoComId(modelo: string, id: string): string {
+  return modelo.replace(/\{[^/}]+\}/, encodeURIComponent(id));
 }

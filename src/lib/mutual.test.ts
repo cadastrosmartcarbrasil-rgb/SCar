@@ -13,6 +13,7 @@ import {
   planosPendentes, idsPara90Pct, amplitudeFipe, ENTIDADES_MUTUAL,
   mensagemDeFalhaDeLeitura, urlMutualCaminho, caminhoQueRespondeu, CANDIDATAS_PLANO,
   resumoDoCorpo, parametrosDoSwagger, veiculosPorPlano, listaDePlanos, somarDiagnosticoPlanos,
+  caminhosDoSwagger, caminhoDeDetalhe, caminhoComId,
 } from './mutual';
 import type { LinhaCarga, TipoVeiculoExterno, PlanoExterno } from './mutual';
 import type { PassoFunil, FilialMutual, EquipeVendas } from './mutual';
@@ -870,6 +871,26 @@ describe('parametrosDoSwagger — o que o contrato declara para o GET', () => {
   });
 });
 
+describe('swagger: caminhos de plano e o detalhe por id', () => {
+  const sw = { basePath: '/public_api/v2', paths: {
+    '/public_api/v2/quotation/plan/': { get: {} },
+    '/public_api/v2/quotation/plan/{id}/': { get: {}, parameters: [] },
+    '/public_api/v2/contract/contract_object/': { get: {} },
+    '/public_api/v2/quotation/plan_product/': { get: {}, post: {} },
+  } };
+  it('lista so os caminhos que contem o filtro, sem o basePath', () => {
+    expect(caminhosDoSwagger(sw, 'plan').map((x) => x.caminho)).toEqual(
+      ['/quotation/plan/', '/quotation/plan/{id}/', '/quotation/plan_product/']);
+    expect(caminhosDoSwagger(sw, 'plan')[2].metodos).toEqual(['get', 'post']);
+    expect(caminhosDoSwagger(null, 'plan')).toEqual([]);
+  });
+  it('acha o detalhe declarado e nao inventa quando nao ha', () => {
+    expect(caminhoDeDetalhe(sw, '/quotation/plan/')).toBe('/quotation/plan/{id}/');
+    expect(caminhoDeDetalhe(sw, '/contract/contract_object/')).toBeNull();
+    expect(caminhoComId('/quotation/plan/{id}/', '48')).toBe('/quotation/plan/48/');
+  });
+});
+
 describe('captura de planos por veiculo (/quotation/plan/ exige vehicle_id)', () => {
   it('um veiculo por plano, mais pesado primeiro, preferindo ATIVO e o mais recente', () => {
     const r = veiculosPorPlano([
@@ -884,9 +905,9 @@ describe('captura de planos por veiculo (/quotation/plan/ exige vehicle_id)', ()
       { plan_id: '77', vehicle_id: null, status: null },
     ]);
     expect(r).toEqual([
-      { plan_id: '48', vehicle_id: '9', peso: 3 },   // ativo vence o id maior inativo
-      { plan_id: '9', vehicle_id: '2', peso: 2 },    // empate de peso: id do plano numerico (9 < 41)
-      { plan_id: '41', vehicle_id: '12', peso: 2 },  // sem ativo: o mais recente
+      { plan_id: '48', vehicle_id: '9', peso: 3, reservas: ['3', '10'] }, // ativo vence o id maior inativo
+      { plan_id: '9', vehicle_id: '2', peso: 2, reservas: [] },   // empate de peso: id numerico (9 < 41)
+      { plan_id: '41', vehicle_id: '12', peso: 2, reservas: ['7'] }, // sem ativo: o mais recente
     ]);                                              // 77 sem veiculo fica de fora
   });
 

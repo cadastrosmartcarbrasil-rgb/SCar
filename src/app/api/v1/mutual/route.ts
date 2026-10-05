@@ -4,6 +4,7 @@ import {
   ENTIDADES_MUTUAL, ENTIDADES_PAGINADAS, urlMutual, urlMutualCaminho, cabecalhoMutual,
   extrairLista, extrairTotal, temProximaPagina, CANDIDATAS_PLANO,
   resumoDoCorpo, parametrosDoSwagger, veiculosPorPlano, listaDePlanos,
+  caminhosDoSwagger, caminhoDeDetalhe, caminhoComId,
   type EntidadeMutual, type SondagemCaminho, type ParPlanoVeiculo, type DiagnosticoPlanos,
 } from '@/lib/mutual';
 import type { Json } from '@/lib/database.types';
@@ -282,30 +283,31 @@ async function capturarPlanos(
       .from('mutual_captura').select('id_externo').eq('entidade', 'PLAN').limit(5000);
     const capturados = new Set((ja ?? []).map((r) => r.id_externo));
 
-    // 3) um bloco de consultas, a partir da posicao pedida.
-    let i = Math.max(posicao0, 1) - 1;
-    while (i < representantes.length && diag.consultados < VEICULOS_POR_BLOCO) {
-      const rep = representantes[i++];
-      if (capturados.has(rep.plan_id)) { diag.ja_capturados += 1; continue; }
+    // 3) O contrato da API: se ele declara GET por id (`/quotation/plan/{id}/`),
+    // os planos ANTIGOS — que nenhum veiculo pode mais contratar, e por isso nao
+    // voltam na lista por veiculo — saem por ali. Sem detalhe declarado, nao se
+    // tenta: chutar caminho foi o que custou a semana de 28/09.
+    let modeloDetalhe: string | null = null;
+    try {
+      const r = await fetch(urlMutualCaminho(base, 'swagger.json'), { headers: cabecalhoMutual(token), cache: 'no-store' });
+      if (r.ok) {
+        const sw = (await r.json()) as unknown;
+        modeloDetalhe = caminhoDeDetalhe(sw, ENTIDADES_MUTUAL.PLAN);
+        diag.swagger_planos = caminhosDoSwagger(sw, 'plan').slice(0, 20);
+      }
+    } catch { /* sem o contrato, fica so a consulta por veiculo */ }
+    diag.caminho_detalhe = modeloDetalhe;
+    diag.consultados_por_id = 0;
 
-      const url = urlMutualCaminho(base, ENTIDADES_MUTUAL.PLAN, { vehicle_id: rep.vehicle_id });
-      diag.consultados += 1;
-      let res: Response;
-      try {
-        res = await fetch(url, { headers: cabecalhoMutual(token), cache: 'no-store' });
-      } catch (e) {
-        if (diag.recusas.length < 5) diag.recusas.push({ vehicle_id: rep.vehicle_id, http: null, detalhe: (e as Error).message });
-        continue;
-      }
-      const texto = await res.text();
-      if (!res.ok) {
-        if (diag.recusas.length < 5) {
-          diag.recusas.push({ vehicle_id: rep.vehicle_id, http: res.status, detalhe: resumoDoCorpo(texto) });
-        }
-        continue;
-      }
-      let corpo: unknown = null;
-      try { corpo = JSON.parse(texto); } catch { /* nao era JSON */ }
+    // A posicao percorre duas passadas: [0, N) por ID (so se ha detalhe) e
+    // depois [N, 2N) por VEICULO. Quem ja foi capturado e pulado sem consulta.
+    const N = representantes.length;
+    const inicioVeiculo = modeloDetalhe ? N : 0;
+    const total = inicioVeiculo + N;
+    const anotarRecusa = (quem: string, http: number | null, texto: string) => {
+      if (diag.recusas.length < 5) diag.recusas.push({ vehicle_id: quem, http, detalhe: texto });
+    };
+    const gravar = async (corpo: unknown) => {
       const lista = listaDePlanos(corpo);
       if (diag.chaves.length === 0) {
         const alvo = lista[0] ?? corpo;
@@ -313,30 +315,68 @@ async function capturarPlanos(
       }
       diag.recebidos += lista.length;
       diag.sem_id += lista.filter((p) => p.id === undefined || p.id === null || p.id === '').length;
-      if (lista.length > 0) {
-        const { data: n, error } = await supabase.rpc('mutual_registrar_captura', {
-          p_entidade: 'PLAN',
-          p_registros: lista as unknown as Json,
-        });
-        if (error) throw new Error(error.message);
-        registros += n ?? 0;
-        for (const p of lista) if (p.id !== undefined && p.id !== null) capturados.add(String(p.id));
+      if (lista.length === 0) return;
+      const { data: n, error } = await supabase.rpc('mutual_registrar_captura', {
+        p_entidade: 'PLAN',
+        p_registros: lista as unknown as Json,
+      });
+      if (error) throw new Error(error.message);
+      registros += n ?? 0;
+      for (const p of lista) if (p.id !== undefined && p.id !== null) capturados.add(String(p.id));
+    };
+    // Uma consulta: devolve true quando o Mutual respondeu 2xx.
+    const consultar = async (url: string, quem: string) => {
+      let res: Response;
+      try {
+        res = await fetch(url, { headers: cabecalhoMutual(token), cache: 'no-store' });
+      } catch (e) {
+        anotarRecusa(quem, null, (e as Error).message);
+        return false;
+      }
+      const texto = await res.text();
+      if (!res.ok) { anotarRecusa(quem, res.status, resumoDoCorpo(texto)); return false; }
+      let corpo: unknown = null;
+      try { corpo = JSON.parse(texto); } catch { /* nao era JSON */ }
+      await gravar(corpo);
+      return true;
+    };
+
+    let i = Math.max(posicao0, 1) - 1;
+    let tentativas = 0;
+    while (i < total && tentativas < VEICULOS_POR_BLOCO) {
+      const porId = i < inicioVeiculo;
+      const rep = representantes[porId ? i : i - inicioVeiculo];
+      i += 1;
+      if (capturados.has(rep.plan_id)) { diag.ja_capturados += 1; continue; }
+
+      if (porId && modeloDetalhe) {
+        tentativas += 1;
+        diag.consultados_por_id = (diag.consultados_por_id ?? 0) + 1;
+        const url = urlMutualCaminho(base, caminhoComId(modeloDetalhe, rep.plan_id), { vehicle_id: rep.vehicle_id });
+        await consultar(url, `plano ${rep.plan_id}`);
+        continue;
+      }
+      // Por veiculo: o titular e ate 2 reservas — "Veiculo nao encontrado" e
+      // recusa do VEICULO, nao do plano.
+      for (const v of [rep.vehicle_id, ...rep.reservas]) {
+        tentativas += 1;
+        diag.consultados += 1;
+        const url = urlMutualCaminho(base, ENTIDADES_MUTUAL.PLAN, { vehicle_id: v });
+        if (await consultar(url, v)) break;
       }
     }
-    proxima = i < representantes.length ? i + 1 : null;
+    proxima = i < total ? i + 1 : null;
 
-    if (diag.consultados > 0 && diag.recusas.length === diag.consultados && registros === 0) {
-      const r = diag.recusas[0];
-      throw new Error(`O Mutual recusou todos os ${diag.consultados} veiculos deste bloco` +
-        ` (ex.: vehicle_id ${r.vehicle_id}, HTTP ${r.http ?? '-'}${r.detalhe ? ` — ${r.detalhe}` : ''})`);
-    }
+    // Recusa NAO para a captura: um bloco inteiro de planos antigos pode ser
+    // recusado ("Veiculo nao encontrado") e parar ali prenderia o laco na mesma
+    // posicao para sempre. As recusas vao no diagnostico, com o motivo.
 
     await fechar();
     return NextResponse.json({
       configured: true, ok: true, entidade: 'PLAN',
       // `paginas` = consultas feitas; com zero o laco do navegador para, entao
       // um bloco so de "ja capturados" conta 1 para seguir adiante.
-      paginas: Math.max(diag.consultados, proxima ? 1 : 0), registros,
+      paginas: Math.max(tentativas, proxima ? 1 : 0), registros,
       total_remoto: diag.planos_nos_contratos, proxima_pagina: proxima, diagnostico: diag,
     });
   } catch (e) {
