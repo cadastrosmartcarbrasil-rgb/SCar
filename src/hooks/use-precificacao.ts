@@ -346,14 +346,15 @@ export function useSavePlano() {
   return useMutation<
     string,
     Error,
-    { id?: string; nome: string; descricao_comercial?: string | null; nivel?: number; ativo?: boolean; produtosIds: string[] }
+    { id?: string; nome: string; descricao_comercial?: string | null; nivel?: number; ativo?: boolean; sem_casco?: boolean; produtosIds: string[] }
   >({
-    mutationFn: async ({ id, nome, descricao_comercial, nivel, ativo, produtosIds }) => {
+    mutationFn: async ({ id, nome, descricao_comercial, nivel, ativo, sem_casco, produtosIds }) => {
       const payload = {
         nome: nome.trim(),
         descricao_comercial: descricao_comercial ?? null,
         nivel: nivel ?? 0,
         ativo: ativo ?? true,
+        sem_casco: sem_casco ?? false,
       };
       let planoId = id;
       if (planoId) {

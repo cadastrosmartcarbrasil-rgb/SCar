@@ -89,7 +89,15 @@ extensão (`btree_gist` 188 · `pg_trgm` 31 · `unaccent` 4), como documentado.
 `mutual_carga_linhas` trocando UMA linha — conferido em 05/10 que a versão em produção é idêntica à
 da 0084, salvo `\r\n` — e cria `mutual_categorias_veiculo`). Depois dela, o deploy do contêiner
 mostra a seção *Categoria do veículo* em `/integracao/mutual`.
-**Próxima migration livre: `0088`.** As **`0001`..`0086`** estão aplicadas — a **`0086` foi rodada e
+**🔴 A `0088_plano_sem_casco` é NOVA e AINDA NÃO FOI RODADA.** Ela cria
+`planos_protecao.sem_casco` e recria `cotar_plano` (a versão em produção foi conferida idêntica à da
+0081 em 05/10, md5 igual): plano marcado não leva o casco OBRIGATÓRIO no detalhamento nem no total.
+É o que corrige a ficha do SAC mostrando **casco para quem não tem** — a moto QCC9H13 (plano 57 do
+Mutual: Taxa Adm 25 + terceiros 20 + rastreador 35 + 24h 23 − 6 = R$ 97, sem casco) e o plano
+**RASTREAMENTO**. Default `false`: nenhum plano muda ao aplicar; o boleto dos migrados não muda
+(override). Depois de rodar: marcar *Sem proteção de casco* no RASTREAMENTO e no plano de moto, em
+`Configurações → Planos`. **Próxima migration livre: `0089`.**
+**Próxima migration livre era `0088`.** As **`0001`..`0086`** estão aplicadas — a **`0086` foi rodada e
 CONFERIDA em 05/10/2026**: o comentário de `mutual_planos_externos` diz 18/42 e 29/91 (sem "17" nem
 "26"), a função segue `security definer` com `search_path=public`, fechada ao `anon`; 0 `security
 definer` sem `search_path` e **0 RPCs nossas abertas ao `anon`**. (A primeira tentativa rodou num dos
@@ -488,8 +496,8 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0087`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **64 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Migrations `0001`..`0088`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **65 suites** em `supabase/tests/*.test.sql` — todas passando.
 - **Vitest: 755 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
@@ -1784,6 +1792,13 @@ categoria manda, o de `VEHICLE_TYPE` (0084) e reserva, sem os dois e nulo. `mutu
 recriada trocando so a linha do `tipo_id`; `mutual_categorias_veiculo(regional)` e a tela, com peso
 da unidade, cobertura acumulada, destino e reserva. A COTA (V5..V15) que o nome da categoria carrega
 so e MOSTRADA — a carga nao grava cota, decisao a parte)
+· `0088_plano_sem_casco` (PLANO SEM PROTECAO DE CASCO: `planos_protecao.sem_casco` + `cotar_plano`
+recriado com a MESMA assinatura — plano marcado tira do detalhamento e do total o item OBRIGATORIO da
+categoria CASCO. Um ponto so, porque `cotar_plano` alimenta a ficha do SAC (`opcionais_veiculo`), os
+obrigatorios da cotacao, o snapshot da venda e o hotlink. Casco amarrado ao plano como OPCIONAL fica;
+Taxa Adm, 24h e a regra do rastreador ficam; adesao e participacao nao foram tocadas (o que fazer com
+a participacao de quem nao tem casco e decisao a parte — o retorno anuncia `sem_casco`). Default
+false; override do veiculo continua mandando no boleto)
 · `0082_carga_mutual_preparacao` (as TRES pecas que faltavam para a carga do Mutual poder rodar,
 e nenhuma delas carrega nada — ha teste provando que a operacao segue intacta: (A) **a UNIDADE sai
 do ASSOCIADO** — a corrente do consultor (0073/0074) foi medida com a base completa e esta VAZIA

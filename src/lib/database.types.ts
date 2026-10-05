@@ -242,6 +242,8 @@ export type PlanosProtecaoRow = Timestamps & {
   ativo: boolean;
   descricao_comercial: string | null;
   nivel: number;
+  /** 0088 — plano SEM protecao de casco: cotar_plano tira o casco obrigatorio. */
+  sem_casco: boolean;
 };
 
 export type VeiculosRow = Timestamps & {

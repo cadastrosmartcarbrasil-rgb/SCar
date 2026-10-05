@@ -17,6 +17,7 @@ interface Edicao {
   descricao_comercial: string;
   nivel: number;
   ativo: boolean;
+  semCasco: boolean;
   produtosIds: Set<string>;
 }
 
@@ -44,7 +45,7 @@ export default function PlanosPage() {
 
   function novo() {
     setEditId(undefined);
-    setEd({ nome: '', descricao_comercial: '', nivel: (planos?.length ?? 0) + 1, ativo: true, produtosIds: new Set() });
+    setEd({ nome: '', descricao_comercial: '', nivel: (planos?.length ?? 0) + 1, ativo: true, semCasco: false, produtosIds: new Set() });
     setAberto(true);
   }
 
@@ -56,6 +57,7 @@ export default function PlanosPage() {
       descricao_comercial: p.descricao_comercial ?? '',
       nivel: p.nivel ?? 0,
       ativo: p.ativo,
+      semCasco: p.sem_casco ?? false,
       produtosIds: new Set(),
     });
     setAberto(true);
@@ -80,6 +82,7 @@ export default function PlanosPage() {
         descricao_comercial: ed.descricao_comercial || null,
         nivel: ed.nivel,
         ativo: ed.ativo,
+        sem_casco: ed.semCasco,
         produtosIds: [...ed.produtosIds],
       },
       {
@@ -105,7 +108,8 @@ export default function PlanosPage() {
         <p className="max-w-2xl text-sm text-slate-500">
           Combos comerciais (ex.: Prata, Ouro, Diamante). Todo plano ja inclui a cotacao base
           (casco + taxa admin + assistencia 24h + rastreador se aplicavel); aqui voce amarra os
-          opcionais que compoem cada nivel.
+          opcionais que compoem cada nivel. Plano marcado como <strong>sem protecao de casco</strong>{' '}
+          (ex.: so terceiros, rastreamento) nao leva o casco da base.
         </p>
         <Button onClick={novo}><Plus className="h-4 w-4" /> Novo Plano</Button>
       </div>
@@ -165,6 +169,23 @@ export default function PlanosPage() {
               <p className="mt-1 text-xs text-slate-400">A cotacao base entra automaticamente; marque apenas os adicionais.</p>
             </div>
 
+            <label className="flex items-start gap-2 rounded-lg border border-slate-200 p-2 text-sm text-slate-600">
+              <input
+                type="checkbox"
+                checked={ed.semCasco}
+                onChange={(e) => setEd({ ...ed, semCasco: e.target.checked })}
+                className="mt-0.5 h-4 w-4 rounded border-slate-300"
+              />
+              <span>
+                <span className="font-medium text-slate-700">Sem protecao de casco</span>
+                <span className="block text-xs text-slate-500">
+                  O casco da cotacao base sai do preco e da ficha do SAC. Use para planos so de
+                  terceiros, rastreamento ou assistencia. Taxa administrativa, assistencia 24h e a
+                  regra do rastreador continuam.
+                </span>
+              </span>
+            </label>
+
             <label className="flex items-center gap-2 text-sm text-slate-600">
               <input type="checkbox" checked={ed.ativo} onChange={(e) => setEd({ ...ed, ativo: e.target.checked })} className="h-4 w-4 rounded border-slate-300" />
               Ativo
@@ -192,6 +213,7 @@ function PlanoCard({ plano, onEdit, onDelete }: { plano: PlanosProtecaoRow; onEd
           <Layers className="h-4 w-4 text-brand-500" />
           <h3 className="font-semibold text-slate-800">{plano.nome}</h3>
           {!plano.ativo && <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] uppercase text-slate-500">inativo</span>}
+          {plano.sem_casco && <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] uppercase text-amber-800">sem casco</span>}
         </div>
         <div className="flex gap-1">
           <button onClick={onEdit} className="rounded p-1.5 text-slate-500 hover:bg-slate-100"><Pencil className="h-4 w-4" /></button>
@@ -202,7 +224,7 @@ function PlanoCard({ plano, onEdit, onDelete }: { plano: PlanosProtecaoRow; onEd
       <div className="mt-3">
         <p className="text-[10px] font-medium uppercase text-slate-400">Opcionais</p>
         {nomes.length === 0 ? (
-          <p className="text-xs text-slate-400">Somente cotacao base.</p>
+          <p className="text-xs text-slate-400">{plano.sem_casco ? 'Somente cotacao base, sem o casco.' : 'Somente cotacao base.'}</p>
         ) : (
           <ul className="mt-1 flex flex-wrap gap-1">
             {nomes.map((n) => (
