@@ -12,7 +12,7 @@ import {
   filaAntesDoCutover, cutoverLiberado, tiposPendentes,
   planosPendentes, idsPara90Pct, amplitudeFipe, ENTIDADES_MUTUAL,
   mensagemDeFalhaDeLeitura, urlMutualCaminho, caminhoQueRespondeu, CANDIDATAS_PLANO,
-  resumoDoCorpo, parametrosDoSwagger,
+  resumoDoCorpo, parametrosDoSwagger, veiculosPorPlano, listaDePlanos, somarDiagnosticoPlanos,
 } from './mutual';
 import type { LinhaCarga, TipoVeiculoExterno, PlanoExterno } from './mutual';
 import type { PassoFunil, FilialMutual, EquipeVendas } from './mutual';
@@ -867,5 +867,45 @@ describe('parametrosDoSwagger — o que o contrato declara para o GET', () => {
     expect(parametrosDoSwagger(swagger, '/plan/')).toBeNull();
     expect(parametrosDoSwagger(swagger, '/vehicle/type/')).toEqual([]);
     expect(parametrosDoSwagger(null, '/x/')).toBeNull();
+  });
+});
+
+describe('captura de planos por veiculo (/quotation/plan/ exige vehicle_id)', () => {
+  it('um veiculo por plano, mais pesado primeiro, preferindo ATIVO e o mais recente', () => {
+    const r = veiculosPorPlano([
+      { plan_id: '41', vehicle_id: '7', status: 'INATIVO' },
+      { plan_id: '48', vehicle_id: '10', status: 'INATIVO' },
+      { plan_id: '48', vehicle_id: '9', status: 'ATIVO' },
+      { plan_id: '48', vehicle_id: '3', status: 'ATIVO' },
+      { plan_id: '41', vehicle_id: '12', status: 'INATIVO' },
+      { plan_id: '9', vehicle_id: '2', status: 'ATIVO' },
+      { plan_id: '9', vehicle_id: null, status: 'ATIVO' },
+      { plan_id: '', vehicle_id: '5', status: 'ATIVO' },
+      { plan_id: '77', vehicle_id: null, status: null },
+    ]);
+    expect(r).toEqual([
+      { plan_id: '48', vehicle_id: '9', peso: 3 },   // ativo vence o id maior inativo
+      { plan_id: '9', vehicle_id: '2', peso: 2 },    // empate de peso: id do plano numerico (9 < 41)
+      { plan_id: '41', vehicle_id: '12', peso: 2 },  // sem ativo: o mais recente
+    ]);                                              // 77 sem veiculo fica de fora
+  });
+
+  it('listaDePlanos aceita lista, envelope DRF, outra chave e objeto unico', () => {
+    expect(listaDePlanos([{ id: 1 }])).toEqual([{ id: 1 }]);
+    expect(listaDePlanos({ results: [{ id: 2 }] })).toEqual([{ id: 2 }]);
+    expect(listaDePlanos({ total: 1, plans: [{ id: 3 }] })).toEqual([{ id: 3 }]);
+    expect(listaDePlanos({ id: 4, name: 'OURO' })).toEqual([{ id: 4, name: 'OURO' }]);
+    expect(listaDePlanos({ detail: 'nada' })).toEqual([]);
+    expect(listaDePlanos(null)).toEqual([]);
+  });
+
+  it('somarDiagnosticoPlanos acumula blocos sem perder o primeiro formato visto', () => {
+    const a = { planos_nos_contratos: 109, ja_capturados: 0, consultados: 15, recebidos: 30,
+      sem_id: 0, chaves: ['id', 'name'], recusas: [{ vehicle_id: '1', http: 400, detalhe: 'x' }] };
+    const b = { ...a, ja_capturados: 20, consultados: 3, recebidos: 6, chaves: ['outra'], recusas: [] };
+    const s = somarDiagnosticoPlanos(somarDiagnosticoPlanos(undefined, a), b);
+    expect(s).toMatchObject({ planos_nos_contratos: 109, ja_capturados: 20, consultados: 18,
+      recebidos: 36, chaves: ['id', 'name'] });
+    expect(s.recusas).toHaveLength(1);
   });
 });

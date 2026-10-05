@@ -3,7 +3,8 @@
 import { useCallback, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
-import type { EntidadeMutual, SondagemCaminho } from '@/lib/mutual';
+import { somarDiagnosticoPlanos } from '@/lib/mutual';
+import type { EntidadeMutual, SondagemCaminho, DiagnosticoPlanos } from '@/lib/mutual';
 import type {
   MutualDiagnostico, MutualPorStatus, MutualFilial,
   MutualQuarentena, MutualResumoCaptura, MutualStatusNaoMapeado, MutualPeriodicidade,
@@ -151,6 +152,8 @@ export interface RespostaMutual {
   amostra?: unknown;
   erro?: string;
   error?: string;
+  /** So na captura de PLAN: o que o /quotation/plan/ devolveu. */
+  diagnostico?: DiagnosticoPlanos;
 }
 
 async function chamar(body: Record<string, unknown>): Promise<RespostaMutual> {
@@ -276,6 +279,8 @@ export interface ResultadoCaptura {
   proximaPagina: number | null;
   parado: boolean;            // o usuario mandou parar
   erro?: string;
+  /** PLAN: o diagnostico ACUMULADO da rodada (ver `somarDiagnosticoPlanos`). */
+  diagnostico?: DiagnosticoPlanos;
 }
 
 // Teto de seguranca: se a API devolver "ha mais" para sempre, o laco tem de
@@ -312,6 +317,7 @@ export function useCapturaMutual() {
     let registros = 0;
     let paginas = 0;
     let total: number | null = null;
+    let diagnostico: DiagnosticoPlanos | undefined;
 
     pararRef.current = false;
     setRodando(true);
@@ -325,6 +331,8 @@ export function useCapturaMutual() {
           updated_at__gte: opcoes.updated_at__gte,
         });
 
+        if (r.diagnostico) diagnostico = somarDiagnosticoPlanos(diagnostico, r.diagnostico);
+
         if (!r.configured) {
           return { configured: false, ok: false, registros, paginas, total,
                    proximaPagina: pagina, parado: false };
@@ -332,7 +340,7 @@ export function useCapturaMutual() {
         if (!r.ok) {
           // Para no ponto: `pagina` e de onde retomar depois de resolver.
           return { configured: true, ok: false, registros, paginas, total,
-                   proximaPagina: pagina, parado: false,
+                   proximaPagina: pagina, parado: false, diagnostico,
                    erro: r.erro ?? r.error ?? 'Falha ao consultar o Mutual' };
         }
 
@@ -346,7 +354,7 @@ export function useCapturaMutual() {
         if (!proxima || (r.paginas ?? 0) === 0 || proxima > PAGINA_MAXIMA) {
           return { configured: true, ok: true, registros, paginas, total,
                    proximaPagina: proxima && proxima <= PAGINA_MAXIMA ? proxima : null,
-                   parado: false };
+                   parado: false, diagnostico };
         }
 
         pagina = proxima;
@@ -356,7 +364,7 @@ export function useCapturaMutual() {
         // o servidor gravando sem ninguem para dizer onde retomar.
         if (pararRef.current) {
           return { configured: true, ok: true, registros, paginas, total,
-                   proximaPagina: pagina, parado: true };
+                   proximaPagina: pagina, parado: true, diagnostico };
         }
       }
     } finally {

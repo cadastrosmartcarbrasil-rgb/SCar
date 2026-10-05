@@ -22,7 +22,7 @@ import {
   gargaloDoFunil, coberturaDoFunil, teseSeSustenta, correnteVazia,
   situacaoDePara, filiaisPendentes, carteiraSemDePara,
   equipesPendentes, carteiraSemAgrupamento, equipesSemNome, porMacrorregiao, consolidacao,
-  caminhoQueRespondeu, ENTIDADES_MUTUAL, type SondagemCaminho,
+  caminhoQueRespondeu, ENTIDADES_MUTUAL, type SondagemCaminho, type DiagnosticoPlanos,
 } from '@/lib/mutual';
 import { CargaMutual } from '@/components/integracao/carga-mutual';
 import { ErroLeitura } from '@/components/integracao/erro-leitura';
@@ -147,6 +147,7 @@ export default function IntegracaoMutualPage() {
   const ping = usePingMutual();
   const sondar = useSondarCaminhos();
   const [sondagens, setSondagens] = useState<SondagemCaminho[] | null>(null);
+  const [diagPlanos, setDiagPlanos] = useState<DiagnosticoPlanos | null>(null);
   const { puxarTudo, parar, progresso, rodando } = useCapturaMutual();
   const [paginas, setPaginas] = useState(5);
   // De onde continuar em cada entidade. Sem isto, o botao recomeçaria sempre da
@@ -175,6 +176,7 @@ export default function IntegracaoMutualPage() {
       paginasPorVez: paginas,
       inicio: proximas[entidade] ?? 1,
     });
+    if (entidade === 'PLAN') setDiagPlanos(r.diagnostico ?? null);
 
     // Onde retomar. Sem `proximaPagina`, a entidade acabou.
     setProximas((p) => {
@@ -274,9 +276,11 @@ export default function IntegracaoMutualPage() {
         <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50/60 p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs leading-relaxed text-amber-800">
-              <strong>Planos:</strong> o caminho em uso e{' '}
-              <code className="tnum">{ENTIDADES_MUTUAL.PLAN}</code>, o do contrato da API. As
-              outras candidatas ja deram 404. O provador confirma qual existe — sem gravar nada.
+              <strong>Planos:</strong> o caminho e{' '}
+              <code className="tnum">{ENTIDADES_MUTUAL.PLAN}</code>, e o Mutual exige o{' '}
+              <code className="tnum">vehicle_id</code>: ele lista os planos de UM veiculo, nao o
+              catalogo. Por isso <strong>Puxar Planos</strong> consulta um veiculo de cada plano
+              citado nos contratos e junta o que voltar.
             </p>
             <Button variant="ghost" onClick={() => void descobrirPlano()} disabled={sondar.isPending}>
               {sondar.isPending ? 'Sondando...' : 'Descobrir o caminho'}
@@ -334,6 +338,38 @@ export default function IntegracaoMutualPage() {
             </ul>
           )}
         </div>
+
+        {diagPlanos && (
+          <div className="mb-3 rounded-xl border border-slate-200 bg-fundo p-3 text-xs text-slate-600">
+            <p className="font-medium text-slate-800">O que o Mutual devolveu na captura de Planos</p>
+            <p className="mt-1 tnum">
+              {diagPlanos.planos_nos_contratos} plano(s) citados nos contratos ·{' '}
+              {diagPlanos.consultados} veiculo(s) consultados · {diagPlanos.recebidos} plano(s)
+              recebidos · {diagPlanos.ja_capturados} ja estavam capturados
+            </p>
+            {diagPlanos.sem_id > 0 && (
+              <p className="mt-1 text-red-700">
+                {diagPlanos.sem_id} plano(s) vieram SEM <code>id</code> — esses nao casam com o{' '}
+                <code>plan_id</code> do contrato.
+              </p>
+            )}
+            {diagPlanos.chaves.length > 0 && (
+              <p className="mt-1">
+                Campos de cada plano: <span className="font-mono">{diagPlanos.chaves.join(', ')}</span>
+              </p>
+            )}
+            {diagPlanos.recusas.length > 0 && (
+              <ul className="mt-1 space-y-0.5">
+                {diagPlanos.recusas.map((x) => (
+                  <li key={x.vehicle_id}>
+                    Recusou o veiculo <span className="tnum">{x.vehicle_id}</span> (HTTP {x.http ?? '-'})
+                    {x.detalhe ? <>: <span className="font-mono">{x.detalhe}</span></> : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
 
         {progresso && (
           <div className="mb-3 rounded-xl border border-cyan-200 bg-cyan-50/60 p-3">

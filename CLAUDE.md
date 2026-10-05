@@ -75,7 +75,7 @@ extensão (`btree_gist` 188 · `pg_trgm` 31 · `unaccent` 4), como documentado.
 > |---|---|
 > | Captura | ✅ completa — `SALE_TEAM` puxada em 02/10 (**52**), `CONTRACT_OBJECT` 17.741, `CONTRACT` 17.658 |
 > | Unidade (equipe de vendas) | ✅ 19 vínculos desde 21/09 |
-> | `PLAN` | ⏳ **O caminho é `/quotation/plan/`** (estava no `docs/` desde 09/09). Ele **EXISTE** — responde **400**, não 404 —, ou seja, recusa a requisição como está (falta parâmetro). O sondador agora mostra o corpo da recusa e os parâmetros que o swagger declara; o próximo clique em *Descobrir o caminho* nomeia o que falta |
+> | `PLAN` | ⏳ **`/quotation/plan/` exige `vehicle_id`** (o sondador mostrou a recusa: *"O id do veículo é obrigatório"*). Ele lista os planos de UM veículo, não o catálogo — então *Puxar Planos* agora consulta **um veículo por `plan_id`** citado nos contratos (109 na base) e junta o resultado. **Falta: deploy + clicar Puxar Planos** e ler o painel do que voltou |
 > | De-para `VEHICLE_TYPE` | ❌ 0 de 3 decisões |
 > | De-para `PLAN` | ❌ 0 de 42 (18 cobrem 90%) |
 > | **Carga da MATRIZ** | ❌ **não executada** — prévia: **470 veículos / 428 associados entram, 8 recusados (0 km)** |
@@ -486,7 +486,7 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 ### Estado de validação (fim da fase)
 - **Migrations `0001`..`0086`** + `schema.sql` consolidado aplicam limpos no harness local.
 - **63 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 736 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Vitest: 746 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Os portais e páginas públicas
@@ -2539,10 +2539,16 @@ listadas as filiais" de semanas antes). O banco estava são o tempo todo.
   trocar `ENTIDADES_MUTUAL.PLAN` é **uma linha**.
 
 ### O que falta CLICAR (medido em 05/10/2026)
-- **`PLAN`: `/quotation/plan/` responde 400** (existe, mas recusa a requisição como está). Depois
-  do deploy, *Descobrir o caminho* mostra **o que o Mutual disse** e **os parâmetros do swagger**
-  (`resumoDoCorpo`, `parametrosDoSwagger`). É de cotação: é provável que exija tipo de veículo/FIPE.
-  **Regra nova: erro do Mutual sempre leva o corpo da recusa** — "HTTP 400" sozinho manda chutar.
+- **`PLAN`: `/quotation/plan/` exige `vehicle_id`** — a resposta é *os planos que ESTE veículo
+  pode contratar*, não um catálogo. `capturarPlanos` (em `/api/v1/mutual`) escolhe **um veículo
+  por `plan_id`** dos contratos capturados (`veiculosPorPlano`: o plano mais pesado primeiro,
+  objeto ATIVO e mais recente), consulta 15 por bloco, **pula plano já capturado** (se a 1ª
+  resposta trouxer o catálogo inteiro, termina num bloco) e grava tudo como `PLAN`. O formato da
+  resposta **não foi visto ainda** — por isso `listaDePlanos` aceita lista/envelope/objeto e a tela
+  mostra o **diagnóstico** (campos de cada plano, recusas, planos sem `id`). **Ao conferir:** os
+  ids capturados têm de casar com o `plan_id` do contrato (`capturado` em
+  `mutual_planos_externos`); se não casarem, é outro catálogo com o mesmo nome.
+  **Regra: erro do Mutual sempre leva o corpo da recusa** — "HTTP 400" sozinho manda chutar.
 - **0 vínculos de `PLAN`** → as 18 decisões que cobrem 90% da matriz. Os três maiores são
   `48` (114 faturáveis · 23,8%), `88` (108 · 46,4%) e `41` (44 · 55,6%).
 - **0 vínculos de `VEHICLE_TYPE`** → as 3 decisões da 0084, que continuam pendentes.

@@ -1019,3 +1019,117 @@ export function parametrosDoSwagger(swagger: unknown, caminho: string): Parametr
 export function caminhoQueRespondeu(sondagens: SondagemCaminho[]): SondagemCaminho | null {
   return sondagens.find((s) => s.http !== null && s.http >= 200 && s.http < 300) ?? null;
 }
+
+// ---------------------------------------------------------------------------
+// PLANOS pelo /quotation/plan/ — a lista e POR VEICULO, nao um catalogo.
+// ---------------------------------------------------------------------------
+// O Mutual recusa `/quotation/plan/` sem `vehicle_id` ("O id do veiculo e
+// obrigatorio", 400). O endpoint responde "quais planos ESTE veiculo pode
+// contratar", entao o catalogo se monta consultando UM veiculo de cada
+// `plan_id` que aparece nos contratos e juntando o que voltar (upsert por id).
+
+/** Um par plano x veiculo lido do CONTRACT_OBJECT capturado. */
+export type ParPlanoVeiculo = {
+  plan_id: string | null;
+  vehicle_id: string | null;
+  status: string | null;
+};
+
+/** O veiculo escolhido para representar um `plan_id` na consulta. */
+export type RepresentantePlano = { plan_id: string; vehicle_id: string; peso: number };
+
+/**
+ * Um veiculo por `plan_id`, do plano mais pesado para o mais leve.
+ *
+ * Prefere objeto ATIVO (veiculo encerrado pode ser recusado na cotacao) e,
+ * entre os elegiveis, o de MAIOR id (o mais recente). A ordem e ESTAVEL —
+ * peso desc, depois o id do plano — porque a captura anda em blocos e cada
+ * bloco recalcula a lista: ordem instavel pularia ou repetiria planos.
+ */
+export function veiculosPorPlano(pares: ParPlanoVeiculo[]): RepresentantePlano[] {
+  const grupos = new Map<string, { peso: number; ativo: string | null; qualquer: string | null }>();
+  const maior = (a: string | null, b: string) =>
+    a === null || compararIds(b, a) > 0 ? b : a;
+  for (const p of pares) {
+    const plano = (p.plan_id ?? '').trim();
+    const veiculo = (p.vehicle_id ?? '').trim();
+    if (!plano) continue;
+    const g = grupos.get(plano) ?? { peso: 0, ativo: null, qualquer: null };
+    g.peso += 1;
+    if (veiculo) {
+      g.qualquer = maior(g.qualquer, veiculo);
+      if ((p.status ?? '').trim().toUpperCase() === 'ATIVO') g.ativo = maior(g.ativo, veiculo);
+    }
+    grupos.set(plano, g);
+  }
+  const out: RepresentantePlano[] = [];
+  for (const [plan_id, g] of Array.from(grupos.entries())) {
+    const vehicle_id = g.ativo ?? g.qualquer;
+    if (vehicle_id) out.push({ plan_id, vehicle_id, peso: g.peso });
+  }
+  return out.sort((a, b) => b.peso - a.peso || compararIds(a.plan_id, b.plan_id));
+}
+
+/** Compara ids que costumam ser numericos ("9" < "10"), com fallback textual. */
+function compararIds(a: string, b: string): number {
+  const na = Number(a), nb = Number(b);
+  if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb;
+  return a.localeCompare(b);
+}
+
+/**
+ * A lista de planos de uma resposta cujo formato NAO foi confirmado: lista
+ * crua, envelope DRF (`results`), envelope com outra chave (`plans`, `data`…)
+ * ou um objeto so. Tudo o que nao for nenhum desses vira lista vazia — e a
+ * rota relata as CHAVES que vieram, para o formato deixar de ser palpite.
+ */
+export function listaDePlanos(json: unknown): Registro[] {
+  const direta = extrairLista(json);
+  if (direta.length > 0) return direta;
+  if (!json || typeof json !== 'object' || Array.isArray(json)) return [];
+  for (const v of Object.values(json as Record<string, unknown>)) {
+    if (Array.isArray(v) && v.length > 0 && v.every((x) => x && typeof x === 'object' && !Array.isArray(x))) {
+      return v as Registro[];
+    }
+  }
+  const o = json as Record<string, unknown>;
+  return o.id !== undefined || o.uuid !== undefined ? [o as Registro] : [];
+}
+
+/** O que a captura de planos viu — e com isso que o formato deixa de ser palpite. */
+export type DiagnosticoPlanos = {
+  /** Quantos plan_id distintos os contratos citam (o universo a cobrir). */
+  planos_nos_contratos: number;
+  /** Quantos desses ja estavam capturados antes deste bloco (pulados). */
+  ja_capturados: number;
+  /** Veiculos consultados neste bloco. */
+  consultados: number;
+  /** Planos recebidos (com repeticao entre veiculos). */
+  recebidos: number;
+  /** Planos recebidos sem `id` — nao casam com o `plan_id` do contrato. */
+  sem_id: number;
+  /** Chaves do primeiro plano recebido (ou da resposta, quando nao veio lista). */
+  chaves: string[];
+  /** As primeiras recusas do Mutual, com o motivo. */
+  recusas: { vehicle_id: string; http: number | null; detalhe: string }[];
+};
+
+/**
+ * Junta o diagnostico de varios blocos numa rodada. Contadores somam; o
+ * universo (`planos_nos_contratos`) e o mesmo em todos; as chaves sao as do
+ * primeiro bloco que as viu; e as recusas ficam nas 5 primeiras.
+ */
+export function somarDiagnosticoPlanos(
+  acc: DiagnosticoPlanos | undefined, d: DiagnosticoPlanos,
+): DiagnosticoPlanos {
+  if (!acc) return { ...d, chaves: [...d.chaves], recusas: [...d.recusas] };
+  return {
+    planos_nos_contratos: d.planos_nos_contratos || acc.planos_nos_contratos,
+    ja_capturados: acc.ja_capturados + d.ja_capturados,
+    consultados: acc.consultados + d.consultados,
+    recebidos: acc.recebidos + d.recebidos,
+    sem_id: acc.sem_id + d.sem_id,
+    chaves: acc.chaves.length > 0 ? acc.chaves : [...d.chaves],
+    recusas: [...acc.recusas, ...d.recusas].slice(0, 5),
+  };
+}
