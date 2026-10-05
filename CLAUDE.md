@@ -75,7 +75,7 @@ extensão (`btree_gist` 188 · `pg_trgm` 31 · `unaccent` 4), como documentado.
 > |---|---|
 > | Captura | ✅ completa — `SALE_TEAM` puxada em 02/10 (**52**), `CONTRACT_OBJECT` 17.741, `CONTRACT` 17.658 |
 > | Unidade (equipe de vendas) | ✅ 19 vínculos desde 21/09 |
-> | `PLAN` | ⏳ **O caminho é `/quotation/plan/`** — estava no `docs/modulos/integracao-mutual.md` desde 09/09; a 0085 palpitou `/contract/plan/` e o provador mediu 404 nas 8 candidatas em 05/10. Corrigido; falta deploy + puxar *Planos* |
+> | `PLAN` | ⏳ **O caminho é `/quotation/plan/`** (estava no `docs/` desde 09/09). Ele **EXISTE** — responde **400**, não 404 —, ou seja, recusa a requisição como está (falta parâmetro). O sondador agora mostra o corpo da recusa e os parâmetros que o swagger declara; o próximo clique em *Descobrir o caminho* nomeia o que falta |
 > | De-para `VEHICLE_TYPE` | ❌ 0 de 3 decisões |
 > | De-para `PLAN` | ❌ 0 de 42 (18 cobrem 90%) |
 > | **Carga da MATRIZ** | ❌ **não executada** — prévia: **470 veículos / 428 associados entram, 8 recusados (0 km)** |
@@ -2539,7 +2539,10 @@ listadas as filiais" de semanas antes). O banco estava são o tempo todo.
   trocar `ENTIDADES_MUTUAL.PLAN` é **uma linha**.
 
 ### O que falta CLICAR (medido em 05/10/2026)
-- **`PLAN`: o caminho é `/quotation/plan/`** → depois do deploy, puxar *Planos* em *Puxar dados*.
+- **`PLAN`: `/quotation/plan/` responde 400** (existe, mas recusa a requisição como está). Depois
+  do deploy, *Descobrir o caminho* mostra **o que o Mutual disse** e **os parâmetros do swagger**
+  (`resumoDoCorpo`, `parametrosDoSwagger`). É de cotação: é provável que exija tipo de veículo/FIPE.
+  **Regra nova: erro do Mutual sempre leva o corpo da recusa** — "HTTP 400" sozinho manda chutar.
 - **0 vínculos de `PLAN`** → as 18 decisões que cobrem 90% da matriz. Os três maiores são
   `48` (114 faturáveis · 23,8%), `88` (108 · 46,4%) e `41` (44 · 55,6%).
 - **0 vínculos de `VEHICLE_TYPE`** → as 3 decisões da 0084, que continuam pendentes.

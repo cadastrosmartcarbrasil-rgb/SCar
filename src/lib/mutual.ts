@@ -933,7 +933,80 @@ export const CANDIDATAS_PLANO: string[] = [
 ];
 
 /** O veredito de uma rodada do provador, para a tela nao ter de interpretar HTTP. */
-export type SondagemCaminho = { caminho: string; http: number | null; registros: number | null; erro?: string };
+export type SondagemCaminho = {
+  caminho: string; http: number | null; registros: number | null; erro?: string;
+  /** O que o Mutual disse ao recusar (4xx/5xx), resumido. E isto que nomeia o parametro faltante. */
+  detalhe?: string;
+  /** O que o swagger DECLARA para o caminho (GET). Vem quando a resposta e 400. */
+  parametros?: ParametroApi[];
+};
+
+/** Um parametro de query/path declarado no swagger para um GET. */
+export type ParametroApi = {
+  nome: string; em: string; obrigatorio: boolean; tipo: string | null; descricao: string | null;
+};
+
+/**
+ * O corpo de uma recusa do Mutual, curto e legivel. A API e Django REST: um 400
+ * de validacao vem como `{"campo": ["mensagem"]}` — exatamente o que diz QUAL
+ * parametro falta. Sem isto a tela so mostrava "HTTP 400", e o proximo passo
+ * voltava a ser chute (05/10/2026: `/quotation/plan/` deu 400 e ninguem sabia
+ * por que). HTML (pagina de erro) vira texto puro; tudo e truncado.
+ */
+export function resumoDoCorpo(texto: string, limite = 300): string {
+  const bruto = (texto ?? '').trim();
+  if (!bruto) return '';
+  let saida: string;
+  try {
+    const json = JSON.parse(bruto) as unknown;
+    if (json && typeof json === 'object' && !Array.isArray(json)) {
+      saida = Object.entries(json as Record<string, unknown>)
+        .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.map(String).join(' ') : String(v)}`)
+        .join('; ');
+    } else {
+      saida = Array.isArray(json) ? json.map(String).join('; ') : String(json);
+    }
+  } catch {
+    saida = bruto.replace(/<[^>]*>/g, ' ');
+  }
+  saida = saida.replace(/\s+/g, ' ').trim();
+  return saida.length > limite ? `${saida.slice(0, limite - 1)}…` : saida;
+}
+
+/**
+ * Os parametros que o swagger (2.0) declara para o GET de um caminho. O caminho
+ * pode estar escrito com ou sem o `basePath` (`/public_api/v2`) e com ou sem a
+ * barra final — os tres jeitos aparecem em swagger de Django. Os parametros do
+ * nivel do caminho somam aos da operacao. Devolve `null` quando o caminho nao
+ * esta no contrato (diferente de "esta e nao tem parametro", que e `[]`).
+ */
+export function parametrosDoSwagger(swagger: unknown, caminho: string): ParametroApi[] | null {
+  if (!swagger || typeof swagger !== 'object') return null;
+  const sw = swagger as { basePath?: string; paths?: Record<string, Record<string, unknown>> };
+  const paths = sw.paths ?? {};
+  const norm = (c: string) => `/${c.replace(/^\/+|\/+$/g, '')}/`;
+  const alvo = norm(caminho);
+  const base = sw.basePath ? norm(sw.basePath).slice(0, -1) : '';
+  const chave = Object.keys(paths).find((k) => {
+    const n = norm(k);
+    return n === alvo || (base && n === norm(`${base}${alvo}`)) || (base && norm(n.replace(base, '')) === alvo);
+  });
+  if (!chave) return null;
+  const item = paths[chave] ?? {};
+  const lista = [
+    ...((item.parameters as unknown[]) ?? []),
+    ...((((item.get as Record<string, unknown>) ?? {}).parameters as unknown[]) ?? []),
+  ];
+  return lista
+    .filter((x): x is Record<string, unknown> => !!x && typeof x === 'object' && 'name' in x)
+    .map((x) => ({
+      nome: String(x.name),
+      em: String(x.in ?? ''),
+      obrigatorio: x.required === true,
+      tipo: x.type != null ? String(x.type) : null,
+      descricao: x.description != null ? String(x.description) : null,
+    }));
+}
 
 /**
  * A primeira candidata que respondeu de verdade.

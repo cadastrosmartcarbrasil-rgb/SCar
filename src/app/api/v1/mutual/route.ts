@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import {
   ENTIDADES_MUTUAL, ENTIDADES_PAGINADAS, urlMutual, urlMutualCaminho, cabecalhoMutual,
   extrairLista, extrairTotal, temProximaPagina, CANDIDATAS_PLANO,
+  resumoDoCorpo, parametrosDoSwagger,
   type EntidadeMutual, type SondagemCaminho,
 } from '@/lib/mutual';
 import type { Json } from '@/lib/database.types';
@@ -113,10 +114,31 @@ export async function POST(request: Request) {
         const texto = await res.text();
         let registros: number | null = null;
         try { registros = extrairLista(JSON.parse(texto)).length; } catch { /* HTML/vazio */ }
-        sondagens.push({ caminho, http: res.status, registros });
+        // A RECUSA diz o porque (ex.: 400 = existe, mas falta parametro). So o
+        // corpo de 4xx/5xx sai daqui, resumido — nunca o de um 2xx, que e dado.
+        const detalhe = res.status >= 400 && res.status !== 404 ? resumoDoCorpo(texto) : undefined;
+        sondagens.push({ caminho, http: res.status, registros, ...(detalhe ? { detalhe } : {}) });
       } catch (e) {
         sondagens.push({ caminho, http: null, registros: null, erro: (e as Error).message });
       }
+    }
+    // 400 = o caminho EXISTE e a requisicao esta incompleta. Em vez de chutar o
+    // parametro, le o que o CONTRATO declara para ele (swagger.json, com a barra
+    // final). Uma leitura so, e so quando ha 400 — falhar aqui nao derruba nada.
+    if (sondagens.some((x) => x.http === 400)) {
+      try {
+        const res = await fetch(urlMutualCaminho(base, 'swagger.json'), {
+          headers: cabecalhoMutual(token), cache: 'no-store',
+        });
+        if (res.ok) {
+          const swagger = (await res.json()) as unknown;
+          for (const x of sondagens) {
+            if (x.http !== 400) continue;
+            const params = parametrosDoSwagger(swagger, x.caminho);
+            if (params) x.parametros = params;
+          }
+        }
+      } catch { /* sem o contrato, fica o `detalhe` da recusa */ }
     }
     return NextResponse.json({ configured: true, ok: true, sondagens });
   }
@@ -150,7 +172,11 @@ export async function POST(request: Request) {
         updated_at__gte: body.updated_at__gte || undefined,
       });
       const res = await fetch(url, { headers: cabecalhoMutual(token), cache: 'no-store' });
-      if (!res.ok) throw new Error(`HTTP ${res.status} em ${url}`);
+      if (!res.ok) {
+        // O motivo da recusa vai junto: "HTTP 400" sozinho manda a proxima pessoa chutar.
+        const detalhe = resumoDoCorpo(await res.text().catch(() => ''));
+        throw new Error(`HTTP ${res.status} em ${url}${detalhe ? ` — ${detalhe}` : ''}`);
+      }
       const corpo = (await res.json()) as unknown;
 
       const lista = extrairLista(corpo);

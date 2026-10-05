@@ -287,7 +287,7 @@ export default function IntegracaoMutualPage() {
               {sondagens.map((x) => {
                 const existe = x.http !== null && x.http >= 200 && x.http < 300;
                 return (
-                  <li key={x.caminho} className="flex items-center gap-2 text-xs">
+                  <li key={x.caminho} className="flex flex-wrap items-center gap-2 text-xs">
                     <span className={`rounded px-1.5 py-0.5 font-semibold tnum ring-1 ${
                       existe ? TOM.OK : x.http === 301 || x.http === 302 ? TOM.ATENCAO : TOM.CRITICO
                     }`}>
@@ -300,6 +300,27 @@ export default function IntegracaoMutualPage() {
                       </span>
                     )}
                     {x.erro && <span className="text-slate-500">{x.erro}</span>}
+                    {x.http === 400 && (
+                      <span className="text-slate-500">existe, mas recusou a requisicao</span>
+                    )}
+                    {x.detalhe && (
+                      <span className="block w-full pl-10 text-slate-600">
+                        O Mutual disse: <span className="font-mono">{x.detalhe}</span>
+                      </span>
+                    )}
+                    {x.parametros && (
+                      <span className="block w-full pl-10 text-slate-600">
+                        O contrato declara:{' '}
+                        {x.parametros.length === 0
+                          ? 'nenhum parametro.'
+                          : x.parametros.map((p) => (
+                            <code key={`${p.em}:${p.nome}`} className={`mr-1 tnum ${p.obrigatorio ? 'font-semibold text-red-700' : ''}`}>
+                              {p.nome}{p.obrigatorio ? '*' : ''}{p.tipo ? `:${p.tipo}` : ''}
+                            </code>
+                          ))}
+                        {x.parametros.some((p) => p.obrigatorio) && ' (* obrigatorio)'}
+                      </span>
+                    )}
                   </li>
                 );
               })}

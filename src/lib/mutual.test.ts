@@ -12,6 +12,7 @@ import {
   filaAntesDoCutover, cutoverLiberado, tiposPendentes,
   planosPendentes, idsPara90Pct, amplitudeFipe, ENTIDADES_MUTUAL,
   mensagemDeFalhaDeLeitura, urlMutualCaminho, caminhoQueRespondeu, CANDIDATAS_PLANO,
+  resumoDoCorpo, parametrosDoSwagger,
 } from './mutual';
 import type { LinhaCarga, TipoVeiculoExterno, PlanoExterno } from './mutual';
 import type { PassoFunil, FilialMutual, EquipeVendas } from './mutual';
@@ -814,5 +815,57 @@ describe('caminhoQueRespondeu — 200 com zero registro CONTA como existir', () 
     expect(CANDIDATAS_PLANO[0]).toBe(ENTIDADES_MUTUAL.PLAN);
     expect(new Set(CANDIDATAS_PLANO).size).toBe(CANDIDATAS_PLANO.length);
     for (const c of CANDIDATAS_PLANO) expect(c).toMatch(/^\/[\w/_-]*\/$/);
+  });
+});
+
+describe('resumoDoCorpo — o motivo da recusa do Mutual', () => {
+  it('erro de validacao do Django REST vira "campo: mensagem"', () => {
+    expect(resumoDoCorpo('{"vehicle_type":["Este campo e obrigatorio."],"fipe_value":["Obrigatorio."]}'))
+      .toBe('vehicle_type: Este campo e obrigatorio.; fipe_value: Obrigatorio.');
+  });
+  it('detail simples', () => {
+    expect(resumoDoCorpo('{"detail":"Parametro invalido"}')).toBe('detail: Parametro invalido');
+  });
+  it('HTML vira texto puro e espaco nao se acumula', () => {
+    expect(resumoDoCorpo('<html><body><h1>Bad   Request</h1>\n<p>(400)</p></body></html>'))
+      .toBe('Bad Request (400)');
+  });
+  it('vazio e vazio; longo e truncado', () => {
+    expect(resumoDoCorpo('')).toBe('');
+    const r = resumoDoCorpo('x'.repeat(1000), 50);
+    expect(r).toHaveLength(50);
+    expect(r.endsWith('…')).toBe(true);
+  });
+});
+
+describe('parametrosDoSwagger — o que o contrato declara para o GET', () => {
+  const swagger = {
+    basePath: '/public_api/v2',
+    paths: {
+      '/quotation/plan/': {
+        parameters: [{ name: 'page', in: 'query', type: 'integer' }],
+        get: { parameters: [
+          { name: 'vehicle_type', in: 'query', required: true, type: 'integer', description: 'tipo' },
+          { name: 'page_size', in: 'query', type: 'integer' },
+        ] },
+      },
+      '/vehicle/type/': { get: {} },
+    },
+  };
+  it('junta os do caminho com os da operacao e marca o obrigatorio', () => {
+    const p = parametrosDoSwagger(swagger, '/quotation/plan/');
+    expect(p?.map((x) => x.nome)).toEqual(['page', 'vehicle_type', 'page_size']);
+    expect(p?.find((x) => x.nome === 'vehicle_type')).toMatchObject({ obrigatorio: true, tipo: 'integer', em: 'query' });
+    expect(p?.find((x) => x.nome === 'page')?.obrigatorio).toBe(false);
+  });
+  it('casa com ou sem barra e com o basePath na chave', () => {
+    expect(parametrosDoSwagger(swagger, 'quotation/plan')).not.toBeNull();
+    const comBase = { basePath: '/public_api/v2', paths: { '/public_api/v2/quotation/plan/': { get: {} } } };
+    expect(parametrosDoSwagger(comBase, '/quotation/plan/')).toEqual([]);
+  });
+  it('caminho fora do contrato e null; caminho sem parametro e []', () => {
+    expect(parametrosDoSwagger(swagger, '/plan/')).toBeNull();
+    expect(parametrosDoSwagger(swagger, '/vehicle/type/')).toEqual([]);
+    expect(parametrosDoSwagger(null, '/x/')).toBeNull();
   });
 });
