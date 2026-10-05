@@ -75,7 +75,7 @@ extensão (`btree_gist` 188 · `pg_trgm` 31 · `unaccent` 4), como documentado.
 > |---|---|
 > | Captura | ✅ completa — `SALE_TEAM` puxada em 02/10 (**52**), `CONTRACT_OBJECT` 17.741, `CONTRACT` 17.658 |
 > | Unidade (equipe de vendas) | ✅ 19 vínculos desde 21/09 |
-> | `PLAN` | ⏳ **Capturados 13 planos em 05/10** (Moto SP/RBP/RN, V6 MT/RBP, V10, Econômico…), mas são só os **VENDÁVEIS HOJE**: `/quotation/plan/?vehicle_id=` devolve o que o veículo pode contratar agora. Casaram **11 dos 109** `plan_id` dos contratos (1.784 de 17.358 objetos); na matriz só o **88** (108 faturáveis) entre os grandes — o **48** (112) e o **41** (44) são planos antigos e não voltam. A captura agora tenta o GET por id **se o swagger o declarar** e mostra os caminhos de plano do contrato da API |
+> | `PLAN` | ✅ **Captura esgotada (05/10, 2ª rodada): 18 planos**, 16 casam com os `plan_id` dos contratos. **A API não tem mais o que dar:** o swagger só declara `/quotation/plan/` (GET, por veículo) e `/quotation/plan/select_plan/` (POST — é ESCRITA, não usar); não há GET por id. Na matriz: **163 de 474 faturáveis têm nome** — 88 *V6 Automóvel MT* (108), **41 *Moto MT* (44)**, 43, 46, 42, 45, 86, 98. **O 48 (112) segue sem nome** e só sai da tela do Mutual (contrato 20224) ou da decisão direta |
 > | De-para `VEHICLE_TYPE` | ❌ 0 de 3 decisões |
 > | De-para `PLAN` | ❌ 0 de 42 (18 cobrem 90%) |
 > | **Carga da MATRIZ** | ❌ **não executada** — prévia: **470 veículos / 428 associados entram, 8 recusados (0 km)** |
