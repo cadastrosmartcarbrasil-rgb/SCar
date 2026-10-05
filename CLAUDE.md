@@ -85,8 +85,13 @@ extensão (`btree_gist` 188 · `pg_trgm` 31 · `unaccent` 4), como documentado.
 > de-para depois **preenche os nulos na re-execução**. A semana de 28/09 parou porque a tela
 > mentia (timeout virando "Puxe Equipes de vendas" com 52 capturadas) e porque o `/plan/` deu 404 —
 > e o caminho crítico passou a ser tratado como se dependesse do plano, e não depende.
-**Próxima migration livre: `0087`.** A `0086` (só o `comment on function` da 0085: 18 ids, não 17)
-é NOVA e **não bloqueia nada** — roda quando quiser.
+**Próxima migration livre: `0087`.** As **`0001`..`0086`** estão aplicadas — a **`0086` foi rodada e
+CONFERIDA em 05/10/2026**: o comentário de `mutual_planos_externos` diz 18/42 e 29/91 (sem "17" nem
+"26"), a função segue `security definer` com `search_path=public`, fechada ao `anon`; 0 `security
+definer` sem `search_path` e **0 RPCs nossas abertas ao `anon`**. (A primeira tentativa rodou num dos
+OUTROS três projetos e deu `42883: function ... does not exist` — sem efeito. É o retrato exato do
+"qual é o banco" abaixo: o erro foi o aviso.)
+**Vínculos: 20** — entrou a equipe **22 → GRANDE NATAL** em 05/10/2026, pela tela.
 As migrations **`0001`..`0084`** estão aplicadas em
 produção — a **`0084` (a CARGA) foi rodada e CONFERIDA em 01/10/2026**: as 14 funções existem e o
 rito da 0052 se manteve (0 RPCs nossas abertas ao `anon`; as 223 são de extensão, como documentado).
