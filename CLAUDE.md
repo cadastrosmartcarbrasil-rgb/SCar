@@ -89,7 +89,7 @@ extensão (`btree_gist` 188 · `pg_trgm` 31 · `unaccent` 4), como documentado.
 `mutual_carga_linhas` trocando UMA linha — conferido em 05/10 que a versão em produção é idêntica à
 da 0084, salvo `\r\n` — e cria `mutual_categorias_veiculo`). Depois dela, o deploy do contêiner
 mostra a seção *Categoria do veículo* em `/integracao/mutual`.
-**🔴 A `0088_plano_sem_casco` é NOVA e AINDA NÃO FOI RODADA.** Ela cria
+**✅ A `0088_plano_sem_casco` e a `0089_produto_tipo_veiculo` foram rodadas e CONFERIDAS em 06/10/2026**: `planos_protecao.sem_casco` existe, `produto_tipos_veiculo` com RLS e as 2 policies, `produto_atende_tipo` security definer com `search_path`, `cotar_plano`/`calcular_mensalidade` com as versões novas (uma de cada, sem overload), 0 security definer sem `search_path`, **0 RPCs nossas ao `anon`**. **Nenhum preço mudou:** moto da QCC9H13 na base = R$ 61,00 e Passeio 50k = R$ 135,00, como antes; ainda 0 planos marcados sem casco e 0 restrições de tipo (falta marcar na tela). Texto original da 0088: Ela cria
 `planos_protecao.sem_casco` e recria `cotar_plano` (a versão em produção foi conferida idêntica à da
 0081 em 05/10, md5 igual): plano marcado não leva o casco OBRIGATÓRIO no detalhamento nem no total.
 É o que corrige a ficha do SAC mostrando **casco para quem não tem** — a moto QCC9H13 (plano 57 do
@@ -97,7 +97,7 @@ Mutual: Taxa Adm 25 + terceiros 20 + rastreador 35 + 24h 23 − 6 = R$ 97, sem c
 **RASTREAMENTO**. Default `false`: nenhum plano muda ao aplicar; o boleto dos migrados não muda
 (override). Depois de rodar: marcar *Sem proteção de casco* no RASTREAMENTO e no plano de moto, em
 `Configurações → Planos`.
-**🔴 A `0089_produto_tipo_veiculo` também é NOVA e AINDA NÃO FOI RODADA** (roda depois da 0088). Pedido
+**A `0089_produto_tipo_veiculo` (aplicada, ver acima).** Pedido
 do usuário: *"ao cadastrar produtos, deixar claro para qual tipo de veículo se aplica… não parabrisa
 para motos"*. Cria `produto_tipos_veiculo` (sem linha = TODOS os tipos, então é no-op ao aplicar) e
 recria `calcular_mensalidade` (produção conferida idêntica à 0081, md5 igual, em 05/10) com UMA
