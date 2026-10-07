@@ -77,7 +77,7 @@ extensão (`btree_gist` 188 · `pg_trgm` 31 · `unaccent` 4), como documentado.
 > | Unidade (equipe de vendas) | ✅ 19 vínculos desde 21/09 |
 > | `PLAN` | ✅ **Captura esgotada (05/10, 2ª rodada): 18 planos**, 16 casam com os `plan_id` dos contratos. **A API não tem mais o que dar:** o swagger só declara `/quotation/plan/` (GET, por veículo) e `/quotation/plan/select_plan/` (POST — é ESCRITA, não usar); não há GET por id. Na matriz: **163 de 474 faturáveis têm nome** — 88 *V6 Automóvel MT* (108), **41 *Moto MT* (44)**, 43, 46, 42, 45, 86, 98. **O 48 (112) segue sem nome** e só sai da tela do Mutual (contrato 20224) ou da decisão direta |
 > | De-para do TIPO | ✅ **`0087` aplicada e conferida (05/10)** — o tipo sai da **CATEGORIA** do Mutual, por **par categoria/tipo**. **23 vínculos gravados** (decisão do usuário, FRETE → Caminhão Pesado): na matriz **467 entram, TODOS com tipo** — Passeio 300 · Pick-up/Van 83 · Moto 71 · Caminhão Pesado 8 · Diesel Leve 5. Sem vínculo (0 faturáveis na matriz): V15/V5/V12 pickups, TAXI, PICKUP-TAXI, LOCADORA, CAMINHONETE, SUV, roubo e furto, 99/UBER — decidir antes de dezembro. `VEHICLE_TYPE` (reserva) segue com 0 |
-> | De-para `PLAN` | 🟡 **9 vínculos (05/10)** — `48`→*DIESEL MIGRADO MUTUAL* · `88`/`86`/`98`→**Ouro** · `41`/`43`/`42`→**Prata** · `45`→**Roubo e Furto** · `46`→**RASTREAMENTO**; aplicados por re-execução. **Motos (07/10): o plano saiu dos PRODUTOS, não do `plan_id`** (0091/0092 — terceiros → MOTOCICLETAS - OURO, sem → ESSENCIAL). Matriz hoje (467): **sem plano 172 · Diesel Migrado 112 · Ouro 109 · Moto Ouro 67 · Moto Essencial 3 · Rastreamento 3 · Roubo e Furto 1 · Prata 0**. ⚠️ **Os 46 "Prata" eram TODOS motos** — `41`/`43`/`42` são planos de MOTO vinculados a um plano de CARRO: corrigir esse vínculo (ou rodar a classificação por terceiros por unidade) antes de carregar outra unidade em dezembro. Caminhões (140/53/66/70) SEM plano por decisão. Próximos (carros, agora com nome pelo `plan_name`): 104, 116, 120, 54, 49, 92, 128 |
+> | De-para `PLAN` | 🟡 **9 vínculos (05/10)** — `48`→*DIESEL MIGRADO MUTUAL* · `88`/`86`/`98`→**Ouro** · `41`/`43`/`42`→**Prata** · `45`→**Roubo e Furto** · `46`→**RASTREAMENTO**; aplicados por re-execução. **Motos (07/10): o plano saiu dos PRODUTOS, não do `plan_id`** (0091/0092 — terceiros → MOTOCICLETAS - OURO, sem → ESSENCIAL). Matriz hoje (467): **sem plano 172 · Diesel Migrado 112 · Ouro 109 · Moto Ouro 67 · Moto Essencial 3 · Rastreamento 3 · Roubo e Furto 1 · Prata 0**. ⚠️ **Os 46 "Prata" eram TODOS motos** — `41`/`43`/`42` são planos de MOTO vinculados a um plano de CARRO: corrigir esse vínculo (ou rodar a classificação por terceiros por unidade) antes de carregar outra unidade em dezembro. Caminhões (*Caminhões MT*, *CAMINHõES-LEVE-VANSMIG*, *VANS - CAMINHAO 3/4MIG*, *CAMINHõES-V-PESADOSMIG*) SEM plano por decisão. Próximos: ver a tabela **"PLANO DO MUTUAL SE CITA PELO NOME"** — e citar SEMPRE pelo nome do Mutual |
 > | **Carga da MATRIZ** | ✅ **EXECUTADA em 05/10/2026** (autorizada pelo usuário): **426 associados e 467 veículos criados, 7 recusados**. Conferido: 467 com `cobranca_externa`, **0 faturas e 0 títulos novos** (faturas 8 e títulos 6, como antes), 0 ativados "hoje", 0 sem tipo, todos na matriz; status ativo 452 · vistoria_pendente 15; 112 com plano (o 48), 1 sem valor, 1 sem cor. **Próximo:** re-executar após recapturar (deriva), de-para dos planos 88/41/45/46, e o piloto de outubro (SAC, portal, 24h) |
 >
 > **🔴 Nenhum dos dois de-paras bloqueia a carga.** `mutual_executar_carga` grava
@@ -2517,6 +2517,48 @@ atendimento real**, não antes de carregar.
   a placa chegar. A cobrança da placa é operacional.
 - **`DIFICULDADE FINANCEIRA`** (11 objetos na base toda) segue sem de-para: o usuário nomeou três
   status e esse não estava. Os objetos ficam de fora, contados.
+
+## 🔴 PLANO DO MUTUAL SE CITA PELO NOME, NUNCA SÓ PELO NÚMERO (pedido do usuário, 07/10/2026)
+> *"Para eu localizar os planos no Mutual, não é por número ou código, é pelo nome."* O `plan_id`
+> não aparece na tela do Mutual — quem faz o vínculo procura pelo NOME. **Ao falar com o usuário,
+> escreva sempre o nome do Mutual** (o número pode ir entre parênteses, só para referência nossa).
+
+- **Fonte do nome:** `CONTRACT_OBJECT_PRODUCT.payload->>'plan_name'` (cobre TODOS os planos legados,
+  capturado em 07/10) e, na falta, `PLAN.payload->>'name'`. O sufixo **"MIG"** colado no fim
+  ("V5 AUTOMOVEL COMUMMIG") faz parte do nome como o Mutual devolve — são os planos migrados.
+- **⚠️ `mutual_planos_externos` (a tela do de-para) só conhece o nome pela entidade `PLAN`** (18
+  planos vendáveis hoje), então os legados aparecem SEM nome lá. Trazer o `plan_name` como reserva é
+  uma migration de função (próxima livre) — oferecida ao usuário, não feita.
+
+**Planos da carteira da MATRIZ (467 veículos carregados), por volume — medido em 07/10/2026:**
+
+| Nome no Mutual | (id) | Veíc. | Tipo | Vínculo no SCar |
+|---|---:|---:|---|---|
+| V5 AUTOMOVEL COMUMMIG | 48 | 112 | Passeio | DIESEL MIGRADO MUTUAL ⚠️ |
+| Plano V6- Automóvel MT | 88 | 107 | Passeio | PLANO OURO - VEÍCULOS |
+| Plano Moto MT | 41 | 41 | Moto | PLANO PRATA ⚠️ (motos já reclassificadas) |
+| MOTOCICLETAS /SP/CAPITALMIG | 57 | 20 | Moto | — (reclassificadas por terceiros) |
+| Plano V7 - Automóvel Especial MT | 104 | 17 | Passeio | — |
+| Plano V7 para pickups, vans e utilitários MT | 116 | 16 | Pick-up/Van | — |
+| Plano V10 para pickups, vans e utilitários MT | 120 | 15 | Pick-up/Van | — |
+| V6 PICKUPS/VANS/UTILITáRIOSMIG | 54 | 15 | Pick-up/Van | — |
+| ESPECIAL V10 PICKUPS/VANS/UTILITáRIOSMIG | 49 | 13 | Pick-up/Van | — |
+| Plano V7 - Automóvel MT | 92 | 12 | Passeio | — |
+| Plano V10 para pickups_vans_ e utilitários especiais MT | 128 | 11 | Pick-up/Van | — |
+| Plano V6 - Automóvel Especial MT | 100 | 9 | Passeio | — |
+| ESPECIAL V6 /AUTOMóVEISMIG | 52 | 9 | Passeio | — |
+| V6 AUTOMOVEL COMUMMIG | 56 | 8 | Passeio | — |
+| Plano V5 - Automóvel | 22 | 6 | Passeio | — |
+| Caminhões MT | 140 | 6 | Caminhão/Diesel | sem plano (decisão) |
+| CAMINHõES-LEVE-VANSMIG | 53 | 5 | Caminhão | sem plano (decisão) |
+| V10 PICKUPS/VANS/UTILITáRIOSMIG | 61 | 4 | Pick-up/Van | — |
+| Plano Moto SP/ Riberão Preto | 43 | 4 | Moto | PLANO PRATA ⚠️ |
+| ESPECIAL V6 PICKUPS/VANS/UTILITáRIOSMIG | 62 | 4 | Pick-up/Van | — |
+| ESPECIAL V5 /AUTOMóVEISMIG | 55 | 4 | Passeio | — |
+| ESPECIAL V10 AUTOMOVELMIG | 58 | 3 | Passeio | — |
+| Rastreador e Assistência | 46 | 3 | vários | RASTREAMENTO |
+| Plano V6 - Automóvel SP/SP | 87 | 3 | Passeio | — |
+| Cauda de 1–2 veículos | — | 17 | — | Plano V7 para pickups_vans_ e utilitários especiais. MT (124) · MOTOCICLETA RN ESPECIALMIG (63) · ESPECIAL V12 /AUTOMÓVEISMIG (59) · V10 /AUTOMóVEIS COMUMMIG (51) · Roubo/Furto (45 → Roubo e Furto) · MOTOCICLETA R.PMIG (64) · VANS - CAMINHAO 3/4MIG (66) · CAMINHõES-V-PESADOSMIG (70) · Plano V6 - Automóvel RBP/SP (86 → Ouro) · Plano Moto SP/SP (42 → Prata ⚠️) · Plano V10 - Automóvel Especial MT (108) · Plano - V10 Automóvel MT (96) · Plano V6 - Automóvel Especial RBP/SP (98 → Ouro) · Plano V15 para pickups_vans_ e utilitários especiais MT (136) · MOTOCICLETAS / MATO GROSSOMIG (50) · Plano V10 para pickups_vans_ e utilitários especiais (38) |
 
 ## O DE-PARA DO PLANO (0085) — `/integracao/mutual` → *Plano / cobertura*
 > Só leitura. **Não carrega, não muda preço, não toca em `veiculos`.** Ela abre a entidade,
