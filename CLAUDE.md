@@ -77,7 +77,7 @@ extensão (`btree_gist` 188 · `pg_trgm` 31 · `unaccent` 4), como documentado.
 > | Unidade (equipe de vendas) | ✅ 19 vínculos desde 21/09 |
 > | `PLAN` | ✅ **Captura esgotada (05/10, 2ª rodada): 18 planos**, 16 casam com os `plan_id` dos contratos. **A API não tem mais o que dar:** o swagger só declara `/quotation/plan/` (GET, por veículo) e `/quotation/plan/select_plan/` (POST — é ESCRITA, não usar); não há GET por id. Na matriz: **163 de 474 faturáveis têm nome** — 88 *V6 Automóvel MT* (108), **41 *Moto MT* (44)**, 43, 46, 42, 45, 86, 98. **O 48 (112) segue sem nome** e só sai da tela do Mutual (contrato 20224) ou da decisão direta |
 > | De-para do TIPO | ✅ **`0087` aplicada e conferida (05/10)** — o tipo sai da **CATEGORIA** do Mutual, por **par categoria/tipo**. **23 vínculos gravados** (decisão do usuário, FRETE → Caminhão Pesado): na matriz **467 entram, TODOS com tipo** — Passeio 300 · Pick-up/Van 83 · Moto 71 · Caminhão Pesado 8 · Diesel Leve 5. Sem vínculo (0 faturáveis na matriz): V15/V5/V12 pickups, TAXI, PICKUP-TAXI, LOCADORA, CAMINHONETE, SUV, roubo e furto, 99/UBER — decidir antes de dezembro. `VEHICLE_TYPE` (reserva) segue com 0 |
-> | De-para `PLAN` | 🟡 **9 vínculos (05/10)** — `48`→*DIESEL MIGRADO MUTUAL* · `88`/`86`/`98`→**Ouro** · `41`/`43`/`42`→**Prata** · `45`→**Roubo e Furto** · `46`→**RASTREAMENTO**; aplicados por re-execução: na matriz **Diesel Migrado 112 · Ouro 109 · Prata 46 · Rastreamento 3 · Roubo e Furto 1 · sem plano 196**. Caminhões (140/53/66/70) SEM plano por decisão. Próximo grupo: **57** (20 motos, placa QCC9H13, contrato 8931), 104, 116, 120, 54, 49, 92, 128 — o usuário identifica na tela do Mutual |
+> | De-para `PLAN` | 🟡 **9 vínculos (05/10)** — `48`→*DIESEL MIGRADO MUTUAL* · `88`/`86`/`98`→**Ouro** · `41`/`43`/`42`→**Prata** · `45`→**Roubo e Furto** · `46`→**RASTREAMENTO**; aplicados por re-execução. **Motos (07/10): o plano saiu dos PRODUTOS, não do `plan_id`** (0091/0092 — terceiros → MOTOCICLETAS - OURO, sem → ESSENCIAL). Matriz hoje (467): **sem plano 172 · Diesel Migrado 112 · Ouro 109 · Moto Ouro 67 · Moto Essencial 3 · Rastreamento 3 · Roubo e Furto 1 · Prata 0**. ⚠️ **Os 46 "Prata" eram TODOS motos** — `41`/`43`/`42` são planos de MOTO vinculados a um plano de CARRO: corrigir esse vínculo (ou rodar a classificação por terceiros por unidade) antes de carregar outra unidade em dezembro. Caminhões (140/53/66/70) SEM plano por decisão. Próximos (carros, agora com nome pelo `plan_name`): 104, 116, 120, 54, 49, 92, 128 |
 > | **Carga da MATRIZ** | ✅ **EXECUTADA em 05/10/2026** (autorizada pelo usuário): **426 associados e 467 veículos criados, 7 recusados**. Conferido: 467 com `cobranca_externa`, **0 faturas e 0 títulos novos** (faturas 8 e títulos 6, como antes), 0 ativados "hoje", 0 sem tipo, todos na matriz; status ativo 452 · vistoria_pendente 15; 112 com plano (o 48), 1 sem valor, 1 sem cor. **Próximo:** re-executar após recapturar (deriva), de-para dos planos 88/41/45/46, e o piloto de outubro (SAC, portal, 24h) |
 >
 > **🔴 Nenhum dos dois de-paras bloqueia a carga.** `mutual_executar_carga` grava
@@ -129,14 +129,17 @@ veículos*. Depois de rodar + deploy: puxar a entidade na tela, conferir com
 aplicar com `mutual_aplicar_plano_por_terceiros(matriz, moto, OURO, ESSENCIAL, array[PRATA], true)`.
 Matriz hoje: 72 motos = 46 em PRATA (de-para do 41, plano de CARRO) · 25 sem plano · 1 RASTREAMENTO
 (fica). Sem produto capturado = não é tocado.
-**🟡 A `0092_mutual_produtos_aninhados` é NOVA — falta rodar no SQL Editor** (só recria
-`mutual_terceiros_por_objeto`, mesma assinatura). A captura de 07/10 trouxe os **467** veículos da
-matriz, mas o formato real é **UMA LINHA POR VEÍCULO com `products[]` dentro** (+ `plan_name`,
-`plate`, `price_total`), não uma linha por produto como a 0091 supôs — com a leitura da 0091 todos
-viravam "não sei" e nada seria aplicado. **Nada foi aplicado ainda.** Medido direto no payload:
-**71 motos na matriz = 67 com terceiros → OURO · 3 sem → ESSENCIAL · 1 sem produto (plano 46,
-fica no RASTREAMENTO)**. Depois de rodar a 0092, com autorização do usuário:
-`mutual_aplicar_plano_por_terceiros(matriz, moto, OURO, ESSENCIAL, array[PRATA], true)`.
+**✅ A `0092_mutual_produtos_aninhados` foi rodada e CONFERIDA em 07/10/2026** (só recria
+`mutual_terceiros_por_objeto`, mesma assinatura; 0 security definer sem `search_path`). A captura
+de 07/10 trouxe os **467** veículos da matriz, e o formato real é **UMA LINHA POR VEÍCULO com
+`products[]` dentro** (+ `plan_name`, `plate`, `price_total`), não uma linha por produto como a 0091
+supôs. **✅ CLASSIFICAÇÃO DAS MOTOS APLICADA em 07/10/2026** (autorizada pelo usuário) com
+`mutual_aplicar_plano_por_terceiros(matriz, moto, OURO, ESSENCIAL, array[PRATA], true)`:
+**67 → MOTOCICLETAS - OURO · 3 → MOTOCICLETA ESSENCIAL · 1 sem produto (SKO7E85, plano 46) segue
+no RASTREAMENTO** · OBA9558 (não é do Mutual, sem `cobranca_externa`) intocada. **Boleto idêntico
+antes e depois: R$ 8.932,90** nas 72 motos da matriz (o override manda). A carga preserva o plano
+pelo `coalesce`. **Falta na tela:** marcar *Sem proteção de casco* nos planos que não têm casco
+(`sem_casco` está `false` em todos).
 **⚠️ Achado do `plan_name`: o plano 48 do Mutual é "V5 AUTOMOVEL COMUM"** (112 carros da matriz),
 não diesel — ele está vinculado a *DIESEL MIGRADO MUTUAL*. Os pendentes têm nome agora: 104 V7
 Automóvel Especial MT · 116 V7 pickups MT · 120 V10 pickups MT · 54 V6 pickups · 49 Especial V10
