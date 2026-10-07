@@ -266,6 +266,7 @@ export function useSaveProduto() {
         obrigatorio: p.obrigatorio ?? false,
         categoria: p.categoria || 'BENEFICIO',
         status: p.status ?? true,
+        rastreador_avulso: p.rastreador_avulso ?? false,
       };
       let produtoId = p.id;
       if (produtoId) {

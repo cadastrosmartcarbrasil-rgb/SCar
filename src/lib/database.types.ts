@@ -1388,6 +1388,8 @@ export type ProdutosRow = Timestamps & {
   tem_limite_uso: boolean;
   quantidade_limite: number;
   janela_dias_limite: number;
+  /** 0090 — rastreador OPCIONAL: so entra abaixo do minimo da regra do tipo. */
+  rastreador_avulso: boolean;
 };
 
 export type TabelaPrecosFaixaRow = {

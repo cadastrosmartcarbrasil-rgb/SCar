@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FormField, Input, Select } from '@/components/ui/field';
 import { useTiposVeiculo, useProdutos, useSimularPreco, useCotasParticipacao, usePlanos, useTiposPorProduto, type ResultadoSimulacao } from '@/hooks/use-precificacao';
-import { produtosParaTipo } from '@/lib/produtos';
+import { produtosParaTipo, regraRastreadorCobra, semRastreadorDaRegra } from '@/lib/produtos';
 import { TabelaPrecosEditor } from '@/components/precificacao/tabela-precos-editor';
 import { ImportarTabela } from '@/components/precificacao/importar-tabela';
 import { formatCurrency } from '@/lib/utils';
@@ -61,8 +61,12 @@ function Simulador() {
 
   // So o que atende o tipo escolhido (0089) — e o que o motor vai cobrar.
   const doTipo = useMemo(
-    () => produtosParaTipo((produtos ?? []).filter((p) => p.status), tipoVeiculoId, tiposPorProduto),
-    [produtos, tipoVeiculoId, tiposPorProduto],
+    () => semRastreadorDaRegra(
+      produtosParaTipo((produtos ?? []).filter((p) => p.status), tipoVeiculoId, tiposPorProduto),
+      // O rastreador opcional so abaixo do minimo do tipo (0090).
+      regraRastreadorCobra((tipos ?? []).find((t) => t.id === tipoVeiculoId), Number(fipe) || null),
+    ),
+    [produtos, tipoVeiculoId, tiposPorProduto, tipos, fipe],
   );
   const opcionais = useMemo(() => doTipo.filter((p) => !p.obrigatorio), [doTipo]);
   const obrigatorios = useMemo(() => doTipo.filter((p) => p.obrigatorio), [doTipo]);

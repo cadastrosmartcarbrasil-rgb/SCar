@@ -14,7 +14,7 @@ import { useAssociados } from '@/hooks/use-associados';
 import { useRegionais, useVendedores, useUsuarios, useMarcas, useModelos } from '@/hooks/use-config';
 import { rotuloUnidade } from '@/lib/regional';
 import { useTiposVeiculo, usePlanos, useProdutos, useProdutosPorPlano, useTiposPorProduto } from '@/hooks/use-precificacao';
-import { produtoAtendeTipo, produtosParaTipo } from '@/lib/produtos';
+import { produtoAtendeTipo, produtosParaTipo, regraRastreadorCobra, semRastreadorDaRegra } from '@/lib/produtos';
 import { useVeiculos, useSaveVeiculo, useExcluirVeiculo } from '@/hooks/use-veiculos';
 import { useEmpresasRastreamento } from '@/hooks/use-rastreamento';
 import { useEmpresa } from '@/hooks/use-empresa';
@@ -172,11 +172,16 @@ function VeiculosConteudo() {
   // So o que atende o tipo do veiculo (0089). Avulso ja gravado que nao atende
   // continua na lista, marcado — esconder faria o proximo "salvar" apaga-lo calado.
   const opcionaisDisp = useMemo(
-    () => produtosParaTipo(
-      (produtos ?? []).filter((p) => !p.obrigatorio && p.status),
-      form.tipo_veiculo_id, tiposPorProduto, opcionais,
+    () => semRastreadorDaRegra(
+      produtosParaTipo(
+        (produtos ?? []).filter((p) => !p.obrigatorio && p.status),
+        form.tipo_veiculo_id, tiposPorProduto, opcionais,
+      ),
+      // O rastreador opcional so abaixo do minimo do tipo (0090).
+      regraRastreadorCobra((tiposVeiculo ?? []).find((t) => t.id === form.tipo_veiculo_id), form.valor_fipe),
+      opcionais,
     ),
-    [produtos, form.tipo_veiculo_id, tiposPorProduto, opcionais],
+    [produtos, form.tipo_veiculo_id, tiposPorProduto, opcionais, tiposVeiculo, form.valor_fipe],
   );
   const atendeOTipo = (id: string) => produtoAtendeTipo(id, form.tipo_veiculo_id, tiposPorProduto);
   const toggleSet = (setter: React.Dispatch<React.SetStateAction<Set<string>>>, id: string) =>

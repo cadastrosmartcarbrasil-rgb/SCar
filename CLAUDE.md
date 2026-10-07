@@ -104,7 +104,15 @@ recria `calcular_mensalidade` (produção conferida idêntica à 0081, md5 igual
 condição: produto que não atende o tipo não entra no motor — nem da base, nem do plano, nem avulso.
 As telas (Produtos, Planos, captura da venda, edição da cotação, ficha do veículo, simulador, tabela
 de preços e importação) só oferecem o que atende o tipo; regra pura em `src/lib/produtos.ts`.
-**Próxima migration livre: `0090`.**
+**🔴 A `0090_rastreador_opcional` é NOVA e AINDA NÃO FOI RODADA.** Regra do usuário (07/10): o
+rastreador OPCIONAL só é oferecido e cobrado quando o veículo está ABAIXO do mínimo do tipo; acima, a
+regra do tipo (0019) já cobra e o opcional some. Cria `produtos.rastreador_avulso`, marca o produto
+"Rastreador" (R$ 35, ativo, em 0 planos e 0 veículos em 07/10 — nenhum preço muda) e recria
+`calcular_mensalidade` (corpo da 0089 + a condição). O "RASTREAMENTO SMART CAR BRASIL" (produto do
+plano RASTREAMENTO, R$ 59,90) NÃO é marcado: rastreamento puro é outra coisa. Telas: o opcional some
+da lista quando a regra cobra (`regraRastreadorCobra`/`semRastreadorDaRegra`, `src/lib/produtos.ts`)
+e o cadastro de Produtos ganhou a marca "Rastreador opcional".
+**Próxima migration livre: `0091`.**
 **Próxima migration livre era `0088`.** As **`0001`..`0086`** estão aplicadas — a **`0086` foi rodada e
 CONFERIDA em 05/10/2026**: o comentário de `mutual_planos_externos` diz 18/42 e 29/91 (sem "17" nem
 "26"), a função segue `security definer` com `search_path=public`, fechada ao `anon`; 0 `security
@@ -504,9 +512,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0089`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **66 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 764 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0090`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **67 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 769 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Os portais e páginas públicas
@@ -1816,6 +1824,11 @@ parabrisa amarrado ao Ouro some do preco e da ficha do SAC da moto no Ouro, e o 
 servindo carro e moto. Boleto: so muda veiculo SEM override (3 na base em 05/10). Espelho puro em
 `src/lib/produtos.ts` (`produtoAtendeTipo`, `produtosParaTipo` — que MANTEM na tela o avulso ja
 gravado, marcado "nao atende este tipo", para o salvar nao apaga-lo calado)
+· `0090_rastreador_opcional` (O RASTREADOR OPCIONAL SO ABAIXO DO MINIMO: `produtos.rastreador_avulso`
+marca o rastreador opcional (o produto "Rastreador", R$ 35, ja nasce marcado); `calcular_mensalidade`
+decide a regra do tipo ANTES do laco e pula o opcional quando ela ja cobra — avulso ou amarrado a
+plano. Antes, carro acima de R$ 60 mil com o opcional pagava R$ 70 por UM equipamento. Marcador e
+nao categoria, porque o produto do plano RASTREAMENTO tambem e categoria RASTREADOR e nao pode sumir)
 · `0082_carga_mutual_preparacao` (as TRES pecas que faltavam para a carga do Mutual poder rodar,
 e nenhuma delas carrega nada — ha teste provando que a operacao segue intacta: (A) **a UNIDADE sai
 do ASSOCIADO** — a corrente do consultor (0073/0074) foi medida com a base completa e esta VAZIA

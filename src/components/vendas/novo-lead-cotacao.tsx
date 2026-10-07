@@ -12,7 +12,7 @@ import { FipeConsulta } from '@/components/fipe/fipe-consulta';
 import { useFipePorPlaca } from '@/hooks/use-fipe';
 import type { RegistroPlaca } from '@/lib/fipe';
 import { useTiposVeiculo, useProdutos, useCotasParticipacao, useTiposPorProduto } from '@/hooks/use-precificacao';
-import { produtosParaTipo } from '@/lib/produtos';
+import { produtosParaTipo, regraRastreadorCobra, semRastreadorDaRegra } from '@/lib/produtos';
 import {
   useAvisoDeCaptura, useCotacaoComparativa, useProdutosDoPlano, useSalvarCotacao, useSaveLead,
   type PlanoComparado,
@@ -107,8 +107,12 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
   // So o que atende o tipo do veiculo (0089): sem parabrisa para moto. O motor
   // ignora o resto de qualquer jeito; aqui e para a tela nao oferecer.
   const opcionais = useMemo(
-    () => produtosParaTipo((produtos ?? []).filter((p) => !p.obrigatorio && p.status), tipoVeiculoId, tiposPorProduto),
-    [produtos, tipoVeiculoId, tiposPorProduto],
+    // ...e o rastreador opcional so abaixo do minimo do tipo (0090).
+    () => semRastreadorDaRegra(
+      produtosParaTipo((produtos ?? []).filter((p) => !p.obrigatorio && p.status), tipoVeiculoId, tiposPorProduto),
+      regraRastreadorCobra((tipos ?? []).find((t) => t.id === tipoVeiculoId), valorFipe),
+    ),
+    [produtos, tipoVeiculoId, tiposPorProduto, tipos, valorFipe],
   );
   const { inclusos, avulsos } = useMemo(
     () => separarOpcionais(opcionais, idsDoPlano),

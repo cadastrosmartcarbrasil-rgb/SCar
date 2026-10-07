@@ -56,3 +56,31 @@ export function rotuloTiposDoProduto(
   const nomes = tipos.map((t) => nomeDoTipo(t)).filter((n): n is string => !!n);
   return nomes.length ? nomes.sort((a, b) => a.localeCompare(b)).join(', ') : 'Todos os tipos';
 }
+
+/**
+ * A regra do rastreador do TIPO (0019) ja cobra este veiculo? Espelho da
+ * condicao de `calcular_mensalidade`: tipo que exige e FIPE ACIMA do limite de
+ * isencao. Tipo ou FIPE desconhecidos = nao (nao esconda nada no escuro).
+ */
+export function regraRastreadorCobra(
+  tipo: { exige_rastreador?: boolean | null; valor_limite_isencao?: number | null } | null | undefined,
+  fipe: number | null | undefined,
+): boolean {
+  if (!tipo || !tipo.exige_rastreador || !fipe) return false;
+  return fipe > Number(tipo.valor_limite_isencao ?? 0);
+}
+
+/**
+ * Tira da lista o rastreador OPCIONAL (0090) quando a regra do tipo ja cobra —
+ * oferecer seria vender o mesmo equipamento duas vezes. O que ja esta gravado
+ * fica (`manter`), e o motor ignora de qualquer jeito.
+ */
+export function semRastreadorDaRegra<P extends { id: string; rastreador_avulso?: boolean | null }>(
+  produtos: P[],
+  regraCobra: boolean,
+  manter: Iterable<string> = [],
+): P[] {
+  if (!regraCobra) return produtos;
+  const fica = new Set(manter);
+  return produtos.filter((p) => !p.rastreador_avulso || fica.has(p.id));
+}

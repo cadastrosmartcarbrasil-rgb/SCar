@@ -6,8 +6,8 @@ import { Lock, Percent, ShieldCheck, Loader2 } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { FormField, Input, Select, MoneyInput } from '@/components/ui/field';
-import { usePlanos, useProdutos, useProdutosPorPlano, useTiposPorProduto } from '@/hooks/use-precificacao';
-import { produtosParaTipo } from '@/lib/produtos';
+import { usePlanos, useProdutos, useProdutosPorPlano, useTiposPorProduto, useTiposVeiculo } from '@/hooks/use-precificacao';
+import { produtosParaTipo, regraRastreadorCobra, semRastreadorDaRegra } from '@/lib/produtos';
 import {
   useAtualizarCotacao, useProdutosObrigatorios, useSimularDesconto, useAprovarDesconto,
 } from '@/hooks/use-vendas';
@@ -30,6 +30,7 @@ export function EditarCotacao({
   const { data: produtos } = useProdutos();
   const { data: produtosPorPlano } = useProdutosPorPlano();
   const { data: tiposPorProduto } = useTiposPorProduto();
+  const { data: tiposVeiculo } = useTiposVeiculo();
   const atualizar = useAtualizarCotacao();
   const aprovar = useAprovarDesconto();
 
@@ -51,11 +52,16 @@ export function EditarCotacao({
   // So o que atende o tipo do veiculo (0089). O que ja esta na cotacao e nao
   // atende fica na lista, marcado, para nao sumir calado.
   const disponiveis = useMemo(
-    () => produtosParaTipo(
-      (produtos ?? []).filter((p) => p.status && !idsObrigatorios.includes(p.id)),
-      cotacao.tipo_veiculo_id, tiposPorProduto, opcionais,
+    () => semRastreadorDaRegra(
+      produtosParaTipo(
+        (produtos ?? []).filter((p) => p.status && !idsObrigatorios.includes(p.id)),
+        cotacao.tipo_veiculo_id, tiposPorProduto, opcionais,
+      ),
+      // O rastreador opcional so abaixo do minimo do tipo (0090).
+      regraRastreadorCobra((tiposVeiculo ?? []).find((t) => t.id === cotacao.tipo_veiculo_id), fipe),
+      opcionais,
     ),
-    [produtos, idsObrigatorios, cotacao.tipo_veiculo_id, tiposPorProduto, opcionais],
+    [produtos, idsObrigatorios, cotacao.tipo_veiculo_id, tiposPorProduto, opcionais, tiposVeiculo, fipe],
   );
 
   // O combo tambem carrega OPCIONAIS (plano_produtos). Eles nao sao

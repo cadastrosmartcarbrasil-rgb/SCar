@@ -107,7 +107,10 @@ export default function ProdutosPage() {
                     <Package className="h-4 w-4 text-brand-500" /> {p.nome}
                   </span>
                 </td>
-                <td className="px-4 py-2 text-slate-600">{p.categoria}</td>
+                <td className="px-4 py-2 text-slate-600">
+                  {p.categoria}
+                  {p.rastreador_avulso && <span className="ml-1 rounded bg-cyan-50 px-1 text-[10px] uppercase text-cyan-700">opcional</span>}
+                </td>
                 <td className="px-4 py-2 text-xs text-slate-600">
                   {rotuloTiposDoProduto(p.id, tiposPorProduto, nomeDoTipo)}
                 </td>
@@ -203,6 +206,23 @@ export default function ProdutosPage() {
                 : 'So os tipos marcados recebem este produto — na cotacao, no plano e na ficha do veiculo.'}
             </p>
           </div>
+          {ed?.categoria === 'RASTREADOR' && (
+            <label className="flex items-start gap-2 rounded-lg border border-slate-200 p-2 text-sm text-slate-600">
+              <input
+                type="checkbox"
+                checked={ed?.rastreador_avulso ?? false}
+                onChange={(e) => setEd((p) => ({ ...p, rastreador_avulso: e.target.checked }))}
+                className="mt-0.5 h-4 w-4 rounded border-slate-300"
+              />
+              <span>
+                <span className="font-medium text-slate-700">Rastreador opcional</span>
+                <span className="block text-xs text-slate-500">
+                  So e oferecido e cobrado quando o veiculo esta ABAIXO do minimo do tipo. Acima, a regra
+                  do tipo ja cobra o rastreador e este some. Nao marque o produto do plano RASTREAMENTO.
+                </span>
+              </span>
+            </label>
+          )}
           <div className="flex items-center gap-6 pt-1">
             <label className="flex items-center gap-2 text-sm text-slate-600">
               <input type="checkbox" checked={ed?.obrigatorio ?? false} onChange={(e) => setEd((p) => ({ ...p, obrigatorio: e.target.checked }))} className="h-4 w-4 rounded border-slate-300" />
