@@ -48,6 +48,7 @@ const ENTIDADES: { chave: EntidadeMutual; rotulo: string; nota: string }[] = [
   { chave: 'VEHICLE_CATEGORY', rotulo: 'Categorias', nota: 'tabela de dominio' },
   { chave: 'VEHICLE_USE_TYPE', rotulo: 'Tipos de uso', nota: 'tabela de dominio' },
   { chave: 'EVENT_TYPE', rotulo: 'Tipos de evento', nota: 'tabela de dominio' },
+  { chave: 'CONTRACT_OBJECT_PRODUCT', rotulo: 'Produtos dos veiculos', nota: 'o que cada veiculo contratou — terceiros decide o plano da moto' },
 ];
 
 // A ordem em que a gestao le: quanto tem -> o que trava a carteira viva ->

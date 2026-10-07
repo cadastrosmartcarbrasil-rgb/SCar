@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  urlMutual, cabecalhoMutual, extrairLista, extrairTotal, temProximaPagina,
+  urlMutual, ehProdutoTerceiros, cabecalhoMutual, extrairLista, extrairTotal, temProximaPagina,
   textoOuNulo, numeroOuNulo, dataLocalDeIso, tipoPessoaMutual,
   statusVeiculoDoContrato, statusTituloMutual, ehMensalidade, problemasDoObjeto,
   mesesDoPeriodoMutual, ehFilaOperacional, ehFunilDeVenda, statusDeTexto,
@@ -720,7 +720,7 @@ describe('ENTIDADES_MUTUAL — a allow-list do banco e a do cliente andam JUNTAS
     expect(urlMutual(BASE, 'PLAN')).toBe(`${BASE}/public_api/v2${ENTIDADES_MUTUAL.PLAN}`);
   });
 
-  it('as 15 entidades da `chk_mutual_entidade` estao TODAS aqui', () => {
+  it('as 16 entidades da `chk_mutual_entidade` estao TODAS aqui', () => {
     // 🔴 Guarda contra o erro que a suite 0085 pegou no banco: redigitar uma
     // allow-list derruba em SILENCIO o que se esquecer (foi `CONTRACT`, que
     // guarda o dia de vencimento e a sales_team_id). Vale dos dois lados.
@@ -728,6 +728,7 @@ describe('ENTIDADES_MUTUAL — a allow-list do banco e a do cliente andam JUNTAS
       'CONTRACT_OBJECT', 'CONTRACT', 'PERSON', 'ADDRESS', 'INVOICE', 'EVENT',
       'REGIONAL', 'SALE_TEAM', 'CONSULTANT', 'PLAN',
       'VEHICLE_TYPE', 'VEHICLE_COLOR', 'VEHICLE_CATEGORY', 'VEHICLE_USE_TYPE', 'EVENT_TYPE',
+      'CONTRACT_OBJECT_PRODUCT',
     ];
     expect(Object.keys(ENTIDADES_MUTUAL).sort()).toEqual([...noBanco].sort());
   });
@@ -1002,5 +1003,19 @@ describe('cotaDaCategoria', () => {
     expect(cotaDaCategoria('PASSEIO')).toBeNull();
     expect(cotaDaCategoria('Caminhão Leve')).toBeNull();
     expect(cotaDaCategoria(null)).toBeNull();
+  });
+});
+
+describe('ehProdutoTerceiros (espelho de mutual_produto_terceiros, 0091)', () => {
+  it('reconhece o produto com e sem acento, no singular e no plural', () => {
+    expect(ehProdutoTerceiros('Proteção a terceiros')).toBe(true);
+    expect(ehProdutoTerceiros('B-PROTEÇÃO TERCEIRO MOTO ATÉ R$ 15.000,00')).toBe(true);
+    expect(ehProdutoTerceiros('MOTOCICLETA -  TERCEIROS ATÉ R$ 20.000,00')).toBe(true);
+  });
+  it('o resto nao e terceiros — e vazio nao decide nada', () => {
+    expect(ehProdutoTerceiros('Taxa Administrativa')).toBe(false);
+    expect(ehProdutoTerceiros('Assistência 24 Horas -')).toBe(false);
+    expect(ehProdutoTerceiros(null)).toBe(false);
+    expect(ehProdutoTerceiros('')).toBe(false);
   });
 });

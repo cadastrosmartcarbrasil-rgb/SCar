@@ -112,7 +112,18 @@ regra do tipo (0019) já cobra e o opcional some. Cria `produtos.rastreador_avul
 plano RASTREAMENTO, R$ 59,90) NÃO é marcado: rastreamento puro é outra coisa. Telas: o opcional some
 da lista quando a regra cobra (`regraRastreadorCobra`/`semRastreadorDaRegra`, `src/lib/produtos.ts`)
 e o cadastro de Produtos ganhou a marca "Rastreador opcional".
-**Próxima migration livre: `0091`.**
+**🟡 A `0091_mutual_produtos_do_objeto` é NOVA — falta rodar no SQL Editor** (só abre uma entidade
+na allow-list e cria funções; não carrega nada, não muda preço). Regra do usuário (07/10): **moto com
+TERCEIROS → MOTOCICLETAS - OURO, sem → MOTOCICLETA ESSENCIAL.** Medido: nos planos de moto do Mutual
+(41/42/43/44) "Proteção a terceiros" (product_id 41) é **`required: false` — opcional DENTRO do mesmo
+plano**, e os planos 57/63/64/50 nem vêm do `/quotation/plan/`; então **o `plan_id` não decide**. A
+fonte é `/contract/contract_object_product/` (produtos por veículo), nova entidade *Produtos dos
+veículos*. Depois de rodar + deploy: puxar a entidade na tela, conferir com
+`mutual_terceiros_por_objeto(matriz, moto)` (e QUAL chave pegou — o payload ainda não foi visto) e
+aplicar com `mutual_aplicar_plano_por_terceiros(matriz, moto, OURO, ESSENCIAL, array[PRATA], true)`.
+Matriz hoje: 72 motos = 46 em PRATA (de-para do 41, plano de CARRO) · 25 sem plano · 1 RASTREAMENTO
+(fica). Sem produto capturado = não é tocado.
+**Próxima migration livre: `0092`.**
 **Próxima migration livre era `0088`.** As **`0001`..`0086`** estão aplicadas — a **`0086` foi rodada e
 CONFERIDA em 05/10/2026**: o comentário de `mutual_planos_externos` diz 18/42 e 29/91 (sem "17" nem
 "26"), a função segue `security definer` com `search_path=public`, fechada ao `anon`; 0 `security
@@ -512,9 +523,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0090`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **67 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 769 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0091`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **68 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 771 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Os portais e páginas públicas
@@ -1829,6 +1840,14 @@ marca o rastreador opcional (o produto "Rastreador", R$ 35, ja nasce marcado); `
 decide a regra do tipo ANTES do laco e pula o opcional quando ela ja cobra — avulso ou amarrado a
 plano. Antes, carro acima de R$ 60 mil com o opcional pagava R$ 70 por UM equipamento. Marcador e
 nao categoria, porque o produto do plano RASTREAMENTO tambem e categoria RASTREADOR e nao pode sumir)
+· `0091_mutual_produtos_do_objeto` (O PLANO DA MOTO PELOS PRODUTOS DO VEICULO: `CONTRACT_OBJECT_PRODUCT`
+(`/contract/contract_object_product/`) entra na allow-list — a lista INTEIRA, 16, afirmada uma a uma;
+leitura por chaves CANDIDATAS (`mutual_chaves_produto_*`, `mutual_produto_da_linha`) porque o payload
+ainda nao foi visto, com o nome caindo no catalogo dos planos (`mutual_nome_produto`, product_id global);
+`mutual_produto_terceiros` (espelho de `ehProdutoTerceiros`); `mutual_terceiros_por_objeto` (so leitura,
+NULL = "nao sei") e `mutual_aplicar_plano_por_terceiros` (simula sem `p_confirmar`; so troca quem esta sem
+plano ou em `p_substituir`; a carga preserva pelo coalesce). Por que nao pelo `plan_id`: terceiros e
+OPCIONAL dentro do mesmo plano de moto no Mutual)
 · `0082_carga_mutual_preparacao` (as TRES pecas que faltavam para a carga do Mutual poder rodar,
 e nenhuma delas carrega nada — ha teste provando que a operacao segue intacta: (A) **a UNIDADE sai
 do ASSOCIADO** — a corrente do consultor (0073/0074) foi medida com a base completa e esta VAZIA

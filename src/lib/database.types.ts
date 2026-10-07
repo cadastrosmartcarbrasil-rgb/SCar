@@ -2465,7 +2465,9 @@ export type EntidadeMutual =
   | 'REGIONAL' | 'SALE_TEAM' | 'CONSULTANT'
   /** 0085 — o nome dos `plan_id`. */
   | 'PLAN'
-  | 'VEHICLE_TYPE' | 'VEHICLE_COLOR' | 'VEHICLE_CATEGORY' | 'VEHICLE_USE_TYPE' | 'EVENT_TYPE';
+  | 'VEHICLE_TYPE' | 'VEHICLE_COLOR' | 'VEHICLE_CATEGORY' | 'VEHICLE_USE_TYPE' | 'EVENT_TYPE'
+  /** 0091 — os produtos de cada veiculo (terceiros decide o plano da moto). */
+  | 'CONTRACT_OBJECT_PRODUCT';
 
 /** 0083 — uma equipe de vendas do Mutual e o agrupamento dela numa regional. */
 export type MutualEquipeVendas = {
@@ -3961,6 +3963,23 @@ export type Database = {
       mutual_categorias_veiculo: {
         Args: { p_regional_id?: string | null };
         Returns: MutualCategoriaVeiculo[];
+      };
+      // 0091 — o plano pelos PRODUTOS do veiculo (terceiros -> Ouro, sem -> Essencial).
+      mutual_terceiros_por_objeto: {
+        Args: { p_regional_id: string; p_tipo_veiculo_id?: string | null };
+        Returns: {
+          veiculo_id: string; placa: string; objeto_id: string; plan_id: string | null;
+          plano_atual_id: string | null; plano_atual: string | null; produtos: number;
+          tem_terceiros: boolean | null; nomes: string | null;
+          chave_objeto: string | null; chave_nome: string | null;
+        }[];
+      };
+      mutual_aplicar_plano_por_terceiros: {
+        Args: {
+          p_regional_id: string; p_tipo_veiculo_id: string; p_plano_com: string; p_plano_sem: string;
+          p_substituir?: string[]; p_confirmar?: boolean;
+        };
+        Returns: { acao: string; quantidade: number }[];
       };
       mutual_carga_linhas: {
         Args: {

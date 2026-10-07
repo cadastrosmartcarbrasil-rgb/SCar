@@ -50,6 +50,11 @@ export const ENTIDADES_MUTUAL = {
   VEHICLE_CATEGORY: '/vehicle/category/',
   VEHICLE_USE_TYPE: '/vehicle/use_type/',
   EVENT_TYPE: '/event/event_type/',
+  // 0091: o que cada OBJETO (veiculo) contratou. Esta no swagger desde 09/09
+  // (docs/modulos/integracao-mutual.md) e e a UNICA fonte de produto por
+  // veiculo — o objeto, o contrato e a fatura nao trazem. E dela que sai o
+  // plano da moto: com TERCEIROS -> Ouro, sem -> Essencial (regra do usuario).
+  CONTRACT_OBJECT_PRODUCT: '/contract/contract_object_product/',
 } as const;
 
 export type EntidadeMutual = keyof typeof ENTIDADES_MUTUAL;
@@ -68,7 +73,7 @@ void _entidadesSincronizadas;
 export const ENTIDADES_INCREMENTAIS: EntidadeMutual[] = ['CONTRACT_OBJECT', 'CONTRACT', 'INVOICE'];
 
 /** Quais paginam com `page`/`page_size`. PERSON e EVENT nao declaram. */
-export const ENTIDADES_PAGINADAS: EntidadeMutual[] = ['CONTRACT_OBJECT', 'CONTRACT', 'INVOICE', 'ADDRESS'];
+export const ENTIDADES_PAGINADAS: EntidadeMutual[] = ['CONTRACT_OBJECT', 'CONTRACT', 'INVOICE', 'ADDRESS', 'CONTRACT_OBJECT_PRODUCT'];
 
 /**
  * Monta a URL da API do Mutual.
@@ -325,6 +330,15 @@ export function statusTituloMutual(v: unknown): StatusTitulo {
  * Sem este filtro, adesao, comissao, repasse e multa de rastreador entrariam
  * como se fossem mensalidade e a inadimplencia mentiria.
  */
+/**
+ * Produto de TERCEIROS (0091) — e ele que separa o plano Ouro do Essencial da
+ * moto. Espelho de `mutual_produto_terceiros`: mexeu num lado, mexa no outro.
+ */
+export function ehProdutoTerceiros(nome: string | null | undefined): boolean {
+  if (!nome) return false;
+  return nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().includes('TERCEIRO');
+}
+
 const TIPOS_MENSALIDADE = new Set([
   'MONTHLY_PAYMENT', 'PRO_RATA', 'ACCESSION_MONTHLY_PAYMENT',
 ]);
