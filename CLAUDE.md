@@ -104,7 +104,7 @@ recria `calcular_mensalidade` (produção conferida idêntica à 0081, md5 igual
 condição: produto que não atende o tipo não entra no motor — nem da base, nem do plano, nem avulso.
 As telas (Produtos, Planos, captura da venda, edição da cotação, ficha do veículo, simulador, tabela
 de preços e importação) só oferecem o que atende o tipo; regra pura em `src/lib/produtos.ts`.
-**🔴 A `0090_rastreador_opcional` é NOVA e AINDA NÃO FOI RODADA.** Regra do usuário (07/10): o
+**✅ A `0090_rastreador_opcional` foi rodada e CONFERIDA em 07/10/2026** (coluna existe, só o "Rastreador" marcado, `calcular_mensalidade` com uma versão, 0 security definer sem `search_path`, 0 RPCs nossas ao `anon`; Passeio 50k = R$ 135 · 80k = R$ 215 com ou sem o opcional · 50k + opcional = R$ 170 · moto QCC9H13 base = R$ 61). Texto original: Regra do usuário (07/10): o
 rastreador OPCIONAL só é oferecido e cobrado quando o veículo está ABAIXO do mínimo do tipo; acima, a
 regra do tipo (0019) já cobra e o opcional some. Cria `produtos.rastreador_avulso`, marca o produto
 "Rastreador" (R$ 35, ativo, em 0 planos e 0 veículos em 07/10 — nenhum preço muda) e recria
