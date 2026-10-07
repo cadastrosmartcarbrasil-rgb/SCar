@@ -129,7 +129,19 @@ veículos*. Depois de rodar + deploy: puxar a entidade na tela, conferir com
 aplicar com `mutual_aplicar_plano_por_terceiros(matriz, moto, OURO, ESSENCIAL, array[PRATA], true)`.
 Matriz hoje: 72 motos = 46 em PRATA (de-para do 41, plano de CARRO) · 25 sem plano · 1 RASTREAMENTO
 (fica). Sem produto capturado = não é tocado.
-**Próxima migration livre: `0092`.**
+**🟡 A `0092_mutual_produtos_aninhados` é NOVA — falta rodar no SQL Editor** (só recria
+`mutual_terceiros_por_objeto`, mesma assinatura). A captura de 07/10 trouxe os **467** veículos da
+matriz, mas o formato real é **UMA LINHA POR VEÍCULO com `products[]` dentro** (+ `plan_name`,
+`plate`, `price_total`), não uma linha por produto como a 0091 supôs — com a leitura da 0091 todos
+viravam "não sei" e nada seria aplicado. **Nada foi aplicado ainda.** Medido direto no payload:
+**71 motos na matriz = 67 com terceiros → OURO · 3 sem → ESSENCIAL · 1 sem produto (plano 46,
+fica no RASTREAMENTO)**. Depois de rodar a 0092, com autorização do usuário:
+`mutual_aplicar_plano_por_terceiros(matriz, moto, OURO, ESSENCIAL, array[PRATA], true)`.
+**⚠️ Achado do `plan_name`: o plano 48 do Mutual é "V5 AUTOMOVEL COMUM"** (112 carros da matriz),
+não diesel — ele está vinculado a *DIESEL MIGRADO MUTUAL*. Os pendentes têm nome agora: 104 V7
+Automóvel Especial MT · 116 V7 pickups MT · 120 V10 pickups MT · 54 V6 pickups · 49 Especial V10
+pickups · 92 V7 Automóvel MT · 128 V10 pickups especiais MT.
+**Próxima migration livre: `0093`.**
 **Próxima migration livre era `0088`.** As **`0001`..`0086`** estão aplicadas — a **`0086` foi rodada e
 CONFERIDA em 05/10/2026**: o comentário de `mutual_planos_externos` diz 18/42 e 29/91 (sem "17" nem
 "26"), a função segue `security definer` com `search_path=public`, fechada ao `anon`; 0 `security
@@ -529,9 +541,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0091`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **68 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 771 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0092`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **69 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 774 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Os portais e páginas públicas
@@ -1854,6 +1866,10 @@ ainda nao foi visto, com o nome caindo no catalogo dos planos (`mutual_nome_prod
 NULL = "nao sei") e `mutual_aplicar_plano_por_terceiros` (simula sem `p_confirmar`; so troca quem esta sem
 plano ou em `p_substituir`; a carga preserva pelo coalesce). Por que nao pelo `plan_id`: terceiros e
 OPCIONAL dentro do mesmo plano de moto no Mutual)
+· `0092_mutual_produtos_aninhados` (CORRETIVA da 0091: o payload real de
+`/contract/contract_object_product/` e UMA LINHA POR VEICULO com `products[]` dentro; so
+`mutual_terceiros_por_objeto` e recriada, abrindo a lista item a item — linha sem `products` segue
+lida como produto avulso. Lista vazia = "nao sei")
 · `0082_carga_mutual_preparacao` (as TRES pecas que faltavam para a carga do Mutual poder rodar,
 e nenhuma delas carrega nada — ha teste provando que a operacao segue intacta: (A) **a UNIDADE sai
 do ASSOCIADO** — a corrente do consultor (0073/0074) foi medida com a base completa e esta VAZIA
