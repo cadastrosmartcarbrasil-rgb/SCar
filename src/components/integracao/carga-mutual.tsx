@@ -13,7 +13,7 @@ import { useRegionais } from '@/hooks/use-config';
 import { usePlanos, useTiposVeiculo } from '@/hooks/use-precificacao';
 import {
   resumoDaCarga, recusasPorMotivo, filaAntesDoCutover, cutoverLiberado, tiposPendentes,
-  planosPendentes, idsPara90Pct, amplitudeFipe, ENTIDADES_MUTUAL,
+  planosPendentes, idsPara90Pct, amplitudeFipe,
   agruparCategoriasPorTipo, categoriasSemTipo, cotaDaCategoria,
 } from '@/lib/mutual';
 import type { SeveridadeDiagnostico } from '@/lib/database.types';
@@ -264,11 +264,12 @@ export function CargaMutual() {
                 </>
               )}
             </p>
-            {!listaPlanos.some((p) => p.capturado) && (
+            {!listaPlanos.some((p) => p.nome) && (
               <p className="mb-2 text-xs text-amber-700">
-                <code className="tnum">{ENTIDADES_MUTUAL.PLAN}</code> ainda nao foi capturado,
-                entao os ids aparecem sem nome. Puxe <strong>Planos</strong> em Puxar dados. O
-                de-para funciona do mesmo jeito; capturar so preenche o nome.
+                Nenhum plano tem nome ainda. Puxe <strong>Planos</strong> e{' '}
+                <strong>Produtos dos veiculos</strong> em Puxar dados — os planos antigos so
+                ganham nome pelos produtos. O de-para funciona do mesmo jeito; capturar so
+                preenche o nome.
               </p>
             )}
             <div className="space-y-2">
@@ -276,9 +277,11 @@ export function CargaMutual() {
                 const amplitude = amplitudeFipe(p);
                 return (
                   <div key={p.id_externo} className="flex flex-wrap items-center gap-2 text-sm">
+                    {/* O usuario acha o plano no Mutual pelo NOME; o id vai so como referencia. */}
                     <span className="min-w-[9rem] text-slate-800">
-                      {p.nome ?? `(id ${p.id_externo})`}
-                      {!p.capturado && (
+                      {p.nome ?? 'Plano sem nome'}
+                      <span className="tnum ml-1 text-xs text-slate-400">(id {p.id_externo})</span>
+                      {!p.nome && (
                         <span className="ml-1 text-xs text-amber-700">· sem nome</span>
                       )}
                     </span>

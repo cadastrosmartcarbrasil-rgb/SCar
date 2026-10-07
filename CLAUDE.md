@@ -144,7 +144,14 @@ pelo `coalesce`. **Falta na tela:** marcar *Sem proteção de casco* nos planos 
 não diesel — ele está vinculado a *DIESEL MIGRADO MUTUAL*. Os pendentes têm nome agora: 104 V7
 Automóvel Especial MT · 116 V7 pickups MT · 120 V10 pickups MT · 54 V6 pickups · 49 Especial V10
 pickups · 92 V7 Automóvel MT · 128 V10 pickups especiais MT.
-**Próxima migration livre: `0093`.**
+**🟡 A `0093_mutual_nome_plano_legado` é NOVA — falta rodar no SQL Editor + deploy do contêiner.**
+Só recria `mutual_planos_externos` (mesma assinatura): o NOME do plano passa a sair também do
+`plan_name` dos produtos dos veículos (reserva de `PLAN`), então os planos antigos ("…MIG",
+"Plano Moto MT") aparecem com nome na seção *Plano / cobertura*. `capturado` passa a significar
+"nome conhecido". A tela mostra **nome + (id N)**. Conferir depois de rodar:
+`select count(*) from pg_proc where proname='mutual_planos_externos'` = 1 e o secdef sem
+`search_path` = 0.
+**Próxima migration livre: `0094`.**
 **Próxima migration livre era `0088`.** As **`0001`..`0086`** estão aplicadas — a **`0086` foi rodada e
 CONFERIDA em 05/10/2026**: o comentário de `mutual_planos_externos` diz 18/42 e 29/91 (sem "17" nem
 "26"), a função segue `security definer` com `search_path=public`, fechada ao `anon`; 0 `security
@@ -544,8 +551,8 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0092`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **69 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Migrations `0001`..`0093`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **70 suites** em `supabase/tests/*.test.sql` — todas passando.
 - **Vitest: 774 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
@@ -1873,6 +1880,10 @@ OPCIONAL dentro do mesmo plano de moto no Mutual)
 `/contract/contract_object_product/` e UMA LINHA POR VEICULO com `products[]` dentro; so
 `mutual_terceiros_por_objeto` e recriada, abrindo a lista item a item — linha sem `products` segue
 lida como produto avulso. Lista vazia = "nao sei")
+· `0093_mutual_nome_plano_legado` (O NOME DO PLANO LEGADO NA TELA DO DE-PARA, pedido do usuario:
+"localizo o plano no Mutual pelo nome". `mutual_planos_externos` recriada com a mesma assinatura;
+o nome sai de `PLAN` e, na falta, do `plan_name` de CONTRACT_OBJECT_PRODUCT (grafia mais
+frequente vence). `capturado` = nome conhecido. So leitura)
 · `0082_carga_mutual_preparacao` (as TRES pecas que faltavam para a carga do Mutual poder rodar,
 e nenhuma delas carrega nada — ha teste provando que a operacao segue intacta: (A) **a UNIDADE sai
 do ASSOCIADO** — a corrente do consultor (0073/0074) foi medida com a base completa e esta VAZIA
@@ -2526,9 +2537,10 @@ atendimento real**, não antes de carregar.
 - **Fonte do nome:** `CONTRACT_OBJECT_PRODUCT.payload->>'plan_name'` (cobre TODOS os planos legados,
   capturado em 07/10) e, na falta, `PLAN.payload->>'name'`. O sufixo **"MIG"** colado no fim
   ("V5 AUTOMOVEL COMUMMIG") faz parte do nome como o Mutual devolve — são os planos migrados.
-- **⚠️ `mutual_planos_externos` (a tela do de-para) só conhece o nome pela entidade `PLAN`** (18
-  planos vendáveis hoje), então os legados aparecem SEM nome lá. Trazer o `plan_name` como reserva é
-  uma migration de função (próxima livre) — oferecida ao usuário, não feita.
+- **✅ A tela do de-para mostra o nome dos legados desde a `0093`**: `mutual_planos_externos` lê
+  `PLAN` e, na falta, o `plan_name` dos produtos (vence a grafia mais frequente). A linha mostra
+  **nome + (id N)**. Limite: só há `plan_name` para veículos cujos produtos foram puxados — ao
+  carregar outra unidade, puxar *Produtos dos veículos* dela traz os nomes junto.
 
 **Planos da carteira da MATRIZ (467 veículos carregados), por volume — medido em 07/10/2026:**
 
