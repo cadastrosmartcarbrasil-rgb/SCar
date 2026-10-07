@@ -112,8 +112,14 @@ regra do tipo (0019) já cobra e o opcional some. Cria `produtos.rastreador_avul
 plano RASTREAMENTO, R$ 59,90) NÃO é marcado: rastreamento puro é outra coisa. Telas: o opcional some
 da lista quando a regra cobra (`regraRastreadorCobra`/`semRastreadorDaRegra`, `src/lib/produtos.ts`)
 e o cadastro de Produtos ganhou a marca "Rastreador opcional".
-**🟡 A `0091_mutual_produtos_do_objeto` é NOVA — falta rodar no SQL Editor** (só abre uma entidade
-na allow-list e cria funções; não carrega nada, não muda preço). Regra do usuário (07/10): **moto com
+**✅ A `0091_mutual_produtos_do_objeto` foi rodada e CONFERIDA em 07/10/2026** (as 8 funções existem,
+allow-list com as **16** entidades, 0 security definer sem `search_path`). **Mas a 1ª captura voltou
+VAZIA:** o Mutual recusa a listagem geral de `/contract/contract_object_product/` (HTTP 400: *"É
+obrigatório informar UM dos parâmetros: quotation_token, contract_id, contract_object_id ou
+quotation_object_id"*). A rota passou a perguntar **veículo por veículo** (`capturarProdutos`, 25 por
+bloco), só pelos **já carregados** (vínculo `CONTRACT_OBJECT → veiculos`, 467 hoje), grudando o
+`contract_object_id` da pergunta em cada linha (`comObjeto`). **Precisa do deploy do contêiner e de
+puxar de novo.** Texto original: Regra do usuário (07/10): **moto com
 TERCEIROS → MOTOCICLETAS - OURO, sem → MOTOCICLETA ESSENCIAL.** Medido: nos planos de moto do Mutual
 (41/42/43/44) "Proteção a terceiros" (product_id 41) é **`required: false` — opcional DENTRO do mesmo
 plano**, e os planos 57/63/64/50 nem vêm do `/quotation/plan/`; então **o `plan_id` não decide**. A

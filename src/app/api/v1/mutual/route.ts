@@ -4,7 +4,7 @@ import {
   ENTIDADES_MUTUAL, ENTIDADES_PAGINADAS, urlMutual, urlMutualCaminho, cabecalhoMutual,
   extrairLista, extrairTotal, temProximaPagina, CANDIDATAS_PLANO,
   resumoDoCorpo, parametrosDoSwagger, veiculosPorPlano, listaDePlanos,
-  caminhosDoSwagger, caminhoDeDetalhe, caminhoComId,
+  caminhosDoSwagger, caminhoDeDetalhe, caminhoComId, comObjeto,
   type EntidadeMutual, type SondagemCaminho, type ParPlanoVeiculo, type DiagnosticoPlanos,
 } from '@/lib/mutual';
 import type { Json } from '@/lib/database.types';
@@ -25,6 +25,7 @@ export const dynamic = 'force-dynamic';
 const BASE_PADRAO = 'https://smartcar-api.mutualignit.com.br';
 const PAGE_SIZE_PADRAO = 500;   // teto declarado no contrato (/quotation/)
 const VEICULOS_POR_BLOCO = 15;  // PLAN: consultas ao Mutual por requisicao
+const OBJETOS_POR_BLOCO = 25;   // CONTRACT_OBJECT_PRODUCT: veiculos por requisicao
 const LINHAS_POR_LEITURA = 1000; // teto de linhas do PostgREST por chamada
 
 interface Body {
@@ -158,6 +159,9 @@ export async function POST(request: Request) {
 
   if (entidade === 'PLAN') {
     return capturarPlanos(supabase, base, token, user.id, pagina0);
+  }
+  if (entidade === 'CONTRACT_OBJECT_PRODUCT') {
+    return capturarProdutos(supabase, base, token, user.id, pagina0);
   }
 
   const { data: sinc } = await supabase
@@ -384,6 +388,107 @@ async function capturarPlanos(
     await fechar(erro);
     return NextResponse.json(
       { configured: true, ok: false, entidade: 'PLAN', paginas: diag.consultados, registros, erro, diagnostico: diag },
+      { status: 502 });
+  }
+}
+
+// --- CONTRACT_OBJECT_PRODUCT: os produtos de CADA veiculo ------------------
+// O endpoint recusa a listagem geral (400: exige contract_id, contract_object_id,
+// quotation_token ou quotation_object_id — medido em 07/10/2026). Entao a
+// pergunta e por veiculo, e o universo e o que JA FOI CARREGADO (vinculo
+// CONTRACT_OBJECT -> veiculos): e para eles que o plano sai dos produtos (0091),
+// e sao centenas, nao os 17 mil objetos do acervo. A "pagina" e a POSICAO na
+// lista, como em PLAN, para o laco em blocos do navegador servir. Recusa de UM
+// veiculo nao derruba o bloco; so quando TODOS recusam o bloco falha.
+async function capturarProdutos(
+  supabase: ReturnType<typeof createClient>,
+  base: string, token: string, usuarioId: string, posicao0: number,
+) {
+  const { data: sinc } = await supabase
+    .from('mutual_sincronias')
+    .insert({ entidade: 'CONTRACT_OBJECT_PRODUCT', executada_por: usuarioId })
+    .select('id').maybeSingle();
+
+  let registros = 0;
+  let consultados = 0;
+  let total = 0;
+  const recusas: { contract_object_id: string; http: number | null; detalhe: string }[] = [];
+  let chaves: string[] = [];
+
+  const fechar = async (erro?: string) => {
+    if (!sinc?.id) return;
+    await supabase.from('mutual_sincronias').update({
+      concluida_em: new Date().toISOString(), paginas: consultados, registros,
+      total_remoto: total, ...(erro ? { erro } : {}),
+    }).eq('id', sinc.id);
+  };
+
+  try {
+    const objetos: string[] = [];
+    for (let de = 0; ; de += LINHAS_POR_LEITURA) {
+      const { data, error } = await supabase
+        .from('integracao_vinculos')
+        .select('id_externo')
+        .eq('sistema', 'MUTUAL').eq('entidade', 'CONTRACT_OBJECT').eq('tabela', 'veiculos')
+        .order('id_externo')
+        .range(de, de + LINHAS_POR_LEITURA - 1);
+      if (error) throw new Error(`lendo os veiculos carregados: ${error.message}`);
+      const lote = (data ?? []).map((r) => r.id_externo);
+      objetos.push(...lote);
+      if (lote.length < LINHAS_POR_LEITURA) break;
+    }
+    total = objetos.length;
+    if (total === 0) {
+      throw new Error('Nenhum veiculo do Mutual carregado ainda — a captura de produtos pergunta pelos veiculos ja carregados');
+    }
+
+    let i = Math.max(posicao0, 1) - 1;
+    const fim = Math.min(i + OBJETOS_POR_BLOCO, total);
+    for (; i < fim; i++) {
+      const obj = objetos[i];
+      consultados += 1;
+      const url = urlMutualCaminho(base, ENTIDADES_MUTUAL.CONTRACT_OBJECT_PRODUCT,
+        { contract_object_id: obj, page_size: PAGE_SIZE_PADRAO });
+      let res: Response;
+      try {
+        res = await fetch(url, { headers: cabecalhoMutual(token), cache: 'no-store' });
+      } catch (e) {
+        if (recusas.length < 5) recusas.push({ contract_object_id: obj, http: null, detalhe: (e as Error).message });
+        continue;
+      }
+      const texto = await res.text();
+      if (!res.ok) {
+        if (recusas.length < 5) recusas.push({ contract_object_id: obj, http: res.status, detalhe: resumoDoCorpo(texto) });
+        continue;
+      }
+      let corpo: unknown = null;
+      try { corpo = JSON.parse(texto); } catch { /* nao era JSON */ }
+      const lista = comObjeto(extrairLista(corpo), obj);
+      if (chaves.length === 0 && lista[0]) chaves = Object.keys(lista[0]).slice(0, 30);
+      if (lista.length === 0) continue;
+      const { data: n, error } = await supabase.rpc('mutual_registrar_captura', {
+        p_entidade: 'CONTRACT_OBJECT_PRODUCT',
+        p_registros: lista as unknown as Json,
+      });
+      if (error) throw new Error(error.message);
+      registros += n ?? 0;
+    }
+    if (consultados > 0 && recusas.length === consultados) {
+      throw new Error(`O Mutual recusou todos os ${consultados} veiculos do bloco — `
+        + `HTTP ${recusas[0].http ?? '-'}: ${recusas[0].detalhe}`);
+    }
+    const proxima = i < total ? i + 1 : null;
+    await fechar();
+    return NextResponse.json({
+      configured: true, ok: true, entidade: 'CONTRACT_OBJECT_PRODUCT',
+      paginas: consultados, registros, total_remoto: total, proxima_pagina: proxima,
+      diagnostico: { chaves, recusas },
+    });
+  } catch (e) {
+    const erro = (e as Error).message;
+    await fechar(erro);
+    return NextResponse.json(
+      { configured: true, ok: false, entidade: 'CONTRACT_OBJECT_PRODUCT', paginas: consultados, registros, erro },
       { status: 502 });
   }
 }

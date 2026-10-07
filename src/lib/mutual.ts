@@ -1190,6 +1190,21 @@ export function listaDePlanos(json: unknown): Registro[] {
   return o.id !== undefined || o.uuid !== undefined ? [o as Registro] : [];
 }
 
+/**
+ * `/contract/contract_object_product/` so responde COM filtro (400: "E obrigatorio
+ * informar UM dos parametros: quotation_token, contract_id, contract_object_id ou
+ * quotation_object_id" — medido em 07/10/2026). A captura entao pergunta veiculo
+ * por veiculo, e o veiculo da pergunta e grudado em cada linha que nao o trouxer:
+ * sem isso a leitura (0091, `mutual_produto_da_linha`) nao saberia de quem e o
+ * produto. O que o Mutual mandou NAO e sobrescrito.
+ */
+export function comObjeto(lista: Registro[], contractObjectId: string): Registro[] {
+  return lista.map((r) =>
+    r.contract_object_id === undefined || r.contract_object_id === null || r.contract_object_id === ''
+      ? { ...r, contract_object_id: contractObjectId }
+      : r);
+}
+
 /** O que a captura de planos viu — e com isso que o formato deixa de ser palpite. */
 export type DiagnosticoPlanos = {
   /** Quantos plan_id distintos os contratos citam (o universo a cobrir). */

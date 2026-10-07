@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  urlMutual, ehProdutoTerceiros, cabecalhoMutual, extrairLista, extrairTotal, temProximaPagina,
+  urlMutual, ehProdutoTerceiros, comObjeto, cabecalhoMutual, extrairLista, extrairTotal, temProximaPagina,
   textoOuNulo, numeroOuNulo, dataLocalDeIso, tipoPessoaMutual,
   statusVeiculoDoContrato, statusTituloMutual, ehMensalidade, problemasDoObjeto,
   mesesDoPeriodoMutual, ehFilaOperacional, ehFunilDeVenda, statusDeTexto,
@@ -1017,5 +1017,17 @@ describe('ehProdutoTerceiros (espelho de mutual_produto_terceiros, 0091)', () =>
     expect(ehProdutoTerceiros('Assistência 24 Horas -')).toBe(false);
     expect(ehProdutoTerceiros(null)).toBe(false);
     expect(ehProdutoTerceiros('')).toBe(false);
+  });
+});
+
+describe('comObjeto — o veiculo da pergunta vai junto da resposta (0091)', () => {
+  it('gruda o contract_object_id em quem nao o trouxe', () => {
+    expect(comObjeto([{ id: 1, product_id: 41 }], '8931')).toEqual([{ id: 1, product_id: 41, contract_object_id: '8931' }]);
+  });
+  it('nao sobrescreve o que o Mutual mandou', () => {
+    expect(comObjeto([{ id: 2, contract_object_id: 77 }], '8931')).toEqual([{ id: 2, contract_object_id: 77 }]);
+  });
+  it('vazio conta como ausente', () => {
+    expect(comObjeto([{ id: 3, contract_object_id: '' }], '9')[0].contract_object_id).toBe('9');
   });
 });

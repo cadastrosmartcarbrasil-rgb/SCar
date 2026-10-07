@@ -2609,6 +2609,20 @@ export type MutualCapturaRow = {
   capturado_por: string | null;
 };
 
+/** 0082 — a ponte id externo -> registro do SCar (unique so do lado externo). */
+export type IntegracaoVinculosRow = {
+  id: number;
+  sistema: string;
+  entidade: string;
+  id_externo: string;
+  tabela: string;
+  registro_id: string;
+  observacao: string | null;
+  criado_por: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type MutualSincroniasRow = {
   id: string;
   entidade: string;
@@ -2930,6 +2944,7 @@ export type Database = {
       // ---- 0062: integracao com o Mutual (Fase 1) ----
       mutual_captura: TableDef<MutualCapturaRow, [Rel<'capturado_por', 'usuarios'>]>;
       mutual_sincronias: TableDef<MutualSincroniasRow, [Rel<'executada_por', 'usuarios'>]>;
+      integracao_vinculos: TableDef<IntegracaoVinculosRow, [Rel<'criado_por', 'usuarios'>]>;
     };
     Views: { [_ in never]: never };
     Functions: {
