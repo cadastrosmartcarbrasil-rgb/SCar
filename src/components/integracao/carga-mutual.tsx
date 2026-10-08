@@ -2,13 +2,13 @@
 
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Upload, Undo2, Car, AlertTriangle, ShieldCheck, Bike } from 'lucide-react';
+import { Upload, Undo2, Car, AlertTriangle, ShieldCheck, Bike, UserCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ErroLeitura } from '@/components/integracao/erro-leitura';
 import {
   useMutualTiposVeiculo, useMutualPlanos, useMutualCategorias, useVincularCatalogo,
   useCargaPrevia, useCargaLinhas, useExecutarCarga, useDesfazerCarga,
-  useClassificarPorTerceiros,
+  useClassificarPorTerceiros, useMutualVendedores, useVincularVendedores,
 } from '@/hooks/use-mutual';
 import { useRegionais } from '@/hooks/use-config';
 import { usePlanos, useTiposVeiculo } from '@/hooks/use-precificacao';
@@ -16,6 +16,7 @@ import {
   resumoDaCarga, recusasPorMotivo, filaAntesDoCutover, cutoverLiberado, tiposPendentes,
   planosPendentes, idsPara90Pct, amplitudeFipe,
   agruparCategoriasPorTipo, categoriasSemTipo, cotaDaCategoria,
+  totaisVendedores, vendedorPendente, ROTULO_MOTIVO_VENDEDOR,
 } from '@/lib/mutual';
 import type { SeveridadeDiagnostico } from '@/lib/database.types';
 
@@ -360,6 +361,7 @@ export function CargaMutual() {
       </div>
 
       {unidade && <MotosPorProdutos unidade={unidade} nomeUnidade={nomeUnidade} />}
+      {unidade && <VendedoresDosVeiculos unidade={unidade} nomeUnidade={nomeUnidade} />}
 
       {!unidade && (
         <p className="text-sm text-slate-500">
@@ -748,6 +750,109 @@ function MotosPorProdutos({ unidade, nomeUnidade }: { unidade: string; nomeUnida
           Aplicar
         </Button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * O VENDEDOR DOS VEICULOS MIGRADOS (0095). A carga nao grava vendedor; o
+ * vendedor sai do consultor do CONTRATO no Mutual, casado pelo CPF com o
+ * cadastro de vendedores. O botao Carregar ja liga sozinho no fim; este quadro
+ * mostra quem ficou SEM e por que, e liga de novo depois de cadastrar quem
+ * faltava. Nunca troca vendedor ja gravado.
+ */
+function VendedoresDosVeiculos({ unidade, nomeUnidade }: { unidade: string; nomeUnidade: string }) {
+  const resumo = useMutualVendedores(unidade);
+  const vincular = useVincularVendedores();
+  const linhas = resumo.data ?? [];
+  const t = totaisVendedores(linhas);
+  const pendentes = linhas.filter((l) => vendedorPendente(l.motivo));
+
+  return (
+    <div className="rounded-xl border border-slate-200/80 p-4">
+      <h3 className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+        <UserCheck className="h-4 w-4 text-cyan-600" aria-hidden /> Vendedor dos veiculos
+      </h3>
+      <p className="mb-3 text-xs leading-relaxed text-slate-500">
+        O vendedor vem do <strong>consultor do contrato</strong> no Mutual, pelo CPF do cadastro de
+        vendedores. Quem ja tem vendedor <strong>nao e trocado</strong>. Veiculo vindo do Mutual{' '}
+        <strong>nunca gera comissao de adesao</strong> aqui — a adesao foi paga la.
+      </p>
+
+      <ErroLeitura q={resumo} />
+      {resumo.isLoading && <p className="text-xs text-slate-500">Lendo...</p>}
+
+      {!resumo.isLoading && !resumo.isError && t.total === 0 && (
+        <p className="text-xs text-slate-500">Nenhum veiculo carregado nesta unidade ainda.</p>
+      )}
+
+      {t.total > 0 && (
+        <>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {[
+              ['A ligar', t.ligar],
+              ['Ja ligados', t.jaLigados],
+              ['Outro vendedor (mantido)', t.mantidos],
+              ['Sem vendedor', t.semVendedor],
+            ].map(([rotulo, valor]) => (
+              <div key={rotulo as string} className="rounded-lg bg-fundo p-2">
+                <p className="text-[11px] text-slate-500">{rotulo}</p>
+                <p className="tnum text-lg font-semibold text-slate-900">{valor}</p>
+              </div>
+            ))}
+          </div>
+
+          {pendentes.length > 0 && (
+            <div className="mt-3">
+              <p className="mb-1 text-xs font-semibold text-slate-600">
+                Quem fica sem vendedor, e por que
+              </p>
+              <ul className="space-y-1.5">
+                {pendentes.map((l) => (
+                  <li key={`${l.motivo}-${l.consultor_id ?? ''}`} className="rounded-lg border border-slate-200/80 p-2 text-xs">
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <span className="font-medium text-slate-800">
+                        {l.consultor_nome ?? '(sem consultor)'}
+                        {l.consultor_documento && (
+                          <span className="tnum font-normal text-slate-500"> · CPF {l.consultor_documento}</span>
+                        )}
+                      </span>
+                      <span className="tnum font-semibold text-slate-900">{l.veiculos} veic.</span>
+                    </div>
+                    <p className="text-amber-700">{ROTULO_MOTIVO_VENDEDOR[l.motivo] ?? l.motivo}</p>
+                    {l.placas && <p className="mt-0.5 break-words text-slate-500">{l.placas}</p>}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-xs text-slate-500">
+                Para quem nao esta no cadastro: cadastre o vendedor (com o CPF) em{' '}
+                <strong>Configuracoes → Vendedores</strong>, na mesma unidade, e clique em Ligar.
+              </p>
+            </div>
+          )}
+
+          <div className="mt-3">
+            <Button
+              disabled={t.ligar === 0 || vincular.isPending}
+              onClick={() => {
+                if (!window.confirm(
+                  `Ligar ${t.ligar} veiculo(s) de "${nomeUnidade}" ao vendedor do consultor?\n\n`
+                  + 'Quem ja tem vendedor nao e trocado. Confirmar?',
+                )) return;
+                vincular.mutate(
+                  { regionalId: unidade, confirmar: true },
+                  {
+                    onSuccess: (r) => toast.success(r.mensagem),
+                    onError: (e) => toast.error(e.message),
+                  },
+                );
+              }}
+            >
+              {vincular.isPending ? 'Ligando...' : `Ligar ${t.ligar} ao vendedor`}
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

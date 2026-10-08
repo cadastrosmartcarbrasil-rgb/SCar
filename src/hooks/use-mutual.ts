@@ -13,7 +13,7 @@ import type {
   CobrancaExternaResumo, MutualEquipeVendas,
   MutualTipoVeiculoExterno,
   MutualPlanoExterno, MutualCategoriaVeiculo, MutualCargaLinha, MutualCargaResultado,
-  MutualDesfazerResultado, Database,
+  MutualDesfazerResultado, MutualVendedorResumo, MutualVincularVendedores, Database,
 } from '@/lib/database.types';
 
 // =====================================================================
@@ -691,7 +691,22 @@ export function useExecutarCarga() {
           blocos.push(b);
           restantes = Number(b.restantes);
         }
-        return somarBlocosCarga(blocos);
+        const soma = somarBlocosCarga(blocos);
+        // A carga nao grava vendedor (0084); quem liga e a 0095, pelo consultor
+        // do contrato, e so em quem esta SEM vendedor. Falhar aqui nao desfaz a
+        // carga — ela ja esta gravada; o quadro "Vendedor dos veiculos" refaz.
+        try {
+          const { data, error } = await supabase.rpc('mutual_vincular_vendedores', {
+            p_regional_id: regionalId, p_confirmar: true,
+          });
+          if (error) throw error;
+          const v = (data ?? [])[0];
+          if (v) soma.mensagem = `${soma.mensagem} ${v.mensagem}`.trim();
+        } catch (e) {
+          soma.mensagem = `${soma.mensagem} Os vendedores nao foram ligados (${
+            (e as { message?: string }).message ?? 'erro'}) — use o quadro "Vendedor dos veiculos".`.trim();
+        }
+        return soma;
       } finally {
         setProgresso(null);
       }
@@ -737,6 +752,49 @@ export function useClassificarPorTerceiros() {
     onSuccess: (_d, v) => {
       if (!v.confirmar) return;
       for (const k of [['mutual'], ['veiculos']]) void qc.invalidateQueries({ queryKey: k });
+    },
+  });
+}
+
+/**
+ * O VENDEDOR DOS VEICULOS MIGRADOS (0095), pelo consultor do contrato do
+ * Mutual. A leitura e agrupada por motivo e consultor — a fila de quem fica
+ * sem vendedor e o que a tela precisa mostrar.
+ */
+export function useMutualVendedores(regionalId: string | null) {
+  const supabase = createClient();
+  return useQuery<MutualVendedorResumo[]>({
+    queryKey: ['mutual', 'vendedores', regionalId],
+    enabled: !!regionalId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('mutual_vendedores_resumo', {
+        p_regional_id: regionalId as string,
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+/** Liga os vendedores. `confirmar` false so conta. Nunca troca vendedor ja gravado. */
+export function useVincularVendedores() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<MutualVincularVendedores, Error, { regionalId: string; confirmar: boolean }>({
+    mutationFn: async ({ regionalId, confirmar }) => {
+      const { data, error } = await supabase.rpc('mutual_vincular_vendedores', {
+        p_regional_id: regionalId, p_confirmar: confirmar,
+      });
+      if (error) throw error;
+      const r = (data ?? [])[0];
+      if (!r) throw new Error('O banco nao devolveu o resultado');
+      return r;
+    },
+    onSuccess: (_d, v) => {
+      if (!v.confirmar) return;
+      for (const k of [['mutual'], ['veiculos'], ['vendedores'], ['regional']]) {
+        void qc.invalidateQueries({ queryKey: k });
+      }
     },
   });
 }

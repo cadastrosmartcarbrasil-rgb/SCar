@@ -2591,6 +2591,27 @@ export type MutualCargaResultado = {
   mensagem: string;
 };
 
+/** 0095 — o vendedor dos veiculos migrados, agrupado por motivo e consultor. */
+export type MutualVendedorResumo = {
+  motivo: string;
+  consultor_id: string | null;
+  consultor_nome: string | null;
+  consultor_documento: string | null;
+  vendedor_nome: string | null;
+  veiculos: number;
+  placas: string | null;
+};
+
+/** 0095 — o resultado de ligar os vendedores (ou da simulacao). */
+export type MutualVincularVendedores = {
+  ligar: number;
+  ja_ligados: number;
+  mantidos: number;
+  sem_vendedor: number;
+  gravados: number;
+  mensagem: string;
+};
+
 /** 0084 — o resultado do desfazer. */
 export type MutualDesfazerResultado = {
   veiculos_removidos: number;
@@ -4025,6 +4046,14 @@ export type Database = {
       mutual_desfazer_carga: {
         Args: { p_regional_id: string; p_confirmar?: boolean };
         Returns: MutualDesfazerResultado[];
+      };
+      mutual_vendedores_resumo: {
+        Args: { p_regional_id: string };
+        Returns: MutualVendedorResumo[];
+      };
+      mutual_vincular_vendedores: {
+        Args: { p_regional_id: string; p_confirmar?: boolean };
+        Returns: MutualVincularVendedores[];
       };
       veiculo_tem_movimento: { Args: { p_veiculo_id: string }; Returns: boolean };
       // 0082 — a ponte id externo -> registro do SCar (a carga e re-executavel).

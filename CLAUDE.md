@@ -172,7 +172,19 @@ seguintes gravam 200 linhas cada sem cortar associado; fila de outro recorte ou 
 Sem `p_lote` faz tudo de uma vez, como antes. Conferir depois de rodar:
 `select count(*) from pg_proc where proname='mutual_executar_carga'` = 1, a tabela `mutual_carga_fila`
 existe com RLS e sem policy, secdef sem `search_path` = 0, 0 RPCs nossas ao `anon`.
-**Próxima migration livre: `0095`.**
+**🟡 A `0095_mutual_vendedor_do_consultor` é NOVA — falta rodar no SQL Editor + deploy do contêiner.**
+(A) `vendedores.documento` passa a ser gravado SÓ COM DÍGITOS por trigger (a tela gravava com
+máscara); (B) `mutual_vendedores_dos_veiculos`/`_resumo`/`mutual_vincular_vendedores` — liga o
+vendedor dos migrados pelo consultor do CONTRATO (CPF → `vendedores.documento`; e-mail só se apontar
+para UM), **nunca troca vendedor já gravado** e **não liga vendedor de outra unidade**; o botão
+*Carregar* chama no fim, e o quadro **"Vendedor dos veículos"** (seção da carga) mostra quem fica
+sem e por quê; (C) `fn_calcular_comissao`: veículo com vínculo `CONTRACT_OBJECT` do Mutual **nunca
+gera comissão de ADESÃO** (a recorrência segue sobre o valor cheio). Simulado em produção em
+08/10 (mesma consulta, sem gravar): MATRIZ **429 a ligar · 24 já ligados · 12 mantidos (os do
+Clayton de outros consultores) · 2 sem consultor**. Conferir depois de rodar: `fn_calcular_comissao`
+contém `integracao_vinculos`, trigger `trg_vendedor_documento_digitos` existe, secdef sem
+`search_path` = 0, 0 RPCs nossas ao `anon`; depois, na tela, **Ligar** na MATRIZ.
+**Próxima migration livre: `0096`.**
 **Próxima migration livre era `0088`.** As **`0001`..`0086`** estão aplicadas — a **`0086` foi rodada e
 CONFERIDA em 05/10/2026**: o comentário de `mutual_planos_externos` diz 18/42 e 29/91 (sem "17" nem
 "26"), a função segue `security definer` com `search_path=public`, fechada ao `anon`; 0 `security
@@ -572,9 +584,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0094`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **71 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 779 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0095`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **72 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 783 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Os portais e páginas públicas
@@ -1911,6 +1923,14 @@ objeto); `mutual_carga_linhas`, `mutual_planos_externos` e `mutual_categorias_ve
 `mutual_carga_fila` (RLS sem policy) + `mutual_executar_carga(regional, inativos, confirmar, p_lote,
 p_preparar)` — DROP + CREATE: preparar le UMA vez, cada bloco grava ate p_lote linhas sem cortar CPF,
 fila velha (+1 h) ou de outro recorte e recusada; simulacao passou a ler o lote uma vez so)
+· `0095_mutual_vendedor_do_consultor` (O VENDEDOR DOS MIGRADOS: trigger `fn_vendedor_documento_digitos`
+grava `vendedores.documento` so com digitos por qualquer caminho; `mutual_vendedores_dos_veiculos(regional)`
+(contrato -> `consultant_id` -> CONSULTANT -> CPF -> vendedor; e-mail so se unico; motivos LIGAR/JA_LIGADO/
+MANTIDO/SEM_CONSULTOR/CONSULTOR_NAO_CAPTURADO/EMAIL_AMBIGUO/CONSULTOR_SEM_VENDEDOR/UNIDADE_DIFERENTE),
+`mutual_vendedores_resumo` e `mutual_vincular_vendedores(regional, confirmar)` — so preenche quem esta SEM
+vendedor e nao liga vendedor de outra unidade; `fn_calcular_comissao` recriada: veiculo com vinculo
+CONTRACT_OBJECT do Mutual nunca e ADESAO. Espelho puro em `src/lib/mutual.ts` (`totaisVendedores`,
+`vendedorPendente`, `ROTULO_MOTIVO_VENDEDOR`))
 · `0082_carga_mutual_preparacao` (as TRES pecas que faltavam para a carga do Mutual poder rodar,
 e nenhuma delas carrega nada — ha teste provando que a operacao segue intacta: (A) **a UNIDADE sai
 do ASSOCIADO** — a corrente do consultor (0073/0074) foi medida com a base completa e esta VAZIA
@@ -2620,11 +2640,10 @@ atendimento real**, não antes de carregar.
   (HNC4288, NAU8B54); os outros 34 eram de 8 consultores ausentes do cadastro (o Mutual tem 379, o
   cadastro casa 302). **Os 34 foram ligados ao CLAYTON R CARNIEL** por SQL do usuário em 08/10 (12 deles
   são de outros consultores no Mutual — decisão do usuário), e o CPF dele foi gravado só com dígitos.
-  **Os 431 seguem sem vendedor** até a carga preencher por `coalesce` (migration pendente, decidir).
-  ⚠️ **Armadilha de COMISSÃO no cutover:** `fn_calcular_comissao` trata o 1º título pago do veículo
-  como ADESÃO — num migrado a adesão já foi paga no Mutual (e o Clayton está com adesão de 100%).
-  Resolver antes de ligar a cobrança aqui. Vendedor criado pela TELA guarda o CPF com máscara
-  (a importação grava só dígitos) — conferir antes de casar por documento.
+  **→ Resolvido pela `0095`** (decisão do usuário: ligar para carteira/relatórios e migrado nunca
+  paga adesão): a carga liga o vendedor no fim (só quem está SEM), o quadro **"Vendedor dos
+  veículos"** mostra quem fica sem e por quê, `fn_calcular_comissao` deixa de tratar o 1º título do
+  migrado como ADESÃO, e o CPF do vendedor passa a ser gravado só com dígitos por trigger.
 - **Números das 3 unidades que faltam (08/10):** RIBEIRÃO PRETO 1.182 no lote (11 recusados, 483 sem
   plano) · SÃO PAULO 1 837 (13, 420) · GRANDE NATAL 433 (1, 350).
 
