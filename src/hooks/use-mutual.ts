@@ -3,7 +3,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
-import { somarDiagnosticoPlanos } from '@/lib/mutual';
+import { somarDiagnosticoPlanos, somarBlocosCarga, LOTE_CARGA } from '@/lib/mutual';
 import type { EntidadeMutual, SondagemCaminho, DiagnosticoPlanos } from '@/lib/mutual';
 import type {
   MutualDiagnostico, MutualPorStatus, MutualFilial,
@@ -13,7 +13,7 @@ import type {
   CobrancaExternaResumo, MutualEquipeVendas,
   MutualTipoVeiculoExterno,
   MutualPlanoExterno, MutualCategoriaVeiculo, MutualCargaLinha, MutualCargaResultado,
-  MutualDesfazerResultado,
+  MutualDesfazerResultado, Database,
 } from '@/lib/database.types';
 
 // =====================================================================
@@ -628,33 +628,115 @@ export function useCargaLinhas(
   });
 }
 
+/** Onde a carga em blocos esta (0094) — a tela mostra "gravando 400 de 1.171". */
+export type ProgressoCarga = {
+  fase: 'preparando' | 'gravando';
+  feitos: number;
+  total: number;
+};
+
 /**
  * A execucao. `confirmar` false e SIMULACAO e nao escreve nada — o mesmo
  * parametro serve aos dois para nao existirem duas rotinas divergindo.
+ *
+ * 🔴 A CARGA DE VERDADE E EM BLOCOS (0094). Numa chamada so ela nao cabe no
+ * teto de 8 s do papel `authenticated`: a da MATRIZ (467 veiculos) levou ~10 s
+ * e foi executada por fora da tela — pelo botao ela teria falhado. Agora:
+ * a primeira chamada LE o lote uma vez e enche a fila; cada chamada seguinte
+ * grava `LOTE_CARGA` linhas. Cada bloco e uma transacao: cair a rede no meio
+ * nunca deixa veiculo pela metade, e o proximo clique prepara de novo (a carga
+ * e re-executavel pelo vinculo, entao o que ja entrou vira ATUALIZAR).
  */
 export function useExecutarCarga() {
   const supabase = createClient();
   const qc = useQueryClient();
-  return useMutation<MutualCargaResultado, Error, {
+  const [progresso, setProgresso] = useState<ProgressoCarga | null>(null);
+
+  const chamar = async (args: Database['public']['Functions']['mutual_executar_carga']['Args']) => {
+    const { data, error } = await supabase.rpc('mutual_executar_carga', args);
+    if (error) throw error;
+    const r = (data ?? [])[0];
+    if (!r) throw new Error('O banco nao devolveu o resultado da carga');
+    return r;
+  };
+
+  const mutation = useMutation<MutualCargaResultado, Error, {
     regionalId: string; incluirInativos?: boolean; confirmar?: boolean;
   }>({
     mutationFn: async ({ regionalId, incluirInativos = false, confirmar = false }) => {
-      const { data, error } = await supabase.rpc('mutual_executar_carga', {
-        p_regional_id: regionalId,
-        p_incluir_inativos: incluirInativos,
-        p_confirmar: confirmar,
-      });
-      if (error) throw error;
-      return (data ?? [])[0];
+      if (!confirmar) {
+        return chamar({
+          p_regional_id: regionalId, p_incluir_inativos: incluirInativos, p_confirmar: false,
+        });
+      }
+      try {
+        setProgresso({ fase: 'preparando', feitos: 0, total: 0 });
+        const preparo = await chamar({
+          p_regional_id: regionalId, p_incluir_inativos: incluirInativos, p_confirmar: true,
+          p_lote: LOTE_CARGA, p_preparar: true,
+        });
+        const blocos = [preparo];
+        const total = Number(preparo.restantes);
+        let restantes = total;
+        // Freio: cada bloco grava ao menos uma linha, entao mais voltas que
+        // linhas so aconteceria com a fila andando para tras.
+        let voltas = 0;
+        while (restantes > 0) {
+          if (++voltas > total + 1) throw new Error('A fila da carga nao esvaziou — pare e confira');
+          setProgresso({ fase: 'gravando', feitos: total - restantes, total });
+          const b = await chamar({
+            p_regional_id: regionalId, p_incluir_inativos: incluirInativos, p_confirmar: true,
+            p_lote: LOTE_CARGA, p_preparar: false,
+          });
+          blocos.push(b);
+          restantes = Number(b.restantes);
+        }
+        return somarBlocosCarga(blocos);
+      } finally {
+        setProgresso(null);
+      }
     },
-    onSuccess: (_d, vars) => {
+    onSettled: (_d, _e, vars) => {
       if (!vars.confirmar) return;
       // A carga mexe na operacao inteira: invalidar so ['mutual'] deixaria o
-      // SAC, a lista de veiculos e os paineis mostrando a base de antes.
+      // SAC, a lista de veiculos e os paineis mostrando a base de antes. E vale
+      // tambem no ERRO: os blocos anteriores a falha ja foram gravados.
       for (const k of [['mutual'], ['veiculos'], ['clientes'], ['cobrancas'],
                        ['regionais'], ['dashboard']]) {
         void qc.invalidateQueries({ queryKey: k });
       }
+    },
+  });
+
+  return { ...mutation, progresso };
+}
+
+/**
+ * O plano das MOTOS pelos produtos do veiculo (0091/0092). No Mutual a protecao
+ * a terceiros e OPCIONAL dentro do mesmo plano de moto, entao o `plan_id` nao
+ * decide: quem decide e o produto contratado. Ate aqui isto so rodava por SQL.
+ * `confirmar` false so conta (COM_TERCEIROS / SEM_TERCEIROS / JA_CERTO /
+ * MANTIDO / SEM_DADOS); true grava. Boleto nao muda: o override manda.
+ */
+export function useClassificarPorTerceiros() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<{ acao: string; quantidade: number }[], Error, {
+    regionalId: string; tipoVeiculoId: string; planoCom: string; planoSem: string;
+    substituir: string[]; confirmar: boolean;
+  }>({
+    mutationFn: async (v) => {
+      const { data, error } = await supabase.rpc('mutual_aplicar_plano_por_terceiros', {
+        p_regional_id: v.regionalId, p_tipo_veiculo_id: v.tipoVeiculoId,
+        p_plano_com: v.planoCom, p_plano_sem: v.planoSem,
+        p_substituir: v.substituir, p_confirmar: v.confirmar,
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+    onSuccess: (_d, v) => {
+      if (!v.confirmar) return;
+      for (const k of [['mutual'], ['veiculos']]) void qc.invalidateQueries({ queryKey: k });
     },
   });
 }

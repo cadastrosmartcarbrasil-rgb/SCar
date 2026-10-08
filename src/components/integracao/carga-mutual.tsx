@@ -2,12 +2,13 @@
 
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Upload, Undo2, Car, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { Upload, Undo2, Car, AlertTriangle, ShieldCheck, Bike } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ErroLeitura } from '@/components/integracao/erro-leitura';
 import {
   useMutualTiposVeiculo, useMutualPlanos, useMutualCategorias, useVincularCatalogo,
   useCargaPrevia, useCargaLinhas, useExecutarCarga, useDesfazerCarga,
+  useClassificarPorTerceiros,
 } from '@/hooks/use-mutual';
 import { useRegionais } from '@/hooks/use-config';
 import { usePlanos, useTiposVeiculo } from '@/hooks/use-precificacao';
@@ -82,6 +83,30 @@ export function CargaMutual() {
         <strong>nenhuma fatura e gerada aqui</strong> — a mensalidade continua saindo do Mutual
         ate o cutover daquela unidade.
       </p>
+
+      {/* ------------------------------------------------ a UNIDADE vem PRIMEIRO (0094)
+          Ela filtra os de-paras abaixo: sem ela as listas leem a base inteira, que e
+          lenta e pode estourar o teto da tela. */}
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="text-xs text-slate-600">
+          <span className="mb-1 block font-medium uppercase tracking-wide">Unidade a carregar</span>
+          <select
+            className="rounded border border-slate-200 px-2 py-1.5 text-sm"
+            value={unidade}
+            onChange={(e) => setUnidade(e.target.value)}
+          >
+            <option value="">— escolha a unidade —</option>
+            {(regionais.data ?? []).map((r) => (
+              <option key={r.id} value={r.id}>{r.nome}</option>
+            ))}
+          </select>
+        </label>
+        <label className="flex items-center gap-2 pb-1.5 text-xs text-slate-600">
+          <input type="checkbox" checked={inativos} onChange={(e) => setInativos(e.target.checked)} />
+          Incluir o acervo historico (inativos e suspensos)
+        </label>
+      </div>
+
 
       {/* ------------------------------------------------ o de-para por CATEGORIA (0087) */}
       <div className="rounded-xl border border-slate-200/80 p-4">
@@ -292,6 +317,12 @@ export function CargaMutual() {
                     <span className="tnum text-xs text-slate-400">
                       {p.mensalidade_mediana !== null && `mediana R$ ${p.mensalidade_mediana}`}
                       {p.tipos && ` · tipo ${p.tipos}`}
+                      {p.tipos === '2' && (
+                        <span className="ml-1 text-amber-700">
+                          · moto: quem decide e o PRODUTO, nao este plano — deixe sem de-para e
+                          use o quadro das motos abaixo
+                        </span>
+                      )}
                       {amplitude !== null && amplitude >= 6 && (
                         <span className="ml-1 text-amber-700">
                           · FIPE {amplitude.toFixed(0)}x (generico)
@@ -328,26 +359,7 @@ export function CargaMutual() {
         )}
       </div>
 
-      {/* ------------------------------------------------ a unidade e a previa */}
-      <div className="flex flex-wrap items-end gap-3">
-        <label className="text-xs text-slate-600">
-          <span className="mb-1 block font-medium uppercase tracking-wide">Unidade a carregar</span>
-          <select
-            className="rounded border border-slate-200 px-2 py-1.5 text-sm"
-            value={unidade}
-            onChange={(e) => setUnidade(e.target.value)}
-          >
-            <option value="">— escolha a unidade —</option>
-            {(regionais.data ?? []).map((r) => (
-              <option key={r.id} value={r.id}>{r.nome}</option>
-            ))}
-          </select>
-        </label>
-        <label className="flex items-center gap-2 pb-1.5 text-xs text-slate-600">
-          <input type="checkbox" checked={inativos} onChange={(e) => setInativos(e.target.checked)} />
-          Incluir o acervo historico (inativos e suspensos)
-        </label>
-      </div>
+      {unidade && <MotosPorProdutos unidade={unidade} nomeUnidade={nomeUnidade} />}
 
       {!unidade && (
         <p className="text-sm text-slate-500">
@@ -492,15 +504,27 @@ export function CargaMutual() {
                 executar.mutate(
                   { regionalId: unidade, incluirInativos: inativos, confirmar: true },
                   {
-                    onSuccess: (r) => toast.success(r.mensagem),
-                    onError: (e) => toast.error((e as Error).message),
+                    onSuccess: (r) => toast.success(
+                      `${r.veiculos_criados} veiculo(s) criado(s), ${r.veiculos_atualizados} `
+                      + `atualizado(s), ${r.clientes_criados} associado(s) novo(s). ${r.mensagem}`,
+                    ),
+                    // O que ja foi gravado fica (cada bloco e uma transacao); clicar de
+                    // novo prepara a fila outra vez e o ja carregado vira ATUALIZAR.
+                    onError: (e) => toast.error(
+                      `${(e as Error).message} — os blocos anteriores ficaram gravados; `
+                      + 'clicar de novo refaz a fila, e o que ja entrou so e atualizado.',
+                    ),
                   },
                 );
               }}
               disabled={executar.isPending || resumo.criar + resumo.atualizar === 0}
             >
               <Upload className="mr-2 h-4 w-4" aria-hidden />
-              {executar.isPending ? 'Carregando...' : `Carregar ${nomeUnidade}`}
+              {executar.progresso?.fase === 'preparando'
+                ? 'Lendo o lote...'
+                : executar.progresso?.fase === 'gravando'
+                  ? `Gravando ${executar.progresso.feitos} de ${executar.progresso.total}...`
+                  : executar.isPending ? 'Carregando...' : `Carregar ${nomeUnidade}`}
             </Button>
 
             <button
@@ -554,6 +578,176 @@ function Indicador({ rotulo, valor, nota, alerta }: {
       <p className="text-[11px] uppercase tracking-wide text-slate-500">{rotulo}</p>
       <p className="tnum text-2xl font-semibold text-slate-900">{valor}</p>
       {nota && <p className="text-[11px] text-slate-500">{nota}</p>}
+    </div>
+  );
+}
+
+const ROTULO_TERCEIROS: Record<string, string> = {
+  COM_TERCEIROS: 'tem protecao a terceiros no Mutual',
+  SEM_TERCEIROS: 'nao tem protecao a terceiros',
+  JA_CERTO: 'ja estao no plano certo',
+  MANTIDO: 'tem outro plano escolhido aqui — nao sao tocados',
+  SEM_DADOS: 'sem produtos capturados — puxe "Produtos dos veiculos" e rode de novo',
+};
+
+/**
+ * As MOTOS pelos produtos (0091/0092). No Mutual a protecao a terceiros e
+ * opcional DENTRO do mesmo plano de moto, entao "Plano Moto MT" nao diz se a
+ * moto e Ouro ou Essencial — quem diz e o produto contratado. Ate aqui isto so
+ * rodava por SQL; o quadro simula primeiro e so grava no segundo clique.
+ * Vale para veiculos JA CARREGADOS (os produtos so sao puxados para eles).
+ */
+function MotosPorProdutos({ unidade, nomeUnidade }: { unidade: string; nomeUnidade: string }) {
+  const tipos = useTiposVeiculo();
+  const planos = usePlanos();
+  const classificar = useClassificarPorTerceiros();
+  const listaPlanos = useMemo(() => planos.data ?? [], [planos.data]);
+
+  const tipoMoto = (tipos.data ?? []).find((t) => /^moto/i.test(t.nome))?.id ?? '';
+  const sugestao = (re: RegExp) => listaPlanos.find((p) => re.test(p.nome))?.id ?? '';
+
+  const [tipo, setTipo] = useState('');
+  const [com, setCom] = useState('');
+  const [sem, setSem] = useState('');
+  const [substituir, setSubstituir] = useState<string[] | null>(null);
+  const [simulado, setSimulado] = useState<{ acao: string; quantidade: number }[] | null>(null);
+
+  // Os padroes sao os da decisao do usuario (07/10/2026): com terceiros ->
+  // MOTOCICLETAS - OURO, sem -> MOTOCICLETA ESSENCIAL, e quem caiu em PRATA (o
+  // de-para errado de "Plano Moto MT") e reclassificado. Tudo editavel.
+  const tipoEf = tipo || tipoMoto;
+  const comEf = com || sugestao(/MOTOCICLETAS?\s*-\s*OURO/i);
+  const semEf = sem || sugestao(/MOTOCICLETAS?\s+ESSENCIAL/i);
+  const substEf = substituir ?? listaPlanos.filter((p) => /PRATA/i.test(p.nome)).map((p) => p.id);
+  const pronto = Boolean(tipoEf && comEf && semEf);
+
+  const rodar = (confirmar: boolean) => classificar.mutate(
+    { regionalId: unidade, tipoVeiculoId: tipoEf, planoCom: comEf, planoSem: semEf,
+      substituir: substEf, confirmar },
+    {
+      onSuccess: (r) => {
+        setSimulado(confirmar ? null : r);
+        if (confirmar) {
+          const n = r.filter((x) => x.acao === 'COM_TERCEIROS' || x.acao === 'SEM_TERCEIROS')
+            .reduce((acc, x) => acc + Number(x.quantidade), 0);
+          toast.success(`${n} moto(s) de ${nomeUnidade} reclassificada(s). O boleto nao muda.`);
+        }
+      },
+      onError: (e) => toast.error((e as Error).message),
+    },
+  );
+
+  const nomePlano = (id: string) => listaPlanos.find((p) => p.id === id)?.nome ?? '—';
+
+  return (
+    <div className="rounded-xl border border-slate-200/80 p-4">
+      <h3 className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+        <Bike className="h-4 w-4 text-cyan-600" aria-hidden /> Motos — o plano pelos produtos
+      </h3>
+      <p className="mb-3 text-xs leading-relaxed text-slate-500">
+        Nos planos de moto do Mutual (&quot;Plano Moto MT&quot;, &quot;Plano Moto SP/SP&quot;,
+        &quot;Plano Moto SP/ Riberão Preto&quot;…) a <strong>protecao a terceiros e opcional
+        dentro do mesmo plano</strong>: o nome do plano nao diz se a moto e Ouro ou Essencial.
+        Quem diz e o <strong>produto contratado</strong>. Por isso esses planos ficam{' '}
+        <strong>sem de-para</strong> acima, e a classificacao e feita aqui, depois de carregar a
+        unidade e puxar <strong>Produtos dos veiculos</strong>. O boleto nao muda.
+      </p>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <label className="text-xs text-slate-600">
+          <span className="mb-1 block font-medium">Tipo de veiculo</span>
+          <select className="w-full rounded border border-slate-200 px-2 py-1.5 text-sm"
+            value={tipoEf} onChange={(e) => { setTipo(e.target.value); setSimulado(null); }}>
+            <option value="">— escolha —</option>
+            {(tipos.data ?? []).map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
+          </select>
+        </label>
+        <label className="text-xs text-slate-600">
+          <span className="mb-1 block font-medium">COM terceiros vai para</span>
+          <select className="w-full rounded border border-slate-200 px-2 py-1.5 text-sm"
+            value={comEf} onChange={(e) => { setCom(e.target.value); setSimulado(null); }}>
+            <option value="">— escolha —</option>
+            {listaPlanos.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+          </select>
+        </label>
+        <label className="text-xs text-slate-600">
+          <span className="mb-1 block font-medium">SEM terceiros vai para</span>
+          <select className="w-full rounded border border-slate-200 px-2 py-1.5 text-sm"
+            value={semEf} onChange={(e) => { setSem(e.target.value); setSimulado(null); }}>
+            <option value="">— escolha —</option>
+            {listaPlanos.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+          </select>
+        </label>
+      </div>
+      <div className="mt-3 text-xs text-slate-600">
+        <span className="font-medium">Reclassificar tambem quem ja esta em:</span>{' '}
+        <span className="text-slate-500">(quem esta sem plano e sempre classificado; outro plano escolhido aqui e mantido)</span>
+        <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+          {listaPlanos.map((p) => (
+            <label key={p.id} className="flex items-center gap-1.5">
+              <input
+                type="checkbox"
+                checked={substEf.includes(p.id)}
+                onChange={(e) => {
+                  setSimulado(null);
+                  setSubstituir(e.target.checked
+                    ? [...substEf, p.id]
+                    : substEf.filter((x) => x !== p.id));
+                }}
+              />
+              {p.nome}
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {simulado && (
+        <div className="mt-3 rounded-lg bg-fundo p-3 text-sm">
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-600">
+            Simulacao em {nomeUnidade} — nada foi gravado
+          </p>
+          {simulado.length === 0 && (
+            <p className="text-xs text-slate-500">
+              Nenhuma moto carregada nesta unidade ainda. Carregue a unidade e puxe os produtos.
+            </p>
+          )}
+          <ul className="space-y-0.5">
+            {simulado.map((x) => (
+              <li key={x.acao} className="flex justify-between gap-3">
+                <span className="text-slate-700">
+                  {ROTULO_TERCEIROS[x.acao] ?? x.acao}
+                  {x.acao === 'COM_TERCEIROS' && ` → ${nomePlano(comEf)}`}
+                  {x.acao === 'SEM_TERCEIROS' && ` → ${nomePlano(semEf)}`}
+                </span>
+                <span className="tnum font-semibold text-slate-900">{x.quantidade}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          className="rounded border border-slate-200 px-3 py-1.5 text-xs text-slate-700 hover:bg-fundo disabled:opacity-50"
+          disabled={!pronto || classificar.isPending}
+          onClick={() => rodar(false)}
+        >
+          {classificar.isPending ? 'Lendo...' : 'Simular'}
+        </button>
+        <Button
+          disabled={!pronto || !simulado || classificar.isPending}
+          onClick={() => {
+            if (!window.confirm(
+              `Gravar o plano das motos de "${nomeUnidade}" pelos produtos?\n\n`
+              + `COM terceiros → ${nomePlano(comEf)}\nSEM terceiros → ${nomePlano(semEf)}\n\n`
+              + 'O boleto nao muda. Confirmar?',
+            )) return;
+            rodar(true);
+          }}
+        >
+          Aplicar
+        </Button>
+      </div>
     </div>
   );
 }

@@ -2586,6 +2586,8 @@ export type MutualCargaResultado = {
   veiculos_criados: number;
   veiculos_atualizados: number;
   recusados: number;
+  /** 0094 — quantas linhas ainda estao na fila depois desta chamada. */
+  restantes: number;
   mensagem: string;
 };
 
@@ -4014,6 +4016,9 @@ export type Database = {
           p_regional_id: string;
           p_incluir_inativos?: boolean;
           p_confirmar?: boolean;
+          /** 0094 — com bloco, a carga vira fila: prepara uma vez e grava aos poucos. */
+          p_lote?: number | null;
+          p_preparar?: boolean;
         };
         Returns: MutualCargaResultado[];
       };

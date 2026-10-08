@@ -151,7 +151,20 @@ Só recria `mutual_planos_externos` (mesma assinatura): o NOME do plano passa a 
 "nome conhecido". A tela mostra **nome + (id N)**. Conferir depois de rodar:
 `select count(*) from pg_proc where proname='mutual_planos_externos'` = 1 e o secdef sem
 `search_path` = 0.
-**Próxima migration livre: `0094`.**
+**🟡 A `0094_mutual_carga_em_blocos` é NOVA — falta rodar no SQL Editor + deploy do contêiner.**
+É o que torna a carga da base inteira possível pela TELA. Medido em 08/10/2026: a leitura do lote de
+Ribeirão Preto levava 5,9 s, a prévia 9,9 s, e a carga da MATRIZ levou ~10 s (pg_stat_statements) —
+**ela foi executada por fora da tela; pelo botão teria falhado** (teto de 8 s do `authenticated`; o
+`service_role` pela API herda os mesmos 8 s do `authenticator`). Ela traz: `mutual_unidade_dos_objetos()`
+(a unidade de todos os objetos EM CONJUNTO, ~1,9 s em vez de ~9 s, **0 divergências em 17.764** contra
+`mutual_regional_do_objeto`, conferido em produção); `mutual_carga_linhas`/`mutual_planos_externos`/
+`mutual_categorias_veiculo` recriadas usando ela (mesma assinatura); e `mutual_executar_carga` com
+**FILA** (`mutual_carga_fila`): `p_lote` + `p_preparar` — a 1ª chamada lê uma vez e enche a fila, as
+seguintes gravam 200 linhas cada sem cortar associado; fila de outro recorte ou com +1 h é recusada.
+Sem `p_lote` faz tudo de uma vez, como antes. Conferir depois de rodar:
+`select count(*) from pg_proc where proname='mutual_executar_carga'` = 1, a tabela `mutual_carga_fila`
+existe com RLS e sem policy, secdef sem `search_path` = 0, 0 RPCs nossas ao `anon`.
+**Próxima migration livre: `0095`.**
 **Próxima migration livre era `0088`.** As **`0001`..`0086`** estão aplicadas — a **`0086` foi rodada e
 CONFERIDA em 05/10/2026**: o comentário de `mutual_planos_externos` diz 18/42 e 29/91 (sem "17" nem
 "26"), a função segue `security definer` com `search_path=public`, fechada ao `anon`; 0 `security
@@ -551,9 +564,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0093`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **70 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 774 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0094`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **71 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 779 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Os portais e páginas públicas
@@ -1884,6 +1897,12 @@ lida como produto avulso. Lista vazia = "nao sei")
 "localizo o plano no Mutual pelo nome". `mutual_planos_externos` recriada com a mesma assinatura;
 o nome sai de `PLAN` e, na falta, do `plan_name` de CONTRACT_OBJECT_PRODUCT (grafia mais
 frequente vence). `capturado` = nome conhecido. So leitura)
+· `0094_mutual_carga_em_blocos` (A CARGA CABE NO TETO DE 8 S: `mutual_unidade_dos_objetos()` resolve a
+unidade de todos os objetos EM CONJUNTO, espelho exato de `mutual_regional_do_objeto` (suite prova objeto a
+objeto); `mutual_carga_linhas`, `mutual_planos_externos` e `mutual_categorias_veiculo` recriadas com ela;
+`mutual_carga_fila` (RLS sem policy) + `mutual_executar_carga(regional, inativos, confirmar, p_lote,
+p_preparar)` — DROP + CREATE: preparar le UMA vez, cada bloco grava ate p_lote linhas sem cortar CPF,
+fila velha (+1 h) ou de outro recorte e recusada; simulacao passou a ler o lote uma vez so)
 · `0082_carga_mutual_preparacao` (as TRES pecas que faltavam para a carga do Mutual poder rodar,
 e nenhuma delas carrega nada — ha teste provando que a operacao segue intacta: (A) **a UNIDADE sai
 do ASSOCIADO** — a corrente do consultor (0073/0074) foi medida com a base completa e esta VAZIA
@@ -2571,6 +2590,23 @@ atendimento real**, não antes de carregar.
 | Rastreador e Assistência | 46 | 3 | vários | RASTREAMENTO |
 | Plano V6 - Automóvel SP/SP | 87 | 3 | Passeio | — |
 | Cauda de 1–2 veículos | — | 17 | — | Plano V7 para pickups_vans_ e utilitários especiais. MT (124) · MOTOCICLETA RN ESPECIALMIG (63) · ESPECIAL V12 /AUTOMÓVEISMIG (59) · V10 /AUTOMóVEIS COMUMMIG (51) · Roubo/Furto (45 → Roubo e Furto) · MOTOCICLETA R.PMIG (64) · VANS - CAMINHAO 3/4MIG (66) · CAMINHõES-V-PESADOSMIG (70) · Plano V6 - Automóvel RBP/SP (86 → Ouro) · Plano Moto SP/SP (42 → Prata ⚠️) · Plano V10 - Automóvel Especial MT (108) · Plano - V10 Automóvel MT (96) · Plano V6 - Automóvel Especial RBP/SP (98 → Ouro) · Plano V15 para pickups_vans_ e utilitários especiais MT (136) · MOTOCICLETAS / MATO GROSSOMIG (50) · Plano V10 para pickups_vans_ e utilitários especiais (38) |
+
+## A CARGA EM BLOCOS (0094) e as MOTOS pela tela — leia antes de carregar outra unidade
+- **O botão "Carregar" agora grava em blocos** (`useExecutarCarga`, `LOTE_CARGA` = 200 em
+  `src/lib/mutual.ts`): "Lendo o lote…" → "Gravando N de M…". Cada bloco é uma transação; falhar no
+  meio deixa o que já entrou, e o próximo clique refaz a fila (o carregado vira ATUALIZAR).
+- **O seletor "Unidade a carregar" subiu para o TOPO da seção** — é ele que filtra os de-paras de
+  categoria e de plano. Embaixo, o usuário não achava onde corrigir o plano: sem unidade a lista lia a
+  base inteira.
+- **🔴 PLANO DE MOTO NÃO TEM DE-PARA FIXO.** "Plano Moto MT" (41), "Plano Moto SP/SP" (42) e
+  "Plano Moto SP/ Riberão Preto" (43) estão ligados a **PLANO PRATA** (plano de CARRO). Medido em
+  08/10: **SP 1 tem 300 motos no 42 e Ribeirão Preto 192 no 43** — carregar assim põe 492 motos no
+  Prata. O certo: deixar esses três **"— sem de-para —"** e, depois de carregar e puxar *Produtos
+  dos veículos*, usar o quadro **"Motos — o plano pelos produtos"** (novo, mesma seção): simula e
+  aplica `mutual_aplicar_plano_por_terceiros` (terceiros → MOTOCICLETAS - OURO, sem → MOTOCICLETA
+  ESSENCIAL, reclassificando quem está em PRATA). A linha de plano de moto (`tipos = '2'`) avisa isso.
+- **Números das 3 unidades que faltam (08/10):** RIBEIRÃO PRETO 1.182 no lote (11 recusados, 483 sem
+  plano) · SÃO PAULO 1 837 (13, 420) · GRANDE NATAL 433 (1, 350).
 
 ## O DE-PARA DO PLANO (0085) — `/integracao/mutual` → *Plano / cobertura*
 > Só leitura. **Não carrega, não muda preço, não toca em `veiculos`.** Ela abre a entidade,

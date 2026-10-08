@@ -9,6 +9,7 @@ import {
   equipesPendentes, carteiraSemAgrupamento, equipesSemNome, porMacrorregiao,
   consolidacao,
   placaMutual, chassiMutual, renavamMutual, resumoDaCarga, recusasPorMotivo,
+  somarBlocosCarga, LOTE_CARGA,
   filaAntesDoCutover, cutoverLiberado, tiposPendentes,
   planosPendentes, idsPara90Pct, amplitudeFipe, ENTIDADES_MUTUAL,
   mensagemDeFalhaDeLeitura, urlMutualCaminho, caminhoQueRespondeu, CANDIDATAS_PLANO,
@@ -532,6 +533,49 @@ const linha = (over: Partial<LinhaCarga> = {}): LinhaCarga => ({
   valor_mensalidade: 189.9, dia_vencimento: 15,
   tipo_veiculo_id: 't1', plano_id: 'p1', ativacao_estimada: false,
   ...over,
+});
+
+describe('somarBlocosCarga (0094)', () => {
+  const bloco = (o: Partial<Parameters<typeof somarBlocosCarga>[0][number]> = {}) => ({
+    clientes_criados: 0, clientes_atualizados: 0, veiculos_criados: 0,
+    veiculos_atualizados: 0, recusados: 0, restantes: 0, mensagem: '', ...o,
+  });
+
+  it('soma os contadores e fica com o estado do ULTIMO bloco', () => {
+    const r = somarBlocosCarga([
+      bloco({ recusados: 11, restantes: 400, mensagem: 'Fila preparada' }),
+      bloco({ clientes_criados: 150, veiculos_criados: 200, restantes: 200, mensagem: 'Bloco' }),
+      bloco({ clientes_criados: 140, veiculos_criados: 190, veiculos_atualizados: 10,
+              restantes: 0, mensagem: 'Carga concluida' }),
+    ]);
+    expect(r.clientes_criados).toBe(290);
+    expect(r.veiculos_criados).toBe(390);
+    expect(r.veiculos_atualizados).toBe(10);
+    expect(r.restantes).toBe(0);
+    expect(r.mensagem).toBe('Carga concluida');
+  });
+
+  it('recusados vem do preparo e NAO e somado bloco a bloco', () => {
+    // Se um dia o banco repetir o numero em toda chamada, somar triplicaria.
+    const r = somarBlocosCarga([bloco({ recusados: 11 }), bloco({ recusados: 11 }), bloco({ recusados: 11 })]);
+    expect(r.recusados).toBe(11);
+  });
+
+  it('o banco devolve bigint como texto: soma como numero, nao concatena', () => {
+    const r = somarBlocosCarga([
+      bloco({ veiculos_criados: '200' as unknown as number }),
+      bloco({ veiculos_criados: '5' as unknown as number }),
+    ]);
+    expect(r.veiculos_criados).toBe(205);
+  });
+
+  it('sem bloco nenhum devolve tudo zerado', () => {
+    expect(somarBlocosCarga([]).veiculos_criados).toBe(0);
+  });
+
+  it('o lote cabe no teto de 8 s com folga (~13 ms por veiculo medido)', () => {
+    expect(LOTE_CARGA * 0.013).toBeLessThan(4);
+  });
 });
 
 describe('resumoDaCarga', () => {

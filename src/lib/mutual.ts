@@ -680,6 +680,47 @@ export interface LinhaCarga {
   ativacao_estimada: boolean;
 }
 
+/**
+ * Quantas linhas da fila cada chamada grava (0094). Medido em producao: ~13 ms
+ * por veiculo (os gatilhos do cadastro). 200 linhas sao ~2,6 s — folga larga
+ * para o teto de 8 s do papel `authenticated`, mesmo com o banco ocupado.
+ */
+export const LOTE_CARGA = 200;
+
+/** O resultado de UMA chamada de `mutual_executar_carga`. */
+export type ResultadoBlocoCarga = {
+  clientes_criados: number;
+  clientes_atualizados: number;
+  veiculos_criados: number;
+  veiculos_atualizados: number;
+  recusados: number;
+  restantes: number;
+  mensagem: string;
+};
+
+/**
+ * A carga em blocos (0094) devolve um resultado POR CHAMADA; a tela mostra a
+ * soma. `recusados` vem so do preparo (as chamadas seguintes devolvem 0, e
+ * somar repetiria nada — mas pegar o MAIOR protege contra quem um dia passar
+ * a repetir o numero em toda chamada). `restantes` e `mensagem` sao os do
+ * ULTIMO bloco: e o estado em que a fila ficou.
+ */
+export function somarBlocosCarga(blocos: ResultadoBlocoCarga[]): ResultadoBlocoCarga {
+  const vazio: ResultadoBlocoCarga = {
+    clientes_criados: 0, clientes_atualizados: 0, veiculos_criados: 0,
+    veiculos_atualizados: 0, recusados: 0, restantes: 0, mensagem: '',
+  };
+  return blocos.reduce<ResultadoBlocoCarga>((acc, b) => ({
+    clientes_criados: acc.clientes_criados + Number(b.clientes_criados),
+    clientes_atualizados: acc.clientes_atualizados + Number(b.clientes_atualizados),
+    veiculos_criados: acc.veiculos_criados + Number(b.veiculos_criados),
+    veiculos_atualizados: acc.veiculos_atualizados + Number(b.veiculos_atualizados),
+    recusados: Math.max(acc.recusados, Number(b.recusados)),
+    restantes: Number(b.restantes),
+    mensagem: b.mensagem,
+  }), vazio);
+}
+
 /** O que a carga faria, contado como a tela mostra. */
 export function resumoDaCarga(linhas: LinhaCarga[]) {
   const entram = linhas.filter((l) => !l.problema);
