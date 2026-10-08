@@ -151,7 +151,15 @@ Só recria `mutual_planos_externos` (mesma assinatura): o NOME do plano passa a 
 "nome conhecido". A tela mostra **nome + (id N)**. Conferir depois de rodar:
 `select count(*) from pg_proc where proname='mutual_planos_externos'` = 1 e o secdef sem
 `search_path` = 0.
-**🟡 A `0094_mutual_carga_em_blocos` é NOVA — falta rodar no SQL Editor + deploy do contêiner.**
+**✅ A `0094_mutual_carga_em_blocos` foi rodada e CONFERIDA em 08/10/2026** (uma versão de
+`mutual_executar_carga` com `p_lote`/`p_preparar`, `mutual_unidade_dos_objetos` existe e as 3 leituras
+a usam, `mutual_carga_fila` com RLS e 0 policies e vazia, 0 security definer sem `search_path`, 0 RPCs
+nossas ao `anon`). **Tempos medidos em produção, RIBEIRÃO PRETO:** unidade de todos os objetos
+0,7 s · leitura do lote 3,8 s (era 5,9) · prévia 3,7 s (era 9,9) · planos 1,4 s · categorias 1,4 s ·
+simulação 3,8 s (1.171 veículos, 1.002 associados, 11 recusados). Lotes conferidos iguais aos de antes
+(matriz 467 ATUALIZAR + 7 recusados; Grande Natal 432 + 1). Nota: o `anon` tem o `select` padrão em
+`mutual_carga_fila`, mas RLS sem policy devolve 0 linhas — dá para revogar numa próxima migration, de
+passagem. Texto original:
 É o que torna a carga da base inteira possível pela TELA. Medido em 08/10/2026: a leitura do lote de
 Ribeirão Preto levava 5,9 s, a prévia 9,9 s, e a carga da MATRIZ levou ~10 s (pg_stat_statements) —
 **ela foi executada por fora da tela; pelo botão teria falhado** (teto de 8 s do `authenticated`; o
