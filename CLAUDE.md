@@ -144,7 +144,7 @@ pelo `coalesce`. **Falta na tela:** marcar *Sem proteção de casco* nos planos 
 não diesel — ele está vinculado a *DIESEL MIGRADO MUTUAL*. Os pendentes têm nome agora: 104 V7
 Automóvel Especial MT · 116 V7 pickups MT · 120 V10 pickups MT · 54 V6 pickups · 49 Especial V10
 pickups · 92 V7 Automóvel MT · 128 V10 pickups especiais MT.
-**🟡 A `0093_mutual_nome_plano_legado` é NOVA — falta rodar no SQL Editor + deploy do contêiner.**
+**✅ A `0093_mutual_nome_plano_legado` foi rodada e CONFERIDA em 08/10/2026** (uma versão de `mutual_planos_externos`, lê `CONTRACT_OBJECT_PRODUCT`, 0 security definer sem `search_path`, fechada ao `anon`, comentário novo). Na MATRIZ: **50 de 69 planos com nome**; os 19 sem nome somam só **2 faturáveis** (acervo inativo, que não teve produtos puxados). Texto original:
 Só recria `mutual_planos_externos` (mesma assinatura): o NOME do plano passa a sair também do
 `plan_name` dos produtos dos veículos (reserva de `PLAN`), então os planos antigos ("…MIG",
 "Plano Moto MT") aparecem com nome na seção *Plano / cobertura*. `capturado` passa a significar
