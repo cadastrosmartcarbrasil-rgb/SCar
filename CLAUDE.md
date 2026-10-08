@@ -2613,6 +2613,18 @@ atendimento real**, não antes de carregar.
   dos veículos*, usar o quadro **"Motos — o plano pelos produtos"** (novo, mesma seção): simula e
   aplica `mutual_aplicar_plano_por_terceiros` (terceiros → MOTOCICLETAS - OURO, sem → MOTOCICLETA
   ESSENCIAL, reclassificando quem está em PRATA). A linha de plano de moto (`tipos = '2'`) avisa isso.
+- **🔴 A CARGA NÃO TRAZ O CONSULTOR (medido 08/10).** `mutual_executar_carga` nunca grava
+  `veiculos.vendedor_id` (0084: "vendedor é daqui"). Na matriz, a corrente
+  `objeto.contract_id → CONTRACT.consultant_id → CONSULTANT.cpf_cnpj → vendedores.documento` resolve
+  **431 de 467** (29 vendedores, todos da mesma unidade do veículo); 2 contratos sem consultor
+  (HNC4288, NAU8B54); os outros 34 eram de 8 consultores ausentes do cadastro (o Mutual tem 379, o
+  cadastro casa 302). **Os 34 foram ligados ao CLAYTON R CARNIEL** por SQL do usuário em 08/10 (12 deles
+  são de outros consultores no Mutual — decisão do usuário), e o CPF dele foi gravado só com dígitos.
+  **Os 431 seguem sem vendedor** até a carga preencher por `coalesce` (migration pendente, decidir).
+  ⚠️ **Armadilha de COMISSÃO no cutover:** `fn_calcular_comissao` trata o 1º título pago do veículo
+  como ADESÃO — num migrado a adesão já foi paga no Mutual (e o Clayton está com adesão de 100%).
+  Resolver antes de ligar a cobrança aqui. Vendedor criado pela TELA guarda o CPF com máscara
+  (a importação grava só dígitos) — conferir antes de casar por documento.
 - **Números das 3 unidades que faltam (08/10):** RIBEIRÃO PRETO 1.182 no lote (11 recusados, 483 sem
   plano) · SÃO PAULO 1 837 (13, 420) · GRANDE NATAL 433 (1, 350).
 
