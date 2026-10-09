@@ -172,7 +172,11 @@ seguintes gravam 200 linhas cada sem cortar associado; fila de outro recorte ou 
 Sem `p_lote` faz tudo de uma vez, como antes. Conferir depois de rodar:
 `select count(*) from pg_proc where proname='mutual_executar_carga'` = 1, a tabela `mutual_carga_fila`
 existe com RLS e sem policy, secdef sem `search_path` = 0, 0 RPCs nossas ao `anon`.
-**🟡 A `0095_mutual_vendedor_do_consultor` é NOVA — falta rodar no SQL Editor + deploy do contêiner.**
+**✅ A `0095_mutual_vendedor_do_consultor` foi rodada e CONFERIDA em 09/10/2026** (as 4 funções e o
+trigger existem, `fn_calcular_comissao` lê `integracao_vinculos` e segue sobre o valor cheio, 0 secdef
+sem `search_path`, 0 RPCs nossas ao `anon`, 0 CPF de vendedor com máscara; nenhuma fatura, título ou
+comissão nova). **Falta o clique "Ligar" na MATRIZ** — a RPC em produção devolve o mesmo da
+simulação: 429 a ligar · 24 já ligados · 12 mantidos · 2 sem consultor. Texto original:
 (A) `vendedores.documento` passa a ser gravado SÓ COM DÍGITOS por trigger (a tela gravava com
 máscara); (B) `mutual_vendedores_dos_veiculos`/`_resumo`/`mutual_vincular_vendedores` — liga o
 vendedor dos migrados pelo consultor do CONTRATO (CPF → `vendedores.documento`; e-mail só se apontar
