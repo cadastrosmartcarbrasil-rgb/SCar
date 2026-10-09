@@ -29,7 +29,7 @@ import { useAbrirProtocolo } from '@/hooks/use-protocolos';
 import { CATEGORIAS_PROTOCOLO, PRIORIDADES } from '@/lib/protocolos';
 import { CentralProtocolos } from '@/components/protocolos/central-protocolos';
 import { STATUS_ACIONAMENTO_LABEL } from '@/lib/assistencia';
-import { statusVeiculoResumo } from '@/lib/sac';
+import { statusVeiculoResumo, primeiraAtivacao } from '@/lib/sac';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type {
   ClientesRow, OpcionalVeiculo, PrioridadeAtendimento, TipoAtendimento, TipoFaturamento,
@@ -325,6 +325,7 @@ function ListaVeiculos({ v360, onSelect }: { v360: Visao360; onSelect: (id: stri
               <th className="px-4 py-2.5">Placa</th>
               <th className="px-4 py-2.5">Marca / Modelo</th>
               <th className="px-4 py-2.5">Ano</th>
+              <th className="px-4 py-2.5">Ativacao</th>
               <th className="px-4 py-2.5">Status</th>
               <th className="px-4 py-2.5"></th>
             </tr>
@@ -354,6 +355,7 @@ function ListaVeiculos({ v360, onSelect }: { v360: Visao360; onSelect: (id: stri
                     )}
                   </td>
                   <td className="tnum px-4 py-2.5 text-slate-600">{v.ano_modelo ?? '—'}</td>
+                  <td className="tnum px-4 py-2.5 text-slate-600">{primeiraAtivacao(v.data_ativacao)?.data ?? '—'}</td>
                   <td className="px-4 py-2.5"><span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${st.cor}`}>{st.label}</span></td>
                   <td className="px-4 py-2.5 text-right"><span className="text-xs font-medium text-cyan-700">Atender →</span></td>
                 </tr>
@@ -523,9 +525,14 @@ function VeiculoDetalheCard({ clienteId, veiculo }: { clienteId: string; veiculo
       onError: (e) => toast.error(e.message),
     });
   };
-  const dado = (label: string, valor?: string | number | null) => (
-    <div><p className="text-[11px] uppercase text-slate-400">{label}</p><p className="text-sm font-medium text-slate-700">{valor || '—'}</p></div>
+  const dado = (label: string, valor?: string | number | null, sub?: string | null) => (
+    <div>
+      <p className="text-[11px] uppercase text-slate-400">{label}</p>
+      <p className="text-sm font-medium text-slate-700">{valor || '—'}</p>
+      {sub && <p className="text-[11px] text-slate-500">{sub}</p>}
+    </div>
   );
+  const ativacao = primeiraAtivacao(veiculo.data_ativacao);
   return (
     <Card>
       <CardContent className="pt-5">
@@ -554,6 +561,7 @@ function VeiculoDetalheCard({ clienteId, veiculo }: { clienteId: string; veiculo
           {dado('Categoria', veiculo.categoria)}
           {dado('FIPE', veiculo.valor_fipe != null ? formatCurrency(veiculo.valor_fipe) : null)}
           {dado('Plano', veiculo.plano_nome)}
+          {dado('Primeira ativacao', ativacao?.data, ativacao?.tempo ? `ha ${ativacao.tempo}` : null)}
         </div>
 
         {(veiculo.rastreadora || veiculo.rastreador_imei) && (

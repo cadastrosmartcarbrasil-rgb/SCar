@@ -30,9 +30,18 @@ export function maskCep(v: string): string {
   return d.length <= 5 ? d : d.replace(/(\d{5})(\d{0,3})/, '$1-$2');
 }
 
+/**
+ * Coluna `date` do banco chega como 'AAAA-MM-DD', e `new Date('2025-11-28')` e
+ * MEIA-NOITE UTC — no fuso do Brasil isso e 27/11 as 21h, e a tela mostrava o
+ * DIA ANTERIOR (data de ativacao, "associado desde", vencimento). Data pura
+ * vira data LOCAL; timestamp com hora segue como antes.
+ */
 export function formatDate(value: string | Date | null | undefined): string {
   if (!value) return '-';
-  const d = typeof value === 'string' ? new Date(value) : value;
+  const d =
+    typeof value !== 'string' ? value
+    : /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T00:00:00`)
+    : new Date(value);
   return new Intl.DateTimeFormat('pt-BR').format(d);
 }
 

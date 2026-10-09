@@ -190,6 +190,16 @@ gera comissão de ADESÃO** (a recorrência segue sobre o valor cheio). Simulado
 Clayton de outros consultores) · 2 sem consultor**. Conferir depois de rodar: `fn_calcular_comissao`
 contém `integracao_vinculos`, trigger `trg_vendedor_documento_digitos` existe, secdef sem
 `search_path` = 0, 0 RPCs nossas ao `anon`; depois, na tela, **Ligar** na MATRIZ.
+**✅ "Primeira ativação" conferida em 09/10/2026 (sem migration):** a carga GRAVOU certo —
+`veiculos.data_ativacao` bate com `first_activation_date` do Mutual em **452 de 467**; os outros
+**15** são `vistoria_pendente` que no Mutual estão com o campo VAZIO (nunca ativados lá), e
+receberam a data de criação do contrato (a adesão). O que faltava era **TELA**: nenhuma mostrava a
+data. Agora aparece no SAC (lista + ficha, com o tempo de casa), na lista e na ficha de
+`/veiculos` (só leitura — nos migrados vem do Mutual a cada carga e decide faturamento) e no
+portal ("Protegido desde"). Junto: **`formatDate` mostrava o DIA ANTERIOR para coluna `date`**
+(`new Date('2025-11-28')` é meia-noite UTC = 27/11 no Brasil) — afetava também o "Associado
+desde" do portal; corrigido na raiz (`src/lib/utils.ts`, teste em `utils.test.ts`). Helper
+`primeiraAtivacao` em `src/lib/sac.ts`.
 **Próxima migration livre: `0096`.**
 **Próxima migration livre era `0088`.** As **`0001`..`0086`** estão aplicadas — a **`0086` foi rodada e
 CONFERIDA em 05/10/2026**: o comentário de `mutual_planos_externos` diz 18/42 e 29/91 (sem "17" nem

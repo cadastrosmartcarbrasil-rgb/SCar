@@ -28,6 +28,7 @@ import { consultarPlaca, normalizarPlaca, placaValida } from '@/lib/placa';
 import { FipeConsulta } from '@/components/fipe/fipe-consulta';
 import { useFipePorPlaca } from '@/hooks/use-fipe';
 import { formatCurrency } from '@/lib/utils';
+import { primeiraAtivacao } from '@/lib/sac';
 import { normalizarDigitos, validarRastreador, imeiLuhnValido } from '@/lib/rastreador';
 import { separarOpcionais } from '@/lib/vistoria';
 import {
@@ -456,6 +457,7 @@ function VeiculosConteudo() {
               <th className="px-4 py-2">Veiculo</th>
               <th className="px-4 py-2">Associado</th>
               <th className="px-4 py-2">FIPE</th>
+              <th className="px-4 py-2">Ativacao</th>
               <th className="px-4 py-2">Situacao</th>
               <th className="px-4 py-2 text-right">Acoes</th>
             </tr>
@@ -463,7 +465,7 @@ function VeiculosConteudo() {
           <tbody>
             {isLoading && (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={7} className="px-4 py-6 text-center text-slate-400">
                   Carregando...
                 </td>
               </tr>
@@ -486,6 +488,7 @@ function VeiculosConteudo() {
                     {v.clientes?.nome_razao_social ?? nomeAssociado.get(v.cliente_id) ?? '-'}
                   </td>
                   <td className="px-4 py-2 text-slate-600">{v.valor_fipe ? formatCurrency(v.valor_fipe) : '-'}</td>
+                  <td className="tnum px-4 py-2 text-slate-600">{primeiraAtivacao(v.data_ativacao)?.data ?? '-'}</td>
                   <td className="px-4 py-2">
                     <span className={`rounded px-2 py-0.5 text-xs ${meta.cor}`}>{meta.l}</span>
                     {aviso && (
@@ -527,7 +530,7 @@ function VeiculosConteudo() {
             })}
             {!isLoading && filtrados.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={7} className="px-4 py-6 text-center text-slate-400">
                   Nenhum veiculo cadastrado.
                 </td>
               </tr>
@@ -576,6 +579,27 @@ function VeiculosConteudo() {
               </Button>
             </div>
           </FormField>
+
+          {/* A "Primeira ativacao" do Mutual (0084) — o inicio do veiculo na base.
+              So LEITURA: nos migrados ela vem do Mutual a cada carga, e nos demais
+              o banco carimba ao ativar (0025). Ela decide faturamento
+              (veiculo_faturavel), entao nao e campo de digitar. */}
+          {form.id && (() => {
+            const a = primeiraAtivacao(form.data_ativacao);
+            return (
+              <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                <span className="text-[11px] uppercase text-slate-400">Primeira ativacao: </span>
+                {a ? (
+                  <>
+                    <span className="tnum font-medium text-slate-800">{a.data}</span>
+                    {a.tempo && <span className="text-slate-500"> · ha {a.tempo}</span>}
+                  </>
+                ) : (
+                  <span className="text-slate-500">ainda nao ativado</span>
+                )}
+              </p>
+            );
+          })()}
 
           {/* Marca / Modelo */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

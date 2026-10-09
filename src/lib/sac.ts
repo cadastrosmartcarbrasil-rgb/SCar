@@ -2,6 +2,8 @@
 // as funcoes SQL (opcionais_elegibilidade / gerar_faturas_cliente). Ficam aqui
 // para reuso na UI e cobertura por testes unitarios.
 import type { OpcionalElegibilidade, TipoFaturamento } from '@/lib/database.types';
+import { formatDate } from '@/lib/utils';
+import { tempoDeCasa } from '@/lib/usuario';
 
 // ---------------------------------------------------------------------------
 // Limite flutuante de opcionais (ultimos N dias a partir de "hoje")
@@ -192,6 +194,21 @@ export function ordenarVeiculos<T extends VeiculoOrdenavel>(veiculos: T[]): T[] 
     if (ma !== mb) return ma.localeCompare(mb);
     return (a.placa ?? '').localeCompare(b.placa ?? '');
   });
+}
+
+/**
+ * A "Primeira ativacao" do Mutual = `veiculos.data_ativacao` (a carga da 0084
+ * grava `first_activation_date`; sem ela, a data de criacao do contrato). E o
+ * INICIO do veiculo na associacao — o que a operacao le como data de adesao e
+ * o que conta o tempo de casa. `hoje` e parametro para o teste nao depender do
+ * relogio.
+ */
+export function primeiraAtivacao(
+  dataAtivacao: string | null | undefined,
+  hoje: Date = new Date(),
+): { data: string; tempo: string | null } | null {
+  if (!dataAtivacao) return null;
+  return { data: formatDate(dataAtivacao.slice(0, 10)), tempo: tempoDeCasa(dataAtivacao, hoje) };
 }
 
 export function resumoFinanceiro(titulos: TituloResumo[], hoje: Date = new Date()): StatusFinanceiro {
