@@ -175,8 +175,10 @@ existe com RLS e sem policy, secdef sem `search_path` = 0, 0 RPCs nossas ao `ano
 **✅ A `0095_mutual_vendedor_do_consultor` foi rodada e CONFERIDA em 09/10/2026** (as 4 funções e o
 trigger existem, `fn_calcular_comissao` lê `integracao_vinculos` e segue sobre o valor cheio, 0 secdef
 sem `search_path`, 0 RPCs nossas ao `anon`, 0 CPF de vendedor com máscara; nenhuma fatura, título ou
-comissão nova). **Falta o clique "Ligar" na MATRIZ** — a RPC em produção devolve o mesmo da
-simulação: 429 a ligar · 24 já ligados · 12 mantidos · 2 sem consultor. Texto original:
+comissão nova). **✅ "Ligar" na MATRIZ feito e CONFERIDO em 09/10/2026:** **465 de 467 migrados
+com vendedor** (30 vendedores, 0 de outra unidade; Clayton segue com 34), resumo agora 453 já
+ligados · 12 mantidos · 2 sem consultor (**HNC4288, NAU8B54** — o contrato no Mutual não tem
+consultor; ligar à mão se quiser). Faturas 8, títulos 6, comissões 1 — nada novo. Texto original:
 (A) `vendedores.documento` passa a ser gravado SÓ COM DÍGITOS por trigger (a tela gravava com
 máscara); (B) `mutual_vendedores_dos_veiculos`/`_resumo`/`mutual_vincular_vendedores` — liga o
 vendedor dos migrados pelo consultor do CONTRATO (CPF → `vendedores.documento`; e-mail só se apontar
