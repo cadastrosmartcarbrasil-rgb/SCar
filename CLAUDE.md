@@ -295,12 +295,26 @@ adivinha entre quatro bancos de produção.
 8 usuários. **Os 9 veículos não são erro:** a carteira real ainda está no Mutual e a integração é
 **Fase 1, só leitura** — nada foi importado para `clientes`/`veiculos` ainda.
 
-#### ⛔ DECISÃO DO USUÁRIO (20/09/2026): migration SÓ pelo SQL Editor. Nunca por ferramenta.
-**O agente lê o banco; quem escreve schema é você, pelo SQL Editor do Supabase.** Vale para
-`apply_migration` do MCP, para `supabase db push` e para qualquer caminho que aplique DDL sozinho.
+#### ✅ DECISÃO DO USUÁRIO (10/10/2026) — substitui a de 20/09: CONSULTA livre, IMPLANTAÇÃO com autorização
+*"As implantações podem ser feitas pelo Claude, o que é preciso que eu autorize; as consultas ficam
+liberadas."* Está em `.claude/settings.json` + `.claude/hooks/supabase-sql-guard.sh` (commitados):
+- **Consulta roda sem perguntar:** as ferramentas de leitura do MCP do Supabase (`list_tables`,
+  `query_logs`, `get_advisors`…) estão em `allow`, e o `execute_sql` passa pelo hook, que libera
+  quando o SQL é só leitura.
+- **Implantação PERGUNTA, uma a uma:** o hook devolve `ask` para qualquer escrita/DDL, bloco `$$`,
+  `SET`, e **SELECT que chama RPC com verbo de escrita** no nome (`mutual_executar_carga`,
+  `vincular_externo`, `registrar_*`… — neste projeto quase toda ação é RPC, e
+  `select vincular_externo(...)` grava sem conter INSERT). Na dúvida pergunta; nunca libera no
+  escuro. Sem `jq` o hook não responde e vale o fluxo normal (pergunta). 32 casos testados.
+- **Migration se aplica pelo `execute_sql`, com o arquivo inteiro** — é o mesmo efeito do SQL
+  Editor, e o usuário vê o SQL no pedido de autorização. Ritual inalterado: escrever →
+  `npm run validate` → commit → **pedir** → aplicar → conferir no banco → atualizar a caixa de estado.
+- **`apply_migration` está em `deny`, de propósito** (motivo abaixo). Não contornar.
 
-**O motivo é concreto, não cautela genérica:** `supabase_migrations.schema_migrations` está
-**VAZIA** — as `0001`..`0078` entraram pelo SQL Editor, que não registra nada ali. Aplicar a
+#### (histórico) DECISÃO DE 20/09/2026: migration SÓ pelo SQL Editor
+**O motivo continua valendo para o `apply_migration`:** `supabase_migrations.schema_migrations`
+**NEM EXISTE** (conferido em 10/10/2026: `42P01 relation does not exist`) — as `0001`..`0095`
+entraram pelo SQL Editor, que não registra nada ali. Aplicar a
 próxima por ferramenta faria ela ser a **primeira linha** da tabela, e o banco passaria a dizer
 que a história começa na `0079`, com setenta e oito migrations invisíveis. Um `db push` ou
 `db reset` depois disso lê "só falta a 0079" — é a mesma família de erro do branch morto: um
@@ -4419,10 +4433,10 @@ no fim — o runner procura por "PASSARAM") e rode `npm run schema`.
 - **Publicar:** `DEPLOY.md` tem o runbook. Resumo: (A) migrations novas no Supabase
   SQL Editor, na ordem; (B) `.\scripts\deploy.ps1` (Windows) ou `npm run deploy` — os dois ja
   levam o `DOCKER_BUILDKIT=0` embutido.
-- **QUEM APLICA MIGRATION E O USUARIO, pelo SQL Editor** (decisao de 20/09/2026). O agente
-  escreve, valida no harness local e entrega o arquivo — nao aplica por ferramenta. O porque
-  esta em "Qual e o banco"; em uma linha: a `schema_migrations` do Supabase esta vazia, e
-  aplicar por ferramenta faria o banco jurar que a historia comeca na proxima migration.
+- **MIGRATION: o agente aplica, COM AUTORIZACAO a cada uma** (decisao de 10/10/2026, substitui
+  a de 20/09). Caminho: `execute_sql` com o arquivo inteiro (o hook pede a aprovacao); NUNCA
+  `apply_migration` (esta em `deny`: a `schema_migrations` nao existe, e criar a tabela com uma
+  linha faria o banco jurar que a historia comeca ali). Detalhes em "Qual e o banco".
 - **O `git pull` roda DENTRO do VPS.** Rodar no PowerShell do Windows dá
   `fatal: not a git repository` — foi o erro que mais custou tempo nesta fase.
   Toda janela nova de terminal começa fora do servidor; o `ssh` precisa ser refeito.
