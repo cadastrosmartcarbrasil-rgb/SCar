@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { somarDiagnosticoPlanos, somarBlocosCarga, LOTE_CARGA } from '@/lib/mutual';
+import { criarFila } from '@/lib/fila';
 import type { EntidadeMutual, SondagemCaminho, DiagnosticoPlanos } from '@/lib/mutual';
 import type {
   MutualDiagnostico, MutualPorStatus, MutualFilial,
@@ -29,17 +30,27 @@ import type {
 // Entao diagnostico NAO carrega sozinho: carrega quando a secao e ABERTA. As
 // leituras que sao TRABALHO (o que esta capturado, as equipes, as filiais, o
 // cutover) seguem eager, porque sem elas a tela nao serve para nada.
+//
+// 🔴 E MESMO ASSIM ESTOURAVA (10/10/2026): com uma unidade escolhida, as
+// leituras eager da carga (capturas, equipes, cutover, tipos, planos,
+// categorias, previa, linhas, vendedores) ainda saiam JUNTAS, e os logs
+// mostravam timeout em rajada. Por isso TODA leitura deste arquivo passa por
+// `naFila`: uma por vez, na ordem em que a tela pede (de cima para baixo).
+// A tela enche mais devagar e para de falhar. Leitura de unidade que ficou
+// para tras (trocou o seletor) e descartada antes de chegar ao banco.
+// As MUTACOES nao entram: a carga em blocos ja e sequencial por natureza.
+const naFila = criarFila(1);
 
 /** O que ja esta na area de captura. */
 export function useMutualCapturas() {
   const supabase = createClient();
   return useQuery<MutualResumoCaptura[]>({
     queryKey: ['mutual', 'capturas'],
-    queryFn: async () => {
+    queryFn: ({ signal }) => naFila(async () => {
       const { data, error } = await supabase.rpc('mutual_resumo_capturas', {});
       if (error) throw error;
       return data ?? [];
-    },
+    }, signal),
   });
 }
 
@@ -48,11 +59,11 @@ export function useMutualDiagnostico(ativo = true) {
   const supabase = createClient();
   return useQuery<MutualDiagnostico[]>({
     queryKey: ['mutual', 'diagnostico'],
-    queryFn: async () => {
+    queryFn: ({ signal }) => naFila(async () => {
       const { data, error } = await supabase.rpc('mutual_diagnostico', {});
       if (error) throw error;
       return data ?? [];
-    },
+    }, signal),
     enabled: ativo,
   });
 }
@@ -61,11 +72,11 @@ export function useMutualPorStatus(ativo = true) {
   const supabase = createClient();
   return useQuery<MutualPorStatus[]>({
     queryKey: ['mutual', 'status'],
-    queryFn: async () => {
+    queryFn: ({ signal }) => naFila(async () => {
       const { data, error } = await supabase.rpc('mutual_por_status', {});
       if (error) throw error;
       return data ?? [];
-    },
+    }, signal),
     enabled: ativo,
   });
 }
@@ -75,11 +86,11 @@ export function useMutualFiliais(ativo = true) {
   const supabase = createClient();
   return useQuery<MutualFilial[]>({
     queryKey: ['mutual', 'filiais'],
-    queryFn: async () => {
+    queryFn: ({ signal }) => naFila(async () => {
       const { data, error } = await supabase.rpc('mutual_filiais', {});
       if (error) throw error;
       return data ?? [];
-    },
+    }, signal),
     enabled: ativo,
   });
 }
@@ -95,7 +106,7 @@ export function useMutualQuarentena(
   const supabase = createClient();
   return useQuery<MutualQuarentena[]>({
     queryKey: ['mutual', 'quarentena', limite, somenteFaturaveis, incluirPlacaPendente],
-    queryFn: async () => {
+    queryFn: ({ signal }) => naFila(async () => {
       const { data, error } = await supabase.rpc('mutual_quarentena', {
         p_limite: limite,
         p_somente_faturaveis: somenteFaturaveis,
@@ -103,7 +114,7 @@ export function useMutualQuarentena(
       });
       if (error) throw error;
       return data ?? [];
-    },
+    }, signal),
     enabled: ativo,
   });
 }
@@ -117,11 +128,11 @@ export function useMutualStatusNaoMapeados(ativo = true) {
   const supabase = createClient();
   return useQuery<MutualStatusNaoMapeado[]>({
     queryKey: ['mutual', 'status-nao-mapeados'],
-    queryFn: async () => {
+    queryFn: ({ signal }) => naFila(async () => {
       const { data, error } = await supabase.rpc('mutual_status_nao_mapeados', {});
       if (error) throw error;
       return data ?? [];
-    },
+    }, signal),
     enabled: ativo,
   });
 }
@@ -131,11 +142,11 @@ export function useMutualStatusCruzado(ativo = true) {
   const supabase = createClient();
   return useQuery<MutualStatusCruzado[]>({
     queryKey: ['mutual', 'status-cruzado'],
-    queryFn: async () => {
+    queryFn: ({ signal }) => naFila(async () => {
       const { data, error } = await supabase.rpc('mutual_status_cruzado', {});
       if (error) throw error;
       return data ?? [];
-    },
+    }, signal),
     enabled: ativo,
   });
 }
@@ -198,11 +209,11 @@ export function useMutualPeriodicidade(ativo = true) {
   const supabase = createClient();
   return useQuery<MutualPeriodicidade[]>({
     queryKey: ['mutual', 'periodicidade'],
-    queryFn: async () => {
+    queryFn: ({ signal }) => naFila(async () => {
       const { data, error } = await supabase.rpc('mutual_periodicidade', {});
       if (error) throw error;
       return data ?? [];
-    },
+    }, signal),
     enabled: ativo,
   });
 }
@@ -219,13 +230,13 @@ export function useMutualCampos(entidade: EntidadeMutual, caminho?: string, ativ
   const supabase = createClient();
   return useQuery<MutualCampo[]>({
     queryKey: ['mutual', 'campos', entidade, caminho ?? null],
-    queryFn: async () => {
+    queryFn: ({ signal }) => naFila(async () => {
       const { data, error } = await supabase.rpc('mutual_campos', {
         p_entidade: entidade, p_caminho: caminho ?? null,
       });
       if (error) throw error;
       return data ?? [];
-    },
+    }, signal),
     enabled: ativo,
   });
 }
@@ -235,13 +246,13 @@ export function useMutualCoberturaConsultor(somenteFaturaveis = true, ativo = tr
   const supabase = createClient();
   return useQuery<MutualPassoFunil[]>({
     queryKey: ['mutual', 'cobertura-consultor', somenteFaturaveis],
-    queryFn: async () => {
+    queryFn: ({ signal }) => naFila(async () => {
       const { data, error } = await supabase.rpc('mutual_cobertura_consultor', {
         p_somente_faturaveis: somenteFaturaveis,
       });
       if (error) throw error;
       return data ?? [];
-    },
+    }, signal),
     enabled: ativo,
   });
 }
@@ -251,13 +262,13 @@ export function useMutualConsultoresPendentes(somenteFaturaveis = true, limite =
   const supabase = createClient();
   return useQuery<MutualConsultorPendente[]>({
     queryKey: ['mutual', 'consultores-pendentes', somenteFaturaveis, limite],
-    queryFn: async () => {
+    queryFn: ({ signal }) => naFila(async () => {
       const { data, error } = await supabase.rpc('mutual_consultores_sem_vendedor', {
         p_limite: limite, p_somente_faturaveis: somenteFaturaveis,
       });
       if (error) throw error;
       return data ?? [];
-    },
+    }, signal),
   });
 }
 
@@ -385,13 +396,13 @@ export function useMutualCoberturaUnidade(somenteFaturaveis = true, ativo = true
   const supabase = createClient();
   return useQuery<MutualPassoFunil[]>({
     queryKey: ['mutual', 'cobertura-unidade', somenteFaturaveis],
-    queryFn: async () => {
+    queryFn: ({ signal }) => naFila(async () => {
       const { data, error } = await supabase.rpc('mutual_cobertura_unidade', {
         p_somente_faturaveis: somenteFaturaveis,
       });
       if (error) throw error;
       return data ?? [];
-    },
+    }, signal),
     enabled: ativo,
   });
 }
@@ -429,11 +440,11 @@ export function useCobrancaExternaResumo() {
   const supabase = createClient();
   return useQuery<CobrancaExternaResumo[]>({
     queryKey: ['mutual', 'cobranca-externa'],
-    queryFn: async () => {
+    queryFn: ({ signal }) => naFila(async () => {
       const { data, error } = await supabase.rpc('cobranca_externa_resumo', {});
       if (error) throw error;
       return data ?? [];
-    },
+    }, signal),
   });
 }
 
@@ -468,11 +479,11 @@ export function useMutualEquipes() {
   const supabase = createClient();
   return useQuery<MutualEquipeVendas[]>({
     queryKey: ['mutual', 'equipes-vendas'],
-    queryFn: async () => {
+    queryFn: ({ signal }) => naFila(async () => {
       const { data, error } = await supabase.rpc('mutual_equipes_vendas', {});
       if (error) throw error;
       return data ?? [];
-    },
+    }, signal),
   });
 }
 
@@ -512,11 +523,11 @@ export function useMutualTiposVeiculo() {
   const supabase = createClient();
   return useQuery<MutualTipoVeiculoExterno[]>({
     queryKey: ['mutual', 'tipos-veiculo-externos'],
-    queryFn: async () => {
+    queryFn: ({ signal }) => naFila(async () => {
       const { data, error } = await supabase.rpc('mutual_tipos_veiculo_externos', {});
       if (error) throw error;
       return data ?? [];
-    },
+    }, signal),
   });
 }
 
@@ -531,13 +542,13 @@ export function useMutualPlanos(unidade: string | null) {
   const supabase = createClient();
   return useQuery<MutualPlanoExterno[]>({
     queryKey: ['mutual', 'planos-externos', unidade],
-    queryFn: async () => {
+    queryFn: ({ signal }) => naFila(async () => {
       const { data, error } = await supabase.rpc('mutual_planos_externos', {
         p_regional_id: unidade,
       });
       if (error) throw error;
       return data ?? [];
-    },
+    }, signal),
   });
 }
 
@@ -549,13 +560,13 @@ export function useMutualCategorias(unidade: string | null) {
   const supabase = createClient();
   return useQuery<MutualCategoriaVeiculo[]>({
     queryKey: ['mutual', 'categorias-veiculo', unidade],
-    queryFn: async () => {
+    queryFn: ({ signal }) => naFila(async () => {
       const { data, error } = await supabase.rpc('mutual_categorias_veiculo', {
         p_regional_id: unidade,
       });
       if (error) throw error;
       return data ?? [];
-    },
+    }, signal),
   });
 }
 
@@ -594,13 +605,13 @@ export function useCargaPrevia(regionalId: string | null, incluirInativos = fals
   return useQuery<MutualDiagnostico[]>({
     queryKey: ['mutual', 'carga', 'previa', regionalId, incluirInativos],
     enabled: !!regionalId,
-    queryFn: async () => {
+    queryFn: ({ signal }) => naFila(async () => {
       const { data, error } = await supabase.rpc('mutual_carga_previa', {
         p_regional_id: regionalId as string, p_incluir_inativos: incluirInativos,
       });
       if (error) throw error;
       return data ?? [];
-    },
+    }, signal),
   });
 }
 
@@ -615,7 +626,7 @@ export function useCargaLinhas(
   return useQuery<MutualCargaLinha[]>({
     queryKey: ['mutual', 'carga', 'linhas', regionalId, incluirInativos, somenteProblemas, limite],
     enabled: !!regionalId,
-    queryFn: async () => {
+    queryFn: ({ signal }) => naFila(async () => {
       const { data, error } = await supabase.rpc('mutual_carga_linhas', {
         p_regional_id: regionalId as string,
         p_incluir_inativos: incluirInativos,
@@ -624,7 +635,7 @@ export function useCargaLinhas(
       });
       if (error) throw error;
       return data ?? [];
-    },
+    }, signal),
   });
 }
 
@@ -766,13 +777,13 @@ export function useMutualVendedores(regionalId: string | null) {
   return useQuery<MutualVendedorResumo[]>({
     queryKey: ['mutual', 'vendedores', regionalId],
     enabled: !!regionalId,
-    queryFn: async () => {
+    queryFn: ({ signal }) => naFila(async () => {
       const { data, error } = await supabase.rpc('mutual_vendedores_resumo', {
         p_regional_id: regionalId as string,
       });
       if (error) throw error;
       return data ?? [];
-    },
+    }, signal),
   });
 }
 

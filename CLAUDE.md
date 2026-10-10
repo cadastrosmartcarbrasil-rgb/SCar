@@ -616,7 +616,7 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 ### Estado de validação (fim da fase)
 - **Migrations `0001`..`0095`** + `schema.sql` consolidado aplicam limpos no harness local.
 - **72 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 783 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Vitest: 796 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Os portais e páginas públicas
@@ -2791,6 +2791,14 @@ listadas as filiais" de semanas antes). O banco estava são o tempo todo.
   `instanceof Error` faz tudo virar "[object Object]" (o teste pegou).
 - **As seções de diagnóstico nascem FECHADAS** (`<Secao aberta onAlternar>`) e só consultam ao
   abrir — os hooks ganharam `ativo` → `enabled`.
+- **✅ A FILA (10/10/2026): toda leitura de `use-mutual.ts` passa por `naFila`** (`criarFila(1)`,
+  `src/lib/fila.ts`, testada). Mesmo com as seções de diagnóstico fechadas, escolher uma unidade
+  disparava ~9 leituras eager JUNTAS (capturas, equipes, cutover, tipos, planos, categorias,
+  prévia, linhas, vendedores) — sozinhas cada uma cabe nos 8 s, juntas estouravam. Agora vão
+  **uma por vez, na ordem em que a tela pede**: enche mais devagar e não falha. A leitura de
+  unidade que ficou para trás (trocou o seletor) é **descartada antes de chegar ao banco** (o
+  `signal` do TanStack). Mutações não entram na fila. **Hook novo de leitura neste módulo:
+  `queryFn: ({ signal }) => naFila(async () => {...}, signal)`** — sem isso ele volta a disputar.
 - **`alter function … set statement_timeout` NÃO resolve:** o timer é armado no início do
   statement; mudá-lo dentro da função não o rearma (medido). O alívio real seria o de-para como
   TABELA/join (**75 ms × 1.235 ms** de `mutual_status_veiculo`), ~13 funções — decisão à parte.
