@@ -211,6 +211,9 @@ cancelamentos saíram de 8 em 8 s). Como a rotina da convivência é recapturar 
 repetiria a cada rodada. **Regra que fica:** upsert de captura re-executável escreve só o que mudou —
 regravar linha idêntica é inchar a tabela que a carga inteira lê.
 **Próxima migration livre: `0097`.**
+**🔴 DECISÃO DE 11/10/2026: depois de dezembro o Mutual é DESLIGADO de vez** — a integração é
+migração com fim marcado, não conexão permanente. Ver "DECISÃO DO USUÁRIO (11/10/2026)" na seção
+do Mutual: o que isso muda no desenho, o checklist pós-corte e o porquê do timeout da prévia.
 **Próxima migration livre era `0088`.** As **`0001`..`0086`** estão aplicadas — a **`0086` foi rodada e
 CONFERIDA em 05/10/2026**: o comentário de `mutual_planos_externos` diz 18/42 e 29/91 (sem "17" nem
 "26"), a função segue `security definer` com `search_path=public`, fechada ao `anon`; 0 `security
@@ -871,7 +874,30 @@ correspondência que `docs/modulos/rastreadores.md` já mapeou para o TrackerSto
 4. **Convivência: SIM, por um tempo — e por enquanto QUEM MANDA É O MUTUAL.**
 5. **Volume e janela:** a definir; é uma das saídas da fase de diagnóstico.
 
+### ✅ DECISÃO DO USUÁRIO (11/10/2026): é MIGRAÇÃO, com fim marcado — DEPOIS DE DEZEMBRO O MUTUAL É DESLIGADO
+*"Depois de dezembro, o Mutual é desligado de vez. Vamos ficar só com o SCar."* A API do Mutual
+serve **só para tirar a base de lá**; não existe conexão permanente a construir.
+- **`mutual_captura` é ÁREA DE PASSAGEM, não estrutura do sistema.** A convivência (outubro: piloto
+  da MATRIZ; dezembro: o resto) é o único motivo de recapturar e re-executar a carga.
+- **Consequência para decisões de desenho:** nada de estrutura PERMANENTE para resolver problema da
+  captura (foi descartada, por isso, uma tabela-resumo mantida a cada captura proposta para o
+  timeout da prévia). Solução da migração tem de ser descartável junto com ela.
+- **Depois do corte (checklist):** apagar a área de captura (`mutual_captura`, ~1,1 GB — é o que
+  pressiona a memória do banco, ver abaixo), tirar `MUTUAL_API_TOKEN`/`MUTUAL_API_BASE` do VPS e do
+  `docker-compose.yml`, desfazer qualquer afrouxamento temporário de timeout, e decidir o destino de
+  `integracao_vinculos` (guarda o id do Mutual de cada associado/veículo — vale manter como
+  rastro histórico). O boleto passa a sair do SCar: `definir_cobranca_externa_regional` por unidade.
+- **O timeout da prévia da carga (medido 11/10/2026):** o banco é pequeno (`shared_buffers` 256 MB,
+  ~1 GB de RAM) e `mutual_captura` tem 794 MB; 16% das leituras dela já vão ao disco. A prévia da
+  MATRIZ leva **2,8 s com cache quente** e **passa de 8 s frio** — por isso a tela falha "às
+  vezes". Não é bug de SQL nem disputa (a fila já serializa). Saídas aceitas por serem
+  temporárias: subir o teto do `authenticated` só durante a migração, ou o agente rodar a
+  prévia/carga direto no banco (sem o teto de 8 s), com autorização — como a carga da MATRIZ em 05/10.
+
 ### O que a resposta 4 muda (a conclusão da análise)
+> ⚠️ Lido à luz da decisão de 11/10/2026 acima: a "replicação" é só o meio da migração, e termina
+> em dezembro.
+
 **Não é migração, é replicação unidirecional Mutual → SCar com cutover gradual por unidade.**
 Consequências que o levantamento original não tinha:
 - **Não existe chave externa em NENHUMA tabela do SCar** (tudo é chave natural: `cpf_cnpj`,
