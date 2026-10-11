@@ -200,7 +200,17 @@ portal ("Protegido desde"). Junto: **`formatDate` mostrava o DIA ANTERIOR para c
 (`new Date('2025-11-28')` é meia-noite UTC = 27/11 no Brasil) — afetava também o "Associado
 desde" do portal; corrigido na raiz (`src/lib/utils.ts`, teste em `utils.test.ts`). Helper
 `primeiraAtivacao` em `src/lib/sac.ts`.
-**Próxima migration livre: `0096`.**
+**✅ A `0096_mutual_captura_sem_regravar` foi APLICADA PELO AGENTE (com autorização do usuário,
+`execute_sql`) e CONFERIDA em 11/10/2026** — a primeira pela regra nova. Uma versão de
+`mutual_registrar_captura` com a regra de só regravar o que mudou, `mutual_resumo_capturas` novo,
+`mutual_captura` com autovacuum em 2%, 0 secdef sem `search_path`, 0 RPCs nossas ao `anon`; e o
+autovacuum começou sozinho logo depois (havia 39.709 versões mortas). **O porquê:** a recaptura de
+CONTRACT_OBJECT de 11/10 (17.777 linhas) regravou TUDO, e a prévia, as linhas da carga e o funil do
+consultor passaram a estourar os 8 s **mesmo uma por vez** (a fila da tela já estava no ar: os
+cancelamentos saíram de 8 em 8 s). Como a rotina da convivência é recapturar toda semana, isso se
+repetiria a cada rodada. **Regra que fica:** upsert de captura re-executável escreve só o que mudou —
+regravar linha idêntica é inchar a tabela que a carga inteira lê.
+**Próxima migration livre: `0097`.**
 **Próxima migration livre era `0088`.** As **`0001`..`0086`** estão aplicadas — a **`0086` foi rodada e
 CONFERIDA em 05/10/2026**: o comentário de `mutual_planos_externos` diz 18/42 e 29/91 (sem "17" nem
 "26"), a função segue `security definer` com `search_path=public`, fechada ao `anon`; 0 `security
@@ -614,8 +624,8 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0095`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **72 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Migrations `0001`..`0096`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **73 suites** em `supabase/tests/*.test.sql` — todas passando.
 - **Vitest: 796 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
