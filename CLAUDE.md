@@ -214,6 +214,8 @@ regravar linha idêntica é inchar a tabela que a carga inteira lê.
 **🔴 DECISÃO DE 11/10/2026: depois de dezembro o Mutual é DESLIGADO de vez** — a integração é
 migração com fim marcado, não conexão permanente. Ver "DECISÃO DO USUÁRIO (11/10/2026)" na seção
 do Mutual: o que isso muda no desenho, o checklist pós-corte e o porquê do timeout da prévia.
+**⏱️ Teto do `authenticated` está em 20 s desde 11/10/2026 (temporário, migração).** Voltar a 8 s
+no corte: `alter role authenticated set statement_timeout = '8s'; notify pgrst, 'reload config';`
 **Próxima migration livre era `0088`.** As **`0001`..`0086`** estão aplicadas — a **`0086` foi rodada e
 CONFERIDA em 05/10/2026**: o comentário de `mutual_planos_externos` diz 18/42 e 29/91 (sem "17" nem
 "26"), a função segue `security definer` com `search_path=public`, fechada ao `anon`; 0 `security
@@ -884,15 +886,20 @@ serve **só para tirar a base de lá**; não existe conexão permanente a constr
   timeout da prévia). Solução da migração tem de ser descartável junto com ela.
 - **Depois do corte (checklist):** apagar a área de captura (`mutual_captura`, ~1,1 GB — é o que
   pressiona a memória do banco, ver abaixo), tirar `MUTUAL_API_TOKEN`/`MUTUAL_API_BASE` do VPS e do
-  `docker-compose.yml`, desfazer qualquer afrouxamento temporário de timeout, e decidir o destino de
+  `docker-compose.yml`, **voltar o `statement_timeout` do `authenticated` de 20s para 8s** (subido
+  em 11/10, ver abaixo), e decidir o destino de
   `integracao_vinculos` (guarda o id do Mutual de cada associado/veículo — vale manter como
   rastro histórico). O boleto passa a sair do SCar: `definir_cobranca_externa_regional` por unidade.
 - **O timeout da prévia da carga (medido 11/10/2026):** o banco é pequeno (`shared_buffers` 256 MB,
   ~1 GB de RAM) e `mutual_captura` tem 794 MB; 16% das leituras dela já vão ao disco. A prévia da
   MATRIZ leva **2,8 s com cache quente** e **passa de 8 s frio** — por isso a tela falha "às
-  vezes". Não é bug de SQL nem disputa (a fila já serializa). Saídas aceitas por serem
-  temporárias: subir o teto do `authenticated` só durante a migração, ou o agente rodar a
-  prévia/carga direto no banco (sem o teto de 8 s), com autorização — como a carga da MATRIZ em 05/10.
+  vezes". Não é bug de SQL nem disputa (a fila já serializa).
+- **✅ TETO TEMPORÁRIO APLICADO em 11/10/2026 (autorizado pelo usuário):**
+  `alter role authenticated set statement_timeout = '20s'` + `notify pgrst, 'reload config'`
+  (conferido: `authenticated` = 20s; `authenticator` segue 8s, e `anon` 3s). Vale para o sistema
+  inteiro enquanto durar — consulta lenta em OUTRA tela deixa de falhar em 8 s e passa a demorar
+  até 20 s. **🔴 DESFAZER NO CORTE DE DEZEMBRO:** `alter role authenticated set statement_timeout
+  = '8s'; notify pgrst, 'reload config';` — item do checklist acima.
 
 ### O que a resposta 4 muda (a conclusão da análise)
 > ⚠️ Lido à luz da decisão de 11/10/2026 acima: a "replicação" é só o meio da migração, e termina
