@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import {
   Database, PlugZap, DownloadCloud, ShieldAlert, Building2, ListChecks, RefreshCw,
-  Search, Users, Upload, ChevronDown, ChevronRight,
+  Search, Users, Upload, ChevronDown, ChevronRight, Receipt,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,6 +25,7 @@ import {
   caminhoQueRespondeu, ENTIDADES_MUTUAL, type SondagemCaminho, type DiagnosticoPlanos,
 } from '@/lib/mutual';
 import { CargaMutual } from '@/components/integracao/carga-mutual';
+import { HistoricoBoletos } from '@/components/integracao/historico-boletos';
 import { ErroLeitura } from '@/components/integracao/erro-leitura';
 import type { MutualDiagnostico, SeveridadeDiagnostico } from '@/lib/database.types';
 
@@ -1149,6 +1150,17 @@ export default function IntegracaoMutualPage() {
         custo="O de-para de tipo e de plano, a previa e a fila de trabalho. Abrir e deliberado: e aqui que a carteira entra."
       >
         <CargaMutual />
+      </Secao>
+
+      {/* HISTORICO DE BOLETOS (0097) */}
+      <Secao
+        titulo="Historico de boletos — a qualidade do pagador"
+        icone={Receipt}
+        aberta={ab('historico')}
+        onAlternar={() => alternar('historico')}
+        custo="Os boletos de mensalidade do Mutual dos associados ja carregados, para o Painel de Inadimplencia."
+      >
+        <HistoricoBoletos />
       </Secao>
 
       {/* O INTERRUPTOR DA COBRANCA (0082) */}

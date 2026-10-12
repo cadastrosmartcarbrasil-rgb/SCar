@@ -16,7 +16,7 @@ export type PapelUsuario =
   // APOSENTADO na 0077 e o banco o recusa por CHECK — fora daqui de proposito,
   // para o TS recusar junto.
   | 'admin' | 'gestor_regional' | 'consultor_vendas' | 'financeiro' | 'sinistro' | 'auditoria'
-  | 'assistencia_24h';
+  | 'assistencia_24h' | 'supervisor' | 'cobranca';
 export type TipoPessoa = 'PF' | 'PJ';
 export type StatusCliente =
   | 'ativo' | 'inadimplente' | 'cancelado' | 'inativo' | 'suspenso' | 'excluido';
@@ -1617,6 +1617,120 @@ export type AssistPainelSituacao = { situacao: StatusVeiculo; quantidade: number
 // Painel executivo das Regionais (0078) — o controle da matriz sobre as
 // unidades. Percentuais voltam como FRACAO (0..1), como no resto do sistema.
 // ---------------------------------------------------------------------------
+// --- Cobranca: painel, perfis e historico (0097) ---------------------------
+export type CobrancaIndicadores = {
+  recorte: 'atual' | 'anterior_1' | 'anterior_2' | 'anterior_3' | 'ano_anterior';
+  inicio: string;
+  fim: string;
+  boletos: number;
+  valor_emitido: number;
+  boletos_venceram: number;
+  valor_venceram: number;
+  boletos_aberto_vencido: number;
+  valor_aberto_vencido: number;
+  valor_pago_no_prazo: number;
+  valor_pago_em_atraso: number;
+  boletos_pago_em_atraso: number;
+  valor_a_vencer: number;
+  valor_vence_hoje: number;
+  clientes_venceram: number;
+  clientes_inadimplentes: number;
+  primeiros_venceram: number;
+  primeiros_nao_pagos: number;
+  primeiros_pagos_atraso: number;
+  reincidentes: number;
+  regularizados: number;
+  clientes_serasa: number;
+};
+export type CobrancaCarteira = {
+  clientes_ativos: number;
+  clientes_inadimplentes: number;
+  boletos_vencidos: number;
+  valor_vencido: number;
+  ultima_captura_mutual: string | null;
+  ultima_importacao: string | null;
+};
+export type CobrancaCalendarioLinha = {
+  ciclo: number;
+  data_ciclo: string;
+  boletos: number;
+  clientes: number;
+  valor_emitido: number;
+  valor_pago_no_prazo: number;
+  valor_pago_em_atraso: number;
+  valor_a_vencer: number;
+  valor_vence_hoje: number;
+  valor_aberto_vencido: number;
+  boletos_aberto_vencido: number;
+  valor_venceram: number;
+};
+export type CobrancaPorRegional = {
+  regional_id: string | null;
+  regional: string;
+  boletos: number;
+  valor_emitido: number;
+  valor_venceram: number;
+  valor_aberto_vencido: number;
+  valor_pago_em_atraso: number;
+  clientes_venceram: number;
+  clientes_inadimplentes: number;
+};
+export type CobrancaSerieMes = {
+  mes: string;
+  valor_emitido: number;
+  valor_venceram: number;
+  valor_aberto_vencido: number;
+  valor_pago_no_prazo: number;
+  valor_pago_em_atraso: number;
+};
+export type CobrancaBoletoLinha = {
+  origem: 'SCAR' | 'MUTUAL';
+  boleto_id: string;
+  cliente_id: string;
+  associado: string;
+  cpf_cnpj: string;
+  placa: string | null;
+  regional: string;
+  competencia: string | null;
+  vencimento: string;
+  valor: number;
+  valor_pago: number | null;
+  data_pagamento: string | null;
+  situacao: string;
+  ciclo: number;
+  dias_atraso: number;
+  em_serasa: boolean;
+  total_registros: number;
+  total_valor: number;
+};
+export type CobrancaParametros = {
+  meta: number;
+  limite: number;
+  feriados: { data: string; descricao: string }[];
+};
+export type CobrancaEscopo = { global: boolean; regionais: string[] };
+export type CobrancaHistoricoResumo = {
+  boletos: number;
+  associados: number;
+  pagos: number;
+  abertos: number;
+  cancelados: number;
+  primeiro_vencimento: string | null;
+  ultimo_vencimento: string | null;
+  ultima_importacao: string | null;
+  boletos_capturados: number;
+  ultima_captura: string | null;
+};
+export type CobrancaImportacaoBloco = {
+  lidos: number;
+  mensalidades: number;
+  sem_associado: number;
+  status_desconhecido: number;
+  gravados: number;
+  proximo_cursor: string | null;
+  fim: boolean;
+};
+
 export type RegionaisPainelResumo = {
   veiculos_ativos: number;
   veiculos_ativos_antes: number;
@@ -3368,6 +3482,46 @@ export type Database = {
           p_conta_ate?: string | null;
         };
         Returns: RegionaisPainelLinha[];
+      };
+      cobranca_escopo: { Args: Record<string, never>; Returns: CobrancaEscopo[] };
+      cobranca_parametros: { Args: Record<string, never>; Returns: CobrancaParametros[] };
+      salvar_parametros_cobranca: { Args: { p_meta: number; p_limite: number }; Returns: undefined };
+      salvar_feriado_cobranca: { Args: { p_data: string; p_descricao: string }; Returns: undefined };
+      remover_feriado_cobranca: { Args: { p_data: string }; Returns: undefined };
+      definir_regionais_supervisor: { Args: { p_usuario_id: string; p_regionais: string[] }; Returns: number };
+      regionais_do_supervisor: { Args: { p_usuario_id: string }; Returns: string[] };
+      cobranca_indicadores: {
+        Args: { p_inicio: string; p_fim: string; p_regional_id?: string | null };
+        Returns: CobrancaIndicadores[];
+      };
+      cobranca_carteira: { Args: { p_regional_id?: string | null }; Returns: CobrancaCarteira[] };
+      cobranca_calendario: {
+        Args: { p_mes: string; p_regional_id?: string | null };
+        Returns: CobrancaCalendarioLinha[];
+      };
+      cobranca_por_regional: { Args: { p_inicio: string; p_fim: string }; Returns: CobrancaPorRegional[] };
+      cobranca_serie_mensal: {
+        Args: { p_meses?: number; p_regional_id?: string | null };
+        Returns: CobrancaSerieMes[];
+      };
+      cobranca_boletos_lista: {
+        Args: {
+          p_inicio?: string | null;
+          p_fim?: string | null;
+          p_regional_id?: string | null;
+          p_situacoes?: string[] | null;
+          p_ciclo?: number | null;
+          p_somente_primeiro?: boolean;
+          p_pago_inicio?: string | null;
+          p_pago_fim?: string | null;
+          p_limite?: number;
+        };
+        Returns: CobrancaBoletoLinha[];
+      };
+      cobranca_historico_resumo: { Args: Record<string, never>; Returns: CobrancaHistoricoResumo[] };
+      cobranca_importar_historico_mutual: {
+        Args: { p_cursor?: string | null; p_lote?: number; p_confirmar?: boolean };
+        Returns: CobrancaImportacaoBloco[];
       };
       intervalo_contas_painel: {
         Args: Record<string, never>;

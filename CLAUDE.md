@@ -223,7 +223,19 @@ plano** — foi carregada antes do de-para novo; re-executar a carga dela preenc
 captura) e recarregar; INVOICE de novo antes do carnê de 2027. **Bancos (decisão do usuário, não
 bloqueia a carga):** Sicredi para boleto/PIX (~98% da carteira) e Asaas para cartão; API configurada
 nos próximos dias (`integracoes_bancarias` ainda vazia).
-**Próxima migration livre: `0097`.**
+**Próxima migration livre: `0098`.**
+**🟡 A `0097_cobranca_painel` é NOVA e ainda NÃO foi aplicada** — Fase 1 do módulo de
+**Inadimplência e Cobranças** (documento 2 do Rodrigo Medeiros, 30/09/2026; decisões do usuário
+em 12/10/2026: caminho B, perfis Supervisor e Cobrança, começar pela Fase 1). Cria os papéis
+`supervisor`/`cobranca` + `supervisor_regionais`, `boletos_historico` (o histórico de boletos
+do Mutual — tabela PRÓPRIA, nunca `titulos_financeiros`: lá contaria no DRE e travaria a 24h),
+`cobranca_feriados`, meta/limite em `empresa`, a fonte única `cobranca_boletos_base` e as leituras
+do painel; e **corrige `resumo_cobrancas`** (dividia o vencido pelo EMITIDO, incluindo o a vencer).
+Nada de preço, fatura ou título muda. **Depois de aplicar:** deploy do contêiner →
+`/integracao/mutual` → puxar **INVOICE** (captura atual é de 10/09) → seção *Histórico de
+boletos* → importar. Medido em 12/10 com a captura velha: **77.884 boletos de mensalidade de
+2.524 associados carregados** entram. Conferir: `select count(*) from pg_proc where proname like
+'cobranca_%'` e o secdef sem `search_path` = 0. Ver a seção "INADIMPLÊNCIA E COBRANÇAS (0097)".
 **🔴 DECISÃO DE 11/10/2026: depois de dezembro o Mutual é DESLIGADO de vez** — a integração é
 migração com fim marcado, não conexão permanente. Ver "DECISÃO DO USUÁRIO (11/10/2026)" na seção
 do Mutual: o que isso muda no desenho, o checklist pós-corte e o porquê do timeout da prévia.
@@ -653,8 +665,8 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0096`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **73 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Migrations `0001`..`0097`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **74 suites** em `supabase/tests/*.test.sql` — todas passando.
 - **Vitest: 796 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
@@ -2028,6 +2040,17 @@ MANTIDO/SEM_CONSULTOR/CONSULTOR_NAO_CAPTURADO/EMAIL_AMBIGUO/CONSULTOR_SEM_VENDED
 vendedor e nao liga vendedor de outra unidade; `fn_calcular_comissao` recriada: veiculo com vinculo
 CONTRACT_OBJECT do Mutual nunca e ADESAO. Espelho puro em `src/lib/mutual.ts` (`totaisVendedores`,
 `vendedorPendente`, `ROTULO_MOTIVO_VENDEDOR`))
+· `0096_mutual_captura_sem_regravar` (upsert da captura so regrava o que mudou; autovacuum de
+`mutual_captura` em 2%)
+· `0097_cobranca_painel` (INADIMPLENCIA E COBRANCAS, Fase 1: papeis `supervisor`/`cobranca` +
+`supervisor_regionais` + `cobranca_escopo()` (o escopo vale DENTRO das RPCs de cobranca; `pode_regional`
+NAO foi tocado); `boletos_historico` + `cobranca_importar_historico_mutual` (em blocos por cursor,
+re-executavel, so regrava o que mudou; liga pelo CONTRATO -> PERSON); `mutual_dia` (data so-dia sem
+deslocar fuso); `dia_util_seguinte` + `cobranca_feriados`; `ciclo_vencimento` (5/10/15/20/25/30);
+`cobranca_boletos_base` (SCar + Mutual ate a data de corte do associado, com a situacao do documento);
+`cobranca_recortes`/`_indicadores`/`_carteira`/`_calendario`/`_por_regional`/`_serie_mensal`/
+`_boletos_lista`; meta/limite em `empresa`; `resumo_cobrancas` corrigida. Percentuais no TS:
+`src/lib/cobranca-painel.ts`)
 · `0082_carga_mutual_preparacao` (as TRES pecas que faltavam para a carga do Mutual poder rodar,
 e nenhuma delas carrega nada — ha teste provando que a operacao segue intacta: (A) **a UNIDADE sai
 do ASSOCIADO** — a corrente do consultor (0073/0074) foi medida com a base completa e esta VAZIA
@@ -2096,8 +2119,9 @@ quanto passa a custar (0071) —, opcionais a parte, alertas e **Rastreamento**:
 rastreadora) · Eventos/Sinistros
 (protocolo, reparo próprio/terceiro, financeiro do evento) · Precificação (simulador + editor de
 tabela FIPE com reajuste % + importação por planilha, uma por tipo de veículo) · Empresa (logo/diretoria/mandatos/documentos) · **Fornecedores** (um cadastro só: peças/serviços,
-prestadores da 24h e rastreadoras, com auto CNPJ/CEP) · **Cobrança** (`/cobrancas`: dashboard + faturas por competência + boletagem em lote +
-remessas bancárias) · Financeiro (contas a pagar/receber + baixas + DRE)
+prestadores da 24h e rastreadoras, com auto CNPJ/CEP) · **Cobrança** (grupo no menu, 0097: **Painel de Inadimplência** `/cobrancas/painel`, **Calendário
+de Vencimentos** `/cobrancas/calendario` e **Boletos e Remessas** `/cobrancas/boletos` — o antigo
+dashboard + faturas por competência + boletagem em lote + remessas bancárias) · Financeiro (contas a pagar/receber + baixas + DRE)
 · Configurações (regionais, usuários,
 vendedores, marcas/modelos, **cores do veículo**, tipos de veículo, cotas de participação (V5..V15), tipos de evento,
 produtos, planos/combos (Prata/Ouro/Diamante), **comunicados** (mural interno), contas bancárias,
@@ -2109,6 +2133,28 @@ unidade** — 0084, com prévia, fila de trabalho por motivo e desfazer)
 · **Rastreadores** (`/rastreadores`: parque por IMEI, estoque por unidade/plataforma, instalação no
 veículo, manutenção, painel de divergências com o cadastro da frota e relatórios de custo,
 recuperação e giro).
+
+## INADIMPLÊNCIA E COBRANÇAS (0097) — Fase 1
+> Especificação, fórmulas, regras bancárias, permissões e fases em
+> **`docs/modulos/cobranca-inadimplencia.md`** — leia antes de mexer.
+
+- **A fonte é UMA:** `cobranca_boletos_base()` — títulos de mensalidade do SCar (ligados a fatura)
+  + `boletos_historico` (Mutual) **só antes da data de corte** do associado (o 1º boleto do SCar
+  dele). Sem o corte, a mesma competência contaria duas vezes depois do cutover.
+- **REGRA ESSENCIAL:** boleto que não venceu não entra em taxa nenhuma. O denominador é sempre o que
+  JÁ VENCEU (vencimento efetivo = próximo dia útil; feriados em `cobranca_feriados`).
+- **Percentual mora no TS** (`src/lib/cobranca-painel.ts`, testado); o banco devolve contagem e
+  soma. Comparativo mostra **p.p. e variação relativa** juntos.
+- **O histórico NÃO é título.** `boletos_historico` fica fora de `titulos_financeiros` de propósito
+  (DRE e trava da 24h). E fica depois do corte de dezembro: é a história de pagamento.
+- **Escopo** em `cobranca_escopo()` (uma vez por chamada, não por linha). Supervisor e cobrança
+  NÃO ganharam nada em `pode_regional()` — decisão de desenho à parte (achado nº 1 da varredura).
+- **O ciclo é o dia do vencimento ORIGINAL** (`original_expiration_date` do Mutual); o atraso conta
+  do vencimento prorrogado/limite.
+- **Datas só-dia do Mutual entram por `mutual_dia()`**, não `mutual_data()`: esta converte fuso e
+  um `'2026-09-08'` viraria 07/09 em São Paulo.
+- **O dado do Mutual envelhece:** o painel avisa quando a captura de INVOICE tem mais de 7 dias.
+- **Fases 2–5 (fila, contato/promessa, qualidade da venda, régua, relatórios) ainda não existem.**
 
 ## Catálogo de CORES do veículo (0080) — `Configurações → Cores`
 > **Cuidado com o nome:** isto **não é a paleta visual** do sistema (essa vive em `globals.css` /
@@ -2177,7 +2223,7 @@ recuperação e giro).
 
 ### Os papéis VIVOS (`papel_usuario`) e o que cada um REALMENTE destrava
 `admin` · `gestor_regional` · `consultor_vendas` · `financeiro` · `sinistro` (de `0001`;
-**`cotador` saiu na `0077`**) + `auditoria` (`0017`) + `assistencia_24h` (`0026`). **São 7.**
+**`cotador` saiu na `0077`**) + `auditoria` (`0017`) + `assistencia_24h` (`0026`) + `supervisor` e `cobranca` (`0097`). **São 9.**
 O enum do Postgres ainda tem `cotador` — valor de enum não se apaga —, mas um CHECK em
 `usuarios.papel` recusa gravá-lo e ele saiu de `PAPEIS_USUARIO` e da union de `PapelUsuario`.
 
@@ -2190,6 +2236,8 @@ O enum do Postgres ainda tem `cotador` — valor de enum não se apaga —, mas 
 | `assistencia_24h` | `pode_assistencia` (opera a 24h, cadastra prestador, lança/baixa contas a pagar) |
 | `consultor_vendas` | **só a própria carteira** de leads (0038) — não vê a da unidade |
 | `sinistro` | **`pode_tratar_evento`** (0077): move o evento e gasta nele, na própria unidade. **Não opera mais a 24h.** |
+| `supervisor` | (0097) a COBRANÇA das unidades de `supervisor_regionais`; fora dela, staff da unidade do cadastro |
+| `cobranca` | (0097) a COBRANÇA do Brasil (sem unidade) ou da unidade dela; fora dela, staff da unidade do cadastro |
 
 ### A raiz: 3 funções sustentam tudo
 `is_staff()` · `auth_papel()` · `auth_regional_id()` — e as três exigem **`and ativo`** desde a
