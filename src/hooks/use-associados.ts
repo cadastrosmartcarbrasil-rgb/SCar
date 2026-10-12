@@ -1,5 +1,6 @@
 'use client';
 
+import { lerTodas } from '@/lib/paginacao';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { soDigitos } from '@/lib/documento';
@@ -22,11 +23,12 @@ export function useAssociados(incluirExcluidos = false) {
   return useQuery<ClientesRow[]>({
     queryKey: ['associados', incluirExcluidos],
     queryFn: async () => {
-      let q = supabase.from('clientes').select('*').order('nome_razao_social');
-      if (!incluirExcluidos) q = q.neq('status', 'excluido');
-      const { data, error } = await q;
-      if (error) throw error;
-      return data ?? [];
+      // Paginado: o PostgREST corta em 1.000 linhas (ver src/lib/paginacao.ts).
+      return lerTodas((de, ate) => {
+        let q = supabase.from('clientes').select('*').order('nome_razao_social').order('id');
+        if (!incluirExcluidos) q = q.neq('status', 'excluido');
+        return q.range(de, ate);
+      });
     },
   });
 }

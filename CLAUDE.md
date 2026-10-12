@@ -4694,6 +4694,14 @@ no fim — o runner procura por "PASSARAM") e rode `npm run schema`.
   testado), que só aceita caminho interno e barra também `/api/*` — logout durante
   uma chamada de API gravava `redirect=/api/...` e o login terminava numa tela de
   JSON, indistinguível de "não entrou".
+- **O PostgREST corta em 1.000 LINHAS, em silêncio.** `select` sem `range` devolve no máximo
+  1.000 (max-rows), sem erro nem aviso. Depois da carga do Mutual, `veiculos` (2.898) e `clientes`
+  (2.564) passaram disso: **1.898 veículos sumiram de `/veiculos`** — busca, "Editar Veículo" do SAC
+  (`?editar=<id>` procura na lista carregada) e os seletores de associado/veículo de outras telas.
+  Relatado com a placa QQQ5D49 (posição 2.194) em 12/10/2026. Correção: `lerTodas`
+  (`src/lib/paginacao.ts`, testada) em `useVeiculos` e `useAssociados`, com `id` como desempate da
+  ordem. **Lista que carrega a tabela inteira para filtrar na tela usa `lerTodas` ou pagina no
+  banco** — e RPC que devolve conjunto também é cortada em 1.000.
 - **Campo de "ativo" que nenhuma função de segurança lê é uma promessa falsa.** `usuarios.ativo`
   existia desde a 0001 e só a 0068 fez `is_staff()`/`auth_papel()` olharem para ele — 67 migrations
   construídas sobre um checkbox decorativo, com a tela dizendo que ele revogava acesso.
