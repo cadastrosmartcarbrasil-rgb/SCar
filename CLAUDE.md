@@ -224,7 +224,7 @@ captura) e recarregar; INVOICE de novo antes do carnê de 2027. **Bancos (decis�
 bloqueia a carga):** Sicredi para boleto/PIX (~98% da carteira) e Asaas para cartão; API configurada
 nos próximos dias (`integracoes_bancarias` ainda vazia).
 **Próxima migration livre: `0098`.**
-**🟡 A `0097_cobranca_painel` é NOVA e ainda NÃO foi aplicada** — Fase 1 do módulo de
+**✅ A `0097_cobranca_painel` foi APLICADA (pelo usuário, SQL Editor — o `execute_sql` estourava os 60 s do MCP) e CONFERIDA em 12/10/2026:** 22 funções do módulo, `boletos_historico`/`supervisor_regionais`/`cobranca_feriados` com RLS, papéis `supervisor`/`cobranca` no enum, `resumo_cobrancas` com o denominador novo, meta/limite 5/10, 0 secdef sem `search_path`, 0 RPCs nossas ao `anon`. Histórico ainda VAZIO (0 boletos) — falta deploy + puxar INVOICE + importar. **Migration longa: aplicar pelo SQL Editor**, o MCP corta em 60 s. Texto original: Fase 1 do módulo de
 **Inadimplência e Cobranças** (documento 2 do Rodrigo Medeiros, 30/09/2026; decisões do usuário
 em 12/10/2026: caminho B, perfis Supervisor e Cobrança, começar pela Fase 1). Cria os papéis
 `supervisor`/`cobranca` + `supervisor_regionais`, `boletos_historico` (o histórico de boletos

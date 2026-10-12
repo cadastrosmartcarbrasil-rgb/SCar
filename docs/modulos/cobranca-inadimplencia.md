@@ -118,7 +118,7 @@ inadimplência do veículo (0072).
 
 ## Operação
 
-1. Aplicar a `0097`.
+1. ~~Aplicar a `0097`~~ — aplicada e conferida em 12/10/2026.
 2. Em `/integracao/mutual`: **Puxar dados → Faturas (INVOICE)** (a captura atual é de 10/09).
 3. Seção **Histórico de boletos** → *Importar / atualizar histórico*. Repetir após cada recaptura e
    cada carga de unidade.
