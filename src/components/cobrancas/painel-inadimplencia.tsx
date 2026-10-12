@@ -164,8 +164,8 @@ function ModalParametros({ open, onClose }: { open: boolean; onClose: () => void
 // ---------------------------------------------------------------------------
 // Comparativos: pontos percentuais E variacao relativa, lado a lado
 // ---------------------------------------------------------------------------
-function Delta({ atual, ref, chave }: { atual: number | null; ref: number | null; chave: ChaveTaxa }) {
-  const c = compararTaxa(atual, ref);
+function Delta({ atual, base, chave }: { atual: number | null; base: number | null; chave: ChaveTaxa }) {
+  const c = compararTaxa(atual, base);
   if (c.pp === null) return <span className="text-[11px] text-slate-400">sem base</span>;
   const dir = direcaoVariacao(c.pp / 100, SUBIR_E_BOM[chave]);
   const cls = dir === 'boa' ? 'text-emerald-600' : dir === 'ruim' ? 'text-rose-600' : 'text-slate-400';
@@ -203,7 +203,7 @@ function TabelaComparativos({ atual, refs, mesCheio }: {
               {refs.map((r) => (
                 <td key={r.chave} className="py-2 pr-3 text-right">
                   <p className="tnum text-slate-600">{pct(r.taxas[k])}</p>
-                  <Delta atual={atual[k]} ref={r.taxas[k]} chave={k} />
+                  <Delta atual={atual[k]} base={r.taxas[k]} chave={k} />
                 </td>
               ))}
             </tr>
@@ -352,15 +352,15 @@ export function PainelInadimplencia() {
           <TileCobranca titulo="Inadimplencia por clientes" icon={UserX} tom="rose" carregando={carregando}
             valor={pct(tAtual.inadClientes)}
             detalhe={`${inteiro.format(num(atual?.clientes_inadimplentes))} de ${inteiro.format(num(atual?.clientes_venceram))} com boleto vencido`}
-            rodape={<Delta atual={tAtual.inadClientes} ref={refs[0].taxas.inadClientes} chave="inadClientes" />} />
+            rodape={<Delta atual={tAtual.inadClientes} base={refs[0].taxas.inadClientes} chave="inadClientes" />} />
           <TileCobranca titulo="Taxa de recuperacao" icon={RotateCcw} tom="green" carregando={carregando}
             valor={pct(tAtual.recuperacao)} detalhe={`${formatCurrency(num(atual?.valor_pago_em_atraso))} pagos depois do vencimento`}
-            rodape={<Delta atual={tAtual.recuperacao} ref={refs[0].taxas.recuperacao} chave="recuperacao" />}
+            rodape={<Delta atual={tAtual.recuperacao} base={refs[0].taxas.recuperacao} chave="recuperacao" />}
             onAbrir={() => abrir('Pagos em atraso (recuperados)', { situacoes: ['pago_em_atraso'] })} />
           <TileCobranca titulo="Inadimplencia no 1º boleto" icon={Sparkles} tom="amber" carregando={carregando}
             valor={pct(tAtual.inadInicial)}
             detalhe={`${inteiro.format(num(atual?.primeiros_nao_pagos))} de ${inteiro.format(num(atual?.primeiros_venceram))} novos nao pagaram o 1º`}
-            rodape={<Delta atual={tAtual.inadInicial} ref={refs[0].taxas.inadInicial} chave="inadInicial" />}
+            rodape={<Delta atual={tAtual.inadInicial} base={refs[0].taxas.inadInicial} chave="inadInicial" />}
             onAbrir={() => abrir('1º boleto do associado', { somentePrimeiro: true })} />
           <TileCobranca titulo="Reincidentes" icon={Repeat2} tom="rose" carregando={carregando}
             valor={inteiro.format(num(atual?.reincidentes))}
@@ -465,7 +465,7 @@ export function PainelInadimplencia() {
                       <td className="tnum py-2 pr-3 text-right">{formatCurrency(num(r.valor_venceram))}</td>
                       <td className="tnum py-2 pr-3 text-right">{formatCurrency(num(r.valor_aberto_vencido))}</td>
                       <td className="tnum py-2 pr-3 text-right font-semibold">{pct(t)}</td>
-                      <td className="py-2 pr-3 text-right"><Delta atual={t} ref={nacional} chave="inadFinanceira" /></td>
+                      <td className="py-2 pr-3 text-right"><Delta atual={t} base={nacional} chave="inadFinanceira" /></td>
                       <td className="tnum py-2 pr-3 text-right">{inteiro.format(num(r.clientes_inadimplentes))} / {inteiro.format(num(r.clientes_venceram))}</td>
                       <td className="py-2 pr-3"><SeloSemaforo s={semaforo(t, meta, limite)} /></td>
                     </tr>
