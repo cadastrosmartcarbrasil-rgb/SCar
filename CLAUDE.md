@@ -223,14 +223,9 @@ plano** — foi carregada antes do de-para novo; re-executar a carga dela preenc
 captura) e recarregar; INVOICE de novo antes do carnê de 2027. **Bancos (decisão do usuário, não
 bloqueia a carga):** Sicredi para boleto/PIX (~98% da carteira) e Asaas para cartão; API configurada
 nos próximos dias (`integracoes_bancarias` ainda vazia).
-**Próxima migration livre: `0099`.**
-**🟡 A `0098_cobranca_fila` é NOVA (Fase 2 da Cobrança) e ainda NÃO foi aplicada:** fila de cobrança
-(`cobranca_fila`/`_resumo`/`_base`), `cobranca_contatos` IMUTÁVEL (trigger), promessas/acordos
-(`cobranca_acordos` + `_parcelas`, situação CALCULADA pelos pagamentos em
-`cobranca_acordos_situacao`), `registrar_contato_cobranca`, `cancelar_acordo_cobranca`,
-`cobranca_promessas_resumo` (taxa de cumprimento). Tela `/cobrancas/fila` (menu Cobrança → Fila de
-Cobrança) — sem a migration ela não abre. Conferir depois de aplicar: as 3 tabelas com RLS, 0
-secdef sem `search_path`, 0 RPCs nossas ao `anon`. Ver §9 de `docs/modulos/cobranca-inadimplencia.md`.
+**Próxima migration livre: `0100`.**
+**✅ A `0098_cobranca_fila` foi APLICADA (pelo usuário, SQL Editor — o `execute_sql` estourou os 60 s do MCP e foi desfeito inteiro) e CONFERIDA em 12/10/2026:** 3 tabelas com RLS, 14 funções, 3 triggers de imutabilidade, 0 secdef sem `search_path`, 0 RPCs nossas ao `anon`. Tela `/cobrancas/fila` (Cobrança → Fila de Cobrança). Ver §9 de `docs/modulos/cobranca-inadimplencia.md`.
+**🟡 A `0099_historico_financeiro_mutual` é NOVA e ainda NÃO foi aplicada.** O defeito: o Histórico Financeiro do SAC e o Financeiro do portal liam SÓ `titulos_financeiros` (6 linhas na base) e os 78.425 boletos importados do Mutual não apareciam. Ela: (A) `boletos_historico` ganha `linha_digitavel`/`url_boleto`/`url_pagamento` (o `checkout_link` do Mutual); (B) `cobranca_importar_historico_mutual` recriada (mesma assinatura) preenchendo os três; (C) `corte_cobranca_cliente`; (D) `boletos_mutual_do_cliente` (SAC, permissão de `titulos_do_cliente`) e `portal_boletos_mutual`; (E) `portal_financeiro` recriado somando as duas fontes. As telas unem as duas listas (`src/lib/historico-financeiro.ts`) e o boleto do Mutual é SÓ CONSULTA (selo "Mutual", sem editar/2ª via; link de pagamento e linha digitável do próprio Mutual). **Depois de aplicar:** deploy + `/integracao/mutual` → *Histórico de boletos* → *Importar / atualizar* (é o que traz a linha digitável para os 78 mil já importados).
 **✅ A `0097_cobranca_painel` foi APLICADA (pelo usuário, SQL Editor — o `execute_sql` estourava os 60 s do MCP) e CONFERIDA em 12/10/2026:** 22 funções do módulo, `boletos_historico`/`supervisor_regionais`/`cobranca_feriados` com RLS, papéis `supervisor`/`cobranca` no enum, `resumo_cobrancas` com o denominador novo, meta/limite 5/10, 0 secdef sem `search_path`, 0 RPCs nossas ao `anon`. **Em produção desde 12/10/2026:** INVOICE recapturado (206.706) e **histórico importado — 78.425 boletos de 2.527 associados** (58.125 pagos · 8.428 abertos · 11.872 cancelados; 124 mil mensalidades de associados não carregados ficam de fora, de propósito). Deploy no ar com o painel, as listas paginadas (`lerTodas`) e a barra lateral fixa — conferido pelo usuário. **O VPS estava com o disco 100% cheio** (cache do BuildKit 30 GB + imagens antigas): limpo para 80% e swap ampliado para 3 GB — ver `DEPLOY.md` §2.1 antes de qualquer `prune`. **Migration longa: aplicar pelo SQL Editor**, o MCP corta em 60 s. Texto original: Fase 1 do módulo de
 **Inadimplência e Cobranças** (documento 2 do Rodrigo Medeiros, 30/09/2026; decisões do usuário
 em 12/10/2026: caminho B, perfis Supervisor e Cobrança, começar pela Fase 1). Cria os papéis
@@ -672,9 +667,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0098`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **75 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 843 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0099`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **76 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 848 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Os portais e páginas públicas
@@ -2049,6 +2044,10 @@ CONTRACT_OBJECT do Mutual nunca e ADESAO. Espelho puro em `src/lib/mutual.ts` (`
 `vendedorPendente`, `ROTULO_MOTIVO_VENDEDOR`))
 · `0096_mutual_captura_sem_regravar` (upsert da captura so regrava o que mudou; autovacuum de
 `mutual_captura` em 2%)
+· `0099_historico_financeiro_mutual` (o HISTORICO FINANCEIRO do SAC e do portal passa a ler `boletos_historico`
+alem de `titulos_financeiros`, com a data de corte `corte_cobranca_cliente`; linha digitavel e links de
+pagamento do Mutual gravados na importacao; `portal_financeiro` soma as duas fontes. Boleto do Mutual e so
+consulta. Uniao das listas em `src/lib/historico-financeiro.ts`)
 · `0098_cobranca_fila` (COBRANCA, Fase 2: fila operacional por prioridade, contatos IMUTAVEIS por trigger,
 promessas (1 parcela) e acordos (2..36) sobre a divida existente com situacao CALCULADA pelos pagamentos —
 quebra = vencimento + 3 dias de baixa; taxa de cumprimento = cumpridas / (cumpridas + quebradas).
@@ -2158,6 +2157,10 @@ recuperação e giro).
   soma. Comparativo mostra **p.p. e variação relativa** juntos.
 - **O histórico NÃO é título.** `boletos_historico` fica fora de `titulos_financeiros` de propósito
   (DRE e trava da 24h). E fica depois do corte de dezembro: é a história de pagamento.
+- **Mas TODA tela que mostra "os boletos do associado" lê as DUAS fontes (0099).** Foi bug real: o
+  histórico importado não aparecia no SAC nem no portal, porque eles só liam `titulos_financeiros`.
+  Tela nova de boletos do associado: `titulos_*` + `boletos_mutual_do_cliente`/`portal_boletos_mutual`,
+  unidas por `src/lib/historico-financeiro.ts`.
 - **Escopo** em `cobranca_escopo()` (uma vez por chamada, não por linha). Supervisor e cobrança
   NÃO ganharam nada em `pode_regional()` — decisão de desenho à parte (achado nº 1 da varredura).
 - **O ciclo é o dia do vencimento ORIGINAL** (`original_expiration_date` do Mutual); o atraso conta

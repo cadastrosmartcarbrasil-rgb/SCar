@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
+import { unirHistoricoSac } from '@/lib/historico-financeiro';
 import type {
   AtendimentosRow,
   ProtocoloLinha,
@@ -201,13 +202,22 @@ export function useTitulosCliente(clienteId: string | null, veiculoId?: string |
     queryKey: ['sac', 'titulos', clienteId ?? '', veiculoId ?? 'todos'],
     enabled: !!clienteId,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('titulos_do_cliente', {
-        p_cliente_id: clienteId as string,
-        p_veiculo_id: veiculoId ?? null,
-        p_limite: 60,
-      });
-      if (error) throw error;
-      return data ?? [];
+      // 0099: as duas fontes — os titulos do SCar e o historico do Mutual (so consulta).
+      const [scar, mutual] = await Promise.all([
+        supabase.rpc('titulos_do_cliente', {
+          p_cliente_id: clienteId as string,
+          p_veiculo_id: veiculoId ?? null,
+          p_limite: 60,
+        }),
+        supabase.rpc('boletos_mutual_do_cliente', {
+          p_cliente_id: clienteId as string,
+          p_veiculo_id: veiculoId ?? null,
+          p_limite: 60,
+        }),
+      ]);
+      if (scar.error) throw scar.error;
+      if (mutual.error) throw mutual.error;
+      return unirHistoricoSac(scar.data ?? [], mutual.data ?? []);
     },
   });
 }

@@ -157,9 +157,22 @@ function ModalSegundaVia({ titulo, onClose }: { titulo: PortalTitulo; onClose: (
   // Busca UMA vez ao abrir. Disparar isto no corpo do componente faria a
   // chamada a cada render (e entraria em loop com o setState do resultado).
   const buscar = segunda.mutate;
+  const doMutual = titulo.origem === 'MUTUAL';
   useEffect(() => {
+    // Boleto do Mutual (0099): os dados de pagamento ja vieram na lista — nao
+    // existe 2a via a pedir ao nosso banco.
+    if (doMutual) {
+      const tem = !!(titulo.linha_digitavel || titulo.url_boleto || titulo.url_pagamento);
+      setDados({
+        id: titulo.id, data_vencimento: titulo.data_vencimento, valor: titulo.valor,
+        linha_digitavel: titulo.linha_digitavel, url_boleto: titulo.url_boleto, pix_copia_cola: null,
+        disponivel: tem,
+        aviso: tem ? null : 'Este boleto foi emitido pelo sistema anterior e nao temos a linha digitavel dele. Fale com a associacao para receber a 2a via.',
+      });
+      return;
+    }
     buscar(titulo.id, { onSuccess: (d) => setDados(d) });
-  }, [buscar, titulo.id]);
+  }, [buscar, doMutual, titulo]);
 
   async function copiar(texto: string, qual: string) {
     try {
@@ -228,6 +241,15 @@ function ModalSegundaVia({ titulo, onClose }: { titulo: PortalTitulo; onClose: (
                 {copiado === 'pix' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 {copiado === 'pix' ? 'PIX copiado!' : 'Copiar codigo PIX'}
               </button>
+            )}
+
+            {doMutual && titulo.url_pagamento && (
+              <a
+                href={titulo.url_pagamento} target="_blank" rel="noreferrer"
+                className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-2.5 text-[12.5px] font-bold text-emerald-700 transition hover:bg-emerald-100"
+              >
+                <Receipt className="h-4 w-4" /> Pagar com boleto ou PIX
+              </a>
             )}
 
             {dados.url_boleto && (

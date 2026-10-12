@@ -835,6 +835,28 @@ export type TituloCliente = {
   url_boleto: string | null;
   pix_copia_cola: string | null;
   observacao: string | null;
+  /** 0099: SCAR (titulos_financeiros) ou MUTUAL (boletos_historico, so consulta). Ausente = SCAR. */
+  origem?: 'SCAR' | 'MUTUAL';
+  url_pagamento?: string | null;
+  em_serasa?: boolean;
+};
+
+// Boleto do Mutual no historico do SAC (RPC boletos_mutual_do_cliente, 0099)
+export type BoletoMutualCliente = {
+  id: string;
+  veiculo_id: string | null;
+  placa: string | null;
+  competencia: string | null;
+  data_vencimento: string;
+  valor: number;
+  valor_pago: number | null;
+  data_pagamento: string | null;
+  status: string;
+  dias_atraso: number;
+  em_serasa: boolean;
+  linha_digitavel: string | null;
+  url_boleto: string | null;
+  url_pagamento: string | null;
 };
 
 // Retorno de opcionais_elegibilidade (janela flutuante de N dias)
@@ -2467,6 +2489,25 @@ export type PortalTitulo = {
   linha_digitavel: string | null;
   url_boleto: string | null;
   pix_copia_cola: string | null;
+  /** 0099: boleto do Mutual (so consulta; 2a via sai do proprio registro). */
+  origem?: 'SCAR' | 'MUTUAL';
+  url_pagamento?: string | null;
+};
+
+export type PortalBoletoMutual = {
+  id: string;
+  veiculo_id: string | null;
+  placa: string | null;
+  competencia: string | null;
+  data_vencimento: string;
+  valor: number;
+  valor_pago: number | null;
+  data_pagamento: string | null;
+  situacao: string;
+  dias_atraso: number;
+  linha_digitavel: string | null;
+  url_boleto: string | null;
+  url_pagamento: string | null;
 };
 
 export type PortalFinanceiro = {
@@ -3809,6 +3850,11 @@ export type Database = {
         Args: { p_cliente_id: string };
         Returns: VeiculoDoCliente[];
       };
+      boletos_mutual_do_cliente: {
+        Args: { p_cliente_id: string; p_veiculo_id?: string | null; p_limite?: number };
+        Returns: BoletoMutualCliente[];
+      };
+      portal_boletos_mutual: { Args: { p_limite?: number }; Returns: PortalBoletoMutual[] };
       titulos_do_cliente: {
         Args: { p_cliente_id: string; p_veiculo_id?: string | null; p_limite?: number };
         Returns: TituloCliente[];

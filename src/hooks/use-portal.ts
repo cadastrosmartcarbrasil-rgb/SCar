@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
+import { unirHistoricoPortal } from '@/lib/historico-financeiro';
 import type {
   PortalCartao, PortalFinanceiro, PortalPerfil, PortalSegundaVia, PortalTitulo, PortalVeiculo,
 } from '@/lib/database.types';
@@ -40,9 +41,14 @@ export function usePortalTitulos() {
   return useQuery<PortalTitulo[]>({
     queryKey: ['portal', 'titulos'],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('portal_titulos', { p_limite: 120 });
-      if (error) throw error;
-      return data ?? [];
+      // 0099: os boletos do SCar e os do Mutual, numa lista so.
+      const [scar, mutual] = await Promise.all([
+        supabase.rpc('portal_titulos', { p_limite: 120 }),
+        supabase.rpc('portal_boletos_mutual', { p_limite: 120 }),
+      ]);
+      if (scar.error) throw scar.error;
+      if (mutual.error) throw mutual.error;
+      return unirHistoricoPortal(scar.data ?? [], mutual.data ?? []);
     },
   });
 }

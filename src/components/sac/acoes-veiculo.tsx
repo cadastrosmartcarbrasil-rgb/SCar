@@ -13,8 +13,9 @@ import {
 } from '@/hooks/use-protocolos';
 import {
   linkWhatsAppAssociado, mensagemPadrao, assuntoPadrao, linkEmail,
-  valorAjustado, tituloEditavel, validarAjuste,
+  valorAjustado, validarAjuste,
 } from '@/lib/protocolos';
+import { editavelNoScar } from '@/lib/historico-financeiro';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { ClientesRow, TituloCliente } from '@/lib/database.types';
 
@@ -46,6 +47,12 @@ export function ModalHistoricoFinanceiro({
       {!isLoading && (titulos ?? []).length === 0 && (
         <p className="text-sm text-slate-400">Nenhum boleto para este associado.</p>
       )}
+      {(titulos ?? []).some((t) => t.origem === 'MUTUAL') && (
+        <p className="mb-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
+          Os boletos marcados <b>Mutual</b> foram emitidos pelo sistema anterior e aparecem so para consulta:
+          a cobranca, a 2a via e qualquer ajuste continuam la. A situacao e a da ultima importacao do historico.
+        </p>
+      )}
 
       <ul className="max-h-[60vh] space-y-2 overflow-y-auto">
         {(titulos ?? []).map((t) => (
@@ -68,7 +75,15 @@ export function ModalHistoricoFinanceiro({
                   {t.status === 'vencido' && t.dias_atraso > 0 ? ` · ${t.dias_atraso} dia(s) em atraso` : ''}
                 </p>
               </div>
-              <span className={`rounded px-2 py-0.5 text-xs ${STATUS_COR[t.status] ?? ''}`}>{t.status}</span>
+              <span className="flex items-center gap-1">
+                {t.origem === 'MUTUAL' && (
+                  <span className="rounded bg-brand-50 px-2 py-0.5 text-xs text-brand-600" title="Boleto emitido pelo Mutual — so consulta">
+                    Mutual
+                  </span>
+                )}
+                {t.em_serasa && <span className="rounded bg-rose-50 px-2 py-0.5 text-xs text-rose-700">Serasa</span>}
+                <span className={`rounded px-2 py-0.5 text-xs ${STATUS_COR[t.status] ?? ''}`}>{t.status}</span>
+              </span>
             </div>
 
             <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -94,7 +109,13 @@ export function ModalHistoricoFinanceiro({
                   <QrCode className="h-3.5 w-3.5" /> PIX
                 </button>
               )}
-              {tituloEditavel(t.status) && (
+              {t.origem === 'MUTUAL' && t.url_pagamento && t.status !== 'pago' && t.status !== 'cancelado' && (
+                <a href={t.url_pagamento} target="_blank" rel="noreferrer"
+                  className="inline-flex items-center gap-1 rounded-lg bg-cyan-50 px-2 py-1 text-xs text-cyan-700">
+                  <QrCode className="h-3.5 w-3.5" /> Pagina de pagamento (Mutual)
+                </a>
+              )}
+              {editavelNoScar(t) && (
                 <>
                   <Button variant="ghost" className="px-2 py-1 text-xs" onClick={() => setEditando(t)}>
                     <Pencil className="h-3.5 w-3.5" /> Editar
