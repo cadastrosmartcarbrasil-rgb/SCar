@@ -173,6 +173,27 @@ firewall descartando UDP no loopback):
 ufw status; iptables -S INPUT | head
 ```
 
+## 2.1 Disco cheio — a causa de "o deploy travou" (12/10/2026)
+
+**Sintoma:** o build fica parado em `next build` por muito tempo, ou termina e o sistema continua
+na versão antiga. Em 12/10/2026 o disco do VPS estava **100% cheio (67 GB)**: cada deploy deixa
+imagens antigas para trás, e o cache do BuildKit acumulou **30 GB**. Disco cheio também derruba
+banco de dados de outros contêineres (o `evolution_postgres` parou).
+
+**Conferir:** `df -h /` e `docker system df`.
+
+**Limpar (seguro):**
+```bash
+docker builder prune -a -f   # cache do BuildKit — o deploy usa DOCKER_BUILDKIT=0, nao precisa dele
+docker image prune -f        # so imagens orfas (<none>) de deploys anteriores
+```
+**NUNCA** `docker image prune -a`: apaga a `node:20-alpine` do cache, e o servidor não consegue
+baixá-la de novo (o problema de DNS acima) — nenhum deploy passaria mais. **NUNCA**
+`docker system prune` / `docker container prune`: apagam contêineres parados com dado dentro.
+
+**Rotina:** `docker image prune -f` uma vez por mês, ou sempre que `df -h /` passar de 85%.
+O swap foi aumentado para 3 GB (`/swapfile2`, 2 GB, no `/etc/fstab`) no mesmo dia.
+
 ## 3. Conferência
 
 | Sintoma | Causa provável |
