@@ -1709,6 +1709,104 @@ export type CobrancaParametros = {
   feriados: { data: string; descricao: string }[];
 };
 export type CobrancaEscopo = { global: boolean; regionais: string[] };
+/* ---- Cobranca, Fase 2 (0098): fila, contatos e promessas ---- */
+export type CobrancaFilaLinha = {
+  cliente_id: string;
+  associado: string;
+  cpf_cnpj: string;
+  telefone: string | null;
+  celular: string | null;
+  regional_id: string | null;
+  regional: string;
+  placas: string | null;
+  boletos_vencidos: number;
+  valor_vencido: number;
+  dias_atraso: number;
+  faixa: string | null;
+  vencido_desde: string;
+  ultimo_contato_em: string | null;
+  ultimo_canal: string | null;
+  ultimo_resultado: string | null;
+  ultimo_usuario: string | null;
+  ultima_observacao: string | null;
+  retorno_em: string | null;
+  proxima_acao: string | null;
+  contatos: number;
+  acordo_id: string | null;
+  acordo_tipo: 'PROMESSA' | 'ACORDO' | null;
+  acordo_status: string | null;
+  proxima_parcela_em: string | null;
+  proxima_parcela_valor: number | null;
+  situacao_fila: string;
+  prioridade: number;
+  total_registros: number;
+  total_valor: number;
+};
+export type CobrancaFilaResumo = { grupo: 'situacao' | 'faixa'; chave: string | null; clientes: number; valor: number };
+export type CobrancaParcelaSituacao = {
+  numero: number;
+  vencimento: string;
+  valor: number;
+  acumulado: number;
+  pago_ate: number;
+  situacao: 'cumprida' | 'quebrada' | 'aguardando_baixa' | 'a_vencer';
+};
+export type CobrancaAcordoSituacao = {
+  acordo_id: string;
+  cliente_id: string;
+  regional_id: string | null;
+  tipo: 'PROMESSA' | 'ACORDO';
+  data_base: string;
+  valor_total: number;
+  divida_na_data: number;
+  observacao: string | null;
+  criado_por_nome: string | null;
+  created_at: string;
+  cancelado_em: string | null;
+  motivo_cancelamento: string | null;
+  status: 'EM_ANDAMENTO' | 'CUMPRIDO' | 'QUEBRADO' | 'CANCELADO';
+  valor_pago: number;
+  parcelas: CobrancaParcelaSituacao[];
+  quebra_em: string | null;
+  proxima_parcela_em: string | null;
+  proxima_parcela_valor: number | null;
+};
+export type CobrancaPromessasResumo = {
+  feitas: number;
+  cumpridas: number;
+  quebradas: number;
+  em_andamento: number;
+  canceladas: number;
+  valor_prometido: number;
+  valor_recuperado: number;
+};
+export type CobrancaContato = {
+  id: string;
+  canal: string;
+  resultado: string;
+  observacao: string | null;
+  proxima_acao_em: string | null;
+  proxima_acao: string | null;
+  boletos_vencidos: number;
+  valor_vencido: number;
+  dias_atraso: number;
+  usuario: string | null;
+  created_at: string;
+  acordo_id: string | null;
+};
+export type CobrancaBoletoCliente = {
+  origem: 'SCAR' | 'MUTUAL';
+  boleto_id: string;
+  placa: string | null;
+  competencia: string | null;
+  vencimento: string;
+  valor: number;
+  valor_pago: number | null;
+  data_pagamento: string | null;
+  situacao: string;
+  dias_atraso: number;
+  em_serasa: boolean;
+};
 export type CobrancaHistoricoResumo = {
   boletos: number;
   associados: number;
@@ -3484,6 +3582,41 @@ export type Database = {
         Returns: RegionaisPainelLinha[];
       };
       cobranca_escopo: { Args: Record<string, never>; Returns: CobrancaEscopo[] };
+      cobranca_fila: {
+        Args: {
+          p_regional_id?: string | null;
+          p_situacao?: string | null;
+          p_faixa?: string | null;
+          p_busca?: string | null;
+          p_limite?: number;
+          p_offset?: number;
+        };
+        Returns: CobrancaFilaLinha[];
+      };
+      cobranca_fila_resumo: { Args: { p_regional_id?: string | null }; Returns: CobrancaFilaResumo[] };
+      cobranca_acordos_situacao: {
+        Args: { p_regional_id?: string | null; p_cliente_id?: string | null };
+        Returns: CobrancaAcordoSituacao[];
+      };
+      cobranca_promessas_resumo: {
+        Args: { p_inicio: string; p_fim: string; p_regional_id?: string | null };
+        Returns: CobrancaPromessasResumo[];
+      };
+      cobranca_contatos_cliente: { Args: { p_cliente_id: string }; Returns: CobrancaContato[] };
+      cobranca_boletos_cliente: { Args: { p_cliente_id: string }; Returns: CobrancaBoletoCliente[] };
+      registrar_contato_cobranca: {
+        Args: {
+          p_cliente_id: string;
+          p_canal: string;
+          p_resultado: string;
+          p_observacao?: string | null;
+          p_proxima_acao_em?: string | null;
+          p_proxima_acao?: string | null;
+          p_acordo?: Json | null;
+        };
+        Returns: string;
+      };
+      cancelar_acordo_cobranca: { Args: { p_acordo_id: string; p_motivo: string }; Returns: undefined };
       cobranca_parametros: { Args: Record<string, never>; Returns: CobrancaParametros[] };
       salvar_parametros_cobranca: { Args: { p_meta: number; p_limite: number }; Returns: undefined };
       salvar_feriado_cobranca: { Args: { p_data: string; p_descricao: string }; Returns: undefined };

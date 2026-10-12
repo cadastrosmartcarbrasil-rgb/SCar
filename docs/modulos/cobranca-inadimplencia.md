@@ -13,7 +13,7 @@
 | Fase | Entrega | Estado |
 |---|---|---|
 | **1** | Painel de inadimplência + Calendário dos 6 ciclos + histórico do Mutual + perfis | ✅ `0097` |
-| 2 | Fila operacional de cobrança, histórico de contato imutável, promessas e acordos | a fazer |
+| 2 | Fila operacional de cobrança, histórico de contato imutável, promessas e acordos | **construída (0098)** — ver §9 |
 | 3 | Qualidade das vendas: coorte por mês de venda, 1º boleto por vendedor/regional/origem, índice de qualidade | a fazer |
 | 4 | Régua configurável (D-x … D+15), tarefas e alertas automáticos | a fazer — depende de agendamento (CRON) e, para WhatsApp/e-mail, de `RESEND_API_KEY` |
 | 5 | Relatórios e exportação PDF/Excel com filtros, data/hora e usuário | parcial (CSV em todo bloco) |
@@ -115,6 +115,32 @@ inadimplência do veículo (0072).
 - Critérios de aceite do documento: Vencimento ✅ · Inadimplência (só vencido) ✅ · Pagamento sem
   duplicidade ✅ (fonte única + corte) · Permissão ✅ · Comparativo ✅ · Detalhamento ✅ ·
   Cobrança (contato/promessa) e Qualidade (venda) → Fases 2 e 3.
+
+## 9. Fase 2 — a FILA, os CONTATOS e as PROMESSAS (0098)
+
+Tela: **Cobrança → Fila de Cobrança** (`/cobrancas/fila`). Clicar no associado abre a ficha.
+
+- **Quem entra na fila:** associado com boleto **vencido** em aberto (`cobranca_boletos_base`) e com
+  pelo menos um veículo `ativo`/`em_evento`/`vistoria_pendente`/`inadimplente`. Quem saiu da base
+  não é fila de cobrança operacional.
+- **A ordem (`situacao_fila`):** 1 promessa quebrada → 2 retorno atrasado → 3 retorno hoje →
+  4 sem contato → 5 aguardando → 6 promessa em dia; depois maior atraso e maior valor.
+  Contato **anterior** à dívida atual não conta (vira "sem contato"); contato sem data de retorno
+  volta sozinho em **2 dias**. Promessa quebrada só sai do topo com um contato **depois** da quebra.
+- **Contato (`cobranca_contatos`) é IMUTÁVEL** — trigger recusa update/delete, inclusive da
+  service_role. Guarda o retrato da dívida no momento (boletos, valor, dias). Grava só por
+  `registrar_contato_cobranca`.
+- **Promessa = 1 parcela; acordo = 2 a 36**, sempre sobre a **dívida que já existe**. Nenhum boleto
+  novo é emitido (depende do gateway real; para quem paga no Mutual, a negociação acontece lá).
+  Uma em andamento por associado. A única mudança permitida é **cancelar, com motivo**.
+- **A situação é CALCULADA:** conta o pagamento de boleto com vencimento até a data da promessa,
+  pago a partir dela (mensalidade nova paga não "cumpre" promessa). Parcela cumprida = o pago até o
+  vencimento dela cobre o acumulado; **quebrada** = venceu há mais de 3 dias (prazo de baixa) sem
+  cobrir; entre 1 e 3 dias = aguardando baixa. Quitar tudo cumpre o que ainda não quebrou.
+- **Taxa de cumprimento** = cumpridas ÷ (cumpridas + quebradas) das promessas feitas no período
+  (tile dos últimos 30 dias). Em andamento e canceladas ficam fora do denominador.
+- ⚠️ **Pagamento feito no Mutual só aparece depois da recaptura de INVOICE + importação.**
+- Espelho puro em `src/lib/cobranca-fila.ts` (testado); suíte de banco `0098_cobranca_fila.test.sql`.
 
 ## Operação
 

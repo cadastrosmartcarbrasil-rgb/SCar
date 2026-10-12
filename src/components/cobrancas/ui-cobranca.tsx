@@ -55,10 +55,11 @@ const CHIP: Record<string, string> = {
  * do painel abre os boletos que o compoem (criterio de aceite "Detalhamento").
  */
 export function TileCobranca({
-  titulo, valor, detalhe, rodape, icon: Icon, tom = 'cyan', carregando, onAbrir,
+  titulo, valor, detalhe, rodape, icon: Icon, tom = 'cyan', carregando, onAbrir, rotuloAcao = 'ver boletos →',
 }: {
   titulo: string; valor: string; detalhe?: React.ReactNode; rodape?: React.ReactNode;
   icon: React.ElementType; tom?: keyof typeof CHIP; carregando?: boolean; onAbrir?: () => void;
+  rotuloAcao?: string;
 }) {
   const corpo = (
     <>
@@ -75,7 +76,7 @@ export function TileCobranca({
       )}
       {detalhe && <div className="mt-2 text-[11.5px] leading-tight text-slate-500">{detalhe}</div>}
       {rodape && <div className="mt-1.5">{rodape}</div>}
-      {onAbrir && <p className="mt-2 text-[11px] font-medium text-cyan-600">ver boletos →</p>}
+      {onAbrir && <p className="mt-2 text-[11px] font-medium text-cyan-600">{rotuloAcao}</p>}
     </>
   );
   const classe = 'rounded-2xl border border-slate-200/80 bg-superficie p-4 text-left shadow-[0_1px_2px_rgba(20,33,61,0.04),0_10px_26px_-16px_rgba(20,33,61,0.18)]';

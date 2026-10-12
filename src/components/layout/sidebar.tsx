@@ -28,6 +28,7 @@ import {
   LayoutList,
   DoorOpen,
   Gauge,
+  PhoneCall,
   CalendarDays,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
@@ -60,6 +61,7 @@ const GESTAO: Entrada[] = [
     icon: Receipt,
     itens: [
       { href: '/cobrancas/painel', label: 'Painel de Inadimplencia', icon: Gauge },
+      { href: '/cobrancas/fila', label: 'Fila de Cobranca', icon: PhoneCall },
       { href: '/cobrancas/calendario', label: 'Calendario de Vencimentos', icon: CalendarDays },
       { href: '/cobrancas/boletos', label: 'Boletos e Remessas', icon: Receipt },
     ],

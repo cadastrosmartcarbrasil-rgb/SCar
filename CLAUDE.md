@@ -223,7 +223,14 @@ plano** — foi carregada antes do de-para novo; re-executar a carga dela preenc
 captura) e recarregar; INVOICE de novo antes do carnê de 2027. **Bancos (decisão do usuário, não
 bloqueia a carga):** Sicredi para boleto/PIX (~98% da carteira) e Asaas para cartão; API configurada
 nos próximos dias (`integracoes_bancarias` ainda vazia).
-**Próxima migration livre: `0098`.**
+**Próxima migration livre: `0099`.**
+**🟡 A `0098_cobranca_fila` é NOVA (Fase 2 da Cobrança) e ainda NÃO foi aplicada:** fila de cobrança
+(`cobranca_fila`/`_resumo`/`_base`), `cobranca_contatos` IMUTÁVEL (trigger), promessas/acordos
+(`cobranca_acordos` + `_parcelas`, situação CALCULADA pelos pagamentos em
+`cobranca_acordos_situacao`), `registrar_contato_cobranca`, `cancelar_acordo_cobranca`,
+`cobranca_promessas_resumo` (taxa de cumprimento). Tela `/cobrancas/fila` (menu Cobrança → Fila de
+Cobrança) — sem a migration ela não abre. Conferir depois de aplicar: as 3 tabelas com RLS, 0
+secdef sem `search_path`, 0 RPCs nossas ao `anon`. Ver §9 de `docs/modulos/cobranca-inadimplencia.md`.
 **✅ A `0097_cobranca_painel` foi APLICADA (pelo usuário, SQL Editor — o `execute_sql` estourava os 60 s do MCP) e CONFERIDA em 12/10/2026:** 22 funções do módulo, `boletos_historico`/`supervisor_regionais`/`cobranca_feriados` com RLS, papéis `supervisor`/`cobranca` no enum, `resumo_cobrancas` com o denominador novo, meta/limite 5/10, 0 secdef sem `search_path`, 0 RPCs nossas ao `anon`. **Em produção desde 12/10/2026:** INVOICE recapturado (206.706) e **histórico importado — 78.425 boletos de 2.527 associados** (58.125 pagos · 8.428 abertos · 11.872 cancelados; 124 mil mensalidades de associados não carregados ficam de fora, de propósito). Deploy no ar com o painel, as listas paginadas (`lerTodas`) e a barra lateral fixa — conferido pelo usuário. **O VPS estava com o disco 100% cheio** (cache do BuildKit 30 GB + imagens antigas): limpo para 80% e swap ampliado para 3 GB — ver `DEPLOY.md` §2.1 antes de qualquer `prune`. **Migration longa: aplicar pelo SQL Editor**, o MCP corta em 60 s. Texto original: Fase 1 do módulo de
 **Inadimplência e Cobranças** (documento 2 do Rodrigo Medeiros, 30/09/2026; decisões do usuário
 em 12/10/2026: caminho B, perfis Supervisor e Cobrança, começar pela Fase 1). Cria os papéis
@@ -665,9 +672,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0097`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **74 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 796 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0098`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **75 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 843 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Os portais e páginas públicas
@@ -2042,6 +2049,10 @@ CONTRACT_OBJECT do Mutual nunca e ADESAO. Espelho puro em `src/lib/mutual.ts` (`
 `vendedorPendente`, `ROTULO_MOTIVO_VENDEDOR`))
 · `0096_mutual_captura_sem_regravar` (upsert da captura so regrava o que mudou; autovacuum de
 `mutual_captura` em 2%)
+· `0098_cobranca_fila` (COBRANCA, Fase 2: fila operacional por prioridade, contatos IMUTAVEIS por trigger,
+promessas (1 parcela) e acordos (2..36) sobre a divida existente com situacao CALCULADA pelos pagamentos —
+quebra = vencimento + 3 dias de baixa; taxa de cumprimento = cumpridas / (cumpridas + quebradas).
+Espelho puro em `src/lib/cobranca-fila.ts`)
 · `0097_cobranca_painel` (INADIMPLENCIA E COBRANCAS, Fase 1: papeis `supervisor`/`cobranca` +
 `supervisor_regionais` + `cobranca_escopo()` (o escopo vale DENTRO das RPCs de cobranca; `pode_regional`
 NAO foi tocado); `boletos_historico` + `cobranca_importar_historico_mutual` (em blocos por cursor,
@@ -2154,7 +2165,8 @@ recuperação e giro).
 - **Datas só-dia do Mutual entram por `mutual_dia()`**, não `mutual_data()`: esta converte fuso e
   um `'2026-09-08'` viraria 07/09 em São Paulo.
 - **O dado do Mutual envelhece:** o painel avisa quando a captura de INVOICE tem mais de 7 dias.
-- **Fases 2–5 (fila, contato/promessa, qualidade da venda, régua, relatórios) ainda não existem.**
+- **Fase 2 construída na `0098`** (fila `/cobrancas/fila`, contatos imutáveis, promessas/acordos com
+  situação calculada). **Fases 3–5 (qualidade da venda, régua, relatórios) ainda não existem.**
 
 ## Catálogo de CORES do veículo (0080) — `Configurações → Cores`
 > **Cuidado com o nome:** isto **não é a paleta visual** do sistema (essa vive em `globals.css` /
