@@ -210,6 +210,19 @@ consultor passaram a estourar os 8 s **mesmo uma por vez** (a fila da tela já e
 cancelamentos saíram de 8 em 8 s). Como a rotina da convivência é recapturar toda semana, isso se
 repetiria a cada rodada. **Regra que fica:** upsert de captura re-executável escreve só o que mudou —
 regravar linha idêntica é inchar a tabela que a carga inteira lê.
+**✅ CARGA DAS 3 UNIDADES RESTANTES EXECUTADA em 11–12/10/2026** (autorizada pelo usuário, pelo
+agente via `execute_sql` com a sessão do admin): GRANDE NATAL 432 veíc./375 assoc. novos (1 recusado) ·
+SÃO PAULO 1 821/760 (13) · RIBEIRÃO PRETO 1.169/998 (11). Vendedores ligados: GN 425 · SP1 821 ·
+RP 1.054 — ficam sem: RP 112 *consultor sem vendedor* + 3 *outra unidade*; GN 3 + 1 sem consultor
++ 3 outra unidade. **Conferido:** base com **2.564 associados e 2.898 veículos, 2.889 com
+`cobranca_externa`** (os 9 sem são os de antes da migração); **faturas 8, títulos 6, comissões 1 —
+nada novo**; 0 ativados hoje; 0 sem tipo, 0 sem plano e 0 sem valor nas 3 unidades novas (o de-para
+de plano foi refeito pelo usuário antes); 0 secdef sem `search_path`. **A MATRIZ segue com 172 sem
+plano** — foi carregada antes do de-para novo; re-executar a carga dela preenche pelo `coalesce`.
+**Pendente:** recapturar CONTRACT/PERSON/ADDRESS (143 faturáveis sem unidade = vendas posteriores à
+captura) e recarregar; INVOICE de novo antes do carnê de 2027. **Bancos (decisão do usuário, não
+bloqueia a carga):** Sicredi para boleto/PIX (~98% da carteira) e Asaas para cartão; API configurada
+nos próximos dias (`integracoes_bancarias` ainda vazia).
 **Próxima migration livre: `0097`.**
 **🔴 DECISÃO DE 11/10/2026: depois de dezembro o Mutual é DESLIGADO de vez** — a integração é
 migração com fim marcado, não conexão permanente. Ver "DECISÃO DO USUÁRIO (11/10/2026)" na seção
