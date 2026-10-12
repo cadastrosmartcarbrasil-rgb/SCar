@@ -333,7 +333,18 @@ liberadas."* Está em `.claude/settings.json` + `.claude/hooks/supabase-sql-guar
   `SET`, e **SELECT que chama RPC com verbo de escrita** no nome (`mutual_executar_carga`,
   `vincular_externo`, `registrar_*`… — neste projeto quase toda ação é RPC, e
   `select vincular_externo(...)` grava sem conter INSERT). Na dúvida pergunta; nunca libera no
-  escuro. Sem `jq` o hook não responde e vale o fluxo normal (pergunta). 32 casos testados.
+  escuro. Sem `jq`/`python3` o hook não responde e vale o fluxo normal (pergunta).
+- **12/10/2026 — o hook passou a usar um tokenizador (python3) em vez de `sed`.** A versão
+  anterior pedia autorização para leitura comum (alias em português entre aspas —
+  `"dia do vencimento"` casava com o comando `DO` —, `EXPLAIN ANALYZE`, `gerar_dre`,
+  `resolver_hotlink`) e **deixava passar duas escritas** (`select '--'; delete ...` e a RPC
+  entre aspas `"mutual_executar_carga"(...)`). Funções STABLE com verbo no nome ficam numa
+  lista liberada dentro do hook (Postgres proíbe escrita em função não-volátil) — ao recriar
+  uma delas como VOLATILE, tirar de lá. **48 casos em `npm run test:hooks`**; mexeu no hook,
+  acrescente o caso e rode.
+- **O que ainda pergunta e só o usuário resolve:** o MODO da sessão. Abrir a sessão em
+  **Auto** (seletor ao lado da caixa de mensagem); em "Accept edits" quase toda ferramenta
+  que não é edição pergunta, com ou sem hook.
 - **Migration se aplica pelo `execute_sql`, com o arquivo inteiro** — é o mesmo efeito do SQL
   Editor, e o usuário vê o SQL no pedido de autorização. Ritual inalterado: escrever →
   `npm run validate` → commit → **pedir** → aplicar → conferir no banco → atualizar a caixa de estado.

@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:db": "bash scripts/db-test.sh",
+    "test:hooks": "bash .claude/hooks/supabase-sql-guard.test.sh",
     "schema": "bash scripts/schema-build.sh",
     "build:check": "bash scripts/build-check.sh",
     "validate": "npm run typecheck && npm run test && npm run test:db -- --schema && npm run build:check",
