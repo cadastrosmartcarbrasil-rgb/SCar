@@ -65,7 +65,7 @@ export function SidebarRegional({ nome, unidade, papel, logoUrl, podeTrocarUnida
         </div>
       </div>
 
-      <aside className={`cockpit w-full shrink-0 md:block md:w-60 ${aberto ? 'block' : 'hidden'}`}>
+      <aside className={`cockpit w-full shrink-0 md:sticky md:top-0 md:block md:h-screen md:w-60 md:overflow-y-auto ${aberto ? 'block' : 'hidden'}`}>
         <div className="cockpit-stripe px-4 py-5">
           <LogoNaCabine url={logoUrl} />
           <p className="mt-2.5 text-center text-[11px] font-medium uppercase tracking-wide text-cyan-300">

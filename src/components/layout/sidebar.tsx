@@ -258,7 +258,7 @@ export function Sidebar({ papel, logoUrl }: { papel?: PapelUsuario; logoUrl?: st
       )}
 
       {/* Sidebar desktop (cabine) */}
-      <aside className="cockpit hidden w-64 shrink-0 flex-col md:flex">
+      <aside className="cockpit hidden w-64 shrink-0 flex-col md:sticky md:top-0 md:flex md:h-screen">
         <div className="px-4 py-5">
           <Brand logoUrl={logoUrl} />
         </div>

@@ -121,7 +121,7 @@ export function ShellVendedor({ nome, unidade, codigo, logoUrl, papelStaff, chil
       </div>
 
       {/* sidebar desktop */}
-      <aside className="cockpit hidden w-60 shrink-0 md:block">
+      <aside className="cockpit hidden w-60 shrink-0 md:sticky md:top-0 md:block md:h-screen md:overflow-y-auto">
         <div className="cockpit-stripe px-4 py-5">
           <LogoNaCabine url={logoUrl} />
           <p className="mt-2.5 text-center text-[11px] font-medium uppercase tracking-wide text-cyan-300">
