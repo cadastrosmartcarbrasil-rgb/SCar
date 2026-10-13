@@ -2142,6 +2142,16 @@ export type RegionalPainel = {
   contas_receber_aberto: number;
   contas_pagar_aberto: number;
   resultado_periodo: number;
+  // 0102 — a carteira da unidade. `veiculos_ativos` acima continua sendo SO
+  // `status = 'ativo'`; estes contam quem esta NA BASE (a lista de
+  // `veiculo_faturavel`, 0024/0072).
+  veiculos_carteira: number;
+  veiculos_inadimplentes: number;
+  veiculos_cobranca_externa: number;
+  veiculos_sem_valor: number;
+  carteira_mensal: number;
+  associados: number;
+  vendedores_cadastrados: number;
 };
 
 export type DesempenhoVendedor = {

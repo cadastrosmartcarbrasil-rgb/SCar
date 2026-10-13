@@ -5,12 +5,14 @@ import {
   Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
 import {
-  ArrowDownCircle, ArrowUpCircle, Car, HandCoins, Target, TrendingUp, Users, Zap,
+  ArrowDownCircle, ArrowUpCircle, Car, HandCoins, Info, Target, TrendingUp, UserRound,
+  Users, Wallet, Zap,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Indicador, FiltroPeriodo, Vazio, periodoPreset, type Periodo } from '@/components/financeiro/ui-financeiro';
 import { useDesempenhoEquipe, usePainelRegional } from '@/hooks/use-regional';
 import { formatCurrency } from '@/lib/utils';
+import { avisoCobrancaExterna, composicaoDaCarteira } from '@/lib/regional';
 import { useUnidadeAtual } from '@/components/regional/contexto-unidade';
 
 export default function PainelRegionalPage() {
@@ -37,22 +39,66 @@ export default function PainelRegionalPage() {
 
       <FiltroPeriodo periodo={periodo} onChange={setPeriodo} />
 
+      {/* ---------------------------------------------------------------
+          A CARTEIRA — o que a unidade TEM. Vem primeiro porque, depois da
+          carga do Mutual, e o numero que explica a tela: a unidade com mil
+          veiculos aparecia com a mesma cara de uma recem-aberta, porque o
+          painel so sabia falar de lead do periodo.
+      ---------------------------------------------------------------- */}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Indicador
-          titulo="Leads no periodo" valor={p?.leads_periodo} icon={Zap} tom="destaque"
+          titulo="Carteira (veiculos)" valor={p?.veiculos_carteira} icon={Car} tom="destaque"
+          formato="numero" carregando={isLoading}
+          detalhe={composicaoDaCarteira(p)}
+        />
+        <Indicador
+          titulo="Carteira mensal" valor={p?.carteira_mensal} icon={Wallet} tom="receita"
           carregando={isLoading}
+          detalhe={
+            (p?.veiculos_sem_valor ?? 0) > 0
+              ? `${p?.veiculos_sem_valor} veiculo(s) sem mensalidade definida`
+              : 'Soma da mensalidade dos veiculos na base'
+          }
+        />
+        <Indicador
+          titulo="Associados" valor={p?.associados} icon={UserRound} tom="neutro"
+          formato="numero" carregando={isLoading}
+          detalhe="Cadastros vinculados a esta unidade"
+        />
+        <Indicador
+          titulo="Vendedores ativos" valor={p?.vendedores_ativos} icon={Users} tom="neutro"
+          formato="numero" carregando={isLoading}
+          detalhe={`${p?.vendedores_cadastrados ?? 0} cadastrado(s) na unidade`}
+        />
+      </div>
+
+      {/* Veiculo ativo que nao emite boleto aqui e o estado normal da carteira
+          migrada (0082) — sem dizer isso, "cade a cobranca?" vira chamado. */}
+      {avisoCobrancaExterna(p) && (
+        <div className="flex items-start gap-2 rounded-xl border border-sky-200 bg-sky-50/60 p-3 text-[12px] leading-relaxed text-sky-900">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-sky-600" />
+          <span>{avisoCobrancaExterna(p)}</span>
+        </div>
+      )}
+
+      {/* --------------------------------------------- A VENDA, no periodo */}
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Indicador
+          titulo="Leads no periodo" valor={p?.leads_periodo} icon={Zap} tom="destaque"
+          formato="numero" carregando={isLoading}
           detalhe={`${p?.leads_hotlink ?? 0} vieram por hotlink · ${p?.leads_convertidos ?? 0} viraram veiculo`}
         />
         <Indicador
           titulo="Taxa de conversao" valor={p?.taxa_conversao} icon={Target}
-          tom={(p?.taxa_conversao ?? 0) >= 20 ? 'receita' : 'alerta'}
+          formato="percentual"
+          // Sem lead no periodo nao ha conversao a julgar: pintar de alerta
+          // acusaria a unidade por uma conta que nao existe.
+          tom={(p?.leads_periodo ?? 0) === 0 ? 'neutro'
+            : (p?.taxa_conversao ?? 0) >= 20 ? 'receita' : 'alerta'}
           carregando={isLoading}
-          detalhe="Leads que entraram na base no periodo"
-        />
-        <Indicador
-          titulo="Veiculos ativos" valor={p?.veiculos_ativos} icon={Car} tom="neutro"
-          carregando={isLoading}
-          detalhe={`${p?.vendedores_ativos ?? 0} vendedor(es) ativo(s) na unidade`}
+          detalhe={(p?.leads_periodo ?? 0) === 0
+            ? 'Sem lead no periodo — nada a converter'
+            : 'Leads que entraram na base no periodo'}
         />
         <Indicador
           titulo="Comissao a pagar" valor={p?.comissao_vendedores_pend} icon={HandCoins} tom="alerta"
@@ -61,6 +107,7 @@ export default function PainelRegionalPage() {
         />
       </div>
 
+      {/* ------------------------------- O DINHEIRO DA UNIDADE (so comissao) */}
       <div className="grid gap-3 sm:grid-cols-3">
         <Indicador titulo="A receber (unidade)" valor={p?.contas_receber_aberto} icon={ArrowUpCircle} tom="receita"
           detalhe="Somente titulos desta franquia" />

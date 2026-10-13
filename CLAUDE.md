@@ -172,7 +172,10 @@ seguintes gravam 200 linhas cada sem cortar associado; fila de outro recorte ou 
 Sem `p_lote` faz tudo de uma vez, como antes. Conferir depois de rodar:
 `select count(*) from pg_proc where proname='mutual_executar_carga'` = 1, a tabela `mutual_carga_fila`
 existe com RLS e sem policy, secdef sem `search_path` = 0, 0 RPCs nossas ao `anon`.
-**Próxima migration livre: `0095`.**
+**⚠️ A `0095_portal_regional_equipe` é NOVA e ainda NÃO foi aplicada.** Ela fecha o buraco de
+que o **gestor regional PODE APAGAR vendedor** (a policy `vendedores_write` é `for all`, e `for all`
+inclui DELETE) e põe a CARTEIRA no painel da franquia, que mostrava a unidade de mil veículos com
+cara de recém-aberta. Ver a seção própria. **Próxima migration livre: `0096`.**
 **Próxima migration livre era `0088`.** As **`0001`..`0086`** estão aplicadas — a **`0086` foi rodada e
 CONFERIDA em 05/10/2026**: o comentário de `mutual_planos_externos` diz 18/42 e 29/91 (sem "17" nem
 "26"), a função segue `security definer` com `search_path=public`, fechada ao `anon`; 0 `security
@@ -572,9 +575,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0094`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **71 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 779 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0095`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **72 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 794 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Os portais e páginas públicas
@@ -1911,6 +1914,16 @@ objeto); `mutual_carga_linhas`, `mutual_planos_externos` e `mutual_categorias_ve
 `mutual_carga_fila` (RLS sem policy) + `mutual_executar_carga(regional, inativos, confirmar, p_lote,
 p_preparar)` — DROP + CREATE: preparar le UMA vez, cada bloco grava ate p_lote linhas sem cortar CPF,
 fila velha (+1 h) ou de outro recorte e recusada; simulacao passou a ler o lote uma vez so)
+· `0095_portal_regional_equipe` (O PORTAL DA FRANQUIA: (A) `vendedores_write` era `for all` — e
+`for all` inclui DELETE, entao o `gestor_regional` apagava vendedor da propria unidade. Vira tres
+policies: `insert`/`update` (admin ou gestor da unidade — incluir, editar, ATIVAR e INATIVAR
+seguem identicos, porque `ativo` e coluna e inativar e UPDATE) e `delete` so `is_admin()`.
+NAO EXISTE papel "master": sao 7 (0077) e o teto e o admin; (B) `regional_painel` DROP + CREATE
+com a CARTEIRA — contava so `status = 'ativo'` (lista que o sistema superou: `inadimplente` nasceu
+na 0072) e nao dizia que a carteira inteira esta em cobranca externa (0082). `veiculos_ativos` fica
+INTACTO; entram `veiculos_carteira`/`_inadimplentes`/`_cobranca_externa`/`_sem_valor`,
+`carteira_mensal` (pelo override, sem chamar cotar_plano — escolha da 0078), `associados` e
+`vendedores_cadastrados`)
 · `0082_carga_mutual_preparacao` (as TRES pecas que faltavam para a carga do Mutual poder rodar,
 e nenhuma delas carrega nada — ha teste provando que a operacao segue intacta: (A) **a UNIDADE sai
 do ASSOCIADO** — a corrente do consultor (0073/0074) foi medida com a base completa e esta VAZIA
@@ -3859,6 +3872,89 @@ sem de-para), a **data de corte do financeiro e dos eventos**, e o de-para de **
 - **O financeiro da unidade e OUTRO** (0037), nao a tela da matriz — ver a secao abaixo.
 - **Hotlink da unidade:** `/v/<CODIGO_DA_REGIONAL>` funciona igual ao do vendedor, mas o lead entra
   sem vendedor (fica para a unidade distribuir). `leads.origem_hotlink` permite medir cada link.
+
+## O PORTAL DA FRANQUIA REVISADO (0095) — a equipe e a carteira
+> Pedido do usuário (13/10/2026): *"o usuário (regional) tem o poder de incluir e ativar e inativar
+> o vendedor, excluir somente admin e master."* Junto veio a revisão do que o portal MOSTRA.
+
+### 🔴 A POLICY ERA `for all` — e `for all` inclui DELETE
+`vendedores_write` (0003) dava ao `gestor_regional` todas as operações sobre a própria unidade,
+DELETE incluído. **Nenhuma tela do portal oferecia isso** — a UI já estava certa, a policy é que
+não estava —, mas `/regional` fala com o PostgREST direto e `useExcluirVendedor` existe no mesmo
+hook que a tela usa. Agora são três policies: `insert` e `update` (admin **ou** gestor da unidade)
+e **`delete` só `is_admin()`**.
+
+**Incluir, editar, ATIVAR e INATIVAR não mudaram nada para o gestor** — e é essa a distinção que a
+policy única não sabia fazer: `ativo` é COLUNA, então inativar é UPDATE, não DELETE.
+
+**⚠️ NÃO EXISTE papel `master` neste sistema.** São 7 (0077) e o teto é o `admin`. Ficou admin, e
+só ele; se um dia "master" virar um papel de verdade, é uma linha na policy.
+
+**⚠️ E EXCLUIR VENDEDOR NÃO É BARATO NEM PARA O ADMIN** — isto ficou de fora de propósito, porque
+a pergunta era *quem pode*: `leads.vendedor_id`, `veiculos.vendedor_id`,
+`lancamentos_financeiros.vendedor_id` e `lead_atribuicoes.vendedor_id` são **`on delete set null`**,
+então apagar **desliga a carteira do vendedor em silêncio** (a mordida que a 0067 documentou em
+`regionais`). Só `comissoes_vendas` é `on delete restrict`, então quem já gerou comissão o banco já
+recusa. **Decisão em aberto:** bloquear a exclusão de vendedor COM MOVIMENTO, como
+`fn_regional_bloqueia_exclusao` faz com a unidade.
+
+### O que a TELA da equipe ganhou (`/regional/equipe`)
+- **Ativar/inativar em UM clique**, na linha, com confirmação que diz o que para (hotlink, rodízio)
+  e o que **não** é apagado. Antes era: abrir o modal → rolar até *Status* → salvar.
+- **"66 cadastrados · 2 ativos · 64 aguardando ativação"** + abas *Ativos / Inativos / Todos*.
+  **O número sozinho mentia:** a importação de vendedores (0069) entra com **todos INATIVOS de
+  propósito**, então Ribeirão Preto — 66 importados — aparecia como uma equipe de dois, e a tela
+  não dizia de onde ligar os outros.
+- **O hotlink do inativo não é mais oferecido.** `vendedor_por_codigo` (0035) e `resolver_hotlink`
+  (0067) ignoram vendedor inativo: copiar era distribuir um link morto.
+- **Conversão de quem teve 0 lead mostra "—"**, não "0,0%" em âmbar — acusar quem não teve lead no
+  período é a mesma régua torta que o `/regionais` corrigiu com "sem base de comparação".
+- Rodapé da tela diz, em uma linha, **quem exclui** — para o gestor não procurar um botão que não
+  existe para ele.
+
+### 🔴 O PAINEL MOSTRAVA A UNIDADE VAZIA COM A CARTEIRA DENTRO
+Medido em produção em 13/10/2026, já com as **quatro** unidades carregadas (2.898 veículos):
+
+| Unidade | Veículos | Painel dizia | Associados | Vendedores |
+|---|---:|---:|---:|---:|
+| RIBEIRÃO PRETO | 1.169 (1.149 ativo + 20 vistoria) | "1.149" | 998 | 66 cad. / **2 ativos** |
+| SÃO PAULO 1 | 821 (812 + 9) | "812" | 760 | 28 / 1 |
+| SMART CAR MATRIZ | 474 (459 + 15) | "459" | 430 | 135 / 3 |
+| GRANDE NATAL | 434 (426 + 8) | "426" | 376 | 75 / 1 |
+
+Três defeitos somados, e todos da mesma família:
+1. **contava só `status = 'ativo'`** — lista de status que o sistema superou (`inadimplente` nasceu
+   na 0072; `em_evento`/`vistoria_pendente` existem desde a 0021). É o gotcha do `statusMeta` e do
+   `mutual_filiais` outra vez: **contar por uma lista que envelheceu**;
+2. **não dizia que a carteira inteira está em COBRANÇA EXTERNA** (0082) — veículo ativo que não
+   emite boleto aqui. Sem isso, *"cadê a cobrança?"* vira chamado (foi por isso que `/veiculos`
+   ganhou o selo);
+3. **não mostrava ASSOCIADOS nem a carteira em R$** — a unidade com 998 associados tinha a mesma
+   cara de uma recém-aberta, porque o painel só sabia falar de lead do período.
+
+**`veiculos_ativos` ficou INTACTO** (continua só `status = 'ativo'`): o que entra são colunas NOVAS
+ao lado, e há teste de regressão provando que o número velho não mudou de significado. A carteira
+em R$ soma `veiculos.valor_mensalidade` e **não chama `cotar_plano` por veículo** — mesma escolha
+do painel das regionais (0078) —, e quem está sem valor aparece contado em `veiculos_sem_valor`,
+para a diferença ser visível em vez de virar um total baixo sem explicação.
+
+**A ordem da tela virou: a CARTEIRA (o que a unidade tem) → a VENDA do período → o DINHEIRO da
+unidade.** Antes começava pelo lead do período, que numa unidade migrada é zero.
+
+### 🔴 O `Indicador` CRAVAVA "R$" EM TUDO — inclusive no que não é dinheiro
+Achado ao revisar: `Indicador` (`ui-financeiro.tsx`) nasceu no Financeiro e escrevia `R$` no valor
+sempre. Os dois portais que **contam coisas** usavam o mesmo componente, então estavam no ar
+mostrando **"R$ 1.149,00" veículos** e **"R$ 0,00" de taxa de conversão** — no `/regional` **e no
+`/vendedor`**. Entrou `formato?: 'moeda' | 'numero' | 'percentual'`, com **`moeda` como padrão**
+para nenhuma tela de dinheiro mudar; quem conta passa `numero`, quem mede passa `percentual`.
+**Componente compartilhado entre domínios não pode ter a unidade de UM deles cravada.**
+
+### Lógica pura testada
+`src/lib/regional.ts` — `resumoDaEquipe`, `filtrarEquipe`, `hotlinkResolve`,
+`avisoDeSituacaoVendedor`, `composicaoDaCarteira`, `avisoCobrancaExterna`.
+Suíte de banco em `supabase/tests/0095_portal_regional_equipe.test.sql` (inclui o DELETE recusado
+ao gestor — RLS de delete **não levanta erro**, ela simplesmente não alcança a linha, então o
+teste afirma `row_count = 0` e que a linha continua lá).
 
 ## Financeiro da franquia (0037) — compacto de proposito
 - **Ele nao e o financeiro da matriz reduzido; e outro financeiro.** A operacao (mensalidade,

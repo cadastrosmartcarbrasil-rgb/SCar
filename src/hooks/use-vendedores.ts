@@ -59,6 +59,29 @@ export function useSalvarVendedor() {
   });
 }
 
+/**
+ * Ativa / inativa o vendedor — o poder que a FRANQUIA tem sobre a propria
+ * equipe (0102). E um UPDATE de uma coluna, nao uma exclusao: o que ele ja
+ * trouxe (leads, vendas, comissao) continua inteiro, e por isso o gestor pode.
+ * Excluir e outra coisa e so o admin alcanca, pela policy `vendedores_delete`.
+ */
+export function useAlternarVendedorAtivo() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<void, Error, { id: string; ativo: boolean }>({
+    mutationFn: async ({ id, ativo }) => {
+      const { error } = await supabase.from('vendedores').update({ ativo }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: CHAVE });
+      // O portal da franquia le a equipe por outra RPC — sem isto a linha
+      // continuaria desenhada com a situacao antiga ate recarregar a pagina.
+      qc.invalidateQueries({ queryKey: ['regional'] });
+    },
+  });
+}
+
 export function useExcluirVendedor() {
   const supabase = createClient();
   const qc = useQueryClient();

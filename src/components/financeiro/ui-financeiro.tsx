@@ -25,7 +25,15 @@ const TOM_ICONE: Record<Tom, string> = {
   destaque: 'bg-cyan-50 text-cyan-600',
 };
 
-/** Indicador de painel: rótulo, valor em destaque e uma linha de contexto. */
+/**
+ * Indicador de painel: rótulo, valor em destaque e uma linha de contexto.
+ *
+ * 🔴 `formato` existe porque o componente nasceu no Financeiro e cravava "R$"
+ * no valor — então os painéis que contam COISAS mostravam "R$ 1.149,00"
+ * veículos e "R$ 0,00" de taxa de conversão (o portal da franquia e o do
+ * vendedor, os dois). O padrão continua `moeda`, para nenhuma tela de dinheiro
+ * mudar; quem conta passa `numero` e quem mede passa `percentual`.
+ */
 export function Indicador({
   titulo,
   valor,
@@ -33,6 +41,7 @@ export function Indicador({
   icon: Icon,
   tom = 'neutro',
   carregando,
+  formato = 'moeda',
 }: {
   titulo: string;
   valor: number | null | undefined;
@@ -40,6 +49,7 @@ export function Indicador({
   icon?: React.ElementType;
   tom?: Tom;
   carregando?: boolean;
+  formato?: 'moeda' | 'numero' | 'percentual';
 }) {
   return (
     <div className="rounded-2xl border border-slate-200/80 bg-superficie p-4 shadow-[0_1px_2px_rgba(20,33,61,0.04),0_10px_26px_-16px_rgba(20,33,61,0.18)]">
@@ -55,8 +65,15 @@ export function Indicador({
         <div className="mt-3 h-7 w-28 animate-pulse rounded bg-slate-100" />
       ) : (
         <p className={`tnum mt-2.5 text-[23px] font-bold leading-none ${TOM_VALOR[tom]}`}>
-          <span className="mr-1 text-[13px] font-semibold text-slate-400">R$</span>
-          {formatarMoedaBR(valor ?? 0)}
+          {formato === 'moeda' && (
+            <span className="mr-1 text-[13px] font-semibold text-slate-400">R$</span>
+          )}
+          {formato === 'numero'
+            ? Math.round(Number(valor ?? 0)).toLocaleString('pt-BR')
+            : formatarMoedaBR(valor ?? 0)}
+          {formato === 'percentual' && (
+            <span className="ml-0.5 text-[13px] font-semibold text-slate-400">%</span>
+          )}
         </p>
       )}
       {detalhe && <p className="mt-2 text-[11.5px] leading-tight text-slate-500">{detalhe}</p>}

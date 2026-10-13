@@ -63,12 +63,14 @@ export default function PainelVendedorPage() {
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Indicador
           titulo="Leads no periodo" valor={p?.leads_periodo} icon={Zap} tom="destaque"
-          carregando={isLoading}
+          formato="numero" carregando={isLoading}
           detalhe={`${p?.leads_hotlink ?? 0} pelo meu link · ${p?.leads_abertos ?? 0} em aberto`}
         />
         <Indicador
           titulo="Taxa de conversao" valor={p?.taxa_conversao} icon={Target}
-          tom={(p?.taxa_conversao ?? 0) >= 20 ? 'receita' : 'alerta'}
+          formato="percentual"
+          tom={(p?.leads_periodo ?? 0) === 0 ? 'neutro'
+            : (p?.taxa_conversao ?? 0) >= 20 ? 'receita' : 'alerta'}
           carregando={isLoading}
           detalhe={`${p?.leads_convertidos ?? 0} viraram veiculo na base`}
         />
@@ -79,7 +81,7 @@ export default function PainelVendedorPage() {
         />
         <Indicador
           titulo="Minha carteira" valor={p?.veiculos_ativos} icon={Car} tom="neutro"
-          carregando={isLoading}
+          formato="numero" carregando={isLoading}
           detalhe="Veiculos ativos vendidos por mim"
         />
       </div>
