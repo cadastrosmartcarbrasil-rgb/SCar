@@ -64,6 +64,15 @@ export type StatusComunicacao = 'pendente' | 'enviado' | 'falha';
 export type EnvolvidoTipo = 'ASSOCIADO' | 'TERCEIRO';
 export type TipoEnvolvimento = 'CAUSADOR' | 'VITIMA';
 export type TipoReparo = 'PROPRIO' | 'TERCEIRO';
+// 0103 — tratativa do terceiro envolvido no evento
+export type StatusTerceiro =
+  | 'EM_ANALISE'
+  | 'AGUARDANDO_DOCUMENTOS'
+  | 'EM_REPARO'
+  | 'ACORDO'
+  | 'INDENIZADO'
+  | 'NEGADO'
+  | 'ENCERRADO';
 export type MetodoPreco = 'FAIXA_FIPE' | 'FIXO' | 'PERCENTUAL_FIPE';
 export type TipoValorFaixa = 'VALOR' | 'PERCENTUAL';
 export type MandatoStatus = 'VIGENTE' | 'EXPIRADO' | 'EM_RENOVACAO';
@@ -1416,6 +1425,47 @@ export type EventosSinistroRow = Timestamps & {
   bo_data: string | null;
   bo_unidade: string | null;
   bo_resumo: string | null;
+  // 0103 — informado na abertura; libera o cadastro de terceiros
+  possui_terceiros: boolean;
+};
+
+// 0103 — terceiro vinculado a UM evento (e, por FK composta, ao associado dono do evento)
+export type EventoTerceirosRow = Timestamps & {
+  id: string;
+  evento_id: string;
+  cliente_id: string;
+  regional_id: string | null;
+  sequencia: number;
+  codigo: string;
+  papel: TipoEnvolvimento | null;
+  status: StatusTerceiro;
+  tipo_pessoa: TipoPessoa;
+  nome: string;
+  cpf_cnpj: string | null;
+  rg: string | null;
+  data_nascimento: string | null;
+  telefone: string | null;
+  celular: string | null;
+  email: string | null;
+  endereco: Json;
+  condutor_e_proprietario: boolean;
+  condutor_nome: string | null;
+  condutor_cpf: string | null;
+  condutor_cnh: string | null;
+  possui_veiculo: boolean;
+  veiculo_placa: string | null;
+  veiculo_marca: string | null;
+  veiculo_modelo: string | null;
+  veiculo_ano: number | null;
+  veiculo_cor: string | null;
+  veiculo_valor_fipe: number | null;
+  possui_seguro: boolean;
+  seguradora: string | null;
+  numero_apolice: string | null;
+  descricao_danos: string | null;
+  valor_estimado_danos: number | null;
+  observacoes: string | null;
+  created_by: string | null;
 };
 
 export type TiposEventoRow = {
@@ -2107,6 +2157,8 @@ export type LancamentosFinanceirosRow = Timestamps & {
   valor_saldo: number;
   // 0037 — favorecido do repasse de comissao (financeiro da franquia)
   vendedor_id: string | null;
+  // 0103 — terceiro do evento relacionado (sem fornecedor = favorecido e o terceiro)
+  evento_terceiro_id: string | null;
 };
 
 export type BaixasFinanceirasRow = {
@@ -2250,6 +2302,7 @@ export type AnexosEventoRow = {
   tamanho_bytes: number | null;
   uploaded_by: string | null;
   created_at: string;
+  evento_terceiro_id: string | null;
 };
 
 export type CotacoesPecasRow = Timestamps & {
@@ -2260,6 +2313,7 @@ export type CotacoesPecasRow = Timestamps & {
   valor_total: number;
   status: StatusCotacao;
   tipo_reparo: TipoReparo;
+  evento_terceiro_id: string | null;
 };
 
 export type ItensCotacaoRow = {
@@ -3121,7 +3175,11 @@ export type Database = {
       tipos_evento: TableDef<TiposEventoRow>;
       historico_protocolo: TableDef<HistoricoProtocoloRow>;
       anexos_evento: TableDef<AnexosEventoRow>;
-      cotacoes_pecas: TableDef<CotacoesPecasRow>;
+      cotacoes_pecas: TableDef<CotacoesPecasRow, [Rel<'evento_terceiro_id', 'evento_terceiros'>]>;
+      evento_terceiros: TableDef<
+        EventoTerceirosRow,
+        [Rel<'evento_id', 'eventos_sinistro'>, Rel<'cliente_id', 'clientes'>, Rel<'regional_id', 'regionais'>]
+      >;
       itens_cotacao: TableDef<ItensCotacaoRow, [Rel<'cotacao_id', 'cotacoes_pecas'>]>;
       notas_fiscais_evento: TableDef<NotasFiscaisEventoRow>;
       email_templates: TableDef<EmailTemplatesRow>;
@@ -3261,6 +3319,8 @@ export type Database = {
           Rel<'categoria_dre_id', 'categorias_dre'>,
           Rel<'centro_custo_id', 'centros_custo'>,
           Rel<'vendedor_id', 'vendedores'>,
+          Rel<'evento_id', 'eventos_sinistro'>,
+          Rel<'evento_terceiro_id', 'evento_terceiros'>,
         ]
       >;
       baixas_financeiras: TableDef<BaixasFinanceirasRow, [Rel<'lancamento_id', 'lancamentos_financeiros'>]>;

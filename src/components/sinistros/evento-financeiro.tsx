@@ -1,126 +1,207 @@
 'use client';
 
 import { useState } from 'react';
-import { toast } from 'sonner';
-import { Plus } from 'lucide-react';
+import { HandCoins, Pencil, Plus, Receipt } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { FormField, Input, MoneyInput, Select } from '@/components/ui/field';
-import { usePlanoContas } from '@/hooks/use-config';
-import { useMovimentacoesEvento, useAddMovimentacaoEvento } from '@/hooks/use-evento-cadastro';
+import { LancamentoModal } from '@/components/financeiro/lancamento-modal';
+import { BaixaModal } from '@/components/financeiro/baixa-modal';
+import { Selo } from '@/components/financeiro/ui-financeiro';
+import { usePerfilAtual, usePlanoContas } from '@/hooks/use-config';
+import { podeTratarEvento } from '@/lib/usuario';
+import { useLancamentosEvento, useMovimentacoesLegadasEvento, useTerceirosEvento } from '@/hooks/use-terceiros';
+import type { LancamentoComRel } from '@/hooks/use-financeiro';
+import { resumoFinanceiroEvento, tipoFavorecido } from '@/lib/terceiros';
+import { situacaoTitulo } from '@/lib/financeiro';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import type { MovimentacoesCaixaRow, TipoMovimentacao } from '@/lib/database.types';
+import type { LancamentosFinanceirosRow } from '@/lib/database.types';
 
-// Lancamentos financeiros (contas a pagar/receber) vinculados ao protocolo.
-export function EventoFinanceiro({ eventoId, regionalId }: { eventoId: string; regionalId?: string | null }) {
-  const { data: movs, isLoading } = useMovimentacoesEvento(eventoId);
+/**
+ * Compras e pagamentos do evento. Grava em lancamentos_financeiros (o mesmo
+ * Contas a Pagar/Receber do /financeiro, com baixa, saldo e DRE), sempre com
+ * FAVORECIDO na conta a pagar: fornecedor ou terceiro do evento.
+ * Com `terceiroId`, a tela mostra so o que trata daquele terceiro e ja abre o
+ * lancamento amarrado a ele.
+ */
+export function EventoFinanceiro({
+  eventoId,
+  regionalId,
+  protocolo,
+  terceiroId,
+}: {
+  eventoId: string;
+  regionalId?: string | null;
+  protocolo: string | null;
+  terceiroId?: string;
+}) {
+  const { data: lancs, isLoading } = useLancamentosEvento(eventoId, terceiroId);
+  const { data: terceiros } = useTerceirosEvento(eventoId);
+  const { data: legado } = useMovimentacoesLegadasEvento(terceiroId ? '' : eventoId);
+  const [editando, setEditando] = useState<Partial<LancamentosFinanceirosRow> | null>(null);
+  const [baixando, setBaixando] = useState<LancamentoComRel | null>(null);
   const { data: categorias } = usePlanoContas();
-  const add = useAddMovimentacaoEvento(eventoId, regionalId);
+  const { data: perfil } = usePerfilAtual();
+  // Gastar no evento e TRATAR o evento (0077): o botao so aparece para o time.
+  const trata = podeTratarEvento(perfil?.papel);
+  // Sugestao de classificacao (0103): reparo de evento. Indenizacao = 3.1.05.
+  const categoriaPadrao = (categorias ?? []).find((c) => c.codigo_estruturado === '3.1.04')?.id ?? null;
 
+  const lista = lancs ?? [];
+  const r = resumoFinanceiroEvento(lista);
   const hoje = new Date().toISOString().slice(0, 10);
-  const [form, setForm] = useState<Partial<MovimentacoesCaixaRow>>({
-    tipo: 'DESPESA',
-    valor: 0,
-    data_competencia: hoje,
-  });
 
-  const m = movs ?? [];
-  const receber = m.filter((x) => x.tipo === 'RECEITA').reduce((s, x) => s + Number(x.valor), 0);
-  const pagar = m.filter((x) => x.tipo === 'DESPESA').reduce((s, x) => s + Number(x.valor), 0);
-
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!form.valor || form.valor <= 0) return toast.error('Informe um valor');
-    add.mutate(form, {
-      onSuccess: () => {
-        toast.success('Lancamento adicionado');
-        setForm({ tipo: form.tipo, valor: 0, data_competencia: hoje });
-      },
-      onError: (err) => toast.error((err as Error).message),
+  function novo() {
+    setEditando({
+      tipo: 'DESPESA',
+      evento_id: eventoId,
+      evento_terceiro_id: terceiroId ?? null,
+      regional_id: regionalId ?? null,
+      categoria_dre_id: categoriaPadrao,
+      data_emissao: hoje,
+      data_vencimento: hoje,
+      competencia: hoje,
     });
   }
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-3">
-        <Box titulo="A Receber" valor={receber} cor="text-emerald-600" />
-        <Box titulo="A Pagar" valor={pagar} cor="text-rose-600" />
-        <Box titulo="Saldo do evento" valor={receber - pagar} cor="text-slate-800" />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Box titulo="A pagar (total)" valor={r.aPagar} detalhe={`em aberto ${formatCurrency(r.saldoPagar)}`} cor="text-rose-600" />
+        <Box titulo="Pago" valor={r.pago} cor="text-slate-800" />
+        <Box titulo="A receber" valor={r.aReceber} detalhe={`em aberto ${formatCurrency(r.saldoReceber)}`} cor="text-emerald-600" />
+        <Box titulo={terceiroId ? 'Custo do terceiro' : 'Custo liquido do evento'} valor={r.custoLiquido} cor="text-brand-700" />
       </div>
 
-      {/* Novo lancamento */}
-      <form onSubmit={submit} className="grid grid-cols-2 gap-3 rounded-lg border border-slate-200 p-3 lg:grid-cols-6">
-        <FormField label="Tipo">
-          <Select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value as TipoMovimentacao })}>
-            <option value="DESPESA">A Pagar</option>
-            <option value="RECEITA">A Receber</option>
-          </Select>
-        </FormField>
-        <FormField label="Categoria (DRE)" className="lg:col-span-2">
-          <Select value={form.categoria_dre_id ?? ''} onChange={(e) => setForm({ ...form, categoria_dre_id: e.target.value || null })}>
-            <option value="">--</option>
-            {(categorias ?? []).map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.codigo_estruturado} - {c.nome}
-              </option>
-            ))}
-          </Select>
-        </FormField>
-        <FormField label="Valor (R$)">
-          <MoneyInput value={form.valor ?? null} onChange={(v) => setForm({ ...form, valor: v ?? 0 })} />
-        </FormField>
-        <FormField label="Competencia">
-          <Input type="date" value={form.data_competencia ?? hoje} onChange={(e) => setForm({ ...form, data_competencia: e.target.value })} />
-        </FormField>
-        <div className="flex items-end">
-          <Button type="submit" disabled={add.isPending} className="w-full">
-            <Plus className="h-4 w-4" /> Lancar
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-slate-500">
+          Lancamentos entram no Contas a Pagar/Receber e no DRE. Conta a pagar exige fornecedor ou terceiro.
+        </p>
+        {trata && (
+          <Button type="button" onClick={novo}>
+            <Plus className="h-4 w-4" /> Novo lancamento
           </Button>
-        </div>
-        <FormField label="Descricao" className="lg:col-span-6">
-          <Input value={form.descricao ?? ''} onChange={(e) => setForm({ ...form, descricao: e.target.value })} placeholder="Ex.: pagamento de funilaria" />
-        </FormField>
-      </form>
+        )}
+      </div>
 
-      {/* Lista */}
       {isLoading ? (
         <p className="text-sm text-slate-400">Carregando...</p>
-      ) : m.length === 0 ? (
-        <p className="text-sm text-slate-400">Nenhum lancamento vinculado a este protocolo.</p>
+      ) : lista.length === 0 ? (
+        <p className="text-sm text-slate-400">Nenhum lancamento {terceiroId ? 'para este terceiro' : 'neste evento'}.</p>
       ) : (
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
-              <th className="py-2">Competencia</th>
-              <th className="py-2">Tipo</th>
-              <th className="py-2">Descricao</th>
-              <th className="py-2 text-right">Valor</th>
-            </tr>
-          </thead>
-          <tbody>
-            {m.map((x) => (
-              <tr key={x.id} className="border-b border-slate-50">
-                <td className="py-2">{formatDate(x.data_competencia)}</td>
-                <td className="py-2">
-                  <span className={`rounded px-2 py-0.5 text-xs ${x.tipo === 'RECEITA' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
-                    {x.tipo === 'RECEITA' ? 'A Receber' : 'A Pagar'}
-                  </span>
-                </td>
-                <td className="py-2 text-slate-600">{x.descricao ?? '-'}</td>
-                <td className="py-2 text-right font-medium">{formatCurrency(x.valor)}</td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
+                <th className="py-2">Vencimento</th>
+                <th className="py-2">Descricao</th>
+                <th className="py-2">Favorecido / Pagador</th>
+                <th className="py-2">Situacao</th>
+                <th className="py-2 text-right">Valor</th>
+                <th className="py-2 text-right">Saldo</th>
+                <th className="py-2" />
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {lista.map((l) => {
+                const sit = situacaoTitulo(l);
+                return (
+                  <tr key={l.id} className="border-b border-slate-50">
+                    <td className="tnum py-2">{formatDate(l.data_vencimento)}</td>
+                    <td className="py-2">
+                      <span className={`mr-1.5 rounded px-1.5 py-0.5 text-[10px] ${l.tipo === 'RECEITA' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                        {l.tipo === 'RECEITA' ? 'Receber' : 'Pagar'}
+                      </span>
+                      {l.descricao}
+                    </td>
+                    <td className="py-2 text-slate-600">
+                      <Favorecido l={l} />
+                    </td>
+                    <td className="py-2"><Selo situacao={sit} /></td>
+                    <td className="tnum py-2 text-right font-medium">{formatCurrency(l.valor_original)}</td>
+                    <td className="tnum py-2 text-right">{formatCurrency(l.valor_saldo)}</td>
+                    <td className="py-2 text-right">
+                      {l.status !== 'cancelado' && l.status !== 'quitado' && (
+                        <button title="Registrar baixa" onClick={() => setBaixando(l)} className="p-1 text-slate-400 hover:text-emerald-600">
+                          <HandCoins className="h-4 w-4" />
+                        </button>
+                      )}
+                      {l.status !== 'cancelado' && (
+                        <button title="Editar" onClick={() => setEditando(l)} className="p-1 text-slate-400 hover:text-brand-600">
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
+
+      {(legado ?? []).length > 0 && (
+        <div className="rounded-lg border border-dashed border-slate-300 p-3">
+          <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase text-slate-400">
+            <Receipt className="h-3.5 w-3.5" /> Movimentacoes antigas (antes do controle por favorecido) · somente leitura
+          </p>
+          <table className="w-full text-xs text-slate-500">
+            <tbody>
+              {(legado ?? []).map((m) => (
+                <tr key={m.id}>
+                  <td className="py-1">{formatDate(m.data_competencia)}</td>
+                  <td className="py-1">{m.tipo === 'RECEITA' ? 'Receber' : 'Pagar'}</td>
+                  <td className="py-1">{m.descricao ?? '-'}</td>
+                  <td className="tnum py-1 text-right">{formatCurrency(m.valor)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {editando && (
+        <LancamentoModal
+          aberto
+          inicial={editando}
+          onClose={() => setEditando(null)}
+          evento={{
+            protocolo,
+            terceiros: (terceiros ?? []).map((t) => ({ id: t.id, codigo: t.codigo, nome: t.nome })),
+          }}
+        />
+      )}
+      {baixando && <BaixaModal lancamento={baixando} onClose={() => setBaixando(null)} />}
     </div>
   );
 }
 
-function Box({ titulo, valor, cor }: { titulo: string; valor: number; cor: string }) {
+function Favorecido({ l }: { l: LancamentoComRel }) {
+  if (l.tipo === 'RECEITA') return <>{l.clientes?.nome_razao_social ?? '-'}</>;
+  const tipo = tipoFavorecido(l);
+  if (tipo === 'FORNECEDOR') {
+    return (
+      <>
+        {l.fornecedores?.razao_social}
+        {l.evento_terceiros && <span className="block text-[11px] text-slate-400">ref. terceiro {l.evento_terceiros.codigo}</span>}
+      </>
+    );
+  }
+  if (tipo === 'TERCEIRO') {
+    return (
+      <>
+        {l.evento_terceiros?.nome}
+        <span className="block text-[11px] text-slate-400">terceiro {l.evento_terceiros?.codigo}</span>
+      </>
+    );
+  }
+  return <span className="text-amber-600">sem favorecido (legado)</span>;
+}
+
+function Box({ titulo, valor, cor, detalhe }: { titulo: string; valor: number; cor: string; detalhe?: string }) {
   return (
     <div className="rounded-lg border border-slate-200 bg-superficie p-3">
       <p className="text-xs text-slate-500">{titulo}</p>
-      <p className={`mt-1 text-lg font-semibold ${cor}`}>{formatCurrency(valor)}</p>
+      <p className={`tnum mt-1 text-lg font-semibold ${cor}`}>{formatCurrency(valor)}</p>
+      {detalhe && <p className="tnum text-[11px] text-slate-400">{detalhe}</p>}
     </div>
   );
 }

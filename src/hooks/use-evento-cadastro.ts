@@ -1,9 +1,9 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { normalizarPlaca } from '@/lib/placa';
-import type { EventosSinistroRow, MovimentacoesCaixaRow } from '@/lib/database.types';
+import type { EventosSinistroRow } from '@/lib/database.types';
 
 export interface VeiculoLocalizado {
   id: string;
@@ -60,6 +60,7 @@ export function useCriarEvento() {
           data_ocorrencia: e.data_ocorrencia,
           data_comunicacao: e.data_comunicacao || null,
           envolvido_tipo: e.envolvido_tipo ?? 'ASSOCIADO',
+          possui_terceiros: e.possui_terceiros ?? false,
           tipo_envolvimento: e.tipo_envolvimento || null,
           tipo_evento_id: e.tipo_evento_id || null,
           local_evento: e.local_evento ?? {},
@@ -80,45 +81,5 @@ export function useCriarEvento() {
       return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['eventos'] }),
-  });
-}
-
-// Lancamentos financeiros vinculados ao protocolo do evento.
-export function useMovimentacoesEvento(eventoId: string) {
-  const supabase = createClient();
-  return useQuery<MovimentacoesCaixaRow[]>({
-    queryKey: ['eventos', eventoId, 'financeiro'],
-    enabled: !!eventoId,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('movimentacoes_caixa')
-        .select('*')
-        .eq('evento_id', eventoId)
-        .order('data_competencia', { ascending: false });
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-}
-
-export function useAddMovimentacaoEvento(eventoId: string, regionalId?: string | null) {
-  const supabase = createClient();
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (m: Partial<MovimentacoesCaixaRow>) => {
-      const { error } = await supabase.from('movimentacoes_caixa').insert({
-        evento_id: eventoId,
-        tipo: m.tipo,
-        categoria_dre_id: m.categoria_dre_id || null,
-        descricao: m.descricao || null,
-        valor: m.valor ?? 0,
-        data_competencia: m.data_competencia,
-        data_caixa: m.data_caixa || null,
-        status: m.status ?? 'pendente',
-        regional_id: regionalId || null,
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['eventos', eventoId, 'financeiro'] }),
   });
 }

@@ -234,7 +234,8 @@ sessão: **aplicar pelo SQL Editor** e depois `select * from mutual_importar_eve
 depois de rodar, `/integracao/mutual` → *Histórico de eventos* → *Importar* (medido em 13/10: 827 de
 2.909 eventos entram). Conferir: `select count(*) from pg_proc where proname like '%eventos_historico%'`,
 secdef sem `search_path` = 0, 0 RPCs nossas ao `anon`.
-**Próxima migration livre: `0103`** (a `0102` está escrita e pendente, logo abaixo).
+**Próxima migration livre: `0104`.** A `0102` e a **`0103_eventos_terceiros`** estão escritas e
+**pendentes** (ver abaixo e a seção "EVENTOS E TERCEIROS (0103)").
 **✅ A `0098_cobranca_fila` foi APLICADA (pelo usuário, SQL Editor — o `execute_sql` estourou os 60 s do MCP e foi desfeito inteiro) e CONFERIDA em 12/10/2026:** 3 tabelas com RLS, 14 funções, 3 triggers de imutabilidade, 0 secdef sem `search_path`, 0 RPCs nossas ao `anon`. Tela `/cobrancas/fila` (Cobrança → Fila de Cobrança). Ver §9 de `docs/modulos/cobranca-inadimplencia.md`.
 **✅ A `0099_historico_financeiro_mutual` foi APLICADA (pelo usuário, SQL Editor) e CONFERIDA em 12/10/2026:** 3 colunas novas em `boletos_historico`, 3 funções novas, importação e `portal_financeiro` nas versões novas, 0 secdef sem `search_path`, 0 RPCs nossas ao `anon`; QQQ5D49 com 35 boletos visíveis (29 pagos · 2 vencidos · 3 a vencer). Linha digitável ainda em 0 — falta reimportar o histórico. Texto original: O defeito: o Histórico Financeiro do SAC e o Financeiro do portal liam SÓ `titulos_financeiros` (6 linhas na base) e os 78.425 boletos importados do Mutual não apareciam. Ela: (A) `boletos_historico` ganha `linha_digitavel`/`url_boleto`/`url_pagamento` (o `checkout_link` do Mutual); (B) `cobranca_importar_historico_mutual` recriada (mesma assinatura) preenchendo os três; (C) `corte_cobranca_cliente`; (D) `boletos_mutual_do_cliente` (SAC, permissão de `titulos_do_cliente`) e `portal_boletos_mutual`; (E) `portal_financeiro` recriado somando as duas fontes. As telas unem as duas listas (`src/lib/historico-financeiro.ts`) e o boleto do Mutual é SÓ CONSULTA (selo "Mutual", sem editar/2ª via; link de pagamento e linha digitável do próprio Mutual). **Depois de aplicar:** deploy + `/integracao/mutual` → *Histórico de boletos* → *Importar / atualizar* (é o que traz a linha digitável para os 78 mil já importados).
 **✅ A `0097_cobranca_painel` foi APLICADA (pelo usuário, SQL Editor — o `execute_sql` estourava os 60 s do MCP) e CONFERIDA em 12/10/2026:** 22 funções do módulo, `boletos_historico`/`supervisor_regionais`/`cobranca_feriados` com RLS, papéis `supervisor`/`cobranca` no enum, `resumo_cobrancas` com o denominador novo, meta/limite 5/10, 0 secdef sem `search_path`, 0 RPCs nossas ao `anon`. **Em produção desde 12/10/2026:** INVOICE recapturado (206.706) e **histórico importado — 78.425 boletos de 2.527 associados** (58.125 pagos · 8.428 abertos · 11.872 cancelados; 124 mil mensalidades de associados não carregados ficam de fora, de propósito). Deploy no ar com o painel, as listas paginadas (`lerTodas`) e a barra lateral fixa — conferido pelo usuário. **O VPS estava com o disco 100% cheio** (cache do BuildKit 30 GB + imagens antigas): limpo para 80% e swap ampliado para 3 GB — ver `DEPLOY.md` §2.1 antes de qualquer `prune`. **Migration longa: aplicar pelo SQL Editor**, o MCP corta em 60 s. Texto original: Fase 1 do módulo de
@@ -255,7 +256,11 @@ do Mutual: o que isso muda no desenho, o checklist pós-corte e o porquê do tim
 **⚠️ A `0102_portal_regional_equipe` é NOVA e ainda NÃO foi aplicada.** Ela fecha o buraco de
 que o **gestor regional PODE APAGAR vendedor** (a policy `vendedores_write` é `for all`, e `for all`
 inclui DELETE) e põe a CARTEIRA no painel da franquia, que mostrava a unidade de mil veículos com
-cara de recém-aberta. Ver a seção própria. **Próxima migration livre: `0103`.**
+cara de recém-aberta. Ver a seção própria.
+**⚠️ A `0103_eventos_terceiros` é NOVA e ainda NÃO foi aplicada** (13/10/2026). Terceiros do evento com
+tela própria e favorecido obrigatório na conta a pagar do evento. **Aplicar DEPOIS da 0102.** Conferir:
+`select count(*) from information_schema.tables where table_name = 'evento_terceiros'` = 1, secdef sem
+`search_path` = 0, 0 RPCs nossas ao `anon`. **Próxima migration livre: `0104`.**
 **⏱️ Teto do `authenticated` está em 20 s desde 11/10/2026 (temporário, migração).** Voltar a 8 s
 no corte: `alter role authenticated set statement_timeout = '8s'; notify pgrst, 'reload config';`
 **Próxima migration livre era `0088`.** As **`0001`..`0086`** estão aplicadas — a **`0086` foi rodada e
@@ -2089,6 +2094,17 @@ associado pelo vinculo PERSON ou o dono atual do carro), `mutual_importar_evento
 (re-executavel, so regrava o que mudou), `eventos_historico_resumo`, `eventos_mutual_do_cliente` (SAC),
 `eventos_historico_listar` (aba Historico de /sinistros, paginada); `veiculos_do_cliente` e
 `painel_visao_geral` recriadas contando o historico. Regua em `src/lib/eventos-historico.ts`)
+· `0103_eventos_terceiros` (TERCEIROS DO EVENTO + FAVORECIDO NAS COMPRAS: `evento_terceiros` (N por
+evento; papel `tipo_envolvimento` com null = a apurar; enum `status_terceiro`; pessoa/condutor/veiculo/
+seguro/danos) com FK COMPOSTA `(evento_id, cliente_id) -> eventos_sinistro(id, cliente_id)` = "Terceiro
+do Evento X do Associado Y" no banco; trigger `fn_terceiro_vincular` herda associado/unidade do evento,
+numera `<protocolo>-T01` e trava troca de evento; historico `TERCEIRO`/`TERCEIRO_STATUS`;
+`eventos_sinistro.possui_terceiros`; `evento_terceiro_id` em `lancamentos_financeiros`/`cotacoes_pecas`/
+`anexos_evento`; trigger `fn_lanc_evento_favorecido`: DESPESA de evento exige `fornecedor_id` OU
+`evento_terceiro_id` (titulo legado sem favorecido segue recebendo baixa). RLS no recorte da 0077:
+ver/cadastrar = staff da unidade; alterar = `pode_tratar_evento`; apagar = admin; portal NAO ve
+(LGPD). Categorias `3.1.04` reparos de eventos / `3.1.05` indenizacoes. Suite em
+`supabase/tests/0103_eventos_terceiros.test.sql`; o fixture da 0078 ganhou fornecedor).
 · `0102_portal_regional_equipe` (O PORTAL DA FRANQUIA: (A) `vendedores_write` era `for all` — e
 `for all` inclui DELETE, entao o `gestor_regional` apagava vendedor da propria unidade. Vira tres
 policies: `insert`/`update` (admin ou gestor da unidade — incluir, editar, ATIVAR e INATIVAR
@@ -4158,6 +4174,33 @@ sem de-para), a **data de corte do financeiro e dos eventos**, e o de-para de **
 - **O financeiro da unidade e OUTRO** (0037), nao a tela da matriz — ver a secao abaixo.
 - **Hotlink da unidade:** `/v/<CODIGO_DA_REGIONAL>` funciona igual ao do vendedor, mas o lead entra
   sem vendedor (fica para a unidade distribuir). `leads.origem_hotlink` permite medir cada link.
+
+## EVENTOS E TERCEIROS (0103) — o associado vincula, cada terceiro tem tela propria
+Pedido do usuario (13/10/2026). Decisoes tomadas com ele: papel POR envolvido; aba no evento + pagina
+propria do terceiro; cadastro do terceiro POR EVENTO (nao reaproveita entre eventos); associado gravado
+no terceiro COM trava; favorecido obrigatorio SO nas contas a pagar do evento.
+- **Fluxo:** `/sinistros/novo` pergunta "Ha terceiros envolvidos?" (substitui o antigo "Veiculo
+  envolvido", `envolvido_tipo` ficou legado) → se sim, ao abrir o evento vai direto para
+  `/sinistros/[id]/terceiros/novo` → salva → `/sinistros/[id]/terceiros/[terceiroId]` (Dados | Reparo |
+  Financeiro, faixa fixa `VinculoTerceiro`). No protocolo: aba **Terceiros (N)** e aviso amarelo
+  enquanto `possui_terceiros` e nenhum cadastrado. A pagina recusa terceiro de OUTRO evento na URL.
+- **Recorte 0077 na tela:** quem nao `podeTratarEvento` ve o terceiro em somente leitura e nao ganha o
+  botao "Novo lancamento" do evento. ⚠️ O banco so barra o lancamento pelo `lanc_all`
+  (`pode_regional`) — mesmo achado nº 1 da varredura (87 policies), nao mexido aqui.
+- **Financeiro do evento** grava em `lancamentos_financeiros` (antes ia para `movimentacoes_caixa`, sem
+  fornecedor nem baixa): `EventoFinanceiro` reusa `LancamentoModal` (prop `evento`) e `BaixaModal`.
+  Favorecido: fornecedor preenchido manda; sem fornecedor e com terceiro = paga o terceiro
+  (indenizacao). As `movimentacoes_caixa` antigas do evento aparecem so leitura. `/financeiro` mostra o
+  terceiro como favorecido.
+- **Fornecedor novo:** `pode_cadastrar_fornecedor()` NAO inclui `sinistro` — o time de eventos escolhe
+  da lista; cadastrar e admin/financeiro/assistencia/gestor. Decisao pendente com o usuario.
+- **DRE (regime competencia):** `dre_movimentos` soma `notas_fiscais_evento` E os lancamentos do evento.
+  Se a mesma compra for lancada pelos dois caminhos, conta duas vezes.
+- **Codigo:** `src/lib/terceiros.ts` (+ `terceiros.test.ts`, 11 testes), `src/hooks/use-terceiros.ts`,
+  `src/components/sinistros/terceiro-form.tsx` e `terceiros-evento.tsx`, paginas em
+  `src/app/(dashboard)/sinistros/[id]/terceiros/`.
+- **Nao feito:** terceiro que tambem e associado da Smart Car fica como terceiro comum (sem ligar ao
+  cadastro dele).
 
 ## O PORTAL DA FRANQUIA REVISADO (0102) — a equipe e a carteira
 > Pedido do usuário (13/10/2026): *"o usuário (regional) tem o poder de incluir e ativar e inativar

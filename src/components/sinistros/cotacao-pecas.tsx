@@ -10,12 +10,21 @@ import type { CotacoesPecasRow, ItensCotacaoRow, TipoReparo } from '@/lib/databa
 
 // Modulo de cotacao de pecas: lancamento de fornecedor e itens.
 // valor_total e recalculado por trigger no banco (fn_recalcular_cotacao).
-// tipoReparo separa reparo do veiculo proprio x veiculo de terceiro.
-export function CotacaoPecas({ eventoId, tipoReparo }: { eventoId: string; tipoReparo?: TipoReparo }) {
+// tipoReparo separa reparo do veiculo proprio x veiculo de terceiro;
+// terceiroId (0103) restringe ao reparo de UM terceiro do evento.
+export function CotacaoPecas({
+  eventoId,
+  tipoReparo,
+  terceiroId,
+}: {
+  eventoId: string;
+  tipoReparo?: TipoReparo;
+  terceiroId?: string;
+}) {
   const supabase = createClient();
   const qc = useQueryClient();
   const [fornecedor, setFornecedor] = useState('');
-  const chave = ['eventos', eventoId, 'cotacoes', tipoReparo ?? 'all'];
+  const chave = ['eventos', eventoId, 'cotacoes', tipoReparo ?? 'all', terceiroId ?? 'todos'];
 
   const { data: cotacoes } = useQuery<(CotacoesPecasRow & { itens_cotacao: ItensCotacaoRow[] })[]>({
     queryKey: chave,
@@ -26,6 +35,7 @@ export function CotacaoPecas({ eventoId, tipoReparo }: { eventoId: string; tipoR
         .eq('evento_id', eventoId)
         .order('created_at', { ascending: true });
       if (tipoReparo) q = q.eq('tipo_reparo', tipoReparo);
+      if (terceiroId) q = q.eq('evento_terceiro_id', terceiroId);
       const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as never;
@@ -38,6 +48,7 @@ export function CotacaoPecas({ eventoId, tipoReparo }: { eventoId: string; tipoR
         evento_id: eventoId,
         fornecedor_nome: fornecedor || 'Novo fornecedor',
         tipo_reparo: tipoReparo ?? 'PROPRIO',
+        evento_terceiro_id: terceiroId ?? null,
       });
       if (error) throw error;
     },

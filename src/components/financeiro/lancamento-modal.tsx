@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { CalendarDays, CheckCircle2, Info, Layers, Paperclip } from 'lucide-react';
+import { CalendarDays, CheckCircle2, Info, Layers, Paperclip, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { FormField, Input, MoneyInput, Select, Textarea } from '@/components/ui/field';
@@ -13,6 +13,7 @@ import { opcoesParaEscolher } from '@/lib/regional';
 import { useCentrosCusto, useSaveLancamento } from '@/hooks/use-financeiro';
 import { gerarParcelas, type Periodicidade } from '@/lib/financeiro';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import { erroFavorecidoEvento } from '@/lib/terceiros';
 import type { FormaPagamento, LancamentosFinanceirosRow, TipoMovimentacao } from '@/lib/database.types';
 import { AnexosLancamento } from './anexos-lancamento';
 
@@ -39,8 +40,17 @@ function Secao({ titulo, children }: { titulo: string; children: React.ReactNode
   );
 }
 
+/** Contexto quando o lancamento nasce dentro de um evento (0103). */
+export interface ContextoEvento {
+  protocolo: string | null;
+  terceiros: { id: string; codigo: string; nome: string }[];
+}
+
 /**
  * Cadastro de titulo a pagar/receber.
+ * Dentro de um evento (`evento`), a conta a pagar exige FAVORECIDO: um
+ * fornecedor cadastrado ou um terceiro do evento (indenizacao). O banco
+ * aplica a mesma regra (trigger fn_lanc_evento_favorecido, 0103).
  * Todo o dinheiro passa pelo <MoneyInput> (campo comeca vazio com placeholder
  * 0,00 e aceita digitacao corrida) e o parcelamento e pre-visualizado antes
  * de gravar.
@@ -49,10 +59,12 @@ export function LancamentoModal({
   aberto,
   onClose,
   inicial,
+  evento,
 }: {
   aberto: boolean;
   onClose: () => void;
   inicial?: Form | null;
+  evento?: ContextoEvento;
   /** No portal da franquia o titulo nasce na unidade e o campo fica travado. */
 }) {
   const hoje = new Date().toISOString().slice(0, 10);
@@ -107,6 +119,8 @@ export function LancamentoModal({
     if (!form.descricao?.trim()) return toast.error('Informe a descricao do lancamento');
     if (!form.valor_original || form.valor_original <= 0) return toast.error('Informe um valor maior que zero');
     if (!form.data_vencimento) return toast.error('Informe a data de vencimento');
+    const semFavorecido = erroFavorecidoEvento(form);
+    if (semFavorecido) return toast.error(semFavorecido);
 
     salvar.mutate(
       { ...form, parcelas: previa.length > 1 ? previa : undefined },
@@ -180,9 +194,9 @@ export function LancamentoModal({
                 </Select>
               </FormField>
             ) : (
-              <FormField label="Favorecido (fornecedor)">
+              <FormField label={form.evento_id ? 'Fornecedor (favorecido)' : 'Favorecido (fornecedor)'}>
                 <Select value={form.fornecedor_id ?? ''} onChange={(e) => set({ fornecedor_id: e.target.value || null })}>
-                  <option value="">-- Nao vinculado --</option>
+                  <option value="">{form.evento_id ? '-- Sem fornecedor (paga o terceiro) --' : '-- Nao vinculado --'}</option>
                   {(fornecedores ?? []).map((f) => (
                     <option key={f.id} value={f.id}>{f.razao_social}</option>
                   ))}
@@ -201,6 +215,31 @@ export function LancamentoModal({
               </Select>
             </FormField>
           </div>
+
+          {form.evento_id && evento && (
+            <div className="space-y-2 rounded-xl border border-cyan-200 bg-cyan-50/50 p-3">
+              <p className="text-[11.5px] font-semibold uppercase tracking-wide text-cyan-800">
+                Evento {evento.protocolo ?? ''}
+              </p>
+              <FormField label={form.fornecedor_id ? 'Terceiro relacionado (opcional)' : 'Terceiro favorecido'}>
+                <Select
+                  value={form.evento_terceiro_id ?? ''}
+                  onChange={(e) => set({ evento_terceiro_id: e.target.value || null })}
+                >
+                  <option value="">-- Nenhum (despesa do associado) --</option>
+                  {evento.terceiros.map((t) => (
+                    <option key={t.id} value={t.id}>{t.codigo} · {t.nome}</option>
+                  ))}
+                </Select>
+              </FormField>
+              {!receita && !form.fornecedor_id && !form.evento_terceiro_id && (
+                <p className="flex items-start gap-1.5 text-[11.5px] leading-relaxed text-rose-700">
+                  <ShieldAlert className="mt-px h-3.5 w-3.5 shrink-0" />
+                  Conta a pagar do evento exige favorecido: escolha o fornecedor ou o terceiro.
+                </p>
+              )}
+            </div>
+          )}
         </Secao>
 
         <Secao titulo="Classificacao contabil">

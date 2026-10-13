@@ -137,9 +137,14 @@ begin
                                 status, regional_id)
     values (v_sp, c_sp, current_date - 7, 'COLISAO', 'REPARO', r_sp)
     returning id into e_sp;
+  insert into fornecedores (tipo_pessoa, documento, razao_social)
+    values ('PJ','11222333000181','Oficina 0078') on conflict (documento) do nothing;
+  -- 0103: conta a pagar de evento exige favorecido (a oficina que fez o reparo).
   insert into lancamentos_financeiros (tipo, descricao, categoria_dre_id, evento_id,
-                                       regional_id, valor_original, data_vencimento)
-    values ('DESPESA','Reparo do evento', cat_desp, e_sp, r_sp, 900.00, current_date - 6)
+                                       fornecedor_id, regional_id, valor_original, data_vencimento)
+    values ('DESPESA','Reparo do evento', cat_desp, e_sp,
+            (select id from fornecedores where documento = '11222333000181'),
+            r_sp, 900.00, current_date - 6)
     returning id into l_evt;
   insert into baixas_financeiras (lancamento_id, data_pagamento, valor_pago, valor_liquido)
     values (l_evt, current_date - 6, 900.00, 900.00);

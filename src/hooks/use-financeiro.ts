@@ -21,6 +21,8 @@ export interface LancamentoComRel extends LancamentosFinanceirosRow {
   clientes?: { nome_razao_social: string } | null;
   categorias_dre?: { codigo_estruturado: string; nome: string } | null;
   centros_custo?: { nome: string } | null;
+  /** 0103 — terceiro do evento (favorecido quando nao ha fornecedor). */
+  evento_terceiros?: { codigo: string; nome: string } | null;
 }
 
 export interface FiltroLancamentos {
@@ -48,7 +50,7 @@ export function useLancamentos(filtro?: FiltroLancamentos) {
         .from('lancamentos_financeiros')
         .select(
           '*, fornecedores(razao_social), clientes(nome_razao_social), ' +
-            'categorias_dre(codigo_estruturado, nome), centros_custo(nome)',
+            'categorias_dre(codigo_estruturado, nome), centros_custo(nome), evento_terceiros(codigo, nome)',
         )
         .order('data_vencimento', { ascending: true });
       if (filtro?.tipo) q = q.eq('tipo', filtro.tipo);
@@ -120,6 +122,7 @@ function payloadLancamento(l: Partial<LancamentosFinanceirosRow>) {
     categoria_dre_id: l.categoria_dre_id || null,
     centro_custo_id: l.centro_custo_id || null,
     evento_id: l.evento_id || null,
+    evento_terceiro_id: l.evento_terceiro_id || null,
     regional_id: l.regional_id || null,
     valor_original: l.valor_original ?? 0,
     data_emissao: l.data_emissao,

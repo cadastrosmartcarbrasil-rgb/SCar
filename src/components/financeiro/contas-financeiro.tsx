@@ -73,7 +73,7 @@ export function ContasFinanceiro() {
     const termo = busca.trim().toLowerCase();
     if (!termo) return lancamentos ?? [];
     return (lancamentos ?? []).filter((l) =>
-      [l.descricao, l.numero_documento, l.fornecedores?.razao_social, l.clientes?.nome_razao_social, l.centros_custo?.nome]
+      [l.descricao, l.numero_documento, l.fornecedores?.razao_social, l.evento_terceiros?.nome, l.clientes?.nome_razao_social, l.centros_custo?.nome]
         .filter(Boolean)
         .some((campo) => String(campo).toLowerCase().includes(termo)),
     );
@@ -105,7 +105,7 @@ export function ContasFinanceiro() {
         l.tipo === 'RECEITA' ? 'A Receber' : 'A Pagar',
         l.numero_documento ?? '',
         l.descricao,
-        l.fornecedores?.razao_social ?? l.clientes?.nome_razao_social ?? '',
+        favorecidoTexto(l),
         l.categorias_dre ? `${l.categorias_dre.codigo_estruturado} ${l.categorias_dre.nome}` : '',
         l.centros_custo?.nome ?? '',
         l.data_emissao, l.data_vencimento, l.competencia,
@@ -244,7 +244,7 @@ export function ContasFinanceiro() {
                     </div>
                   </td>
                   <td className="px-4 py-2.5 text-slate-600">
-                    {l.fornecedores?.razao_social ?? l.clientes?.nome_razao_social ?? <span className="text-slate-300">—</span>}
+                    {favorecidoTexto(l) || <span className="text-slate-300">—</span>}
                   </td>
                   <td className="px-4 py-2.5">
                     {l.categorias_dre ? (
@@ -359,6 +359,13 @@ export function ContasFinanceiro() {
       {baixando && <BaixaModal lancamento={baixando} onClose={() => setBaixando(null)} />}
     </div>
   );
+}
+
+/** Favorecido/pagador: fornecedor, terceiro do evento (indenizacao) ou associado. */
+function favorecidoTexto(l: LancamentoComRel): string {
+  if (l.fornecedores?.razao_social) return l.fornecedores.razao_social;
+  if (l.evento_terceiros) return `${l.evento_terceiros.nome} (terceiro ${l.evento_terceiros.codigo})`;
+  return l.clientes?.nome_razao_social ?? '';
 }
 
 function IconeAcao({

@@ -14,7 +14,7 @@ import { normalizarPlaca, placaValida } from '@/lib/placa';
 import { buscarCep } from '@/lib/cep';
 import { formatarDocumento, soDigitos } from '@/lib/documento';
 import { formatCurrency } from '@/lib/utils';
-import type { EnvolvidoTipo, TipoEnvolvimento } from '@/lib/database.types';
+import type { TipoEnvolvimento } from '@/lib/database.types';
 
 interface LocalEvento {
   cep?: string;
@@ -41,7 +41,7 @@ export default function NovoEventoPage() {
   const [form, setForm] = useState({
     data_ocorrencia: '',
     data_comunicacao: new Date().toISOString().slice(0, 10),
-    envolvido_tipo: 'ASSOCIADO' as EnvolvidoTipo,
+    possui_terceiros: false,
     tipo_envolvimento: '' as TipoEnvolvimento | '',
     tipo_evento_id: '',
     valor_fipe_atualizado: '' as number | '',
@@ -111,7 +111,7 @@ export default function NovoEventoPage() {
         regional_id: veiculo.regional_id,
         data_ocorrencia: form.data_ocorrencia,
         data_comunicacao: form.data_comunicacao || null,
-        envolvido_tipo: form.envolvido_tipo,
+        possui_terceiros: form.possui_terceiros,
         tipo_envolvimento: (form.tipo_envolvimento || null) as TipoEnvolvimento | null,
         tipo_evento_id: form.tipo_evento_id,
         local_evento: local,
@@ -126,7 +126,8 @@ export default function NovoEventoPage() {
       {
         onSuccess: (evt) => {
           toast.success(`Evento aberto: ${evt.numero_protocolo}`);
-          router.push(`/sinistros/${evt.id}`);
+          // Ha terceiro: abre direto o cadastro dele, ja vinculado ao evento/associado.
+          router.push(form.possui_terceiros ? `/sinistros/${evt.id}/terceiros/novo` : `/sinistros/${evt.id}`);
         },
         onError: (err) => toast.error((err as Error).message),
       },
@@ -199,15 +200,18 @@ export default function NovoEventoPage() {
                 </FormField>
               </div>
               <div className="grid grid-cols-3 gap-3">
-                <FormField label="Veiculo envolvido">
-                  <Select value={form.envolvido_tipo} onChange={(e) => setF({ envolvido_tipo: e.target.value as EnvolvidoTipo })}>
-                    <option value="ASSOCIADO">Do Associado</option>
-                    <option value="TERCEIRO">De Terceiro</option>
+                <FormField label="Ha terceiros envolvidos?">
+                  <Select
+                    value={form.possui_terceiros ? 'S' : 'N'}
+                    onChange={(e) => setF({ possui_terceiros: e.target.value === 'S' })}
+                  >
+                    <option value="N">Nao</option>
+                    <option value="S">Sim</option>
                   </Select>
                 </FormField>
-                <FormField label="Envolvimento">
+                <FormField label="Papel do associado">
                   <Select value={form.tipo_envolvimento} onChange={(e) => setF({ tipo_envolvimento: e.target.value as TipoEnvolvimento })}>
-                    <option value="">--</option>
+                    <option value="">A apurar</option>
                     <option value="CAUSADOR">Causador</option>
                     <option value="VITIMA">Vitima</option>
                   </Select>
@@ -322,12 +326,18 @@ export default function NovoEventoPage() {
             reparo (proprio/terceiro) e lancamentos financeiros.
           </p>
 
+          {form.possui_terceiros && (
+            <p className="rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs text-cyan-800">
+              Ao abrir o evento, o cadastro do terceiro abre em seguida, ja vinculado a este evento e ao associado.
+            </p>
+          )}
+
           <div className="flex justify-end gap-2">
             <Button type="button" variant="secondary" onClick={() => router.push('/sinistros')}>
               Cancelar
             </Button>
             <Button type="submit" disabled={criar.isPending}>
-              {criar.isPending ? 'Abrindo...' : 'Abrir evento (protocolo)'}
+              {criar.isPending ? 'Abrindo...' : form.possui_terceiros ? 'Abrir evento e cadastrar terceiro' : 'Abrir evento (protocolo)'}
             </Button>
           </div>
         </form>

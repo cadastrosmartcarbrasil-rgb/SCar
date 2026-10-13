@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Clock, Paperclip, Wrench, Info, DollarSign } from 'lucide-react';
+import { Clock, Paperclip, Wrench, Info, DollarSign, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { UploadAnexos } from './upload-anexos';
 import { CotacaoPecas } from './cotacao-pecas';
 import { EventoFinanceiro } from './evento-financeiro';
+import { AvisoTerceiroPendente, TerceirosEvento } from './terceiros-evento';
+import { useTerceirosEvento } from '@/hooks/use-terceiros';
 import { useEvento, useHistoricoProtocolo } from '@/hooks/use-eventos';
 import { useUsuarios } from '@/hooks/use-config';
 import { TramitacaoEvento } from './tramitacao-evento';
@@ -13,7 +15,7 @@ import { PIPELINE_SINISTRO, TIPO_EVENTO_LABEL } from '@/types/domain';
 import { formatDate, formatCurrency } from '@/lib/utils';
 import type { StatusEvento, TipoEvento, Json } from '@/lib/database.types';
 
-type Aba = 'info' | 'reparo' | 'financeiro' | 'anexos' | 'historico';
+type Aba = 'info' | 'terceiros' | 'reparo' | 'financeiro' | 'anexos' | 'historico';
 
 interface LocalEvento {
   cep?: string;
@@ -29,6 +31,7 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
   const { data: evento, isLoading } = useEvento(eventoId);
   const { data: historico } = useHistoricoProtocolo(eventoId);
   const { data: usuarios } = useUsuarios();
+  const { data: terceiros } = useTerceirosEvento(eventoId);
   const [aba, setAba] = useState<Aba>('info');
 
   if (isLoading || !evento) return <p className="text-sm text-slate-500">Carregando protocolo...</p>;
@@ -46,6 +49,7 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
 
   const abas: { id: Aba; label: string; icon: React.ElementType }[] = [
     { id: 'info', label: 'Dados', icon: Info },
+    { id: 'terceiros', label: `Terceiros (${terceiros?.length ?? 0})`, icon: Users },
     { id: 'reparo', label: 'Reparo', icon: Wrench },
     { id: 'financeiro', label: 'Financeiro', icon: DollarSign },
     { id: 'anexos', label: 'Anexos', icon: Paperclip },
@@ -55,6 +59,7 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
   return (
     <div className="grid gap-6 lg:grid-cols-3">
       <div className="space-y-4 lg:col-span-2">
+        <AvisoTerceiroPendente eventoId={eventoId} possuiTerceiros={evento.possui_terceiros} />
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -92,8 +97,11 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
                     <Campo label="Matricula" value={cliente?.matricula} />
                     <Campo label="Veiculo" value={`${veiculo?.marca ?? ''} ${veiculo?.modelo ?? ''} - ${veiculo?.placa ?? ''}`} />
                     <Campo label="Contato" value={cliente?.celular || cliente?.telefone} />
-                    <Campo label="Veiculo envolvido" value={evento.envolvido_tipo === 'TERCEIRO' ? 'De Terceiro' : 'Do Associado'} />
-                    <Campo label="Envolvimento" value={evento.tipo_envolvimento === 'CAUSADOR' ? 'Causador' : evento.tipo_envolvimento === 'VITIMA' ? 'Vitima' : '-'} />
+                    <Campo label="Papel do associado" value={evento.tipo_envolvimento === 'CAUSADOR' ? 'Causador' : evento.tipo_envolvimento === 'VITIMA' ? 'Vitima' : 'A apurar'} />
+                    <Campo
+                      label="Terceiros envolvidos"
+                      value={evento.possui_terceiros ? `Sim · ${terceiros?.length ?? 0} cadastrado(s)` : 'Nao'}
+                    />
                     <Campo label="Tipo de evento" value={tipoNome} />
                     <Campo label="Data do evento" value={formatDate(evento.data_ocorrencia)} />
                     <Campo label="Data da comunicacao" value={evento.data_comunicacao ? formatDate(evento.data_comunicacao) : '-'} />
@@ -144,12 +152,18 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
                     <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
                       <Wrench className="h-4 w-4" /> Reparo de veiculo de terceiro
                     </h3>
+                    <p className="mb-2 text-xs text-slate-500">
+                      Visao geral. Para orcar o reparo de um terceiro especifico, abra o terceiro na aba Terceiros.
+                    </p>
                     <CotacaoPecas eventoId={eventoId} tipoReparo="TERCEIRO" />
                   </div>
                 </div>
               )}
 
-              {aba === 'financeiro' && <EventoFinanceiro eventoId={eventoId} regionalId={evento.regional_id} />}
+              {aba === 'terceiros' && <TerceirosEvento eventoId={eventoId} />}
+              {aba === 'financeiro' && (
+                <EventoFinanceiro eventoId={eventoId} regionalId={evento.regional_id} protocolo={evento.numero_protocolo} />
+              )}
               {aba === 'anexos' && <UploadAnexos eventoId={eventoId} />}
 
               {aba === 'historico' && (
@@ -197,6 +211,8 @@ const ACAO_HISTORICO: Record<string, string> = {
   TRANSFERENCIA: 'Transferido para',
   MUDANCA_STATUS: 'Status alterado',
   PARECER: 'Parecer registrado',
+  TERCEIRO: 'Terceiro cadastrado',
+  TERCEIRO_STATUS: 'Tratativa do terceiro alterada',
 };
 
 function nomeDe(usuarios: { id: string; nome: string }[] | undefined, id: string): string {
