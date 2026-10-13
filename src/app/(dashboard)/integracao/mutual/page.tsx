@@ -26,6 +26,7 @@ import {
 } from '@/lib/mutual';
 import { CargaMutual } from '@/components/integracao/carga-mutual';
 import { HistoricoBoletos } from '@/components/integracao/historico-boletos';
+import { HistoricoEventos } from '@/components/integracao/historico-eventos';
 import { ErroLeitura } from '@/components/integracao/erro-leitura';
 import type { MutualDiagnostico, SeveridadeDiagnostico } from '@/lib/database.types';
 
@@ -1161,6 +1162,17 @@ export default function IntegracaoMutualPage() {
         custo="Os boletos de mensalidade do Mutual dos associados ja carregados, para o Painel de Inadimplencia."
       >
         <HistoricoBoletos />
+      </Secao>
+
+      {/* HISTORICO DE EVENTOS (0101) */}
+      <Secao
+        titulo="Historico de eventos / sinistros"
+        icone={ShieldAlert}
+        aberta={ab('eventos')}
+        onAlternar={() => alternar('eventos')}
+        custo="Os eventos do Mutual dos associados ja carregados, para o SAC, /sinistros e a Visao Geral."
+      >
+        <HistoricoEventos />
       </Secao>
 
       {/* O INTERRUPTOR DA COBRANCA (0082) */}

@@ -859,6 +859,45 @@ export type BoletoMutualCliente = {
   url_pagamento: string | null;
 };
 
+// Historico de eventos do Mutual (0101) — so consulta, NUNCA eventos_sinistro
+export type EventoMutualCliente = {
+  id: string;
+  veiculo_id: string | null;
+  placa: string | null;
+  protocolo: string | null;
+  data_evento: string | null;
+  data_conclusao: string | null;
+  tipos: string[];
+  envolvimento: string | null;
+  valor_total: number | null;
+  status_origem: string | null;
+};
+export type EventoHistoricoLinha = EventoMutualCliente & {
+  cliente_id: string;
+  associado: string;
+  unidade: string | null;
+  total_registros: number;
+};
+export type EventosHistoricoResumo = {
+  eventos: number;
+  associados: number;
+  veiculos: number;
+  sem_veiculo: number;
+  primeiro_evento: string | null;
+  ultimo_evento: string | null;
+  capturados: number;
+  ultima_captura: string | null;
+  ultima_importacao: string | null;
+};
+export type ImportacaoEventosHistorico = {
+  lidos: number;
+  importaveis: number;
+  sem_associado: number;
+  sem_veiculo_na_base: number;
+  data_invalida: number;
+  gravados: number;
+};
+
 // Retorno de opcionais_elegibilidade (janela flutuante de N dias)
 // Resumo do lote de cobrancas (gerar_faturas_competencia / emitir_titulos_competencia)
 export type ResumoGeracaoFaturas = {
@@ -3853,6 +3892,22 @@ export type Database = {
       veiculos_do_cliente: {
         Args: { p_cliente_id: string };
         Returns: VeiculoDoCliente[];
+      };
+      eventos_mutual_do_cliente: {
+        Args: { p_cliente_id: string; p_limite?: number };
+        Returns: EventoMutualCliente[];
+      };
+      eventos_historico_listar: {
+        Args: {
+          p_busca?: string | null; p_tipo?: string | null; p_de?: string | null; p_ate?: string | null;
+          p_regional_id?: string | null; p_limite?: number; p_offset?: number;
+        };
+        Returns: EventoHistoricoLinha[];
+      };
+      eventos_historico_resumo: { Args: Record<string, never>; Returns: EventosHistoricoResumo[] };
+      mutual_importar_eventos_historico: {
+        Args: { p_confirmar?: boolean };
+        Returns: ImportacaoEventosHistorico[];
       };
       boletos_mutual_do_cliente: {
         Args: { p_cliente_id: string; p_veiculo_id?: string | null; p_limite?: number };

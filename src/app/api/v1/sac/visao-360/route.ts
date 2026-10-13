@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { resumoFinanceiro, veiculoInadimplente, type TituloResumo, type TituloVeiculo } from '@/lib/sac';
+import { rotuloEnvolvimento, rotuloTipos, situacaoHistorico } from '@/lib/eventos-historico';
 
 // GET /api/v1/sac/visao-360?cliente_id=|placa=|cpf=
 // Payload LEVE do associado: dados + resumo financeiro + LISTA resumida de
@@ -63,6 +64,11 @@ export async function GET(request: Request) {
     .limit(100);
   if (erroEventos) return NextResponse.json({ error: erroEventos.message }, { status: 500 });
 
+  // Historico de eventos do Mutual (0101): so consulta, entra na mesma aba.
+  const { data: eventosMutual, error: erroMutual } = await supabase
+    .rpc('eventos_mutual_do_cliente', { p_cliente_id: clienteId, p_limite: 100 });
+  if (erroMutual) return NextResponse.json({ error: erroMutual.message }, { status: 500 });
+
   // Alertas ativos dos veiculos do associado -> abrem no SAC no mesmo instante.
   // (a CONTAGEM por veiculo ja vem do RPC; aqui e o detalhe do banner)
   const veicIds = (veiculos ?? []).map((v) => v.id);
@@ -105,15 +111,32 @@ export async function GET(request: Request) {
     mensagem: a.mensagem,
   }));
 
-  const eventosOut = (eventos ?? []).map((e) => ({
-    id: e.id,
-    veiculo_id: e.veiculo_id,
-    placa: (e.veiculos as unknown as { placa: string } | null)?.placa ?? null,
-    numero_protocolo: e.numero_protocolo,
-    tipo: (e.tipos_evento as unknown as { nome: string } | null)?.nome ?? null,
-    status: e.status,
-    data_ocorrencia: e.data_ocorrencia,
-  }));
+  const eventosOut = [
+    ...(eventos ?? []).map((e) => ({
+      id: e.id,
+      origem: 'SCAR' as const,
+      veiculo_id: e.veiculo_id,
+      placa: (e.veiculos as unknown as { placa: string } | null)?.placa ?? null,
+      numero_protocolo: e.numero_protocolo,
+      tipo: (e.tipos_evento as unknown as { nome: string } | null)?.nome ?? null,
+      status: e.status as string,
+      data_ocorrencia: e.data_ocorrencia as string | null,
+      data_conclusao: null as string | null,
+      envolvimento: null as string | null,
+    })),
+    ...(eventosMutual ?? []).map((e) => ({
+      id: e.id,
+      origem: 'MUTUAL' as const,
+      veiculo_id: e.veiculo_id,
+      placa: e.placa,
+      numero_protocolo: e.protocolo,
+      tipo: rotuloTipos(e.tipos),
+      status: situacaoHistorico(e),
+      data_ocorrencia: e.data_evento,
+      data_conclusao: e.data_conclusao,
+      envolvimento: rotuloEnvolvimento(e.envolvimento),
+    })),
+  ].sort((a, b) => (b.data_ocorrencia ?? '').localeCompare(a.data_ocorrencia ?? ''));
 
   const resumo = resumoFinanceiro(
     (titulos ?? []).map<TituloResumo>((t) => ({ status: t.status, data_vencimento: t.data_vencimento, valor: Number(t.valor) })),

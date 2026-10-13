@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   COR_OUTROS, PALETA_CATEGORICA, coresPorEntidade, crescimentoLiquido, eventosPorEtapa,
-  fatiasComOutros, funilOrdenado, inadimplenciaDoMes, inadimplenciaDoPeriodo, recebidoDoMes, projecaoDoMes, rotuloMesCurto, taxaChurn, variacaoRelativa,
+  fatiasComOutros, funilOrdenado, inadimplenciaDoMes, inadimplenciaDoPeriodo, recebidoDoMes, projecaoDoMes, somarPorTipo, rotuloMesCurto, taxaChurn, variacaoRelativa,
 } from './visao-geral';
 
 describe('coresPorEntidade', () => {
@@ -92,5 +92,18 @@ describe('mensalidades (serie da cobranca)', () => {
     // 10% de 100 e 50% de 900 = 460/1000, nao (10+50)/2
     expect(inadimplenciaDoPeriodo([mes(100, 10), mes(900, 450)])).toBeCloseTo(0.46);
     expect(inadimplenciaDoPeriodo([])).toBeNull();
+  });
+});
+
+describe('somarPorTipo', () => {
+  it('casa sem caixa/acento e mantem a grafia de quem pesa mais', () => {
+    const r = somarPorTipo(
+      [{ tipo: 'Colisao', n: 2 }, { tipo: 'Furto', n: 1 }],
+      [{ tipo: 'COLISÃO', n: '30' }, { tipo: 'PARABRISA', n: 5 }],
+      null,
+    );
+    expect(r).toEqual([
+      { tipo: 'COLISÃO', n: 32 }, { tipo: 'PARABRISA', n: 5 }, { tipo: 'Furto', n: 1 },
+    ]);
   });
 });

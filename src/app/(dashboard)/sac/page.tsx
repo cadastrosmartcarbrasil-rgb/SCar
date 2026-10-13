@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { ROTULO_SITUACAO_HISTORICO, type SituacaoHistorico } from '@/lib/eventos-historico';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -32,7 +33,7 @@ import { STATUS_ACIONAMENTO_LABEL } from '@/lib/assistencia';
 import { statusVeiculoResumo, primeiraAtivacao } from '@/lib/sac';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type {
-  ClientesRow, OpcionalVeiculo, PrioridadeAtendimento, TipoAtendimento, TipoFaturamento,
+  ClientesRow, OpcionalVeiculo, PrioridadeAtendimento, StatusEvento, TipoAtendimento, TipoFaturamento,
 } from '@/lib/database.types';
 
 type Aba = 'veiculos' | 'eventos' | 'protocolos';
@@ -150,7 +151,7 @@ export default function SacPage() {
 // Aba Eventos: sinistros do associado com atalhos de gerenciamento.
 function ListaEventos({ v360 }: { v360: Visao360 }) {
   if (v360.eventos.length === 0) {
-    return <p className="text-sm text-slate-400">Nenhum evento registrado para este associado.</p>;
+    return <p className="text-sm text-slate-400">Nenhum evento registrado para este associado — nem no SCar, nem no historico do Mutual.</p>;
   }
   return (
     <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-superficie shadow-sm">
@@ -167,18 +168,39 @@ function ListaEventos({ v360 }: { v360: Visao360 }) {
         </thead>
         <tbody>
           {v360.eventos.map((e) => {
-            const st = STATUS_EVENTO_LABEL[e.status];
+            const mutual = e.origem === 'MUTUAL';
+            const st = mutual ? null : STATUS_EVENTO_LABEL[e.status as StatusEvento];
             return (
-              <tr key={e.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/60">
-                <td className="px-4 py-2.5 font-mono text-xs text-slate-500">{e.numero_protocolo}</td>
-                <td className="px-4 py-2.5"><span className="rounded bg-slate-100 px-2 py-0.5 font-mono text-xs font-semibold text-slate-700">{e.placa}</span></td>
-                <td className="px-4 py-2.5 text-slate-600">{e.tipo ?? '—'}</td>
-                <td className="tnum px-4 py-2.5 text-slate-600">{formatDate(e.data_ocorrencia)}</td>
-                <td className="px-4 py-2.5"><span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${st?.cor ?? 'bg-slate-100 text-slate-600'}`}>{st?.label ?? e.status}</span></td>
+              <tr key={`${e.origem}-${e.id}`} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/60">
+                <td className="px-4 py-2.5 font-mono text-xs text-slate-500">
+                  {e.numero_protocolo ?? '—'}
+                  {mutual && <span className="ml-1.5 rounded bg-violet-50 px-1.5 py-0.5 font-sans text-[10px] font-semibold text-violet-700">Mutual</span>}
+                </td>
+                <td className="px-4 py-2.5">{e.placa ? <span className="rounded bg-slate-100 px-2 py-0.5 font-mono text-xs font-semibold text-slate-700">{e.placa}</span> : '—'}</td>
+                <td className="px-4 py-2.5 text-slate-600">
+                  {e.tipo ?? '—'}
+                  {e.envolvimento && <span className="block text-[11px] text-slate-400">{e.envolvimento}</span>}
+                </td>
+                <td className="tnum px-4 py-2.5 text-slate-600">{e.data_ocorrencia ? formatDate(e.data_ocorrencia) : '—'}</td>
+                <td className="px-4 py-2.5">
+                  {mutual ? (
+                    <span className="text-xs text-slate-500">
+                      {e.status === 'CONCLUIDO' && e.data_conclusao
+                        ? `Concluido em ${formatDate(e.data_conclusao)}`
+                        : ROTULO_SITUACAO_HISTORICO[e.status as SituacaoHistorico]}
+                    </span>
+                  ) : (
+                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${st?.cor ?? 'bg-slate-100 text-slate-600'}`}>{st?.label ?? e.status}</span>
+                  )}
+                </td>
                 <td className="px-4 py-2.5 text-right">
-                  <Link href={`/sinistros/${e.id}`} className="inline-flex items-center gap-1 text-xs font-medium text-cyan-700 hover:text-cyan-800">
-                    <Settings2 className="h-3.5 w-3.5" /> Gerenciar
-                  </Link>
+                  {mutual ? (
+                    <span className="text-[11px] text-slate-400">so consulta</span>
+                  ) : (
+                    <Link href={`/sinistros/${e.id}`} className="inline-flex items-center gap-1 text-xs font-medium text-cyan-700 hover:text-cyan-800">
+                      <Settings2 className="h-3.5 w-3.5" /> Gerenciar
+                    </Link>
+                  )}
                 </td>
               </tr>
             );

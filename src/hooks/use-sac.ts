@@ -1,6 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { SituacaoHistorico } from '@/lib/eventos-historico';
 import type {
   ClientesRow, VeiculosRow, FaturasRow, OpcionalVeiculo, TipoFaturamento,
   AtendimentosRow, TipoAtendimento, CanalAtendimento, Json, StatusVeiculo, StatusEvento,
@@ -35,12 +36,17 @@ export interface AlertaResumo {
 // Evento (sinistro) do associado — aba Eventos.
 export interface EventoResumo {
   id: string;
-  veiculo_id: string;
+  /** 0101: SCAR (eventos_sinistro) ou MUTUAL (eventos_historico, so consulta). */
+  origem: 'SCAR' | 'MUTUAL';
+  veiculo_id: string | null;
   placa: string | null;
   numero_protocolo: string | null;
   tipo: string | null;
-  status: StatusEvento;
-  data_ocorrencia: string;
+  /** SCAR: StatusEvento. MUTUAL: SituacaoHistorico. */
+  status: StatusEvento | SituacaoHistorico;
+  data_ocorrencia: string | null;
+  data_conclusao: string | null;
+  envolvimento: string | null;
 }
 export interface RastreadoraResumo {
   nome: string;

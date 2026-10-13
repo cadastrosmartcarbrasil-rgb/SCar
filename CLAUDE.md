@@ -223,11 +223,14 @@ plano** — foi carregada antes do de-para novo; re-executar a carga dela preenc
 captura) e recarregar; INVOICE de novo antes do carnê de 2027. **Bancos (decisão do usuário, não
 bloqueia a carga):** Sicredi para boleto/PIX (~98% da carteira) e Asaas para cartão; API configurada
 nos próximos dias (`integracoes_bancarias` ainda vazia).
-**🆕 A `0100_painel_visao_geral` é NOVA e ainda NÃO foi aplicada** — só leitura (uma função,
-`painel_visao_geral`). Sem ela a aba *Visão Geral* do `/dashboard` mostra o erro de leitura. Conferir
-depois de rodar: `select count(*) from pg_proc where proname='painel_visao_geral'` = 1, secdef sem
-`search_path` = 0, 0 RPCs nossas ao `anon`. Ver a seção "Visão Geral do /dashboard (0100)".
-**Próxima migration livre: `0101`.**
+**✅ A `0100_painel_visao_geral` está aplicada** (conferido em 13/10/2026: `painel_visao_geral` existe).
+**🆕 A `0101_eventos_historico_mutual` é NOVA** — o histórico de eventos do Mutual (ver a seção
+"HISTÓRICO DE EVENTOS DO MUTUAL (0101)"). Cria `eventos_historico` + 5 funções e recria
+`veiculos_do_cliente` e `painel_visao_geral` (mesmas assinaturas). **Não importa nada sozinha:**
+depois de rodar, `/integracao/mutual` → *Histórico de eventos* → *Importar* (medido em 13/10: 827 de
+2.909 eventos entram). Conferir: `select count(*) from pg_proc where proname like '%eventos_historico%'`,
+secdef sem `search_path` = 0, 0 RPCs nossas ao `anon`.
+**Próxima migration livre: `0102`.**
 **✅ A `0098_cobranca_fila` foi APLICADA (pelo usuário, SQL Editor — o `execute_sql` estourou os 60 s do MCP e foi desfeito inteiro) e CONFERIDA em 12/10/2026:** 3 tabelas com RLS, 14 funções, 3 triggers de imutabilidade, 0 secdef sem `search_path`, 0 RPCs nossas ao `anon`. Tela `/cobrancas/fila` (Cobrança → Fila de Cobrança). Ver §9 de `docs/modulos/cobranca-inadimplencia.md`.
 **✅ A `0099_historico_financeiro_mutual` foi APLICADA (pelo usuário, SQL Editor) e CONFERIDA em 12/10/2026:** 3 colunas novas em `boletos_historico`, 3 funções novas, importação e `portal_financeiro` nas versões novas, 0 secdef sem `search_path`, 0 RPCs nossas ao `anon`; QQQ5D49 com 35 boletos visíveis (29 pagos · 2 vencidos · 3 a vencer). Linha digitável ainda em 0 — falta reimportar o histórico. Texto original: O defeito: o Histórico Financeiro do SAC e o Financeiro do portal liam SÓ `titulos_financeiros` (6 linhas na base) e os 78.425 boletos importados do Mutual não apareciam. Ela: (A) `boletos_historico` ganha `linha_digitavel`/`url_boleto`/`url_pagamento` (o `checkout_link` do Mutual); (B) `cobranca_importar_historico_mutual` recriada (mesma assinatura) preenchendo os três; (C) `corte_cobranca_cliente`; (D) `boletos_mutual_do_cliente` (SAC, permissão de `titulos_do_cliente`) e `portal_boletos_mutual`; (E) `portal_financeiro` recriado somando as duas fontes. As telas unem as duas listas (`src/lib/historico-financeiro.ts`) e o boleto do Mutual é SÓ CONSULTA (selo "Mutual", sem editar/2ª via; link de pagamento e linha digitável do próprio Mutual). **Depois de aplicar:** deploy + `/integracao/mutual` → *Histórico de boletos* → *Importar / atualizar* (é o que traz a linha digitável para os 78 mil já importados).
 **✅ A `0097_cobranca_painel` foi APLICADA (pelo usuário, SQL Editor — o `execute_sql` estourava os 60 s do MCP) e CONFERIDA em 12/10/2026:** 22 funções do módulo, `boletos_historico`/`supervisor_regionais`/`cobranca_feriados` com RLS, papéis `supervisor`/`cobranca` no enum, `resumo_cobrancas` com o denominador novo, meta/limite 5/10, 0 secdef sem `search_path`, 0 RPCs nossas ao `anon`. **Em produção desde 12/10/2026:** INVOICE recapturado (206.706) e **histórico importado — 78.425 boletos de 2.527 associados** (58.125 pagos · 8.428 abertos · 11.872 cancelados; 124 mil mensalidades de associados não carregados ficam de fora, de propósito). Deploy no ar com o painel, as listas paginadas (`lerTodas`) e a barra lateral fixa — conferido pelo usuário. **O VPS estava com o disco 100% cheio** (cache do BuildKit 30 GB + imagens antigas): limpo para 80% e swap ampliado para 3 GB — ver `DEPLOY.md` §2.1 antes de qualquer `prune`. **Migration longa: aplicar pelo SQL Editor**, o MCP corta em 60 s. Texto original: Fase 1 do módulo de
@@ -671,9 +674,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0100`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **77 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 862 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0101`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **78 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 866 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Os portais e páginas públicas
@@ -2071,6 +2074,13 @@ mensal (adesoes, saidas, base no fim do mes, eventos, acionamentos, leads), even
 vendas, contas a pagar e rastreadores. Frota lida por DATA (como `frota_na_base`), carteira pelo
 override da ficha (fallback: ultimo titulo), `escopo_regional` e NULL para nao-staff. As MENSALIDADES
 nao sao lidas aqui: a tela usa `cobranca_serie_mensal` (0097). So leitura)
+· `0101_eventos_historico_mutual` (O HISTORICO DE EVENTOS DO MUTUAL: `eventos_historico` (tabela propria,
+NUNCA `eventos_sinistro` — o Mutual manda "ANDAMENTO" em todos, la virariam evento em aberto),
+`mutual_eventos_para_importar` (a leitura: veiculo por `objeto.vehicle_id`, contrato do evento vence;
+associado pelo vinculo PERSON ou o dono atual do carro), `mutual_importar_eventos_historico(p_confirmar)`
+(re-executavel, so regrava o que mudou), `eventos_historico_resumo`, `eventos_mutual_do_cliente` (SAC),
+`eventos_historico_listar` (aba Historico de /sinistros, paginada); `veiculos_do_cliente` e
+`painel_visao_geral` recriadas contando o historico. Regua em `src/lib/eventos-historico.ts`)
 · `0082_carga_mutual_preparacao` (as TRES pecas que faltavam para a carga do Mutual poder rodar,
 e nenhuma delas carrega nada — ha teste provando que a operacao segue intacta: (A) **a UNIDADE sai
 do ASSOCIADO** — a corrente do consultor (0073/0074) foi medida com a base completa e esta VAZIA
@@ -3575,6 +3585,36 @@ sem de-para), a **data de corte do financeiro e dos eventos**, e o de-para de **
   `rotuloMesCurto`, `variacaoRelativa`, `crescimentoLiquido`, `taxaChurn`, `projecaoDoMes`,
   `funilOrdenado`, `eventosPorEtapa`, `inadimplenciaDoMes`, `inadimplenciaDoPeriodo`, `recebidoDoMes`.
 - `kpi-cards.tsx`, `useDashboardKpis` e `useReceitaSerie` **saíram** (só a Visão Geral os usava).
+
+## HISTÓRICO DE EVENTOS DO MUTUAL (0101) — "capturei 2.909 eventos e não vejo nenhum"
+- **Por que não aparecia:** a carga (0084) deixou evento de fora por decisão, e a segunda metade
+  nunca foi feita. Os 2.909 estavam em `mutual_captura` e em lugar nenhum da operação.
+- **A ligação com o veículo é `evento.vehicle_id` = `objeto.vehicle_id`** — NÃO o id do objeto (casa
+  1.848 de 2.909 por acaso; pelo `vehicle_id` casa 2.901). O mesmo carro pode ter estado em mais de
+  um contrato: vence o objeto do `contract_id` do evento. *Lição de sempre: a chave certa estava na
+  entidade, com outro nome; conferir antes de concluir.*
+- **Quem entra:** evento de associado JÁ CARREGADO (vínculo PERSON) — 827 de 2.909 em 13/10/2026 —
+  ou de veículo na base cujo associado do evento não tem vínculo (carro transferido: fica com o dono
+  atual). O resto (acervo encerrado) fica de fora, contado — mesma regra dos boletos (0097).
+  Evento de carro antigo do associado (fora da base) entra sem `veiculo_id`, com a placa do objeto.
+- **🔴 TABELA PRÓPRIA, NUNCA `eventos_sinistro`.** O `event_status` vem **"ANDAMENTO" em 2.909 de
+  2.909** e só 38 têm `conclusion_date`: o status da listagem não informa nada. Na tabela operacional
+  cada linha viraria evento EM ABERTO (Kanban, tramitação, painel, status `em_evento`). A tela nunca
+  repete esse status como situação: mostra **"Concluído em X"** quando há data de conclusão, senão
+  **"Sem encerramento registrado"** (`situacaoHistorico`).
+- **Onde aparece:** aba **Eventos do SAC** (selo "Mutual", só consulta, sem "Gerenciar"), o marcador
+  de evento na lista de veículos do SAC (`veiculos_do_cliente`), **`/sinistros?aba=historico`**
+  (busca por associado/placa/CPF/protocolo, tipo e período, paginada no banco) e a **Visão Geral**
+  (eventos no mês e em 12 meses somando as duas fontes, série empilhada SCar × Mutual, tipos dos
+  últimos 12 meses com `somarPorTipo`, que casa "COLISÃO" e "Colisao").
+- **Importar:** `/integracao/mutual` → *Histórico de eventos* → *Simular* / *Importar*. Re-executável
+  (regra 0096: só regrava o que mudou). Rodar de novo depois de cada recaptura de EVENT e de cada
+  carga de unidade.
+- **O que NÃO muda (decisão em aberto):** os limites por janela dos opcionais (parabrisa 1×/ano etc.,
+  `opcionais_elegibilidade`/`opcionais_veiculo`) contam só `eventos_sinistro`. Fazer o histórico
+  consumir cota é decisão do usuário — 525 dos eventos do Mutual são de parabrisa.
+- **Lógica pura testada:** `src/lib/eventos-historico.ts` (`situacaoHistorico`, `rotuloTipos`,
+  `rotuloEnvolvimento`) e `somarPorTipo` em `src/lib/visao-geral.ts`. Suíte `supabase/tests/0101_*`.
 
 ## Painel gerencial da Assistência 24h (0061) — a aba da Visão Geral
 - **Por que existe:** a `0026` resolveu a OPERAÇÃO (abrir, cotar, autorizar OS, pagar o prestador).

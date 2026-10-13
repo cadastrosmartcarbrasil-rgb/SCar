@@ -20,7 +20,7 @@ import { useTema } from '@/hooks/use-tema';
 import { opcoesParaFiltrar, rotuloUnidade } from '@/lib/regional';
 import {
   coresPorEntidade, crescimentoLiquido, eventosPorEtapa, fatiasComOutros, funilOrdenado,
-  inadimplenciaDoMes, inadimplenciaDoPeriodo, recebidoDoMes,
+  inadimplenciaDoMes, inadimplenciaDoPeriodo, recebidoDoMes, somarPorTipo,
   projecaoDoMes, rotuloMesCurto, taxaChurn, variacaoRelativa, ROTULO_STATUS_VEICULO,
   type Fatia, type PainelVisaoGeral,
 } from '@/lib/visao-geral';
@@ -42,6 +42,9 @@ const EIXO = { fontSize: 11, fill: 'currentColor' } as const;
 // slots 1 e 2 da paleta categorica validada.
 const COR_A = { claro: '#2a78d6', escuro: '#3987e5' };
 const COR_B = { claro: '#eb6834', escuro: '#d95926' };
+// Slot 3 (verde-agua): eventos do SCar, empilhados sobre o historico do Mutual.
+// Validado contra o laranja e o azul nos dois temas (violeta x azul reprovou).
+const COR_C = { claro: '#1baf7a', escuro: '#199e70' };
 
 const inteiro = new Intl.NumberFormat('pt-BR');
 const n = (v: unknown) => Number(v ?? 0);
@@ -488,18 +491,33 @@ function Composicao({ d, escuro }: { d: PainelVisaoGeral; escuro: boolean }) {
 
 function EventosBloco({ d, escuro }: { d: PainelVisaoGeral; escuro: boolean }) {
   const e = d.eventos;
+  const h = e.historico;
   const etapas = eventosPorEtapa(e.por_status);
-  const porTipo = fatiasComOutros(e.por_tipo, (t) => t.tipo, (t) => t.n, 6);
-  const serie = d.serie.map((m) => ({ rotulo: rotuloMesCurto(m.mes), eventos: n(m.eventos), acionamentos: n(m.acionamentos) }));
-  const indice = n(d.kpis.veiculos_base) ? n(e.novos_mes) / n(d.kpis.veiculos_base) : null;
+  // Tipos dos ULTIMOS 12 MESES, somando SCar + historico do Mutual (0101).
+  const porTipo = fatiasComOutros(
+    somarPorTipo(e.por_tipo_12m ?? e.por_tipo, h?.por_tipo_12m),
+    (t) => t.tipo, (t) => t.n, 7,
+  );
+  const serie = d.serie.map((m) => ({
+    rotulo: rotuloMesCurto(m.mes),
+    eventos: n(m.eventos),
+    historico: n(m.eventos_historico),
+    acionamentos: n(m.acionamentos),
+  }));
+  const temHistorico = n(h?.total) > 0;
+  const mes = n(e.novos_mes) + n(h?.mes);
+  const doze = n(e.ultimos_12m) + n(h?.ultimos_12m);
+  const frequencia = n(d.kpis.veiculos_base) ? doze / n(d.kpis.veiculos_base) : null;
 
   return (
     <Secao titulo="Eventos / sinistros e Assistencia 24h" icon={ShieldAlert} acao={<LinkSecao href="/sinistros" texto="Abrir eventos" />}>
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <Tile titulo="Eventos em aberto" icon={AlertTriangle} tom="amber" href="/sinistros" valor={inteiro.format(n(e.abertos))}
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
+        <Tile titulo="Eventos em aberto (SCar)" icon={AlertTriangle} tom="amber" href="/sinistros" valor={inteiro.format(n(e.abertos))}
           detalhe={etapas.filter((x) => !['CONCLUIDO', 'NEGADO'].includes(x.status)).map((x) => `${x.rotulo} ${x.n}`).join(' · ') || 'Nenhum em andamento'} />
-        <Tile titulo="Novos eventos no mes" icon={ShieldAlert} tom="rose" valor={inteiro.format(n(e.novos_mes))}
-          detalhe={indice === null ? undefined : `${formatPercent(indice)} da base · ${inteiro.format(n(e.total))} registrados no total`} />
+        <Tile titulo="Eventos no mes" icon={ShieldAlert} tom="rose" valor={inteiro.format(mes)}
+          detalhe={temHistorico ? `${inteiro.format(n(e.novos_mes))} no SCar · ${inteiro.format(n(h?.mes))} no Mutual` : `${inteiro.format(n(e.total))} registrados no total`} />
+        <Tile titulo="Eventos em 12 meses" icon={ShieldAlert} tom="rose" href="/sinistros?aba=historico" valor={inteiro.format(doze)}
+          detalhe={frequencia === null ? undefined : `${formatPercent(frequencia)} da frota na base · SCar + historico`} />
         <Tile titulo="Acionamentos 24h no mes" icon={LifeBuoy} tom="cyan" valor={inteiro.format(n(d.assistencia.mes))}
           detalhe={`${inteiro.format(n(d.assistencia.em_aberto))} OS em andamento · custo ${formatCurrency(n(d.assistencia.custo_mes))}`} />
         <Tile titulo="Rastreadores instalados" icon={Radar} tom="navy" href="/rastreadores" valor={inteiro.format(n(d.rastreadores.instalados))}
@@ -523,7 +541,10 @@ function EventosBloco({ d, escuro }: { d: PainelVisaoGeral; escuro: boolean }) {
                   <YAxis tick={EIXO} axisLine={false} tickLine={false} allowDecimals={false} width={30} />
                   <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(30,43,77,0.05)' }} />
                   <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
-                  <Bar dataKey="eventos" name="Eventos/sinistros" fill={escuro ? COR_B.escuro : COR_B.claro} radius={[4, 4, 0, 0]} maxBarSize={22} isAnimationActive={false} />
+                  {temHistorico && (
+                    <Bar dataKey="historico" name="Eventos (historico Mutual)" stackId="ev" fill={escuro ? COR_B.escuro : COR_B.claro} maxBarSize={22} isAnimationActive={false} />
+                  )}
+                  <Bar dataKey="eventos" name="Eventos (SCar)" stackId="ev" fill={escuro ? COR_C.escuro : COR_C.claro} radius={[4, 4, 0, 0]} maxBarSize={22} isAnimationActive={false} />
                   <Bar dataKey="acionamentos" name="Acionamentos 24h" fill={escuro ? COR_A.escuro : COR_A.claro} radius={[4, 4, 0, 0]} maxBarSize={22} isAnimationActive={false} />
                 </BarChart>
               </ResponsiveContainer>
@@ -531,19 +552,23 @@ function EventosBloco({ d, escuro }: { d: PainelVisaoGeral; escuro: boolean }) {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle>Eventos por tipo</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Eventos por tipo — ultimos 12 meses</CardTitle></CardHeader>
           <CardContent>
             {porTipo.length ? (
               <BarrasRanking fatias={porTipo} cor={escuro ? COR_B.escuro : COR_B.claro} />
             ) : (
-              <SemDados texto="Nenhum evento registrado no SCar." />
+              <SemDados texto="Nenhum evento nos ultimos 12 meses." />
             )}
           </CardContent>
         </Card>
       </div>
       <p className="flex items-start gap-1.5 text-[11.5px] text-slate-400">
         <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-        Eventos e acionamentos contam o que foi registrado no SCar — o historico do sistema anterior nao foi importado.
+        {temHistorico
+          ? <>Os eventos somam o SCar e o <b>historico do Mutual</b> ({inteiro.format(n(h?.total))} eventos dos associados carregados).
+              O historico e so consulta: nao conta como evento em aberto. Acionamentos 24h sao so os do SCar.</>
+          : <>Eventos e acionamentos contam o que foi registrado no SCar — o historico do Mutual ainda nao foi importado
+              (Integracao Mutual → Historico de eventos).</>}
       </p>
     </Secao>
   );

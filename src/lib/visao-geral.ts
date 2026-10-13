@@ -13,6 +13,8 @@ export interface PainelMes {
   saidas: number;
   base_fim: number;
   eventos: number;
+  /** 0101: eventos do historico do Mutual no mes (pela data do evento). */
+  eventos_historico?: number;
   acionamentos: number;
   leads: number;
 }
@@ -49,6 +51,13 @@ export interface PainelVisaoGeral {
     abertos: number; novos_mes: number; concluidos: number; negados: number; total: number;
     por_status: { status: string; n: number }[];
     por_tipo: { tipo: string; n: number }[];
+    /** 0101 */
+    por_tipo_12m?: { tipo: string; n: number }[];
+    ultimos_12m?: number;
+    historico?: {
+      total: number; ultimos_12m: number; mes: number;
+      por_tipo_12m: { tipo: string; n: number }[];
+    };
   };
   assistencia: { mes: number; em_aberto: number; custo_mes: number };
   vendas: {
@@ -229,4 +238,29 @@ export function inadimplenciaDoPeriodo(serie: MesCobranca[]): number | null {
   const venceu = serie.reduce((s, m) => s + (Number(m.valor_venceram) || 0), 0);
   if (venceu <= 0) return null;
   return serie.reduce((s, m) => s + (Number(m.valor_aberto_vencido) || 0), 0) / venceu;
+}
+
+/**
+ * Soma duas contagens por tipo (SCar + historico do Mutual). O nome casa sem
+ * caixa e sem acento — "COLISÃO" do Mutual e "Colisao" do SCar sao o mesmo
+ * tipo; vence a grafia de quem tem mais.
+ */
+export function somarPorTipo(
+  ...listas: ({ tipo: string; n: number | string }[] | null | undefined)[]
+): { tipo: string; n: number }[] {
+  const chave = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
+  const mapa = new Map<string, { tipo: string; n: number; maior: number }>();
+  for (const lista of listas) {
+    for (const x of lista ?? []) {
+      const k = chave(x.tipo);
+      const n = Number(x.n) || 0;
+      const atual = mapa.get(k);
+      if (!atual) mapa.set(k, { tipo: x.tipo, n, maior: n });
+      else {
+        atual.n += n;
+        if (n > atual.maior) { atual.tipo = x.tipo; atual.maior = n; }
+      }
+    }
+  }
+  return [...mapa.values()].map(({ tipo, n }) => ({ tipo, n })).sort((a, b) => b.n - a.n);
 }
