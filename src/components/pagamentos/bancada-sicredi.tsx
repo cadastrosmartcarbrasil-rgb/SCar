@@ -24,6 +24,28 @@ export function BancadaSicredi() {
   const [nossoNumero, setNossoNumero] = useState('');
   const [linha, setLinha] = useState('');
   const [dia, setDia] = useState(new Date().toISOString().slice(0, 10));
+  const [tituloId, setTituloId] = useState('');
+
+  // Emite UM titulo pelo caminho real (a remessa), sem levar a fila inteira:
+  // com `titulo_ids` a rota nao consulta `titulos_para_remessa`.
+  async function emitirTitulo() {
+    setOcupado('remessa');
+    setSaida(null);
+    try {
+      const r = await fetch('/api/v1/cobrancas/remessa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ titulo_ids: [tituloId.trim()] }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error ?? `HTTP ${r.status}`);
+      setSaida({ ok: true, texto: JSON.stringify(j, null, 2) });
+    } catch (e) {
+      setSaida({ ok: false, texto: (e as Error).message });
+    } finally {
+      setOcupado(null);
+    }
+  }
 
   useEffect(() => {
     fetch('/api/v1/sicredi')
@@ -125,6 +147,18 @@ export function BancadaSicredi() {
               <Input type="date" value={dia} onChange={(e) => setDia(e.target.value)} />
               <Button type="button" variant="secondary" disabled={!!ocupado} onClick={() => chamar('liquidados', { dia })}>
                 Pagos no dia
+              </Button>
+            </div>
+          </div>
+          <div className="space-y-1 border-t border-slate-200 pt-3">
+            <p className="text-xs text-slate-500">
+              Emitir UM titulo pela remessa (o caminho real: cria a remessa, chama o Sicredi e grava linha
+              digitavel/PIX no titulo). So este titulo vai; a fila do mes nao e tocada.
+            </p>
+            <div className="flex gap-2">
+              <Input placeholder="ID do titulo (uuid)" value={tituloId} onChange={(e) => setTituloId(e.target.value)} caixa="original" />
+              <Button type="button" variant="secondary" disabled={!/^[0-9a-f-]{36}$/i.test(tituloId.trim()) || !!ocupado} onClick={emitirTitulo}>
+                <Receipt className="h-4 w-4" /> {ocupado === 'remessa' ? 'Emitindo...' : 'Emitir titulo'}
               </Button>
             </div>
           </div>
