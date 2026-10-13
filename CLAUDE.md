@@ -234,8 +234,8 @@ sessão: **aplicar pelo SQL Editor** e depois `select * from mutual_importar_eve
 depois de rodar, `/integracao/mutual` → *Histórico de eventos* → *Importar* (medido em 13/10: 827 de
 2.909 eventos entram). Conferir: `select count(*) from pg_proc where proname like '%eventos_historico%'`,
 secdef sem `search_path` = 0, 0 RPCs nossas ao `anon`.
-**Próxima migration livre: `0104`.** A `0102` e a **`0103_eventos_terceiros`** estão escritas e
-**pendentes** (ver abaixo e a seção "EVENTOS E TERCEIROS (0103)").
+**Próxima migration livre: `0104`.** **✅ A `0102` e a `0103` estão APLICADAS e CONFERIDAS em
+13/10/2026** (ver abaixo).
 **✅ A `0098_cobranca_fila` foi APLICADA (pelo usuário, SQL Editor — o `execute_sql` estourou os 60 s do MCP e foi desfeito inteiro) e CONFERIDA em 12/10/2026:** 3 tabelas com RLS, 14 funções, 3 triggers de imutabilidade, 0 secdef sem `search_path`, 0 RPCs nossas ao `anon`. Tela `/cobrancas/fila` (Cobrança → Fila de Cobrança). Ver §9 de `docs/modulos/cobranca-inadimplencia.md`.
 **✅ A `0099_historico_financeiro_mutual` foi APLICADA (pelo usuário, SQL Editor) e CONFERIDA em 12/10/2026:** 3 colunas novas em `boletos_historico`, 3 funções novas, importação e `portal_financeiro` nas versões novas, 0 secdef sem `search_path`, 0 RPCs nossas ao `anon`; QQQ5D49 com 35 boletos visíveis (29 pagos · 2 vencidos · 3 a vencer). Linha digitável ainda em 0 — falta reimportar o histórico. Texto original: O defeito: o Histórico Financeiro do SAC e o Financeiro do portal liam SÓ `titulos_financeiros` (6 linhas na base) e os 78.425 boletos importados do Mutual não apareciam. Ela: (A) `boletos_historico` ganha `linha_digitavel`/`url_boleto`/`url_pagamento` (o `checkout_link` do Mutual); (B) `cobranca_importar_historico_mutual` recriada (mesma assinatura) preenchendo os três; (C) `corte_cobranca_cliente`; (D) `boletos_mutual_do_cliente` (SAC, permissão de `titulos_do_cliente`) e `portal_boletos_mutual`; (E) `portal_financeiro` recriado somando as duas fontes. As telas unem as duas listas (`src/lib/historico-financeiro.ts`) e o boleto do Mutual é SÓ CONSULTA (selo "Mutual", sem editar/2ª via; link de pagamento e linha digitável do próprio Mutual). **Depois de aplicar:** deploy + `/integracao/mutual` → *Histórico de boletos* → *Importar / atualizar* (é o que traz a linha digitável para os 78 mil já importados).
 **✅ A `0097_cobranca_painel` foi APLICADA (pelo usuário, SQL Editor — o `execute_sql` estourava os 60 s do MCP) e CONFERIDA em 12/10/2026:** 22 funções do módulo, `boletos_historico`/`supervisor_regionais`/`cobranca_feriados` com RLS, papéis `supervisor`/`cobranca` no enum, `resumo_cobrancas` com o denominador novo, meta/limite 5/10, 0 secdef sem `search_path`, 0 RPCs nossas ao `anon`. **Em produção desde 12/10/2026:** INVOICE recapturado (206.706) e **histórico importado — 78.425 boletos de 2.527 associados** (58.125 pagos · 8.428 abertos · 11.872 cancelados; 124 mil mensalidades de associados não carregados ficam de fora, de propósito). Deploy no ar com o painel, as listas paginadas (`lerTodas`) e a barra lateral fixa — conferido pelo usuário. **O VPS estava com o disco 100% cheio** (cache do BuildKit 30 GB + imagens antigas): limpo para 80% e swap ampliado para 3 GB — ver `DEPLOY.md` §2.1 antes de qualquer `prune`. **Migration longa: aplicar pelo SQL Editor**, o MCP corta em 60 s. Texto original: Fase 1 do módulo de
@@ -253,14 +253,19 @@ boletos* → importar. Medido em 12/10 com a captura velha: **77.884 boletos de 
 **🔴 DECISÃO DE 11/10/2026: depois de dezembro o Mutual é DESLIGADO de vez** — a integração é
 migração com fim marcado, não conexão permanente. Ver "DECISÃO DO USUÁRIO (11/10/2026)" na seção
 do Mutual: o que isso muda no desenho, o checklist pós-corte e o porquê do timeout da prévia.
-**⚠️ A `0102_portal_regional_equipe` é NOVA e ainda NÃO foi aplicada.** Ela fecha o buraco de
+**✅ A `0102_portal_regional_equipe` foi APLICADA e CONFERIDA em 13/10/2026** (`vendedores` com as
+policies insert/update/select/delete, `vendedores_delete` = `is_admin()`, `regional_painel` devolvendo
+`veiculos_carteira`). Texto original: ela fecha o buraco de
 que o **gestor regional PODE APAGAR vendedor** (a policy `vendedores_write` é `for all`, e `for all`
 inclui DELETE) e põe a CARTEIRA no painel da franquia, que mostrava a unidade de mil veículos com
 cara de recém-aberta. Ver a seção própria.
-**⚠️ A `0103_eventos_terceiros` é NOVA e ainda NÃO foi aplicada** (13/10/2026). Terceiros do evento com
-tela própria e favorecido obrigatório na conta a pagar do evento. **Aplicar DEPOIS da 0102.** Conferir:
-`select count(*) from information_schema.tables where table_name = 'evento_terceiros'` = 1, secdef sem
-`search_path` = 0, 0 RPCs nossas ao `anon`. **Próxima migration livre: `0104`.**
+**✅ A `0103_eventos_terceiros` foi APLICADA e CONFERIDA em 13/10/2026**: `evento_terceiros` com as 4
+policies (update = `pode_tratar_evento`), FK composta `fk_terceiro_evento_associado`, os 4 triggers,
+`possui_terceiros` + `evento_terceiro_id` nas 3 tabelas, categorias 3.1.04/3.1.05,
+`fn_lanc_evento_favorecido` security definer, 0 secdef sem `search_path`, 0 RPCs nossas ao `anon`.
+**Falta o deploy do contêiner** para as telas de terceiros aparecerem. **Próxima migration livre: `0104`.**
+(Na mesma conferência a tabela `eventos_historico` da `0101` já existe em produção — a caixa da 0101
+acima é anterior a isso; reconferir as funções dela antes de marcar como conferida.)
 **⏱️ Teto do `authenticated` está em 20 s desde 11/10/2026 (temporário, migração).** Voltar a 8 s
 no corte: `alter role authenticated set statement_timeout = '8s'; notify pgrst, 'reload config';`
 **Próxima migration livre era `0088`.** As **`0001`..`0086`** estão aplicadas — a **`0086` foi rodada e
