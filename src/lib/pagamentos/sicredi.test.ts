@@ -289,6 +289,22 @@ describe('SicrediGateway', () => {
     expect(chamadas[1].url).toContain('codigoBeneficiario=12345');
   });
 
+  it('liquidados: formato REAL do sandbox (13/10/2026)', () => {
+    // Resposta de liquidados/dia no sandbox: o mock devolve este item para qualquer dia.
+    // valorLiquidado ja inclui juros e multa; dataPagamento vem com hora.
+    const real = [{
+      valor: 195, seuNumero: 'ABCDEF', cooperativa: '6789', nossoNumero: '211001202',
+      jurosLiquido: 2.7, multaLiquida: 3.9, tipoCarteira: 'A', dataPagamento: '2026-10-13 11:04:18.7',
+      tipoLiquidacao: 'COMPE', valorLiquidado: 201.6, descontoLiquido: 0, abatimentoLiquido: 0,
+      codigoBeneficiario: '12345', cooperativaPostoBeneficiario: '678903',
+    }];
+    const [l] = liquidacoesDoRetorno(real);
+    expect(l.nossoNumero).toBe('211001202');
+    expect(l.seuNumero).toBe('ABCDEF');
+    expect(l.valorPago).toBe(201.6);
+    expect(l.dataPagamento).toBe('2026-10-13');
+  });
+
   it('liquidados percorre as paginas enquanto hasNext', async () => {
     const { fn, chamadas } = fetchFalso([
       { body: TOKEN },
