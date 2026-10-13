@@ -3613,6 +3613,10 @@ export type Database = {
         };
         Returns: RegionaisPainelPonto[];
       };
+      painel_visao_geral: {
+        Args: { p_regional_id?: string | null; p_meses?: number | null };
+        Returns: Json;
+      };
       regionais_painel_comparativo: {
         Args: {
           p_data_inicio: string;

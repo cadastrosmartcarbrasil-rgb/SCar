@@ -223,7 +223,11 @@ plano** — foi carregada antes do de-para novo; re-executar a carga dela preenc
 captura) e recarregar; INVOICE de novo antes do carnê de 2027. **Bancos (decisão do usuário, não
 bloqueia a carga):** Sicredi para boleto/PIX (~98% da carteira) e Asaas para cartão; API configurada
 nos próximos dias (`integracoes_bancarias` ainda vazia).
-**Próxima migration livre: `0100`.**
+**🆕 A `0100_painel_visao_geral` é NOVA e ainda NÃO foi aplicada** — só leitura (uma função,
+`painel_visao_geral`). Sem ela a aba *Visão Geral* do `/dashboard` mostra o erro de leitura. Conferir
+depois de rodar: `select count(*) from pg_proc where proname='painel_visao_geral'` = 1, secdef sem
+`search_path` = 0, 0 RPCs nossas ao `anon`. Ver a seção "Visão Geral do /dashboard (0100)".
+**Próxima migration livre: `0101`.**
 **✅ A `0098_cobranca_fila` foi APLICADA (pelo usuário, SQL Editor — o `execute_sql` estourou os 60 s do MCP e foi desfeito inteiro) e CONFERIDA em 12/10/2026:** 3 tabelas com RLS, 14 funções, 3 triggers de imutabilidade, 0 secdef sem `search_path`, 0 RPCs nossas ao `anon`. Tela `/cobrancas/fila` (Cobrança → Fila de Cobrança). Ver §9 de `docs/modulos/cobranca-inadimplencia.md`.
 **✅ A `0099_historico_financeiro_mutual` foi APLICADA (pelo usuário, SQL Editor) e CONFERIDA em 12/10/2026:** 3 colunas novas em `boletos_historico`, 3 funções novas, importação e `portal_financeiro` nas versões novas, 0 secdef sem `search_path`, 0 RPCs nossas ao `anon`; QQQ5D49 com 35 boletos visíveis (29 pagos · 2 vencidos · 3 a vencer). Linha digitável ainda em 0 — falta reimportar o histórico. Texto original: O defeito: o Histórico Financeiro do SAC e o Financeiro do portal liam SÓ `titulos_financeiros` (6 linhas na base) e os 78.425 boletos importados do Mutual não apareciam. Ela: (A) `boletos_historico` ganha `linha_digitavel`/`url_boleto`/`url_pagamento` (o `checkout_link` do Mutual); (B) `cobranca_importar_historico_mutual` recriada (mesma assinatura) preenchendo os três; (C) `corte_cobranca_cliente`; (D) `boletos_mutual_do_cliente` (SAC, permissão de `titulos_do_cliente`) e `portal_boletos_mutual`; (E) `portal_financeiro` recriado somando as duas fontes. As telas unem as duas listas (`src/lib/historico-financeiro.ts`) e o boleto do Mutual é SÓ CONSULTA (selo "Mutual", sem editar/2ª via; link de pagamento e linha digitável do próprio Mutual). **Depois de aplicar:** deploy + `/integracao/mutual` → *Histórico de boletos* → *Importar / atualizar* (é o que traz a linha digitável para os 78 mil já importados).
 **✅ A `0097_cobranca_painel` foi APLICADA (pelo usuário, SQL Editor — o `execute_sql` estourava os 60 s do MCP) e CONFERIDA em 12/10/2026:** 22 funções do módulo, `boletos_historico`/`supervisor_regionais`/`cobranca_feriados` com RLS, papéis `supervisor`/`cobranca` no enum, `resumo_cobrancas` com o denominador novo, meta/limite 5/10, 0 secdef sem `search_path`, 0 RPCs nossas ao `anon`. **Em produção desde 12/10/2026:** INVOICE recapturado (206.706) e **histórico importado — 78.425 boletos de 2.527 associados** (58.125 pagos · 8.428 abertos · 11.872 cancelados; 124 mil mensalidades de associados não carregados ficam de fora, de propósito). Deploy no ar com o painel, as listas paginadas (`lerTodas`) e a barra lateral fixa — conferido pelo usuário. **O VPS estava com o disco 100% cheio** (cache do BuildKit 30 GB + imagens antigas): limpo para 80% e swap ampliado para 3 GB — ver `DEPLOY.md` §2.1 antes de qualquer `prune`. **Migration longa: aplicar pelo SQL Editor**, o MCP corta em 60 s. Texto original: Fase 1 do módulo de
@@ -667,9 +671,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0099`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **76 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 848 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0100`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **77 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 862 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Os portais e páginas públicas
@@ -2061,6 +2065,12 @@ deslocar fuso); `dia_util_seguinte` + `cobranca_feriados`; `ciclo_vencimento` (5
 `cobranca_recortes`/`_indicadores`/`_carteira`/`_calendario`/`_por_regional`/`_serie_mensal`/
 `_boletos_lista`; meta/limite em `empresa`; `resumo_cobrancas` corrigida. Percentuais no TS:
 `src/lib/cobranca-painel.ts`)
+· `0100_painel_visao_geral` (A VISAO GERAL DO /dashboard: UMA funcao, `painel_visao_geral(regional,
+meses)`, devolve o painel inteiro em jsonb — kpis, distribuicao por unidade/UF/tipo/plano/status, serie
+mensal (adesoes, saidas, base no fim do mes, eventos, acionamentos, leads), eventos, 24h, funil de
+vendas, contas a pagar e rastreadores. Frota lida por DATA (como `frota_na_base`), carteira pelo
+override da ficha (fallback: ultimo titulo), `escopo_regional` e NULL para nao-staff. As MENSALIDADES
+nao sao lidas aqui: a tela usa `cobranca_serie_mensal` (0097). So leitura)
 · `0082_carga_mutual_preparacao` (as TRES pecas que faltavam para a carga do Mutual poder rodar,
 e nenhuma delas carrega nada — ha teste provando que a operacao segue intacta: (A) **a UNIDADE sai
 do ASSOCIADO** — a corrente do consultor (0073/0074) foi medida com a base completa e esta VAZIA
@@ -3534,6 +3544,37 @@ sem de-para), a **data de corte do financeiro e dos eventos**, e o de-para de **
   então a tela **não envia** o recorte, e o número é o mesmo para todos.
 - **Isolamento:** gestor de unidade pedindo outra recebe a própria (`escopo_regional`), e no ranking
   vê só a própria linha. Há teste cobrindo os dois casos e o do não-staff (painel zerado).
+
+## Visão Geral do /dashboard (0100) — a primeira aba do Painel
+- **Por que foi refeita:** a versão do início do projeto contava TÍTULO de mensalidade ("MRR",
+  inadimplência = vencidos/títulos do mês) numa base em que **2.889 de 2.898 veículos são cobrados
+  pelo Mutual** (`cobranca_externa`) — o MRR dava ~zero com a carteira inteira contratada. Lia as
+  tabelas pelo navegador em 4 consultas soltas.
+- **Agora são DUAS leituras:** `painel_visao_geral` (jsonb, `useVisaoGeral`) para a operação, e
+  **`cobranca_serie_mensal` (0097, `useCobrancaSerie`) para as mensalidades** — ela já junta o SCar e o
+  histórico de boletos do Mutual. **Não criar segunda leitura de mensalidade no painel**: divergiria
+  do módulo de cobrança.
+- **Blocos, na ordem da tela:** 6 KPIs (veículos na base com variação no mês, associados, carteira
+  mensal + ticket médio, adesões no mês **com projeção pelo ritmo** — comparar 13 dias com o mês
+  anterior inteiro sempre "cai" —, saídas/churn, protocolos) · faixa da **cobrança externa** ·
+  **distribuição nacional** (rosca por unidade com carteira R$ + barras por UF do associado) ·
+  **evolução 6/12 meses** (adesões × saídas e base no fim de cada mês — dois gráficos, nunca eixo
+  duplo) · **composição** (rosca por tipo, barras por plano, barra de situação) · **eventos + 24h +
+  rastreadores** · **comercial** (funil na ordem da esteira) · **financeiro** (emitido/recebido no
+  mês, inadimplência em VALOR dos meses fechados — ponderada, nunca média de % —, a pagar 7 dias, e o
+  gráfico emitido × recebido com a inadimplência de cada mês embaixo).
+- **Notas que a tela escreve, de propósito:** a carteira migrada traz a ativação original, mas os
+  encerrados antes da migração não vieram (saídas antigas zeradas); eventos e acionamentos são só os
+  do SCar.
+- **Cor:** paleta categórica validada (CVD/contraste) nos dois temas, em `src/lib/visao-geral.ts`;
+  a cor segue a **entidade** (ordem alfabética), nunca a posição no ranking; toda fatia tem nome,
+  valor e % escritos na legenda.
+- **Unidade:** só admin/financeiro escolhem; o gestor recebe a própria (`escopo_regional`), e quem
+  não é staff recebe NULL.
+- **Lógica pura testada:** `src/lib/visao-geral.ts` — `coresPorEntidade`, `fatiasComOutros`,
+  `rotuloMesCurto`, `variacaoRelativa`, `crescimentoLiquido`, `taxaChurn`, `projecaoDoMes`,
+  `funilOrdenado`, `eventosPorEtapa`, `inadimplenciaDoMes`, `inadimplenciaDoPeriodo`, `recebidoDoMes`.
+- `kpi-cards.tsx`, `useDashboardKpis` e `useReceitaSerie` **saíram** (só a Visão Geral os usava).
 
 ## Painel gerencial da Assistência 24h (0061) — a aba da Visão Geral
 - **Por que existe:** a `0026` resolveu a OPERAÇÃO (abrir, cotar, autorizar OS, pagar o prestador).
