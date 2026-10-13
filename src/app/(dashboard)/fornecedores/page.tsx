@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useMemo, useState } from 'react';
+import { fornecedorCasaComBusca } from '@/lib/fornecedores';
 import { useSearchParams } from 'next/navigation';
 import { Plus, Pencil, Store, Search, LifeBuoy, Satellite } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -31,14 +32,7 @@ function Conteudo() {
   const { data: fornecedores, isLoading } = useFornecedores(aba);
 
   const filtrados = useMemo(() => {
-    const t = busca.trim().toLowerCase();
-    if (!t) return fornecedores ?? [];
-    return (fornecedores ?? []).filter((f) =>
-      f.razao_social.toLowerCase().includes(t)
-      || (f.nome_fantasia ?? '').toLowerCase().includes(t)
-      || (f.documento ?? '').includes(t.replace(/\D/g, ''))
-      || (f.cobertura ?? '').toLowerCase().includes(t),
-    );
+    return (fornecedores ?? []).filter((f) => fornecedorCasaComBusca(f, busca));
   }, [fornecedores, busca]);
 
   function editar(f: FornecedoresRow) {
@@ -76,7 +70,7 @@ function Conteudo() {
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
         <input value={busca} onChange={(e) => setBusca(e.target.value)}
-          placeholder="Buscar por nome, documento ou cobertura"
+          placeholder="Buscar por nome fantasia, razao social, CNPJ ou cobertura"
           className="w-full rounded-md border border-slate-300 py-2 pl-9 pr-3 text-sm" />
       </div>
 

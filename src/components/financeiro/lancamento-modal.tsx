@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { FormField, Input, MoneyInput, Select, Textarea } from '@/components/ui/field';
 import { useFornecedores } from '@/hooks/use-fornecedores';
+import { ordenarFornecedores, rotuloFornecedor } from '@/lib/fornecedores';
 import { useAssociados } from '@/hooks/use-associados';
 import { usePlanoContas, useRegionais } from '@/hooks/use-config';
 import { opcoesParaEscolher } from '@/lib/regional';
@@ -197,8 +198,8 @@ export function LancamentoModal({
               <FormField label={form.evento_id ? 'Fornecedor (favorecido)' : 'Favorecido (fornecedor)'}>
                 <Select value={form.fornecedor_id ?? ''} onChange={(e) => set({ fornecedor_id: e.target.value || null })}>
                   <option value="">{form.evento_id ? '-- Sem fornecedor (paga o terceiro) --' : '-- Nao vinculado --'}</option>
-                  {(fornecedores ?? []).map((f) => (
-                    <option key={f.id} value={f.id}>{f.razao_social}</option>
+                  {ordenarFornecedores(fornecedores ?? []).map((f) => (
+                    <option key={f.id} value={f.id}>{rotuloFornecedor(f)}</option>
                   ))}
                 </Select>
               </FormField>

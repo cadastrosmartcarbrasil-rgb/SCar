@@ -4737,6 +4737,18 @@ teste afirma `row_count = 0` e que a linha continua lá).
 - **`documento` é OPCIONAL** desde a `0051` (segue validado quando informado): o cadastro de
   rastreadora absorvido não exigia CNPJ e prestador pequeno às vezes entra sem. Ao salvar, campo
   vazio tem de virar **null** — duas empresas com `''` colidiriam no unique.
+- **Consulta de CNPJ com 3 provedores (13/10/2026):** `/api/cnpj` tenta BrasilAPI → CNPJ.ws
+  (publica) → ReceitaWS, com User-Agent e 7 s cada; leituras puras em `src/lib/cnpj-provedores.ts`
+  (testadas). A BrasilAPI sozinha falhava em produção e a tela só dizia "preencha manualmente";
+  agora o erro mostra o que cada provedor respondeu e o servidor loga `[cnpj]`
+  (`docker compose logs app | grep cnpj`). Nulo do provedor não apaga o que foi digitado.
+- **Busca de fornecedor = `fornecedorCasaComBusca` (`src/lib/fornecedores.ts`, testada):** fantasia,
+  razão social, cobertura, contato e CNPJ, sem acento. **O bug que ela corrigiu:** a busca antiga
+  fazia `documento.includes(termo sem não-dígitos)` e, para qualquer texto, isso é `includes('')` =
+  sempre verdadeiro — a lista nunca filtrava. Vale em `/fornecedores` e na aba Prestadores da 24h;
+  os seletores de fornecedor usam `rotuloFornecedor` ("FANTASIA (RAZÃO)"). Ainda mostram só a
+  razão: os seletores de prestador do acionamento (`prestadores_do_servico` não devolve fantasia —
+  precisa de migration).
 - **Quem cadastra:** `pode_cadastrar_fornecedor()` = admin/financeiro + time da 24h + **gestor
   regional**. Cadastro operacional não pode depender de quem tem acesso a Configurações.
 

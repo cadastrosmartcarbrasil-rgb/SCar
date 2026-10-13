@@ -1,4 +1,4 @@
-// Helper client-side para consulta de CNPJ (via /api/cnpj -> BrasilAPI).
+// Helper client-side para consulta de CNPJ (via /api/cnpj -> BrasilAPI, CNPJ.ws, ReceitaWS).
 export interface DadosCnpj {
   found: boolean;
   razao_social?: string | null;
@@ -16,6 +16,12 @@ export interface DadosCnpj {
     cidade?: string | null;
     uf?: string | null;
   };
+  /** qual provedor respondeu (BrasilAPI, CNPJ.ws, ReceitaWS) */
+  fonte?: string;
+  /** todos responderam que o CNPJ nao existe */
+  nao_encontrado?: boolean;
+  /** o que cada provedor respondeu, quando nenhum achou */
+  tentativas?: string[];
   raw?: unknown;
 }
 
@@ -26,9 +32,9 @@ export async function consultarCnpj(cnpj: string): Promise<DadosCnpj> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ cnpj }),
     });
-    if (!res.ok) return { found: false };
+    if (!res.ok) return { found: false, tentativas: [`servidor: HTTP ${res.status}`] };
     return res.json();
   } catch {
-    return { found: false };
+    return { found: false, tentativas: ['sem conexao com o servidor'] };
   }
 }

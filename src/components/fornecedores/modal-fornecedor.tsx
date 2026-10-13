@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/modal';
 import { FormField, Input, Select, Textarea, MoneyInput } from '@/components/ui/field';
 import { useSaveFornecedor } from '@/hooks/use-fornecedores';
 import { consultarCnpj } from '@/lib/cnpj';
+import { paraCaixaAlta } from '@/lib/texto';
 import { buscarCep } from '@/lib/cep';
 import { validarDocumento, formatarDocumento, soDigitos, formatarTelefone } from '@/lib/documento';
 import type { FornecedoresRow, TipoPessoa, Json } from '@/lib/database.types';
@@ -69,19 +70,32 @@ export function ModalFornecedor({
     setConsultando(true);
     const d = await consultarCnpj(form.documento ?? '');
     setConsultando(false);
-    if (!d.found) return toast.message('Consulta indisponivel - preencha os dados manualmente.');
+    if (!d.found) {
+      if (d.nao_encontrado) return toast.error('CNPJ nao encontrado na Receita. Confira o numero.');
+      return toast.error('Nao foi possivel consultar o CNPJ agora — preencha os dados manualmente.', {
+        description: d.tentativas?.length ? d.tentativas.join(' · ') : undefined,
+      });
+    }
     setForm((f) => ({
       ...f,
-      razao_social: d.razao_social ?? f.razao_social,
-      nome_fantasia: d.nome_fantasia ?? f.nome_fantasia,
+      razao_social: d.razao_social ? paraCaixaAlta(d.razao_social) : f.razao_social,
+      nome_fantasia: d.nome_fantasia ? paraCaixaAlta(d.nome_fantasia) : f.nome_fantasia,
       situacao_cadastral: d.situacao_cadastral ?? f.situacao_cadastral,
       cnae_principal: d.cnae_principal ?? f.cnae_principal,
       email: d.email ?? f.email,
       telefone: d.telefone ?? f.telefone,
-      endereco: { ...f.endereco, ...(d.endereco ?? {}) } as EnderecoFornecedor,
-      dados_receita: (d.raw as Json) ?? f.dados_receita,
+      // so o que veio preenchido: nulo do provedor nao apaga o que ja foi digitado
+      endereco: {
+        ...f.endereco,
+        ...Object.fromEntries(
+          Object.entries(d.endereco ?? {})
+            .filter(([, v]) => v)
+            .map(([k, v]) => [k, k === 'cep' ? v : paraCaixaAlta(String(v))]),
+        ),
+      } as EnderecoFornecedor,
+      dados_receita: (d as unknown as Json) ?? f.dados_receita,
     }));
-    toast.success('Dados da Receita preenchidos');
+    toast.success(`Dados da Receita preenchidos${d.fonte ? ` (${d.fonte})` : ''}`);
   }
 
   function submit(e: React.FormEvent) {

@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { Plus, Pencil, Wrench, ExternalLink } from 'lucide-react';
+import { Plus, Pencil, Wrench, ExternalLink, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { FormField, Input, MoneyInput } from '@/components/ui/field';
@@ -15,6 +15,7 @@ import {
 } from '@/components/fornecedores/modal-fornecedor';
 import { formatCurrency } from '@/lib/utils';
 import { formatarDocumento } from '@/lib/documento';
+import { fornecedorCasaComBusca } from '@/lib/fornecedores';
 import type { FornecedoresRow } from '@/lib/database.types';
 
 interface ServicoPrestador {
@@ -35,6 +36,11 @@ export function Prestadores24h() {
   const salvar = useSalvarPrestador();
 
   const [cadastro, setCadastro] = useState<FormFornecedor | null>(null);
+  const [busca, setBusca] = useState('');
+  const filtrados = useMemo(
+    () => (prestadores ?? []).filter((p) => fornecedorCasaComBusca(p, busca)),
+    [prestadores, busca],
+  );
   const [servicoDe, setServicoDe] = useState<FornecedoresRow | null>(null);
   const [vinculos, setVinculos] = useState<ServicoPrestador[]>([]);
   const { data: vinculosSalvos } = useServicosDoPrestador(servicoDe?.id ?? null);
@@ -83,6 +89,13 @@ export function Prestadores24h() {
         </Button>
       </div>
 
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+        <input value={busca} onChange={(e) => setBusca(e.target.value)}
+          placeholder="Buscar por nome fantasia, razao social, CNPJ ou cobertura"
+          className="w-full rounded-md border border-slate-300 py-2 pl-9 pr-3 text-sm" />
+      </div>
+
       <div className="overflow-x-auto rounded-lg border border-slate-200 bg-superficie">
         <table className="w-full text-sm">
           <thead>
@@ -100,7 +113,10 @@ export function Prestadores24h() {
             {!isLoading && (prestadores ?? []).length === 0 && (
               <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-400">Nenhum prestador cadastrado.</td></tr>
             )}
-            {(prestadores ?? []).map((p) => (
+            {!isLoading && (prestadores ?? []).length > 0 && filtrados.length === 0 && (
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-400">Nenhum prestador para essa busca.</td></tr>
+            )}
+            {filtrados.map((p) => (
               <tr key={p.id} className="border-b border-slate-50 last:border-0">
                 <td className="px-4 py-2">
                   <p className="font-medium text-slate-700">{p.nome_fantasia?.trim() || p.razao_social}</p>
