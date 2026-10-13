@@ -199,14 +199,16 @@ export function useSaveIntegracao() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (i: Partial<IntegracoesBancariasRow>) => {
+      // Sicredi: credencial e do servidor (SICREDI_*); nada de chave na tabela.
+      const semChave = i.provedor === 'SICREDI';
       const payload = {
         nome: i.nome,
         provedor: i.provedor,
         ambiente: i.ambiente,
-        api_url: i.api_url || null,
-        api_key: i.api_key || null,
-        api_token_extra: i.api_token_extra || null,
-        webhook_secret: i.webhook_secret || null,
+        api_url: semChave ? null : i.api_url || null,
+        api_key: semChave ? null : i.api_key || null,
+        api_token_extra: semChave ? null : i.api_token_extra || null,
+        webhook_secret: semChave ? null : i.webhook_secret || null,
         regional_id: i.regional_id || null,
         is_padrao: i.is_padrao ?? false,
         ativo: i.ativo ?? true,

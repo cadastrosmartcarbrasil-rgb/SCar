@@ -15,7 +15,10 @@ import {
 } from '@/hooks/use-config';
 import type { IntegracoesBancariasRow, ProvedorBanco, AmbienteIntegracao } from '@/lib/database.types';
 
-const PROVEDORES: ProvedorBanco[] = ['ASAAS', 'PJBANK', 'CORA', 'INTER', 'GERENCIANET', 'OUTRO'];
+const PROVEDORES: ProvedorBanco[] = ['SICREDI', 'ASAAS', 'PJBANK', 'CORA', 'INTER', 'GERENCIANET', 'OUTRO'];
+
+// O Sicredi le as credenciais das variaveis SICREDI_* do servidor, nunca desta tabela.
+const credencialNoServidor = (p?: ProvedorBanco | null) => p === 'SICREDI';
 
 const mask = (s: string | null) => (s ? '••••••••' + s.slice(-4) : '-');
 
@@ -99,7 +102,9 @@ export default function IntegracoesPage() {
                     {i.ambiente}
                   </span>
                 </td>
-                <td className="px-4 py-2 font-mono text-xs text-slate-500">{mask(i.api_key)}</td>
+                <td className="px-4 py-2 font-mono text-xs text-slate-500">
+                  {credencialNoServidor(i.provedor) ? 'no servidor (SICREDI_*)' : mask(i.api_key)}
+                </td>
                 <td className="px-4 py-2 text-slate-600">{i.regionais?.nome ?? 'Global'}</td>
                 <td className="px-4 py-2">
                   <span className={i.ativo ? 'text-emerald-600' : 'text-slate-400'}>
@@ -175,35 +180,46 @@ export default function IntegracoesPage() {
               </Select>
             </FormField>
           </div>
-          <FormField label="URL da API">
-            <Input
-              value={ed?.api_url ?? ''}
-              onChange={(e) => setEd((p) => ({ ...p, api_url: e.target.value }))}
-              placeholder="https://sandbox.asaas.com/api/v3"
-            />
-          </FormField>
-          <FormField label="Chave da API (API Key / Token)">
-            <Input
-              value={ed?.api_key ?? ''}
-              onChange={(e) => setEd((p) => ({ ...p, api_key: e.target.value }))}
-              placeholder="Cole a chave do gateway"
-            />
-          </FormField>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <FormField label="Token extra (opcional)">
+          {credencialNoServidor(ed?.provedor) ? (
+            <p className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs text-sky-800">
+              As credenciais do Sicredi ficam nas variaveis <span className="font-mono">SICREDI_*</span> do
+              servidor, nao aqui. O <strong>ambiente</strong> escolhido acima tem de ser o mesmo de{' '}
+              <span className="font-mono">SICREDI_AMBIENTE</span> — se divergirem, a emissao e recusada.
+              Confira no painel do Sicredi, no topo desta pagina.
+            </p>
+          ) : (
+            <>
+            <FormField label="URL da API">
               <Input
-                value={ed?.api_token_extra ?? ''}
-                onChange={(e) => setEd((p) => ({ ...p, api_token_extra: e.target.value }))}
-                placeholder="Wallet ID, client secret..."
+                value={ed?.api_url ?? ''}
+                onChange={(e) => setEd((p) => ({ ...p, api_url: e.target.value }))}
+                placeholder="https://sandbox.asaas.com/api/v3"
               />
             </FormField>
-            <FormField label="Segredo do Webhook">
+            <FormField label="Chave da API (API Key / Token)">
               <Input
-                value={ed?.webhook_secret ?? ''}
-                onChange={(e) => setEd((p) => ({ ...p, webhook_secret: e.target.value }))}
+                value={ed?.api_key ?? ''}
+                onChange={(e) => setEd((p) => ({ ...p, api_key: e.target.value }))}
+                placeholder="Cole a chave do gateway"
               />
             </FormField>
-          </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <FormField label="Token extra (opcional)">
+                <Input
+                  value={ed?.api_token_extra ?? ''}
+                  onChange={(e) => setEd((p) => ({ ...p, api_token_extra: e.target.value }))}
+                  placeholder="Wallet ID, client secret..."
+                />
+              </FormField>
+              <FormField label="Segredo do Webhook">
+                <Input
+                  value={ed?.webhook_secret ?? ''}
+                  onChange={(e) => setEd((p) => ({ ...p, webhook_secret: e.target.value }))}
+                />
+              </FormField>
+            </div>
+            </>
+          )}
           <FormField label="Regional (deixe vazio para uso global)">
             <Select
               value={ed?.regional_id ?? ''}

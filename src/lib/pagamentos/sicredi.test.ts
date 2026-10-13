@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { getPaymentGateway } from './index';
+import { escolherIntegracao, getPaymentGateway } from './index';
 import { GatewayNaoImplementadoError, type CobrancaInput } from './types';
 import {
   SicrediGateway,
@@ -65,6 +65,13 @@ describe('configuracao pelo ambiente', () => {
     expect(getPaymentGateway({ provedor: 'SICREDI' }, ENV)).toBeInstanceOf(SicrediGateway);
     expect(() => getPaymentGateway({ provedor: 'SICREDI' }, {})).toThrow(GatewayNaoImplementadoError);
     expect(() => getPaymentGateway({ provedor: 'SICREDI' }, {})).toThrow(/SICREDI_API_KEY/);
+  });
+  it('fabrica: recusa cadastro e servidor em ambientes diferentes', () => {
+    expect(getPaymentGateway({ provedor: 'SICREDI', ambiente: 'sandbox' }, ENV)).toBeInstanceOf(SicrediGateway);
+    expect(() => getPaymentGateway({ provedor: 'SICREDI', ambiente: 'producao' }, ENV)).toThrow(/servidor esta em sandbox/);
+    expect(() =>
+      getPaymentGateway({ provedor: 'SICREDI', ambiente: 'sandbox' }, { ...ENV, SICREDI_AMBIENTE: 'producao' }),
+    ).toThrow(/cadastrada como sandbox/);
   });
 });
 
@@ -280,5 +287,23 @@ describe('SicrediGateway', () => {
     expect(await new SicrediGateway(CFG, fn).liquidadosDoDia('2026-10-13')).toEqual([]);
     expect(chamadas[1].url).toContain('dia=13%2F10%2F2026');
     expect(chamadas[1].url).toContain('codigoBeneficiario=12345');
+  });
+});
+
+describe('escolherIntegracao', () => {
+  const g = { id: 'g', provedor: 'SICREDI' as const, is_padrao: true, ativo: true, regional_id: null };
+  const rn = { id: 'rn', provedor: 'ASAAS' as const, is_padrao: true, ativo: true, regional_id: 'natal' };
+  const off = { id: 'off', provedor: 'ASAAS' as const, is_padrao: true, ativo: false, regional_id: 'cuiaba' };
+  const naoPadrao = { id: 'np', provedor: 'ASAAS' as const, is_padrao: false, ativo: true, regional_id: null };
+  it('a padrao da unidade vence a global', () => {
+    expect(escolherIntegracao([g, rn], 'natal')?.id).toBe('rn');
+  });
+  it('sem padrao da unidade (ou inativa) cai na global', () => {
+    expect(escolherIntegracao([g, rn, off], 'cuiaba')?.id).toBe('g');
+    expect(escolherIntegracao([g, rn], null)?.id).toBe('g');
+  });
+  it('sem padrao global nem da unidade: nenhuma (vira MOCK, e a tela avisa)', () => {
+    expect(escolherIntegracao([rn, naoPadrao], null)).toBeNull();
+    expect(escolherIntegracao([], 'natal')).toBeNull();
   });
 });

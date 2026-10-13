@@ -57,7 +57,7 @@ export type TipoDocumentoAnexo =
   | 'FOTO_AVARIA' | 'BOLETIM_OCORRENCIA' | 'CNH' | 'CRLV' | 'NOTA_FISCAL';
 export type StatusCotacao = 'EM_ABERTO' | 'APROVADA' | 'REJEITADA';
 export type CodigoTemplate = 'BOAS_VINDAS' | 'LEMBRETE_BOLETO' | 'NOVO_EVENTO';
-export type ProvedorBanco = 'ASAAS' | 'PJBANK' | 'CORA' | 'INTER' | 'GERENCIANET' | 'OUTRO';
+export type ProvedorBanco = 'ASAAS' | 'PJBANK' | 'CORA' | 'INTER' | 'GERENCIANET' | 'SICREDI' | 'OUTRO';
 export type AmbienteIntegracao = 'sandbox' | 'producao';
 export type CanalComunicacao = 'EMAIL' | 'SMS' | 'WHATSAPP';
 export type StatusComunicacao = 'pendente' | 'enviado' | 'falha';

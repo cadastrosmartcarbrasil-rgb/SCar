@@ -234,7 +234,8 @@ sessão: **aplicar pelo SQL Editor** e depois `select * from mutual_importar_eve
 depois de rodar, `/integracao/mutual` → *Histórico de eventos* → *Importar* (medido em 13/10: 827 de
 2.909 eventos entram). Conferir: `select count(*) from pg_proc where proname like '%eventos_historico%'`,
 secdef sem `search_path` = 0, 0 RPCs nossas ao `anon`.
-**Próxima migration livre: `0104`.** **✅ A `0102` e a `0103` estão APLICADAS e CONFERIDAS em
+**🆕 A `0104_provedor_sicredi` é NOVA** (só `alter type provedor_banco add value 'SICREDI'`).
+**Próxima migration livre: `0105`.** **✅ A `0102` e a `0103` estão APLICADAS e CONFERIDAS em
 13/10/2026** (ver abaixo).
 **✅ A `0098_cobranca_fila` foi APLICADA (pelo usuário, SQL Editor — o `execute_sql` estourou os 60 s do MCP e foi desfeito inteiro) e CONFERIDA em 12/10/2026:** 3 tabelas com RLS, 14 funções, 3 triggers de imutabilidade, 0 secdef sem `search_path`, 0 RPCs nossas ao `anon`. Tela `/cobrancas/fila` (Cobrança → Fila de Cobrança). Ver §9 de `docs/modulos/cobranca-inadimplencia.md`.
 **✅ A `0099_historico_financeiro_mutual` foi APLICADA (pelo usuário, SQL Editor) e CONFERIDA em 12/10/2026:** 3 colunas novas em `boletos_historico`, 3 funções novas, importação e `portal_financeiro` nas versões novas, 0 secdef sem `search_path`, 0 RPCs nossas ao `anon`; QQQ5D49 com 35 boletos visíveis (29 pagos · 2 vencidos · 3 a vencer). Linha digitável ainda em 0 — falta reimportar o histórico. Texto original: O defeito: o Histórico Financeiro do SAC e o Financeiro do portal liam SÓ `titulos_financeiros` (6 linhas na base) e os 78.425 boletos importados do Mutual não apareciam. Ela: (A) `boletos_historico` ganha `linha_digitavel`/`url_boleto`/`url_pagamento` (o `checkout_link` do Mutual); (B) `cobranca_importar_historico_mutual` recriada (mesma assinatura) preenchendo os três; (C) `corte_cobranca_cliente`; (D) `boletos_mutual_do_cliente` (SAC, permissão de `titulos_do_cliente`) e `portal_boletos_mutual`; (E) `portal_financeiro` recriado somando as duas fontes. As telas unem as duas listas (`src/lib/historico-financeiro.ts`) e o boleto do Mutual é SÓ CONSULTA (selo "Mutual", sem editar/2ª via; link de pagamento e linha digitável do próprio Mutual). **Depois de aplicar:** deploy + `/integracao/mutual` → *Histórico de boletos* → *Importar / atualizar* (é o que traz a linha digitável para os 78 mil já importados).
@@ -721,8 +722,13 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
   `docker compose exec -T app printenv`. **⚠️ A coleção oficial não
   traz webhook:** a leitura aceita mais de um nome de campo e a baixa vai
   ser por consulta diária de `liquidados/dia` — conferir o formato real no sandbox antes de ligar a
-  baixa. **Falta para a remessa usar o Sicredi:** migration com `alter type provedor_banco add
-  value 'SICREDI'` + cadastrar a integração padrão. Pagador sem endereço completo (CEP, logradouro,
+  baixa. **A remessa usa o Sicredi desde a `0104`** (só o valor `SICREDI` no enum
+  `provedor_banco`): cadastrar em Configurações → Integrações bancárias o provedor SICREDI como
+  **padrão** (sem chave na tabela — a tela esconde os campos). `escolherIntegracao` (testada) pega a
+  padrão da UNIDADE e, na falta, a GLOBAL — a rota antiga usava `maybeSingle()` e, com duas padrão,
+  caía no MOCK calada. O gateway é resolvido ANTES de criar a remessa, e cadastro × `SICREDI_AMBIENTE`
+  divergentes RECUSAM a emissão. Carteira com `cobranca_externa` não gera título, então nada sai
+  para o banco até o cutover da unidade. Pagador sem endereço completo (CEP, logradouro,
   cidade, UF) é recusado antes de ir ao banco, por título. `seuNumero` (máx. 10) = 10 primeiros hex
   do UUID; a correlação forte é o `nosso_numero` devolvido.
 - **Gateway bancário mockado:** `MockGateway` gera linha digitável/PIX fictícios. Ligar o real =
@@ -2131,6 +2137,8 @@ numera `<protocolo>-T01` e trava troca de evento; historico `TERCEIRO`/`TERCEIRO
 ver/cadastrar = staff da unidade; alterar = `pode_tratar_evento`; apagar = admin; portal NAO ve
 (LGPD). Categorias `3.1.04` reparos de eventos / `3.1.05` indenizacoes. Suite em
 `supabase/tests/0103_eventos_terceiros.test.sql`; o fixture da 0078 ganhou fornecedor).
+· `0104_provedor_sicredi` (o enum `provedor_banco` ganha `SICREDI`; credenciais seguem nas
+`SICREDI_*` do servidor; a remessa escolhe a integracao padrao da unidade ou a global)
 · `0102_portal_regional_equipe` (O PORTAL DA FRANQUIA: (A) `vendedores_write` era `for all` — e
 `for all` inclui DELETE, entao o `gestor_regional` apagava vendedor da propria unidade. Vira tres
 policies: `insert`/`update` (admin ou gestor da unidade — incluir, editar, ATIVAR e INATIVAR

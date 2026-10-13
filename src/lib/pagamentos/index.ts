@@ -21,6 +21,14 @@ export function getPaymentGateway(config?: GatewayConfig | null, env: Record<str
     if (!cfg) {
       throw new GatewayNaoImplementadoError('SICREDI', `faltam variaveis: ${variaveisSicrediFaltando(env).join(', ')}`);
     }
+    // O cadastro diz um ambiente e o servidor esta em outro: emitir assim e
+    // achar que testou (boleto real) ou achar que cobrou (boleto de mentira).
+    if (config.ambiente && config.ambiente !== cfg.ambiente) {
+      throw new Error(
+        `Integracao Sicredi cadastrada como ${config.ambiente}, mas o servidor esta em ${cfg.ambiente} ` +
+          `(SICREDI_AMBIENTE). Acerte um dos dois antes de emitir.`,
+      );
+    }
     return new SicrediGateway(cfg);
   }
   if (!config || !config.api_key) return new MockGateway();
@@ -39,4 +47,29 @@ export function getPaymentGateway(config?: GatewayConfig | null, env: Record<str
     default:
       throw new GatewayNaoImplementadoError(config.provedor, 'adaptador nao registrado');
   }
+}
+
+/** Linha minima de `integracoes_bancarias` para escolher o gateway. */
+export interface IntegracaoCandidata extends GatewayConfig {
+  regional_id?: string | null;
+  is_padrao?: boolean | null;
+  ativo?: boolean | null;
+}
+
+/**
+ * Qual integracao a remessa usa: a PADRAO ativa da unidade pedida e, na falta
+ * dela, a padrao GLOBAL (regional nula). Antes a rota pedia "a padrao" com
+ * maybeSingle(): com uma padrao por unidade + a global ela recebia ERRO, ficava
+ * sem integracao e caia no MOCK calada — boleto ficticio achando que era real.
+ */
+export function escolherIntegracao<T extends IntegracaoCandidata>(
+  lista: T[],
+  regionalId?: string | null,
+): T | null {
+  const ativas = lista.filter((i) => i.ativo !== false && i.is_padrao);
+  if (regionalId) {
+    const daUnidade = ativas.find((i) => i.regional_id === regionalId);
+    if (daUnidade) return daUnidade;
+  }
+  return ativas.find((i) => !i.regional_id) ?? null;
 }

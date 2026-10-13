@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { getPaymentGateway, type CobrancaEmitida, type CobrancaInput, type GatewayConfig } from '@/lib/pagamentos';
+import {
+  escolherIntegracao,
+  getPaymentGateway,
+  type CobrancaEmitida,
+  type CobrancaInput,
+  type IntegracaoCandidata,
+  type PaymentGateway,
+} from '@/lib/pagamentos';
 
 // POST /api/v1/cobrancas/remessa
 // Envia um LOTE de titulos para a API bancaria:
@@ -48,10 +55,27 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, remessa: null, enviados: 0, mensagem: 'Nenhum titulo pendente de envio' });
   }
 
+  // 0) Gateway ANTES de criar a remessa: a integracao padrao da unidade (ou a
+  // global). Config errada (variavel faltando, ambiente divergente) para AQUI,
+  // em vez de deixar uma remessa marcada como enviada e nada emitido.
+  const { data: integracoes, error: errInt } = await supabase
+    .from('integracoes_bancarias')
+    .select('id, nome, provedor, ambiente, api_url, api_key, api_token_extra, webhook_secret, regional_id, is_padrao, ativo')
+    .eq('ativo', true)
+    .eq('is_padrao', true);
+  if (errInt) return NextResponse.json({ error: errInt.message }, { status: 400 });
+  const integracao = escolherIntegracao((integracoes ?? []) as IntegracaoCandidata[], body.regional_id ?? null);
+  let gateway: PaymentGateway;
+  try {
+    gateway = getPaymentGateway(integracao);
+  } catch (e) {
+    return NextResponse.json({ error: (e as Error).message }, { status: 400 });
+  }
+
   // 2) Remessa
   const { data: remessa, error: errRem } = await supabase.rpc('criar_remessa_cobranca', {
     p_titulo_ids: tituloIds,
-    p_integracao_id: null,
+    p_integracao_id: integracao?.id ?? null,
     p_referencia: competencia ? `competencia ${competencia.slice(0, 7)}` : 'lote manual',
   });
   if (errRem || !remessa) return NextResponse.json({ error: errRem?.message ?? 'Falha ao criar remessa' }, { status: 400 });
@@ -67,14 +91,7 @@ export async function POST(request: Request) {
 
   await supabase.rpc('marcar_remessa_enviada', { p_remessa_id: remessa.id });
 
-  // 3) Gateway (integracao padrao ativa; sem credencial cai no MOCK)
-  const { data: integracao } = await supabase
-    .from('integracoes_bancarias')
-    .select('id, nome, provedor, ambiente, api_url, api_key, api_token_extra, webhook_secret')
-    .eq('ativo', true)
-    .eq('is_padrao', true)
-    .maybeSingle();
-  const gateway = getPaymentGateway((integracao as GatewayConfig | null) ?? null);
+  // 3) Gateway ja resolvido antes da remessa (passo 0).
 
   type ItemRel = {
     titulo_id: string;
