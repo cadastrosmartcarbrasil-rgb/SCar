@@ -721,6 +721,43 @@ export function somarBlocosCarga(blocos: ResultadoBlocoCarga[]): ResultadoBlocoC
   }), vazio);
 }
 
+/**
+ * O VENDEDOR DOS MIGRADOS (0095). Os motivos sao os de
+ * `mutual_vendedores_dos_veiculos` — mexeu num lado, mexa no outro e nos dois
+ * testes. Os tres primeiros nao sao pendencia: o veiculo ja tem (ou vai ter)
+ * vendedor. Os demais sao a fila de quem fica sem.
+ */
+export const ROTULO_MOTIVO_VENDEDOR: Record<string, string> = {
+  LIGAR: 'Sera ligado ao vendedor',
+  JA_LIGADO: 'Ja ligado ao vendedor certo',
+  MANTIDO: 'Ja tem outro vendedor (nao e trocado)',
+  SEM_CONSULTOR: 'Contrato sem consultor no Mutual',
+  CONSULTOR_NAO_CAPTURADO: 'Consultor nao puxado (puxe Consultores)',
+  EMAIL_AMBIGUO: 'Sem CPF que case, e o e-mail e de varios vendedores',
+  CONSULTOR_SEM_VENDEDOR: 'Consultor nao esta no cadastro de vendedores',
+  UNIDADE_DIFERENTE: 'O vendedor e de outra unidade',
+};
+
+const MOTIVOS_RESOLVIDOS = new Set(['LIGAR', 'JA_LIGADO', 'MANTIDO']);
+
+/** O motivo deixa o veiculo SEM vendedor? (espelho do `sem_vendedor` da RPC) */
+export function vendedorPendente(motivo: string): boolean {
+  return !MOTIVOS_RESOLVIDOS.has(motivo);
+}
+
+/** Os totais do quadro, pela mesma conta de `mutual_vincular_vendedores`. */
+export function totaisVendedores(linhas: { motivo: string; veiculos: number | string }[]) {
+  const soma = (f: (m: string) => boolean) =>
+    linhas.filter((l) => f(l.motivo)).reduce((acc, l) => acc + Number(l.veiculos), 0);
+  return {
+    ligar: soma((m) => m === 'LIGAR'),
+    jaLigados: soma((m) => m === 'JA_LIGADO'),
+    mantidos: soma((m) => m === 'MANTIDO'),
+    semVendedor: soma(vendedorPendente),
+    total: soma(() => true),
+  };
+}
+
 /** O que a carga faria, contado como a tela mostra. */
 export function resumoDaCarga(linhas: LinhaCarga[]) {
   const entram = linhas.filter((l) => !l.problema);

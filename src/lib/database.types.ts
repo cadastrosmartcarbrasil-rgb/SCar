@@ -16,7 +16,7 @@ export type PapelUsuario =
   // APOSENTADO na 0077 e o banco o recusa por CHECK — fora daqui de proposito,
   // para o TS recusar junto.
   | 'admin' | 'gestor_regional' | 'consultor_vendas' | 'financeiro' | 'sinistro' | 'auditoria'
-  | 'assistencia_24h';
+  | 'assistencia_24h' | 'supervisor' | 'cobranca';
 export type TipoPessoa = 'PF' | 'PJ';
 export type StatusCliente =
   | 'ativo' | 'inadimplente' | 'cancelado' | 'inativo' | 'suspenso' | 'excluido';
@@ -835,6 +835,67 @@ export type TituloCliente = {
   url_boleto: string | null;
   pix_copia_cola: string | null;
   observacao: string | null;
+  /** 0099: SCAR (titulos_financeiros) ou MUTUAL (boletos_historico, so consulta). Ausente = SCAR. */
+  origem?: 'SCAR' | 'MUTUAL';
+  url_pagamento?: string | null;
+  em_serasa?: boolean;
+};
+
+// Boleto do Mutual no historico do SAC (RPC boletos_mutual_do_cliente, 0099)
+export type BoletoMutualCliente = {
+  id: string;
+  veiculo_id: string | null;
+  placa: string | null;
+  competencia: string | null;
+  data_vencimento: string;
+  valor: number;
+  valor_pago: number | null;
+  data_pagamento: string | null;
+  status: string;
+  dias_atraso: number;
+  em_serasa: boolean;
+  linha_digitavel: string | null;
+  url_boleto: string | null;
+  url_pagamento: string | null;
+};
+
+// Historico de eventos do Mutual (0101) — so consulta, NUNCA eventos_sinistro
+export type EventoMutualCliente = {
+  id: string;
+  veiculo_id: string | null;
+  placa: string | null;
+  protocolo: string | null;
+  data_evento: string | null;
+  data_conclusao: string | null;
+  tipos: string[];
+  envolvimento: string | null;
+  valor_total: number | null;
+  status_origem: string | null;
+};
+export type EventoHistoricoLinha = EventoMutualCliente & {
+  cliente_id: string;
+  associado: string;
+  unidade: string | null;
+  total_registros: number;
+};
+export type EventosHistoricoResumo = {
+  eventos: number;
+  associados: number;
+  veiculos: number;
+  sem_veiculo: number;
+  primeiro_evento: string | null;
+  ultimo_evento: string | null;
+  capturados: number;
+  ultima_captura: string | null;
+  ultima_importacao: string | null;
+};
+export type ImportacaoEventosHistorico = {
+  lidos: number;
+  importaveis: number;
+  sem_associado: number;
+  sem_veiculo_na_base: number;
+  data_invalida: number;
+  gravados: number;
 };
 
 // Retorno de opcionais_elegibilidade (janela flutuante de N dias)
@@ -1617,6 +1678,218 @@ export type AssistPainelSituacao = { situacao: StatusVeiculo; quantidade: number
 // Painel executivo das Regionais (0078) — o controle da matriz sobre as
 // unidades. Percentuais voltam como FRACAO (0..1), como no resto do sistema.
 // ---------------------------------------------------------------------------
+// --- Cobranca: painel, perfis e historico (0097) ---------------------------
+export type CobrancaIndicadores = {
+  recorte: 'atual' | 'anterior_1' | 'anterior_2' | 'anterior_3' | 'ano_anterior';
+  inicio: string;
+  fim: string;
+  boletos: number;
+  valor_emitido: number;
+  boletos_venceram: number;
+  valor_venceram: number;
+  boletos_aberto_vencido: number;
+  valor_aberto_vencido: number;
+  valor_pago_no_prazo: number;
+  valor_pago_em_atraso: number;
+  boletos_pago_em_atraso: number;
+  valor_a_vencer: number;
+  valor_vence_hoje: number;
+  clientes_venceram: number;
+  clientes_inadimplentes: number;
+  primeiros_venceram: number;
+  primeiros_nao_pagos: number;
+  primeiros_pagos_atraso: number;
+  reincidentes: number;
+  regularizados: number;
+  clientes_serasa: number;
+};
+export type CobrancaCarteira = {
+  clientes_ativos: number;
+  clientes_inadimplentes: number;
+  boletos_vencidos: number;
+  valor_vencido: number;
+  ultima_captura_mutual: string | null;
+  ultima_importacao: string | null;
+};
+export type CobrancaCalendarioLinha = {
+  ciclo: number;
+  data_ciclo: string;
+  boletos: number;
+  clientes: number;
+  valor_emitido: number;
+  valor_pago_no_prazo: number;
+  valor_pago_em_atraso: number;
+  valor_a_vencer: number;
+  valor_vence_hoje: number;
+  valor_aberto_vencido: number;
+  boletos_aberto_vencido: number;
+  valor_venceram: number;
+};
+export type CobrancaPorRegional = {
+  regional_id: string | null;
+  regional: string;
+  boletos: number;
+  valor_emitido: number;
+  valor_venceram: number;
+  valor_aberto_vencido: number;
+  valor_pago_em_atraso: number;
+  clientes_venceram: number;
+  clientes_inadimplentes: number;
+};
+export type CobrancaSerieMes = {
+  mes: string;
+  valor_emitido: number;
+  valor_venceram: number;
+  valor_aberto_vencido: number;
+  valor_pago_no_prazo: number;
+  valor_pago_em_atraso: number;
+};
+export type CobrancaBoletoLinha = {
+  origem: 'SCAR' | 'MUTUAL';
+  boleto_id: string;
+  cliente_id: string;
+  associado: string;
+  cpf_cnpj: string;
+  placa: string | null;
+  regional: string;
+  competencia: string | null;
+  vencimento: string;
+  valor: number;
+  valor_pago: number | null;
+  data_pagamento: string | null;
+  situacao: string;
+  ciclo: number;
+  dias_atraso: number;
+  em_serasa: boolean;
+  total_registros: number;
+  total_valor: number;
+};
+export type CobrancaParametros = {
+  meta: number;
+  limite: number;
+  feriados: { data: string; descricao: string }[];
+};
+export type CobrancaEscopo = { global: boolean; regionais: string[] };
+/* ---- Cobranca, Fase 2 (0098): fila, contatos e promessas ---- */
+export type CobrancaFilaLinha = {
+  cliente_id: string;
+  associado: string;
+  cpf_cnpj: string;
+  telefone: string | null;
+  celular: string | null;
+  regional_id: string | null;
+  regional: string;
+  placas: string | null;
+  boletos_vencidos: number;
+  valor_vencido: number;
+  dias_atraso: number;
+  faixa: string | null;
+  vencido_desde: string;
+  ultimo_contato_em: string | null;
+  ultimo_canal: string | null;
+  ultimo_resultado: string | null;
+  ultimo_usuario: string | null;
+  ultima_observacao: string | null;
+  retorno_em: string | null;
+  proxima_acao: string | null;
+  contatos: number;
+  acordo_id: string | null;
+  acordo_tipo: 'PROMESSA' | 'ACORDO' | null;
+  acordo_status: string | null;
+  proxima_parcela_em: string | null;
+  proxima_parcela_valor: number | null;
+  situacao_fila: string;
+  prioridade: number;
+  total_registros: number;
+  total_valor: number;
+};
+export type CobrancaFilaResumo = { grupo: 'situacao' | 'faixa'; chave: string | null; clientes: number; valor: number };
+export type CobrancaParcelaSituacao = {
+  numero: number;
+  vencimento: string;
+  valor: number;
+  acumulado: number;
+  pago_ate: number;
+  situacao: 'cumprida' | 'quebrada' | 'aguardando_baixa' | 'a_vencer';
+};
+export type CobrancaAcordoSituacao = {
+  acordo_id: string;
+  cliente_id: string;
+  regional_id: string | null;
+  tipo: 'PROMESSA' | 'ACORDO';
+  data_base: string;
+  valor_total: number;
+  divida_na_data: number;
+  observacao: string | null;
+  criado_por_nome: string | null;
+  created_at: string;
+  cancelado_em: string | null;
+  motivo_cancelamento: string | null;
+  status: 'EM_ANDAMENTO' | 'CUMPRIDO' | 'QUEBRADO' | 'CANCELADO';
+  valor_pago: number;
+  parcelas: CobrancaParcelaSituacao[];
+  quebra_em: string | null;
+  proxima_parcela_em: string | null;
+  proxima_parcela_valor: number | null;
+};
+export type CobrancaPromessasResumo = {
+  feitas: number;
+  cumpridas: number;
+  quebradas: number;
+  em_andamento: number;
+  canceladas: number;
+  valor_prometido: number;
+  valor_recuperado: number;
+};
+export type CobrancaContato = {
+  id: string;
+  canal: string;
+  resultado: string;
+  observacao: string | null;
+  proxima_acao_em: string | null;
+  proxima_acao: string | null;
+  boletos_vencidos: number;
+  valor_vencido: number;
+  dias_atraso: number;
+  usuario: string | null;
+  created_at: string;
+  acordo_id: string | null;
+};
+export type CobrancaBoletoCliente = {
+  origem: 'SCAR' | 'MUTUAL';
+  boleto_id: string;
+  placa: string | null;
+  competencia: string | null;
+  vencimento: string;
+  valor: number;
+  valor_pago: number | null;
+  data_pagamento: string | null;
+  situacao: string;
+  dias_atraso: number;
+  em_serasa: boolean;
+};
+export type CobrancaHistoricoResumo = {
+  boletos: number;
+  associados: number;
+  pagos: number;
+  abertos: number;
+  cancelados: number;
+  primeiro_vencimento: string | null;
+  ultimo_vencimento: string | null;
+  ultima_importacao: string | null;
+  boletos_capturados: number;
+  ultima_captura: string | null;
+};
+export type CobrancaImportacaoBloco = {
+  lidos: number;
+  mensalidades: number;
+  sem_associado: number;
+  status_desconhecido: number;
+  gravados: number;
+  proximo_cursor: string | null;
+  fim: boolean;
+};
+
 export type RegionaisPainelResumo = {
   veiculos_ativos: number;
   veiculos_ativos_antes: number;
@@ -2265,6 +2538,25 @@ export type PortalTitulo = {
   linha_digitavel: string | null;
   url_boleto: string | null;
   pix_copia_cola: string | null;
+  /** 0099: boleto do Mutual (so consulta; 2a via sai do proprio registro). */
+  origem?: 'SCAR' | 'MUTUAL';
+  url_pagamento?: string | null;
+};
+
+export type PortalBoletoMutual = {
+  id: string;
+  veiculo_id: string | null;
+  placa: string | null;
+  competencia: string | null;
+  data_vencimento: string;
+  valor: number;
+  valor_pago: number | null;
+  data_pagamento: string | null;
+  situacao: string;
+  dias_atraso: number;
+  linha_digitavel: string | null;
+  url_boleto: string | null;
+  url_pagamento: string | null;
 };
 
 export type PortalFinanceiro = {
@@ -2598,6 +2890,27 @@ export type MutualCargaResultado = {
   recusados: number;
   /** 0094 — quantas linhas ainda estao na fila depois desta chamada. */
   restantes: number;
+  mensagem: string;
+};
+
+/** 0095 — o vendedor dos veiculos migrados, agrupado por motivo e consultor. */
+export type MutualVendedorResumo = {
+  motivo: string;
+  consultor_id: string | null;
+  consultor_nome: string | null;
+  consultor_documento: string | null;
+  vendedor_nome: string | null;
+  veiculos: number;
+  placas: string | null;
+};
+
+/** 0095 — o resultado de ligar os vendedores (ou da simulacao). */
+export type MutualVincularVendedores = {
+  ligar: number;
+  ja_ligados: number;
+  mantidos: number;
+  sem_vendedor: number;
+  gravados: number;
   mensagem: string;
 };
 
@@ -3349,6 +3662,10 @@ export type Database = {
         };
         Returns: RegionaisPainelPonto[];
       };
+      painel_visao_geral: {
+        Args: { p_regional_id?: string | null; p_meses?: number | null };
+        Returns: Json;
+      };
       regionais_painel_comparativo: {
         Args: {
           p_data_inicio: string;
@@ -3357,6 +3674,81 @@ export type Database = {
           p_conta_ate?: string | null;
         };
         Returns: RegionaisPainelLinha[];
+      };
+      cobranca_escopo: { Args: Record<string, never>; Returns: CobrancaEscopo[] };
+      cobranca_fila: {
+        Args: {
+          p_regional_id?: string | null;
+          p_situacao?: string | null;
+          p_faixa?: string | null;
+          p_busca?: string | null;
+          p_limite?: number;
+          p_offset?: number;
+        };
+        Returns: CobrancaFilaLinha[];
+      };
+      cobranca_fila_resumo: { Args: { p_regional_id?: string | null }; Returns: CobrancaFilaResumo[] };
+      cobranca_acordos_situacao: {
+        Args: { p_regional_id?: string | null; p_cliente_id?: string | null };
+        Returns: CobrancaAcordoSituacao[];
+      };
+      cobranca_promessas_resumo: {
+        Args: { p_inicio: string; p_fim: string; p_regional_id?: string | null };
+        Returns: CobrancaPromessasResumo[];
+      };
+      cobranca_contatos_cliente: { Args: { p_cliente_id: string }; Returns: CobrancaContato[] };
+      cobranca_boletos_cliente: { Args: { p_cliente_id: string }; Returns: CobrancaBoletoCliente[] };
+      registrar_contato_cobranca: {
+        Args: {
+          p_cliente_id: string;
+          p_canal: string;
+          p_resultado: string;
+          p_observacao?: string | null;
+          p_proxima_acao_em?: string | null;
+          p_proxima_acao?: string | null;
+          p_acordo?: Json | null;
+        };
+        Returns: string;
+      };
+      cancelar_acordo_cobranca: { Args: { p_acordo_id: string; p_motivo: string }; Returns: undefined };
+      cobranca_parametros: { Args: Record<string, never>; Returns: CobrancaParametros[] };
+      salvar_parametros_cobranca: { Args: { p_meta: number; p_limite: number }; Returns: undefined };
+      salvar_feriado_cobranca: { Args: { p_data: string; p_descricao: string }; Returns: undefined };
+      remover_feriado_cobranca: { Args: { p_data: string }; Returns: undefined };
+      definir_regionais_supervisor: { Args: { p_usuario_id: string; p_regionais: string[] }; Returns: number };
+      regionais_do_supervisor: { Args: { p_usuario_id: string }; Returns: string[] };
+      cobranca_indicadores: {
+        Args: { p_inicio: string; p_fim: string; p_regional_id?: string | null };
+        Returns: CobrancaIndicadores[];
+      };
+      cobranca_carteira: { Args: { p_regional_id?: string | null }; Returns: CobrancaCarteira[] };
+      cobranca_calendario: {
+        Args: { p_mes: string; p_regional_id?: string | null };
+        Returns: CobrancaCalendarioLinha[];
+      };
+      cobranca_por_regional: { Args: { p_inicio: string; p_fim: string }; Returns: CobrancaPorRegional[] };
+      cobranca_serie_mensal: {
+        Args: { p_meses?: number; p_regional_id?: string | null };
+        Returns: CobrancaSerieMes[];
+      };
+      cobranca_boletos_lista: {
+        Args: {
+          p_inicio?: string | null;
+          p_fim?: string | null;
+          p_regional_id?: string | null;
+          p_situacoes?: string[] | null;
+          p_ciclo?: number | null;
+          p_somente_primeiro?: boolean;
+          p_pago_inicio?: string | null;
+          p_pago_fim?: string | null;
+          p_limite?: number;
+        };
+        Returns: CobrancaBoletoLinha[];
+      };
+      cobranca_historico_resumo: { Args: Record<string, never>; Returns: CobrancaHistoricoResumo[] };
+      cobranca_importar_historico_mutual: {
+        Args: { p_cursor?: string | null; p_lote?: number; p_confirmar?: boolean };
+        Returns: CobrancaImportacaoBloco[];
       };
       intervalo_contas_painel: {
         Args: Record<string, never>;
@@ -3511,6 +3903,27 @@ export type Database = {
         Args: { p_cliente_id: string };
         Returns: VeiculoDoCliente[];
       };
+      eventos_mutual_do_cliente: {
+        Args: { p_cliente_id: string; p_limite?: number };
+        Returns: EventoMutualCliente[];
+      };
+      eventos_historico_listar: {
+        Args: {
+          p_busca?: string | null; p_tipo?: string | null; p_de?: string | null; p_ate?: string | null;
+          p_regional_id?: string | null; p_limite?: number; p_offset?: number;
+        };
+        Returns: EventoHistoricoLinha[];
+      };
+      eventos_historico_resumo: { Args: Record<string, never>; Returns: EventosHistoricoResumo[] };
+      mutual_importar_eventos_historico: {
+        Args: { p_confirmar?: boolean };
+        Returns: ImportacaoEventosHistorico[];
+      };
+      boletos_mutual_do_cliente: {
+        Args: { p_cliente_id: string; p_veiculo_id?: string | null; p_limite?: number };
+        Returns: BoletoMutualCliente[];
+      };
+      portal_boletos_mutual: { Args: { p_limite?: number }; Returns: PortalBoletoMutual[] };
       titulos_do_cliente: {
         Args: { p_cliente_id: string; p_veiculo_id?: string | null; p_limite?: number };
         Returns: TituloCliente[];
@@ -4035,6 +4448,14 @@ export type Database = {
       mutual_desfazer_carga: {
         Args: { p_regional_id: string; p_confirmar?: boolean };
         Returns: MutualDesfazerResultado[];
+      };
+      mutual_vendedores_resumo: {
+        Args: { p_regional_id: string };
+        Returns: MutualVendedorResumo[];
+      };
+      mutual_vincular_vendedores: {
+        Args: { p_regional_id: string; p_confirmar?: boolean };
+        Returns: MutualVincularVendedores[];
       };
       veiculo_tem_movimento: { Args: { p_veiculo_id: string }; Returns: boolean };
       // 0082 — a ponte id externo -> registro do SCar (a carga e re-executavel).

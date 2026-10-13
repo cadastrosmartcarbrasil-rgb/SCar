@@ -2,13 +2,13 @@
 
 import { useState } from 'react';
 import { LayoutDashboard, LifeBuoy } from 'lucide-react';
-import { DashboardKpis } from '@/components/dashboard/kpi-cards';
+import { VisaoGeral } from '@/components/dashboard/visao-geral';
 import { AssistenciaPainel } from '@/components/dashboard/assistencia-24h';
 
 type Aba = 'geral' | 'assistencia';
 
 const ABAS: { id: Aba; label: string; icon: React.ElementType; descricao: string }[] = [
-  { id: 'geral', label: 'Visao Geral', icon: LayoutDashboard, descricao: 'Indicadores da operacao em tempo real.' },
+  { id: 'geral', label: 'Visao Geral', icon: LayoutDashboard, descricao: 'A operacao inteira numa tela: carteira, crescimento, eventos, comercial e financeiro.' },
   {
     id: 'assistencia',
     label: 'Assistencia 24h',
@@ -48,7 +48,7 @@ export default function DashboardPage() {
         })}
       </div>
 
-      {aba === 'geral' ? <DashboardKpis /> : <AssistenciaPainel />}
+      {aba === 'geral' ? <VisaoGeral /> : <AssistenciaPainel />}
     </div>
   );
 }

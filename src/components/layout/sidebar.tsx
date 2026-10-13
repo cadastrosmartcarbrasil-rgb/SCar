@@ -27,6 +27,9 @@ import {
   ChevronDown,
   LayoutList,
   DoorOpen,
+  Gauge,
+  PhoneCall,
+  CalendarDays,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
@@ -34,7 +37,7 @@ import { ThemeToggle } from '@/components/ui/theme-toggle';
 import type { PapelUsuario } from '@/lib/database.types';
 
 type Item = { href: string; label: string; icon: React.ElementType };
-/** Item com sub-itens (hoje so Regionais: o painel e a porta das unidades). */
+/** Item com sub-itens (Regionais e Cobranca). */
 type Grupo = { label: string; icon: React.ElementType; itens: Item[] };
 type Entrada = Item | Grupo;
 const ehGrupo = (e: Entrada): e is Grupo => 'itens' in e;
@@ -50,8 +53,19 @@ const OPERACAO: Item[] = [
   { href: '/rastreadores', label: 'Rastreadores', icon: Satellite },
   { href: '/sinistros', label: 'Sinistros', icon: AlertTriangle },
 ];
-const GESTAO: Item[] = [
-  { href: '/cobrancas', label: 'Cobranca', icon: Receipt },
+const GESTAO: Entrada[] = [
+  // COBRANCA virou grupo (0097): o painel de inadimplencia, o calendario dos 6
+  // ciclos e a emissao (faturas, lote e remessas) sao tres trabalhos diferentes.
+  {
+    label: 'Cobranca',
+    icon: Receipt,
+    itens: [
+      { href: '/cobrancas/painel', label: 'Painel de Inadimplencia', icon: Gauge },
+      { href: '/cobrancas/fila', label: 'Fila de Cobranca', icon: PhoneCall },
+      { href: '/cobrancas/calendario', label: 'Calendario de Vencimentos', icon: CalendarDays },
+      { href: '/cobrancas/boletos', label: 'Boletos e Remessas', icon: Receipt },
+    ],
+  },
   { href: '/precificacao', label: 'Precificacao', icon: Calculator },
   { href: '/fornecedores', label: 'Fornecedores', icon: Store },
   { href: '/financeiro', label: 'Financeiro / DRE', icon: DollarSign },
@@ -246,7 +260,7 @@ export function Sidebar({ papel, logoUrl }: { papel?: PapelUsuario; logoUrl?: st
       )}
 
       {/* Sidebar desktop (cabine) */}
-      <aside className="cockpit hidden w-64 shrink-0 flex-col md:flex">
+      <aside className="cockpit hidden w-64 shrink-0 flex-col md:sticky md:top-0 md:flex md:h-screen">
         <div className="px-4 py-5">
           <Brand logoUrl={logoUrl} />
         </div>

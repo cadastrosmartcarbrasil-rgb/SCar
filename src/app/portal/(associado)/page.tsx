@@ -96,6 +96,11 @@ export default function PortalVeiculosPage() {
                     {v.plano_nome && (
                       <p className="mt-0.5 text-[11.5px] text-slate-400">{v.plano_nome}</p>
                     )}
+                    {v.data_ativacao && (
+                      <p className="mt-0.5 text-[11.5px] text-slate-400">
+                        Protegido desde {formatDate(v.data_ativacao)}
+                      </p>
+                    )}
                   </div>
                   <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset ${
                     COR_STATUS[v.status] ?? COR_STATUS.inativo}`}>

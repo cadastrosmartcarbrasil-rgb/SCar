@@ -1,5 +1,6 @@
 'use client';
 
+import { lerTodas } from '@/lib/paginacao';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { ordenarVeiculos } from '@/lib/sac';
@@ -15,15 +16,19 @@ export function useVeiculos(associadoId?: string) {
   return useQuery<VeiculoComAssociado[]>({
     queryKey: ['veiculos', associadoId ?? 'all'],
     queryFn: async () => {
-      let q = supabase
-        .from('veiculos')
-        .select('*, clientes(nome_razao_social, matricula)')
-        .neq('status', 'excluido')
-        .order('data_ativacao', { ascending: false, nullsFirst: false })
-        .order('created_at', { ascending: false });
-      if (associadoId) q = q.eq('cliente_id', associadoId);
-      const { data, error } = await q;
-      if (error) throw error;
+      // Paginado: o PostgREST corta em 1.000 linhas e a carteira ja passou
+      // disso (ver src/lib/paginacao.ts). O `id` no fim desempata a ordem.
+      const data = await lerTodas((de, ate) => {
+        let q = supabase
+          .from('veiculos')
+          .select('*, clientes(nome_razao_social, matricula)')
+          .neq('status', 'excluido')
+          .order('data_ativacao', { ascending: false, nullsFirst: false })
+          .order('created_at', { ascending: false })
+          .order('id');
+        if (associadoId) q = q.eq('cliente_id', associadoId);
+        return q.range(de, ate);
+      });
       // Ordem padrao do sistema: ativos primeiro, inativos/cancelados no fim
       // (mesma regra do SQL ordem_status_veiculo, em src/lib/sac.ts).
       return ordenarVeiculos((data ?? []) as unknown as VeiculoComAssociado[]);

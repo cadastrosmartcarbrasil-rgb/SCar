@@ -10,6 +10,7 @@ import {
   consolidacao,
   placaMutual, chassiMutual, renavamMutual, resumoDaCarga, recusasPorMotivo,
   somarBlocosCarga, LOTE_CARGA,
+  totaisVendedores, vendedorPendente, ROTULO_MOTIVO_VENDEDOR,
   filaAntesDoCutover, cutoverLiberado, tiposPendentes,
   planosPendentes, idsPara90Pct, amplitudeFipe, ENTIDADES_MUTUAL,
   mensagemDeFalhaDeLeitura, urlMutualCaminho, caminhoQueRespondeu, CANDIDATAS_PLANO,
@@ -1073,5 +1074,40 @@ describe('comObjeto — o veiculo da pergunta vai junto da resposta (0091)', () 
   });
   it('vazio conta como ausente', () => {
     expect(comObjeto([{ id: 3, contract_object_id: '' }], '9')[0].contract_object_id).toBe('9');
+  });
+});
+
+describe('vendedor dos migrados (0095)', () => {
+  it('so LIGAR, JA_LIGADO e MANTIDO deixam o veiculo com vendedor', () => {
+    expect(vendedorPendente('LIGAR')).toBe(false);
+    expect(vendedorPendente('JA_LIGADO')).toBe(false);
+    expect(vendedorPendente('MANTIDO')).toBe(false);
+    for (const m of ['SEM_CONSULTOR', 'CONSULTOR_NAO_CAPTURADO', 'EMAIL_AMBIGUO',
+                     'CONSULTOR_SEM_VENDEDOR', 'UNIDADE_DIFERENTE']) {
+      expect(vendedorPendente(m)).toBe(true);
+    }
+  });
+
+  it('motivo desconhecido e pendencia, nunca "resolvido" em silencio', () => {
+    expect(vendedorPendente('ALGO_NOVO')).toBe(true);
+  });
+
+  it('todo motivo da RPC tem rotulo', () => {
+    expect(Object.keys(ROTULO_MOTIVO_VENDEDOR).sort()).toEqual([
+      'CONSULTOR_NAO_CAPTURADO', 'CONSULTOR_SEM_VENDEDOR', 'EMAIL_AMBIGUO', 'JA_LIGADO',
+      'LIGAR', 'MANTIDO', 'SEM_CONSULTOR', 'UNIDADE_DIFERENTE',
+    ]);
+  });
+
+  it('soma por veiculo, e o bigint pode chegar como texto', () => {
+    const t = totaisVendedores([
+      { motivo: 'LIGAR', veiculos: '400' },
+      { motivo: 'LIGAR', veiculos: 9 },
+      { motivo: 'JA_LIGADO', veiculos: 22 },
+      { motivo: 'MANTIDO', veiculos: 14 },
+      { motivo: 'CONSULTOR_SEM_VENDEDOR', veiculos: 3 },
+      { motivo: 'SEM_CONSULTOR', veiculos: 2 },
+    ]);
+    expect(t).toEqual({ ligar: 409, jaLigados: 22, mantidos: 14, semVendedor: 5, total: 450 });
   });
 });

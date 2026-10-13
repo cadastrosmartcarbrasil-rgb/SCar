@@ -172,10 +172,92 @@ seguintes gravam 200 linhas cada sem cortar associado; fila de outro recorte ou 
 Sem `p_lote` faz tudo de uma vez, como antes. Conferir depois de rodar:
 `select count(*) from pg_proc where proname='mutual_executar_carga'` = 1, a tabela `mutual_carga_fila`
 existe com RLS e sem policy, secdef sem `search_path` = 0, 0 RPCs nossas ao `anon`.
-**⚠️ A `0095_portal_regional_equipe` é NOVA e ainda NÃO foi aplicada.** Ela fecha o buraco de
+**✅ A `0095_mutual_vendedor_do_consultor` foi rodada e CONFERIDA em 09/10/2026** (as 4 funções e o
+trigger existem, `fn_calcular_comissao` lê `integracao_vinculos` e segue sobre o valor cheio, 0 secdef
+sem `search_path`, 0 RPCs nossas ao `anon`, 0 CPF de vendedor com máscara; nenhuma fatura, título ou
+comissão nova). **✅ "Ligar" na MATRIZ feito e CONFERIDO em 09/10/2026:** **465 de 467 migrados
+com vendedor** (30 vendedores, 0 de outra unidade; Clayton segue com 34), resumo agora 453 já
+ligados · 12 mantidos · 2 sem consultor (**HNC4288, NAU8B54** — o contrato no Mutual não tem
+consultor; ligar à mão se quiser). Faturas 8, títulos 6, comissões 1 — nada novo. Texto original:
+(A) `vendedores.documento` passa a ser gravado SÓ COM DÍGITOS por trigger (a tela gravava com
+máscara); (B) `mutual_vendedores_dos_veiculos`/`_resumo`/`mutual_vincular_vendedores` — liga o
+vendedor dos migrados pelo consultor do CONTRATO (CPF → `vendedores.documento`; e-mail só se apontar
+para UM), **nunca troca vendedor já gravado** e **não liga vendedor de outra unidade**; o botão
+*Carregar* chama no fim, e o quadro **"Vendedor dos veículos"** (seção da carga) mostra quem fica
+sem e por quê; (C) `fn_calcular_comissao`: veículo com vínculo `CONTRACT_OBJECT` do Mutual **nunca
+gera comissão de ADESÃO** (a recorrência segue sobre o valor cheio). Simulado em produção em
+08/10 (mesma consulta, sem gravar): MATRIZ **429 a ligar · 24 já ligados · 12 mantidos (os do
+Clayton de outros consultores) · 2 sem consultor**. Conferir depois de rodar: `fn_calcular_comissao`
+contém `integracao_vinculos`, trigger `trg_vendedor_documento_digitos` existe, secdef sem
+`search_path` = 0, 0 RPCs nossas ao `anon`; depois, na tela, **Ligar** na MATRIZ.
+**✅ "Primeira ativação" conferida em 09/10/2026 (sem migration):** a carga GRAVOU certo —
+`veiculos.data_ativacao` bate com `first_activation_date` do Mutual em **452 de 467**; os outros
+**15** são `vistoria_pendente` que no Mutual estão com o campo VAZIO (nunca ativados lá), e
+receberam a data de criação do contrato (a adesão). O que faltava era **TELA**: nenhuma mostrava a
+data. Agora aparece no SAC (lista + ficha, com o tempo de casa), na lista e na ficha de
+`/veiculos` (só leitura — nos migrados vem do Mutual a cada carga e decide faturamento) e no
+portal ("Protegido desde"). Junto: **`formatDate` mostrava o DIA ANTERIOR para coluna `date`**
+(`new Date('2025-11-28')` é meia-noite UTC = 27/11 no Brasil) — afetava também o "Associado
+desde" do portal; corrigido na raiz (`src/lib/utils.ts`, teste em `utils.test.ts`). Helper
+`primeiraAtivacao` em `src/lib/sac.ts`.
+**✅ A `0096_mutual_captura_sem_regravar` foi APLICADA PELO AGENTE (com autorização do usuário,
+`execute_sql`) e CONFERIDA em 11/10/2026** — a primeira pela regra nova. Uma versão de
+`mutual_registrar_captura` com a regra de só regravar o que mudou, `mutual_resumo_capturas` novo,
+`mutual_captura` com autovacuum em 2%, 0 secdef sem `search_path`, 0 RPCs nossas ao `anon`; e o
+autovacuum começou sozinho logo depois (havia 39.709 versões mortas). **O porquê:** a recaptura de
+CONTRACT_OBJECT de 11/10 (17.777 linhas) regravou TUDO, e a prévia, as linhas da carga e o funil do
+consultor passaram a estourar os 8 s **mesmo uma por vez** (a fila da tela já estava no ar: os
+cancelamentos saíram de 8 em 8 s). Como a rotina da convivência é recapturar toda semana, isso se
+repetiria a cada rodada. **Regra que fica:** upsert de captura re-executável escreve só o que mudou —
+regravar linha idêntica é inchar a tabela que a carga inteira lê.
+**✅ CARGA DAS 3 UNIDADES RESTANTES EXECUTADA em 11–12/10/2026** (autorizada pelo usuário, pelo
+agente via `execute_sql` com a sessão do admin): GRANDE NATAL 432 veíc./375 assoc. novos (1 recusado) ·
+SÃO PAULO 1 821/760 (13) · RIBEIRÃO PRETO 1.169/998 (11). Vendedores ligados: GN 425 · SP1 821 ·
+RP 1.054 — ficam sem: RP 112 *consultor sem vendedor* + 3 *outra unidade*; GN 3 + 1 sem consultor
++ 3 outra unidade. **Conferido:** base com **2.564 associados e 2.898 veículos, 2.889 com
+`cobranca_externa`** (os 9 sem são os de antes da migração); **faturas 8, títulos 6, comissões 1 —
+nada novo**; 0 ativados hoje; 0 sem tipo, 0 sem plano e 0 sem valor nas 3 unidades novas (o de-para
+de plano foi refeito pelo usuário antes); 0 secdef sem `search_path`. **A MATRIZ segue com 172 sem
+plano** — foi carregada antes do de-para novo; re-executar a carga dela preenche pelo `coalesce`.
+**Pendente:** recapturar CONTRACT/PERSON/ADDRESS (143 faturáveis sem unidade = vendas posteriores à
+captura) e recarregar; INVOICE de novo antes do carnê de 2027. **Bancos (decisão do usuário, não
+bloqueia a carga):** Sicredi para boleto/PIX (~98% da carteira) e Asaas para cartão; API configurada
+nos próximos dias (`integracoes_bancarias` ainda vazia).
+**✅ A `0100_painel_visao_geral` está aplicada** (conferido em 13/10/2026: `painel_visao_geral` existe).
+**🆕 A `0101_eventos_historico_mutual` é NOVA** — o histórico de eventos do Mutual (ver a seção
+"HISTÓRICO DE EVENTOS DO MUTUAL (0101)"). Cria `eventos_historico` + 5 funções e recria
+`veiculos_do_cliente` e `painel_visao_geral` (mesmas assinaturas). **⚠️ Tentada pelo `execute_sql` em 13/10/2026 e NÃO aplicada:** toda escrita
+pelo MCP parou em 60 s sem chegar ao banco — inclusive um `create table` de teste vazio (leituras
+respondem na hora, nenhum bloqueio no banco). O caminho de escrita do MCP não está passando nesta
+sessão: **aplicar pelo SQL Editor** e depois `select * from mutual_importar_eventos_historico(true);`
+(no SQL Editor `auth.uid()` é nulo, então a trava da matriz deixa passar). **Não importa nada sozinha:**
+depois de rodar, `/integracao/mutual` → *Histórico de eventos* → *Importar* (medido em 13/10: 827 de
+2.909 eventos entram). Conferir: `select count(*) from pg_proc where proname like '%eventos_historico%'`,
+secdef sem `search_path` = 0, 0 RPCs nossas ao `anon`.
+**Próxima migration livre: `0103`** (a `0102` está escrita e pendente, logo abaixo).
+**✅ A `0098_cobranca_fila` foi APLICADA (pelo usuário, SQL Editor — o `execute_sql` estourou os 60 s do MCP e foi desfeito inteiro) e CONFERIDA em 12/10/2026:** 3 tabelas com RLS, 14 funções, 3 triggers de imutabilidade, 0 secdef sem `search_path`, 0 RPCs nossas ao `anon`. Tela `/cobrancas/fila` (Cobrança → Fila de Cobrança). Ver §9 de `docs/modulos/cobranca-inadimplencia.md`.
+**✅ A `0099_historico_financeiro_mutual` foi APLICADA (pelo usuário, SQL Editor) e CONFERIDA em 12/10/2026:** 3 colunas novas em `boletos_historico`, 3 funções novas, importação e `portal_financeiro` nas versões novas, 0 secdef sem `search_path`, 0 RPCs nossas ao `anon`; QQQ5D49 com 35 boletos visíveis (29 pagos · 2 vencidos · 3 a vencer). Linha digitável ainda em 0 — falta reimportar o histórico. Texto original: O defeito: o Histórico Financeiro do SAC e o Financeiro do portal liam SÓ `titulos_financeiros` (6 linhas na base) e os 78.425 boletos importados do Mutual não apareciam. Ela: (A) `boletos_historico` ganha `linha_digitavel`/`url_boleto`/`url_pagamento` (o `checkout_link` do Mutual); (B) `cobranca_importar_historico_mutual` recriada (mesma assinatura) preenchendo os três; (C) `corte_cobranca_cliente`; (D) `boletos_mutual_do_cliente` (SAC, permissão de `titulos_do_cliente`) e `portal_boletos_mutual`; (E) `portal_financeiro` recriado somando as duas fontes. As telas unem as duas listas (`src/lib/historico-financeiro.ts`) e o boleto do Mutual é SÓ CONSULTA (selo "Mutual", sem editar/2ª via; link de pagamento e linha digitável do próprio Mutual). **Depois de aplicar:** deploy + `/integracao/mutual` → *Histórico de boletos* → *Importar / atualizar* (é o que traz a linha digitável para os 78 mil já importados).
+**✅ A `0097_cobranca_painel` foi APLICADA (pelo usuário, SQL Editor — o `execute_sql` estourava os 60 s do MCP) e CONFERIDA em 12/10/2026:** 22 funções do módulo, `boletos_historico`/`supervisor_regionais`/`cobranca_feriados` com RLS, papéis `supervisor`/`cobranca` no enum, `resumo_cobrancas` com o denominador novo, meta/limite 5/10, 0 secdef sem `search_path`, 0 RPCs nossas ao `anon`. **Em produção desde 12/10/2026:** INVOICE recapturado (206.706) e **histórico importado — 78.425 boletos de 2.527 associados** (58.125 pagos · 8.428 abertos · 11.872 cancelados; 124 mil mensalidades de associados não carregados ficam de fora, de propósito). Deploy no ar com o painel, as listas paginadas (`lerTodas`) e a barra lateral fixa — conferido pelo usuário. **O VPS estava com o disco 100% cheio** (cache do BuildKit 30 GB + imagens antigas): limpo para 80% e swap ampliado para 3 GB — ver `DEPLOY.md` §2.1 antes de qualquer `prune`. **Migration longa: aplicar pelo SQL Editor**, o MCP corta em 60 s. Texto original: Fase 1 do módulo de
+**Inadimplência e Cobranças** (documento 2 do Rodrigo Medeiros, 30/09/2026; decisões do usuário
+em 12/10/2026: caminho B, perfis Supervisor e Cobrança, começar pela Fase 1). Cria os papéis
+`supervisor`/`cobranca` + `supervisor_regionais`, `boletos_historico` (o histórico de boletos
+do Mutual — tabela PRÓPRIA, nunca `titulos_financeiros`: lá contaria no DRE e travaria a 24h),
+`cobranca_feriados`, meta/limite em `empresa`, a fonte única `cobranca_boletos_base` e as leituras
+do painel; e **corrige `resumo_cobrancas`** (dividia o vencido pelo EMITIDO, incluindo o a vencer).
+Nada de preço, fatura ou título muda. **Depois de aplicar:** deploy do contêiner →
+`/integracao/mutual` → puxar **INVOICE** (captura atual é de 10/09) → seção *Histórico de
+boletos* → importar. Medido em 12/10 com a captura velha: **77.884 boletos de mensalidade de
+2.524 associados carregados** entram. Conferir: `select count(*) from pg_proc where proname like
+'cobranca_%'` e o secdef sem `search_path` = 0. Ver a seção "INADIMPLÊNCIA E COBRANÇAS (0097)".
+**🔴 DECISÃO DE 11/10/2026: depois de dezembro o Mutual é DESLIGADO de vez** — a integração é
+migração com fim marcado, não conexão permanente. Ver "DECISÃO DO USUÁRIO (11/10/2026)" na seção
+do Mutual: o que isso muda no desenho, o checklist pós-corte e o porquê do timeout da prévia.
+**⚠️ A `0102_portal_regional_equipe` é NOVA e ainda NÃO foi aplicada.** Ela fecha o buraco de
 que o **gestor regional PODE APAGAR vendedor** (a policy `vendedores_write` é `for all`, e `for all`
 inclui DELETE) e põe a CARTEIRA no painel da franquia, que mostrava a unidade de mil veículos com
-cara de recém-aberta. Ver a seção própria. **Próxima migration livre: `0096`.**
+cara de recém-aberta. Ver a seção própria. **Próxima migration livre: `0103`.**
+**⏱️ Teto do `authenticated` está em 20 s desde 11/10/2026 (temporário, migração).** Voltar a 8 s
+no corte: `alter role authenticated set statement_timeout = '8s'; notify pgrst, 'reload config';`
 **Próxima migration livre era `0088`.** As **`0001`..`0086`** estão aplicadas — a **`0086` foi rodada e
 CONFERIDA em 05/10/2026**: o comentário de `mutual_planos_externos` diz 18/42 e 29/91 (sem "17" nem
 "26"), a função segue `security definer` com `search_path=public`, fechada ao `anon`; 0 `security
@@ -270,12 +352,37 @@ adivinha entre quatro bancos de produção.
 8 usuários. **Os 9 veículos não são erro:** a carteira real ainda está no Mutual e a integração é
 **Fase 1, só leitura** — nada foi importado para `clientes`/`veiculos` ainda.
 
-#### ⛔ DECISÃO DO USUÁRIO (20/09/2026): migration SÓ pelo SQL Editor. Nunca por ferramenta.
-**O agente lê o banco; quem escreve schema é você, pelo SQL Editor do Supabase.** Vale para
-`apply_migration` do MCP, para `supabase db push` e para qualquer caminho que aplique DDL sozinho.
+#### ✅ DECISÃO DO USUÁRIO (10/10/2026) — substitui a de 20/09: CONSULTA livre, IMPLANTAÇÃO com autorização
+*"As implantações podem ser feitas pelo Claude, o que é preciso que eu autorize; as consultas ficam
+liberadas."* Está em `.claude/settings.json` + `.claude/hooks/supabase-sql-guard.sh` (commitados):
+- **Consulta roda sem perguntar:** as ferramentas de leitura do MCP do Supabase (`list_tables`,
+  `query_logs`, `get_advisors`…) estão em `allow`, e o `execute_sql` passa pelo hook, que libera
+  quando o SQL é só leitura.
+- **Implantação PERGUNTA, uma a uma:** o hook devolve `ask` para qualquer escrita/DDL, bloco `$$`,
+  `SET`, e **SELECT que chama RPC com verbo de escrita** no nome (`mutual_executar_carga`,
+  `vincular_externo`, `registrar_*`… — neste projeto quase toda ação é RPC, e
+  `select vincular_externo(...)` grava sem conter INSERT). Na dúvida pergunta; nunca libera no
+  escuro. Sem `jq`/`python3` o hook não responde e vale o fluxo normal (pergunta).
+- **12/10/2026 — o hook passou a usar um tokenizador (python3) em vez de `sed`.** A versão
+  anterior pedia autorização para leitura comum (alias em português entre aspas —
+  `"dia do vencimento"` casava com o comando `DO` —, `EXPLAIN ANALYZE`, `gerar_dre`,
+  `resolver_hotlink`) e **deixava passar duas escritas** (`select '--'; delete ...` e a RPC
+  entre aspas `"mutual_executar_carga"(...)`). Funções STABLE com verbo no nome ficam numa
+  lista liberada dentro do hook (Postgres proíbe escrita em função não-volátil) — ao recriar
+  uma delas como VOLATILE, tirar de lá. **48 casos em `npm run test:hooks`**; mexeu no hook,
+  acrescente o caso e rode.
+- **O que ainda pergunta e só o usuário resolve:** o MODO da sessão. Abrir a sessão em
+  **Auto** (seletor ao lado da caixa de mensagem); em "Accept edits" quase toda ferramenta
+  que não é edição pergunta, com ou sem hook.
+- **Migration se aplica pelo `execute_sql`, com o arquivo inteiro** — é o mesmo efeito do SQL
+  Editor, e o usuário vê o SQL no pedido de autorização. Ritual inalterado: escrever →
+  `npm run validate` → commit → **pedir** → aplicar → conferir no banco → atualizar a caixa de estado.
+- **`apply_migration` está em `deny`, de propósito** (motivo abaixo). Não contornar.
 
-**O motivo é concreto, não cautela genérica:** `supabase_migrations.schema_migrations` está
-**VAZIA** — as `0001`..`0078` entraram pelo SQL Editor, que não registra nada ali. Aplicar a
+#### (histórico) DECISÃO DE 20/09/2026: migration SÓ pelo SQL Editor
+**O motivo continua valendo para o `apply_migration`:** `supabase_migrations.schema_migrations`
+**NEM EXISTE** (conferido em 10/10/2026: `42P01 relation does not exist`) — as `0001`..`0095`
+entraram pelo SQL Editor, que não registra nada ali. Aplicar a
 próxima por ferramenta faria ela ser a **primeira linha** da tabela, e o banco passaria a dizer
 que a história começa na `0079`, com setenta e oito migrations invisíveis. Um `db push` ou
 `db reset` depois disso lê "só falta a 0079" — é a mesma família de erro do branch morto: um
@@ -575,9 +682,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 | `a468ead` | **TEMA CLARO / ESCURO** em todo o sistema, com botão no cabeçalho dos 4 portais |
 
 ### Estado de validação (fim da fase)
-- **Migrations `0001`..`0095`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **72 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 794 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Migrations `0001`..`0102`** + `schema.sql` consolidado aplicam limpos no harness local.
+- **79 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 881 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Os portais e páginas públicas
@@ -822,7 +929,35 @@ correspondência que `docs/modulos/rastreadores.md` já mapeou para o TrackerSto
 4. **Convivência: SIM, por um tempo — e por enquanto QUEM MANDA É O MUTUAL.**
 5. **Volume e janela:** a definir; é uma das saídas da fase de diagnóstico.
 
+### ✅ DECISÃO DO USUÁRIO (11/10/2026): é MIGRAÇÃO, com fim marcado — DEPOIS DE DEZEMBRO O MUTUAL É DESLIGADO
+*"Depois de dezembro, o Mutual é desligado de vez. Vamos ficar só com o SCar."* A API do Mutual
+serve **só para tirar a base de lá**; não existe conexão permanente a construir.
+- **`mutual_captura` é ÁREA DE PASSAGEM, não estrutura do sistema.** A convivência (outubro: piloto
+  da MATRIZ; dezembro: o resto) é o único motivo de recapturar e re-executar a carga.
+- **Consequência para decisões de desenho:** nada de estrutura PERMANENTE para resolver problema da
+  captura (foi descartada, por isso, uma tabela-resumo mantida a cada captura proposta para o
+  timeout da prévia). Solução da migração tem de ser descartável junto com ela.
+- **Depois do corte (checklist):** apagar a área de captura (`mutual_captura`, ~1,1 GB — é o que
+  pressiona a memória do banco, ver abaixo), tirar `MUTUAL_API_TOKEN`/`MUTUAL_API_BASE` do VPS e do
+  `docker-compose.yml`, **voltar o `statement_timeout` do `authenticated` de 20s para 8s** (subido
+  em 11/10, ver abaixo), e decidir o destino de
+  `integracao_vinculos` (guarda o id do Mutual de cada associado/veículo — vale manter como
+  rastro histórico). O boleto passa a sair do SCar: `definir_cobranca_externa_regional` por unidade.
+- **O timeout da prévia da carga (medido 11/10/2026):** o banco é pequeno (`shared_buffers` 256 MB,
+  ~1 GB de RAM) e `mutual_captura` tem 794 MB; 16% das leituras dela já vão ao disco. A prévia da
+  MATRIZ leva **2,8 s com cache quente** e **passa de 8 s frio** — por isso a tela falha "às
+  vezes". Não é bug de SQL nem disputa (a fila já serializa).
+- **✅ TETO TEMPORÁRIO APLICADO em 11/10/2026 (autorizado pelo usuário):**
+  `alter role authenticated set statement_timeout = '20s'` + `notify pgrst, 'reload config'`
+  (conferido: `authenticated` = 20s; `authenticator` segue 8s, e `anon` 3s). Vale para o sistema
+  inteiro enquanto durar — consulta lenta em OUTRA tela deixa de falhar em 8 s e passa a demorar
+  até 20 s. **🔴 DESFAZER NO CORTE DE DEZEMBRO:** `alter role authenticated set statement_timeout
+  = '8s'; notify pgrst, 'reload config';` — item do checklist acima.
+
 ### O que a resposta 4 muda (a conclusão da análise)
+> ⚠️ Lido à luz da decisão de 11/10/2026 acima: a "replicação" é só o meio da migração, e termina
+> em dezembro.
+
 **Não é migração, é replicação unidirecional Mutual → SCar com cutover gradual por unidade.**
 Consequências que o levantamento original não tinha:
 - **Não existe chave externa em NENHUMA tabela do SCar** (tudo é chave natural: `cpf_cnpj`,
@@ -1914,7 +2049,47 @@ objeto); `mutual_carga_linhas`, `mutual_planos_externos` e `mutual_categorias_ve
 `mutual_carga_fila` (RLS sem policy) + `mutual_executar_carga(regional, inativos, confirmar, p_lote,
 p_preparar)` — DROP + CREATE: preparar le UMA vez, cada bloco grava ate p_lote linhas sem cortar CPF,
 fila velha (+1 h) ou de outro recorte e recusada; simulacao passou a ler o lote uma vez so)
-· `0095_portal_regional_equipe` (O PORTAL DA FRANQUIA: (A) `vendedores_write` era `for all` — e
+· `0095_mutual_vendedor_do_consultor` (O VENDEDOR DOS MIGRADOS: trigger `fn_vendedor_documento_digitos`
+grava `vendedores.documento` so com digitos por qualquer caminho; `mutual_vendedores_dos_veiculos(regional)`
+(contrato -> `consultant_id` -> CONSULTANT -> CPF -> vendedor; e-mail so se unico; motivos LIGAR/JA_LIGADO/
+MANTIDO/SEM_CONSULTOR/CONSULTOR_NAO_CAPTURADO/EMAIL_AMBIGUO/CONSULTOR_SEM_VENDEDOR/UNIDADE_DIFERENTE),
+`mutual_vendedores_resumo` e `mutual_vincular_vendedores(regional, confirmar)` — so preenche quem esta SEM
+vendedor e nao liga vendedor de outra unidade; `fn_calcular_comissao` recriada: veiculo com vinculo
+CONTRACT_OBJECT do Mutual nunca e ADESAO. Espelho puro em `src/lib/mutual.ts` (`totaisVendedores`,
+`vendedorPendente`, `ROTULO_MOTIVO_VENDEDOR`))
+· `0096_mutual_captura_sem_regravar` (upsert da captura so regrava o que mudou; autovacuum de
+`mutual_captura` em 2%)
+· `0099_historico_financeiro_mutual` (o HISTORICO FINANCEIRO do SAC e do portal passa a ler `boletos_historico`
+alem de `titulos_financeiros`, com a data de corte `corte_cobranca_cliente`; linha digitavel e links de
+pagamento do Mutual gravados na importacao; `portal_financeiro` soma as duas fontes. Boleto do Mutual e so
+consulta. Uniao das listas em `src/lib/historico-financeiro.ts`)
+· `0098_cobranca_fila` (COBRANCA, Fase 2: fila operacional por prioridade, contatos IMUTAVEIS por trigger,
+promessas (1 parcela) e acordos (2..36) sobre a divida existente com situacao CALCULADA pelos pagamentos —
+quebra = vencimento + 3 dias de baixa; taxa de cumprimento = cumpridas / (cumpridas + quebradas).
+Espelho puro em `src/lib/cobranca-fila.ts`)
+· `0097_cobranca_painel` (INADIMPLENCIA E COBRANCAS, Fase 1: papeis `supervisor`/`cobranca` +
+`supervisor_regionais` + `cobranca_escopo()` (o escopo vale DENTRO das RPCs de cobranca; `pode_regional`
+NAO foi tocado); `boletos_historico` + `cobranca_importar_historico_mutual` (em blocos por cursor,
+re-executavel, so regrava o que mudou; liga pelo CONTRATO -> PERSON); `mutual_dia` (data so-dia sem
+deslocar fuso); `dia_util_seguinte` + `cobranca_feriados`; `ciclo_vencimento` (5/10/15/20/25/30);
+`cobranca_boletos_base` (SCar + Mutual ate a data de corte do associado, com a situacao do documento);
+`cobranca_recortes`/`_indicadores`/`_carteira`/`_calendario`/`_por_regional`/`_serie_mensal`/
+`_boletos_lista`; meta/limite em `empresa`; `resumo_cobrancas` corrigida. Percentuais no TS:
+`src/lib/cobranca-painel.ts`)
+· `0100_painel_visao_geral` (A VISAO GERAL DO /dashboard: UMA funcao, `painel_visao_geral(regional,
+meses)`, devolve o painel inteiro em jsonb — kpis, distribuicao por unidade/UF/tipo/plano/status, serie
+mensal (adesoes, saidas, base no fim do mes, eventos, acionamentos, leads), eventos, 24h, funil de
+vendas, contas a pagar e rastreadores. Frota lida por DATA (como `frota_na_base`), carteira pelo
+override da ficha (fallback: ultimo titulo), `escopo_regional` e NULL para nao-staff. As MENSALIDADES
+nao sao lidas aqui: a tela usa `cobranca_serie_mensal` (0097). So leitura)
+· `0101_eventos_historico_mutual` (O HISTORICO DE EVENTOS DO MUTUAL: `eventos_historico` (tabela propria,
+NUNCA `eventos_sinistro` — o Mutual manda "ANDAMENTO" em todos, la virariam evento em aberto),
+`mutual_eventos_para_importar` (a leitura: veiculo por `objeto.vehicle_id`, contrato do evento vence;
+associado pelo vinculo PERSON ou o dono atual do carro), `mutual_importar_eventos_historico(p_confirmar)`
+(re-executavel, so regrava o que mudou), `eventos_historico_resumo`, `eventos_mutual_do_cliente` (SAC),
+`eventos_historico_listar` (aba Historico de /sinistros, paginada); `veiculos_do_cliente` e
+`painel_visao_geral` recriadas contando o historico. Regua em `src/lib/eventos-historico.ts`)
+· `0102_portal_regional_equipe` (O PORTAL DA FRANQUIA: (A) `vendedores_write` era `for all` — e
 `for all` inclui DELETE, entao o `gestor_regional` apagava vendedor da propria unidade. Vira tres
 policies: `insert`/`update` (admin ou gestor da unidade — incluir, editar, ATIVAR e INATIVAR
 seguem identicos, porque `ativo` e coluna e inativar e UPDATE) e `delete` so `is_admin()`.
@@ -1992,8 +2167,9 @@ quanto passa a custar (0071) —, opcionais a parte, alertas e **Rastreamento**:
 rastreadora) · Eventos/Sinistros
 (protocolo, reparo próprio/terceiro, financeiro do evento) · Precificação (simulador + editor de
 tabela FIPE com reajuste % + importação por planilha, uma por tipo de veículo) · Empresa (logo/diretoria/mandatos/documentos) · **Fornecedores** (um cadastro só: peças/serviços,
-prestadores da 24h e rastreadoras, com auto CNPJ/CEP) · **Cobrança** (`/cobrancas`: dashboard + faturas por competência + boletagem em lote +
-remessas bancárias) · Financeiro (contas a pagar/receber + baixas + DRE)
+prestadores da 24h e rastreadoras, com auto CNPJ/CEP) · **Cobrança** (grupo no menu, 0097: **Painel de Inadimplência** `/cobrancas/painel`, **Calendário
+de Vencimentos** `/cobrancas/calendario` e **Boletos e Remessas** `/cobrancas/boletos` — o antigo
+dashboard + faturas por competência + boletagem em lote + remessas bancárias) · Financeiro (contas a pagar/receber + baixas + DRE)
 · Configurações (regionais, usuários,
 vendedores, marcas/modelos, **cores do veículo**, tipos de veículo, cotas de participação (V5..V15), tipos de evento,
 produtos, planos/combos (Prata/Ouro/Diamante), **comunicados** (mural interno), contas bancárias,
@@ -2005,6 +2181,33 @@ unidade** — 0084, com prévia, fila de trabalho por motivo e desfazer)
 · **Rastreadores** (`/rastreadores`: parque por IMEI, estoque por unidade/plataforma, instalação no
 veículo, manutenção, painel de divergências com o cadastro da frota e relatórios de custo,
 recuperação e giro).
+
+## INADIMPLÊNCIA E COBRANÇAS (0097) — Fase 1
+> Especificação, fórmulas, regras bancárias, permissões e fases em
+> **`docs/modulos/cobranca-inadimplencia.md`** — leia antes de mexer.
+
+- **A fonte é UMA:** `cobranca_boletos_base()` — títulos de mensalidade do SCar (ligados a fatura)
+  + `boletos_historico` (Mutual) **só antes da data de corte** do associado (o 1º boleto do SCar
+  dele). Sem o corte, a mesma competência contaria duas vezes depois do cutover.
+- **REGRA ESSENCIAL:** boleto que não venceu não entra em taxa nenhuma. O denominador é sempre o que
+  JÁ VENCEU (vencimento efetivo = próximo dia útil; feriados em `cobranca_feriados`).
+- **Percentual mora no TS** (`src/lib/cobranca-painel.ts`, testado); o banco devolve contagem e
+  soma. Comparativo mostra **p.p. e variação relativa** juntos.
+- **O histórico NÃO é título.** `boletos_historico` fica fora de `titulos_financeiros` de propósito
+  (DRE e trava da 24h). E fica depois do corte de dezembro: é a história de pagamento.
+- **Mas TODA tela que mostra "os boletos do associado" lê as DUAS fontes (0099).** Foi bug real: o
+  histórico importado não aparecia no SAC nem no portal, porque eles só liam `titulos_financeiros`.
+  Tela nova de boletos do associado: `titulos_*` + `boletos_mutual_do_cliente`/`portal_boletos_mutual`,
+  unidas por `src/lib/historico-financeiro.ts`.
+- **Escopo** em `cobranca_escopo()` (uma vez por chamada, não por linha). Supervisor e cobrança
+  NÃO ganharam nada em `pode_regional()` — decisão de desenho à parte (achado nº 1 da varredura).
+- **O ciclo é o dia do vencimento ORIGINAL** (`original_expiration_date` do Mutual); o atraso conta
+  do vencimento prorrogado/limite.
+- **Datas só-dia do Mutual entram por `mutual_dia()`**, não `mutual_data()`: esta converte fuso e
+  um `'2026-09-08'` viraria 07/09 em São Paulo.
+- **O dado do Mutual envelhece:** o painel avisa quando a captura de INVOICE tem mais de 7 dias.
+- **Fase 2 construída na `0098`** (fila `/cobrancas/fila`, contatos imutáveis, promessas/acordos com
+  situação calculada). **Fases 3–5 (qualidade da venda, régua, relatórios) ainda não existem.**
 
 ## Catálogo de CORES do veículo (0080) — `Configurações → Cores`
 > **Cuidado com o nome:** isto **não é a paleta visual** do sistema (essa vive em `globals.css` /
@@ -2073,7 +2276,7 @@ recuperação e giro).
 
 ### Os papéis VIVOS (`papel_usuario`) e o que cada um REALMENTE destrava
 `admin` · `gestor_regional` · `consultor_vendas` · `financeiro` · `sinistro` (de `0001`;
-**`cotador` saiu na `0077`**) + `auditoria` (`0017`) + `assistencia_24h` (`0026`). **São 7.**
+**`cotador` saiu na `0077`**) + `auditoria` (`0017`) + `assistencia_24h` (`0026`) + `supervisor` e `cobranca` (`0097`). **São 9.**
 O enum do Postgres ainda tem `cotador` — valor de enum não se apaga —, mas um CHECK em
 `usuarios.papel` recusa gravá-lo e ele saiu de `PAPEIS_USUARIO` e da union de `PapelUsuario`.
 
@@ -2086,6 +2289,8 @@ O enum do Postgres ainda tem `cotador` — valor de enum não se apaga —, mas 
 | `assistencia_24h` | `pode_assistencia` (opera a 24h, cadastra prestador, lança/baixa contas a pagar) |
 | `consultor_vendas` | **só a própria carteira** de leads (0038) — não vê a da unidade |
 | `sinistro` | **`pode_tratar_evento`** (0077): move o evento e gasta nele, na própria unidade. **Não opera mais a 24h.** |
+| `supervisor` | (0097) a COBRANÇA das unidades de `supervisor_regionais`; fora dela, staff da unidade do cadastro |
+| `cobranca` | (0097) a COBRANÇA do Brasil (sem unidade) ou da unidade dela; fora dela, staff da unidade do cadastro |
 
 ### A raiz: 3 funções sustentam tudo
 `is_staff()` · `auth_papel()` · `auth_regional_id()` — e as três exigem **`and ativo`** desde a
@@ -2626,6 +2831,17 @@ atendimento real**, não antes de carregar.
   dos veículos*, usar o quadro **"Motos — o plano pelos produtos"** (novo, mesma seção): simula e
   aplica `mutual_aplicar_plano_por_terceiros` (terceiros → MOTOCICLETAS - OURO, sem → MOTOCICLETA
   ESSENCIAL, reclassificando quem está em PRATA). A linha de plano de moto (`tipos = '2'`) avisa isso.
+- **🔴 A CARGA NÃO TRAZ O CONSULTOR (medido 08/10).** `mutual_executar_carga` nunca grava
+  `veiculos.vendedor_id` (0084: "vendedor é daqui"). Na matriz, a corrente
+  `objeto.contract_id → CONTRACT.consultant_id → CONSULTANT.cpf_cnpj → vendedores.documento` resolve
+  **431 de 467** (29 vendedores, todos da mesma unidade do veículo); 2 contratos sem consultor
+  (HNC4288, NAU8B54); os outros 34 eram de 8 consultores ausentes do cadastro (o Mutual tem 379, o
+  cadastro casa 302). **Os 34 foram ligados ao CLAYTON R CARNIEL** por SQL do usuário em 08/10 (12 deles
+  são de outros consultores no Mutual — decisão do usuário), e o CPF dele foi gravado só com dígitos.
+  **→ Resolvido pela `0095`** (decisão do usuário: ligar para carteira/relatórios e migrado nunca
+  paga adesão): a carga liga o vendedor no fim (só quem está SEM), o quadro **"Vendedor dos
+  veículos"** mostra quem fica sem e por quê, `fn_calcular_comissao` deixa de tratar o 1º título do
+  migrado como ADESÃO, e o CPF do vendedor passa a ser gravado só com dígitos por trigger.
 - **Números das 3 unidades que faltam (08/10):** RIBEIRÃO PRETO 1.182 no lote (11 recusados, 483 sem
   plano) · SÃO PAULO 1 837 (13, 420) · GRANDE NATAL 433 (1, 350).
 
@@ -2743,6 +2959,14 @@ listadas as filiais" de semanas antes). O banco estava são o tempo todo.
   `instanceof Error` faz tudo virar "[object Object]" (o teste pegou).
 - **As seções de diagnóstico nascem FECHADAS** (`<Secao aberta onAlternar>`) e só consultam ao
   abrir — os hooks ganharam `ativo` → `enabled`.
+- **✅ A FILA (10/10/2026): toda leitura de `use-mutual.ts` passa por `naFila`** (`criarFila(1)`,
+  `src/lib/fila.ts`, testada). Mesmo com as seções de diagnóstico fechadas, escolher uma unidade
+  disparava ~9 leituras eager JUNTAS (capturas, equipes, cutover, tipos, planos, categorias,
+  prévia, linhas, vendedores) — sozinhas cada uma cabe nos 8 s, juntas estouravam. Agora vão
+  **uma por vez, na ordem em que a tela pede**: enche mais devagar e não falha. A leitura de
+  unidade que ficou para trás (trocou o seletor) é **descartada antes de chegar ao banco** (o
+  `signal` do TanStack). Mutações não entram na fila. **Hook novo de leitura neste módulo:
+  `queryFn: ({ signal }) => naFila(async () => {...}, signal)`** — sem isso ele volta a disputar.
 - **`alter function … set statement_timeout` NÃO resolve:** o timer é armado no início do
   statement; mudá-lo dentro da função não o rearma (medido). O alívio real seria o de-para como
   TABELA/join (**75 ms × 1.235 ms** de `mutual_status_veiculo`), ~13 funções — decisão à parte.
@@ -3349,6 +3573,68 @@ sem de-para), a **data de corte do financeiro e dos eventos**, e o de-para de **
 - **Isolamento:** gestor de unidade pedindo outra recebe a própria (`escopo_regional`), e no ranking
   vê só a própria linha. Há teste cobrindo os dois casos e o do não-staff (painel zerado).
 
+## Visão Geral do /dashboard (0100) — a primeira aba do Painel
+- **Por que foi refeita:** a versão do início do projeto contava TÍTULO de mensalidade ("MRR",
+  inadimplência = vencidos/títulos do mês) numa base em que **2.889 de 2.898 veículos são cobrados
+  pelo Mutual** (`cobranca_externa`) — o MRR dava ~zero com a carteira inteira contratada. Lia as
+  tabelas pelo navegador em 4 consultas soltas.
+- **Agora são DUAS leituras:** `painel_visao_geral` (jsonb, `useVisaoGeral`) para a operação, e
+  **`cobranca_serie_mensal` (0097, `useCobrancaSerie`) para as mensalidades** — ela já junta o SCar e o
+  histórico de boletos do Mutual. **Não criar segunda leitura de mensalidade no painel**: divergiria
+  do módulo de cobrança.
+- **Blocos, na ordem da tela:** 6 KPIs (veículos na base com variação no mês, associados, carteira
+  mensal + ticket médio, adesões no mês **com projeção pelo ritmo** — comparar 13 dias com o mês
+  anterior inteiro sempre "cai" —, saídas/churn, protocolos) · faixa da **cobrança externa** ·
+  **distribuição nacional** (rosca por unidade com carteira R$ + barras por UF do associado) ·
+  **evolução 6/12 meses** (adesões × saídas e base no fim de cada mês — dois gráficos, nunca eixo
+  duplo) · **composição** (rosca por tipo, barras por plano, barra de situação) · **eventos + 24h +
+  rastreadores** · **comercial** (funil na ordem da esteira) · **financeiro** (emitido/recebido no
+  mês, inadimplência em VALOR dos meses fechados — ponderada, nunca média de % —, a pagar 7 dias, e o
+  gráfico emitido × recebido com a inadimplência de cada mês embaixo).
+- **Notas que a tela escreve, de propósito:** a carteira migrada traz a ativação original, mas os
+  encerrados antes da migração não vieram (saídas antigas zeradas); eventos e acionamentos são só os
+  do SCar.
+- **Cor:** paleta categórica validada (CVD/contraste) nos dois temas, em `src/lib/visao-geral.ts`;
+  a cor segue a **entidade** (ordem alfabética), nunca a posição no ranking; toda fatia tem nome,
+  valor e % escritos na legenda.
+- **Unidade:** só admin/financeiro escolhem; o gestor recebe a própria (`escopo_regional`), e quem
+  não é staff recebe NULL.
+- **Lógica pura testada:** `src/lib/visao-geral.ts` — `coresPorEntidade`, `fatiasComOutros`,
+  `rotuloMesCurto`, `variacaoRelativa`, `crescimentoLiquido`, `taxaChurn`, `projecaoDoMes`,
+  `funilOrdenado`, `eventosPorEtapa`, `inadimplenciaDoMes`, `inadimplenciaDoPeriodo`, `recebidoDoMes`.
+- `kpi-cards.tsx`, `useDashboardKpis` e `useReceitaSerie` **saíram** (só a Visão Geral os usava).
+
+## HISTÓRICO DE EVENTOS DO MUTUAL (0101) — "capturei 2.909 eventos e não vejo nenhum"
+- **Por que não aparecia:** a carga (0084) deixou evento de fora por decisão, e a segunda metade
+  nunca foi feita. Os 2.909 estavam em `mutual_captura` e em lugar nenhum da operação.
+- **A ligação com o veículo é `evento.vehicle_id` = `objeto.vehicle_id`** — NÃO o id do objeto (casa
+  1.848 de 2.909 por acaso; pelo `vehicle_id` casa 2.901). O mesmo carro pode ter estado em mais de
+  um contrato: vence o objeto do `contract_id` do evento. *Lição de sempre: a chave certa estava na
+  entidade, com outro nome; conferir antes de concluir.*
+- **Quem entra:** evento de associado JÁ CARREGADO (vínculo PERSON) — 827 de 2.909 em 13/10/2026 —
+  ou de veículo na base cujo associado do evento não tem vínculo (carro transferido: fica com o dono
+  atual). O resto (acervo encerrado) fica de fora, contado — mesma regra dos boletos (0097).
+  Evento de carro antigo do associado (fora da base) entra sem `veiculo_id`, com a placa do objeto.
+- **🔴 TABELA PRÓPRIA, NUNCA `eventos_sinistro`.** O `event_status` vem **"ANDAMENTO" em 2.909 de
+  2.909** e só 38 têm `conclusion_date`: o status da listagem não informa nada. Na tabela operacional
+  cada linha viraria evento EM ABERTO (Kanban, tramitação, painel, status `em_evento`). A tela nunca
+  repete esse status como situação: mostra **"Concluído em X"** quando há data de conclusão, senão
+  **"Sem encerramento registrado"** (`situacaoHistorico`).
+- **Onde aparece:** aba **Eventos do SAC** (selo "Mutual", só consulta, sem "Gerenciar"), o marcador
+  de evento na lista de veículos do SAC (`veiculos_do_cliente`), **`/sinistros?aba=historico`**
+  (busca por associado/placa/CPF/protocolo, tipo e período, paginada no banco) e a **Visão Geral**
+  (eventos no mês e em 12 meses somando as duas fontes, série empilhada SCar × Mutual, tipos dos
+  últimos 12 meses com `somarPorTipo`, que casa "COLISÃO" e "Colisao").
+- **Importar:** `/integracao/mutual` → *Histórico de eventos* → *Simular* / *Importar*. Re-executável
+  (regra 0096: só regrava o que mudou). Rodar de novo depois de cada recaptura de EVENT e de cada
+  carga de unidade.
+- **✅ DECISÃO DO USUÁRIO (13/10/2026): o histórico NÃO consome cota.** Os limites por janela dos
+  opcionais (parabrisa 1×/ano etc., `opcionais_elegibilidade`/`opcionais_veiculo`) contam só
+  `eventos_sinistro` — *"não conte os eventos de parabrisa, vamos contar daqui pra frente"*. Há 525
+  eventos de parabrisa no histórico do Mutual; eles NÃO entram nessa conta. Não mudar sem o usuário.
+- **Lógica pura testada:** `src/lib/eventos-historico.ts` (`situacaoHistorico`, `rotuloTipos`,
+  `rotuloEnvolvimento`) e `somarPorTipo` em `src/lib/visao-geral.ts`. Suíte `supabase/tests/0101_*`.
+
 ## Painel gerencial da Assistência 24h (0061) — a aba da Visão Geral
 - **Por que existe:** a `0026` resolveu a OPERAÇÃO (abrir, cotar, autorizar OS, pagar o prestador).
   Faltava a leitura de GESTÃO. Assistência é a maior saída de caixa da proteção veicular e ninguém
@@ -3873,7 +4159,7 @@ sem de-para), a **data de corte do financeiro e dos eventos**, e o de-para de **
 - **Hotlink da unidade:** `/v/<CODIGO_DA_REGIONAL>` funciona igual ao do vendedor, mas o lead entra
   sem vendedor (fica para a unidade distribuir). `leads.origem_hotlink` permite medir cada link.
 
-## O PORTAL DA FRANQUIA REVISADO (0095) — a equipe e a carteira
+## O PORTAL DA FRANQUIA REVISADO (0102) — a equipe e a carteira
 > Pedido do usuário (13/10/2026): *"o usuário (regional) tem o poder de incluir e ativar e inativar
 > o vendedor, excluir somente admin e master."* Junto veio a revisão do que o portal MOSTRA.
 
@@ -3952,7 +4238,7 @@ para nenhuma tela de dinheiro mudar; quem conta passa `numero`, quem mede passa 
 ### Lógica pura testada
 `src/lib/regional.ts` — `resumoDaEquipe`, `filtrarEquipe`, `hotlinkResolve`,
 `avisoDeSituacaoVendedor`, `composicaoDaCarteira`, `avisoCobrancaExterna`.
-Suíte de banco em `supabase/tests/0095_portal_regional_equipe.test.sql` (inclui o DELETE recusado
+Suíte de banco em `supabase/tests/0102_portal_regional_equipe.test.sql` (inclui o DELETE recusado
 ao gestor — RLS de delete **não levanta erro**, ela simplesmente não alcança a linha, então o
 teste afirma `row_count = 0` e que a linha continua lá).
 
@@ -4468,10 +4754,10 @@ no fim — o runner procura por "PASSARAM") e rode `npm run schema`.
 - **Publicar:** `DEPLOY.md` tem o runbook. Resumo: (A) migrations novas no Supabase
   SQL Editor, na ordem; (B) `.\scripts\deploy.ps1` (Windows) ou `npm run deploy` — os dois ja
   levam o `DOCKER_BUILDKIT=0` embutido.
-- **QUEM APLICA MIGRATION E O USUARIO, pelo SQL Editor** (decisao de 20/09/2026). O agente
-  escreve, valida no harness local e entrega o arquivo — nao aplica por ferramenta. O porque
-  esta em "Qual e o banco"; em uma linha: a `schema_migrations` do Supabase esta vazia, e
-  aplicar por ferramenta faria o banco jurar que a historia comeca na proxima migration.
+- **MIGRATION: o agente aplica, COM AUTORIZACAO a cada uma** (decisao de 10/10/2026, substitui
+  a de 20/09). Caminho: `execute_sql` com o arquivo inteiro (o hook pede a aprovacao); NUNCA
+  `apply_migration` (esta em `deny`: a `schema_migrations` nao existe, e criar a tabela com uma
+  linha faria o banco jurar que a historia comeca ali). Detalhes em "Qual e o banco".
 - **O `git pull` roda DENTRO do VPS.** Rodar no PowerShell do Windows dá
   `fatal: not a git repository` — foi o erro que mais custou tempo nesta fase.
   Toda janela nova de terminal começa fora do servidor; o `ssh` precisa ser refeito.
@@ -4606,6 +4892,14 @@ no fim — o runner procura por "PASSARAM") e rode `npm run schema`.
   testado), que só aceita caminho interno e barra também `/api/*` — logout durante
   uma chamada de API gravava `redirect=/api/...` e o login terminava numa tela de
   JSON, indistinguível de "não entrou".
+- **O PostgREST corta em 1.000 LINHAS, em silêncio.** `select` sem `range` devolve no máximo
+  1.000 (max-rows), sem erro nem aviso. Depois da carga do Mutual, `veiculos` (2.898) e `clientes`
+  (2.564) passaram disso: **1.898 veículos sumiram de `/veiculos`** — busca, "Editar Veículo" do SAC
+  (`?editar=<id>` procura na lista carregada) e os seletores de associado/veículo de outras telas.
+  Relatado com a placa QQQ5D49 (posição 2.194) em 12/10/2026. Correção: `lerTodas`
+  (`src/lib/paginacao.ts`, testada) em `useVeiculos` e `useAssociados`, com `id` como desempate da
+  ordem. **Lista que carrega a tabela inteira para filtrar na tela usa `lerTodas` ou pagina no
+  banco** — e RPC que devolve conjunto também é cortada em 1.000.
 - **Campo de "ativo" que nenhuma função de segurança lê é uma promessa falsa.** `usuarios.ativo`
   existia desde a 0001 e só a 0068 fez `is_staff()`/`auth_papel()` olharem para ele — 67 migrations
   construídas sobre um checkbox decorativo, com a tela dizendo que ele revogava acesso.

@@ -7,6 +7,7 @@ import {
   statusVeiculoResumo,
   ordemStatusVeiculo,
   ordenarVeiculos,
+  primeiraAtivacao,
   type OpcionalCfg,
   type EventoUso,
   type VeiculoFaturavel,
@@ -172,5 +173,24 @@ describe('ordenacao padrao das listagens de veiculo', () => {
     ];
     ordenarVeiculos(lista);
     expect(lista.map((v) => v.placa)).toEqual(['AAA1A11', 'BBB2B22']);
+  });
+});
+
+describe('primeiraAtivacao', () => {
+  const hoje = new Date('2026-10-09T12:00:00');
+
+  it('mostra o DIA gravado, sem voltar um dia pelo fuso (bug do new Date em data pura)', () => {
+    expect(primeiraAtivacao('2025-11-28', hoje)?.data).toBe('28/11/2025');
+    expect(primeiraAtivacao('2016-12-09', hoje)?.data).toBe('09/12/2016');
+  });
+
+  it('conta o tempo de casa a partir da ativacao', () => {
+    expect(primeiraAtivacao('2025-11-28', hoje)?.tempo).toBe('10 meses');
+    expect(primeiraAtivacao('2016-12-09', hoje)?.tempo).toBe('9 anos e 10 meses');
+  });
+
+  it('sem data nao inventa nada', () => {
+    expect(primeiraAtivacao(null, hoje)).toBeNull();
+    expect(primeiraAtivacao('', hoje)).toBeNull();
   });
 });

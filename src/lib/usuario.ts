@@ -32,7 +32,18 @@ export const PAPEIS_USUARIO = [
   { valor: 'sinistro', rotulo: 'Sinistro', nota: 'trata o evento da unidade' },
   { valor: 'auditoria', rotulo: 'Auditoria', nota: 'autoriza a entrada na base' },
   { valor: 'assistencia_24h', rotulo: 'Assistencia 24h' },
+  { valor: 'supervisor', rotulo: 'Supervisor', nota: 'as unidades sob a responsabilidade dele (cobranca)' },
+  { valor: 'cobranca', rotulo: 'Cobranca', nota: 'painel e fila de cobranca — sem unidade, o Brasil' },
 ] as const;
+
+/**
+ * O supervisor responde por VARIAS unidades (0097, `supervisor_regionais`),
+ * escolhidas na edicao do usuario. Hoje o escopo dele vale no modulo de
+ * COBRANCA; nos demais modulos ele e staff da unidade do proprio cadastro.
+ */
+export function usaUnidadesDeSupervisor(papel: string): boolean {
+  return papel === 'supervisor';
+}
 
 export type PapelValor = (typeof PAPEIS_USUARIO)[number]['valor'];
 

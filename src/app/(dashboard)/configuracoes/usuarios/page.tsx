@@ -15,10 +15,12 @@ import {
   type NovoUsuario,
 } from '@/hooks/use-config';
 import { opcoesParaEscolher } from '@/lib/regional';
+import { UnidadesSupervisor } from '@/components/usuarios/unidades-supervisor';
 import {
   PAPEIS_USUARIO,
   rotuloPapel,
   exigeUnidade,
+  usaUnidadesDeSupervisor,
   validarFichaUsuario,
   situacaoUsuario,
   tempoDeCasa,
@@ -355,6 +357,12 @@ export default function UsuariosPage() {
                 </Select>
               </FormField>
             </div>
+            {usaUnidadesDeSupervisor(form.papel) && (
+              <p className="mt-1.5 text-[11px] text-cyan-700">
+                Depois de criar, abra a edicao do usuario para marcar as <b>unidades</b> pelas quais o
+                supervisor responde.
+              </p>
+            )}
             {exigeUnidade(form.papel) && !form.regional_id && (
               <p className="mt-1.5 text-[11px] text-amber-700">
                 O <b>gestor regional</b> so funciona com uma unidade escolhida — e ela que define o
@@ -425,6 +433,7 @@ export default function UsuariosPage() {
                 </Select>
               </FormField>
             </div>
+            {usaUnidadesDeSupervisor(edicao.papel) && <UnidadesSupervisor usuarioId={edicao.id} />}
 
             <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
               <p className="mb-2 text-[11.5px] font-semibold uppercase tracking-wide text-slate-500">

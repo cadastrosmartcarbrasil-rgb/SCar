@@ -38855,10 +38855,3691 @@ revoke execute on all functions in schema public from anon;
 grant  execute on all functions in schema public to authenticated;
 grant  execute on all functions in schema public to service_role;
 
--- >>>>>>>>>>>>>>>>>>>>>>>> migrations/0095_portal_regional_equipe.sql >>>>>>>>>>>>>>>>>>>>>>>>
+-- >>>>>>>>>>>>>>>>>>>>>>>> migrations/0095_mutual_vendedor_do_consultor.sql >>>>>>>>>>>>>>>>>>>>>>>>
+
+-- =====================================================================
+-- 0095_mutual_vendedor_do_consultor
+-- O VEICULO MIGRADO GANHA O VENDEDOR — E O VEICULO MIGRADO NUNCA PAGA ADESAO.
+--
+-- Medido em producao em 08/10/2026: a carga (0084/0094) nunca grava
+-- `veiculos.vendedor_id`. Na MATRIZ, 465 dos 467 veiculos migrados estavam sem
+-- vendedor, e o dado existe no Mutual: o CONTRATO traz `consultant_id`, o
+-- consultor (`/association/consultant/`, capturado) traz o CPF, e o CPF casa
+-- com `vendedores.documento` (a chave da importacao, 0069). A corrente resolve
+-- 431 dos 467, todos com o vendedor na MESMA unidade do veiculo. Os 34 cujo
+-- consultor nao estava no cadastro foram ligados a mao (decisao do usuario).
+--
+-- O que muda:
+--   (A) `vendedores.documento` passa a ser gravado SO COM DIGITOS por qualquer
+--       caminho. A importacao (0069) ja gravava assim; a TELA gravava com
+--       mascara ("503.189.501-20"), e a corrente acima nao casava o vendedor
+--       que acabara de ser cadastrado a mao.
+--   (B) `mutual_vendedores_dos_veiculos(regional)` — a leitura, uma linha por
+--       veiculo migrado da unidade, com o vendedor encontrado e o MOTIVO de
+--       quando nao ha. `mutual_vendedores_resumo` agrupa para a tela e
+--       `mutual_vincular_vendedores(regional, confirmar)` grava.
+--       So preenche quem esta SEM vendedor: o que alguem ligou a mao (os 34 do
+--       Clayton) nao e tocado, e a carga continua sem mexer no campo (0084).
+--       Vendedor de OUTRA unidade nao e ligado: e relatado.
+--   (C) `fn_calcular_comissao` (0002): o 1o titulo pago de um veiculo vindo do
+--       Mutual NAO e adesao — a adesao dele foi paga no sistema antigo. Sem
+--       isso, no cutover, cada veiculo migrado pagaria ao vendedor a comissao
+--       de ADESAO (hoje ha vendedor com 100%) sobre a 1a mensalidade.
+--       A recorrencia segue igual, sobre o valor cheio do titulo.
+--
+-- Nada aqui gera fatura, titulo ou comissao: os migrados seguem com
+-- `cobranca_externa`.
+-- =====================================================================
+
+
+-- =====================================================================
+-- (A) O CPF DO VENDEDOR SO COM DIGITOS, POR QUALQUER CAMINHO
+-- =====================================================================
+create or replace function fn_vendedor_documento_digitos()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  -- Vazio vira NULL, nunca '': o unique parcial (0069) colidiria nos vazios.
+  new.documento := nullif(regexp_replace(coalesce(new.documento, ''), '\D', '', 'g'), '');
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_vendedor_documento_digitos on vendedores;
+create trigger trg_vendedor_documento_digitos
+  before insert or update of documento on vendedores
+  for each row execute function fn_vendedor_documento_digitos();
+
+-- Quem ja foi gravado com mascara (em 08/10/2026 eram ZERO em producao: o
+-- unico caso, o do Clayton, foi corrigido a mao). Se dois cadastros forem o
+-- mesmo CPF, o unique da 0069 recusa aqui — e e o certo: sao duas fichas da
+-- mesma pessoa, e quem decide qual fica e a gestao.
+update vendedores
+   set documento = documento
+ where documento ~ '\D';
+
+
+-- =====================================================================
+-- (B) O VENDEDOR DE CADA VEICULO MIGRADO, PELO CONSULTOR DO CONTRATO
+-- =====================================================================
+-- Corrente: vinculo CONTRACT_OBJECT -> veiculos (a carga, 0084) -> objeto ->
+-- contrato -> consultor (`mutual_consultor_do_objeto`, 0073: objeto manda,
+-- contrato e reserva; no objeto a chave vem vazia, no contrato e
+-- `consultant_id`) -> CPF -> `vendedores.documento`. E-mail so como reserva, e
+-- so quando aponta para UM vendedor (e-mail nao e unico — a mordida da 0074).
+--
+-- Motivos, na ordem em que sao decididos:
+--   JA_LIGADO          o veiculo ja tem ESTE vendedor
+--   MANTIDO            o veiculo ja tem OUTRO vendedor — nao e tocado
+--   SEM_CONSULTOR      o contrato no Mutual nao tem consultor
+--   CONSULTOR_NAO_CAPTURADO  o consultor nao foi puxado (puxe Consultores)
+--   EMAIL_AMBIGUO      sem CPF que case, e o e-mail aponta para varios
+--   CONSULTOR_SEM_VENDEDOR   o consultor nao esta no cadastro de vendedores
+--   UNIDADE_DIFERENTE  o vendedor e de outra unidade — nao e ligado
+--   LIGAR              sera ligado
+create or replace function mutual_vendedores_dos_veiculos(p_regional_id uuid)
+returns table (
+  veiculo_id          uuid,
+  placa               text,
+  objeto              text,
+  vendedor_atual_id   uuid,
+  consultor_id        text,
+  consultor_nome      text,
+  consultor_documento text,
+  vendedor_id         uuid,
+  vendedor_nome       text,
+  motivo              text
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with car as (
+    select v.id as vid, v.placa, v.vendedor_id as atual, v.regional_id as reg,
+           iv.id_externo as obj, o.payload as op
+      from integracao_vinculos iv
+      join veiculos v       on v.id = iv.registro_id
+      join mutual_captura o on o.entidade = 'CONTRACT_OBJECT' and not o.deletado
+                           and o.id_externo = iv.id_externo
+     where iv.sistema = 'MUTUAL' and iv.entidade = 'CONTRACT_OBJECT' and iv.tabela = 'veiculos'
+       and v.regional_id = p_regional_id
+       and (tem_acesso_global() or auth.uid() is null)
+  ),
+  cons as (
+    select car.*, mutual_consultor_do_objeto(car.op, ct.payload) as cid
+      from car
+      left join mutual_captura ct on ct.entidade = 'CONTRACT' and not ct.deletado
+                                 and ct.id_externo = car.op->>'contract_id'
+  ),
+  cs as (
+    select cons.*, c.payload as cp,
+           mutual_texto_em(c.payload, array['name','nome','full_name','fantasy_name']) as cnome,
+           nullif(regexp_replace(coalesce(
+             mutual_texto_em(c.payload, array['cpf_cnpj','cpf','document','documento','doc']), ''),
+             '\D', '', 'g'), '') as cdoc,
+           lower(mutual_texto_em(c.payload, array['email','e_mail','mail'])) as cmail
+      from cons
+      left join mutual_captura c on c.entidade = 'CONSULTANT' and not c.deletado
+                                and c.id_externo = cons.cid
+  ),
+  m as (
+    select cs.*,
+           coalesce(pd.id, case when pe.n = 1 then pe.id end) as vend,
+           coalesce(pe.n, 0) as n_mail
+      from cs
+      -- documento e unique (0069): no maximo um
+      left join lateral (
+        select vd.id from vendedores vd
+         where cs.cdoc is not null and vd.documento = cs.cdoc
+         limit 1
+      ) pd on true
+      -- reserva: e-mail, so se apontar para UM vendedor
+      left join lateral (
+        select (array_agg(vd.id order by vd.id))[1] as id, count(*) as n
+          from vendedores vd
+         where pd.id is null and cs.cmail is not null and lower(vd.email) = cs.cmail
+      ) pe on true
+  )
+  select m.vid, m.placa, m.obj, m.atual, m.cid, m.cnome, m.cdoc,
+         m.vend, vd.nome,
+         case
+           when m.atual is not null and m.atual = m.vend then 'JA_LIGADO'
+           when m.atual is not null                      then 'MANTIDO'
+           when m.cid is null                            then 'SEM_CONSULTOR'
+           when m.cp is null                             then 'CONSULTOR_NAO_CAPTURADO'
+           when m.vend is null and m.n_mail > 1          then 'EMAIL_AMBIGUO'
+           when m.vend is null                           then 'CONSULTOR_SEM_VENDEDOR'
+           when vd.regional_id is distinct from m.reg    then 'UNIDADE_DIFERENTE'
+           else 'LIGAR'
+         end
+    from m
+    left join vendedores vd on vd.id = m.vend;
+$$;
+
+comment on function mutual_vendedores_dos_veiculos(uuid) is
+  'O vendedor de cada veiculo migrado da unidade, pelo consultor do contrato do Mutual (CPF -> '
+  'vendedores.documento; e-mail so se unico), com o MOTIVO quando nao ha. Leitura (0095).';
+
+
+-- A tela: agrupado por motivo e consultor, maior volume primeiro.
+create or replace function mutual_vendedores_resumo(p_regional_id uuid)
+returns table (
+  motivo              text,
+  consultor_id        text,
+  consultor_nome      text,
+  consultor_documento text,
+  vendedor_nome       text,
+  veiculos            bigint,
+  placas              text
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select b.motivo, b.consultor_id, b.consultor_nome, b.consultor_documento, b.vendedor_nome,
+         count(*),
+         string_agg(b.placa, ', ' order by b.placa)
+    from mutual_vendedores_dos_veiculos(p_regional_id) b
+   group by 1, 2, 3, 4, 5
+   order by count(*) desc, b.consultor_nome nulls last;
+$$;
+
+
+-- A escrita. Sem `p_confirmar` so conta. So preenche quem esta SEM vendedor.
+create or replace function mutual_vincular_vendedores(
+  p_regional_id uuid,
+  p_confirmar   boolean default false
+)
+returns table (
+  ligar         bigint,
+  ja_ligados    bigint,
+  mantidos      bigint,
+  sem_vendedor  bigint,
+  gravados      bigint,
+  mensagem      text
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_ligar bigint; v_ja bigint; v_mant bigint; v_sem bigint;
+  v_grav  bigint := 0;
+begin
+  if not (tem_acesso_global() or auth.uid() is null) then
+    raise exception 'Somente a matriz liga vendedores aos veiculos migrados'
+      using errcode = 'insufficient_privilege';
+  end if;
+  if p_regional_id is null then
+    raise exception 'Escolha a unidade' using errcode = 'invalid_parameter_value';
+  end if;
+
+  select count(*) filter (where b.motivo = 'LIGAR'),
+         count(*) filter (where b.motivo = 'JA_LIGADO'),
+         count(*) filter (where b.motivo = 'MANTIDO'),
+         count(*) filter (where b.motivo not in ('LIGAR','JA_LIGADO','MANTIDO'))
+    into v_ligar, v_ja, v_mant, v_sem
+    from mutual_vendedores_dos_veiculos(p_regional_id) b;
+
+  if p_confirmar then
+    update veiculos v
+       set vendedor_id = b.vendedor_id
+      from mutual_vendedores_dos_veiculos(p_regional_id) b
+     where b.motivo = 'LIGAR'
+       and v.id = b.veiculo_id
+       and v.vendedor_id is null;
+    get diagnostics v_grav = row_count;
+  end if;
+
+  return query select v_ligar, v_ja, v_mant, v_sem, v_grav,
+    case
+      when p_confirmar then format('%s veiculo(s) ligado(s) ao vendedor.', v_grav)
+      else format('%s veiculo(s) seriam ligados ao vendedor.', v_ligar)
+    end;
+end;
+$$;
+
+comment on function mutual_vincular_vendedores(uuid, boolean) is
+  'Liga ao vendedor os veiculos migrados da unidade SEM vendedor, pelo consultor do contrato do '
+  'Mutual. Sem p_confirmar so conta. Nunca troca vendedor ja gravado (0095).';
+
+
+-- =====================================================================
+-- (C) VEICULO VINDO DO MUTUAL NUNCA PAGA COMISSAO DE ADESAO
+-- =====================================================================
+-- Corpo da 0002 com UMA condicao a mais na adesao. O vinculo da carga
+-- (`integracao_vinculos`) e a marca permanente de "veio do Mutual" — a
+-- `cobranca_externa` nao serve, porque e justamente ela que vira no cutover.
+create or replace function fn_calcular_comissao()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_vendedor   vendedores;
+  v_is_adesao  boolean;
+  v_taxa       numeric(6,4);
+  v_base       numeric(12,2);
+begin
+  -- dispara apenas na transicao para 'pago' (ignora se ja estava pago)
+  if new.status <> 'pago' or old.status is not distinct from 'pago' then
+    return new;
+  end if;
+  if new.veiculo_id is null then
+    return new;
+  end if;
+
+  select v.* into v_vendedor
+    from veiculos ve
+    join vendedores v on v.id = ve.vendedor_id
+   where ve.id = new.veiculo_id;
+
+  if not found then
+    return new;  -- veiculo sem vendedor: nada a comissionar
+  end if;
+
+  -- adesao = primeiro titulo pago deste veiculo — EXCETO veiculo migrado do
+  -- Mutual, cuja adesao foi paga no sistema antigo (0095)
+  select not exists (
+           select 1 from comissoes_vendas c
+            where c.veiculo_id = new.veiculo_id and c.is_adesao = true
+         )
+     and not exists (
+           select 1 from integracao_vinculos iv
+            where iv.sistema = 'MUTUAL' and iv.entidade = 'CONTRACT_OBJECT'
+              and iv.tabela = 'veiculos' and iv.registro_id = new.veiculo_id
+         )
+    into v_is_adesao;
+
+  v_taxa := case when v_is_adesao
+                 then v_vendedor.taxa_comissao_adesao
+                 else v_vendedor.taxa_comissao_recorrente end;
+
+  v_base := coalesce(new.valor_pago, new.valor);
+
+  insert into comissoes_vendas (
+    vendedor_id, veiculo_id, titulo_id, valor_comissao, is_adesao, status_pagamento
+  ) values (
+    v_vendedor.id, new.veiculo_id, new.id, round(v_base * v_taxa, 2), v_is_adesao, 'pendente'
+  )
+  on conflict (titulo_id) do nothing;   -- idempotente
+
+  return new;
+end;
+$$;
+
+
+-- =====================================================================
+-- Rito da 0052
+-- =====================================================================
+revoke execute on all functions in schema public from public;
+revoke execute on all functions in schema public from anon;
+grant  execute on all functions in schema public to authenticated;
+grant  execute on all functions in schema public to service_role;
+
+-- >>>>>>>>>>>>>>>>>>>>>>>> migrations/0096_mutual_captura_sem_regravar.sql >>>>>>>>>>>>>>>>>>>>>>>>
+
+-- =============================================================================
+-- 0096 — A RECAPTURA DO MUTUAL PARA DE REGRAVAR O QUE NAO MUDOU
+-- =============================================================================
+-- Medido em producao em 11/10/2026: uma recaptura completa de CONTRACT_OBJECT
+-- (17.777 objetos, 36 blocos, 11:02 -> 11:05) regravou TODAS as linhas, mudasse
+-- o payload ou nao. Resultado: 39.709 versoes mortas em `mutual_captura`
+-- (1,1 GB), e o autovacuum NAO dispara (o padrao e 20% da tabela; isso era 13%).
+-- Logo depois, as tres leituras que varrem a captura — `mutual_carga_previa`,
+-- `mutual_carga_linhas` e `mutual_cobertura_consultor` — passaram a estourar o
+-- teto de 8 s do `authenticated` MESMO SOZINHAS (a fila da tela ja as mandava
+-- uma por vez: os cancelamentos sairam espacados de 8 em 8 s).
+--
+-- E isto nao e um acidente de um dia: a rotina combinada para a convivencia e
+-- RECAPTURAR + rodar a carga de novo toda semana (a deriva, 0084). Do jeito que
+-- estava, cada rodada semanal deixaria a carga mais lenta logo antes de ela
+-- precisar rodar.
+--
+-- O que muda:
+--   (A) `mutual_registrar_captura` so ESCREVE a linha quando algo mudou:
+--       payload, deletado ou o uuid externo (que o coalesce so deixa trocar de
+--       nulo para valor). Linha identica nao vira versao morta.
+--       O RETORNO continua sendo quantos registros a chamada RECEBEU — e o que
+--       a tela soma como progresso ("registros puxados"); devolver so os
+--       alterados faria uma recaptura sem mudanca parecer que nao trouxe nada.
+--   (B) `capturado_em` passa a significar "quando ESTE conteudo chegou", e nao
+--       "quando foi visto pela ultima vez" — e e o que as leituras da carga ja
+--       esperavam dele (reserva do `updated_at` do payload). Para o resumo nao
+--       mentir sobre a ultima captura, `mutual_resumo_capturas.ultima` passa a
+--       ser a mais recente entre o conteudo e a ultima sincronizacao concluida
+--       sem erro daquela entidade.
+--   (C) `mutual_captura` ganha limpeza automatica mais cedo (2% em vez de 20%):
+--       a tabela tem ~300 mil linhas, e 20% delas sao 60 mil versoes mortas
+--       antes de alguem limpar.
+--
+-- Nada aqui toca em `clientes`, `veiculos`, faturas ou titulos.
+-- A limpeza das 39.709 versoes que JA existem e um VACUUM a parte (nao roda
+-- dentro de transacao, entao nao cabe numa migration).
+-- =============================================================================
+
+-- (A) ---------------------------------------------------------------------------
+create or replace function mutual_registrar_captura(p_entidade text, p_registros jsonb)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not tem_acesso_global() then
+    raise exception 'Somente a matriz (admin/financeiro) pode puxar dados do Mutual';
+  end if;
+  if jsonb_typeof(p_registros) <> 'array' then
+    raise exception 'p_registros precisa ser um array json';
+  end if;
+
+  insert into mutual_captura (entidade, id_externo, uuid_externo, payload, deletado, capturado_por)
+  select p_entidade,
+         coalesce(r->>'id', r->>'uuid', md5(r::text)),
+         case when r->>'uuid' ~ '^[0-9a-fA-F-]{36}$' then (r->>'uuid')::uuid end,
+         r,
+         coalesce((r->>'deleted')::boolean, false),
+         auth.uid()
+    from jsonb_array_elements(p_registros) r
+  on conflict (entidade, id_externo) do update
+    set payload      = excluded.payload,
+        -- COALESCE de proposito (0062): uma recaptura com payload parcial (ou de
+        -- um endpoint que nao devolve `uuid`) NAO pode apagar a chave externa
+        -- estavel que ja tinhamos. O payload e substituido; a identidade, nao.
+        uuid_externo = coalesce(excluded.uuid_externo, mutual_captura.uuid_externo),
+        deletado     = excluded.deletado,
+        capturado_em = now(),
+        capturado_por = excluded.capturado_por
+    -- 0096: linha identica NAO e regravada. `is distinct from` porque o jsonb
+    -- compara por valor (ordem de chave e espaco nao contam) e trata nulo.
+    where mutual_captura.payload  is distinct from excluded.payload
+       or mutual_captura.deletado is distinct from excluded.deletado
+       or (excluded.uuid_externo is not null
+           and mutual_captura.uuid_externo is distinct from excluded.uuid_externo);
+
+  -- Quantos a chamada RECEBEU (ver (A) no cabecalho), nao quantos regravou.
+  return jsonb_array_length(p_registros);
+end;
+$$;
+
+-- (B) ---------------------------------------------------------------------------
+create or replace function mutual_resumo_capturas()
+returns table (
+  entidade     text,
+  registros    bigint,
+  deletados    bigint,
+  ultima       timestamptz,
+  total_remoto integer
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not is_staff() then
+    raise exception 'Somente a equipe pode ler o diagnostico da integracao';
+  end if;
+  return query
+  select c.entidade, count(*)::bigint, count(*) filter (where c.deletado)::bigint,
+         -- 0096: recapturar sem mudanca nao mexe mais em `capturado_em`; a
+         -- sincronizacao concluida e quem diz que a entidade foi olhada.
+         greatest(
+           max(c.capturado_em),
+           (select max(s.concluida_em) from mutual_sincronias s
+             where s.entidade = c.entidade and s.erro is null)
+         ),
+         (select s.total_remoto from mutual_sincronias s
+           where s.entidade = c.entidade and s.total_remoto is not null
+           order by s.iniciada_em desc limit 1)
+    from mutual_captura c
+   group by c.entidade
+   order by 1;
+end;
+$$;
+
+-- (C) ---------------------------------------------------------------------------
+alter table mutual_captura set (
+  autovacuum_vacuum_scale_factor  = 0.02,
+  autovacuum_analyze_scale_factor = 0.02
+);
+
+comment on function mutual_registrar_captura(text, jsonb) is
+  'Upsert da captura do Mutual (0062). Desde a 0096 so regrava a linha quando '
+  'payload, deletado ou uuid externo mudaram — recaptura identica nao gera '
+  'versao morta. Devolve quantos registros RECEBEU (progresso da tela).';
+
+-- ----------------------------------------------------------------------------
+-- Rito de seguranca (0052).
+-- ----------------------------------------------------------------------------
+revoke execute on all functions in schema public from public;
+revoke execute on all functions in schema public from anon;
+grant  execute on all functions in schema public to authenticated;
+grant  execute on all functions in schema public to service_role;
+
+-- >>>>>>>>>>>>>>>>>>>>>>>> migrations/0097_cobranca_painel.sql >>>>>>>>>>>>>>>>>>>>>>>>
+
+-- =============================================================================
+-- 0097 — COBRANCA: perfis, historico de boletos do Mutual e o painel (Fase 1)
+--
+-- Origem: "Modulo de Inadimplencia e Cobrancas" (documento 2, 30/09/2026) e as
+-- decisoes do usuario em 12/10/2026:
+--   * caminho B — o historico de boletos do Mutual entra no SCar. E ele que diz
+--     a "qualidade do pagador" (pagou no prazo? atrasou? reincide?), e sem ele
+--     o painel ficaria vazio ate o carne de janeiro;
+--   * os perfis SUPERVISOR e COBRANCA passam a existir;
+--   * comecar pela Fase 1: painel + calendario dos 6 ciclos.
+--
+-- (A) PERFIS. `supervisor` responde por VARIAS unidades (tabela
+--     `supervisor_regionais`); `cobranca` sem unidade enxerga o Brasil, com
+--     unidade enxerga a dela. O escopo vale DENTRO das RPCs de cobranca
+--     (`cobranca_escopo`), nao em `pode_regional()` — mexer nele seria mexer
+--     nas 87 policies (achado nº 1 da varredura, decisao de desenho a parte).
+-- (B) PARAMETROS: meta e limite de inadimplencia (o semaforo) em `empresa`, e
+--     `cobranca_feriados` para o vencimento efetivo.
+-- (C) `boletos_historico`: os boletos de MENSALIDADE do Mutual dos associados
+--     JA CARREGADOS. Tabela PROPRIA, de proposito, e NAO `titulos_financeiros`:
+--       - la eles entrariam no DRE (`dre_movimentos`) e contariam de novo uma
+--         receita que o Mutual ja contou;
+--       - `dias_atraso_cliente()` passaria a recusar a 24h por divida que quem
+--         cobra e o outro sistema.
+--     Diferente da `mutual_captura` (area de passagem, apagada no corte), esta
+--     tabela FICA: e historia de pagamento do associado.
+-- (D) `cobranca_boletos_base`: a fonte UNICA do modulo — SCar (titulos de
+--     mensalidade, ligados a fatura) + historico do Mutual ate a data de corte
+--     de cada associado (o 1º boleto do SCar dele), com a SITUACAO do documento:
+--     a_vencer · vence_hoje · vencido · pago_no_prazo · pago_em_atraso · cancelado.
+--     REGRA ESSENCIAL: boleto que ainda nao venceu NAO e inadimplencia.
+-- (E) Leituras do painel: indicadores por recorte (atual, 3 anteriores, ano
+--     anterior), carteira, calendario por ciclo, por regional, serie de 12
+--     meses e a lista de detalhamento (todo numero abre os boletos).
+-- (F) `resumo_cobrancas` (0025) corrigida: inadimplencia = vencido / o que JA
+--     venceu, e nao / tudo o que foi emitido (contava o "a vencer" na base).
+--
+-- As PORCENTAGENS sao calculadas no TS (`src/lib/cobranca-painel.ts`, testado):
+-- o banco devolve contagens e somas, e a formula fica num lugar so.
+-- =============================================================================
 
 -- ============================================================================
--- 0095 — O PORTAL DA FRANQUIA: QUEM EXCLUI VENDEDOR, E A CARTEIRA NO PAINEL
+-- (A) PERFIS
+-- ============================================================================
+-- Valor novo de enum nao pode ser USADO na mesma transacao: daqui para baixo
+-- o papel e comparado como TEXTO (padrao 0017/0026/0028).
+alter type papel_usuario add value if not exists 'supervisor';
+alter type papel_usuario add value if not exists 'cobranca';
+
+create table if not exists supervisor_regionais (
+  usuario_id  uuid not null references usuarios(id) on delete cascade,
+  regional_id uuid not null references regionais(id) on delete cascade,
+  created_at  timestamptz not null default now(),
+  created_by  uuid references usuarios(id) on delete set null,
+  primary key (usuario_id, regional_id)
+);
+
+comment on table supervisor_regionais is
+  'Unidades pelas quais o SUPERVISOR responde (0097). Lido por cobranca_escopo(). '
+  'Escrita so por definir_regionais_supervisor (admin).';
+
+alter table supervisor_regionais enable row level security;
+drop policy if exists supervisor_regionais_select on supervisor_regionais;
+create policy supervisor_regionais_select on supervisor_regionais for select to authenticated
+  using (tem_acesso_global() or usuario_id = auth.uid());
+grant select on supervisor_regionais to authenticated;
+
+create or replace function definir_regionais_supervisor(p_usuario_id uuid, p_regionais uuid[])
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_n integer;
+begin
+  if auth.uid() is not null and not is_admin() then
+    raise exception 'Somente o administrador define as unidades do supervisor.'
+      using errcode = 'insufficient_privilege';
+  end if;
+  if not exists (select 1 from usuarios where id = p_usuario_id) then
+    raise exception 'Usuario nao encontrado.' using errcode = 'no_data_found';
+  end if;
+
+  delete from supervisor_regionais
+   where usuario_id = p_usuario_id
+     and regional_id <> all (coalesce(p_regionais, '{}'::uuid[]));
+
+  insert into supervisor_regionais (usuario_id, regional_id, created_by)
+  select p_usuario_id, r, auth.uid()
+    from unnest(coalesce(p_regionais, '{}'::uuid[])) r
+   where exists (select 1 from regionais g where g.id = r)
+  on conflict do nothing;
+
+  select count(*) into v_n from supervisor_regionais where usuario_id = p_usuario_id;
+  return v_n;
+end;
+$$;
+
+create or replace function regionais_do_supervisor(p_usuario_id uuid)
+returns uuid[]
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(array_agg(regional_id order by regional_id), '{}'::uuid[])
+    from supervisor_regionais
+   where usuario_id = p_usuario_id
+     and (tem_acesso_global() or p_usuario_id = auth.uid() or auth.uid() is null);
+$$;
+
+/**
+ * O ESCOPO da cobranca, resolvido UMA vez por chamada (nao por linha).
+ *   global    -> enxerga tudo, inclusive o que e da MATRIZ (regional nula):
+ *                admin/financeiro, `cobranca` sem unidade e o caminho de
+ *                servidor (sem sessao, service_role).
+ *   regionais -> o gestor e a `cobranca` com unidade veem a dela; o supervisor,
+ *                as da `supervisor_regionais` (+ a propria, se tiver).
+ * Os outros papeis (consultor, sinistro, auditoria, 24h) e o associado do
+ * /portal ficam com escopo VAZIO: nao leem nada aqui.
+ */
+create or replace function cobranca_escopo()
+returns table (global boolean, regionais uuid[])
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    (auth.uid() is null
+      or tem_acesso_global()
+      or (auth_papel()::text = 'cobranca' and auth_regional_id() is null)) as global,
+    array(
+      select auth_regional_id()
+       where auth_papel()::text in ('gestor_regional', 'cobranca', 'supervisor')
+         and auth_regional_id() is not null
+      union
+      select sr.regional_id
+        from supervisor_regionais sr
+       where auth_papel()::text = 'supervisor'
+         and sr.usuario_id = auth.uid()
+    ) as regionais;
+$$;
+
+-- ============================================================================
+-- (B) PARAMETROS
+-- ============================================================================
+alter table empresa add column if not exists cobranca_meta_inadimplencia   numeric(5,2) not null default 5;
+alter table empresa add column if not exists cobranca_limite_inadimplencia numeric(5,2) not null default 10;
+
+alter table empresa drop constraint if exists chk_empresa_cobranca_semaforo;
+alter table empresa add constraint chk_empresa_cobranca_semaforo check (
+  cobranca_meta_inadimplencia between 0 and 100
+  and cobranca_limite_inadimplencia between 0 and 100
+  and cobranca_meta_inadimplencia <= cobranca_limite_inadimplencia
+);
+
+comment on column empresa.cobranca_meta_inadimplencia is
+  'Semaforo da cobranca (0097): inadimplencia financeira ate a META e verde.';
+comment on column empresa.cobranca_limite_inadimplencia is
+  'Semaforo da cobranca (0097): acima do LIMITE e vermelho; entre meta e limite, ambar.';
+
+create table if not exists cobranca_feriados (
+  data       date primary key,
+  descricao  text not null,
+  created_at timestamptz not null default now(),
+  created_by uuid references usuarios(id) on delete set null
+);
+comment on table cobranca_feriados is
+  'Feriados bancarios (0097). Boleto que vence em fim de semana ou feriado so '
+  'conta como vencido depois do proximo dia util — nao antecipar inadimplencia.';
+alter table cobranca_feriados enable row level security;
+drop policy if exists cobranca_feriados_select on cobranca_feriados;
+create policy cobranca_feriados_select on cobranca_feriados for select to authenticated
+  using (is_staff());
+grant select on cobranca_feriados to authenticated;
+
+create or replace function cobranca_parametros()
+returns table (meta numeric, limite numeric, feriados jsonb)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce((select cobranca_meta_inadimplencia from empresa limit 1), 5),
+         coalesce((select cobranca_limite_inadimplencia from empresa limit 1), 10),
+         coalesce((select jsonb_agg(jsonb_build_object('data', data, 'descricao', descricao) order by data)
+                     from cobranca_feriados), '[]'::jsonb)
+   where is_staff() or auth.uid() is null;
+$$;
+
+create or replace function salvar_parametros_cobranca(p_meta numeric, p_limite numeric)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is not null and not tem_acesso_global() then
+    raise exception 'Somente a matriz (admin/financeiro) altera a meta da cobranca.'
+      using errcode = 'insufficient_privilege';
+  end if;
+  if p_meta is null or p_limite is null or p_meta < 0 or p_limite > 100 or p_meta > p_limite then
+    raise exception 'A meta tem de ficar entre 0 e o limite, e o limite ate 100%%.'
+      using errcode = 'check_violation';
+  end if;
+  update empresa set cobranca_meta_inadimplencia = p_meta,
+                     cobranca_limite_inadimplencia = p_limite;
+  if not found then
+    raise exception 'Cadastre a empresa em Configuracoes -> Empresa antes de definir a meta.'
+      using errcode = 'no_data_found';
+  end if;
+end;
+$$;
+
+create or replace function salvar_feriado_cobranca(p_data date, p_descricao text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is not null and not tem_acesso_global() then
+    raise exception 'Somente a matriz (admin/financeiro) mantem os feriados.'
+      using errcode = 'insufficient_privilege';
+  end if;
+  if p_data is null or btrim(coalesce(p_descricao, '')) = '' then
+    raise exception 'Informe a data e a descricao do feriado.' using errcode = 'check_violation';
+  end if;
+  insert into cobranca_feriados (data, descricao, created_by)
+  values (p_data, upper(btrim(p_descricao)), auth.uid())
+  on conflict (data) do update set descricao = excluded.descricao;
+end;
+$$;
+
+create or replace function remover_feriado_cobranca(p_data date)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is not null and not tem_acesso_global() then
+    raise exception 'Somente a matriz (admin/financeiro) mantem os feriados.'
+      using errcode = 'insufficient_privilege';
+  end if;
+  delete from cobranca_feriados where data = p_data;
+end;
+$$;
+
+/** Proximo dia util a partir de `p_data` (a propria data, se ja for util). */
+create or replace function dia_util_seguinte(p_data date)
+returns date
+language plpgsql
+stable
+set search_path = public
+as $$
+declare
+  d date := p_data;
+begin
+  if d is null then return null; end if;
+  for i in 1..15 loop
+    exit when extract(isodow from d) < 6
+          and not exists (select 1 from cobranca_feriados f where f.data = d);
+    d := d + 1;
+  end loop;
+  return d;
+end;
+$$;
+
+/**
+ * Os SEIS CICLOS da Smartcar (5/10/15/20/25/30) a partir do DIA do vencimento.
+ * O historico tem dias fora do padrao (11, 26...) e o mes sem 30 vence no 28/29:
+ * cada dia cai no ciclo mais proximo, e 1-2 voltam para o 30 (virada de mes).
+ * Espelho: `cicloDoDia` em src/lib/cobranca-painel.ts.
+ */
+create or replace function ciclo_vencimento(p_data date)
+returns integer
+language sql
+immutable
+as $$
+  select case
+    when p_data is null then null
+    when extract(day from p_data) <= 2  then 30
+    when extract(day from p_data) <= 7  then 5
+    when extract(day from p_data) <= 12 then 10
+    when extract(day from p_data) <= 17 then 15
+    when extract(day from p_data) <= 22 then 20
+    when extract(day from p_data) <= 27 then 25
+    else 30
+  end;
+$$;
+
+-- ============================================================================
+-- (C) HISTORICO DE BOLETOS (Mutual)
+-- ============================================================================
+create table if not exists boletos_historico (
+  id                  uuid primary key default gen_random_uuid(),
+  origem              text not null default 'MUTUAL',
+  id_externo          text not null,
+  cliente_id          uuid not null references clientes(id) on delete cascade,
+  veiculo_id          uuid references veiculos(id) on delete set null,
+  contrato_externo    text,
+  tipo                text not null,
+  competencia         date,
+  vencimento_original date not null,
+  data_vencimento     date not null,
+  data_limite         date,
+  valor               numeric(12,2) not null,
+  valor_pago          numeric(12,2),
+  data_pagamento      date,
+  situacao            text not null,
+  status_origem       text not null,
+  em_serasa           boolean not null default false,
+  importado_em        timestamptz not null default now(),
+  atualizado_em       timestamptz not null default now(),
+  constraint uq_boleto_historico unique (origem, id_externo),
+  constraint chk_boleto_historico_origem   check (origem in ('MUTUAL')),
+  constraint chk_boleto_historico_situacao check (situacao in ('aberto', 'pago', 'cancelado'))
+);
+
+create index if not exists idx_boletos_historico_cliente    on boletos_historico (cliente_id, vencimento_original);
+create index if not exists idx_boletos_historico_vencimento on boletos_historico (vencimento_original);
+
+comment on table boletos_historico is
+  'Boletos de MENSALIDADE de outro sistema (hoje o Mutual), dos associados ja '
+  'carregados (0097). NAO e `titulos_financeiros` de proposito: la entraria no '
+  'DRE e na trava da 24h. Fica depois do corte — e a historia de pagamento.';
+
+alter table boletos_historico enable row level security;
+drop policy if exists boletos_historico_select on boletos_historico;
+create policy boletos_historico_select on boletos_historico for select to authenticated
+  using (tem_acesso_global());
+grant select on boletos_historico to authenticated;
+
+/**
+ * Situacao do boleto do Mutual -> aberto | pago | cancelado. Desconhecido
+ * devolve NULL e a linha NAO entra (fica contada no retorno da importacao):
+ * vocabulario novo e decisao pendente, nao chute (regra da 0063).
+ */
+create or replace function mutual_situacao_boleto(p_status text)
+returns text
+language sql
+immutable
+as $$
+  select case upper(btrim(coalesce(p_status, '')))
+    when 'SUCCEEDED'           then 'pago'
+    when 'PAGO'                then 'pago'
+    when 'SUCCEEDED_PENDING'   then 'pago'
+    when 'SUCCEEDED_DUPLICITY' then 'pago'
+    when 'PENDING'             then 'aberto'
+    when 'OVERDUE'             then 'aberto'
+    when 'CANCELED'            then 'cancelado'
+    when 'CANCELED_RECURRENCE' then 'cancelado'
+    when 'CANCELED_UPDATED'    then 'cancelado'
+    when 'CANCEL_ERROR'        then 'cancelado'
+    when 'REFUNDED'            then 'cancelado'
+    else null
+  end;
+$$;
+
+/**
+ * Data do Mutual SEM deslocar o dia. `mutual_data` (0084) converte o fuso — o
+ * certo para timestamp —, mas um campo so-data ('2026-09-08') viraria meia-noite
+ * UTC e, em Sao Paulo, o dia ANTERIOR. Vencimento nao pode andar um dia.
+ */
+create or replace function mutual_dia(p_valor text)
+returns date
+language sql
+immutable
+set search_path = public
+as $$
+  select case
+    when mutual_texto(p_valor) is null then null
+    when mutual_texto(p_valor) ~ '^\d{4}-\d{2}-\d{2}$' then mutual_texto(p_valor)::date
+    else mutual_data(p_valor)
+  end;
+$$;
+
+/**
+ * IMPORTA (ou simula, sem `p_confirmar`) o historico em BLOCOS, por cursor
+ * sobre o id externo — a tela chama em laco ate `fim`. Re-executavel: so
+ * regrava a linha que MUDOU (regra da 0096). Liga o boleto ao associado pelo
+ * CONTRATO (`contract_id` -> CONTRACT.person_id -> vinculo PERSON) e ao veiculo
+ * quando o contrato tem UM objeto so (vinculo CONTRACT_OBJECT).
+ * So mensalidade (`MONTHLY_PAYMENT`, `PRO_RATA`, `ACCESSION_MONTHLY_PAYMENT`,
+ * o mesmo `ehMensalidade` do TS) e so associado ja carregado.
+ * Um statement so, sem tabela temporaria: `create temp table` dentro de
+ * plpgsql quebra a 2ª chamada na mesma sessao (gotcha da 0078/0084).
+ */
+create or replace function cobranca_importar_historico_mutual(
+  p_cursor    text    default null,
+  p_lote      integer default 4000,
+  p_confirmar boolean default false
+)
+returns table (
+  lidos               integer,
+  mensalidades        integer,
+  sem_associado       integer,
+  status_desconhecido integer,
+  gravados            integer,
+  proximo_cursor      text,
+  fim                 boolean
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_lote integer := greatest(1, least(coalesce(p_lote, 4000), 20000));
+begin
+  if auth.uid() is not null and not tem_acesso_global() then
+    raise exception 'Somente a matriz (admin/financeiro) importa o historico de boletos.'
+      using errcode = 'insufficient_privilege';
+  end if;
+
+  return query
+  with inv as (
+    select m.id_externo, m.payload as p
+      from mutual_captura m
+     where m.entidade = 'INVOICE'
+       and m.id_externo > coalesce(p_cursor, '')
+       and not m.deletado
+     order by m.id_externo
+     limit v_lote
+  ),
+  ctr as (
+    select c.id_externo, c.payload->>'person_id' as pid
+      from mutual_captura c
+     where c.entidade = 'CONTRACT'
+       and c.id_externo in (select distinct inv.p->>'contract_id' from inv)
+  ),
+  obj as (
+    select o.payload->>'contract_id' as cid, count(*) as n, min(o.id_externo) as oid
+      from mutual_captura o
+     where o.entidade = 'CONTRACT_OBJECT'
+       and o.payload->>'contract_id' in (select distinct inv.p->>'contract_id' from inv)
+     group by 1
+  ),
+  lote as (
+    select i.id_externo,
+           vc.registro_id as cliente_id,
+           case when ob.n = 1 then vo.registro_id end as veiculo_id,
+           i.p->>'contract_id' as contrato,
+           upper(btrim(coalesce(i.p->>'invoice_type', ''))) as tipo,
+           case when (i.p->>'reference_year') ~ '^\d{4}$' and (i.p->>'reference_month') ~ '^\d{1,2}$'
+                     and (i.p->>'reference_month')::int between 1 and 12
+                then make_date((i.p->>'reference_year')::int, (i.p->>'reference_month')::int, 1)
+           end as competencia,
+           coalesce(mutual_dia(i.p->>'original_expiration_date'), mutual_dia(i.p->>'expiration_date')) as venc_orig,
+           coalesce(mutual_dia(i.p->>'expiration_date'), mutual_dia(i.p->>'original_expiration_date')) as venc,
+           mutual_dia(i.p->>'payment_limit_date') as limite,
+           coalesce(nullif(i.p->>'amount', '')::numeric, nullif(i.p->>'original_amount', '')::numeric, 0) as valor,
+           nullif(nullif(i.p->>'paid_amount', '')::numeric, 0) as valor_pago,
+           coalesce(mutual_dia(i.p->>'payment_date'), mutual_dia(i.p->>'credit_date')) as pago_em,
+           mutual_situacao_boleto(i.p->>'invoice_status') as situacao,
+           coalesce(i.p->>'invoice_status', '') as status_origem,
+           coalesce((i.p->>'in_serasa')::boolean, false) as serasa,
+           upper(btrim(coalesce(i.p->>'invoice_type', '')))
+             in ('MONTHLY_PAYMENT', 'PRO_RATA', 'ACCESSION_MONTHLY_PAYMENT') as mensalidade
+      from inv i
+      left join ctr c on c.id_externo = i.p->>'contract_id'
+      left join integracao_vinculos vc
+             on vc.sistema = 'MUTUAL' and vc.entidade = 'PERSON' and vc.tabela = 'clientes'
+            and vc.id_externo = c.pid
+            and exists (select 1 from clientes cl where cl.id = vc.registro_id)
+      left join obj ob on ob.cid = i.p->>'contract_id'
+      left join integracao_vinculos vo
+             on vo.sistema = 'MUTUAL' and vo.entidade = 'CONTRACT_OBJECT' and vo.tabela = 'veiculos'
+            and vo.id_externo = ob.oid
+            and exists (select 1 from veiculos v where v.id = vo.registro_id)
+  ),
+  up as (
+    insert into boletos_historico as h (
+      origem, id_externo, cliente_id, veiculo_id, contrato_externo, tipo, competencia,
+      vencimento_original, data_vencimento, data_limite, valor, valor_pago,
+      data_pagamento, situacao, status_origem, em_serasa)
+    select 'MUTUAL', l.id_externo, l.cliente_id, l.veiculo_id, l.contrato, l.tipo, l.competencia,
+           l.venc_orig, l.venc, l.limite, l.valor,
+           case when l.situacao = 'pago' then coalesce(l.valor_pago, l.valor) end,
+           case when l.situacao = 'pago' then l.pago_em end,
+           l.situacao, l.status_origem, l.serasa
+      from lote l
+     where p_confirmar
+       and l.mensalidade and l.cliente_id is not null and l.situacao is not null
+       and l.venc_orig is not null
+    on conflict (origem, id_externo) do update set
+      cliente_id = excluded.cliente_id, veiculo_id = excluded.veiculo_id,
+      contrato_externo = excluded.contrato_externo, tipo = excluded.tipo,
+      competencia = excluded.competencia, vencimento_original = excluded.vencimento_original,
+      data_vencimento = excluded.data_vencimento, data_limite = excluded.data_limite,
+      valor = excluded.valor, valor_pago = excluded.valor_pago,
+      data_pagamento = excluded.data_pagamento, situacao = excluded.situacao,
+      status_origem = excluded.status_origem, em_serasa = excluded.em_serasa,
+      atualizado_em = now()
+    where (h.cliente_id, h.veiculo_id, h.contrato_externo, h.tipo, h.competencia,
+           h.vencimento_original, h.data_vencimento, h.data_limite, h.valor, h.valor_pago,
+           h.data_pagamento, h.situacao, h.status_origem, h.em_serasa)
+      is distinct from
+          (excluded.cliente_id, excluded.veiculo_id, excluded.contrato_externo, excluded.tipo,
+           excluded.competencia, excluded.vencimento_original, excluded.data_vencimento,
+           excluded.data_limite, excluded.valor, excluded.valor_pago, excluded.data_pagamento,
+           excluded.situacao, excluded.status_origem, excluded.em_serasa)
+    returning 1
+  )
+  select count(*)::int,
+         (count(*) filter (where l.mensalidade))::int,
+         (count(*) filter (where l.mensalidade and l.cliente_id is null))::int,
+         (count(*) filter (where l.mensalidade and l.cliente_id is not null and l.situacao is null))::int,
+         (select count(*) from up)::int,
+         max(l.id_externo),
+         count(*) < v_lote
+    from lote l;
+end;
+$$;
+
+/** O que a tela mostra do historico: volume, situacao e quao velho ele esta. */
+create or replace function cobranca_historico_resumo()
+returns table (
+  boletos          bigint,
+  associados       bigint,
+  pagos            bigint,
+  abertos          bigint,
+  cancelados       bigint,
+  primeiro_vencimento date,
+  ultimo_vencimento   date,
+  ultima_importacao   timestamptz,
+  boletos_capturados  bigint,
+  ultima_captura      timestamptz
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select (select count(*) from boletos_historico),
+         (select count(distinct cliente_id) from boletos_historico),
+         (select count(*) from boletos_historico where situacao = 'pago'),
+         (select count(*) from boletos_historico where situacao = 'aberto'),
+         (select count(*) from boletos_historico where situacao = 'cancelado'),
+         (select min(vencimento_original) from boletos_historico),
+         (select max(vencimento_original) from boletos_historico),
+         (select max(atualizado_em) from boletos_historico),
+         (select count(*) from mutual_captura where entidade = 'INVOICE'),
+         (select max(capturado_em) from mutual_captura where entidade = 'INVOICE')
+   where is_staff() or auth.uid() is null;
+$$;
+
+-- ============================================================================
+-- (D) A FONTE UNICA
+-- ============================================================================
+/**
+ * Um registro por boleto de MENSALIDADE, ja com a situacao do documento.
+ *   - SCar: titulo ligado a fatura (adesao e cobranca de rastreador ficam fora).
+ *   - Mutual: `boletos_historico`, so ANTES da data de corte do associado (o 1º
+ *     boleto de mensalidade do SCar dele) — depois disso quem cobra e daqui, e
+ *     contar os dois seria cobrar a mesma competencia duas vezes no indicador.
+ * Vencimento EFETIVO = proximo dia util (fins de semana e `cobranca_feriados`);
+ * no Mutual, a `payment_limit_date` quando ele mandou.
+ * Boleto pago sem data de pagamento (0,6% do historico) conta como no prazo —
+ * nao ha como provar atraso.
+ */
+create or replace function cobranca_boletos_base(
+  p_inicio      date default null,
+  p_fim         date default null,
+  p_regional_id uuid default null
+)
+returns table (
+  origem             text,
+  boleto_id          uuid,
+  cliente_id         uuid,
+  veiculo_id         uuid,
+  regional_id        uuid,
+  competencia        date,
+  vencimento         date,
+  vencimento_efetivo date,
+  valor              numeric,
+  valor_pago         numeric,
+  data_pagamento     date,
+  situacao           text,
+  ciclo              integer,
+  dias_atraso        integer,
+  em_serasa          boolean
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with esc as (select * from cobranca_escopo()),
+  scar as (
+    select 'SCAR'::text as origem, t.id as boleto_id, t.cliente_id, t.veiculo_id,
+           coalesce(f.regional_id, cl.regional_id) as regional_id,
+           f.competencia, t.data_vencimento as vencimento,
+           t.data_vencimento as venc_banco, null::date as limite,
+           t.valor, t.valor_pago, t.data_pagamento,
+           case t.status::text when 'pago' then 'pago' when 'cancelado' then 'cancelado'
+                else 'aberto' end as base,
+           false as em_serasa
+      from titulos_financeiros t
+      join faturas f on f.titulo_id = t.id
+      join clientes cl on cl.id = t.cliente_id
+  ),
+  corte as (
+    select s.cliente_id, min(s.vencimento) as corte
+      from scar s where s.base <> 'cancelado' group by 1
+  ),
+  mutual as (
+    select 'MUTUAL'::text, h.id, h.cliente_id, h.veiculo_id, cl.regional_id,
+           h.competencia, h.vencimento_original, h.data_vencimento, h.data_limite,
+           h.valor, h.valor_pago, h.data_pagamento, h.situacao, h.em_serasa
+      from boletos_historico h
+      join clientes cl on cl.id = h.cliente_id
+      left join corte c on c.cliente_id = h.cliente_id
+     where (c.corte is null or h.vencimento_original < c.corte)
+       and (p_inicio is null or h.vencimento_original >= p_inicio)
+       and (p_fim    is null or h.vencimento_original <= p_fim)
+  ),
+  u as (
+    select * from scar
+     where (p_inicio is null or vencimento >= p_inicio)
+       and (p_fim    is null or vencimento <= p_fim)
+    union all
+    select * from mutual
+  ),
+  v as (
+    select u.* from u, esc
+     where (esc.global or u.regional_id = any (esc.regionais))
+       and (p_regional_id is null or u.regional_id = p_regional_id)
+  ),
+  -- O dia util e resolvido por DATA DISTINTA (algumas centenas), nao por boleto
+  -- (dezenas de milhares): e o que mantem a leitura dentro do teto de tempo.
+  du as (
+    select d.venc_banco, dia_util_seguinte(d.venc_banco) as util
+      from (select distinct venc_banco from v) d
+  ),
+  e as (
+    select v.*, coalesce(v.limite, du.util) as efetivo
+      from v left join du on du.venc_banco = v.venc_banco
+  )
+  select e.origem, e.boleto_id, e.cliente_id, e.veiculo_id, e.regional_id,
+         e.competencia, e.vencimento, e.efetivo, e.valor, e.valor_pago,
+         e.data_pagamento,
+         case
+           when e.base = 'cancelado' then 'cancelado'
+           when e.base = 'pago' then
+             case when e.data_pagamento is null or e.data_pagamento <= e.efetivo
+                  then 'pago_no_prazo' else 'pago_em_atraso' end
+           when e.vencimento = current_date or e.efetivo = current_date then 'vence_hoje'
+           when e.efetivo > current_date then 'a_vencer'
+           else 'vencido'
+         end,
+         ciclo_vencimento(e.vencimento),
+         case when e.base = 'aberto' and e.efetivo < current_date
+              then (current_date - e.vencimento)::int else 0 end,
+         e.em_serasa
+    from e;
+$$;
+
+-- ============================================================================
+-- (E) AS LEITURAS DO PAINEL
+-- ============================================================================
+/**
+ * Recortes de comparacao para [inicio, fim]. Se o periodo e um MES CHEIO, os
+ * anteriores sao os meses de calendario (setembro tem 30 dias, agosto 31);
+ * senao, periodos do mesmo tamanho imediatamente antes.
+ */
+create or replace function cobranca_recortes(p_inicio date, p_fim date)
+returns table (recorte text, inicio date, fim date)
+language sql
+immutable
+as $$
+  with p as (
+    select p_inicio as i, p_fim as f, (p_fim - p_inicio + 1) as n,
+           (p_inicio = date_trunc('month', p_inicio)::date
+            and p_fim = (date_trunc('month', p_inicio) + interval '1 month - 1 day')::date) as mes
+  )
+  select 'atual', i, f from p
+  union all
+  select 'anterior_' || k,
+         case when mes then (i - make_interval(months => k))::date else i - n * k end,
+         case when mes then (date_trunc('month', i - make_interval(months => k)) + interval '1 month - 1 day')::date
+              else f - n * k end
+    from p, generate_series(1, 3) k
+  union all
+  select 'ano_anterior', (i - interval '1 year')::date, (f - interval '1 year')::date from p;
+$$;
+
+/**
+ * Os numeros do painel, para o periodo e seus recortes de comparacao. Contagens
+ * e somas; as formulas (%) moram em `src/lib/cobranca-painel.ts`.
+ *   venceram       = o prazo (vencimento efetivo) ja passou — pago ou nao
+ *   aberto_vencido = venceu e segue sem pagamento (a inadimplencia)
+ *   primeiros      = o 1º boleto de cada associado (a "inadimplencia inicial")
+ *   reincidentes   = inadimplentes do periodo com atraso nos 12 meses anteriores
+ *   regularizados  = associados que pagaram ATRASADO dentro do periodo
+ * Atencao: a situacao e a de HOJE. "Agosto" mostra quanto de agosto continua
+ * em aberto agora — e o que a cobranca ainda pode recuperar.
+ */
+create or replace function cobranca_indicadores(
+  p_inicio      date,
+  p_fim         date,
+  p_regional_id uuid default null
+)
+returns table (
+  recorte              text,
+  inicio               date,
+  fim                  date,
+  boletos              bigint,
+  valor_emitido        numeric,
+  boletos_venceram     bigint,
+  valor_venceram       numeric,
+  boletos_aberto_vencido bigint,
+  valor_aberto_vencido numeric,
+  valor_pago_no_prazo  numeric,
+  valor_pago_em_atraso numeric,
+  boletos_pago_em_atraso bigint,
+  valor_a_vencer       numeric,
+  valor_vence_hoje     numeric,
+  clientes_venceram    bigint,
+  clientes_inadimplentes bigint,
+  primeiros_venceram   bigint,
+  primeiros_nao_pagos  bigint,
+  primeiros_pagos_atraso bigint,
+  reincidentes         bigint,
+  regularizados        bigint,
+  clientes_serasa      bigint
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with r as (select * from cobranca_recortes(p_inicio, p_fim)),
+  lim as (select min(inicio) - 365 as ini, max(fim) as fim from r),
+  b as (
+    select * from cobranca_boletos_base((select ini from lim), (select fim from lim), p_regional_id)
+     where situacao <> 'cancelado'
+  ),
+  prim as (
+    select distinct on (x.cliente_id) x.cliente_id, x.vencimento, x.vencimento_efetivo, x.situacao
+      from cobranca_boletos_base(null, null, p_regional_id) x
+     where x.situacao <> 'cancelado'
+     order by x.cliente_id, x.vencimento, x.boleto_id
+  ),
+  j as (
+    select r.recorte, b.*,
+           (b.vencimento_efetivo < current_date) as venceu
+      from r join b on b.vencimento between r.inicio and r.fim
+  ),
+  agg as (
+    select j.recorte,
+           count(*) as boletos,
+           coalesce(sum(j.valor), 0) as valor_emitido,
+           count(*) filter (where j.venceu) as boletos_venceram,
+           coalesce(sum(j.valor) filter (where j.venceu), 0) as valor_venceram,
+           count(*) filter (where j.situacao = 'vencido') as boletos_aberto_vencido,
+           coalesce(sum(j.valor) filter (where j.situacao = 'vencido'), 0) as valor_aberto_vencido,
+           coalesce(sum(coalesce(j.valor_pago, j.valor)) filter (where j.situacao = 'pago_no_prazo'), 0) as valor_pago_no_prazo,
+           coalesce(sum(coalesce(j.valor_pago, j.valor)) filter (where j.situacao = 'pago_em_atraso'), 0) as valor_pago_em_atraso,
+           count(*) filter (where j.situacao = 'pago_em_atraso') as boletos_pago_em_atraso,
+           coalesce(sum(j.valor) filter (where j.situacao = 'a_vencer'), 0) as valor_a_vencer,
+           coalesce(sum(j.valor) filter (where j.situacao = 'vence_hoje'), 0) as valor_vence_hoje,
+           count(distinct j.cliente_id) filter (where j.venceu) as clientes_venceram,
+           count(distinct j.cliente_id) filter (where j.situacao = 'vencido') as clientes_inadimplentes,
+           count(distinct j.cliente_id) filter (where j.situacao = 'vencido' and j.em_serasa) as clientes_serasa
+      from j group by j.recorte
+  ),
+  inad as (
+    select distinct j.recorte, j.cliente_id, r.inicio
+      from j join r on r.recorte = j.recorte
+     where j.situacao = 'vencido'
+  ),
+  reinc as (
+    select i.recorte, count(distinct i.cliente_id) as n
+      from inad i
+      join b on b.cliente_id = i.cliente_id
+            and b.vencimento >= i.inicio - 365 and b.vencimento < i.inicio
+            and b.situacao in ('vencido', 'pago_em_atraso')
+     group by i.recorte
+  ),
+  regul as (
+    select r.recorte, count(distinct b.cliente_id) as n
+      from r join b on b.situacao = 'pago_em_atraso'
+                   and b.data_pagamento between r.inicio and r.fim
+     group by r.recorte
+  ),
+  pri as (
+    select r.recorte,
+           count(*) filter (where p.vencimento_efetivo < current_date) as venceram,
+           count(*) filter (where p.situacao = 'vencido') as nao_pagos,
+           count(*) filter (where p.situacao = 'pago_em_atraso') as pagos_atraso
+      from r join prim p on p.vencimento between r.inicio and r.fim
+     group by r.recorte
+  )
+  select r.recorte, r.inicio, r.fim,
+         coalesce(a.boletos, 0), coalesce(a.valor_emitido, 0),
+         coalesce(a.boletos_venceram, 0), coalesce(a.valor_venceram, 0),
+         coalesce(a.boletos_aberto_vencido, 0), coalesce(a.valor_aberto_vencido, 0),
+         coalesce(a.valor_pago_no_prazo, 0), coalesce(a.valor_pago_em_atraso, 0),
+         coalesce(a.boletos_pago_em_atraso, 0),
+         coalesce(a.valor_a_vencer, 0), coalesce(a.valor_vence_hoje, 0),
+         coalesce(a.clientes_venceram, 0), coalesce(a.clientes_inadimplentes, 0),
+         coalesce(pri.venceram, 0), coalesce(pri.nao_pagos, 0), coalesce(pri.pagos_atraso, 0),
+         coalesce(reinc.n, 0), coalesce(regul.n, 0), coalesce(a.clientes_serasa, 0)
+    from r
+    left join agg a     on a.recorte = r.recorte
+    left join reinc     on reinc.recorte = r.recorte
+    left join regul     on regul.recorte = r.recorte
+    left join pri       on pri.recorte = r.recorte
+   order by case r.recorte when 'atual' then 0 when 'anterior_1' then 1 when 'anterior_2' then 2
+                           when 'anterior_3' then 3 else 4 end;
+$$;
+
+/**
+ * A CARTEIRA, posicional (hoje): associados com veiculo na base e quantos tem
+ * boleto vencido em aberto — de qualquer competencia. Mais a idade dos dados:
+ * o historico do Mutual so e tao novo quanto a ultima captura de INVOICE.
+ */
+create or replace function cobranca_carteira(p_regional_id uuid default null)
+returns table (
+  clientes_ativos        bigint,
+  clientes_inadimplentes bigint,
+  boletos_vencidos       bigint,
+  valor_vencido          numeric,
+  ultima_captura_mutual  timestamptz,
+  ultima_importacao      timestamptz
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with esc as (select * from cobranca_escopo()),
+  ativos as (
+    select distinct cl.id
+      from clientes cl
+      join veiculos v on v.cliente_id = cl.id
+     cross join esc
+     where v.status::text in ('ativo', 'em_evento', 'vistoria_pendente', 'inadimplente')
+       and (esc.global or cl.regional_id = any (esc.regionais))
+       and (p_regional_id is null or cl.regional_id = p_regional_id)
+  ),
+  venc as (
+    select * from cobranca_boletos_base(null, null, p_regional_id) where situacao = 'vencido'
+  )
+  select (select count(*) from ativos),
+         (select count(distinct v.cliente_id) from venc v join ativos a on a.id = v.cliente_id),
+         (select count(*) from venc),
+         (select coalesce(sum(valor), 0) from venc),
+         (select max(capturado_em) from mutual_captura where entidade = 'INVOICE'),
+         (select max(atualizado_em) from boletos_historico);
+$$;
+
+/** O mes por CICLO de vencimento (5/10/15/20/25/30). */
+create or replace function cobranca_calendario(p_mes date, p_regional_id uuid default null)
+returns table (
+  ciclo                integer,
+  data_ciclo           date,
+  boletos              bigint,
+  clientes             bigint,
+  valor_emitido        numeric,
+  valor_pago_no_prazo  numeric,
+  valor_pago_em_atraso numeric,
+  valor_a_vencer       numeric,
+  valor_vence_hoje     numeric,
+  valor_aberto_vencido numeric,
+  boletos_aberto_vencido bigint,
+  valor_venceram       numeric
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with m as (
+    select date_trunc('month', p_mes)::date as ini,
+           (date_trunc('month', p_mes) + interval '1 month - 1 day')::date as fim
+  ),
+  c as (select unnest(array[5, 10, 15, 20, 25, 30]) as ciclo),
+  b as (
+    select * from cobranca_boletos_base((select ini from m), (select fim from m), p_regional_id)
+     where situacao <> 'cancelado'
+  )
+  select c.ciclo,
+         least(make_date(extract(year from m.ini)::int, extract(month from m.ini)::int, 1) + (c.ciclo - 1), m.fim),
+         count(b.boleto_id),
+         count(distinct b.cliente_id),
+         coalesce(sum(b.valor), 0),
+         coalesce(sum(coalesce(b.valor_pago, b.valor)) filter (where b.situacao = 'pago_no_prazo'), 0),
+         coalesce(sum(coalesce(b.valor_pago, b.valor)) filter (where b.situacao = 'pago_em_atraso'), 0),
+         coalesce(sum(b.valor) filter (where b.situacao = 'a_vencer'), 0),
+         coalesce(sum(b.valor) filter (where b.situacao = 'vence_hoje'), 0),
+         coalesce(sum(b.valor) filter (where b.situacao = 'vencido'), 0),
+         count(b.boleto_id) filter (where b.situacao = 'vencido'),
+         coalesce(sum(b.valor) filter (where b.vencimento_efetivo < current_date), 0)
+    from c cross join m
+    left join b on b.ciclo = c.ciclo
+   group by c.ciclo, m.ini, m.fim
+   order by c.ciclo;
+$$;
+
+/** Uma linha por unidade visivel — para "regional x media nacional". */
+create or replace function cobranca_por_regional(p_inicio date, p_fim date)
+returns table (
+  regional_id          uuid,
+  regional             text,
+  boletos              bigint,
+  valor_emitido        numeric,
+  valor_venceram       numeric,
+  valor_aberto_vencido numeric,
+  valor_pago_em_atraso numeric,
+  clientes_venceram    bigint,
+  clientes_inadimplentes bigint
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select b.regional_id,
+         coalesce(g.nome, 'MATRIZ (sem unidade)'),
+         count(*),
+         coalesce(sum(b.valor), 0),
+         coalesce(sum(b.valor) filter (where b.vencimento_efetivo < current_date), 0),
+         coalesce(sum(b.valor) filter (where b.situacao = 'vencido'), 0),
+         coalesce(sum(coalesce(b.valor_pago, b.valor)) filter (where b.situacao = 'pago_em_atraso'), 0),
+         count(distinct b.cliente_id) filter (where b.vencimento_efetivo < current_date),
+         count(distinct b.cliente_id) filter (where b.situacao = 'vencido')
+    from cobranca_boletos_base(p_inicio, p_fim, null) b
+    left join regionais g on g.id = b.regional_id
+   where b.situacao <> 'cancelado'
+   group by b.regional_id, g.nome
+   order by 2;
+$$;
+
+/** Evolucao mensal (por mes de vencimento) dos ultimos `p_meses` meses. */
+create or replace function cobranca_serie_mensal(p_meses integer default 12, p_regional_id uuid default null)
+returns table (
+  mes                  date,
+  valor_emitido        numeric,
+  valor_venceram       numeric,
+  valor_aberto_vencido numeric,
+  valor_pago_no_prazo  numeric,
+  valor_pago_em_atraso numeric
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with m as (
+    select (date_trunc('month', current_date) - make_interval(months => k))::date as mes
+      from generate_series(0, greatest(1, least(coalesce(p_meses, 12), 36)) - 1) k
+  ),
+  b as (
+    select * from cobranca_boletos_base((select min(mes) from m),
+                                        (date_trunc('month', current_date) + interval '1 month - 1 day')::date,
+                                        p_regional_id)
+     where situacao <> 'cancelado'
+  )
+  select m.mes,
+         coalesce(sum(b.valor), 0),
+         coalesce(sum(b.valor) filter (where b.vencimento_efetivo < current_date), 0),
+         coalesce(sum(b.valor) filter (where b.situacao = 'vencido'), 0),
+         coalesce(sum(coalesce(b.valor_pago, b.valor)) filter (where b.situacao = 'pago_no_prazo'), 0),
+         coalesce(sum(coalesce(b.valor_pago, b.valor)) filter (where b.situacao = 'pago_em_atraso'), 0)
+    from m left join b on date_trunc('month', b.vencimento)::date = m.mes
+   group by m.mes
+   order by m.mes;
+$$;
+
+/**
+ * O DETALHAMENTO: todo numero do painel abre os boletos que o compoem.
+ * `total_registros`/`total_valor` vem na propria linha (janela), entao a tela
+ * mostra a quantidade e a soma do FILTRO mesmo quando corta pelo limite.
+ */
+create or replace function cobranca_boletos_lista(
+  p_inicio           date default null,
+  p_fim              date default null,
+  p_regional_id      uuid default null,
+  p_situacoes        text[] default null,
+  p_ciclo            integer default null,
+  p_somente_primeiro boolean default false,
+  p_pago_inicio      date default null,
+  p_pago_fim         date default null,
+  p_limite           integer default 2000
+)
+returns table (
+  origem          text,
+  boleto_id       uuid,
+  cliente_id      uuid,
+  associado       text,
+  cpf_cnpj        text,
+  placa           text,
+  regional        text,
+  competencia     date,
+  vencimento      date,
+  valor           numeric,
+  valor_pago      numeric,
+  data_pagamento  date,
+  situacao        text,
+  ciclo           integer,
+  dias_atraso     integer,
+  em_serasa       boolean,
+  total_registros bigint,
+  total_valor     numeric
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with b as (
+    select * from cobranca_boletos_base(
+      case when p_somente_primeiro then null else p_inicio end,
+      case when p_somente_primeiro then null else p_fim end,
+      p_regional_id)
+  ),
+  prim as (
+    select distinct on (cliente_id) boleto_id
+      from b where situacao <> 'cancelado'
+     order by cliente_id, vencimento, boleto_id
+  ),
+  f as (
+    select b.* from b
+     where (p_situacoes is null or b.situacao = any (p_situacoes))
+       and (p_ciclo is null or b.ciclo = p_ciclo)
+       and (not p_somente_primeiro or (b.boleto_id in (select boleto_id from prim)
+                                       and (p_inicio is null or b.vencimento >= p_inicio)
+                                       and (p_fim is null or b.vencimento <= p_fim)))
+       and (p_pago_inicio is null or b.data_pagamento >= p_pago_inicio)
+       and (p_pago_fim is null or b.data_pagamento <= p_pago_fim)
+  )
+  select f.origem, f.boleto_id, f.cliente_id, cl.nome_razao_social, cl.cpf_cnpj,
+         coalesce(v.placa, (select string_agg(distinct v2.placa, ', ')
+                              from veiculos v2 where v2.cliente_id = f.cliente_id)),
+         coalesce(g.nome, 'MATRIZ'),
+         f.competencia, f.vencimento, f.valor, f.valor_pago, f.data_pagamento,
+         f.situacao, f.ciclo, f.dias_atraso, f.em_serasa,
+         count(*) over (), sum(f.valor) over ()
+    from f
+    join clientes cl on cl.id = f.cliente_id
+    left join veiculos v on v.id = f.veiculo_id
+    left join regionais g on g.id = f.regional_id
+   order by f.dias_atraso desc, f.valor desc, f.vencimento
+   limit greatest(1, least(coalesce(p_limite, 2000), 10000));
+$$;
+
+-- ============================================================================
+-- (F) resumo_cobrancas (0025): a formula da inadimplencia
+-- ============================================================================
+-- Era vencido / emitido — com o "a vencer" no denominador, quanto mais boleto
+-- futuro no periodo, menor a inadimplencia. Agora: vencido / o que JA venceu
+-- (vencido + pago com vencimento passado). Mesma assinatura e mesmo retorno.
+create or replace function resumo_cobrancas(
+  p_inicio      date default null,
+  p_fim         date default null,
+  p_regional_id uuid default null
+)
+returns table (
+  emitido_qtd       integer,
+  emitido_valor     numeric,
+  recebido_qtd      integer,
+  recebido_valor    numeric,
+  aberto_qtd        integer,
+  aberto_valor      numeric,
+  vencido_qtd       integer,
+  vencido_valor     numeric,
+  inadimplencia_pct numeric,
+  vencer_7_qtd      integer,
+  vencer_7_valor    numeric,
+  vencer_15_qtd     integer,
+  vencer_15_valor   numeric,
+  vencer_30_qtd     integer,
+  vencer_30_valor   numeric
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with c as (
+    select * from listar_cobrancas(p_inicio, p_fim, null, null, null, null, null, p_regional_id, 100000)
+  ),
+  fut as (
+    select * from listar_cobrancas(current_date, current_date + 30, null, null, null, null, 'aberto', p_regional_id, 100000)
+  )
+  select
+    count(*) filter (where c.status <> 'cancelado')::int,
+    coalesce(sum(c.valor) filter (where c.status <> 'cancelado'), 0),
+    count(*) filter (where c.status = 'pago')::int,
+    coalesce(sum(coalesce(c.valor_pago, c.valor)) filter (where c.status = 'pago'), 0),
+    count(*) filter (where c.status = 'aberto')::int,
+    coalesce(sum(c.valor) filter (where c.status = 'aberto'), 0),
+    count(*) filter (where c.status = 'vencido')::int,
+    coalesce(sum(c.valor) filter (where c.status = 'vencido'), 0),
+    round(
+      coalesce(sum(c.valor) filter (where c.status = 'vencido'), 0)
+      / nullif(coalesce(sum(c.valor) filter (
+          where c.status = 'vencido'
+             or (c.status = 'pago' and c.data_vencimento < current_date)), 0), 0) * 100,
+      2
+    ),
+    (select count(*)::int from fut where fut.data_vencimento <= current_date + 7),
+    (select coalesce(sum(valor), 0) from fut where fut.data_vencimento <= current_date + 7),
+    (select count(*)::int from fut where fut.data_vencimento <= current_date + 15),
+    (select coalesce(sum(valor), 0) from fut where fut.data_vencimento <= current_date + 15),
+    (select count(*)::int from fut where fut.data_vencimento <= current_date + 30),
+    (select coalesce(sum(valor), 0) from fut where fut.data_vencimento <= current_date + 30)
+  from c;
+$$;
+
+-- ============================================================================
+-- Rito da 0052
+-- ============================================================================
+revoke execute on all functions in schema public from public;
+revoke execute on all functions in schema public from anon;
+grant  execute on all functions in schema public to authenticated;
+grant  execute on all functions in schema public to service_role;
+
+-- >>>>>>>>>>>>>>>>>>>>>>>> migrations/0098_cobranca_fila.sql >>>>>>>>>>>>>>>>>>>>>>>>
+
+-- ============================================================================
+-- 0098 — COBRANCA, FASE 2: a FILA, o HISTORICO DE CONTATOS e as PROMESSAS
+-- ============================================================================
+-- O documento do modulo (Rodrigo Medeiros, 30/09/2026) pede, depois do painel:
+--   * a fila operacional — quem cobrar hoje, por faixa de atraso;
+--   * o historico de contatos que NAO pode ser apagado (canal, resultado,
+--     proxima acao);
+--   * as promessas de pagamento e a TAXA DE CUMPRIMENTO delas; e os acordos.
+--
+-- DECISOES QUE MORAM AQUI
+-- 1. CONTATO E HISTORICO: nao se edita nem se apaga, nem pela service_role —
+--    a trava e TRIGGER, porque a service_role ignora RLS. Quem errou registra
+--    outro contato corrigindo.
+-- 2. PROMESSA e ACORDO sao a mesma coisa com 1 ou N parcelas: o associado se
+--    compromete a pagar a DIVIDA QUE EXISTE (os boletos ja vencidos) em datas
+--    combinadas. Nao se emite boleto novo aqui — isso depende do gateway real
+--    e, para quem ainda e cobrado no Mutual, acontece la.
+-- 3. A SITUACAO DA PROMESSA E CALCULADA, nunca digitada. Pagamento que conta:
+--    boleto do associado com vencimento ATE a data da promessa, pago A PARTIR
+--    dela. Parcela cumprida = o pago ate o vencimento dela cobre o acumulado
+--    das parcelas ate ali. Quebrada = passou do vencimento + 3 dias (o prazo
+--    de baixa do banco) sem cobrir. Quitar a divida inteira cumpre as parcelas
+--    que ainda nao tinham quebrado. Mensalidade NOVA paga nao conta: senao o
+--    associado "cumpriria" a promessa pagando o mes corrente.
+-- 4. ⚠️ O dado do Mutual so e tao novo quanto a ultima captura de INVOICE:
+--    promessa paga no Mutual aparece cumprida depois da recaptura + importacao.
+-- 5. Escopo: o mesmo da Fase 1 (`cobranca_escopo`), pela unidade ATUAL do
+--    associado.
+-- ============================================================================
+
+-- ============================================================================
+-- (A) HELPERS
+-- ============================================================================
+/** Faixa de atraso da fila — espelho de `faixaDeAtraso` (src/lib/cobranca-fila.ts). */
+create or replace function cobranca_faixa_atraso(p_dias integer)
+returns text
+language sql
+immutable
+set search_path = public
+as $$
+  select case
+    when p_dias is null or p_dias <= 0 then null
+    when p_dias <= 5  then 'D01_05'
+    when p_dias <= 10 then 'D06_10'
+    when p_dias <= 15 then 'D11_15'
+    when p_dias <= 30 then 'D16_30'
+    when p_dias <= 60 then 'D31_60'
+    when p_dias <= 90 then 'D61_90'
+    else 'D90_MAIS'
+  end;
+$$;
+
+/** O associado esta no escopo de cobranca de quem chama? (unidade ATUAL dele) */
+create or replace function cobranca_pode_cliente(p_cliente_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+      from clientes cl, cobranca_escopo() e
+     where cl.id = p_cliente_id
+       and (e.global or cl.regional_id = any (e.regionais))
+  );
+$$;
+
+-- ============================================================================
+-- (B) CONTATOS — o historico que nao se apaga
+-- ============================================================================
+create table if not exists cobranca_contatos (
+  id               uuid primary key default gen_random_uuid(),
+  cliente_id       uuid not null references clientes(id),
+  regional_id      uuid references regionais(id),
+  canal            text not null,
+  resultado        text not null,
+  observacao       text,
+  proxima_acao_em  date,
+  proxima_acao     text,
+  -- retrato da divida NO MOMENTO do contato (a divida muda; o contato nao)
+  boletos_vencidos integer not null default 0,
+  valor_vencido    numeric(12,2) not null default 0,
+  dias_atraso      integer not null default 0,
+  usuario_id       uuid references usuarios(id),
+  created_at       timestamptz not null default clock_timestamp(),
+  constraint chk_cobranca_contato_canal check (canal in
+    ('LIGACAO','WHATSAPP','SMS','EMAIL','PRESENCIAL','OUTRO')),
+  constraint chk_cobranca_contato_resultado check (resultado in
+    ('FALOU','NAO_ATENDEU','RECADO','NUMERO_ERRADO','PROMETEU','NEGOCIANDO','RECUSOU','JA_PAGOU'))
+);
+create index if not exists idx_cobranca_contatos_cliente on cobranca_contatos (cliente_id, created_at desc);
+
+comment on table cobranca_contatos is
+  'Historico de contatos de cobranca (0098). IMUTAVEL: trigger recusa update e delete, inclusive da service_role.';
+
+create or replace function fn_cobranca_contato_imutavel()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  raise exception 'O historico de contatos de cobranca nao se altera nem se apaga. Registre um novo contato corrigindo.'
+    using errcode = 'check_violation';
+end;
+$$;
+
+drop trigger if exists trg_cobranca_contato_imutavel on cobranca_contatos;
+create trigger trg_cobranca_contato_imutavel
+  before update or delete on cobranca_contatos
+  for each row execute function fn_cobranca_contato_imutavel();
+
+alter table cobranca_contatos enable row level security;
+drop policy if exists cobranca_contatos_select on cobranca_contatos;
+create policy cobranca_contatos_select on cobranca_contatos
+  for select to authenticated using (cobranca_pode_cliente(cliente_id));
+-- sem policy de escrita: grava SO por `registrar_contato_cobranca`.
+grant select on cobranca_contatos to authenticated;
+
+-- ============================================================================
+-- (C) PROMESSAS E ACORDOS
+-- ============================================================================
+create table if not exists cobranca_acordos (
+  id                  uuid primary key default gen_random_uuid(),
+  cliente_id          uuid not null references clientes(id),
+  regional_id         uuid references regionais(id),
+  tipo                text not null,
+  data_base           date not null default current_date,
+  valor_total         numeric(12,2) not null,
+  divida_na_data      numeric(12,2) not null default 0,
+  observacao          text,
+  contato_id          uuid references cobranca_contatos(id),
+  criado_por          uuid references usuarios(id),
+  created_at          timestamptz not null default clock_timestamp(),
+  cancelado_em        timestamptz,
+  cancelado_por       uuid references usuarios(id),
+  motivo_cancelamento text,
+  constraint chk_cobranca_acordo_tipo check (tipo in ('PROMESSA','ACORDO')),
+  constraint chk_cobranca_acordo_valor check (valor_total > 0),
+  constraint chk_cobranca_acordo_cancelamento check (
+    (cancelado_em is null and motivo_cancelamento is null)
+    or (cancelado_em is not null and length(btrim(motivo_cancelamento)) >= 5))
+);
+create index if not exists idx_cobranca_acordos_cliente on cobranca_acordos (cliente_id, created_at desc);
+
+create table if not exists cobranca_acordo_parcelas (
+  acordo_id  uuid not null references cobranca_acordos(id),
+  numero     smallint not null,
+  vencimento date not null,
+  valor      numeric(12,2) not null,
+  primary key (acordo_id, numero),
+  constraint chk_cobranca_parcela_numero check (numero between 1 and 36),
+  constraint chk_cobranca_parcela_valor check (valor > 0)
+);
+
+comment on table cobranca_acordos is
+  'Promessas (1 parcela) e acordos (N parcelas) de pagamento da divida existente (0098). '
+  'A situacao e CALCULADA pelos pagamentos (cobranca_acordos_situacao); a unica mudanca permitida e o cancelamento.';
+
+/** Acordo so muda para ser CANCELADO (uma vez); parcela nunca muda. */
+create or replace function fn_cobranca_acordo_imutavel()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if tg_op = 'DELETE' then
+    raise exception 'Promessa/acordo de cobranca nao se apaga: cancele com o motivo.' using errcode = 'check_violation';
+  end if;
+  if old.cancelado_em is not null
+     or new.cancelado_em is null
+     or (to_jsonb(new) - array['cancelado_em','cancelado_por','motivo_cancelamento'])
+        <> (to_jsonb(old) - array['cancelado_em','cancelado_por','motivo_cancelamento']) then
+    raise exception 'Promessa/acordo de cobranca so pode ser cancelado (e uma vez so).' using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_cobranca_acordo_imutavel on cobranca_acordos;
+create trigger trg_cobranca_acordo_imutavel
+  before update or delete on cobranca_acordos
+  for each row execute function fn_cobranca_acordo_imutavel();
+
+create or replace function fn_cobranca_parcela_imutavel()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  raise exception 'Parcela de promessa/acordo nao se altera nem se apaga.' using errcode = 'check_violation';
+end;
+$$;
+
+drop trigger if exists trg_cobranca_parcela_imutavel on cobranca_acordo_parcelas;
+create trigger trg_cobranca_parcela_imutavel
+  before update or delete on cobranca_acordo_parcelas
+  for each row execute function fn_cobranca_parcela_imutavel();
+
+alter table cobranca_acordos enable row level security;
+alter table cobranca_acordo_parcelas enable row level security;
+drop policy if exists cobranca_acordos_select on cobranca_acordos;
+create policy cobranca_acordos_select on cobranca_acordos
+  for select to authenticated using (cobranca_pode_cliente(cliente_id));
+drop policy if exists cobranca_parcelas_select on cobranca_acordo_parcelas;
+create policy cobranca_parcelas_select on cobranca_acordo_parcelas
+  for select to authenticated using (exists (
+    select 1 from cobranca_acordos a where a.id = acordo_id and cobranca_pode_cliente(a.cliente_id)));
+grant select on cobranca_acordos, cobranca_acordo_parcelas to authenticated;
+
+/**
+ * A SITUACAO de cada promessa/acordo, calculada pelos pagamentos (ver o
+ * cabecalho, decisao 3). Espelho de `situacaoParcela`/`statusAcordo`
+ * (src/lib/cobranca-fila.ts). `quebra_em` = o 1o dia em que a promessa conta
+ * como quebrada (vencimento da parcela + 4): contato a partir dele tira o
+ * associado do topo da fila.
+ */
+create or replace function cobranca_acordos_situacao(
+  p_regional_id uuid default null,
+  p_cliente_id  uuid default null
+)
+returns table (
+  acordo_id             uuid,
+  cliente_id            uuid,
+  regional_id           uuid,
+  tipo                  text,
+  data_base             date,
+  valor_total           numeric,
+  divida_na_data        numeric,
+  observacao            text,
+  criado_por_nome       text,
+  created_at            timestamptz,
+  cancelado_em          timestamptz,
+  motivo_cancelamento   text,
+  status                text,
+  valor_pago            numeric,
+  parcelas              jsonb,
+  quebra_em             date,
+  proxima_parcela_em    date,
+  proxima_parcela_valor numeric
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with esc as (select * from cobranca_escopo()),
+  a as (
+    select a.*, cl.regional_id as regional_atual
+      from cobranca_acordos a
+      join clientes cl on cl.id = a.cliente_id
+     cross join esc
+     where (esc.global or cl.regional_id = any (esc.regionais))
+       and (p_regional_id is null or cl.regional_id = p_regional_id)
+       and (p_cliente_id is null or a.cliente_id = p_cliente_id)
+  ),
+  b as (
+    select bb.* from cobranca_boletos_base(null, null, p_regional_id) bb
+     where bb.cliente_id in (select a.cliente_id from a)
+  ),
+  pg as (
+    select a.id as acordo_id, b.data_pagamento, coalesce(b.valor_pago, b.valor) as v
+      from a
+      join b on b.cliente_id = a.cliente_id
+     where b.vencimento <= a.data_base
+       and b.situacao in ('pago_no_prazo', 'pago_em_atraso')
+       and b.data_pagamento >= a.data_base
+  ),
+  q as (
+    select a.id,
+           (not exists (select 1 from b
+                         where b.cliente_id = a.cliente_id and b.vencimento <= a.data_base
+                           and b.situacao in ('vencido', 'vence_hoje', 'a_vencer'))
+            and exists (select 1 from pg where pg.acordo_id = a.id)) as quitado,
+           (select coalesce(sum(pg.v), 0) from pg where pg.acordo_id = a.id) as pago_total
+      from a
+  ),
+  p as (
+    select pc.*, sum(pc.valor) over (partition by pc.acordo_id order by pc.numero) as acumulado
+      from cobranca_acordo_parcelas pc
+     where pc.acordo_id in (select id from a)
+  ),
+  ps as (
+    select p.*, q.quitado,
+           (select coalesce(sum(pg.v), 0) from pg
+             where pg.acordo_id = p.acordo_id and pg.data_pagamento <= p.vencimento) as pago_ate
+      from p join q on q.id = p.acordo_id
+  ),
+  pst as (
+    select ps.*,
+           case
+             when ps.pago_ate >= ps.acumulado - 0.01 then 'cumprida'
+             when ps.quitado and current_date <= ps.vencimento + 3 then 'cumprida'
+             when current_date > ps.vencimento + 3 then 'quebrada'
+             when current_date > ps.vencimento then 'aguardando_baixa'
+             else 'a_vencer'
+           end as situacao
+      from ps
+  ),
+  ag as (
+    select pst.acordo_id,
+           bool_and(pst.situacao = 'cumprida') as todas,
+           bool_or(pst.situacao = 'quebrada') as quebrou,
+           min(pst.vencimento + 4) filter (where pst.situacao = 'quebrada') as quebra_em,
+           min(pst.vencimento) filter (where pst.situacao in ('a_vencer', 'aguardando_baixa')) as prox,
+           jsonb_agg(jsonb_build_object(
+             'numero', pst.numero, 'vencimento', pst.vencimento, 'valor', pst.valor,
+             'acumulado', pst.acumulado, 'pago_ate', pst.pago_ate, 'situacao', pst.situacao
+           ) order by pst.numero) as parcelas
+      from pst group by pst.acordo_id
+  )
+  select a.id, a.cliente_id, a.regional_atual, a.tipo, a.data_base, a.valor_total,
+         a.divida_na_data, a.observacao, u.nome, a.created_at, a.cancelado_em,
+         a.motivo_cancelamento,
+         case when a.cancelado_em is not null then 'CANCELADO'
+              when ag.todas then 'CUMPRIDO'
+              when ag.quebrou then 'QUEBRADO'
+              else 'EM_ANDAMENTO' end,
+         q.pago_total, ag.parcelas, ag.quebra_em, ag.prox,
+         (select pp.valor from cobranca_acordo_parcelas pp
+           where pp.acordo_id = a.id and pp.vencimento = ag.prox limit 1)
+    from a
+    join ag on ag.acordo_id = a.id
+    join q on q.id = a.id
+    left join usuarios u on u.id = a.criado_por
+   order by a.created_at desc;
+$$;
+
+-- ============================================================================
+-- (D) A FILA
+-- ============================================================================
+/**
+ * Uma linha por associado ATIVO com boleto vencido em aberto, com o ultimo
+ * contato, a promessa vigente e a SITUACAO NA FILA — espelho de `situacaoFila`
+ * (src/lib/cobranca-fila.ts):
+ *   promessa_quebrada (1) > retorno_atrasado (2) > retorno_hoje (3)
+ *   > sem_contato (4) > aguardando (5) > promessa_em_dia (6).
+ * Contato anterior a divida atual nao conta ("sem contato"); contato sem data
+ * de retorno vira retorno em 2 dias, para o associado voltar a fila sozinho.
+ */
+create or replace function cobranca_fila_base(p_regional_id uuid default null)
+returns table (
+  cliente_id          uuid,
+  associado           text,
+  cpf_cnpj            text,
+  telefone            text,
+  celular             text,
+  regional_id         uuid,
+  regional            text,
+  placas              text,
+  boletos_vencidos    bigint,
+  valor_vencido       numeric,
+  dias_atraso         integer,
+  faixa               text,
+  vencido_desde       date,
+  ultimo_contato_em   timestamptz,
+  ultimo_canal        text,
+  ultimo_resultado    text,
+  ultimo_usuario      text,
+  ultima_observacao   text,
+  retorno_em          date,
+  proxima_acao        text,
+  contatos            bigint,
+  acordo_id           uuid,
+  acordo_tipo         text,
+  acordo_status       text,
+  proxima_parcela_em  date,
+  proxima_parcela_valor numeric,
+  situacao_fila       text,
+  prioridade          integer
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with venc as (
+    select * from cobranca_boletos_base(null, null, p_regional_id) where situacao = 'vencido'
+  ),
+  ativos as (
+    select distinct v.cliente_id from veiculos v
+     where v.status::text in ('ativo', 'em_evento', 'vistoria_pendente', 'inadimplente')
+  ),
+  d as (
+    select venc.cliente_id, count(*) as n, sum(venc.valor) as valor,
+           max(venc.dias_atraso) as atraso, min(venc.vencimento) as desde
+      from venc
+      join ativos on ativos.cliente_id = venc.cliente_id
+     group by venc.cliente_id
+  ),
+  uc as (
+    select distinct on (c.cliente_id) c.*, u.nome as usuario_nome
+      from cobranca_contatos c
+      left join usuarios u on u.id = c.usuario_id
+     where c.cliente_id in (select d.cliente_id from d)
+     order by c.cliente_id, c.created_at desc, c.id desc
+  ),
+  nc as (
+    select c.cliente_id, count(*) as n from cobranca_contatos c
+     where c.cliente_id in (select d.cliente_id from d) group by 1
+  ),
+  ac as (
+    select distinct on (s.cliente_id) s.*
+      from cobranca_acordos_situacao(p_regional_id, null) s
+      join d on d.cliente_id = s.cliente_id
+     where s.status in ('EM_ANDAMENTO', 'QUEBRADO')
+       and s.data_base >= d.desde
+     order by s.cliente_id, s.created_at desc
+  ),
+  l as (
+    select d.*, uc.id as contato_id, uc.created_at as contato_em, uc.canal, uc.resultado,
+           uc.usuario_nome, uc.observacao, uc.proxima_acao,
+           case when uc.id is null then null
+                else coalesce(uc.proxima_acao_em, (uc.created_at)::date + 2) end as retorno,
+           ac.acordo_id, ac.tipo, ac.status as acordo_status, ac.quebra_em,
+           ac.proxima_parcela_em, ac.proxima_parcela_valor,
+           coalesce(nc.n, 0) as contatos
+      from d
+      left join uc on uc.cliente_id = d.cliente_id
+      left join nc on nc.cliente_id = d.cliente_id
+      left join ac on ac.cliente_id = d.cliente_id
+  ),
+  s as (
+    select l.*,
+           case
+             when l.acordo_status = 'QUEBRADO'
+                  and (l.contato_em is null or (l.contato_em)::date < l.quebra_em) then 'promessa_quebrada'
+             when l.acordo_status = 'EM_ANDAMENTO' then 'promessa_em_dia'
+             when l.contato_em is null or (l.contato_em)::date < l.desde then 'sem_contato'
+             when l.retorno < current_date then 'retorno_atrasado'
+             when l.retorno = current_date then 'retorno_hoje'
+             else 'aguardando'
+           end as situacao
+      from l
+  )
+  select s.cliente_id, cl.nome_razao_social, cl.cpf_cnpj, cl.telefone, cl.celular,
+         cl.regional_id, coalesce(g.nome, 'MATRIZ'),
+         (select string_agg(v.placa, ', ' order by v.placa) from veiculos v
+           where v.cliente_id = s.cliente_id
+             and v.status::text in ('ativo', 'em_evento', 'vistoria_pendente', 'inadimplente')),
+         s.n, s.valor, s.atraso, cobranca_faixa_atraso(s.atraso), s.desde,
+         s.contato_em, s.canal, s.resultado, s.usuario_nome, s.observacao,
+         s.retorno, s.proxima_acao, s.contatos,
+         s.acordo_id, s.tipo, s.acordo_status, s.proxima_parcela_em, s.proxima_parcela_valor,
+         s.situacao,
+         case s.situacao
+           when 'promessa_quebrada' then 1 when 'retorno_atrasado' then 2
+           when 'retorno_hoje' then 3 when 'sem_contato' then 4
+           when 'aguardando' then 5 else 6 end
+    from s
+    join clientes cl on cl.id = s.cliente_id
+    left join regionais g on g.id = cl.regional_id;
+$$;
+
+/** A fila filtrada e paginada (o PostgREST corta em 1.000 linhas). */
+create or replace function cobranca_fila(
+  p_regional_id uuid default null,
+  p_situacao    text default null,
+  p_faixa       text default null,
+  p_busca       text default null,
+  p_limite      integer default 100,
+  p_offset      integer default 0
+)
+returns table (
+  cliente_id          uuid,
+  associado           text,
+  cpf_cnpj            text,
+  telefone            text,
+  celular             text,
+  regional_id         uuid,
+  regional            text,
+  placas              text,
+  boletos_vencidos    bigint,
+  valor_vencido       numeric,
+  dias_atraso         integer,
+  faixa               text,
+  vencido_desde       date,
+  ultimo_contato_em   timestamptz,
+  ultimo_canal        text,
+  ultimo_resultado    text,
+  ultimo_usuario      text,
+  ultima_observacao   text,
+  retorno_em          date,
+  proxima_acao        text,
+  contatos            bigint,
+  acordo_id           uuid,
+  acordo_tipo         text,
+  acordo_status       text,
+  proxima_parcela_em  date,
+  proxima_parcela_valor numeric,
+  situacao_fila       text,
+  prioridade          integer,
+  total_registros     bigint,
+  total_valor         numeric
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with f as (
+    select b.* from cobranca_fila_base(p_regional_id) b
+     where (p_situacao is null or b.situacao_fila = p_situacao)
+       and (p_faixa is null or b.faixa = p_faixa)
+       and (nullif(btrim(coalesce(p_busca, '')), '') is null
+            or texto_sem_acento(b.associado) ilike '%' || texto_sem_acento(btrim(p_busca)) || '%'
+            or (length(regexp_replace(p_busca, '\D', '', 'g')) >= 3
+                and regexp_replace(coalesce(b.cpf_cnpj, '') || ' ' || coalesce(b.telefone, '') || ' ' ||
+                                   coalesce(b.celular, ''), '\D', '', 'g')
+                    like '%' || regexp_replace(p_busca, '\D', '', 'g') || '%')
+            or upper(coalesce(b.placas, '')) like '%' || upper(regexp_replace(p_busca, '[^A-Za-z0-9]', '', 'g')) || '%')
+  )
+  select f.*, count(*) over (), sum(f.valor_vencido) over ()
+    from f
+   order by f.prioridade, f.dias_atraso desc, f.valor_vencido desc, f.cliente_id
+   limit greatest(1, least(coalesce(p_limite, 100), 500))
+  offset greatest(0, coalesce(p_offset, 0));
+$$;
+
+/** Quantos associados e quanto dinheiro por SITUACAO e por FAIXA (os tiles). */
+create or replace function cobranca_fila_resumo(p_regional_id uuid default null)
+returns table (grupo text, chave text, clientes bigint, valor numeric)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with b as (select * from cobranca_fila_base(p_regional_id))
+  select 'situacao', b.situacao_fila, count(*), sum(b.valor_vencido) from b group by 2
+  union all
+  select 'faixa', b.faixa, count(*), sum(b.valor_vencido) from b group by 2;
+$$;
+
+/**
+ * As promessas de um PERIODO (pela data em que foram feitas) — a taxa de
+ * cumprimento sai daqui: cumpridas / (cumpridas + quebradas). Em andamento e
+ * canceladas ficam fora do denominador. O percentual e calculado no TS.
+ */
+create or replace function cobranca_promessas_resumo(
+  p_inicio      date,
+  p_fim         date,
+  p_regional_id uuid default null
+)
+returns table (
+  feitas            bigint,
+  cumpridas         bigint,
+  quebradas         bigint,
+  em_andamento      bigint,
+  canceladas        bigint,
+  valor_prometido   numeric,
+  valor_recuperado  numeric
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select count(*),
+         count(*) filter (where s.status = 'CUMPRIDO'),
+         count(*) filter (where s.status = 'QUEBRADO'),
+         count(*) filter (where s.status = 'EM_ANDAMENTO'),
+         count(*) filter (where s.status = 'CANCELADO'),
+         coalesce(sum(s.valor_total) filter (where s.status <> 'CANCELADO'), 0),
+         coalesce(sum(s.valor_pago) filter (where s.status <> 'CANCELADO'), 0)
+    from cobranca_acordos_situacao(p_regional_id, null) s
+   where s.data_base between p_inicio and p_fim;
+$$;
+
+-- ============================================================================
+-- (E) A FICHA DO ASSOCIADO NA COBRANCA
+-- ============================================================================
+/** Os contatos do associado, do mais novo ao mais antigo, com a promessa que nasceu de cada um. */
+create or replace function cobranca_contatos_cliente(p_cliente_id uuid)
+returns table (
+  id               uuid,
+  canal            text,
+  resultado        text,
+  observacao       text,
+  proxima_acao_em  date,
+  proxima_acao     text,
+  boletos_vencidos integer,
+  valor_vencido    numeric,
+  dias_atraso      integer,
+  usuario          text,
+  created_at       timestamptz,
+  acordo_id        uuid
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select c.id, c.canal, c.resultado, c.observacao, c.proxima_acao_em, c.proxima_acao,
+         c.boletos_vencidos, c.valor_vencido, c.dias_atraso, u.nome, c.created_at,
+         (select a.id from cobranca_acordos a where a.contato_id = c.id limit 1)
+    from cobranca_contatos c
+    left join usuarios u on u.id = c.usuario_id
+   where c.cliente_id = p_cliente_id
+     and cobranca_pode_cliente(p_cliente_id)
+   order by c.created_at desc, c.id desc;
+$$;
+
+/** Os boletos do associado (abertos primeiro), para a ficha. */
+create or replace function cobranca_boletos_cliente(p_cliente_id uuid)
+returns table (
+  origem         text,
+  boleto_id      uuid,
+  placa          text,
+  competencia    date,
+  vencimento     date,
+  valor          numeric,
+  valor_pago     numeric,
+  data_pagamento date,
+  situacao       text,
+  dias_atraso    integer,
+  em_serasa      boolean
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select b.origem, b.boleto_id, v.placa, b.competencia, b.vencimento, b.valor,
+         b.valor_pago, b.data_pagamento, b.situacao, b.dias_atraso, b.em_serasa
+    from cobranca_boletos_base(null, null, null) b
+    left join veiculos v on v.id = b.veiculo_id
+   where b.cliente_id = p_cliente_id
+   order by case b.situacao when 'vencido' then 0 when 'vence_hoje' then 1
+                            when 'a_vencer' then 2 else 3 end,
+            b.vencimento desc
+   limit 60;
+$$;
+
+-- ============================================================================
+-- (F) AS ESCRITAS
+-- ============================================================================
+/**
+ * Registra um contato e, quando `p_acordo` vem, a promessa/acordo que nasceu
+ * dele — numa transacao so. `p_acordo`:
+ *   {"tipo":"PROMESSA"|"ACORDO", "observacao":"...",
+ *    "parcelas":[{"vencimento":"2026-10-20","valor":150.00}, ...]}
+ * Regras (espelho de `validarAcordo`, src/lib/cobranca-fila.ts): promessa tem
+ * 1 parcela; acordo de 2 a 36; vencimentos de hoje ate 1 ano, em ordem
+ * crescente; valores positivos; nao abre outra enquanto ha uma EM ANDAMENTO.
+ */
+create or replace function registrar_contato_cobranca(
+  p_cliente_id      uuid,
+  p_canal           text,
+  p_resultado       text,
+  p_observacao      text default null,
+  p_proxima_acao_em date default null,
+  p_proxima_acao    text default null,
+  p_acordo          jsonb default null
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_cli       clientes%rowtype;
+  v_contato   uuid;
+  v_acordo    uuid;
+  v_tipo      text;
+  v_parc      jsonb;
+  v_n         integer;
+  v_total     numeric := 0;
+  v_ant       date;
+  v_venc      date;
+  v_valor     numeric;
+  v_i         integer := 0;
+  v_qtd       integer; v_soma numeric; v_atraso integer;
+begin
+  if auth.uid() is not null and not is_staff() then
+    raise exception 'Sem permissao.' using errcode = 'insufficient_privilege';
+  end if;
+  select * into v_cli from clientes where id = p_cliente_id;
+  if not found then
+    raise exception 'Associado nao encontrado.' using errcode = 'no_data_found';
+  end if;
+  if not cobranca_pode_cliente(p_cliente_id) then
+    raise exception 'Este associado nao esta no seu escopo de cobranca.' using errcode = 'insufficient_privilege';
+  end if;
+  if p_canal is null or p_canal not in ('LIGACAO','WHATSAPP','SMS','EMAIL','PRESENCIAL','OUTRO') then
+    raise exception 'Canal de contato invalido: %.', coalesce(p_canal, '(vazio)') using errcode = 'check_violation';
+  end if;
+  if p_resultado is null or p_resultado not in
+     ('FALOU','NAO_ATENDEU','RECADO','NUMERO_ERRADO','PROMETEU','NEGOCIANDO','RECUSOU','JA_PAGOU') then
+    raise exception 'Resultado de contato invalido: %.', coalesce(p_resultado, '(vazio)') using errcode = 'check_violation';
+  end if;
+  if p_proxima_acao_em is not null and p_proxima_acao_em < current_date then
+    raise exception 'A proxima acao nao pode ficar no passado.' using errcode = 'check_violation';
+  end if;
+  if p_resultado = 'PROMETEU' and p_acordo is null then
+    raise exception 'Resultado "prometeu pagar" exige a promessa (data e valor).' using errcode = 'check_violation';
+  end if;
+  if p_acordo is not null and p_resultado <> 'PROMETEU' then
+    raise exception 'Promessa/acordo so nasce de um contato com resultado "prometeu pagar".' using errcode = 'check_violation';
+  end if;
+
+  -- retrato da divida agora
+  select count(*), coalesce(sum(valor), 0), coalesce(max(dias_atraso), 0)
+    into v_qtd, v_soma, v_atraso
+    from cobranca_boletos_base(null, null, null)
+   where cliente_id = p_cliente_id and situacao = 'vencido';
+
+  if p_acordo is not null then
+    v_tipo := upper(coalesce(p_acordo->>'tipo', ''));
+    v_parc := p_acordo->'parcelas';
+    if v_tipo not in ('PROMESSA', 'ACORDO') then
+      raise exception 'Tipo invalido: use PROMESSA ou ACORDO.' using errcode = 'check_violation';
+    end if;
+    if v_parc is null or jsonb_typeof(v_parc) <> 'array' then
+      raise exception 'Informe as parcelas.' using errcode = 'check_violation';
+    end if;
+    v_n := jsonb_array_length(v_parc);
+    if v_tipo = 'PROMESSA' and v_n <> 1 then
+      raise exception 'Promessa tem uma parcela so; para mais, registre um ACORDO.' using errcode = 'check_violation';
+    end if;
+    if v_tipo = 'ACORDO' and (v_n < 2 or v_n > 36) then
+      raise exception 'Acordo tem de 2 a 36 parcelas.' using errcode = 'check_violation';
+    end if;
+    if exists (select 1 from cobranca_acordos_situacao(null, p_cliente_id) s where s.status = 'EM_ANDAMENTO') then
+      raise exception 'Ja existe promessa/acordo em andamento para este associado. Cancele antes de registrar outro.'
+        using errcode = 'unique_violation';
+    end if;
+    for v_i in 0 .. v_n - 1 loop
+      begin
+        v_venc  := (v_parc->v_i->>'vencimento')::date;
+        v_valor := (v_parc->v_i->>'valor')::numeric;
+      exception when others then
+        raise exception 'Parcela % com data ou valor ilegivel.', v_i + 1 using errcode = 'check_violation';
+      end;
+      if v_venc is null or v_valor is null or v_valor <= 0 then
+        raise exception 'Parcela % precisa de data e valor positivo.', v_i + 1 using errcode = 'check_violation';
+      end if;
+      if v_venc < current_date or v_venc > current_date + 365 then
+        raise exception 'Parcela %: a data tem de ser de hoje ate 1 ano.', v_i + 1 using errcode = 'check_violation';
+      end if;
+      if v_ant is not null and v_venc <= v_ant then
+        raise exception 'Parcela %: as datas tem de estar em ordem crescente.', v_i + 1 using errcode = 'check_violation';
+      end if;
+      v_ant := v_venc;
+      v_total := v_total + round(v_valor, 2);
+    end loop;
+  end if;
+
+  insert into cobranca_contatos (cliente_id, regional_id, canal, resultado, observacao,
+                                 proxima_acao_em, proxima_acao, boletos_vencidos,
+                                 valor_vencido, dias_atraso, usuario_id)
+  values (p_cliente_id, v_cli.regional_id, p_canal, p_resultado,
+          nullif(btrim(coalesce(p_observacao, '')), ''),
+          p_proxima_acao_em, nullif(btrim(coalesce(p_proxima_acao, '')), ''),
+          v_qtd, v_soma, v_atraso, auth.uid())
+  returning id into v_contato;
+
+  if p_acordo is not null then
+    insert into cobranca_acordos (cliente_id, regional_id, tipo, valor_total, divida_na_data,
+                                  observacao, contato_id, criado_por)
+    values (p_cliente_id, v_cli.regional_id, v_tipo, v_total, v_soma,
+            nullif(btrim(coalesce(p_acordo->>'observacao', '')), ''), v_contato, auth.uid())
+    returning id into v_acordo;
+    insert into cobranca_acordo_parcelas (acordo_id, numero, vencimento, valor)
+    select v_acordo, (x.ord)::smallint, (x.p->>'vencimento')::date, round((x.p->>'valor')::numeric, 2)
+      from jsonb_array_elements(v_parc) with ordinality as x(p, ord);
+  end if;
+
+  return v_contato;
+end;
+$$;
+
+/** Cancela uma promessa/acordo (motivo obrigatorio). O historico fica. */
+create or replace function cancelar_acordo_cobranca(p_acordo_id uuid, p_motivo text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_a cobranca_acordos%rowtype;
+begin
+  if auth.uid() is not null and not is_staff() then
+    raise exception 'Sem permissao.' using errcode = 'insufficient_privilege';
+  end if;
+  select * into v_a from cobranca_acordos where id = p_acordo_id;
+  if not found then
+    raise exception 'Promessa/acordo nao encontrado.' using errcode = 'no_data_found';
+  end if;
+  if not cobranca_pode_cliente(v_a.cliente_id) then
+    raise exception 'Este associado nao esta no seu escopo de cobranca.' using errcode = 'insufficient_privilege';
+  end if;
+  if v_a.cancelado_em is not null then
+    raise exception 'Esta promessa ja foi cancelada.' using errcode = 'check_violation';
+  end if;
+  if length(btrim(coalesce(p_motivo, ''))) < 5 then
+    raise exception 'Informe o motivo do cancelamento.' using errcode = 'check_violation';
+  end if;
+  update cobranca_acordos
+     set cancelado_em = clock_timestamp(), cancelado_por = auth.uid(),
+         motivo_cancelamento = btrim(p_motivo)
+   where id = p_acordo_id;
+end;
+$$;
+
+-- ============================================================================
+-- RITO 0052 — nenhuma RPC aberta ao anon
+-- ============================================================================
+revoke execute on all functions in schema public from public;
+revoke execute on all functions in schema public from anon;
+grant  execute on all functions in schema public to authenticated;
+grant  execute on all functions in schema public to service_role;
+
+-- >>>>>>>>>>>>>>>>>>>>>>>> migrations/0099_historico_financeiro_mutual.sql >>>>>>>>>>>>>>>>>>>>>>>>
+
+-- ============================================================================
+-- 0099 — O HISTORICO FINANCEIRO MOSTRA OS BOLETOS DO MUTUAL
+-- ============================================================================
+-- O defeito (relatado em 12/10/2026): o historico de boletos do Mutual foi
+-- importado (0097, 78.425 boletos) e o Historico Financeiro do SAC e o
+-- Financeiro do Portal do Associado continuavam vazios. Os dois leem SO
+-- `titulos_financeiros` (`titulos_do_cliente`, `portal_titulos`,
+-- `portal_financeiro`) — e la ha 6 titulos na base inteira, porque os
+-- migrados seguem cobrados pelo Mutual ate o corte.
+--
+-- O historico NAO vai para `titulos_financeiros` (decisao da 0097: contaria no
+-- DRE e travaria a 24h por divida que o Mutual cobra). O conserto e LER as
+-- duas fontes:
+--   (A) `boletos_historico` guarda o que o associado precisa para PAGAR o
+--       boleto do Mutual: linha digitavel, PDF e o link de pagamento. Ficam na
+--       tabela (e nao lidos de `mutual_captura`) porque a area de captura e
+--       apagada depois do corte de dezembro; o historico fica.
+--   (B) `cobranca_importar_historico_mutual` recriada (mesma assinatura)
+--       preenchendo os tres — reimportar atualiza o que ja esta la.
+--   (C) `corte_cobranca_cliente`: a mesma data de corte da 0097 (o 1o boleto
+--       do SCar do associado). Boleto do Mutual daquela data em diante nao
+--       aparece — seria a mesma competencia duas vezes.
+--   (D) `boletos_mutual_do_cliente` (SAC, mesma permissao de
+--       `titulos_do_cliente`) e `portal_boletos_mutual` (o proprio associado).
+--   (E) `portal_financeiro` recriado (mesma assinatura) somando os dois: o
+--       cabecalho "Em aberto / em atraso" nao pode dizer zero para quem deve
+--       no Mutual.
+-- O boleto do Mutual e SO CONSULTA: sem editar, sem reemitir (quem cobra e o
+-- Mutual). A tela recebe `origem` e decide.
+-- ============================================================================
+
+-- ============================================================================
+-- (A) os dados de pagamento do boleto
+-- ============================================================================
+alter table boletos_historico add column if not exists linha_digitavel text;
+alter table boletos_historico add column if not exists url_boleto      text;
+alter table boletos_historico add column if not exists url_pagamento   text;
+
+comment on column boletos_historico.url_pagamento is
+  'Pagina de pagamento do Mutual (checkout_link: boleto e PIX). Vale enquanto o Mutual estiver no ar.';
+
+-- ============================================================================
+-- (B) a importacao passa a trazer linha digitavel e links
+-- ============================================================================
+create or replace function cobranca_importar_historico_mutual(
+  p_cursor    text    default null,
+  p_lote      integer default 4000,
+  p_confirmar boolean default false
+)
+returns table (
+  lidos               integer,
+  mensalidades        integer,
+  sem_associado       integer,
+  status_desconhecido integer,
+  gravados            integer,
+  proximo_cursor      text,
+  fim                 boolean
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_lote integer := greatest(1, least(coalesce(p_lote, 4000), 20000));
+begin
+  if auth.uid() is not null and not tem_acesso_global() then
+    raise exception 'Somente a matriz (admin/financeiro) importa o historico de boletos.'
+      using errcode = 'insufficient_privilege';
+  end if;
+
+  return query
+  with inv as (
+    select m.id_externo, m.payload as p
+      from mutual_captura m
+     where m.entidade = 'INVOICE'
+       and m.id_externo > coalesce(p_cursor, '')
+       and not m.deletado
+     order by m.id_externo
+     limit v_lote
+  ),
+  ctr as (
+    select c.id_externo, c.payload->>'person_id' as pid
+      from mutual_captura c
+     where c.entidade = 'CONTRACT'
+       and c.id_externo in (select distinct inv.p->>'contract_id' from inv)
+  ),
+  obj as (
+    select o.payload->>'contract_id' as cid, count(*) as n, min(o.id_externo) as oid
+      from mutual_captura o
+     where o.entidade = 'CONTRACT_OBJECT'
+       and o.payload->>'contract_id' in (select distinct inv.p->>'contract_id' from inv)
+     group by 1
+  ),
+  lote as (
+    select i.id_externo,
+           vc.registro_id as cliente_id,
+           case when ob.n = 1 then vo.registro_id end as veiculo_id,
+           i.p->>'contract_id' as contrato,
+           upper(btrim(coalesce(i.p->>'invoice_type', ''))) as tipo,
+           case when (i.p->>'reference_year') ~ '^\d{4}$' and (i.p->>'reference_month') ~ '^\d{1,2}$'
+                     and (i.p->>'reference_month')::int between 1 and 12
+                then make_date((i.p->>'reference_year')::int, (i.p->>'reference_month')::int, 1)
+           end as competencia,
+           coalesce(mutual_dia(i.p->>'original_expiration_date'), mutual_dia(i.p->>'expiration_date')) as venc_orig,
+           coalesce(mutual_dia(i.p->>'expiration_date'), mutual_dia(i.p->>'original_expiration_date')) as venc,
+           mutual_dia(i.p->>'payment_limit_date') as limite,
+           coalesce(nullif(i.p->>'amount', '')::numeric, nullif(i.p->>'original_amount', '')::numeric, 0) as valor,
+           nullif(nullif(i.p->>'paid_amount', '')::numeric, 0) as valor_pago,
+           coalesce(mutual_dia(i.p->>'payment_date'), mutual_dia(i.p->>'credit_date')) as pago_em,
+           mutual_situacao_boleto(i.p->>'invoice_status') as situacao,
+           coalesce(i.p->>'invoice_status', '') as status_origem,
+           coalesce((i.p->>'in_serasa')::boolean, false) as serasa,
+           nullif(btrim(coalesce(i.p->>'linha_digitavel', '')), '') as linha,
+           nullif(btrim(coalesce(i.p->>'invoice_billet_url', '')), '') as url_boleto,
+           nullif(btrim(coalesce(i.p->>'checkout_link', '')), '') as url_pagamento,
+           upper(btrim(coalesce(i.p->>'invoice_type', '')))
+             in ('MONTHLY_PAYMENT', 'PRO_RATA', 'ACCESSION_MONTHLY_PAYMENT') as mensalidade
+      from inv i
+      left join ctr c on c.id_externo = i.p->>'contract_id'
+      left join integracao_vinculos vc
+             on vc.sistema = 'MUTUAL' and vc.entidade = 'PERSON' and vc.tabela = 'clientes'
+            and vc.id_externo = c.pid
+            and exists (select 1 from clientes cl where cl.id = vc.registro_id)
+      left join obj ob on ob.cid = i.p->>'contract_id'
+      left join integracao_vinculos vo
+             on vo.sistema = 'MUTUAL' and vo.entidade = 'CONTRACT_OBJECT' and vo.tabela = 'veiculos'
+            and vo.id_externo = ob.oid
+            and exists (select 1 from veiculos v where v.id = vo.registro_id)
+  ),
+  up as (
+    insert into boletos_historico as h (
+      origem, id_externo, cliente_id, veiculo_id, contrato_externo, tipo, competencia,
+      vencimento_original, data_vencimento, data_limite, valor, valor_pago,
+      data_pagamento, situacao, status_origem, em_serasa,
+      linha_digitavel, url_boleto, url_pagamento)
+    select 'MUTUAL', l.id_externo, l.cliente_id, l.veiculo_id, l.contrato, l.tipo, l.competencia,
+           l.venc_orig, l.venc, l.limite, l.valor,
+           case when l.situacao = 'pago' then coalesce(l.valor_pago, l.valor) end,
+           case when l.situacao = 'pago' then l.pago_em end,
+           l.situacao, l.status_origem, l.serasa,
+           l.linha, l.url_boleto, l.url_pagamento
+      from lote l
+     where p_confirmar
+       and l.mensalidade and l.cliente_id is not null and l.situacao is not null
+       and l.venc_orig is not null
+    on conflict (origem, id_externo) do update set
+      cliente_id = excluded.cliente_id, veiculo_id = excluded.veiculo_id,
+      contrato_externo = excluded.contrato_externo, tipo = excluded.tipo,
+      competencia = excluded.competencia, vencimento_original = excluded.vencimento_original,
+      data_vencimento = excluded.data_vencimento, data_limite = excluded.data_limite,
+      valor = excluded.valor, valor_pago = excluded.valor_pago,
+      data_pagamento = excluded.data_pagamento, situacao = excluded.situacao,
+      status_origem = excluded.status_origem, em_serasa = excluded.em_serasa,
+      linha_digitavel = excluded.linha_digitavel, url_boleto = excluded.url_boleto,
+      url_pagamento = excluded.url_pagamento,
+      atualizado_em = now()
+    where (h.cliente_id, h.veiculo_id, h.contrato_externo, h.tipo, h.competencia,
+           h.vencimento_original, h.data_vencimento, h.data_limite, h.valor, h.valor_pago,
+           h.data_pagamento, h.situacao, h.status_origem, h.em_serasa,
+           h.linha_digitavel, h.url_boleto, h.url_pagamento)
+      is distinct from
+          (excluded.cliente_id, excluded.veiculo_id, excluded.contrato_externo, excluded.tipo,
+           excluded.competencia, excluded.vencimento_original, excluded.data_vencimento,
+           excluded.data_limite, excluded.valor, excluded.valor_pago, excluded.data_pagamento,
+           excluded.situacao, excluded.status_origem, excluded.em_serasa,
+           excluded.linha_digitavel, excluded.url_boleto, excluded.url_pagamento)
+    returning 1
+  )
+  select count(*)::int,
+         (count(*) filter (where l.mensalidade))::int,
+         (count(*) filter (where l.mensalidade and l.cliente_id is null))::int,
+         (count(*) filter (where l.mensalidade and l.cliente_id is not null and l.situacao is null))::int,
+         (select count(*) from up)::int,
+         max(l.id_externo),
+         count(*) < v_lote
+    from lote l;
+end;
+$$;
+
+-- ============================================================================
+-- (C) a data de corte de UM associado (a mesma da 0097)
+-- ============================================================================
+/** O 1o vencimento cobrado pelo SCar (titulo de mensalidade nao cancelado); null = ainda no Mutual. */
+create or replace function corte_cobranca_cliente(p_cliente_id uuid)
+returns date
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select min(t.data_vencimento)
+    from titulos_financeiros t
+    join faturas f on f.titulo_id = t.id
+   where t.cliente_id = p_cliente_id
+     and t.status::text <> 'cancelado';
+$$;
+
+-- ============================================================================
+-- (D) as leituras
+-- ============================================================================
+/**
+ * Os boletos do Mutual de um associado, para o Historico Financeiro do SAC.
+ * Mesma permissao e mesmo recorte de veiculo de `titulos_do_cliente` (0029):
+ * com veiculo escolhido, entram os dele e os sem veiculo (do associado).
+ * `status` usa o vocabulario do SAC: aberto · vencido · pago · cancelado.
+ */
+create or replace function boletos_mutual_do_cliente(
+  p_cliente_id uuid,
+  p_veiculo_id uuid default null,
+  p_limite     int  default 60
+)
+returns table (
+  id              uuid,
+  veiculo_id      uuid,
+  placa           text,
+  competencia     date,
+  data_vencimento date,
+  valor           numeric,
+  valor_pago      numeric,
+  data_pagamento  date,
+  status          text,
+  dias_atraso     integer,
+  em_serasa       boolean,
+  linha_digitavel text,
+  url_boleto      text,
+  url_pagamento   text
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select h.id, h.veiculo_id, ve.placa, h.competencia, h.data_vencimento,
+         h.valor, h.valor_pago, h.data_pagamento,
+         case when h.situacao = 'pago' then 'pago'
+              when h.situacao = 'cancelado' then 'cancelado'
+              when h.data_vencimento < current_date then 'vencido'
+              else 'aberto' end,
+         case when h.situacao = 'aberto' and h.data_vencimento < current_date
+              then (current_date - h.data_vencimento)::int else 0 end,
+         h.em_serasa, h.linha_digitavel, h.url_boleto, h.url_pagamento
+    from boletos_historico h
+    join clientes cl on cl.id = h.cliente_id
+    left join veiculos ve on ve.id = h.veiculo_id
+   where h.cliente_id = p_cliente_id
+     and (p_veiculo_id is null or h.veiculo_id = p_veiculo_id or h.veiculo_id is null)
+     and (tem_acesso_global() or pode_regional(cl.regional_id) or cl.id = auth_cliente_id())
+     and h.vencimento_original < coalesce(corte_cobranca_cliente(p_cliente_id), 'infinity'::date)
+   order by h.data_vencimento desc, h.id
+   limit greatest(coalesce(p_limite, 60), 1);
+$$;
+
+/** Os boletos do Mutual do PROPRIO associado (portal). Sem parametro de cliente, como a 0044. */
+create or replace function portal_boletos_mutual(p_limite integer default 120)
+returns table (
+  id              uuid,
+  veiculo_id      uuid,
+  placa           text,
+  competencia     date,
+  data_vencimento date,
+  valor           numeric,
+  valor_pago      numeric,
+  data_pagamento  date,
+  situacao        text,
+  dias_atraso     integer,
+  linha_digitavel text,
+  url_boleto      text,
+  url_pagamento   text
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select h.id, h.veiculo_id, ve.placa, h.competencia, h.data_vencimento,
+         h.valor, h.valor_pago, h.data_pagamento,
+         case when h.situacao = 'pago' then 'pago'
+              when h.data_vencimento < current_date then 'vencido'
+              else 'aberto' end,
+         case when h.situacao = 'aberto' and h.data_vencimento < current_date
+              then (current_date - h.data_vencimento)::int else 0 end,
+         h.linha_digitavel, h.url_boleto, h.url_pagamento
+    from boletos_historico h
+    left join veiculos ve on ve.id = h.veiculo_id
+   where auth_cliente_id() is not null
+     and h.cliente_id = auth_cliente_id()
+     and h.situacao <> 'cancelado'
+     and h.vencimento_original < coalesce(corte_cobranca_cliente(h.cliente_id), 'infinity'::date)
+   order by h.data_vencimento desc, h.id
+   limit greatest(coalesce(p_limite, 120), 1);
+$$;
+
+-- ============================================================================
+-- (E) o cabecalho do portal soma as duas fontes (mesma assinatura da 0044)
+-- ============================================================================
+create or replace function portal_financeiro()
+returns table (
+  em_aberto        numeric,
+  vencido          numeric,
+  qtd_vencidos     integer,
+  proximo_vencimento date,
+  proximo_valor    numeric,
+  pago_12_meses    numeric,
+  em_dia           boolean
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with t as (
+    select status::text as st, data_vencimento, valor, valor_pago, data_pagamento
+      from titulos_financeiros
+     where cliente_id = auth_cliente_id() and status::text <> 'cancelado'
+    union all
+    select case h.situacao when 'pago' then 'pago' else 'pendente' end,
+           h.data_vencimento, h.valor, h.valor_pago, h.data_pagamento
+      from boletos_historico h
+     where auth_cliente_id() is not null
+       and h.cliente_id = auth_cliente_id()
+       and h.situacao <> 'cancelado'
+       and h.vencimento_original < coalesce(corte_cobranca_cliente(h.cliente_id), 'infinity'::date)
+  ),
+  abertos as (
+    select * from t where st in ('pendente', 'vencido')
+  )
+  select
+    coalesce((select sum(valor) from abertos), 0),
+    coalesce((select sum(valor) from abertos where data_vencimento < current_date), 0),
+    (select count(*)::int from abertos where data_vencimento < current_date),
+    (select min(data_vencimento) from abertos where data_vencimento >= current_date),
+    (select valor from abertos where data_vencimento >= current_date
+      order by data_vencimento limit 1),
+    coalesce((select sum(valor_pago) from t
+               where st = 'pago' and data_pagamento >= current_date - interval '12 months'), 0),
+    not exists (select 1 from abertos where data_vencimento < current_date);
+$$;
+
+-- ============================================================================
+-- RITO 0052 — nenhuma RPC aberta ao anon
+-- ============================================================================
+revoke execute on all functions in schema public from public;
+revoke execute on all functions in schema public from anon;
+grant  execute on all functions in schema public to authenticated;
+grant  execute on all functions in schema public to service_role;
+
+-- >>>>>>>>>>>>>>>>>>>>>>>> migrations/0100_painel_visao_geral.sql >>>>>>>>>>>>>>>>>>>>>>>>
+
+-- ============================================================================
+-- 0100_painel_visao_geral
+--
+-- A VISAO GERAL (`/dashboard`, aba "Visao Geral") foi desenhada no inicio do
+-- projeto: 4 contadores, um grafico de titulos e o tacometro da inadimplencia,
+-- tudo lido direto das tabelas pelo navegador. Depois dela vieram a carga do
+-- Mutual (2.898 veiculos, 2.889 com `cobranca_externa`), as regionais, o CRM,
+-- a 24h, os rastreadores — e o painel continuou contando titulo de mensalidade
+-- numa base em que quase nenhum titulo e emitido aqui. O "MRR" mostrava ~zero
+-- com R$ centenas de milhares de carteira contratada.
+--
+-- Esta migration cria UMA leitura, `painel_visao_geral(regional, meses)`, que
+-- devolve o painel inteiro em jsonb. UMA chamada de proposito: a tela tem ~12
+-- blocos e cada um seria uma requisicao — o mesmo padrao de disputa que
+-- derrubava `/integracao/mutual` no teto de 8 s (ver CLAUDE.md, a fila).
+--
+-- Decisoes:
+--  1. A FROTA E LIDA POR DATA (`data_ativacao`/`data_saida`), igual a
+--     `frota_na_base` (0078) — status sozinho so sabe o agora, e a serie de
+--     6 meses precisa do retrato do fim de cada mes.
+--  2. A CARTEIRA MENSAL e `veiculos.valor_mensalidade` (o override que o
+--     boleto usa, 0024) e, na falta dele, o ultimo titulo — a mesma regra do
+--     `regionais_painel_resumo`. Nao chamamos `cotar_plano` por veiculo.
+--  3. COBRANCA EXTERNA aparece separada: e quanto da carteira ainda e cobrada
+--     pelo Mutual (0082). As MENSALIDADES nao sao lidas aqui: a tela usa
+--     `cobranca_serie_mensal` (0097, modulo de cobranca), que ja junta o SCar e
+--     o historico de boletos do Mutual — uma segunda leitura divergiria.
+--  4. ISOLAMENTO: `escopo_regional()` — gestor de unidade recebe a propria,
+--     qualquer que seja o id pedido; quem nao e staff (o associado do /portal
+--     e `authenticated`, 0044/0052) recebe NULL.
+--  5. So LEITURA. Nenhuma tabela, coluna ou policy muda.
+-- ============================================================================
+
+create or replace function painel_visao_geral(
+  p_regional_id uuid    default null,
+  p_meses       integer default 6
+)
+returns jsonb
+language plpgsql stable security definer set search_path = public
+as $$
+declare
+  v_rid    uuid;
+  v_hoje   date := current_date;
+  v_mes    date := date_trunc('month', current_date)::date;
+  v_mes_ant date := (date_trunc('month', current_date) - interval '1 month')::date;
+  v_meses  integer := least(greatest(coalesce(p_meses, 6), 3), 24);
+  v_res    jsonb;
+begin
+  if not (is_staff() or auth.uid() is null) then
+    return null;
+  end if;
+  v_rid := escopo_regional(p_regional_id);
+
+  with
+  frota as (
+    select v.id, v.cliente_id, v.regional_id, v.tipo_veiculo_id, v.plano_protecao_id,
+           v.status::text as status, v.data_ativacao, v.data_saida,
+           v.cobranca_externa, v.valor_mensalidade
+      from veiculos v
+     where v_rid is null or v.regional_id = v_rid
+  ),
+  -- Quem esta na base HOJE (mesma regra de `frota_na_base`).
+  base as (
+    select f.*,
+           coalesce(nullif(f.valor_mensalidade, 0), (
+             select t.valor from titulos_financeiros t
+              where t.veiculo_id = f.id and t.status <> 'cancelado'
+              order by t.data_vencimento desc, t.created_at desc limit 1
+           ), 0) as mensalidade
+      from frota f
+     where f.data_ativacao is not null
+       and f.data_ativacao <= v_hoje
+       and (f.data_saida is null or f.data_saida > v_hoje)
+  ),
+  meses as (
+    select gs::date as inicio,
+           (gs + interval '1 month' - interval '1 day')::date as fim
+      from generate_series(v_mes - make_interval(months => v_meses - 1), v_mes, interval '1 month') gs
+  ),
+  eventos as (
+    select e.id, e.status::text as status, e.created_at::date as dia,
+           coalesce(te.nome, initcap(lower(e.tipo_evento::text)), 'Nao classificado') as tipo
+      from eventos_sinistro e
+      left join tipos_evento te on te.id = e.tipo_evento_id
+     where v_rid is null or e.regional_id = v_rid
+  ),
+  acion as (
+    select a.status::text as status, a.created_at::date as dia, a.valor_total
+      from acionamentos_assistencia a
+     where v_rid is null or a.regional_id = v_rid
+  ),
+  lds as (
+    select l.status::text as status, l.created_at::date as dia, l.auditado_em::date as auditado
+      from leads l
+     where v_rid is null or l.regional_id = v_rid
+  ),
+  pagar as (
+    select l.data_vencimento, l.valor_saldo
+      from lancamentos_financeiros l
+     where l.tipo = 'DESPESA'
+       and l.status::text in ('pendente', 'pago_parcial', 'atrasado')
+       and (v_rid is null or l.regional_id = v_rid)
+  )
+  select jsonb_build_object(
+    'gerado_em', now(),
+    'regional_id', v_rid,
+
+    -- ---------------- cabecalho ----------------
+    'kpis', jsonb_build_object(
+      'veiculos_base',        (select count(*) from base),
+      'associados_base',      (select count(distinct cliente_id) from base),
+      'carteira_mensal',      (select coalesce(round(sum(mensalidade), 2), 0) from base),
+      'ticket_medio',         (select coalesce(round(avg(nullif(mensalidade, 0)), 2), 0) from base),
+      'sem_valor',            (select count(*) from base where mensalidade = 0),
+      'cobranca_externa',     (select count(*) from base where cobranca_externa),
+      'carteira_externa',     (select coalesce(round(sum(mensalidade), 2), 0) from base where cobranca_externa),
+      'adesoes_mes',          (select count(*) from frota where data_ativacao between v_mes and v_hoje),
+      'adesoes_mes_anterior', (select count(*) from frota
+                                where data_ativacao between v_mes_ant and (v_mes - 1)),
+      'saidas_mes',           (select count(*) from frota where data_saida between v_mes and v_hoje),
+      'saidas_mes_anterior',  (select count(*) from frota
+                                where data_saida between v_mes_ant and (v_mes - 1)),
+      'base_mes_anterior',    (select count(*) from frota
+                                where data_ativacao is not null and data_ativacao <= (v_mes - 1)
+                                  and (data_saida is null or data_saida > (v_mes - 1))),
+      'inadimplentes',        (select count(*) from base where status = 'inadimplente'),
+      'vistoria_pendente',    (select count(*) from base where status = 'vistoria_pendente'),
+      'em_evento',            (select count(*) from base where status = 'em_evento'),
+      'suspensos',            (select count(*) from base where status = 'suspenso'),
+      'regionais',            (select count(*) from regionais r
+                                where (v_rid is null or r.id = v_rid) and r.ativo)
+    ),
+
+    -- ---------------- distribuicao da carteira ----------------
+    'por_regional', coalesce((
+      select jsonb_agg(x order by x.veiculos desc) from (
+        select coalesce(r.nome, 'MATRIZ (sem unidade)') as nome,
+               count(*) as veiculos,
+               count(distinct b.cliente_id) as associados,
+               round(sum(b.mensalidade), 2) as carteira
+          from base b left join regionais r on r.id = b.regional_id
+         group by 1
+      ) x), '[]'::jsonb),
+
+    'por_uf', coalesce((
+      select jsonb_agg(x order by x.veiculos desc) from (
+        select coalesce(nullif(upper(trim(c.endereco->>'uf')), ''), '??') as uf,
+               count(*) as veiculos
+          from base b join clientes c on c.id = b.cliente_id
+         group by 1
+      ) x), '[]'::jsonb),
+
+    'por_tipo', coalesce((
+      select jsonb_agg(x order by x.veiculos desc) from (
+        select coalesce(t.nome, 'Sem tipo') as nome, count(*) as veiculos,
+               round(sum(b.mensalidade), 2) as carteira
+          from base b left join tipos_veiculo t on t.id = b.tipo_veiculo_id
+         group by 1
+      ) x), '[]'::jsonb),
+
+    'por_plano', coalesce((
+      select jsonb_agg(x order by x.veiculos desc) from (
+        select coalesce(p.nome, 'Sem plano') as nome, count(*) as veiculos
+          from base b left join planos_protecao p on p.id = b.plano_protecao_id
+         group by 1
+      ) x), '[]'::jsonb),
+
+    'por_status', coalesce((
+      select jsonb_agg(x order by x.veiculos desc) from (
+        select status, count(*) as veiculos from base group by 1
+      ) x), '[]'::jsonb),
+
+    -- ---------------- evolucao mensal ----------------
+    -- `base_fim` e RETRATO no ultimo dia do mes (ou hoje, no mes corrente);
+    -- o resto e SOMA do mes.
+    'serie', coalesce((
+      select jsonb_agg(x order by x.mes) from (
+        select to_char(m.inicio, 'YYYY-MM') as mes,
+               (select count(*) from frota f where f.data_ativacao between m.inicio and m.fim) as adesoes,
+               (select count(*) from frota f where f.data_saida   between m.inicio and m.fim) as saidas,
+               (select count(*) from frota f
+                 where f.data_ativacao is not null
+                   and f.data_ativacao <= least(m.fim, v_hoje)
+                   and (f.data_saida is null or f.data_saida > least(m.fim, v_hoje))) as base_fim,
+               (select count(*) from eventos e where e.dia between m.inicio and m.fim) as eventos,
+               (select count(*) from acion a
+                 where a.dia between m.inicio and m.fim and a.status <> 'CANCELADO') as acionamentos,
+               (select count(*) from lds l where l.dia between m.inicio and m.fim) as leads
+          from meses m
+      ) x), '[]'::jsonb),
+
+    -- ---------------- eventos / sinistros ----------------
+    'eventos', jsonb_build_object(
+      'abertos',      (select count(*) from eventos where status not in ('CONCLUIDO', 'NEGADO')),
+      'novos_mes',    (select count(*) from eventos where dia >= v_mes),
+      'concluidos',   (select count(*) from eventos where status = 'CONCLUIDO'),
+      'negados',      (select count(*) from eventos where status = 'NEGADO'),
+      'total',        (select count(*) from eventos),
+      'por_status',   coalesce((select jsonb_agg(x) from (
+                        select status, count(*) as n from eventos group by 1) x), '[]'::jsonb),
+      'por_tipo',     coalesce((select jsonb_agg(x order by x.n desc) from (
+                        select tipo, count(*) as n from eventos group by 1) x), '[]'::jsonb)
+    ),
+
+    -- ---------------- assistencia 24h ----------------
+    'assistencia', jsonb_build_object(
+      'mes',        (select count(*) from acion where dia >= v_mes and status <> 'CANCELADO'),
+      'em_aberto',  (select count(*) from acion
+                      where status in ('ABERTO', 'EM_COTACAO', 'AUTORIZADO', 'EM_ATENDIMENTO')),
+      'custo_mes',  (select coalesce(round(sum(valor_total), 2), 0) from acion
+                      where dia >= v_mes and status <> 'CANCELADO')
+    ),
+
+    -- ---------------- vendas ----------------
+    'vendas', jsonb_build_object(
+      'em_aberto',        (select count(*) from lds where status not in ('ATIVO', 'PERDIDO')),
+      'novos_mes',        (select count(*) from lds where dia >= v_mes),
+      'convertidos_mes',  (select count(*) from lds where status = 'ATIVO' and auditado >= v_mes),
+      'funil', coalesce((select jsonb_agg(x) from (
+                 select status, count(*) as n from lds group by 1) x), '[]'::jsonb)
+    ),
+
+    -- ---------------- contas a pagar ----------------
+    -- As MENSALIDADES (SCar + historico do Mutual) a tela le de
+    -- `cobranca_serie_mensal` (0097 da cobranca) — nao ha segunda leitura aqui.
+    'pagar', jsonb_build_object(
+      'em_aberto',  (select coalesce(round(sum(valor_saldo), 2), 0) from pagar),
+      'proximos_7', (select coalesce(round(sum(valor_saldo), 2), 0) from pagar
+                      where data_vencimento between v_hoje and v_hoje + 7),
+      'vencido',    (select coalesce(round(sum(valor_saldo), 2), 0) from pagar
+                      where data_vencimento < v_hoje)
+    ),
+
+    -- ---------------- rastreadores ----------------
+    'rastreadores', jsonb_build_object(
+      'instalados', (select count(*) from rastreadores r
+                      where r.status::text = 'ATIVO' and (v_rid is null or r.regional_id = v_rid)),
+      'estoque',    (select count(*) from rastreadores r
+                      where r.status::text = 'DISPONIVEL' and (v_rid is null or r.regional_id = v_rid)),
+      'inadimplentes', (select count(*) from rastreadores r
+                      where r.status::text = 'INADIMPLENTE' and (v_rid is null or r.regional_id = v_rid))
+    )
+  ) into v_res;
+
+  return v_res;
+end;
+$$;
+
+comment on function painel_visao_geral(uuid, integer) is
+  'Visao Geral do /dashboard (0100): o painel inteiro em uma leitura. Frota lida por data '
+  '(como frota_na_base, 0078), carteira pelo override da ficha, escopo por escopo_regional; '
+  'nao-staff recebe NULL. So leitura.';
+
+-- ============================================================================
+-- Rito de seguranca (0052)
+-- ============================================================================
+revoke execute on all functions in schema public from public;
+revoke execute on all functions in schema public from anon;
+grant  execute on all functions in schema public to authenticated;
+grant  execute on all functions in schema public to service_role;
+
+-- >>>>>>>>>>>>>>>>>>>>>>>> migrations/0101_eventos_historico_mutual.sql >>>>>>>>>>>>>>>>>>>>>>>>
+
+-- ============================================================================
+-- 0101 — O HISTORICO DE EVENTOS / SINISTROS DO MUTUAL
+-- ============================================================================
+-- O defeito (relatado em 13/10/2026): `/integracao/mutual` mostra 2.909 eventos
+-- capturados (`EVENT`) e NENHUM aparece no sistema. Nao e bug de tela: a carga
+-- (0084) deixou evento DE FORA por decisao, e ninguem fez a segunda metade.
+--
+-- O que a base mostrou ao medir (13/10/2026):
+--   * a ligacao do evento com o veiculo e `evento.vehicle_id` =
+--     `objeto.vehicle_id` (NAO o id do objeto) — casa 2.901 de 2.909; quando o
+--     mesmo veiculo esteve em mais de um contrato, vale o do `contract_id` do
+--     evento;
+--   * 827 eventos sao de associados JA CARREGADOS (vinculo PERSON) e 636
+--     deles de veiculos que estao na base; os outros 2.082 sao de associados
+--     que nao vieram (acervo encerrado) e ficam de fora, contados — mesma
+--     regra dos boletos (0097);
+--   * `event_status` vem "ANDAMENTO" em 2.909 de 2.909 e so 38 tem
+--     `conclusion_date`: o status da listagem NAO informa nada.
+--
+-- POR ISSO E TABELA PROPRIA, e nao `eventos_sinistro` (mesmo raciocinio da
+-- 0097 com `boletos_historico`): na tabela operacional cada linha viraria um
+-- evento EM ABERTO — Kanban, tramitacao, "eventos em aberto" do painel e o
+-- status `em_evento` — por um status que nao quer dizer nada. E o Mutual
+-- continua tratando os eventos dele ate o corte de dezembro: o SCar mostra a
+-- HISTORIA, quem opera evento novo e o SCar. Depois do corte, a historia FICA
+-- (a area de captura e apagada; esta tabela nao).
+--
+-- (A) `eventos_historico` + RLS de leitura (staff da unidade ou o proprio
+--     associado); escrita so pela importacao.
+-- (B) `mutual_eventos_para_importar()` (a leitura) +
+--     `mutual_importar_eventos_historico(p_confirmar)` — re-executavel, so
+--     regrava o que mudou (regra da 0096). Sem `p_confirmar` so conta.
+-- (C) `eventos_historico_resumo()` — o quadro da tela de integracao.
+-- (D) `eventos_mutual_do_cliente(cliente)` — a aba Eventos do SAC.
+-- (E) `eventos_historico_listar(...)` — a aba Historico de `/sinistros`.
+-- (F) `veiculos_do_cliente` recriada (mesma assinatura): o marcador de evento
+--     na lista do SAC passa a contar o historico.
+-- (G) `painel_visao_geral` recriada (mesma assinatura): o bloco de eventos
+--     passa a mostrar o historico, separado do que e operacao no SCar.
+--
+-- O que NAO muda: os limites por janela dos opcionais
+-- (`opcionais_elegibilidade`, `opcionais_veiculo`) continuam contando so
+-- `eventos_sinistro`. Fazer o historico consumir cota e decisao a parte.
+-- ============================================================================
+
+-- ============================================================================
+-- (A) a tabela
+-- ============================================================================
+create table if not exists eventos_historico (
+  id              uuid primary key default gen_random_uuid(),
+  origem          text not null default 'MUTUAL',
+  id_externo      text not null,
+  cliente_id      uuid not null references clientes(id) on delete cascade,
+  veiculo_id      uuid references veiculos(id) on delete set null,
+  placa           text,
+  protocolo       text,
+  data_evento     date,
+  data_conclusao  date,
+  tipos           text[] not null default '{}',
+  envolvimento    text,
+  valor_total     numeric(12,2),
+  status_origem   text,
+  importado_em    timestamptz not null default now(),
+  atualizado_em   timestamptz not null default now(),
+  constraint uq_evento_historico unique (origem, id_externo),
+  constraint chk_evento_historico_origem check (origem in ('MUTUAL'))
+);
+
+create index if not exists idx_eventos_historico_cliente on eventos_historico (cliente_id, data_evento desc);
+create index if not exists idx_eventos_historico_veiculo on eventos_historico (veiculo_id);
+create index if not exists idx_eventos_historico_data    on eventos_historico (data_evento);
+
+comment on table eventos_historico is
+  'Eventos/sinistros de outro sistema (hoje o Mutual) dos associados ja carregados (0101). '
+  'NAO e `eventos_sinistro` de proposito: la cada linha viraria evento em aberto, com '
+  'Kanban, tramitacao e status em_evento, e o status do Mutual nao informa (vem ANDAMENTO '
+  'em todos). So consulta. Fica depois do corte de dezembro.';
+
+alter table eventos_historico enable row level security;
+
+drop policy if exists eventos_historico_select on eventos_historico;
+create policy eventos_historico_select on eventos_historico
+  for select to authenticated
+  using (
+    tem_acesso_global()
+    or cliente_id = auth_cliente_id()
+    or exists (select 1 from clientes c
+                where c.id = eventos_historico.cliente_id
+                  and pode_regional(c.regional_id))
+  );
+
+-- ============================================================================
+-- (B) a importacao
+-- ============================================================================
+-- A LEITURA, uma linha por evento capturado, ja resolvida (associado, veiculo,
+-- tipos, datas). A importacao conta e grava sobre ELA — uma fonte so, e sem
+-- `create temp table` dentro de plpgsql (gotcha da 0084: a 2a chamada na mesma
+-- sessao morre com "relation with OID ... does not exist").
+create or replace function mutual_eventos_para_importar()
+returns table (
+  id_externo     text,
+  cliente_id     uuid,
+  veiculo_id     uuid,
+  placa          text,
+  protocolo      text,
+  data_evento    date,
+  data_conclusao date,
+  tipos          text[],
+  envolvimento   text,
+  valor_total    numeric,
+  status_origem  text,
+  data_invalida  boolean
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with e as (
+    select c.id_externo, c.payload p
+      from mutual_captura c
+     where c.entidade = 'EVENT' and not c.deletado
+  ),
+  obj as materialized (
+    select o.id_externo as obj_id,
+           o.payload->>'vehicle_id'  as vid,
+           o.payload->>'contract_id' as cid,
+           mutual_placa(o.payload->'vehicle_data'->>'vehicle_plate') as placa
+      from mutual_captura o
+     where o.entidade = 'CONTRACT_OBJECT'
+  ),
+  -- O objeto do mesmo veiculo; havendo varios (o carro trocou de contrato),
+  -- vence o do contrato do evento, e entre iguais o que esta na base.
+  casado as (
+    select distinct on (e.id_externo)
+           e.id_externo, obj.placa, vv.registro_id as veiculo_id
+      from e
+      join obj on obj.vid = e.p->>'vehicle_id'
+      left join integracao_vinculos vv
+             on vv.entidade = 'CONTRACT_OBJECT' and vv.tabela = 'veiculos'
+            and vv.id_externo = obj.obj_id
+     order by e.id_externo,
+              (obj.cid = e.p->>'contract_id') desc,
+              (vv.registro_id is not null) desc
+  ),
+  tipo as (
+    select coalesce(t.payload->>'value', t.id_externo) as valor, t.payload->>'label' as nome
+      from mutual_captura t
+     where t.entidade = 'EVENT_TYPE'
+  )
+  select e.id_externo,
+         -- O associado do evento; sem vinculo dele (veiculo transferido), o dono
+         -- ATUAL do veiculo — o evento e historia do carro.
+         coalesce(pv.registro_id, ve.cliente_id),
+         ca.veiculo_id,
+         coalesce(ve.placa, ca.placa),
+         mutual_texto(e.p->>'protocol'),
+         -- Data anterior a 2000 e placeholder (ha um "1923"), nao dado.
+         case when mutual_data(e.p->>'event_date') >= date '2000-01-01'
+              then mutual_data(e.p->>'event_date') end,
+         mutual_dia(e.p->>'conclusion_date'),
+         coalesce((
+           select array_agg(coalesce(tp.nome, x.v) order by x.ord)
+             from jsonb_array_elements_text(
+                    case when jsonb_typeof(e.p->'value_event_types') = 'array'
+                         then e.p->'value_event_types' else '[]'::jsonb end
+                  ) with ordinality as x(v, ord)
+             left join tipo tp on tp.valor = x.v
+         ), '{}'),
+         mutual_texto(e.p->>'type_involvement'),
+         nullif(mutual_texto(e.p->>'total_value'), '')::numeric,
+         mutual_texto(e.p->>'event_status'),
+         coalesce(mutual_data(e.p->>'event_date') < date '2000-01-01', false)
+    from e
+    left join integracao_vinculos pv
+           on pv.entidade = 'PERSON' and pv.tabela = 'clientes'
+          and pv.id_externo = e.p->>'person_id'
+    left join casado ca on ca.id_externo = e.id_externo
+    left join veiculos ve on ve.id = ca.veiculo_id
+   where is_staff() or auth.uid() is null;
+$$;
+
+create or replace function mutual_importar_eventos_historico(p_confirmar boolean default false)
+returns table (
+  lidos               integer,
+  importaveis         integer,
+  sem_associado       integer,
+  sem_veiculo_na_base integer,
+  data_invalida       integer,
+  gravados            integer
+)
+language plpgsql
+volatile
+security definer
+set search_path = public
+as $$
+declare
+  v_lidos int; v_imp int; v_sem_assoc int; v_sem_veic int; v_data int; v_grav int := 0;
+begin
+  if auth.uid() is not null and not tem_acesso_global() then
+    raise exception 'Somente a matriz importa o historico de eventos.'
+      using errcode = 'insufficient_privilege';
+  end if;
+
+  if p_confirmar then
+    with up as (
+      insert into eventos_historico as h
+        (origem, id_externo, cliente_id, veiculo_id, placa, protocolo, data_evento,
+         data_conclusao, tipos, envolvimento, valor_total, status_origem)
+      select 'MUTUAL', i.id_externo, i.cliente_id, i.veiculo_id, i.placa, i.protocolo,
+             i.data_evento, i.data_conclusao, i.tipos, i.envolvimento, i.valor_total,
+             i.status_origem
+        from mutual_eventos_para_importar() i
+       where i.cliente_id is not null
+      on conflict (origem, id_externo) do update
+         set cliente_id     = excluded.cliente_id,
+             veiculo_id     = excluded.veiculo_id,
+             placa          = excluded.placa,
+             protocolo      = excluded.protocolo,
+             data_evento    = excluded.data_evento,
+             data_conclusao = excluded.data_conclusao,
+             tipos          = excluded.tipos,
+             envolvimento   = excluded.envolvimento,
+             valor_total    = excluded.valor_total,
+             status_origem  = excluded.status_origem,
+             atualizado_em  = now()
+       -- So regrava o que mudou (0096): linha identica nao incha a tabela.
+       where (h.cliente_id, h.veiculo_id, h.placa, h.protocolo, h.data_evento,
+              h.data_conclusao, h.tipos, h.envolvimento, h.valor_total, h.status_origem)
+             is distinct from
+             (excluded.cliente_id, excluded.veiculo_id, excluded.placa, excluded.protocolo,
+              excluded.data_evento, excluded.data_conclusao, excluded.tipos,
+              excluded.envolvimento, excluded.valor_total, excluded.status_origem)
+      returning 1
+    )
+    select count(*) into v_grav from up;
+  end if;
+
+  select count(*),
+         count(*) filter (where i.cliente_id is not null),
+         count(*) filter (where i.cliente_id is null),
+         count(*) filter (where i.cliente_id is not null and i.veiculo_id is null),
+         count(*) filter (where i.cliente_id is not null and i.data_invalida)
+    into v_lidos, v_imp, v_sem_assoc, v_sem_veic, v_data
+    from mutual_eventos_para_importar() i;
+
+  return query select v_lidos, v_imp, v_sem_assoc, v_sem_veic, v_data, v_grav;
+end;
+$$;
+
+comment on function mutual_importar_eventos_historico(boolean) is
+  'Importa os eventos do Mutual (EVENT) dos associados ja carregados para eventos_historico '
+  '(0101). Veiculo pelo objeto do contrato com o mesmo vehicle_id (o do contrato do evento '
+  'vence). Re-executavel; sem p_confirmar so conta. Somente a matriz.';
+
+-- ============================================================================
+-- (C) o quadro da tela de integracao
+-- ============================================================================
+create or replace function eventos_historico_resumo()
+returns table (
+  eventos            bigint,
+  associados         bigint,
+  veiculos           bigint,
+  sem_veiculo        bigint,
+  primeiro_evento    date,
+  ultimo_evento      date,
+  capturados         bigint,
+  ultima_captura     timestamptz,
+  ultima_importacao  timestamptz
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select (select count(*) from eventos_historico),
+         (select count(distinct cliente_id) from eventos_historico),
+         (select count(distinct veiculo_id) from eventos_historico),
+         (select count(*) from eventos_historico where veiculo_id is null),
+         (select min(data_evento) from eventos_historico),
+         (select max(data_evento) from eventos_historico),
+         (select count(*) from mutual_captura where entidade = 'EVENT'),
+         (select max(capturado_em) from mutual_captura where entidade = 'EVENT'),
+         (select max(atualizado_em) from eventos_historico)
+   where is_staff() or auth.uid() is null;
+$$;
+
+-- ============================================================================
+-- (D) a aba Eventos do SAC
+-- ============================================================================
+create or replace function eventos_mutual_do_cliente(p_cliente_id uuid, p_limite int default 100)
+returns table (
+  id             uuid,
+  veiculo_id     uuid,
+  placa          text,
+  protocolo      text,
+  data_evento    date,
+  data_conclusao date,
+  tipos          text[],
+  envolvimento   text,
+  valor_total    numeric,
+  status_origem  text
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select h.id, h.veiculo_id, coalesce(ve.placa, h.placa), h.protocolo, h.data_evento,
+         h.data_conclusao, h.tipos, h.envolvimento, h.valor_total, h.status_origem
+    from eventos_historico h
+    join clientes cl on cl.id = h.cliente_id
+    left join veiculos ve on ve.id = h.veiculo_id
+   where h.cliente_id = p_cliente_id
+     and (tem_acesso_global() or pode_regional(cl.regional_id) or cl.id = auth_cliente_id())
+   order by h.data_evento desc nulls last, h.id
+   limit greatest(coalesce(p_limite, 100), 1);
+$$;
+
+-- ============================================================================
+-- (E) a aba Historico de /sinistros — paginada no banco
+-- ============================================================================
+create or replace function eventos_historico_listar(
+  p_busca       text    default null,
+  p_tipo        text    default null,
+  p_de          date    default null,
+  p_ate         date    default null,
+  p_regional_id uuid    default null,
+  p_limite      integer default 50,
+  p_offset      integer default 0
+)
+returns table (
+  id               uuid,
+  cliente_id       uuid,
+  associado        text,
+  veiculo_id       uuid,
+  placa            text,
+  protocolo        text,
+  data_evento      date,
+  data_conclusao   date,
+  tipos            text[],
+  envolvimento     text,
+  valor_total      numeric,
+  unidade          text,
+  total_registros  bigint
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with esc as (
+    select case when is_staff() or auth.uid() is null
+                then escopo_regional(p_regional_id)
+                else '00000000-0000-0000-0000-000000000000'::uuid end as rid,
+           is_staff() or auth.uid() is null as pode
+  ),
+  termo as (
+    select nullif(texto_sem_acento(lower(trim(coalesce(p_busca, '')))), '') as t,
+           nullif(regexp_replace(coalesce(p_busca, ''), '\W', '', 'g'), '') as alnum
+  ),
+  base as (
+    select h.*, cl.nome_razao_social, cl.cpf_cnpj,
+           coalesce(ve.regional_id, cl.regional_id) as rid,
+           coalesce(ve.placa, h.placa) as placa_atual
+      from eventos_historico h
+      join clientes cl on cl.id = h.cliente_id
+      left join veiculos ve on ve.id = h.veiculo_id
+  ),
+  f as (
+    select b.* from base b, esc, termo
+     where esc.pode
+       and (esc.rid is null or b.rid = esc.rid)
+       and (p_tipo is null or p_tipo = any (b.tipos))
+       and (p_de  is null or b.data_evento >= p_de)
+       and (p_ate is null or b.data_evento <= p_ate)
+       and (termo.t is null
+            or texto_sem_acento(lower(b.nome_razao_social)) like '%' || termo.t || '%'
+            or upper(coalesce(b.placa_atual, '')) like '%' || upper(termo.alnum) || '%'
+            or b.cpf_cnpj like '%' || regexp_replace(termo.t, '\D', '', 'g') || '%'
+                 and length(regexp_replace(termo.t, '\D', '', 'g')) >= 4
+            or coalesce(b.protocolo, '') = trim(p_busca))
+  )
+  select f.id, f.cliente_id, f.nome_razao_social, f.veiculo_id, f.placa_atual, f.protocolo,
+         f.data_evento, f.data_conclusao, f.tipos, f.envolvimento, f.valor_total,
+         r.nome, count(*) over ()
+    from f left join regionais r on r.id = f.rid
+   order by f.data_evento desc nulls last, f.id
+   limit least(greatest(coalesce(p_limite, 50), 1), 200)
+  offset greatest(coalesce(p_offset, 0), 0);
+$$;
+
+-- ============================================================================
+-- (F) o marcador de evento na lista do SAC conta o historico
+-- ============================================================================
+create or replace function veiculos_do_cliente(p_cliente_id uuid)
+returns table (
+  id uuid,
+  placa text,
+  marca text,
+  modelo text,
+  ano_modelo integer,
+  status status_veiculo,
+  tipo_faturamento tipo_faturamento,
+  data_ativacao date,
+  plano_nome text,
+  alertas_qtd integer,
+  eventos_qtd integer,
+  tem_assistencia boolean
+) language sql stable as $$
+  select v.id, v.placa, v.marca, v.modelo, v.ano_modelo, v.status, v.tipo_faturamento,
+         v.data_ativacao,
+         p.nome,
+         (select count(*)::int from veiculo_alertas a where a.veiculo_id = v.id and a.ativo),
+         (select count(*)::int from eventos_sinistro e where e.veiculo_id = v.id)
+           + (select count(*)::int from eventos_historico h where h.veiculo_id = v.id),
+         exists (select 1 from atendimentos ate
+                  where ate.veiculo_id = v.id and ate.tipo::text = 'ASSISTENCIA_24H')
+    from veiculos v
+    left join planos_protecao p on p.id = v.plano_protecao_id
+   where v.cliente_id = p_cliente_id
+     and v.status::text <> 'excluido'
+   order by ordem_status_veiculo(v.status),
+            v.data_ativacao desc nulls last,
+            v.modelo nulls last,
+            v.placa;
+$$;
+
+-- ============================================================================
+-- (G) a Visao Geral (0100) passa a mostrar o historico
+--     Corpo da 0100 + o bloco `eventos.historico` e a coluna
+--     `eventos_historico` na serie. Mesma assinatura.
+-- ============================================================================
+create or replace function painel_visao_geral(
+  p_regional_id uuid    default null,
+  p_meses       integer default 6
+)
+returns jsonb
+language plpgsql stable security definer set search_path = public
+as $$
+declare
+  v_rid    uuid;
+  v_hoje   date := current_date;
+  v_mes    date := date_trunc('month', current_date)::date;
+  v_mes_ant date := (date_trunc('month', current_date) - interval '1 month')::date;
+  v_meses  integer := least(greatest(coalesce(p_meses, 6), 3), 24);
+  v_res    jsonb;
+begin
+  if not (is_staff() or auth.uid() is null) then
+    return null;
+  end if;
+  v_rid := escopo_regional(p_regional_id);
+
+  with
+  frota as (
+    select v.id, v.cliente_id, v.regional_id, v.tipo_veiculo_id, v.plano_protecao_id,
+           v.status::text as status, v.data_ativacao, v.data_saida,
+           v.cobranca_externa, v.valor_mensalidade
+      from veiculos v
+     where v_rid is null or v.regional_id = v_rid
+  ),
+  base as (
+    select f.*,
+           coalesce(nullif(f.valor_mensalidade, 0), (
+             select t.valor from titulos_financeiros t
+              where t.veiculo_id = f.id and t.status <> 'cancelado'
+              order by t.data_vencimento desc, t.created_at desc limit 1
+           ), 0) as mensalidade
+      from frota f
+     where f.data_ativacao is not null
+       and f.data_ativacao <= v_hoje
+       and (f.data_saida is null or f.data_saida > v_hoje)
+  ),
+  meses as (
+    select gs::date as inicio,
+           (gs + interval '1 month' - interval '1 day')::date as fim
+      from generate_series(v_mes - make_interval(months => v_meses - 1), v_mes, interval '1 month') gs
+  ),
+  eventos as (
+    select e.id, e.status::text as status, e.created_at::date as dia,
+           coalesce(te.nome, initcap(lower(e.tipo_evento::text)), 'Nao classificado') as tipo
+      from eventos_sinistro e
+      left join tipos_evento te on te.id = e.tipo_evento_id
+     where v_rid is null or e.regional_id = v_rid
+  ),
+  -- Historico do Mutual (0101): a unidade e a do veiculo e, sem ele, a do associado.
+  hist as (
+    select h.id, h.data_evento as dia, coalesce(h.tipos[1], 'Nao classificado') as tipo
+      from eventos_historico h
+      join clientes cl on cl.id = h.cliente_id
+      left join veiculos ve on ve.id = h.veiculo_id
+     where v_rid is null or coalesce(ve.regional_id, cl.regional_id) = v_rid
+  ),
+  acion as (
+    select a.status::text as status, a.created_at::date as dia, a.valor_total
+      from acionamentos_assistencia a
+     where v_rid is null or a.regional_id = v_rid
+  ),
+  lds as (
+    select l.status::text as status, l.created_at::date as dia, l.auditado_em::date as auditado
+      from leads l
+     where v_rid is null or l.regional_id = v_rid
+  ),
+  pagar as (
+    select l.data_vencimento, l.valor_saldo
+      from lancamentos_financeiros l
+     where l.tipo = 'DESPESA'
+       and l.status::text in ('pendente', 'pago_parcial', 'atrasado')
+       and (v_rid is null or l.regional_id = v_rid)
+  )
+  select jsonb_build_object(
+    'gerado_em', now(),
+    'regional_id', v_rid,
+
+    'kpis', jsonb_build_object(
+      'veiculos_base',        (select count(*) from base),
+      'associados_base',      (select count(distinct cliente_id) from base),
+      'carteira_mensal',      (select coalesce(round(sum(mensalidade), 2), 0) from base),
+      'ticket_medio',         (select coalesce(round(avg(nullif(mensalidade, 0)), 2), 0) from base),
+      'sem_valor',            (select count(*) from base where mensalidade = 0),
+      'cobranca_externa',     (select count(*) from base where cobranca_externa),
+      'carteira_externa',     (select coalesce(round(sum(mensalidade), 2), 0) from base where cobranca_externa),
+      'adesoes_mes',          (select count(*) from frota where data_ativacao between v_mes and v_hoje),
+      'adesoes_mes_anterior', (select count(*) from frota
+                                where data_ativacao between v_mes_ant and (v_mes - 1)),
+      'saidas_mes',           (select count(*) from frota where data_saida between v_mes and v_hoje),
+      'saidas_mes_anterior',  (select count(*) from frota
+                                where data_saida between v_mes_ant and (v_mes - 1)),
+      'base_mes_anterior',    (select count(*) from frota
+                                where data_ativacao is not null and data_ativacao <= (v_mes - 1)
+                                  and (data_saida is null or data_saida > (v_mes - 1))),
+      'inadimplentes',        (select count(*) from base where status = 'inadimplente'),
+      'vistoria_pendente',    (select count(*) from base where status = 'vistoria_pendente'),
+      'em_evento',            (select count(*) from base where status = 'em_evento'),
+      'suspensos',            (select count(*) from base where status = 'suspenso'),
+      'regionais',            (select count(*) from regionais r
+                                where (v_rid is null or r.id = v_rid) and r.ativo)
+    ),
+
+    'por_regional', coalesce((
+      select jsonb_agg(x order by x.veiculos desc) from (
+        select coalesce(r.nome, 'MATRIZ (sem unidade)') as nome,
+               count(*) as veiculos,
+               count(distinct b.cliente_id) as associados,
+               round(sum(b.mensalidade), 2) as carteira
+          from base b left join regionais r on r.id = b.regional_id
+         group by 1
+      ) x), '[]'::jsonb),
+
+    'por_uf', coalesce((
+      select jsonb_agg(x order by x.veiculos desc) from (
+        select coalesce(nullif(upper(trim(c.endereco->>'uf')), ''), '??') as uf,
+               count(*) as veiculos
+          from base b join clientes c on c.id = b.cliente_id
+         group by 1
+      ) x), '[]'::jsonb),
+
+    'por_tipo', coalesce((
+      select jsonb_agg(x order by x.veiculos desc) from (
+        select coalesce(t.nome, 'Sem tipo') as nome, count(*) as veiculos,
+               round(sum(b.mensalidade), 2) as carteira
+          from base b left join tipos_veiculo t on t.id = b.tipo_veiculo_id
+         group by 1
+      ) x), '[]'::jsonb),
+
+    'por_plano', coalesce((
+      select jsonb_agg(x order by x.veiculos desc) from (
+        select coalesce(p.nome, 'Sem plano') as nome, count(*) as veiculos
+          from base b left join planos_protecao p on p.id = b.plano_protecao_id
+         group by 1
+      ) x), '[]'::jsonb),
+
+    'por_status', coalesce((
+      select jsonb_agg(x order by x.veiculos desc) from (
+        select status, count(*) as veiculos from base group by 1
+      ) x), '[]'::jsonb),
+
+    'serie', coalesce((
+      select jsonb_agg(x order by x.mes) from (
+        select to_char(m.inicio, 'YYYY-MM') as mes,
+               (select count(*) from frota f where f.data_ativacao between m.inicio and m.fim) as adesoes,
+               (select count(*) from frota f where f.data_saida   between m.inicio and m.fim) as saidas,
+               (select count(*) from frota f
+                 where f.data_ativacao is not null
+                   and f.data_ativacao <= least(m.fim, v_hoje)
+                   and (f.data_saida is null or f.data_saida > least(m.fim, v_hoje))) as base_fim,
+               (select count(*) from eventos e where e.dia between m.inicio and m.fim) as eventos,
+               (select count(*) from hist h where h.dia between m.inicio and m.fim) as eventos_historico,
+               (select count(*) from acion a
+                 where a.dia between m.inicio and m.fim and a.status <> 'CANCELADO') as acionamentos,
+               (select count(*) from lds l where l.dia between m.inicio and m.fim) as leads
+          from meses m
+      ) x), '[]'::jsonb),
+
+    'eventos', jsonb_build_object(
+      'abertos',      (select count(*) from eventos where status not in ('CONCLUIDO', 'NEGADO')),
+      'novos_mes',    (select count(*) from eventos where dia >= v_mes),
+      'concluidos',   (select count(*) from eventos where status = 'CONCLUIDO'),
+      'negados',      (select count(*) from eventos where status = 'NEGADO'),
+      'total',        (select count(*) from eventos),
+      'por_status',   coalesce((select jsonb_agg(x) from (
+                        select status, count(*) as n from eventos group by 1) x), '[]'::jsonb),
+      'por_tipo',     coalesce((select jsonb_agg(x order by x.n desc) from (
+                        select tipo, count(*) as n from eventos group by 1) x), '[]'::jsonb),
+      'por_tipo_12m', coalesce((select jsonb_agg(x order by x.n desc) from (
+                        select tipo, count(*) as n from eventos
+                         where dia > v_hoje - 365 group by 1) x), '[]'::jsonb),
+      'ultimos_12m',  (select count(*) from eventos where dia > v_hoje - 365),
+      'historico', jsonb_build_object(
+        'total',       (select count(*) from hist),
+        'ultimos_12m', (select count(*) from hist where dia > v_hoje - 365),
+        'mes',         (select count(*) from hist where dia >= v_mes),
+        'por_tipo_12m', coalesce((select jsonb_agg(x order by x.n desc) from (
+                          select tipo, count(*) as n from hist
+                           where dia > v_hoje - 365 group by 1) x), '[]'::jsonb)
+      )
+    ),
+
+    'assistencia', jsonb_build_object(
+      'mes',        (select count(*) from acion where dia >= v_mes and status <> 'CANCELADO'),
+      'em_aberto',  (select count(*) from acion
+                      where status in ('ABERTO', 'EM_COTACAO', 'AUTORIZADO', 'EM_ATENDIMENTO')),
+      'custo_mes',  (select coalesce(round(sum(valor_total), 2), 0) from acion
+                      where dia >= v_mes and status <> 'CANCELADO')
+    ),
+
+    'vendas', jsonb_build_object(
+      'em_aberto',        (select count(*) from lds where status not in ('ATIVO', 'PERDIDO')),
+      'novos_mes',        (select count(*) from lds where dia >= v_mes),
+      'convertidos_mes',  (select count(*) from lds where status = 'ATIVO' and auditado >= v_mes),
+      'funil', coalesce((select jsonb_agg(x) from (
+                 select status, count(*) as n from lds group by 1) x), '[]'::jsonb)
+    ),
+
+    'pagar', jsonb_build_object(
+      'em_aberto',  (select coalesce(round(sum(valor_saldo), 2), 0) from pagar),
+      'proximos_7', (select coalesce(round(sum(valor_saldo), 2), 0) from pagar
+                      where data_vencimento between v_hoje and v_hoje + 7),
+      'vencido',    (select coalesce(round(sum(valor_saldo), 2), 0) from pagar
+                      where data_vencimento < v_hoje)
+    ),
+
+    'rastreadores', jsonb_build_object(
+      'instalados', (select count(*) from rastreadores r
+                      where r.status::text = 'ATIVO' and (v_rid is null or r.regional_id = v_rid)),
+      'estoque',    (select count(*) from rastreadores r
+                      where r.status::text = 'DISPONIVEL' and (v_rid is null or r.regional_id = v_rid)),
+      'inadimplentes', (select count(*) from rastreadores r
+                      where r.status::text = 'INADIMPLENTE' and (v_rid is null or r.regional_id = v_rid))
+    )
+  ) into v_res;
+
+  return v_res;
+end;
+$$;
+
+-- ============================================================================
+-- Rito de seguranca (0052)
+-- ============================================================================
+revoke execute on all functions in schema public from public;
+revoke execute on all functions in schema public from anon;
+grant  execute on all functions in schema public to authenticated;
+grant  execute on all functions in schema public to service_role;
+
+-- >>>>>>>>>>>>>>>>>>>>>>>> migrations/0102_portal_regional_equipe.sql >>>>>>>>>>>>>>>>>>>>>>>>
+
+-- ============================================================================
+-- 0102 — O PORTAL DA FRANQUIA: QUEM EXCLUI VENDEDOR, E A CARTEIRA NO PAINEL
 -- ============================================================================
 -- Pedido do usuario (13/10/2026): "o usuario (regional) tem o poder de incluir
 -- e ativar e inativar o vendedor, excluir somente admin e master."
@@ -38959,7 +42640,7 @@ returns table (
   contas_receber_aberto     numeric,
   contas_pagar_aberto       numeric,
   resultado_periodo         numeric,
-  -- 0095 — a carteira da unidade, que o painel nunca mostrou
+  -- 0102 — a carteira da unidade, que o painel nunca mostrou
   veiculos_carteira         integer,
   veiculos_inadimplentes    integer,
   veiculos_cobranca_externa integer,
@@ -39022,7 +42703,7 @@ as $$
 $$;
 
 comment on function regional_painel(uuid, date, date) is
-  'Painel do portal da franquia. `veiculos_ativos` e so `status = ativo` (compatibilidade); a CARTEIRA (0095) usa a mesma lista de `veiculo_faturavel` (0024/0072) e vem acompanhada de quantos estao em cobranca externa (0082), quantos sem valor e o total em R$ pelo override, sem chamar cotar_plano.';
+  'Painel do portal da franquia. `veiculos_ativos` e so `status = ativo` (compatibilidade); a CARTEIRA (0102) usa a mesma lista de `veiculo_faturavel` (0024/0072) e vem acompanhada de quantos estao em cobranca externa (0082), quantos sem valor e o total em R$ pelo override, sem chamar cotar_plano.';
 
 -- ----------------------------------------------------------------------------
 -- Rito de seguranca da 0052 (toda migration que cria/recria funcao)

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   rotuloPapel,
   exigeUnidade,
+  usaUnidadesDeSupervisor,
   validarFichaUsuario,
   situacaoUsuario,
   tempoDeCasa,
@@ -156,5 +157,19 @@ describe('cotador aposentado (0077)', () => {
   it('o rotulo cai no valor CRU, nunca num papel plausivel', () => {
     // Regra da casa: fallback de rotulo mostra o valor, nao escolhe um vizinho.
     expect(rotuloPapel('cotador')).toBe('cotador');
+  });
+});
+
+describe('supervisor e cobranca (0097)', () => {
+  it('estao na lista que a tela oferece', () => {
+    const valores: string[] = PAPEIS_USUARIO.map((p) => p.valor);
+    expect(valores).toContain('supervisor');
+    expect(valores).toContain('cobranca');
+    expect(rotuloPapel('supervisor')).toBe('Supervisor');
+  });
+  it('so o supervisor escolhe varias unidades', () => {
+    expect(usaUnidadesDeSupervisor('supervisor')).toBe(true);
+    expect(usaUnidadesDeSupervisor('gestor_regional')).toBe(false);
+    expect(exigeUnidade('supervisor')).toBe(false);
   });
 });
