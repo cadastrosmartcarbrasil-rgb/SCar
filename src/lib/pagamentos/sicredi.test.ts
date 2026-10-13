@@ -135,6 +135,27 @@ describe('leitura do retorno', () => {
       pix_copia_cola: '00020101...',
     });
   });
+  it('payload REAL do sandbox (13/10/2026): cadastro HIBRIDO', () => {
+    // Resposta verbatim do POST /cobranca/boleto/v1/boletos no sandbox.
+    // ATENCAO: o sandbox e um MOCK fixo (mesmo nossoNumero do exemplo da colecao,
+    // linha de R$ 0,50 para qualquer valor enviado) — serve para o FORMATO, nao para conferir valores.
+    const real = {
+      txid: '445488181811848',
+      qrCode: '00020126930014br.gov.bcb.pix2571pix-qrcode-h.sicredi.com.br/qr/v2/cobv/528520acdd5f4740b63b9b643ca2bcf99999999999999999999BR5903PIX6006Cidade62070503***630441AC\n\n',
+      linhaDigitavel: '74891121150039736789903123451001187340000000050',
+      codigoBarras: '74897937700000099891122224595067890312345109',
+      cooperativa: '6789',
+      posto: '03',
+      nossoNumero: '211001292',
+    };
+    const e = emitidaDoRetornoSicredi('t1', real);
+    expect(e.nosso_numero).toBe('211001292');
+    expect(e.gateway_transacao_id).toBe('211001292');
+    expect(e.linha_digitavel).toBe('74891121150039736789903123451001187340000000050');
+    // As quebras de linha que o Sicredi poe no fim do qrCode nao vao para o PIX copia e cola.
+    expect(e.pix_copia_cola).toBe(real.qrCode.trim());
+    expect(e.pix_copia_cola!.endsWith('\n')).toBe(false);
+  });
   it('liquidados aceita array solto ou embrulhado', () => {
     const item = { nossoNumero: '211001293', seuNumero: 'A1B2C3D4E5', valorLiquidado: '135.00', dataPagamento: '10/11/2026' };
     for (const r of [[item], { items: [item] }, { content: [item] }]) {

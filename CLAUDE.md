@@ -711,8 +711,15 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
   só nas `SICREDI_*` do servidor** (`.env` do VPS + `docker-compose.yml`, ver `.env.example`),
   nunca em `integracoes_bancarias`. Bancada de teste em **Configurações → Integrações bancárias**
   (rota `/api/v1/sicredi`, admin/financeiro): testar token, registrar boleto FICTÍCIO no sandbox,
-  consultar, PDF, pagos do dia — nada grava em `titulos_financeiros`. **⚠️ A coleção oficial não
-  traz exemplos de RESPOSTA nem webhook:** a leitura aceita mais de um nome de campo e a baixa vai
+  consultar, PDF, pagos do dia — nada grava em `titulos_financeiros`. **✅ 13/10/2026: autenticação e boleto de
+  teste FUNCIONANDO no sandbox** — o formato real do cadastro (`nossoNumero`, `linhaDigitavel`,
+  `qrCode`, `txid`, `codigoBarras`) está guardado em `sicredi.test.ts`; o sandbox é MOCK fixo
+  (sempre o mesmo nosso número, linha de R$ 0,50). **O sandbox só aceita os dados de TESTE da
+  coleção** (usuário `123456789`, senha `teste123`, coop. `6789`, posto `03`, benef. `12345`) com a
+  x-api-key do app; os dados reais da conta valem só em produção (ainda não testada). Ler o `.env`
+  com `. .env` no shell quebra a chave — para testar por curl, pegue os valores com
+  `docker compose exec -T app printenv`. **⚠️ A coleção oficial não
+  traz webhook:** a leitura aceita mais de um nome de campo e a baixa vai
   ser por consulta diária de `liquidados/dia` — conferir o formato real no sandbox antes de ligar a
   baixa. **Falta para a remessa usar o Sicredi:** migration com `alter type provedor_banco add
   value 'SICREDI'` + cadastrar a integração padrão. Pagador sem endereço completo (CEP, logradouro,
