@@ -714,7 +714,7 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
   (rota `/api/v1/sicredi`, admin/financeiro): testar token, registrar boleto FICTÍCIO no sandbox,
   consultar, PDF, pagos do dia — nada grava em `titulos_financeiros`. **✅ 13/10/2026: autenticação e boleto de
   teste FUNCIONANDO no sandbox** — o formato real do cadastro (`nossoNumero`, `linhaDigitavel`,
-  `qrCode`, `txid`, `codigoBarras`) está guardado em `sicredi.test.ts`; o sandbox é MOCK fixo
+  `qrCode`, `txid`, `codigoBarras`) está guardado em `sicredi.test.ts`; **✅ EMISSÃO PONTA A PONTA PELA REMESSA validada no sandbox em 13/10/2026** (título de teste do associado fictício TESTE SICREDI SANDBOX, CPF 35169335695: remessa CONCLUIDA, título com nosso número, linha, PIX e `gateway_status` REGISTRADO; os 7 títulos reais seguiram intocados). Para testar um título só: bancada → *Emitir título* (manda `titulo_ids`; o botão de lote de `/cobrancas/boletos` leva a fila inteira); o sandbox é MOCK fixo
   (sempre o mesmo nosso número, linha de R$ 0,50). **O sandbox só aceita os dados de TESTE da
   coleção** (usuário `123456789`, senha `teste123`, coop. `6789`, posto `03`, benef. `12345`) com a
   x-api-key do app; os dados reais da conta valem só em produção (ainda não testada). Ler o `.env`
