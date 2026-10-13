@@ -12,7 +12,7 @@ import { Modal } from '@/components/ui/modal';
 import { FormField, Input, Select, MoneyInput } from '@/components/ui/field';
 import {
   useBuscaVeiculoAssistencia, useSituacaoAssistencia, useElegibilidadeAssistencia,
-  useServicosAssistencia, useAbrirAcionamento, usePrestadoresDoServico, useCotacoes,
+  useServicosAssistencia, useAbrirAcionamento, usePrestadoresDoServico, usePrestadores, useCotacoes,
   useRegistrarCotacao, useConfirmarPrestador, useConcluirAcionamento, useCancelarAcionamento,
   useEnviarVoucher, useAcionamento, useHistoricoAssistenciaVeiculo,
   useAtualizarAcionamento, useTrocarPrestador, useEdicoesAcionamento, useDefinirTrajeto,
@@ -31,6 +31,7 @@ import {
   STATUS_ACIONAMENTO_LABEL,
 } from '@/lib/assistencia';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
+import { opcoesPrestadorDoServico, type OpcaoPrestador } from '@/lib/fornecedores';
 import type { Json, ServicosAssistenciaRow } from '@/lib/database.types';
 
 export function PainelAcionamento({ placaInicial }: { placaInicial?: string | null }) {
@@ -379,7 +380,12 @@ function ModalAcionar({
 export function OrdemServico({ acionamentoId, onVoltar }: { acionamentoId: string; onVoltar?: () => void }) {
   const { data: a } = useAcionamento(acionamentoId);
   const { data: servicos } = useServicosAssistencia();
-  const { data: prestadores } = usePrestadoresDoServico(a?.servico_id ?? null);
+  const { data: vinculados } = usePrestadoresDoServico(a?.servico_id ?? null);
+  const { data: todosPrestadores } = usePrestadores();
+  const prestadores = useMemo(
+    () => opcoesPrestadorDoServico(vinculados ?? [], todosPrestadores ?? []),
+    [vinculados, todosPrestadores],
+  );
   const { data: cotacoes } = useCotacoes(acionamentoId);
   const registrar = useRegistrarCotacao();
   const confirmar = useConfirmarPrestador();
@@ -493,11 +499,7 @@ export function OrdemServico({ acionamentoId, onVoltar }: { acionamentoId: strin
                 }}
               >
                 <option value="">Selecione...</option>
-                {(prestadores ?? []).map((p) => (
-                  <option key={p.fornecedor_id} value={p.fornecedor_id}>
-                    {p.razao_social}{p.cobertura ? ` — ${p.cobertura}` : ''}
-                  </option>
-                ))}
+                <OpcoesPrestador opcoes={prestadores} />
               </Select>
             </FormField>
             <FormField label="Valor negociado">
@@ -947,7 +949,13 @@ function ModalEditarOS({
 // Troca de prestador (cancela o lancamento anterior e gera o novo)
 // ---------------------------------------------------------------------------
 function ModalTrocarPrestador({ acionamento, onClose }: { acionamento: AcionamentoComRel; onClose: () => void }) {
-  const { data: prestadores } = usePrestadoresDoServico(acionamento.servico_id);
+  const { data: vinculados } = usePrestadoresDoServico(acionamento.servico_id);
+  const { data: todosPrestadores } = usePrestadores();
+  const prestadores = useMemo(
+    () => opcoesPrestadorDoServico(vinculados ?? [], todosPrestadores ?? [])
+      .filter((p) => p.fornecedor_id !== acionamento.prestador_id),
+    [vinculados, todosPrestadores, acionamento.prestador_id],
+  );
   const trocar = useTrocarPrestador();
   const [form, setForm] = useState({ fornecedor_id: '', valor: null as number | null, valor_km: null as number | null, prazo: '', motivo: '' });
 
@@ -998,13 +1006,7 @@ function ModalTrocarPrestador({ acionamento, onClose }: { acionamento: Acionamen
               }}
             >
               <option value="">Selecione...</option>
-              {(prestadores ?? [])
-                .filter((p) => p.fornecedor_id !== acionamento.prestador_id)
-                .map((p) => (
-                  <option key={p.fornecedor_id} value={p.fornecedor_id}>
-                    {p.razao_social}{p.cobertura ? ` — ${p.cobertura}` : ''}
-                  </option>
-                ))}
+              <OpcoesPrestador opcoes={prestadores} />
             </Select>
           </FormField>
           <FormField label="Valor negociado">
@@ -1114,5 +1116,25 @@ function TrilhaEdicoes({ acionamentoId }: { acionamentoId: string }) {
         ))}
       </ul>
     </div>
+  );
+}
+
+/** Vinculados ao servico (com valor acordado) primeiro; os demais em grupo proprio. */
+function OpcoesPrestador({ opcoes }: { opcoes: OpcaoPrestador[] }) {
+  const vinc = opcoes.filter((p) => p.vinculado);
+  const outros = opcoes.filter((p) => !p.vinculado);
+  return (
+    <>
+      {vinc.length > 0 && (
+        <optgroup label="Atendem este servico (valor acordado)">
+          {vinc.map((p) => <option key={p.fornecedor_id} value={p.fornecedor_id}>{p.rotulo}</option>)}
+        </optgroup>
+      )}
+      {outros.length > 0 && (
+        <optgroup label="Outros prestadores (sem valor acordado)">
+          {outros.map((p) => <option key={p.fornecedor_id} value={p.fornecedor_id}>{p.rotulo}</option>)}
+        </optgroup>
+      )}
+    </>
   );
 }

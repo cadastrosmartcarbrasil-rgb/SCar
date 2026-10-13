@@ -4758,6 +4758,12 @@ teste afirma `row_count = 0` e que a linha continua lá).
   os seletores de fornecedor usam `rotuloFornecedor` ("FANTASIA (RAZÃO)"). Ainda mostram só a
   razão: os seletores de prestador do acionamento (`prestadores_do_servico` não devolve fantasia —
   precisa de migration).
+- **A cotação do acionamento lista TODO prestador ativo (13/10/2026).** Antes só apareciam os que
+  têm o serviço vinculado em `prestador_servicos` (`prestadores_do_servico`), e 10 dos 13 prestadores
+  ativos, recém-cadastrados, não tinham nenhum: sumiam da OS e da troca de prestador. Agora
+  `opcoesPrestadorDoServico` (`src/lib/fornecedores.ts`, testada) põe os vinculados primeiro (com o
+  valor acordado) e os demais no grupo "sem valor acordado". O banco já aceitava: sem acordo, valem o
+  valor padrão e o KM do serviço.
 - **Quem cadastra:** `pode_cadastrar_fornecedor()` = admin/financeiro + time da 24h + **gestor
   regional**. Cadastro operacional não pode depender de quem tem acesso a Configurações.
 
