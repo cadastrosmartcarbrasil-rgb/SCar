@@ -2363,6 +2363,15 @@ O enum do Postgres ainda tem `cotador` — valor de enum não se apaga —, mas 
 | `supervisor` | (0097) a COBRANÇA das unidades de `supervisor_regionais`; fora dela, staff da unidade do cadastro |
 | `cobranca` | (0097) a COBRANÇA do Brasil (sem unidade) ou da unidade dela; fora dela, staff da unidade do cadastro |
 
+### A TELA: `Configurações → Usuários e Permissões` (13/10/2026)
+O usuário não achava onde ajustar permissão — ela existia (o papel na edição), mas sem nome de
+permissão nem explicação. Agora: **coluna Papel editável direto na lista** (confirmação diz o que a
+pessoa GANHA e PERDE, `diferencaEntrePapeis`), aba **Permissões por papel** (grade papel × o que
+libera, com quantos usuários ativos em cada papel) e o resumo do papel embaixo do seletor no
+cadastro. A grade é **descrição** dos helpers do banco, não controle: `src/lib/permissoes.ts`
+(testado) cita a origem de cada linha — **mexeu num helper `pode_*`, atualize a grade**.
+Permissão individual por usuário (fora do papel) NÃO existe: exigiria reescrever as policies.
+
 ### A raiz: 3 funções sustentam tudo
 `is_staff()` · `auth_papel()` · `auth_regional_id()` — e as três exigem **`and ativo`** desde a
 `0068`. Todo o resto deriva delas (`is_admin`, `tem_acesso_global`, `pode_regional`,

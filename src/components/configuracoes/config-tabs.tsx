@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 const TABS = [
   { href: '/configuracoes/empresa', label: 'Empresa', icon: Building },
   { href: '/configuracoes/regionais', label: 'Regionais', icon: Building2 },
-  { href: '/configuracoes/usuarios', label: 'Usuarios & Perfis', icon: Users },
+  { href: '/configuracoes/usuarios', label: 'Usuarios e Permissoes', icon: Users },
   { href: '/configuracoes/vendedores', label: 'Vendedores', icon: BadgeDollarSign },
   { href: '/configuracoes/marcas-modelos', label: 'Marcas & Modelos', icon: Car },
   { href: '/configuracoes/tipos-veiculo', label: 'Tipos de Veiculo', icon: Truck },

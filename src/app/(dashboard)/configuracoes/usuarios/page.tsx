@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, UserCog, Pencil, KeyRound, ShieldAlert, Search, Loader2, Link2 } from 'lucide-react';
+import { Plus, UserCog, Pencil, KeyRound, ShieldAlert, Search, Loader2, Link2, ShieldCheck, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { FormField, Input, Select } from '@/components/ui/field';
@@ -16,6 +16,8 @@ import {
 } from '@/hooks/use-config';
 import { opcoesParaEscolher } from '@/lib/regional';
 import { UnidadesSupervisor } from '@/components/usuarios/unidades-supervisor';
+import { MatrizPermissoes, ResumoDoPapel } from '@/components/usuarios/matriz-permissoes';
+import { diferencaEntrePapeis } from '@/lib/permissoes';
 import {
   PAPEIS_USUARIO,
   rotuloPapel,
@@ -56,6 +58,7 @@ export default function UsuariosPage() {
   const criar = useCreateUsuario();
   const atualizar = useUpdateUsuario();
 
+  const [aba, setAba] = useState<'usuarios' | 'permissoes'>('usuarios');
   const [busca, setBusca] = useState('');
   const [verInativos, setVerInativos] = useState(true);
   const [novoAberto, setNovoAberto] = useState(false);
@@ -80,6 +83,11 @@ export default function UsuariosPage() {
   }, [usuarios, busca, verInativos]);
 
   const ativos = (usuarios ?? []).filter((u) => u.ativo).length;
+  const porPapel = useMemo(() => {
+    const c: Record<string, number> = {};
+    for (const u of usuarios ?? []) if (u.ativo) c[u.papel] = (c[u.papel] ?? 0) + 1;
+    return c;
+  }, [usuarios]);
   const inativos = (usuarios ?? []).length - ativos;
 
   function novo() {
@@ -149,6 +157,34 @@ export default function UsuariosPage() {
   }
 
   /**
+   * Troca de PAPEL direto na lista. Papel e permissao: a confirmacao diz o que a
+   * pessoa ganha e perde, porque vale na hora. O gestor regional sem unidade nao
+   * funciona — nesse caso manda abrir a edicao para escolher a unidade junto.
+   */
+  function trocarPapel(u: UsuarioListado, papel: PapelUsuario) {
+    if (papel === u.papel) return;
+    if (exigeUnidade(papel) && !u.regional_id) {
+      toast.error(`${rotuloPapel(papel)} precisa de unidade: use Editar para escolher o papel e a unidade juntos.`);
+      return;
+    }
+    const { ganha, perde } = diferencaEntrePapeis(u.papel, papel);
+    const linhas = [
+      `Trocar ${u.nome} de ${rotuloPapel(u.papel)} para ${rotuloPapel(papel)}?`,
+      ganha.length ? `\nPassa a poder:\n- ${ganha.join('\n- ')}` : '',
+      perde.length ? `\nDeixa de poder:\n- ${perde.join('\n- ')}` : '',
+      '\nVale a partir do proximo clique da pessoa no sistema.',
+    ];
+    if (!confirm(linhas.filter(Boolean).join('\n'))) return;
+    atualizar.mutate(
+      { id: u.id, papel },
+      {
+        onSuccess: () => toast.success(`Papel alterado para ${rotuloPapel(papel)}`),
+        onError: (err) => toast.error(err.message),
+      },
+    );
+  }
+
+  /**
    * Liga/desliga direto na lista. Desde a 0068 isto CORTA O ACESSO de verdade
    * (`is_staff()`/`auth_papel()` exigem `ativo`), entao a confirmacao diz o que
    * mais cai junto — a unidade que fica sem responsavel, o portal do vendedor.
@@ -169,9 +205,9 @@ export default function UsuariosPage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="max-w-2xl text-sm text-slate-500">
-            Equipe interna: ficha, papel (permissoes), unidade, acesso e redefinicao de senha. O
-            papel decide o que a pessoa enxerga — <strong>admin</strong> e <strong>financeiro</strong>{' '}
-            tem acesso global; os demais ficam na unidade escolhida.
+            Equipe interna: ficha, <strong>papel (que e a permissao)</strong>, unidade, acesso e
+            redefinicao de senha. Troque o papel direto na coluna <strong>Papel</strong>; a aba{' '}
+            <strong>Permissoes por papel</strong> mostra o que cada um libera.
           </p>
           <p className="mt-1 text-xs text-slate-400">
             <b className="text-slate-500">{ativos}</b> com acesso
@@ -189,6 +225,23 @@ export default function UsuariosPage() {
         </p>
       )}
 
+      <div className="flex gap-1 border-b border-slate-200">
+        {([
+          { id: 'usuarios', rotulo: 'Usuarios', icone: Users },
+          { id: 'permissoes', rotulo: 'Permissoes por papel', icone: ShieldCheck },
+        ] as const).map((t) => (
+          <button key={t.id} type="button" onClick={() => setAba(t.id)}
+            className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm ${aba === t.id
+              ? 'border-brand-600 font-medium text-brand-700'
+              : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+            <t.icone className="h-4 w-4" /> {t.rotulo}
+          </button>
+        ))}
+      </div>
+
+      {aba === 'permissoes' && <MatrizPermissoes contagem={porPapel} />}
+
+      {aba === 'usuarios' && (<>
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative max-w-sm flex-1">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
@@ -248,9 +301,21 @@ export default function UsuariosPage() {
                   {u.telefone && <span className="tnum block text-xs text-slate-400">{u.telefone}</span>}
                 </td>
                 <td className="px-4 py-2">
-                  <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
-                    {rotuloPapel(u.papel)}
-                  </span>
+                  {podeGerenciar ? (
+                    <select value={u.papel} disabled={atualizar.isPending}
+                      aria-label={`Papel de ${u.nome}`}
+                      onChange={(e) => trocarPapel(u, e.target.value as PapelUsuario)}
+                      className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700">
+                      {PAPEIS_USUARIO.map((p) => <option key={p.valor} value={p.valor}>{p.rotulo}</option>)}
+                      {!PAPEIS_USUARIO.some((p) => p.valor === u.papel) && (
+                        <option value={u.papel}>{u.papel}</option>
+                      )}
+                    </select>
+                  ) : (
+                    <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
+                      {rotuloPapel(u.papel)}
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-2 text-slate-600">{u.regional_nome ?? 'Global'}</td>
                 <td className="px-4 py-2 text-slate-600">
@@ -296,6 +361,7 @@ export default function UsuariosPage() {
         entrar e deixa de ser reconhecida como equipe pela seguranca do banco. O historico do que
         ela ja fez continua inteiro. O sistema recusa desativar o <b>ultimo administrador ativo</b>.
       </p>
+      </>)}
 
       {/* ------------------------------------------------------------ novo */}
       <Modal open={novoAberto} onClose={() => setNovoAberto(false)} title="Novo usuario" tamanho="xl">
@@ -357,6 +423,7 @@ export default function UsuariosPage() {
                 </Select>
               </FormField>
             </div>
+            <div className="mt-2"><ResumoDoPapel papel={form.papel} /></div>
             {usaUnidadesDeSupervisor(form.papel) && (
               <p className="mt-1.5 text-[11px] text-cyan-700">
                 Depois de criar, abra a edicao do usuario para marcar as <b>unidades</b> pelas quais o
@@ -433,6 +500,12 @@ export default function UsuariosPage() {
                 </Select>
               </FormField>
             </div>
+            <ResumoDoPapel papel={edicao.papel} />
+            {exigeUnidade(edicao.papel) && !edicao.regional_id && (
+              <p className="text-[11px] text-amber-700">
+                O <b>gestor regional</b> so funciona com uma unidade escolhida.
+              </p>
+            )}
             {usaUnidadesDeSupervisor(edicao.papel) && <UnidadesSupervisor usuarioId={edicao.id} />}
 
             <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
