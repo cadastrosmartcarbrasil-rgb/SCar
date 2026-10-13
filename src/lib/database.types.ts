@@ -1328,6 +1328,23 @@ export type CobrancaRemessaItensRow = Timestamps & {
   retorno: Json | null;
 };
 
+// Trilha da baixa bancaria (0105)
+export type SituacaoLiquidacaoBanco = 'BAIXADO' | 'JA_PAGO' | 'NAO_ENCONTRADO' | 'TITULO_CANCELADO';
+export type CobrancaLiquidacoesRow = Timestamps & {
+  id: string;
+  provedor: ProvedorBanco;
+  ambiente: 'sandbox' | 'producao';
+  nosso_numero: string;
+  seu_numero: string | null;
+  data_pagamento: string;
+  valor_pago: number | null;
+  titulo_id: string | null;
+  situacao: SituacaoLiquidacaoBanco;
+  valor_divergente: boolean;
+  dia_consultado: string;
+  payload: Json | null;
+};
+
 // Linha da listagem do modulo Cobranca (RPC listar_cobrancas)
 export type StatusCobranca = 'aberto' | 'pago' | 'vencido' | 'cancelado';
 export type CobrancaLinha = {
@@ -3221,6 +3238,7 @@ export type Database = {
         CobrancaRemessasRow,
         [Rel<'integracao_id', 'integracoes_bancarias'>, Rel<'regional_id', 'regionais'>, Rel<'created_by', 'usuarios'>]
       >;
+      cobranca_liquidacoes: TableDef<CobrancaLiquidacoesRow, [Rel<'titulo_id', 'titulos_financeiros'>]>;
       cobranca_remessa_itens: TableDef<
         CobrancaRemessaItensRow,
         [Rel<'remessa_id', 'cobranca_remessas'>, Rel<'titulo_id', 'titulos_financeiros'>]
@@ -3670,6 +3688,14 @@ export type Database = {
       titulos_para_remessa: {
         Args: { p_competencia?: string | null; p_regional_id?: string | null; p_limite?: number | null };
         Returns: TitulosFinanceirosRow[];
+      };
+      registrar_liquidacao_banco: {
+        Args: {
+          p_provedor: string; p_ambiente: string; p_nosso_numero: string; p_seu_numero: string | null;
+          p_data_pagamento: string | null; p_valor_pago: number | null; p_dia_consultado: string;
+          p_payload?: Json | null;
+        };
+        Returns: { situacao: SituacaoLiquidacaoBanco; titulo_id: string | null; valor_divergente: boolean }[];
       };
       criar_remessa_cobranca: {
         Args: { p_titulo_ids: string[]; p_integracao_id?: string | null; p_referencia?: string | null };

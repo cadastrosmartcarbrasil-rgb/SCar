@@ -25,6 +25,27 @@ export function BancadaSicredi() {
   const [linha, setLinha] = useState('');
   const [dia, setDia] = useState(new Date().toISOString().slice(0, 10));
   const [tituloId, setTituloId] = useState('');
+  const [diaBaixa, setDiaBaixa] = useState('');
+
+  // Baixa dos pagos (0105): sem dia = ontem e hoje, como o agendador faz.
+  async function darBaixa() {
+    setOcupado('baixa');
+    setSaida(null);
+    try {
+      const r = await fetch('/api/v1/cobrancas/baixa-banco', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(diaBaixa ? { dia: diaBaixa } : {}),
+      });
+      const j = await r.json();
+      if (!r.ok && !j.resumo) throw new Error(j.error ?? `HTTP ${r.status}`);
+      setSaida({ ok: !!j.ok, texto: JSON.stringify(j, null, 2) });
+    } catch (e) {
+      setSaida({ ok: false, texto: (e as Error).message });
+    } finally {
+      setOcupado(null);
+    }
+  }
 
   // Emite UM titulo pelo caminho real (a remessa), sem levar a fila inteira:
   // com `titulo_ids` a rota nao consulta `titulos_para_remessa`.
@@ -147,6 +168,19 @@ export function BancadaSicredi() {
               <Input type="date" value={dia} onChange={(e) => setDia(e.target.value)} />
               <Button type="button" variant="secondary" disabled={!!ocupado} onClick={() => chamar('liquidados', { dia })}>
                 Pagos no dia
+              </Button>
+            </div>
+          </div>
+          <div className="space-y-1 border-t border-slate-200 pt-3">
+            <p className="text-xs text-slate-500">
+              Baixa dos pagos: le os boletos pagos no Sicredi e da baixa nos titulos do SCar (o agendador do servidor
+              faz o mesmo sozinho). Sem data: ontem e hoje. Pagamento que nao casa com titulo fica registrado como
+              &quot;nao encontrado&quot;.
+            </p>
+            <div className="flex gap-2">
+              <Input type="date" value={diaBaixa} onChange={(e) => setDiaBaixa(e.target.value)} />
+              <Button type="button" variant="secondary" disabled={!!ocupado} onClick={darBaixa}>
+                <CheckCircle2 className="h-4 w-4" /> {ocupado === 'baixa' ? 'Dando baixa...' : 'Dar baixa agora'}
               </Button>
             </div>
           </div>

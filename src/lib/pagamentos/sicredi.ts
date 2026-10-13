@@ -233,6 +233,15 @@ export function liquidacoesDoRetorno(resp: unknown): LiquidacaoSicredi[] {
   });
 }
 
+export const PAGINAS_MAX_LIQUIDADOS = 50;
+
+/** O banco diz que ha mais paginas? (`hasNext`/`hasNextPage`/`proximaPagina`) */
+export function temProximaPagina(resp: unknown): boolean {
+  if (!resp || typeof resp !== 'object' || Array.isArray(resp)) return false;
+  const o = resp as Record<string, unknown>;
+  return o.hasNext === true || o.hasNextPage === true || o.proximaPagina === true;
+}
+
 /** Mensagem legivel do erro do banco — leva o corpo da recusa, nunca so o HTTP. */
 export function mensagemErroSicredi(status: number, corpo: unknown): string {
   const o = (corpo && typeof corpo === 'object' ? corpo : {}) as Record<string, unknown>;
@@ -400,10 +409,29 @@ export class SicrediGateway extends BasePaymentGateway {
     return res.arrayBuffer();
   }
 
-  /** Boletos pagos num dia ('YYYY-MM-DD'). Base da baixa automatica. */
+  /**
+   * Boletos pagos num dia ('YYYY-MM-DD'). Base da baixa automatica.
+   * Percorre as paginas enquanto o banco disser que ha proxima (`hasNext`),
+   * com teto de PAGINAS_MAX para nunca virar laco infinito.
+   */
   async liquidadosDoDia(dia: string): Promise<LiquidacaoSicredi[]> {
-    const q = new URLSearchParams({ codigoBeneficiario: this.cfg.codigoBeneficiario, dia: dataSicredi(dia) });
-    return liquidacoesDoRetorno(await this.json('GET', `/cobranca/boleto/v1/boletos/liquidados/dia?${q}`));
+    const todos: LiquidacaoSicredi[] = [];
+    const vistos = new Set<string>();
+    for (let pagina = 0; pagina < PAGINAS_MAX_LIQUIDADOS; pagina++) {
+      const q = new URLSearchParams({ codigoBeneficiario: this.cfg.codigoBeneficiario, dia: dataSicredi(dia) });
+      if (pagina > 0) q.set('pagina', String(pagina));
+      const resp = await this.json('GET', `/cobranca/boleto/v1/boletos/liquidados/dia?${q}`);
+      let novos = 0;
+      for (const l of liquidacoesDoRetorno(resp)) {
+        const chave = `${l.nossoNumero}|${l.dataPagamento}|${l.valorPago}`;
+        if (vistos.has(chave)) continue;
+        vistos.add(chave);
+        todos.push(l);
+        novos++;
+      }
+      if (!temProximaPagina(resp) || novos === 0) break;
+    }
+    return todos;
   }
 
   // O Sicredi nao tem webhook na colecao: a baixa e por liquidadosDoDia().

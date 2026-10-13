@@ -288,6 +288,25 @@ describe('SicrediGateway', () => {
     expect(chamadas[1].url).toContain('dia=13%2F10%2F2026');
     expect(chamadas[1].url).toContain('codigoBeneficiario=12345');
   });
+
+  it('liquidados percorre as paginas enquanto hasNext', async () => {
+    const { fn, chamadas } = fetchFalso([
+      { body: TOKEN },
+      { body: { items: [{ nossoNumero: '1', valorLiquidado: 10, dataPagamento: '2026-10-13' }], hasNext: true } },
+      { body: { items: [{ nossoNumero: '2', valorLiquidado: 20, dataPagamento: '2026-10-13' }], hasNext: false } },
+    ]);
+    const r = await new SicrediGateway(CFG, fn).liquidadosDoDia('2026-10-13');
+    expect(r.map((l) => l.nossoNumero)).toEqual(['1', '2']);
+    expect(chamadas[1].url).not.toContain('pagina=');
+    expect(chamadas[2].url).toContain('pagina=1');
+  });
+
+  it('liquidados para se a pagina seguinte repete a anterior', async () => {
+    const pag = { items: [{ nossoNumero: '1', valorLiquidado: 10, dataPagamento: '2026-10-13' }], hasNext: true };
+    const { fn, chamadas } = fetchFalso([{ body: TOKEN }, { body: pag }, { body: pag }]);
+    expect(await new SicrediGateway(CFG, fn).liquidadosDoDia('2026-10-13')).toHaveLength(1);
+    expect(chamadas).toHaveLength(3);
+  });
 });
 
 describe('escolherIntegracao', () => {

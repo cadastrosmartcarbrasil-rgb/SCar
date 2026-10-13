@@ -49,6 +49,8 @@ services:
       SICREDI_POSTO: ${SICREDI_POSTO:-}
       SICREDI_CODIGO_BENEFICIARIO: ${SICREDI_CODIGO_BENEFICIARIO:-}
       SICREDI_API_BASE: ${SICREDI_API_BASE:-}
+      # Segredo do agendador da baixa bancaria (cron do VPS -> /api/v1/cobrancas/baixa-banco)
+      COBRANCA_CRON_SECRET: ${COBRANCA_CRON_SECRET:-}
 
   caddy:
     image: caddy:2-alpine
