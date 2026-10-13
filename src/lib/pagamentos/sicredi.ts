@@ -75,11 +75,20 @@ export function configSicrediDoAmbiente(env: Env): SicrediConfig | null {
     apiKey: v('apiKey'),
     username: v('username'),
     password: v('password'),
-    cooperativa: v('cooperativa'),
-    posto: v('posto'),
-    codigoBeneficiario: v('codigoBeneficiario'),
+    // Formato fixo do Sicredi (colecao oficial): cooperativa 4, posto 2 e
+    // beneficiario 5 digitos. "3" no posto e "03" para o banco — e o webhook
+    // responde 422 "Falha na busca do beneficiario" quando nao confere.
+    cooperativa: codigoSicredi(v('cooperativa'), 4),
+    posto: codigoSicredi(v('posto'), 2),
+    codigoBeneficiario: codigoSicredi(v('codigoBeneficiario'), 5),
     apiBase: v('apiBase') || null,
   };
+}
+
+/** So digitos, com zero a esquerda ate o tamanho do Sicredi. Texto sem digito fica como veio. */
+export function codigoSicredi(valor: string, tamanho: number): string {
+  const d = valor.replace(/\D/g, '');
+  return d ? d.padStart(tamanho, '0') : valor;
 }
 
 export function urlBaseSicredi(cfg: Pick<SicrediConfig, 'ambiente' | 'apiBase'>): string {

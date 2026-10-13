@@ -6,6 +6,7 @@ import {
   avisosDoWebhook,
   caminhosWebhookSicredi,
   configSicrediDoAmbiente,
+  codigoSicredi,
   corpoContratoWebhook,
   idContratoWebhook,
   mascararSegredo,
@@ -60,6 +61,15 @@ describe('configuracao pelo ambiente', () => {
     expect(CFG.ambiente).toBe('sandbox');
     expect(configSicrediDoAmbiente({ ...ENV, SICREDI_AMBIENTE: 'PRODUCAO' })!.ambiente).toBe('producao');
     expect(configSicrediDoAmbiente({ ...ENV, SICREDI_AMBIENTE: 'prod' })!.ambiente).toBe('sandbox');
+  });
+
+  it('cooperativa, posto e beneficiario no formato do Sicredi (4/2/5 digitos)', () => {
+    const c = configSicrediDoAmbiente({
+      ...ENV, SICREDI_COOPERATIVA: '101', SICREDI_POSTO: '3', SICREDI_CODIGO_BENEFICIARIO: '1234-5',
+    })!;
+    expect([c.cooperativa, c.posto, c.codigoBeneficiario]).toEqual(['0101', '03', '12345']);
+    expect(codigoSicredi('0101', 4)).toBe('0101');
+    expect(codigoSicredi('03', 2)).toBe('03');
   });
   it('url base: /sb no sandbox, sem /sb em producao, override sem barra final', () => {
     expect(urlBaseSicredi({ ambiente: 'sandbox' })).toBe('https://api-parceiro.sicredi.com.br/sb');
