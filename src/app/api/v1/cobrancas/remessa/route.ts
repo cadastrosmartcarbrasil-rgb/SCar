@@ -58,7 +58,7 @@ export async function POST(request: Request) {
 
   const { data: itens } = await supabase
     .from('cobranca_remessa_itens')
-    .select('titulo_id, titulos_financeiros(id, valor, data_vencimento, cliente_id, clientes(nome_razao_social, cpf_cnpj, email, telefone))')
+    .select('titulo_id, titulos_financeiros(id, valor, data_vencimento, cliente_id, clientes(nome_razao_social, cpf_cnpj, email, telefone, endereco))')
     .eq('remessa_id', remessa.id);
 
   if (!itens || itens.length === 0) {
@@ -81,7 +81,13 @@ export async function POST(request: Request) {
     titulos_financeiros?: {
       valor: number;
       data_vencimento: string;
-      clientes?: { nome_razao_social: string; cpf_cnpj: string; email: string | null; telefone: string | null } | null;
+      clientes?: {
+        nome_razao_social: string;
+        cpf_cnpj: string;
+        email: string | null;
+        telefone: string | null;
+        endereco: Record<string, string | null> | null;
+      } | null;
     } | null;
   };
   const cobrancas: CobrancaInput[] = (itens as unknown as ItemRel[]).map((i) => ({
@@ -94,6 +100,7 @@ export async function POST(request: Request) {
       cpf_cnpj: i.titulos_financeiros?.clientes?.cpf_cnpj ?? '',
       email: i.titulos_financeiros?.clientes?.email ?? null,
       telefone: i.titulos_financeiros?.clientes?.telefone ?? null,
+      endereco: i.titulos_financeiros?.clientes?.endereco ?? null,
     },
   }));
 

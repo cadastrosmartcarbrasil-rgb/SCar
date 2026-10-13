@@ -6,13 +6,23 @@
 // fluxo (remessa -> retorno -> baixa) funcionando na fase de transicao.
 import { MockGateway } from './mock';
 import { AsaasGateway } from './asaas';
+import { SicrediGateway, configSicrediDoAmbiente, variaveisSicrediFaltando } from './sicredi';
 import { GatewayNaoImplementadoError, type GatewayConfig, type PaymentGateway } from './types';
 
 export * from './types';
 export { MockGateway } from './mock';
 export { AsaasGateway } from './asaas';
+export { SicrediGateway } from './sicredi';
 
-export function getPaymentGateway(config?: GatewayConfig | null): PaymentGateway {
+export function getPaymentGateway(config?: GatewayConfig | null, env: Record<string, string | undefined> = process.env): PaymentGateway {
+  // Sicredi: as credenciais NAO ficam na tabela, ficam nas SICREDI_* do servidor.
+  if (config?.provedor === 'SICREDI') {
+    const cfg = configSicrediDoAmbiente(env);
+    if (!cfg) {
+      throw new GatewayNaoImplementadoError('SICREDI', `faltam variaveis: ${variaveisSicrediFaltando(env).join(', ')}`);
+    }
+    return new SicrediGateway(cfg);
+  }
   if (!config || !config.api_key) return new MockGateway();
 
   switch (config.provedor) {

@@ -40,6 +40,15 @@ services:
       # Da LEITURA DA BASE INTEIRA de associados: nunca vai ao navegador.
       MUTUAL_API_TOKEN: ${MUTUAL_API_TOKEN:-}
       MUTUAL_API_BASE: ${MUTUAL_API_BASE:-}
+      # Sicredi API Cobranca (boleto + PIX). Valores so no .env do VPS.
+      SICREDI_AMBIENTE: ${SICREDI_AMBIENTE:-sandbox}
+      SICREDI_API_KEY: ${SICREDI_API_KEY:-}
+      SICREDI_USERNAME: ${SICREDI_USERNAME:-}
+      SICREDI_PASSWORD: ${SICREDI_PASSWORD:-}
+      SICREDI_COOPERATIVA: ${SICREDI_COOPERATIVA:-}
+      SICREDI_POSTO: ${SICREDI_POSTO:-}
+      SICREDI_CODIGO_BENEFICIARIO: ${SICREDI_CODIGO_BENEFICIARIO:-}
+      SICREDI_API_BASE: ${SICREDI_API_BASE:-}
 
   caddy:
     image: caddy:2-alpine

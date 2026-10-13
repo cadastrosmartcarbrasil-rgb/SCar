@@ -704,6 +704,20 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
   partir a página em server (busca a `empresa`) + client (o formulário), e ela **não foi feita de
   propósito**: aquele arquivo é o do gotcha "tela de login sob o layout que exige sessão", que já
   custou um bug real. Mexer ali é tarefa com teste de ida e volta do login, não ajuste de passagem.
+- **SICREDI (API Cobrança) — adaptador pronto, SANDBOX primeiro (13/10/2026).** Decisão do usuário:
+  Sicredi para boleto/PIX, Asaas para cartão. `src/lib/pagamentos/sicredi.ts` (testado em
+  `sicredi.test.ts`, `fetch` falso): token password-grant com cache e refresh, cadastro
+  `tipoCobranca: HIBRIDO` (boleto + PIX), consulta, baixa, PDF e `liquidados/dia`. **Credenciais
+  só nas `SICREDI_*` do servidor** (`.env` do VPS + `docker-compose.yml`, ver `.env.example`),
+  nunca em `integracoes_bancarias`. Bancada de teste em **Configurações → Integrações bancárias**
+  (rota `/api/v1/sicredi`, admin/financeiro): testar token, registrar boleto FICTÍCIO no sandbox,
+  consultar, PDF, pagos do dia — nada grava em `titulos_financeiros`. **⚠️ A coleção oficial não
+  traz exemplos de RESPOSTA nem webhook:** a leitura aceita mais de um nome de campo e a baixa vai
+  ser por consulta diária de `liquidados/dia` — conferir o formato real no sandbox antes de ligar a
+  baixa. **Falta para a remessa usar o Sicredi:** migration com `alter type provedor_banco add
+  value 'SICREDI'` + cadastrar a integração padrão. Pagador sem endereço completo (CEP, logradouro,
+  cidade, UF) é recusado antes de ir ao banco, por título. `seuNumero` (máx. 10) = 10 primeiros hex
+  do UUID; a correlação forte é o `nosso_numero` devolvido.
 - **Gateway bancário mockado:** `MockGateway` gera linha digitável/PIX fictícios. Ligar o real =
   `AsaasGateway.emitir` (esqueleto pronto) + webhook chamando `registrar_retorno_cobranca`.
 - **`/api/boletos/emitir-lote` é a rotina ANTIGA** (mock) — usar `/api/v1/cobrancas/*`. Pode sair.

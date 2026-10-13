@@ -9,7 +9,7 @@
 // integracao em Configuracoes -> Integracoes bancarias.
 // ============================================================================
 
-export type ProvedorBanco = 'ASAAS' | 'PJBANK' | 'CORA' | 'INTER' | 'GERENCIANET' | 'OUTRO' | 'MOCK';
+export type ProvedorBanco = 'ASAAS' | 'PJBANK' | 'CORA' | 'INTER' | 'GERENCIANET' | 'SICREDI' | 'OUTRO' | 'MOCK';
 
 /** Credenciais/rota do gateway (espelha `integracoes_bancarias`). */
 export interface GatewayConfig {
@@ -34,6 +34,16 @@ export interface CobrancaInput {
     cpf_cnpj: string;
     email?: string | null;
     telefone?: string | null;
+    /** Endereco do pagador (mesmas chaves de clientes.endereco). O Sicredi exige. */
+    endereco?: {
+      logradouro?: string | null;
+      numero?: string | null;
+      complemento?: string | null;
+      bairro?: string | null;
+      cidade?: string | null;
+      uf?: string | null;
+      cep?: string | null;
+    } | null;
   };
 }
 

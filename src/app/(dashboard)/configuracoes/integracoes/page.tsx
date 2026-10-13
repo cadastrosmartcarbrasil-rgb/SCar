@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, Landmark, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
+import { BancadaSicredi } from '@/components/pagamentos/bancada-sicredi';
 import { FormField, Input, Select } from '@/components/ui/field';
 import {
   useIntegracoes,
@@ -46,6 +47,7 @@ export default function IntegracoesPage() {
 
   return (
     <div className="space-y-4">
+      <BancadaSicredi />
       <div className="flex items-center justify-between">
         <p className="text-sm text-slate-500">
           Cadastre as APIs de banco/gateway (Asaas, PJBank, Cora...) usadas para gerar boletos. As
