@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { CheckCircle2, FileText, KeyRound, Landmark, Receipt, Search, XCircle } from 'lucide-react';
+import { BellRing, CheckCircle2, FileText, KeyRound, Landmark, Receipt, Search, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/field';
 
@@ -9,6 +9,7 @@ interface Situacao {
   configurado: boolean;
   ambiente: 'sandbox' | 'producao' | null;
   faltando: string[];
+  webhook_segredo?: boolean;
 }
 
 /**
@@ -26,6 +27,9 @@ export function BancadaSicredi() {
   const [dia, setDia] = useState(new Date().toISOString().slice(0, 10));
   const [tituloId, setTituloId] = useState('');
   const [diaBaixa, setDiaBaixa] = useState('');
+  const [whResp, setWhResp] = useState('');
+  const [whEmail, setWhEmail] = useState('');
+  const [whTel, setWhTel] = useState('');
 
   // Baixa dos pagos (0105): sem dia = ontem e hoje, como o agendador faz.
   async function darBaixa() {
@@ -181,6 +185,39 @@ export function BancadaSicredi() {
               <Input type="date" value={diaBaixa} onChange={(e) => setDiaBaixa(e.target.value)} />
               <Button type="button" variant="secondary" disabled={!!ocupado} onClick={darBaixa}>
                 <CheckCircle2 className="h-4 w-4" /> {ocupado === 'baixa' ? 'Dando baixa...' : 'Dar baixa agora'}
+              </Button>
+            </div>
+          </div>
+          <div className="space-y-2 border-t border-slate-200 pt-3">
+            <p className="flex items-center gap-1 text-xs font-semibold text-slate-700">
+              <BellRing className="h-3.5 w-3.5" /> Webhook de liquidacao
+            </p>
+            <p className="text-xs text-slate-500">
+              Cadastra no Sicredi o aviso de pagamento: a cada boleto pago o banco chama este sistema, que confere o
+              pagamento e da a baixa na hora. O agendador continua rodando como rede de seguranca. O endereco usa o
+              segredo SICREDI_WEBHOOK_SECRET do servidor (aparece mascarado).
+            </p>
+            {sit.webhook_segredo === false && (
+              <p className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
+                Falta SICREDI_WEBHOOK_SECRET no servidor — sem ela nao da para registrar o webhook.
+              </p>
+            )}
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <Input placeholder="Responsavel" value={whResp} onChange={(e) => setWhResp(e.target.value)} />
+              <Input type="email" placeholder="E-mail do responsavel" value={whEmail} onChange={(e) => setWhEmail(e.target.value)} />
+              <Input placeholder="Telefone (opcional)" value={whTel} onChange={(e) => setWhTel(e.target.value)} />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="secondary" disabled={!!ocupado} onClick={() => chamar('webhook_consultar')}>
+                <Search className="h-4 w-4" /> {ocupado === 'webhook_consultar' ? 'Consultando...' : 'Consultar contrato'}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={!!ocupado || !whResp.trim() || !whEmail.trim() || sit.webhook_segredo === false}
+                onClick={() => chamar('webhook_registrar', { responsavel: whResp, email: whEmail, telefone: whTel })}
+              >
+                <BellRing className="h-4 w-4" /> {ocupado === 'webhook_registrar' ? 'Registrando...' : 'Registrar webhook'}
               </Button>
             </div>
           </div>

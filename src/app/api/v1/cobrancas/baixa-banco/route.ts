@@ -10,7 +10,7 @@ import {
   segredoConfere,
   type ResultadoLiquidacao,
 } from '@/lib/baixa-banco';
-import type { Json } from '@/lib/database.types';
+import { registrarLiquidacoesSicredi } from '@/lib/pagamentos/baixa-sicredi';
 
 // POST /api/v1/cobrancas/baixa-banco — BAIXA AUTOMATICA (0105)
 // Le os boletos pagos no Sicredi (`liquidados/dia`) e da baixa nos titulos.
@@ -68,33 +68,7 @@ export async function POST(request: Request) {
       falhasConsulta.push({ dia, erro: (e as Error).message });
       continue;
     }
-    for (const l of liquidados) {
-      if (!l.nossoNumero) {
-        resultados.push({ nosso_numero: null, situacao: 'ERRO', valor_pago: l.valorPago, erro: 'pagamento sem nosso numero' });
-        continue;
-      }
-      const { data, error } = await supabase.rpc('registrar_liquidacao_banco', {
-        p_provedor: 'SICREDI',
-        p_ambiente: cfg.ambiente,
-        p_nosso_numero: l.nossoNumero,
-        p_seu_numero: l.seuNumero,
-        p_data_pagamento: l.dataPagamento,
-        p_valor_pago: l.valorPago,
-        p_dia_consultado: dia,
-        p_payload: (l.bruto ?? null) as Json,
-      });
-      const linha = Array.isArray(data) ? data[0] : null;
-      resultados.push(
-        error || !linha
-          ? { nosso_numero: l.nossoNumero, situacao: 'ERRO', valor_pago: l.valorPago, erro: error?.message ?? 'sem retorno' }
-          : {
-              nosso_numero: l.nossoNumero,
-              situacao: linha.situacao,
-              valor_pago: l.valorPago,
-              valor_divergente: linha.valor_divergente,
-            },
-      );
-    }
+    resultados.push(...(await registrarLiquidacoesSicredi(supabase, cfg.ambiente, liquidados, dia)));
   }
 
   const resumo = resumoDaBaixa(resultados);

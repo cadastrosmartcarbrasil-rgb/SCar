@@ -74,3 +74,13 @@ export function segredoConfere(recebido: string | null | undefined, esperado: st
   for (let i = 0; i < esperado.length; i++) diff |= recebido.charCodeAt(i) ^ esperado.charCodeAt(i);
   return diff === 0;
 }
+
+/**
+ * Dias em que o WEBHOOK procura o pagamento em `liquidados/dia` para
+ * confirmar o aviso: a data que o aviso trouxe (se trouxe) + ontem e hoje.
+ * Sem repeticao e sem data invalida.
+ */
+export function diasParaConfirmar(hoje: string, dataDoAviso?: string | null): string[] {
+  const dias = [dataDoAviso, diaAnterior(hoje), hoje].filter((d): d is string => diaValido(d));
+  return Array.from(new Set(dias));
+}

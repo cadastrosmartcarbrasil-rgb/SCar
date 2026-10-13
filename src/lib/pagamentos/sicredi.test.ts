@@ -3,7 +3,12 @@ import { escolherIntegracao, getPaymentGateway } from './index';
 import { GatewayNaoImplementadoError, type CobrancaInput } from './types';
 import {
   SicrediGateway,
+  avisosDoWebhook,
+  caminhosWebhookSicredi,
   configSicrediDoAmbiente,
+  corpoContratoWebhook,
+  idContratoWebhook,
+  mascararSegredo,
   corpoBoletoSicredi,
   dataIsoDeSicredi,
   dataSicredi,
@@ -340,5 +345,90 @@ describe('escolherIntegracao', () => {
   it('sem padrao global nem da unidade: nenhuma (vira MOCK, e a tela avisa)', () => {
     expect(escolherIntegracao([rn, naoPadrao], null)).toBeNull();
     expect(escolherIntegracao([], 'natal')).toBeNull();
+  });
+});
+
+describe('webhook — contrato e aviso', () => {
+  beforeEach(() => limparCacheTokenSicredi());
+
+  it('caminho do contrato muda entre sandbox e producao (colecao do Sicredi)', () => {
+    expect(caminhosWebhookSicredi('producao')).toEqual({
+      contrato: '/cobranca/boleto/v1/webhook/contrato/',
+      contratos: '/cobranca/boleto/v1/webhook/contratos/',
+    });
+    expect(caminhosWebhookSicredi('sandbox').contrato).toBe('/cobranca/webhook/v1/api/contrato/');
+  });
+
+  it('corpo do contrato: so LIQUIDACAO, ativo, dados do beneficiario', () => {
+    const { corpo, erros } = corpoContratoWebhook(CFG, {
+      url: 'https://app.exemplo.com.br/api/v1/sicredi/webhook/abc',
+      nomeResponsavel: '  Fulano   de Tal ',
+      email: 'fin@exemplo.com.br',
+      telefone: '(65) 99999-8888',
+    });
+    expect(erros).toEqual([]);
+    expect(corpo).toEqual({
+      cooperativa: '6789', posto: '03', codBeneficiario: '12345',
+      eventos: ['LIQUIDACAO'],
+      url: 'https://app.exemplo.com.br/api/v1/sicredi/webhook/abc',
+      urlStatus: 'ATIVO', contratoStatus: 'ATIVO',
+      nomeResponsavel: 'Fulano de Tal', email: 'fin@exemplo.com.br', telefone: '65999998888',
+    });
+  });
+
+  it('corpo do contrato recusa http, sem responsavel e e-mail invalido', () => {
+    const { corpo, erros } = corpoContratoWebhook(CFG, { url: 'http://x.com/a', nomeResponsavel: ' ', email: 'x' });
+    expect(corpo).toBeNull();
+    expect(erros).toHaveLength(3);
+  });
+
+  it('id do contrato em lista, {content} ou objeto', () => {
+    expect(idContratoWebhook([{ id: '639b298017e0ac574b0e8929' }])).toBe('639b298017e0ac574b0e8929');
+    expect(idContratoWebhook({ content: [{ idContrato: 'c1' }] })).toBe('c1');
+    expect(idContratoWebhook({ id: 'c2', url: 'https://x' })).toBe('c2');
+    expect(idContratoWebhook([])).toBeNull();
+    expect(idContratoWebhook(null)).toBeNull();
+  });
+
+  it('aviso: acha o boleto em objeto, lista ou {eventos}, sem repetir', () => {
+    expect(avisosDoWebhook({ nossoNumero: '211001292', movimento: 'LIQUIDACAO_PIX', dataEvento: '2026-10-13T10:00:00' }))
+      .toEqual([{ nossoNumero: '211001292', movimento: 'LIQUIDACAO_PIX', data: '2026-10-13', estorno: false }]);
+    expect(avisosDoWebhook([{ nossoNumero: 1 }, { nossoNumero: '1' }, { outro: 2 }]).map((a) => a.nossoNumero)).toEqual(['1']);
+    expect(avisosDoWebhook({ eventos: [{ nosso_numero: '9', movimento: 'ESTORNO_LIQUIDACAO' }] })[0].estorno).toBe(true);
+    expect(avisosDoWebhook('lixo')).toEqual([]);
+    expect(avisosDoWebhook(null)).toEqual([]);
+  });
+
+  it('mascara o segredo antes de mostrar', () => {
+    expect(mascararSegredo('https://x/webhook/segredo-longo-123', 'segredo-longo-123')).toBe('https://x/webhook/***');
+    expect(mascararSegredo('abc', '')).toBe('abc');
+  });
+
+  it('registrar: consulta pela cooperativa/posto/beneficiario e cria com POST', async () => {
+    const { fn, chamadas } = fetchFalso([{ body: TOKEN }, { body: { id: 'novo' } }]);
+    const gw = new SicrediGateway(CFG, fn);
+    await gw.salvarContratoWebhook({ url: 'https://a.com/w/s', nomeResponsavel: 'X', email: 'a@b.co' });
+    expect(chamadas[1].url).toBe('https://api-parceiro.sicredi.com.br/sb/cobranca/webhook/v1/api/contrato/');
+    expect(chamadas[1].init.method).toBe('POST');
+  });
+
+  it('com id altera por PUT; consulta usa os parametros do beneficiario', async () => {
+    const prod = { ...CFG, ambiente: 'producao' as const };
+    const { fn, chamadas } = fetchFalso([{ body: TOKEN }, { body: [] }, { body: { id: 'c1' } }]);
+    const gw = new SicrediGateway(prod, fn);
+    await gw.consultarContratosWebhook();
+    expect(chamadas[1].url).toBe(
+      'https://api-parceiro.sicredi.com.br/cobranca/boleto/v1/webhook/contratos/?cooperativa=6789&posto=03&beneficiario=12345',
+    );
+    await gw.salvarContratoWebhook({ url: 'https://a.com/w/s', nomeResponsavel: 'X', email: 'a@b.co' }, 'c1');
+    expect(chamadas[2].url).toBe('https://api-parceiro.sicredi.com.br/cobranca/boleto/v1/webhook/contrato/c1');
+    expect(chamadas[2].init.method).toBe('PUT');
+  });
+
+  it('dados invalidos nao chegam ao banco', async () => {
+    const { fn, chamadas } = fetchFalso([]);
+    await expect(new SicrediGateway(CFG, fn).salvarContratoWebhook({ url: 'x', nomeResponsavel: '', email: '' }))
+      .rejects.toThrow(/https/);
+    expect(chamadas).toHaveLength(0);
   });
 });

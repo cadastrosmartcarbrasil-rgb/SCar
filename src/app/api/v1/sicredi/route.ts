@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import {
+  ENV_SICREDI,
   SicrediGateway,
   configSicrediDoAmbiente,
+  idContratoWebhook,
+  mascararSegredo,
   variaveisSicrediFaltando,
 } from '@/lib/pagamentos/sicredi';
 
@@ -16,6 +19,11 @@ import {
 //   POST { action: 'consultar', nosso_numero }
 //   POST { action: 'liquidados', dia: 'YYYY-MM-DD' }
 //   POST { action: 'pdf', linha_digitavel } -> application/pdf
+//   POST { action: 'webhook_consultar' }  -> contrato de webhook no Sicredi
+//   POST { action: 'webhook_registrar', responsavel, email, telefone }
+//        -> cria (ou altera, se ja existe) o contrato apontando para
+//           <este site>/api/v1/sicredi/webhook/<SICREDI_WEBHOOK_SECRET>.
+//           O segredo nunca volta na resposta (sai mascarado).
 //
 // O boleto de teste NAO e gravado em titulos_financeiros: e so para ver o
 // formato real da resposta do banco antes de ligar a remessa.
@@ -40,11 +48,26 @@ export async function GET() {
     configurado: !!cfg,
     ambiente: cfg?.ambiente ?? null,
     faltando: variaveisSicrediFaltando(process.env),
+    webhook_segredo: segredoWebhookOk(),
   });
 }
 
+function segredoWebhookOk() {
+  return (process.env[ENV_SICREDI.webhookSecret] ?? '').length >= 32;
+}
+
+/** Origem publica deste site (atras do Caddy vem nos x-forwarded-*). */
+function origemPublica(request: Request): string {
+  const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host');
+  const proto = request.headers.get('x-forwarded-proto') ?? 'https';
+  return host ? `${proto.split(',')[0].trim()}://${host.split(',')[0].trim()}` : new URL(request.url).origin;
+}
+
 interface Body {
-  action?: 'autenticar' | 'boleto_teste' | 'consultar' | 'liquidados' | 'pdf';
+  action?: 'autenticar' | 'boleto_teste' | 'consultar' | 'liquidados' | 'pdf' | 'webhook_consultar' | 'webhook_registrar';
+  responsavel?: string;
+  email?: string;
+  telefone?: string;
   nosso_numero?: string;
   linha_digitavel?: string;
   dia?: string;
@@ -105,6 +128,43 @@ export async function POST(request: Request) {
         const bytes = await gw.pdf(body.linha_digitavel);
         return new NextResponse(bytes, {
           headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': 'inline; filename="boleto.pdf"' },
+        });
+      }
+      case 'webhook_consultar': {
+        const segredo = process.env[ENV_SICREDI.webhookSecret];
+        const contrato = await gw.consultarContratosWebhook();
+        return NextResponse.json({
+          ok: true,
+          ambiente: cfg.ambiente,
+          contrato: JSON.parse(mascararSegredo(JSON.stringify(contrato ?? null), segredo)),
+        });
+      }
+      case 'webhook_registrar': {
+        const segredo = process.env[ENV_SICREDI.webhookSecret];
+        if (!segredoWebhookOk()) {
+          return NextResponse.json(
+            { error: 'Falta SICREDI_WEBHOOK_SECRET no servidor (minimo 32 caracteres)' },
+            { status: 400 },
+          );
+        }
+        const url = `${origemPublica(request)}/api/v1/sicredi/webhook/${segredo}`;
+        // Ja existe contrato? altera (PUT); senao cria. Consulta que falha = cria.
+        let id: string | null = null;
+        try {
+          id = idContratoWebhook(await gw.consultarContratosWebhook());
+        } catch {
+          id = null;
+        }
+        const resp = await gw.salvarContratoWebhook(
+          { url, nomeResponsavel: body.responsavel ?? '', email: body.email ?? '', telefone: body.telefone },
+          id,
+        );
+        return NextResponse.json({
+          ok: true,
+          ambiente: cfg.ambiente,
+          acao: id ? 'alterado' : 'criado',
+          url: mascararSegredo(url, segredo),
+          contrato: JSON.parse(mascararSegredo(JSON.stringify(resp ?? null), segredo)),
         });
       }
       default:

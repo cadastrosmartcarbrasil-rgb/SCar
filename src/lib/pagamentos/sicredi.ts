@@ -10,10 +10,16 @@
 //   Pagos    GET  {base}/cobranca/boleto/v1/boletos/liquidados/dia?codigoBeneficiario=&dia=DD/MM/AAAA
 // {base} = https://api-parceiro.sicredi.com.br/sb (sandbox) ou sem o /sb (producao).
 //
+// WEBHOOK (colecao "Webhook" do Sicredi, 13/10/2026): o boleto tem um CONTRATO
+// de webhook por beneficiario — POST .../webhook/contrato/ cria, PUT
+// .../contrato/{id} altera, GET .../contratos/?cooperativa=&posto=&beneficiario=
+// consulta. O caminho MUDA entre ambientes (ver caminhosWebhookSicredi). O
+// Sicredi chama a nossa URL a cada LIQUIDACAO; a rota que recebe NAO confia no
+// corpo do aviso: confirma o pagamento em `liquidados/dia` antes de dar baixa.
+// A consulta diaria (cron) continua como rede de seguranca.
+//
 // CREDENCIAIS: so no servidor, por variavel de ambiente (SICREDI_*), nunca em
-// tabela nem no navegador. A colecao NAO traz exemplos de resposta nem webhook:
-// a leitura do retorno aceita mais de um nome de campo, e a BAIXA automatica e
-// por consulta diaria de `liquidados/dia` (nao ha notificacao ativa).
+// tabela nem no navegador. A leitura do retorno aceita mais de um nome de campo.
 import {
   BasePaymentGateway,
   type CobrancaEmitida,
@@ -46,6 +52,8 @@ export const ENV_SICREDI = {
   posto: 'SICREDI_POSTO',
   codigoBeneficiario: 'SICREDI_CODIGO_BENEFICIARIO',
   apiBase: 'SICREDI_API_BASE',
+  /** Segredo na URL do webhook (o Sicredi nao assina o aviso). */
+  webhookSecret: 'SICREDI_WEBHOOK_SECRET',
 } as const;
 
 const OBRIGATORIAS = ['apiKey', 'username', 'password', 'cooperativa', 'posto', 'codigoBeneficiario'] as const;
@@ -233,6 +241,124 @@ export function liquidacoesDoRetorno(resp: unknown): LiquidacaoSicredi[] {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Webhook (contrato + aviso)
+// ---------------------------------------------------------------------------
+
+/** O caminho do contrato muda entre sandbox e producao (esta na colecao). */
+export function caminhosWebhookSicredi(ambiente: AmbienteSicredi): { contrato: string; contratos: string } {
+  return ambiente === 'producao'
+    ? { contrato: '/cobranca/boleto/v1/webhook/contrato/', contratos: '/cobranca/boleto/v1/webhook/contratos/' }
+    : { contrato: '/cobranca/webhook/v1/api/contrato/', contratos: '/cobranca/webhook/v1/api/contratos/' };
+}
+
+export interface DadosContratoWebhook {
+  url: string;
+  nomeResponsavel: string;
+  email: string;
+  telefone?: string | null;
+}
+
+export interface ContratoWebhookSicredi {
+  cooperativa: string;
+  posto: string;
+  codBeneficiario: string;
+  eventos: ['LIQUIDACAO'];
+  url: string;
+  urlStatus: 'ATIVO';
+  contratoStatus: 'ATIVO';
+  nomeResponsavel: string;
+  email: string;
+  telefone: string;
+}
+
+/** Corpo do contrato; devolve os ERROS em vez de mandar ao banco algo recusavel. */
+export function corpoContratoWebhook(
+  cfg: Pick<SicrediConfig, 'cooperativa' | 'posto' | 'codigoBeneficiario'>,
+  d: DadosContratoWebhook,
+): { corpo: ContratoWebhookSicredi | null; erros: string[] } {
+  const erros: string[] = [];
+  if (!/^https:\/\/[^\s/]+\/\S+$/.test(d.url ?? '')) erros.push('URL do webhook tem de ser https');
+  if (!d.nomeResponsavel?.trim()) erros.push('Informe o nome do responsavel');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email?.trim() ?? '')) erros.push('E-mail do responsavel invalido');
+  if (erros.length) return { corpo: null, erros };
+  return {
+    corpo: {
+      cooperativa: cfg.cooperativa,
+      posto: cfg.posto,
+      codBeneficiario: cfg.codigoBeneficiario,
+      eventos: ['LIQUIDACAO'],
+      url: d.url,
+      urlStatus: 'ATIVO',
+      contratoStatus: 'ATIVO',
+      nomeResponsavel: corta(d.nomeResponsavel, 60),
+      email: d.email.trim(),
+      telefone: soDigitos(d.telefone),
+    },
+    erros,
+  };
+}
+
+/** Id do contrato na resposta da consulta (lista, {items}, {content} ou objeto). */
+export function idContratoWebhook(resp: unknown): string | null {
+  const r = resp as Record<string, unknown> | unknown[] | null;
+  const lista: unknown[] = Array.isArray(r)
+    ? r
+    : r && typeof r === 'object'
+      ? ((['items', 'content', 'contratos', 'data'] as const)
+          .map((k) => (r as Record<string, unknown>)[k])
+          .find(Array.isArray) as unknown[] | undefined) ?? [r]
+      : [];
+  for (const it of lista) {
+    const o = (it ?? {}) as Record<string, unknown>;
+    const id = campo(o, 'id', 'idContrato', '_id');
+    if (id) return id;
+  }
+  return null;
+}
+
+export interface AvisoWebhookSicredi {
+  nossoNumero: string;
+  movimento: string | null;
+  data: string | null;
+  estorno: boolean;
+}
+
+/**
+ * Corpo do aviso -> lista de boletos citados. O formato do aviso nao esta na
+ * colecao: le por nomes candidatos, aceita objeto, lista ou {eventos:[...]}.
+ * Serve so para saber QUAL boleto olhar — o valor e a data que entram na
+ * baixa saem da confirmacao em `liquidados/dia`, nunca daqui.
+ */
+export function avisosDoWebhook(payload: unknown): AvisoWebhookSicredi[] {
+  const r = payload as Record<string, unknown> | unknown[] | null;
+  const lista: unknown[] = Array.isArray(r)
+    ? r
+    : r && typeof r === 'object'
+      ? ((['eventos', 'items', 'content', 'data'] as const)
+          .map((k) => (r as Record<string, unknown>)[k])
+          .find(Array.isArray) as unknown[] | undefined) ?? [r]
+      : [];
+  const out: AvisoWebhookSicredi[] = [];
+  const vistos = new Set<string>();
+  for (const it of lista) {
+    const o = (it ?? {}) as Record<string, unknown>;
+    const nn = campo(o, 'nossoNumero', 'nosso_numero');
+    if (!nn || vistos.has(nn)) continue;
+    vistos.add(nn);
+    const mov = campo(o, 'movimento', 'evento', 'tipoEvento', 'tipo');
+    const dataBruta = o.dataEvento ?? o.dataPagamento ?? o.dataLiquidacao;
+    const data = dataIsoDeSicredi(Array.isArray(dataBruta) ? null : dataBruta);
+    out.push({ nossoNumero: nn, movimento: mov, data, estorno: /ESTORNO/i.test(mov ?? '') });
+  }
+  return out;
+}
+
+/** Tira o segredo de um texto antes de mostrar na tela ou no log. */
+export function mascararSegredo(texto: string, segredo: string | null | undefined): string {
+  return segredo && segredo.length >= 8 ? texto.split(segredo).join('***') : texto;
+}
+
 export const PAGINAS_MAX_LIQUIDADOS = 50;
 
 /** O banco diz que ha mais paginas? (`hasNext`/`hasNextPage`/`proximaPagina`) */
@@ -352,7 +478,7 @@ export class SicrediGateway extends BasePaymentGateway {
   }
 
   private async chamar(
-    metodo: 'GET' | 'POST' | 'PATCH',
+    metodo: 'GET' | 'POST' | 'PATCH' | 'PUT',
     caminho: string,
     corpo?: unknown,
     extras: Record<string, string> = {},
@@ -373,7 +499,7 @@ export class SicrediGateway extends BasePaymentGateway {
     });
   }
 
-  private async json(metodo: 'GET' | 'POST' | 'PATCH', caminho: string, corpo?: unknown, extras?: Record<string, string>) {
+  private async json(metodo: 'GET' | 'POST' | 'PATCH' | 'PUT', caminho: string, corpo?: unknown, extras?: Record<string, string>) {
     const res = await this.chamar(metodo, caminho, corpo, extras);
     const dado = await lerCorpo(res);
     if (!res.ok) throw new Error(mensagemErroSicredi(res.status, dado));
@@ -434,7 +560,27 @@ export class SicrediGateway extends BasePaymentGateway {
     return todos;
   }
 
-  // O Sicredi nao tem webhook na colecao: a baixa e por liquidadosDoDia().
+  /** Contrato(s) de webhook do beneficiario. */
+  async consultarContratosWebhook(): Promise<unknown> {
+    const q = new URLSearchParams({
+      cooperativa: this.cfg.cooperativa,
+      posto: this.cfg.posto,
+      beneficiario: this.cfg.codigoBeneficiario,
+    });
+    return this.json('GET', `${caminhosWebhookSicredi(this.cfg.ambiente).contratos}?${q}`);
+  }
+
+  /** Cria o contrato; com `id`, altera o existente (PUT). */
+  async salvarContratoWebhook(d: DadosContratoWebhook, id?: string | null): Promise<unknown> {
+    const { corpo, erros } = corpoContratoWebhook(this.cfg, d);
+    if (!corpo) throw new Error(erros.join('; '));
+    const base = caminhosWebhookSicredi(this.cfg.ambiente).contrato;
+    return id
+      ? this.json('PUT', `${base}${encodeURIComponent(id)}`, corpo)
+      : this.json('POST', base, corpo);
+  }
+
+  // A baixa nao usa o corpo do aviso (ver avisosDoWebhook): confirma em liquidadosDoDia().
   parseWebhook(_payload: unknown): EventoPagamento {
     return { tipo: 'DESCONHECIDO' };
   }

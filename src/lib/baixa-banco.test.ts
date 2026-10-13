@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { diaAnterior, diaValido, diasDaBaixa, hojeEmSaoPaulo, resumoDaBaixa, segredoConfere } from './baixa-banco';
+import { diaAnterior, diaValido, diasDaBaixa, diasParaConfirmar, hojeEmSaoPaulo, resumoDaBaixa, segredoConfere } from './baixa-banco';
 
 describe('baixa-banco', () => {
   it('hoje em Sao Paulo, nao em UTC', () => {
@@ -40,5 +40,16 @@ describe('baixa-banco', () => {
     expect(segredoConfere('curto', 'curto')).toBe(false);
     expect(segredoConfere(null, s)).toBe(false);
     expect(segredoConfere('', '')).toBe(false);
+  });
+});
+
+describe('diasParaConfirmar (webhook)', () => {
+  it('data do aviso + ontem + hoje, sem repetir', () => {
+    expect(diasParaConfirmar('2026-10-13', '2026-10-10')).toEqual(['2026-10-10', '2026-10-12', '2026-10-13']);
+    expect(diasParaConfirmar('2026-10-13', '2026-10-13')).toEqual(['2026-10-13', '2026-10-12']);
+  });
+  it('sem data ou data invalida: ontem e hoje', () => {
+    expect(diasParaConfirmar('2026-10-13')).toEqual(['2026-10-12', '2026-10-13']);
+    expect(diasParaConfirmar('2026-10-13', '13/10/2026')).toEqual(['2026-10-12', '2026-10-13']);
   });
 });

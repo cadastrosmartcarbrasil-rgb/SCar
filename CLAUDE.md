@@ -719,10 +719,12 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
   coleção** (usuário `123456789`, senha `teste123`, coop. `6789`, posto `03`, benef. `12345`) com a
   x-api-key do app; os dados reais da conta valem só em produção (ainda não testada). Ler o `.env`
   com `. .env` no shell quebra a chave — para testar por curl, pegue os valores com
-  `docker compose exec -T app printenv`. **⚠️ A coleção oficial não
-  traz webhook:** a leitura aceita mais de um nome de campo e a baixa vai
-  ser por consulta diária de `liquidados/dia` — conferir o formato real no sandbox antes de ligar a
-  baixa. **A remessa usa o Sicredi desde a `0104`** (só o valor `SICREDI` no enum
+  `docker compose exec -T app printenv`. **✅ O Sicredi TEM webhook de boleto** (a coleção
+  geral não traz; está na coleção "Webhook", recebida em 13/10/2026 — o arquivo do usuário tem
+  credenciais, NÃO commitar): um CONTRATO por beneficiário (`POST .../webhook/contrato/`, `PUT
+  .../contrato/{id}`, `GET .../contratos/?cooperativa=&posto=&beneficiario=`; o caminho MUDA entre
+  sandbox e produção — `caminhosWebhookSicredi`), evento `LIQUIDACAO`. Ver a seção "WEBHOOK DO
+  SICREDI" logo abaixo. **A remessa usa o Sicredi desde a `0104`** (só o valor `SICREDI` no enum
   `provedor_banco`): cadastrar em Configurações → Integrações bancárias o provedor SICREDI como
   **padrão** (sem chave na tabela — a tela esconde os campos). `escolherIntegracao` (testada) pega a
   padrão da UNIDADE e, na falta, a GLOBAL — a rota antiga usava `maybeSingle()` e, com duas padrão,
@@ -731,6 +733,21 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
   para o banco até o cutover da unidade. Pagador sem endereço completo (CEP, logradouro,
   cidade, UF) é recusado antes de ir ao banco, por título. `seuNumero` (máx. 10) = 10 primeiros hex
   do UUID; a correlação forte é o `nosso_numero` devolvido.
+- **WEBHOOK DO SICREDI (13/10/2026) — a baixa na hora, o agendador vira rede de segurança.**
+  Rota `/api/v1/sicredi/webhook/<SICREDI_WEBHOOK_SECRET>` (pública, sem sessão; segredo errado = 404;
+  env nova no `.env` do VPS + compose, mín. 32 caracteres). **O Sicredi não assina o aviso, então o
+  corpo NÃO é confiado:** ele só diz QUAL nosso número olhar (`avisosDoWebhook`, nomes candidatos);
+  a rota confirma em `liquidados/dia` (data do aviso + ontem + hoje, `diasParaConfirmar`) e só então
+  chama a MESMA `registrar_liquidacao_banco` do agendador (`registrarLiquidacoesSicredi`,
+  `src/lib/pagamentos/baixa-sicredi.ts`). Não achou na lista = `NAO_CONFIRMADO` e o cron pega
+  depois. Responde 200 sempre que o segredo confere (para o banco não reenviar em laço). **Estorno
+  NÃO é tratado** (o contrato assina só LIQUIDACAO; se vier, é logado e ignorado). O formato real
+  do aviso ainda não foi visto: a rota loga o corpo (`docker compose logs app | grep
+  sicredi-webhook`) — guardar o primeiro real em `sicredi.test.ts`. Registrar/consultar o contrato:
+  bancada → *Webhook de liquidação* (URL montada a partir do host público, segredo mascarado na
+  resposta; se já existe contrato, altera por PUT). No sandbox a coleção usa outro beneficiário
+  (0101/19/79129) e outra x-api-key — o contrato de teste pode ser recusado com os dados de teste
+  da cobrança.
 - **Gateway bancário mockado:** `MockGateway` gera linha digitável/PIX fictícios. Ligar o real =
   `AsaasGateway.emitir` (esqueleto pronto) + webhook chamando `registrar_retorno_cobranca`.
 - **`/api/boletos/emitir-lote` é a rotina ANTIGA** (mock) — usar `/api/v1/cobrancas/*`. Pode sair.
