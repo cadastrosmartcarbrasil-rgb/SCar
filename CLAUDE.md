@@ -234,7 +234,7 @@ sessão: **aplicar pelo SQL Editor** e depois `select * from mutual_importar_eve
 depois de rodar, `/integracao/mutual` → *Histórico de eventos* → *Importar* (medido em 13/10: 827 de
 2.909 eventos entram). Conferir: `select count(*) from pg_proc where proname like '%eventos_historico%'`,
 secdef sem `search_path` = 0, 0 RPCs nossas ao `anon`.
-**🆕 A `0104_provedor_sicredi` é NOVA** (só `alter type provedor_banco add value 'SICREDI'`).
+**✅ A `0104_provedor_sicredi` foi APLICADA pelo agente (autorizada) e CONFERIDA em 13/10/2026**: `provedor_banco` = ASAAS,PJBANK,CORA,INTER,GERENCIANET,OUTRO,SICREDI; `integracoes_bancarias` ainda vazia; 9 veículos cobrados no SCar e 7 títulos em aberto sem boleto (os de antes da migração).
 **Próxima migration livre: `0105`.** **✅ A `0102` e a `0103` estão APLICADAS e CONFERIDAS em
 13/10/2026** (ver abaixo).
 **✅ A `0098_cobranca_fila` foi APLICADA (pelo usuário, SQL Editor — o `execute_sql` estourou os 60 s do MCP e foi desfeito inteiro) e CONFERIDA em 12/10/2026:** 3 tabelas com RLS, 14 funções, 3 triggers de imutabilidade, 0 secdef sem `search_path`, 0 RPCs nossas ao `anon`. Tela `/cobrancas/fila` (Cobrança → Fila de Cobrança). Ver §9 de `docs/modulos/cobranca-inadimplencia.md`.
