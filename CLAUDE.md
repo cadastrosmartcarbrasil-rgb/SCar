@@ -747,7 +747,9 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
   bancada → *Webhook de liquidação* (URL montada a partir do host público, segredo mascarado na
   resposta; se já existe contrato, altera por PUT). No sandbox a coleção usa outro beneficiário
   (0101/19/79129) e outra x-api-key — o contrato de teste pode ser recusado com os dados de teste
-  da cobrança.
+  da cobrança. **Conferido em 13/10/2026: no sandbox o gateway responde `404 ... without destination`** em
+  `/sb/cobranca/webhook/v1/api/contratos/` — a rota existe no gateway do Sicredi mas não tem serviço
+  atrás para o nosso app. Não é defeito nosso; o contrato de webhook se registra **em produção**.
 - **Gateway bancário mockado:** `MockGateway` gera linha digitável/PIX fictícios. Ligar o real =
   `AsaasGateway.emitir` (esqueleto pronto) + webhook chamando `registrar_retorno_cobranca`.
 - **`/api/boletos/emitir-lote` é a rotina ANTIGA** (mock) — usar `/api/v1/cobrancas/*`. Pode sair.
