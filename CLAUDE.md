@@ -226,7 +226,11 @@ nos próximos dias (`integracoes_bancarias` ainda vazia).
 **✅ A `0100_painel_visao_geral` está aplicada** (conferido em 13/10/2026: `painel_visao_geral` existe).
 **🆕 A `0101_eventos_historico_mutual` é NOVA** — o histórico de eventos do Mutual (ver a seção
 "HISTÓRICO DE EVENTOS DO MUTUAL (0101)"). Cria `eventos_historico` + 5 funções e recria
-`veiculos_do_cliente` e `painel_visao_geral` (mesmas assinaturas). **Não importa nada sozinha:**
+`veiculos_do_cliente` e `painel_visao_geral` (mesmas assinaturas). **⚠️ Tentada pelo `execute_sql` em 13/10/2026 e NÃO aplicada:** toda escrita
+pelo MCP parou em 60 s sem chegar ao banco — inclusive um `create table` de teste vazio (leituras
+respondem na hora, nenhum bloqueio no banco). O caminho de escrita do MCP não está passando nesta
+sessão: **aplicar pelo SQL Editor** e depois `select * from mutual_importar_eventos_historico(true);`
+(no SQL Editor `auth.uid()` é nulo, então a trava da matriz deixa passar). **Não importa nada sozinha:**
 depois de rodar, `/integracao/mutual` → *Histórico de eventos* → *Importar* (medido em 13/10: 827 de
 2.909 eventos entram). Conferir: `select count(*) from pg_proc where proname like '%eventos_historico%'`,
 secdef sem `search_path` = 0, 0 RPCs nossas ao `anon`.
@@ -3610,9 +3614,10 @@ sem de-para), a **data de corte do financeiro e dos eventos**, e o de-para de **
 - **Importar:** `/integracao/mutual` → *Histórico de eventos* → *Simular* / *Importar*. Re-executável
   (regra 0096: só regrava o que mudou). Rodar de novo depois de cada recaptura de EVENT e de cada
   carga de unidade.
-- **O que NÃO muda (decisão em aberto):** os limites por janela dos opcionais (parabrisa 1×/ano etc.,
-  `opcionais_elegibilidade`/`opcionais_veiculo`) contam só `eventos_sinistro`. Fazer o histórico
-  consumir cota é decisão do usuário — 525 dos eventos do Mutual são de parabrisa.
+- **✅ DECISÃO DO USUÁRIO (13/10/2026): o histórico NÃO consome cota.** Os limites por janela dos
+  opcionais (parabrisa 1×/ano etc., `opcionais_elegibilidade`/`opcionais_veiculo`) contam só
+  `eventos_sinistro` — *"não conte os eventos de parabrisa, vamos contar daqui pra frente"*. Há 525
+  eventos de parabrisa no histórico do Mutual; eles NÃO entram nessa conta. Não mudar sem o usuário.
 - **Lógica pura testada:** `src/lib/eventos-historico.ts` (`situacaoHistorico`, `rotuloTipos`,
   `rotuloEnvolvimento`) e `somarPorTipo` em `src/lib/visao-geral.ts`. Suíte `supabase/tests/0101_*`.
 
