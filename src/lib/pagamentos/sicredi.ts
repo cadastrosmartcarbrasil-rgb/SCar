@@ -310,6 +310,16 @@ export function corpoContratoWebhook(
 
 /** Id do contrato na resposta da consulta (lista, {items}, {content} ou objeto). */
 export function idContratoWebhook(resp: unknown): string | null {
+  return contratoWebhookExistente(resp)?.id ?? null;
+}
+
+/**
+ * O contrato de webhook que o beneficiario JA tem: id + URL de destino.
+ * O contrato e UM por beneficiario, e quem o registrou pode ser OUTRO sistema
+ * (em 13/10/2026 era o do Mutual, que ainda emite os boletos ate dezembro):
+ * alterar por PUT troca o destino e derruba a baixa do outro sistema.
+ */
+export function contratoWebhookExistente(resp: unknown): { id: string; url: string | null } | null {
   const r = resp as Record<string, unknown> | unknown[] | null;
   const lista: unknown[] = Array.isArray(r)
     ? r
@@ -321,9 +331,15 @@ export function idContratoWebhook(resp: unknown): string | null {
   for (const it of lista) {
     const o = (it ?? {}) as Record<string, unknown>;
     const id = campo(o, 'id', 'idContrato', '_id');
-    if (id) return id;
+    if (id) return { id, url: campo(o, 'url') };
   }
   return null;
+}
+
+/** O contrato aponta para ESTE sistema? (prefixo da nossa rota de webhook) */
+export function webhookEhNosso(url: string | null, origem: string): boolean {
+  if (!url) return false;
+  return url.trim().toLowerCase().startsWith(`${origem.replace(/\/+$/, '')}/api/v1/sicredi/webhook/`.toLowerCase());
 }
 
 export interface AvisoWebhookSicredi {

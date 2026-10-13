@@ -4,7 +4,8 @@ import {
   ENV_SICREDI,
   SicrediGateway,
   configSicrediDoAmbiente,
-  idContratoWebhook,
+  contratoWebhookExistente,
+  webhookEhNosso,
   mascararSegredo,
   variaveisSicrediFaltando,
 } from '@/lib/pagamentos/sicredi';
@@ -20,10 +21,14 @@ import {
 //   POST { action: 'liquidados', dia: 'YYYY-MM-DD' }
 //   POST { action: 'pdf', linha_digitavel } -> application/pdf
 //   POST { action: 'webhook_consultar' }  -> contrato de webhook no Sicredi
-//   POST { action: 'webhook_registrar', responsavel, email, telefone }
+//   POST { action: 'webhook_registrar', responsavel, email, telefone, substituir? }
 //        -> cria (ou altera, se ja existe) o contrato apontando para
 //           <este site>/api/v1/sicredi/webhook/<SICREDI_WEBHOOK_SECRET>.
 //           O segredo nunca volta na resposta (sai mascarado).
+//           O contrato e UM por beneficiario: se o existente aponta para
+//           OUTRO sistema (o Mutual, ate o corte de dezembro), recusa com 409
+//           — trocar o destino derruba a baixa dele. So com substituir: true.
+//           Consulta que falha tambem recusa: criar no escuro pode duplicar.
 //
 // O boleto de teste NAO e gravado em titulos_financeiros: e so para ver o
 // formato real da resposta do banco antes de ligar a remessa.
@@ -72,6 +77,7 @@ interface Body {
   linha_digitavel?: string;
   dia?: string;
   valor?: number;
+  substituir?: boolean;
 }
 
 export async function POST(request: Request) {
@@ -148,13 +154,32 @@ export async function POST(request: Request) {
           );
         }
         const url = `${origemPublica(request)}/api/v1/sicredi/webhook/${segredo}`;
-        // Ja existe contrato? altera (PUT); senao cria. Consulta que falha = cria.
-        let id: string | null = null;
+        // Ja existe contrato? altera (PUT); senao cria. Consulta que falha
+        // RECUSA: sem saber o que existe, criar pode duplicar ou atropelar.
+        let existente: { id: string; url: string | null } | null;
         try {
-          id = idContratoWebhook(await gw.consultarContratosWebhook());
-        } catch {
-          id = null;
+          existente = contratoWebhookExistente(await gw.consultarContratosWebhook());
+        } catch (e) {
+          return NextResponse.json(
+            { error: `Nao foi possivel consultar o contrato atual no Sicredi (${(e as Error).message}). Nada foi alterado.` },
+            { status: 502 },
+          );
         }
+        if (existente && !webhookEhNosso(existente.url, origemPublica(request)) && body.substituir !== true) {
+          let destino = 'outro sistema';
+          try { destino = existente.url ? new URL(existente.url).host : destino; } catch { /* url estranha */ }
+          return NextResponse.json(
+            {
+              error:
+                `O beneficiario ja tem webhook apontando para ${destino}. Registrar aqui SUBSTITUI esse destino ` +
+                'e o outro sistema deixa de receber os avisos de pagamento. Nada foi alterado.',
+              contrato_de_terceiro: true,
+              destino,
+            },
+            { status: 409 },
+          );
+        }
+        const id = existente?.id ?? null;
         const resp = await gw.salvarContratoWebhook(
           { url, nomeResponsavel: body.responsavel ?? '', email: body.email ?? '', telefone: body.telefone },
           id,

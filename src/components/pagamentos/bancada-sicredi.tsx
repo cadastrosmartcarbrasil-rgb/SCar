@@ -97,6 +97,16 @@ export function BancadaSicredi() {
         return;
       }
       const j = await r.json();
+      if (r.status === 409 && j.contrato_de_terceiro && !extra.substituir) {
+        const ok = window.confirm(
+          `${j.error}\n\nSo confirme no dia do corte, quando o boleto deixar de sair por ${j.destino}. ` +
+            'Substituir agora mesmo assim?',
+        );
+        if (ok) {
+          setOcupado(null);
+          return chamar(action, { ...extra, substituir: true });
+        }
+      }
       if (!r.ok) throw new Error(j.error ?? `HTTP ${r.status}`);
       const emitido = j.emitido as { nosso_numero?: string; linha_digitavel?: string } | undefined;
       if (emitido?.nosso_numero) setNossoNumero(emitido.nosso_numero);

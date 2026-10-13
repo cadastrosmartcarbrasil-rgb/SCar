@@ -9,6 +9,8 @@ import {
   codigoSicredi,
   corpoContratoWebhook,
   idContratoWebhook,
+  contratoWebhookExistente,
+  webhookEhNosso,
   mascararSegredo,
   corpoBoletoSicredi,
   dataIsoDeSicredi,
@@ -440,5 +442,21 @@ describe('webhook — contrato e aviso', () => {
     await expect(new SicrediGateway(CFG, fn).salvarContratoWebhook({ url: 'x', nomeResponsavel: '', email: '' }))
       .rejects.toThrow(/https/);
     expect(chamadas).toHaveLength(0);
+  });
+});
+
+describe('contrato de webhook de outro sistema', () => {
+  const doMutual = [{ idContrato: '67f3', url: 'https://webhook.mutualignit.com.br/webhook/sicredi/x', contratoStatus: 'ATIVO' }];
+  it('le id e url do contrato existente', () => {
+    expect(contratoWebhookExistente(doMutual)).toEqual({ id: '67f3', url: 'https://webhook.mutualignit.com.br/webhook/sicredi/x' });
+    expect(contratoWebhookExistente([])).toBeNull();
+  });
+  it('so e nosso quando aponta para a nossa rota de webhook', () => {
+    const origem = 'https://app.smartvidanet.com.br';
+    expect(webhookEhNosso(doMutual[0].url, origem)).toBe(false);
+    expect(webhookEhNosso('https://app.smartvidanet.com.br/api/v1/sicredi/webhook/abc', origem)).toBe(true);
+    expect(webhookEhNosso('https://APP.smartvidanet.com.br/api/v1/sicredi/webhook/abc', origem + '/')).toBe(true);
+    expect(webhookEhNosso('https://app.smartvidanet.com.br/outra', origem)).toBe(false);
+    expect(webhookEhNosso(null, origem)).toBe(false);
   });
 });

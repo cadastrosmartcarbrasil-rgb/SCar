@@ -734,6 +734,15 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
   para o banco até o cutover da unidade. Pagador sem endereço completo (CEP, logradouro,
   cidade, UF) é recusado antes de ir ao banco, por título. `seuNumero` (máx. 10) = 10 primeiros hex
   do UUID; a correlação forte é o `nosso_numero` devolvido.
+- **🔴 O CONTRATO DE WEBHOOK DO BENEFICIÁRIO É DO MUTUAL (conferido em produção, 13/10/2026).** O
+  contrato é UM por beneficiário e o que existe aponta para `webhook.mutualignit.com.br` (responsável
+  da mutualtech). Registrar o nosso por PUT TROCARIA o destino e derrubaria a baixa do Mutual, que
+  emite os boletos até dezembro. Por isso `webhook_registrar` agora **recusa com 409** quando o
+  contrato existente não aponta para a nossa rota (`webhookEhNosso`), e também quando a consulta
+  falha. Substituir só com `substituir: true` (a bancada pede confirmação) — **no corte**, ou se o
+  Sicredi confirmar que aceita mais de um contrato/URL. Até lá a baixa dos nossos boletos é o cron
+  (`liquidados/dia`). O 422 "Falha na busca do beneficiário" era `SICREDI_POSTO` errado no `.env`
+  (o certo é 39).
 - **WEBHOOK DO SICREDI (13/10/2026) — a baixa na hora, o agendador vira rede de segurança.**
   Rota `/api/v1/sicredi/webhook/<SICREDI_WEBHOOK_SECRET>` (pública, sem sessão; segredo errado = 404;
   env nova no `.env` do VPS + compose, mín. 32 caracteres). **O Sicredi não assina o aviso, então o
