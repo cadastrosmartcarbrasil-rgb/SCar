@@ -10,7 +10,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!;
-const EMAIL_FROM = Deno.env.get('EMAIL_FROM') ?? 'SCar <no-reply@scar.app>';
+const EMAIL_FROM = Deno.env.get('EMAIL_FROM')?.trim() || 'Smart Car Brasil <nao-responda@appsmartcar.com.br>';
 
 interface Payload {
   template: 'BOAS_VINDAS' | 'LEMBRETE_BOLETO' | 'NOVO_EVENTO';

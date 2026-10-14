@@ -61,9 +61,11 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
   blocos nasceram editados à mão no servidor — **edite o `Caddyfile` no repositório, nunca em
   `/opt/scar`**, e nunca rode `git checkout Caddyfile` lá sem comparar antes. Os links do sistema são
   montados pelo `origin` da requisição, então nenhum ficou preso ao domínio antigo; o que era fixo
-  (cron da baixa, scripts de deploy, User-Agent do CNPJ) foi trocado. **Remetentes de e-mail
-  continuam `@smartvidanet.com.br`** (`RESEND_FROM` da boas-vindas e o contato do `GEO_USER_AGENT`)
-  — trocar só junto com a verificação do domínio novo no Resend.
+  (cron da baixa, scripts de deploy, User-Agent do CNPJ) foi trocado. **E-mail (14/10/2026): nada sai
+  mais como smartvida** — remetente `nao-responda@appsmartcar.com.br` e contato `contato@appsmartcar.com.br`,
+  num lugar só (`src/lib/email.ts`, testado; env vazia conta como ausente). Falta verificar o domínio no
+  Resend e conferir o `EMAIL_FROM`/`GEO_USER_AGENT` do `.env` do VPS. Ficam de propósito: o redirect de
+  `app.smartvidanet.com.br` e o `n8n.smartvida.com` no `Caddyfile` (links antigos e outro serviço).
 - **Último commit desta fase:** `a468ead`.
 
 ### ⏱️ RETOMADA EM 30 SEGUNDOS — os 3 fatos que evitam erro de local e de deploy

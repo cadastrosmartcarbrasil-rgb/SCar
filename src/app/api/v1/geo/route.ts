@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { metrosParaKm, segundosParaMinutos, type Coordenada } from '@/lib/geo';
+import { CONTATO_PADRAO } from '@/lib/email';
 
 // POST /api/v1/geo  { action: 'geocode' | 'rota', ... }
 //
@@ -16,7 +17,7 @@ const CHAVE = process.env.GOOGLE_MAPS_API_KEY ?? '';
 const NOMINATIM = process.env.NOMINATIM_BASE ?? 'https://nominatim.openstreetmap.org';
 const OSRM = process.env.OSRM_BASE ?? 'https://router.project-osrm.org';
 // Nominatim exige identificacao de quem chama (politica de uso).
-const UA = process.env.GEO_USER_AGENT ?? 'SCar/1.0 (protecao veicular; contato@smartvidanet.com.br)';
+const UA = process.env.GEO_USER_AGENT?.trim() || `SCar/1.0 (protecao veicular; ${CONTATO_PADRAO})`;
 
 type Provedor = 'google' | 'osm';
 

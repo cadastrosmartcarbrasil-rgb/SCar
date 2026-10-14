@@ -219,8 +219,11 @@ foi comprado na KingHost e o DNS fica lá: registro **A** (`@`) apontando para o
 - **Cron da baixa do Sicredi:** `scripts/baixa-banco.sh` já chama o domínio novo — vale depois do
   `git pull`. Antes disso ele chamava o domínio antigo, que agora devolve 301 (o `curl` do script
   não segue redirecionamento de POST): a baixa só volta a rodar com o `git pull` feito.
-- **Remetente de e-mail continua `@smartvidanet.com.br`** (`RESEND_FROM`, `EMAIL_FROM`) até o
-  domínio novo ser verificado no Resend.
+- **Remetente de e-mail: `Smart Car Brasil <nao-responda@appsmartcar.com.br>`** — padrão no código
+  (`src/lib/email.ts`, usado pelo voucher da 24h, pela boas-vindas do vendedor e pela edge function).
+  `EMAIL_FROM` no `.env` do VPS sobrepõe; **se ela ainda tiver `smartvidanet`, apague a linha ou
+  troque**. Para o Resend ENTREGAR, o domínio `appsmartcar.com.br` tem de estar verificado no Resend
+  (registros DNS na KingHost) — sem isso o envio é recusado e a tela avisa.
 
 ## 3. Conferência
 

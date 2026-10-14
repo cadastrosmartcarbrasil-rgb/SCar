@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { remetenteEmail } from '@/lib/email';
 import {
   montarVoucherTexto,
   montarVoucherHtml,
@@ -101,7 +102,7 @@ export async function POST(request: Request) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: process.env.EMAIL_FROM ?? 'SCar <no-reply@scar.app>',
+          from: remetenteEmail(),
           to: [destinatario],
           subject: `Ordem de Servico ${dados.codigo_os} — ${dados.servico} (${dados.veiculo.placa})`,
           html: montarVoucherHtml(dados),

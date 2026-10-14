@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { remetenteEmail } from '@/lib/email';
 
 const LIMITE_ANEXO = 5 * 1024 * 1024; // ~5 MB
 
@@ -80,7 +81,7 @@ export async function POST(req: Request) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: process.env.RESEND_FROM ?? 'Smart Car Brasil <nao-responda@smartvidanet.com.br>',
+        from: remetenteEmail(),
         to: [email],
         subject: assunto,
         text: texto,
