@@ -63,8 +63,8 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
   montados pelo `origin` da requisição, então nenhum ficou preso ao domínio antigo; o que era fixo
   (cron da baixa, scripts de deploy, User-Agent do CNPJ) foi trocado. **E-mail (14/10/2026): nada sai
   mais como smartvida** — remetente `nao-responda@appsmartcar.com.br` e contato `contato@appsmartcar.com.br`,
-  num lugar só (`src/lib/email.ts`, testado; env vazia conta como ausente). Falta verificar o domínio no
-  Resend e conferir o `EMAIL_FROM`/`GEO_USER_AGENT` do `.env` do VPS. Ficam de propósito: o redirect de
+  num lugar só (`src/lib/email.ts`, testado; env vazia conta como ausente). O `.env` do VPS foi limpo
+  (0 ocorrências de smartvida, contêiner conferido em 14/10). Falta verificar o domínio no Resend. Ficam de propósito: o redirect de
   `app.smartvidanet.com.br` e o `n8n.smartvida.com` no `Caddyfile` (links antigos e outro serviço).
 - **Último commit desta fase:** `a468ead`.
 
