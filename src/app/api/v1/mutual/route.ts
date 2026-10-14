@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import {
-  ENTIDADES_MUTUAL, ENTIDADES_PAGINADAS, urlMutual, urlMutualCaminho, cabecalhoMutual,
-  extrairLista, extrairTotal, temProximaPagina, CANDIDATAS_PLANO,
+  ENTIDADES_MUTUAL, urlMutual, urlMutualCaminho, cabecalhoMutual,
+  extrairLista, CANDIDATAS_PLANO,
   resumoDoCorpo, parametrosDoSwagger, veiculosPorPlano, listaDePlanos,
   caminhosDoSwagger, caminhoDeDetalhe, caminhoComId, comObjeto,
   type EntidadeMutual, type SondagemCaminho, type ParPlanoVeiculo, type DiagnosticoPlanos,
 } from '@/lib/mutual';
 import type { Json } from '@/lib/database.types';
+import { capturarEntidade, PAGE_SIZE_MUTUAL } from '@/lib/mutual-captura-server';
 
 // POST /api/v1/mutual
 // Proxy server-side da API do MUTUAL (sistema atual), no mesmo molde do
@@ -23,7 +24,7 @@ import type { Json } from '@/lib/database.types';
 export const dynamic = 'force-dynamic';
 
 const BASE_PADRAO = 'https://smartcar-api.mutualignit.com.br';
-const PAGE_SIZE_PADRAO = 500;   // teto declarado no contrato (/quotation/)
+const PAGE_SIZE_PADRAO = PAGE_SIZE_MUTUAL;
 const VEICULOS_POR_BLOCO = 15;  // PLAN: consultas ao Mutual por requisicao
 const OBJETOS_POR_BLOCO = 25;   // CONTRACT_OBJECT_PRODUCT: veiculos por requisicao
 const LINHAS_POR_LEITURA = 1000; // teto de linhas do PostgREST por chamada
@@ -155,7 +156,6 @@ export async function POST(request: Request) {
   const pagina0 = Math.max(body.pagina_inicial ?? 1, 1);
   const maxPaginas = Math.min(Math.max(body.paginas ?? 5, 1), 100);
   const tamanho = Math.min(Math.max(body.page_size ?? PAGE_SIZE_PADRAO, 1), 500);
-  const pagina_a_pagina = ENTIDADES_PAGINADAS.includes(entidade);
 
   if (entidade === 'PLAN') {
     return capturarPlanos(supabase, base, token, user.id, pagina0);
@@ -164,66 +164,14 @@ export async function POST(request: Request) {
     return capturarProdutos(supabase, base, token, user.id, pagina0);
   }
 
-  const { data: sinc } = await supabase
-    .from('mutual_sincronias')
-    .insert({ entidade, executada_por: user.id })
-    .select('id').maybeSingle();
-
-  let paginas = 0;
-  let registros = 0;
-  let total: number | null = null;
-  let proxima: number | null = null;
-
-  try {
-    for (let i = 0; i < maxPaginas; i++) {
-      const pagina = pagina0 + i;
-      const url = urlMutual(base, entidade, {
-        page: pagina_a_pagina ? pagina : undefined,
-        page_size: pagina_a_pagina ? tamanho : undefined,
-        updated_at__gte: body.updated_at__gte || undefined,
-      });
-      const res = await fetch(url, { headers: cabecalhoMutual(token), cache: 'no-store' });
-      if (!res.ok) {
-        // O motivo da recusa vai junto: "HTTP 400" sozinho manda a proxima pessoa chutar.
-        const detalhe = resumoDoCorpo(await res.text().catch(() => ''));
-        throw new Error(`HTTP ${res.status} em ${url}${detalhe ? ` — ${detalhe}` : ''}`);
-      }
-      const corpo = (await res.json()) as unknown;
-
-      const lista = extrairLista(corpo);
-      total = total ?? extrairTotal(corpo);
-      paginas += 1;
-      if (lista.length > 0) {
-        const { data: n, error } = await supabase.rpc('mutual_registrar_captura', {
-          p_entidade: entidade,
-          p_registros: lista as unknown as Json,
-        });
-        if (error) throw new Error(error.message);
-        registros += n ?? 0;
-      }
-      if (!pagina_a_pagina || !temProximaPagina(corpo, tamanho)) break;
-      proxima = pagina + 1;
-    }
-
-    if (sinc?.id) {
-      await supabase.from('mutual_sincronias').update({
-        concluida_em: new Date().toISOString(), paginas, registros, total_remoto: total,
-      }).eq('id', sinc.id);
-    }
-    return NextResponse.json({
-      configured: true, ok: true, entidade, paginas, registros,
-      total_remoto: total, proxima_pagina: proxima,
-    });
-  } catch (e) {
-    const erro = (e as Error).message;
-    if (sinc?.id) {
-      await supabase.from('mutual_sincronias').update({
-        concluida_em: new Date().toISOString(), paginas, registros, total_remoto: total, erro,
-      }).eq('id', sinc.id);
-    }
-    return NextResponse.json(
-      { configured: true, ok: false, entidade, paginas, registros, erro }, { status: 502 });
-  }
+  const r = await capturarEntidade(supabase, base, token, entidade, {
+    paginaInicial: pagina0,
+    maxPaginas,
+    tamanho,
+    updatedAtGte: body.updated_at__gte,
+    usuarioId: user.id,
+  });
+  return NextResponse.json({ configured: true, ...r }, { status: r.ok ? 200 : 502 });
 }
 
 // --- PLAN: o catalogo se monta POR VEICULO --------------------------------
