@@ -47,11 +47,12 @@ const num = (v: unknown) => Number(v ?? 0) || 0;
 // Filtros
 // ---------------------------------------------------------------------------
 function BarraFiltros({
-  periodo, onPeriodo, regionalId, onRegional, podeConfigurar, onConfigurar,
+  periodo, onPeriodo, regionalId, onRegional, podeConfigurar, onConfigurar, unidadeFixa,
 }: {
   periodo: PeriodoCobranca; onPeriodo: (p: PeriodoCobranca) => void;
   regionalId: string | null; onRegional: (id: string | null) => void;
   podeConfigurar: boolean; onConfigurar: () => void;
+  unidadeFixa?: string;
 }) {
   const ativo = presetCobrancaAtivo(periodo);
   const campo = 'tnum mt-1 block rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40';
@@ -76,7 +77,14 @@ function BarraFiltros({
           <input type="date" value={periodo.fim} onChange={(e) => onPeriodo({ ...periodo, fim: e.target.value })} className={campo} />
         </label>
       </div>
-      <FiltroUnidadeCobranca valor={regionalId} onChange={onRegional} />
+      {unidadeFixa ? (
+        <div className="block min-w-[190px]">
+          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Regional</span>
+          <p className="mt-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-sm font-medium text-slate-700">{unidadeFixa}</p>
+        </div>
+      ) : (
+        <FiltroUnidadeCobranca valor={regionalId} onChange={onRegional} />
+      )}
       {podeConfigurar && (
         <button type="button" onClick={onConfigurar}
           className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-600 transition hover:bg-slate-50">
@@ -221,9 +229,16 @@ function TabelaComparativos({ atual, refs, mesCheio }: {
 // ---------------------------------------------------------------------------
 // Painel
 // ---------------------------------------------------------------------------
-export function PainelInadimplencia() {
+/**
+ * `unidade` = o painel dentro do PORTAL DA FRANQUIA (/regional): a unidade vem
+ * travada, sem seletor, sem a tabela "por regional" (que compara unidades) e
+ * sem a configuracao da matriz. Quem garante que o gestor so le a propria e o
+ * banco (`cobranca_escopo`, 0097) — aqui e so para a tela nao oferecer o resto.
+ */
+export function PainelInadimplencia({ unidade }: { unidade?: { id: string; nome: string } } = {}) {
   const [periodo, setPeriodo] = useState<PeriodoCobranca>(() => periodoCobranca('mes_anterior'));
-  const [regionalId, setRegionalId] = useState<string | null>(null);
+  const [regionalLivre, setRegionalId] = useState<string | null>(null);
+  const regionalId = unidade?.id ?? regionalLivre;
   const [lista, setLista] = useState<FiltroListaBoletos | null>(null);
   const [config, setConfig] = useState(false);
 
@@ -234,7 +249,7 @@ export function PainelInadimplencia() {
   const qInd = useCobrancaIndicadores(periodo.inicio, periodo.fim, regionalId);
   const qCart = useCobrancaCarteira(regionalId);
   const qPar = useCobrancaParametros();
-  const qReg = useCobrancaPorRegional(periodo.inicio, periodo.fim);
+  const qReg = useCobrancaPorRegional(periodo.inicio, periodo.fim, !unidade);
   const qSerie = useCobrancaSerie(regionalId, 12);
 
   const mesCheio = ehMesCheio(periodo);
@@ -283,7 +298,8 @@ export function PainelInadimplencia() {
   return (
     <div className="space-y-5">
       <BarraFiltros periodo={periodo} onPeriodo={setPeriodo} regionalId={regionalId} onRegional={setRegionalId}
-        podeConfigurar={!!escopo.data?.global} onConfigurar={() => setConfig(true)} />
+        podeConfigurar={!!escopo.data?.global && !unidade} onConfigurar={() => setConfig(true)}
+        unidadeFixa={unidade?.nome} />
 
       {!valido && <p className="text-sm text-rose-600">O inicio do periodo esta depois do fim.</p>}
 
@@ -292,7 +308,11 @@ export function PainelInadimplencia() {
           <Database className="h-4 w-4" />
           O historico do Mutual e de <b>{formatDateTime(qCart.data?.ultima_captura_mutual)}</b> ({idade} dias).
           Pagamentos feitos la depois disso ainda aparecem como em aberto.
-          <Link href="/integracao/mutual" className="font-medium underline">Recapturar boletos e importar</Link>
+          {unidade ? (
+            <span>A matriz atualiza esse historico.</span>
+          ) : (
+            <Link href="/integracao/mutual" className="font-medium underline">Recapturar boletos e importar</Link>
+          )}
         </div>
       )}
       <ErroLeitura q={qInd} />
@@ -432,7 +452,8 @@ export function PainelInadimplencia() {
         </CardContent>
       </Card>
 
-      {/* Regional x media nacional */}
+      {/* Regional x media nacional — so fora do portal da franquia */}
+      {!unidade && (
       <Card>
         <CardHeader><CardTitle className="text-base">Por regional — contra a media</CardTitle></CardHeader>
         <CardContent>
@@ -483,6 +504,7 @@ export function PainelInadimplencia() {
           </p>
         </CardContent>
       </Card>
+      )}
 
       <ModalBoletos filtro={lista} onClose={() => setLista(null)} />
       <ModalParametros open={config} onClose={() => setConfig(false)} />

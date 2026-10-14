@@ -80,10 +80,12 @@ export function useCobrancaCalendario(mes: string, regionalId: string | null) {
   });
 }
 
-export function useCobrancaPorRegional(inicio: string, fim: string) {
+export function useCobrancaPorRegional(inicio: string, fim: string, ativo = true) {
   const supabase = createClient();
   return useQuery<CobrancaPorRegional[]>({
     queryKey: [...RAIZ, 'por-regional', inicio, fim],
+    // No portal da franquia a tabela "por regional" nao aparece: nao consulta.
+    enabled: ativo,
     queryFn: async () => {
       const { data, error } = await supabase.rpc('cobranca_por_regional', { p_inicio: inicio, p_fim: fim });
       if (error) throw error;

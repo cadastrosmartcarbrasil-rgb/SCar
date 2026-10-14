@@ -6,7 +6,7 @@ import { useState } from 'react';
 import {
   BarChart3, Building2, LayoutDashboard, LogOut, Menu, Users, Wallet, X, Zap,
   Repeat2,
-  Megaphone,
+  Megaphone, AlertTriangle,
 } from 'lucide-react';
 import { LogoNaCabine } from '@/components/hotlink/marca';
 import { createClient } from '@/lib/supabase/client';
@@ -18,6 +18,7 @@ const ITENS = [
   { href: '/regional/equipe', label: 'Minha Equipe', icon: Users },
   { href: '/regional/leads', label: 'Leads', icon: Zap },
   { href: '/regional/comissoes', label: 'Comissoes', icon: BarChart3 },
+  { href: '/regional/cobranca', label: 'Inadimplencia', icon: AlertTriangle },
   { href: '/regional/financeiro', label: 'Financeiro', icon: Wallet },
   { href: '/regional/comunicados', label: 'Comunicados', icon: Megaphone },
 ];

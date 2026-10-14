@@ -56,10 +56,14 @@ begin
   insert into comissoes_vendas (vendedor_id, veiculo_id, valor_comissao, is_adesao, status_pagamento)
     values (v1, ve1, 500, true, 'pendente');
 
+  -- O financeiro da franquia e SO comissao (0037; a 0106 passou a exigir a
+  -- categoria): 1.3.01 a receber da matriz, 3.2.01 a pagar aos vendedores.
   insert into lancamentos_financeiros (tipo, descricao, regional_id, valor_original,
-                                       data_emissao, data_vencimento, competencia)
-    values ('RECEITA','Mensalidade regional', r1, 1000, current_date, current_date, current_date),
-           ('DESPESA','Aluguel da unidade', r1, 400, current_date, current_date, current_date);
+                                       data_emissao, data_vencimento, competencia, categoria_dre_id)
+    values ('RECEITA','Comissao da franquia', r1, 1000, current_date, current_date, current_date,
+            regional_categoria_movimento('COMISSAO_RECEBER')),
+           ('DESPESA','Repasse ao vendedor', r1, 400, current_date, current_date, current_date,
+            regional_categoria_movimento('COMISSAO_PAGAR'));
   -- despesa da MATRIZ (regional nula) — nao pode entrar no portal da franquia
   insert into lancamentos_financeiros (tipo, descricao, regional_id, valor_original,
                                        data_emissao, data_vencimento, competencia)

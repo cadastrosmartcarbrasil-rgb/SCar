@@ -5,7 +5,7 @@ import {
   Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
 import {
-  ArrowDownCircle, ArrowUpCircle, Car, HandCoins, Info, Target, TrendingUp, UserRound,
+  AlertTriangle, ArrowDownCircle, ArrowUpCircle, Car, HandCoins, Info, Target, TrendingUp, UserRound,
   Users, Wallet, Zap,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +14,8 @@ import { useDesempenhoEquipe, usePainelRegional } from '@/hooks/use-regional';
 import { formatCurrency } from '@/lib/utils';
 import { avisoCobrancaExterna, composicaoDaCarteira } from '@/lib/regional';
 import { useUnidadeAtual } from '@/components/regional/contexto-unidade';
+import { useCobrancaCarteira } from '@/hooks/use-cobranca-painel';
+import Link from 'next/link';
 
 export default function PainelRegionalPage() {
   const [periodo, setPeriodo] = useState<Periodo>(() => periodoPreset('mes'));
@@ -22,6 +24,8 @@ export default function PainelRegionalPage() {
   const filtro = { regionalId, ...periodo };
   const { data: p, isLoading } = usePainelRegional(filtro);
   const { data: equipe } = useDesempenhoEquipe(filtro);
+  // Retrato de HOJE da inadimplencia (o mesmo numero da tela de cobranca).
+  const { data: cob, isLoading: carregandoCob } = useCobrancaCarteira(regionalId);
 
   const ranking = (equipe ?? [])
     .filter((v) => v.leads > 0 || v.convertidos > 0)
@@ -81,6 +85,25 @@ export default function PainelRegionalPage() {
         </div>
       )}
 
+      {/* ----------------- A INADIMPLENCIA, hoje (a tela completa e /regional/cobranca) */}
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Indicador
+          titulo="Associados inadimplentes" valor={Number(cob?.clientes_inadimplentes ?? 0)} icon={AlertTriangle}
+          tom="alerta" formato="numero" carregando={carregandoCob}
+          detalhe={`hoje · de ${Number(cob?.clientes_ativos ?? 0).toLocaleString('pt-BR')} associados com veiculo na base`}
+        />
+        <Indicador
+          titulo="Vencido em aberto" valor={Number(cob?.valor_vencido ?? 0)} icon={Wallet} tom="despesa"
+          carregando={carregandoCob}
+          detalhe={`hoje · ${Number(cob?.boletos_vencidos ?? 0).toLocaleString('pt-BR')} boletos, qualquer competencia`}
+        />
+        <Link href="/regional/cobranca"
+          className="flex items-center justify-between rounded-2xl border border-slate-200/80 bg-superficie p-4 text-sm font-medium text-slate-700 transition hover:border-cyan-300">
+          <span>Painel de inadimplencia da unidade<span className="block text-xs font-normal text-slate-500">taxas, comparativos, 12 meses e os boletos</span></span>
+          <ArrowUpCircle className="h-5 w-5 rotate-45 text-cyan-600" />
+        </Link>
+      </div>
+
       {/* --------------------------------------------- A VENDA, no periodo */}
       <div className="grid gap-3 sm:grid-cols-3">
         <Indicador
@@ -103,20 +126,20 @@ export default function PainelRegionalPage() {
         <Indicador
           titulo="Comissao a pagar" valor={p?.comissao_vendedores_pend} icon={HandCoins} tom="alerta"
           carregando={isLoading}
-          detalhe={`Ja repassado: ${formatCurrency(p?.comissao_vendedores_paga)}`}
+          detalhe={`Hoje · ja repassado (total): ${formatCurrency(p?.comissao_vendedores_paga)}`}
         />
       </div>
 
       {/* ------------------------------- O DINHEIRO DA UNIDADE (so comissao) */}
       <div className="grid gap-3 sm:grid-cols-3">
         <Indicador titulo="A receber (unidade)" valor={p?.contas_receber_aberto} icon={ArrowUpCircle} tom="receita"
-          detalhe="Somente titulos desta franquia" />
+          detalhe="Comissao a receber da matriz, em aberto hoje" />
         <Indicador titulo="A pagar (unidade)" valor={p?.contas_pagar_aberto} icon={ArrowDownCircle} tom="despesa"
-          detalhe="Nao inclui nada da matriz" />
+          detalhe="Comissao a repassar aos vendedores, em aberto hoje" />
         <Indicador
-          titulo="Resultado liquidado" valor={p?.resultado_periodo} icon={TrendingUp}
+          titulo="Resultado no periodo" valor={p?.resultado_periodo} icon={TrendingUp}
           tom={(p?.resultado_periodo ?? 0) >= 0 ? 'receita' : 'despesa'}
-          detalhe="Recebido menos pago, nesta unidade"
+          detalhe="Comissao recebida menos repassada, pela data da baixa"
         />
       </div>
 

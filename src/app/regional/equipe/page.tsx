@@ -168,8 +168,8 @@ export default function EquipeRegionalPage() {
                   <th className="py-2.5 text-right font-semibold">Leads</th>
                   <th className="py-2.5 text-right font-semibold">Convertidos</th>
                   <th className="py-2.5 text-right font-semibold">Conversao</th>
-                  <th className="py-2.5 text-right font-semibold">Comissao</th>
-                  <th className="py-2.5 text-right font-semibold">A pagar</th>
+                  <th className="py-2.5 text-right font-semibold">Comissao no periodo</th>
+                  <th className="py-2.5 text-right font-semibold">A pagar hoje</th>
                   <th className="py-2.5 text-right font-semibold">Acoes</th>
                 </tr>
               </thead>
