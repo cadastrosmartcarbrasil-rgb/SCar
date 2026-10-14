@@ -1,6 +1,25 @@
 # Caddy: proxy reverso para o app Next.js com HTTPS/SSL automatico.
-# O certificado Let's Encrypt e emitido/renovado sozinho para {$DOMAIN}.
+# O certificado Let's Encrypt e emitido/renovado sozinho para cada endereco abaixo.
+# {$DOMAIN} vem do .env do VPS e tem de ser UM dominio so (ex.: appsmartcar.com.br):
+# ele tambem monta o "www." e o destino dos redirecionamentos.
 {$DOMAIN} {
 	encode gzip
 	reverse_proxy app:3000
+}
+
+# www -> dominio principal
+www.{$DOMAIN} {
+	redir https://{$DOMAIN}{uri} permanent
+}
+
+# Dominio antigo (ate 14/10/2026): redireciona para o novo, mantendo o caminho —
+# hotlink, cotacao e vistoria ja enviados continuam abrindo. Manter durante a transicao.
+app.smartvidanet.com.br {
+	redir https://{$DOMAIN}{uri} permanent
+}
+
+# N8N (webhooks WhatsApp Cloud API / Meta) — outro servico no mesmo VPS, fora do app.
+n8n.smartvida.com {
+	encode gzip
+	reverse_proxy 172.17.0.1:5678
 }

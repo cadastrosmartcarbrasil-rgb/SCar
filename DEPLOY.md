@@ -199,21 +199,26 @@ O swap foi aumentado para 3 GB (`/swapfile2`, 2 GB, no `/etc/fstab`) no mesmo di
 O app responde em **`https://appsmartcar.com.br`** (antes `app.smartvidanet.com.br`). O domínio
 foi comprado na KingHost e o DNS fica lá: registro **A** (`@`) apontando para o IP do VPS.
 
-- **Quem emite o certificado é o Caddy, pelo `DOMAIN` do `.env`** — o `Caddyfile` do repositório
-  é genérico (`{$DOMAIN}`). Durante a transição, os dois endereços juntos:
+- **O `Caddyfile` do repositório tem os quatro endereços** — `{$DOMAIN}` (o app), `www.{$DOMAIN}`
+  e `app.smartvidanet.com.br` (os dois redirecionam para o domínio novo mantendo o caminho, então
+  hotlink, cotação e vistoria antigos continuam abrindo) e o `n8n.smartvida.com` (webhooks do
+  WhatsApp, outro serviço no mesmo VPS). Por isso **`DOMAIN` é UM domínio só**:
   ```
-  DOMAIN=appsmartcar.com.br, app.smartvidanet.com.br
+  DOMAIN=appsmartcar.com.br
   ```
-  O domínio antigo só sai quando os links já enviados (hotlink de vendedor, cotação, vistoria)
-  tiverem perdido o uso.
-- **Não edite o `Caddyfile` no servidor.** Se ele foi editado, o `git pull` para com
-  `Your local changes ... would be overwritten`. Confira com `git -C /opt/scar status` e, se o
-  `Caddyfile` aparecer, devolva-o ao do repositório (`git -C /opt/scar checkout Caddyfile`) —
-  quem escolhe o domínio é o `DOMAIN`.
+  Lista separada por vírgula quebra o `www.{$DOMAIN}` e o destino dos redirecionamentos.
+- **Não edite o `Caddyfile` no servidor — edite no repositório.** O bloco do n8n e os
+  redirecionamentos nasceram editados à mão em `/opt/scar` e foram trazidos para cá em 14/10/2026;
+  um `git checkout Caddyfile` antes disso teria apagado o n8n. Se o `git pull` parar com
+  `Your local changes ... would be overwritten`, compare com `git -C /opt/scar diff Caddyfile`,
+  traga para o repositório o que for de verdade e só então descarte a cópia local.
+- **Conferir depois de mexer:** `docker compose exec caddy caddy validate --config /etc/caddy/Caddyfile`
+  e `docker compose logs caddy --tail 50` (certificado emitido para cada endereço).
 - **Supabase → Authentication → URL Configuration:** `https://appsmartcar.com.br` em *Site URL* e
   em *Redirect URLs* (sem apagar o antigo durante a transição).
 - **Cron da baixa do Sicredi:** `scripts/baixa-banco.sh` já chama o domínio novo — vale depois do
-  `git pull`. Quem tinha `URL=...` próprio na linha do crontab precisa trocar ali.
+  `git pull`. Antes disso ele chamava o domínio antigo, que agora devolve 301 (o `curl` do script
+  não segue redirecionamento de POST): a baixa só volta a rodar com o `git pull` feito.
 - **Remetente de e-mail continua `@smartvidanet.com.br`** (`RESEND_FROM`, `EMAIL_FROM`) até o
   domínio novo ser verificado no Resend.
 

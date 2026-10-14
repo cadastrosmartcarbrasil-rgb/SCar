@@ -55,10 +55,11 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
   pasta `/opt/scar`. **Domínio trocado em 14/10/2026** (antes `app.smartvidanet.com.br`; o
   subdomínio `portal.smartcarbrasil.com.br` foi descartado porque o DNS daquele domínio está na
   revenda HostGator de terceiro). `appsmartcar.com.br` foi comprado na própria KingHost, com DNS lá.
-  O certificado vem do Caddy por `DOMAIN` no `.env` do VPS — o `Caddyfile` do repositório é
-  genérico (`{$DOMAIN}`) e **não** deve ser editado no servidor (o `git pull` recusa arquivo
-  alterado). Manter o domínio antigo junto (`DOMAIN=appsmartcar.com.br, app.smartvidanet.com.br`)
-  enquanto houver link antigo circulando (hotlink, cotação, vistoria). Os links do sistema são
+  `DOMAIN=appsmartcar.com.br` (UM domínio só) no `.env` do VPS; o `Caddyfile` do repositório
+  serve também `www.` e `app.smartvidanet.com.br` (redirecionam 301 para o novo, mantendo o
+  caminho) e o **`n8n.smartvida.com`** (webhooks do WhatsApp, outro serviço no mesmo VPS). Esses
+  blocos nasceram editados à mão no servidor — **edite o `Caddyfile` no repositório, nunca em
+  `/opt/scar`**, e nunca rode `git checkout Caddyfile` lá sem comparar antes. Os links do sistema são
   montados pelo `origin` da requisição, então nenhum ficou preso ao domínio antigo; o que era fixo
   (cron da baixa, scripts de deploy, User-Agent do CNPJ) foi trocado. **Remetentes de e-mail
   continuam `@smartvidanet.com.br`** (`RESEND_FROM` da boas-vindas e o contato do `GEO_USER_AGENT`)
