@@ -274,7 +274,7 @@ Peça de uma vez só, para não virar ida e volta:
    esquecer.
 2. **Credencial de HOMOLOGAÇÃO/sandbox**, se existir — é onde a Fase 1 deve rodar primeiro.
 3. **O token é preso a IP?** Vários provedores amarram a credencial a uma lista de IPs. Se for o
-   caso, informe o IP do VPS (`app.smartvidanet.com.br`) no pedido — senão a primeira chamada falha
+   caso, informe o IP do VPS (`appsmartcar.com.br`) no pedido — senão a primeira chamada falha
    com um erro de autenticação que parece token errado e não é.
 4. **Como o token viaja** (header `Authorization: Bearer`, header próprio, corpo do POST) e
    **se expira** — se for OAuth com refresh, a integração precisa renovar sozinha.

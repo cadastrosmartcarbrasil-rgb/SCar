@@ -28,7 +28,7 @@ export async function POST(request: Request) {
         signal: ctrl.signal,
         cache: 'no-store',
         // sem User-Agent alguns provedores recusam a chamada de servidor
-        headers: { Accept: 'application/json', 'User-Agent': 'SCar/1.0 (+https://app.smartvidanet.com.br)' },
+        headers: { Accept: 'application/json', 'User-Agent': 'SCar/1.0 (+https://appsmartcar.com.br)' },
       });
       if (res.status === 404) { naoExiste++; tentativas.push(`${p.nome}: nao encontrado`); continue; }
       if (!res.ok) { tentativas.push(`${p.nome}: HTTP ${res.status}`); continue; }

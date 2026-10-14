@@ -13,7 +13,7 @@
 set -euo pipefail
 
 BRANCH="${BRANCH:-claude/claude-md-opcao-x-98kfj5}"
-SERVIDOR="${SERVIDOR:-root@app.smartvidanet.com.br}"
+SERVIDOR="${SERVIDOR:-root@appsmartcar.com.br}"
 CAMINHO="${CAMINHO:-/opt/scar}"
 
 if [ "${1:-}" = "--descobrir" ]; then

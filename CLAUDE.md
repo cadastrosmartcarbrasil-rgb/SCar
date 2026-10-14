@@ -51,8 +51,18 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
    GitHub → *Branches* → lixeira em cada um. Depois da troca do padrão, o
    `claude/scar-project-btasdf` também pode ser apagado.
 
-- **Produção:** `https://app.smartvidanet.com.br` — VPS KingHost, Docker + Caddy (HTTPS auto),
-  pasta `/opt/scar`.
+- **Produção:** `https://appsmartcar.com.br` — VPS KingHost, Docker + Caddy (HTTPS auto),
+  pasta `/opt/scar`. **Domínio trocado em 14/10/2026** (antes `app.smartvidanet.com.br`; o
+  subdomínio `portal.smartcarbrasil.com.br` foi descartado porque o DNS daquele domínio está na
+  revenda HostGator de terceiro). `appsmartcar.com.br` foi comprado na própria KingHost, com DNS lá.
+  O certificado vem do Caddy por `DOMAIN` no `.env` do VPS — o `Caddyfile` do repositório é
+  genérico (`{$DOMAIN}`) e **não** deve ser editado no servidor (o `git pull` recusa arquivo
+  alterado). Manter o domínio antigo junto (`DOMAIN=appsmartcar.com.br, app.smartvidanet.com.br`)
+  enquanto houver link antigo circulando (hotlink, cotação, vistoria). Os links do sistema são
+  montados pelo `origin` da requisição, então nenhum ficou preso ao domínio antigo; o que era fixo
+  (cron da baixa, scripts de deploy, User-Agent do CNPJ) foi trocado. **Remetentes de e-mail
+  continuam `@smartvidanet.com.br`** (`RESEND_FROM` da boas-vindas e o contato do `GEO_USER_AGENT`)
+  — trocar só junto com a verificação do domínio novo no Resend.
 - **Último commit desta fase:** `a468ead`.
 
 ### ⏱️ RETOMADA EM 30 SEGUNDOS — os 3 fatos que evitam erro de local e de deploy
@@ -626,7 +636,7 @@ para testar, aba anônima.
 | Só os testes de banco | `npm run test:db` · um módulo: `npm run test:db -- 0043` |
 | Regerar o `supabase/schema.sql` | `npm run schema` (rodar SEMPRE após criar/editar migration) |
 | Publicar — **de dentro do VPS** (prompt `root@smartvida:~#`) | `cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 && DOCKER_BUILDKIT=0 docker compose up -d --build` |
-| Publicar — **do seu computador** (PowerShell/terminal local) | `ssh root@app.smartvidanet.com.br "cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 && DOCKER_BUILDKIT=0 docker compose up -d --build"` |
+| Publicar — **do seu computador** (PowerShell/terminal local) | `ssh root@appsmartcar.com.br "cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 && DOCKER_BUILDKIT=0 docker compose up -d --build"` |
 
 **O `DOCKER_BUILDKIT=0` FAZ PARTE DO COMANDO — nao e contorno de emergencia.** O daemon do Docker
 deste VPS resolve DNS pelo stub do `systemd-resolved`, que ja ficou "no ar e mudo": com o BuildKit
@@ -1216,7 +1226,7 @@ financeiro, precificação por FIPE). Escala esperada: grande (maior que o "Smar
 Prioridade: **segurança (RLS)** e **sempre validado** antes de commitar.
 
 - **Repo:** `cadastrosmartcarbrasil-rgb/scar` · **branch de trabalho/deploy:** `claude/claude-md-opcao-x-98kfj5`
-- **Produção:** `https://app.smartvidanet.com.br` (VPS KingHost, Docker + Caddy/HTTPS auto)
+- **Produção:** `https://appsmartcar.com.br` (VPS KingHost, Docker + Caddy/HTTPS auto)
 - **Idioma:** UI e mensagens em português (sem acentuação em identificadores/SQL para evitar problemas).
 
 ## Stack e decisões de arquitetura

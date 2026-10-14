@@ -16,7 +16,7 @@
 # =============================================================================
 param(
   [string]$Branch   = "claude/claude-md-opcao-x-98kfj5",
-  [string]$Servidor = "root@app.smartvidanet.com.br",
+  [string]$Servidor = "root@appsmartcar.com.br",
   [string]$Caminho  = "/opt/scar",
   [switch]$Descobrir
 )

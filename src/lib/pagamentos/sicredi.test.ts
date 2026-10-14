@@ -452,11 +452,11 @@ describe('contrato de webhook de outro sistema', () => {
     expect(contratoWebhookExistente([])).toBeNull();
   });
   it('so e nosso quando aponta para a nossa rota de webhook', () => {
-    const origem = 'https://app.smartvidanet.com.br';
+    const origem = 'https://appsmartcar.com.br';
     expect(webhookEhNosso(doMutual[0].url, origem)).toBe(false);
-    expect(webhookEhNosso('https://app.smartvidanet.com.br/api/v1/sicredi/webhook/abc', origem)).toBe(true);
-    expect(webhookEhNosso('https://APP.smartvidanet.com.br/api/v1/sicredi/webhook/abc', origem + '/')).toBe(true);
-    expect(webhookEhNosso('https://app.smartvidanet.com.br/outra', origem)).toBe(false);
+    expect(webhookEhNosso('https://appsmartcar.com.br/api/v1/sicredi/webhook/abc', origem)).toBe(true);
+    expect(webhookEhNosso('https://APPSMARTCAR.com.br/api/v1/sicredi/webhook/abc', origem + '/')).toBe(true);
+    expect(webhookEhNosso('https://appsmartcar.com.br/outra', origem)).toBe(false);
     expect(webhookEhNosso(null, origem)).toBe(false);
   });
 });

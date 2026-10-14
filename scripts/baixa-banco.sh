@@ -5,7 +5,7 @@
 # e chama a rota pelo dominio. Log em /var/log/scar-baixa.log.
 set -u
 ENV_FILE="${ENV_FILE:-/opt/scar/.env}"
-URL="${URL:-https://app.smartvidanet.com.br/api/v1/cobrancas/baixa-banco}"
+URL="${URL:-https://appsmartcar.com.br/api/v1/cobrancas/baixa-banco}"
 LOG="${LOG:-/var/log/scar-baixa.log}"
 
 SEGREDO="$(grep -E '^COBRANCA_CRON_SECRET=' "$ENV_FILE" | tail -1 | cut -d= -f2- | tr -d '\r"')"

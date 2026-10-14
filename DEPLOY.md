@@ -70,7 +70,7 @@ npm run deploy
 Sem os scripts, o equivalente em uma linha:
 
 ```powershell
-ssh root@app.smartvidanet.com.br "cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 && DOCKER_BUILDKIT=0 docker compose up -d --build"
+ssh root@appsmartcar.com.br "cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 && DOCKER_BUILDKIT=0 docker compose up -d --build"
 ```
 
 > **Não misture os dois.** Rodar a versão com `ssh root@...` **de dentro do
@@ -193,6 +193,29 @@ baixá-la de novo (o problema de DNS acima) — nenhum deploy passaria mais. **N
 
 **Rotina:** `docker image prune -f` uma vez por mês, ou sempre que `df -h /` passar de 85%.
 O swap foi aumentado para 3 GB (`/swapfile2`, 2 GB, no `/etc/fstab`) no mesmo dia.
+
+## 2.2 Domínio do sistema (trocado em 14/10/2026)
+
+O app responde em **`https://appsmartcar.com.br`** (antes `app.smartvidanet.com.br`). O domínio
+foi comprado na KingHost e o DNS fica lá: registro **A** (`@`) apontando para o IP do VPS.
+
+- **Quem emite o certificado é o Caddy, pelo `DOMAIN` do `.env`** — o `Caddyfile` do repositório
+  é genérico (`{$DOMAIN}`). Durante a transição, os dois endereços juntos:
+  ```
+  DOMAIN=appsmartcar.com.br, app.smartvidanet.com.br
+  ```
+  O domínio antigo só sai quando os links já enviados (hotlink de vendedor, cotação, vistoria)
+  tiverem perdido o uso.
+- **Não edite o `Caddyfile` no servidor.** Se ele foi editado, o `git pull` para com
+  `Your local changes ... would be overwritten`. Confira com `git -C /opt/scar status` e, se o
+  `Caddyfile` aparecer, devolva-o ao do repositório (`git -C /opt/scar checkout Caddyfile`) —
+  quem escolhe o domínio é o `DOMAIN`.
+- **Supabase → Authentication → URL Configuration:** `https://appsmartcar.com.br` em *Site URL* e
+  em *Redirect URLs* (sem apagar o antigo durante a transição).
+- **Cron da baixa do Sicredi:** `scripts/baixa-banco.sh` já chama o domínio novo — vale depois do
+  `git pull`. Quem tinha `URL=...` próprio na linha do crontab precisa trocar ali.
+- **Remetente de e-mail continua `@smartvidanet.com.br`** (`RESEND_FROM`, `EMAIL_FROM`) até o
+  domínio novo ser verificado no Resend.
 
 ## 3. Conferência
 
