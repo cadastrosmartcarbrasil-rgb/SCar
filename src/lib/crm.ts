@@ -202,7 +202,7 @@ export function acoesDoLead(status: StatusLead): AcaoLead[] {
 // ---------------------------------------------------------------------------
 
 /** Tira o que quebraria o filtro `or` do PostgREST (virgula, parenteses, curinga). */
-function seguroParaFiltro(v: string): string {
+export function seguroParaFiltro(v: string): string {
   return (v ?? '').replace(/[,()*%"'\\]/g, ' ').replace(/\s+/g, ' ').trim();
 }
 

@@ -5214,6 +5214,16 @@ no fim — o runner procura por "PASSARAM") e rode `npm run schema`.
   (`src/lib/paginacao.ts`, testada) em `useVeiculos` e `useAssociados`, com `id` como desempate da
   ordem. **Lista que carrega a tabela inteira para filtrar na tela usa `lerTodas` ou pagina no
   banco** — e RPC que devolve conjunto também é cortada em 1.000.
+- **…e `lerTodas` numa LISTA DE TELA virou a "demora extrema" (15/10/2026).** Com 6.807 veículos e
+  5.496 associados, `/veiculos` e `/associados` faziam ~13 requisições de 1.000 em sequência (~250 ms
+  cada no banco + ~4 MB) e desenhavam milhares de linhas; o modal do veículo e o lançamento
+  financeiro montavam `<select>` com 5.500 associados. Agora: `useVeiculosPagina`/`useAssociadosPagina`
+  (50 por página, `count: 'exact'`, busca no banco por `src/lib/busca-cadastro.ts`, testada; o nome
+  do associado vira lista de ids antes do `or`), `<Paginador>`, filtro de situação em `/veiculos`
+  (padrão **Na base**), `?editar=<id>` por `useVeiculo(id)` e **`<SeletorAssociado>`** (digita, até 20)
+  no veículo, no lançamento financeiro e na boletagem; instalar rastreador busca por placa
+  (`useBuscaVeiculos`). Medido: a página custa 11 ms no banco. **Tela nova de cadastro grande:
+  paginar no banco e buscar por digitação — `lerTodas` só para quem precisa mesmo do conjunto.**
 - **Campo de "ativo" que nenhuma função de segurança lê é uma promessa falsa.** `usuarios.ativo`
   existia desde a 0001 e só a 0068 fez `is_staff()`/`auth_papel()` olharem para ele — 67 migrations
   construídas sobre um checkbox decorativo, com a tela dizendo que ele revogava acesso.

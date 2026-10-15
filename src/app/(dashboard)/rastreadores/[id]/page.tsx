@@ -12,7 +12,8 @@ import { Modal } from '@/components/ui/modal';
 import { FormField, Input, Select, Textarea, MoneyInput } from '@/components/ui/field';
 import { useRegionais } from '@/hooks/use-config';
 import { opcoesParaEscolher } from '@/lib/regional';
-import { useVeiculos } from '@/hooks/use-veiculos';
+import { useBuscaVeiculos } from '@/hooks/use-veiculos';
+import { useAdiado } from '@/hooks/use-adiado';
 import {
   useRastreadorFicha, useRastreadorHistorico, useInstalarRastreador, useDesinstalarRastreador,
   useMoverStatusRastreador, useTransferirRastreador, useAbrirManutencao, useConcluirManutencao,
@@ -185,7 +186,8 @@ function ModalAcao({ acao, ficha, onClose }: {
   ficha: { id: string; status: StatusRastreador; regional_id: string | null; manutencao_aberta_id: string | null };
   onClose: () => void;
 }) {
-  const { data: veiculos } = useVeiculos();
+  const [buscaVeiculo, setBuscaVeiculo] = useState('');
+  const { data: veiculos, isFetching: buscandoVeiculo } = useBuscaVeiculos(useAdiado(buscaVeiculo));
   const { data: regionais } = useRegionais();
   const instalar = useInstalarRastreador();
   const desinstalar = useDesinstalarRastreador();
@@ -282,8 +284,11 @@ function ModalAcao({ acao, ficha, onClose }: {
         {acao === 'instalar' && (
           <>
             <FormField label="Veiculo *">
+              <input value={buscaVeiculo} onChange={(e) => setBuscaVeiculo(e.target.value)}
+                placeholder="Digite a placa (ou marca/modelo) para buscar"
+                className="mb-2 w-full rounded-md border border-slate-300 bg-superficie px-3 py-2 text-sm" />
               <Select value={veiculoId} onChange={(e) => setVeiculoId(e.target.value)}>
-                <option value="">-- Selecione o veiculo --</option>
+                <option value="">{buscaVeiculo.trim().length < 2 ? '-- Digite acima para buscar --' : buscandoVeiculo ? 'Buscando...' : `-- ${(veiculos ?? []).length} encontrado(s) --`}</option>
                 {(veiculos ?? []).map((v) => (
                   <option key={v.id} value={v.id}>
                     {v.placa} — {[v.marca, v.modelo].filter(Boolean).join(' ')} ({v.clientes?.nome_razao_social ?? ''})

@@ -1,20 +1,25 @@
 'use client';
 
 import { lerTodas } from '@/lib/paginacao';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { ordenarVeiculos } from '@/lib/sac';
 import { normalizarDigitos } from '@/lib/rastreador';
 import type { VeiculosRow } from '@/lib/database.types';
+import {
+  TAMANHO_PAGINA_CADASTRO, filtroBuscaVeiculos, filtroBuscaAssociados, statusDaSituacao,
+  type SituacaoLista,
+} from '@/lib/busca-cadastro';
 
 export interface VeiculoComAssociado extends VeiculosRow {
   clientes?: { nome_razao_social: string; matricula: string | null } | null;
 }
 
-export function useVeiculos(associadoId?: string) {
+export function useVeiculos(associadoId?: string, ativo = true) {
   const supabase = createClient();
   return useQuery<VeiculoComAssociado[]>({
     queryKey: ['veiculos', associadoId ?? 'all'],
+    enabled: ativo,
     queryFn: async () => {
       // Paginado: o PostgREST corta em 1.000 linhas e a carteira ja passou
       // disso (ver src/lib/paginacao.ts). O `id` no fim desempata a ordem.
@@ -31,6 +36,88 @@ export function useVeiculos(associadoId?: string) {
       });
       // Ordem padrao do sistema: ativos primeiro, inativos/cancelados no fim
       // (mesma regra do SQL ordem_status_veiculo, em src/lib/sac.ts).
+      return ordenarVeiculos((data ?? []) as unknown as VeiculoComAssociado[]);
+    },
+  });
+}
+
+/**
+ * A lista de /veiculos, UMA pagina por vez, com busca e situacao no banco.
+ * Substitui o `useVeiculos()` sem filtro, que baixava a frota inteira.
+ */
+export function useVeiculosPagina(busca: string, situacao: SituacaoLista, pagina: number) {
+  const supabase = createClient();
+  const termo = busca.trim();
+  return useQuery<{ linhas: VeiculoComAssociado[]; total: number }>({
+    queryKey: ['veiculos', 'pagina', termo, situacao, pagina],
+    placeholderData: keepPreviousData,
+    queryFn: async () => {
+      // O `or` nao alcanca a tabela embutida: o NOME do associado vira lista de ids.
+      let clienteIds: string[] = [];
+      const fAssoc = termo.length >= 3 ? filtroBuscaAssociados(termo) : null;
+      if (fAssoc) {
+        const { data, error } = await supabase.from('clientes').select('id').or(fAssoc).limit(200);
+        if (error) throw error;
+        clienteIds = (data ?? []).map((c) => c.id);
+      }
+      const filtro = termo ? filtroBuscaVeiculos(termo, clienteIds) : null;
+      if (termo && !filtro) return { linhas: [], total: 0 };
+
+      const de = pagina * TAMANHO_PAGINA_CADASTRO;
+      let q = supabase
+        .from('veiculos')
+        .select('*, clientes(nome_razao_social, matricula)', { count: 'exact' })
+        .neq('status', 'excluido');
+      const status = statusDaSituacao(situacao);
+      if (status) q = q.in('status', status as VeiculosRow['status'][]);
+      if (filtro) q = q.or(filtro);
+      const { data, error, count } = await q
+        .order('data_ativacao', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false })
+        .order('id')
+        .range(de, de + TAMANHO_PAGINA_CADASTRO - 1);
+      if (error) throw error;
+      return { linhas: (data ?? []) as unknown as VeiculoComAssociado[], total: count ?? 0 };
+    },
+  });
+}
+
+/** Um veiculo so (atalho ?editar=<id> do SAC e da ficha). */
+export function useVeiculo(id: string | null | undefined) {
+  const supabase = createClient();
+  return useQuery<VeiculoComAssociado | null>({
+    queryKey: ['veiculos', 'um', id],
+    enabled: !!id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('veiculos')
+        .select('*, clientes(nome_razao_social, matricula)')
+        .eq('id', id!)
+        .maybeSingle();
+      if (error) throw error;
+      return (data as unknown as VeiculoComAssociado) ?? null;
+    },
+  });
+}
+
+/** Seletor de veiculo por placa (instalar rastreador): ate 20 resultados. */
+export function useBuscaVeiculos(termo: string) {
+  const supabase = createClient();
+  const t = termo.trim();
+  return useQuery<VeiculoComAssociado[]>({
+    queryKey: ['veiculos', 'busca', t],
+    enabled: t.length >= 2,
+    queryFn: async () => {
+      const filtro = filtroBuscaVeiculos(t);
+      if (!filtro) return [];
+      const { data, error } = await supabase
+        .from('veiculos')
+        .select('*, clientes(nome_razao_social, matricula)')
+        .neq('status', 'excluido')
+        .or(filtro)
+        .order('placa')
+        .limit(20);
+      if (error) throw error;
       return ordenarVeiculos((data ?? []) as unknown as VeiculoComAssociado[]);
     },
   });

@@ -11,12 +11,15 @@ import {
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { FormField, Input, Select, MoneyInput } from '@/components/ui/field';
-import { useAssociados } from '@/hooks/use-associados';
+import { SeletorAssociado } from '@/components/associados/seletor-associado';
+import { Paginador } from '@/components/ui/paginador';
+import { useAdiado } from '@/hooks/use-adiado';
+import { SITUACOES_LISTA, type SituacaoLista } from '@/lib/busca-cadastro';
 import { useRegionais, useVendedores, useUsuarios, useMarcas, useModelos } from '@/hooks/use-config';
 import { rotuloUnidade } from '@/lib/regional';
 import { useTiposVeiculo, usePlanos, useProdutos, useProdutosPorPlano, useTiposPorProduto } from '@/hooks/use-precificacao';
 import { produtoAtendeTipo, produtosParaTipo, regraRastreadorCobra, semRastreadorDaRegra } from '@/lib/produtos';
-import { useVeiculos, useSaveVeiculo, useExcluirVeiculo } from '@/hooks/use-veiculos';
+import { useVeiculosPagina, useVeiculo, useSaveVeiculo, useExcluirVeiculo } from '@/hooks/use-veiculos';
 import { useEmpresasRastreamento } from '@/hooks/use-rastreamento';
 import { useEmpresa } from '@/hooks/use-empresa';
 import { DIAS_TOLERANCIA_PADRAO, avisoDeTolerancia, tolerancia } from '@/lib/inadimplencia';
@@ -99,10 +102,8 @@ export default function VeiculosPage() {
 function VeiculosConteudo() {
   const params = useSearchParams();
   const router = useRouter();
-  const { data: veiculos, isLoading } = useVeiculos();
   const { data: empresa } = useEmpresa();
   const diasTolerancia = empresa?.dias_tolerancia_inadimplencia ?? DIAS_TOLERANCIA_PADRAO;
-  const { data: associados } = useAssociados();
   const { data: regionais } = useRegionais();
   const { data: vendedores } = useVendedores();
   const { data: usuarios } = useUsuarios();
@@ -120,6 +121,13 @@ function VeiculosConteudo() {
   const calcMensal = useCalcularMensalidadeVeiculo();
 
   const [busca, setBusca] = useState('');
+  const [situacao, setSituacao] = useState<SituacaoLista>('base');
+  const [pagina, setPagina] = useState(0);
+  const buscaAdiada = useAdiado(busca);
+  // Busca e situacao novas voltam para a primeira pagina.
+  useEffect(() => { setPagina(0); }, [buscaAdiada, situacao]);
+  const lista = useVeiculosPagina(buscaAdiada, situacao, pagina);
+  const isLoading = lista.isLoading;
   const [aberto, setAberto] = useState(false);
   const [form, setForm] = useState<Partial<VeiculosRow>>({});
   const [consultando, setConsultando] = useState(false);
@@ -162,20 +170,21 @@ function VeiculosConteudo() {
   // continuasse na URL, salvar reabria o modal — o efeito rodava de novo a cada
   // refetch da lista (o save invalida ['veiculos']) e no proprio setAberto(false).
   const editarId = params.get('editar');
+  const { data: veiculoDoLink } = useVeiculo(editarId);
   const deepLinkTratado = useRef<string | null>(null);
   // ?voltar=/veiculos/<id>: veio da ficha do veiculo — fechar o modal devolve para la.
   // So caminho interno de veiculo, para o parametro nao virar redirecionamento aberto.
   const voltarPara = useRef<string | null>(null);
   useEffect(() => {
     if (!editarId || deepLinkTratado.current === editarId) return;
-    const v = (veiculos ?? []).find((x) => x.id === editarId);
-    if (!v) return;
+    const v = veiculoDoLink;
+    if (!v || v.id !== editarId) return;
     deepLinkTratado.current = editarId;
     const voltar = params.get('voltar');
     voltarPara.current = voltar && /^\/veiculos\/[0-9a-f-]{36}$/.test(voltar) ? voltar : null;
     editar(v);
     router.replace('/veiculos', { scroll: false });
-  }, [editarId, veiculos, router, params]);
+  }, [editarId, veiculoDoLink, router, params]);
 
   function fecharModal() {
     setAberto(false);
@@ -287,10 +296,6 @@ function VeiculosConteudo() {
   }
 
   const nomeUsuario = useMemo(() => new Map((usuarios ?? []).map((u) => [u.id, u.nome])), [usuarios]);
-  const nomeAssociado = useMemo(
-    () => new Map((associados ?? []).map((a) => [a.id, a.nome_razao_social])),
-    [associados],
-  );
 
   // modelos sugeridos para a marca digitada (busca sob demanda pela marca)
   const marcaSelecionada = useMemo(
@@ -299,18 +304,8 @@ function VeiculosConteudo() {
   );
   const { data: modelosDaMarca = [] } = useModelos(marcaSelecionada?.id);
 
-  const filtrados = useMemo(() => {
-    const t = busca.toLowerCase();
-    return (veiculos ?? []).filter(
-      (v) =>
-        (v.placa ?? '').toLowerCase().includes(t) ||
-        (v.marca ?? '').toLowerCase().includes(t) ||
-        (v.modelo ?? '').toLowerCase().includes(t) ||
-        (v.clientes?.nome_razao_social ?? '').toLowerCase().includes(t) ||
-        (v.rastreador_imei ?? '').includes(t) ||
-        (v.rastreador_chip ?? '').includes(t),
-    );
-  }, [veiculos, busca]);
+  // A frota vem UMA pagina por vez, ja filtrada no banco (busca-cadastro.ts).
+  const filtrados = lista.data?.linhas ?? [];
 
   // Abrir outra ficha nao pode herdar a selecao da anterior: o conjunto de
   // opcionais so e reescrito quando a consulta do novo veiculo responde — e a
@@ -455,14 +450,20 @@ function VeiculosConteudo() {
         </SePode>
       </div>
 
-      <div className="relative max-w-sm">
+      <div className="flex flex-wrap items-center gap-2">
+      <div className="relative w-full max-w-sm">
         <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
         <input
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
-          placeholder="Buscar por placa, marca, modelo ou associado"
+          placeholder="Buscar por placa, marca, modelo, associado ou IMEI"
           className="w-full rounded-md border border-slate-300 py-2 pl-9 pr-3 text-sm"
         />
+      </div>
+        <select value={situacao} onChange={(e) => setSituacao(e.target.value as SituacaoLista)}
+          className="rounded-md border border-slate-300 bg-superficie px-3 py-2 text-sm">
+          {SITUACOES_LISTA.map((o) => <option key={o.valor} value={o.valor}>{o.rotulo}</option>)}
+        </select>
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-slate-200 bg-superficie">
@@ -505,7 +506,7 @@ function VeiculosConteudo() {
                     </span>
                   </td>
                   <td className="px-4 py-2 text-slate-600">
-                    {v.clientes?.nome_razao_social ?? nomeAssociado.get(v.cliente_id) ?? '-'}
+                    {v.clientes?.nome_razao_social ?? '-'}
                   </td>
                   <td className="px-4 py-2 text-slate-600">{v.valor_fipe ? formatCurrency(v.valor_fipe) : '-'}</td>
                   <td className="tnum px-4 py-2 text-slate-600">{primeiraAtivacao(v.data_ativacao)?.data ?? '-'}</td>
@@ -560,12 +561,14 @@ function VeiculosConteudo() {
             {!isLoading && filtrados.length === 0 && (
               <tr>
                 <td colSpan={7} className="px-4 py-6 text-center text-slate-400">
-                  Nenhum veiculo cadastrado.
+                  {busca ? 'Nenhum veiculo encontrado para a busca.' : 'Nenhum veiculo nesta situacao.'}
                 </td>
               </tr>
             )}
           </tbody>
         </table>
+        <Paginador pagina={pagina} total={lista.data?.total ?? 0} onPagina={setPagina}
+          carregando={lista.isFetching && !lista.isLoading} />
       </div>
 
       <Modal open={aberto} onClose={fecharModal} title={form.id ? `Editar ${form.placa}` : 'Novo Veiculo (Contrato)'} tamanho="xl">
@@ -582,15 +585,8 @@ function VeiculosConteudo() {
 
         <form onSubmit={submit} className="space-y-4">
           <FormField label="Associado *">
-            <Select value={form.cliente_id ?? ''} onChange={(e) => setF({ cliente_id: e.target.value })}>
-              <option value="">-- Selecione o associado --</option>
-              {(associados ?? []).map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.matricula ? `${a.matricula} - ` : ''}
-                  {a.nome_razao_social}
-                </option>
-              ))}
-            </Select>
+            <SeletorAssociado value={form.cliente_id} onChange={(id) => setF({ cliente_id: id || undefined })}
+              permiteLimpar={false} />
           </FormField>
 
           {/* Placa + consulta */}

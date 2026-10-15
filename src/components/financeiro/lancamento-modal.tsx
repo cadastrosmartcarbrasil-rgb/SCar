@@ -8,7 +8,7 @@ import { Modal } from '@/components/ui/modal';
 import { FormField, Input, MoneyInput, Select, Textarea } from '@/components/ui/field';
 import { useFornecedores } from '@/hooks/use-fornecedores';
 import { ordenarFornecedores, rotuloFornecedor } from '@/lib/fornecedores';
-import { useAssociados } from '@/hooks/use-associados';
+import { SeletorAssociado } from '@/components/associados/seletor-associado';
 import { usePlanoContas, useRegionais } from '@/hooks/use-config';
 import { opcoesParaEscolher } from '@/lib/regional';
 import { useCentrosCusto, useSaveLancamento } from '@/hooks/use-financeiro';
@@ -86,7 +86,6 @@ export function LancamentoModal({
   const [repetirValor, setRepetirValor] = useState(false);
 
   const { data: fornecedores } = useFornecedores();
-  const { data: associados } = useAssociados();
   const { data: categorias } = usePlanoContas();
   const { data: centros } = useCentrosCusto();
   const { data: regionais } = useRegionais();
@@ -187,12 +186,8 @@ export function LancamentoModal({
           <div className="grid gap-3 sm:grid-cols-2">
             {receita ? (
               <FormField label="Pagador (associado)">
-                <Select value={form.cliente_id ?? ''} onChange={(e) => set({ cliente_id: e.target.value || null })}>
-                  <option value="">-- Nao vinculado --</option>
-                  {(associados ?? []).map((c) => (
-                    <option key={c.id} value={c.id}>{c.nome_razao_social}</option>
-                  ))}
-                </Select>
+                <SeletorAssociado value={form.cliente_id} onChange={(id) => set({ cliente_id: id || null })}
+                  placeholder="Nao vinculado — digite para buscar" />
               </FormField>
             ) : (
               <FormField label={form.evento_id ? 'Fornecedor (favorecido)' : 'Favorecido (fornecedor)'}>

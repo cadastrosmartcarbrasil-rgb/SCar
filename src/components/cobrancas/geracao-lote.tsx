@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { FormField, Input, Select } from '@/components/ui/field';
 import { useRegionais } from '@/hooks/use-config';
 import { rotuloUnidade } from '@/lib/regional';
-import { useAssociados } from '@/hooks/use-associados';
+import { SeletorAssociado } from '@/components/associados/seletor-associado';
 import { useVeiculos } from '@/hooks/use-veiculos';
 import {
   useGerarLotePeriodo, useEnviarRemessa, useRemessas, useRemessaItens,
@@ -40,8 +40,7 @@ export function GeracaoLote() {
   const [resultado, setResultado] = useState<GeracaoLoteResultado | null>(null);
 
   const { data: regionais } = useRegionais();
-  const { data: associados } = useAssociados();
-  const { data: veiculos } = useVeiculos(escopo === 'veiculos' ? clienteId || undefined : undefined);
+  const { data: veiculos } = useVeiculos(clienteId || undefined, escopo === 'veiculos' && !!clienteId);
   const gerar = useGerarLotePeriodo();
   const enviar = useEnviarRemessa();
 
@@ -131,12 +130,7 @@ export function GeracaoLote() {
         {(escopo === 'associado' || escopo === 'veiculos') && (
           <div className="mt-3">
             <FormField label="Associado">
-              <Select value={clienteId} onChange={(e) => { setClienteId(e.target.value); setVeiculoIds([]); }}>
-                <option value="">Selecione...</option>
-                {(associados ?? []).map((a) => (
-                  <option key={a.id} value={a.id}>{a.nome_razao_social} — {a.cpf_cnpj}</option>
-                ))}
-              </Select>
+              <SeletorAssociado value={clienteId} onChange={(id) => { setClienteId(id); setVeiculoIds([]); }} />
             </FormField>
           </div>
         )}

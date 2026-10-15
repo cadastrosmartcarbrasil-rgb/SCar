@@ -1,15 +1,17 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Plus, Trash2, UserRound, Search, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { useRegionais } from '@/hooks/use-config';
-import { useAssociados, useExcluirAssociado } from '@/hooks/use-associados';
+import { useAssociadosPagina, useExcluirAssociado } from '@/hooks/use-associados';
 import { AssociadoForm, novoAssociadoVazio } from '@/components/associados/associado-form';
-import { formatarDocumento, soDigitos } from '@/lib/documento';
+import { formatarDocumento } from '@/lib/documento';
+import { Paginador } from '@/components/ui/paginador';
+import { useAdiado } from '@/hooks/use-adiado';
 import type { StatusCliente } from '@/lib/database.types';
 import { SePode } from '@/components/layout/se-pode';
 
@@ -25,7 +27,6 @@ const cor = (s: StatusCliente) => SITUACAO_COR[s] ?? 'bg-slate-100 text-slate-60
 
 export default function AssociadosPage() {
   const router = useRouter();
-  const { data: associados, isLoading } = useAssociados();
   const { data: regionais } = useRegionais();
   const excluir = useExcluirAssociado();
 
@@ -34,14 +35,14 @@ export default function AssociadosPage() {
 
   const nomesRegionais = useMemo(() => new Map((regionais ?? []).map((r) => [r.id, r.nome])), [regionais]);
 
-  const filtrados = useMemo(() => {
-    return (associados ?? []).filter(
-      (a) =>
-        a.nome_razao_social.toLowerCase().includes(busca.toLowerCase()) ||
-        (a.cpf_cnpj ?? '').includes(soDigitos(busca)) ||
-        (a.matricula ?? '').includes(soDigitos(busca) || busca),
-    );
-  }, [associados, busca]);
+  // Uma pagina por vez, ja filtrada no banco (busca-cadastro.ts) — antes a tela
+  // baixava os 5.500 associados para filtrar aqui.
+  const [pagina, setPagina] = useState(0);
+  const buscaAdiada = useAdiado(busca);
+  useEffect(() => { setPagina(0); }, [buscaAdiada]);
+  const lista = useAssociadosPagina(buscaAdiada, pagina);
+  const isLoading = lista.isLoading;
+  const filtrados = lista.data?.linhas ?? [];
 
   return (
     <div className="space-y-5">
@@ -139,6 +140,8 @@ export default function AssociadosPage() {
             )}
           </tbody>
         </table>
+        <Paginador pagina={pagina} total={lista.data?.total ?? 0} onPagina={setPagina}
+          carregando={lista.isFetching && !lista.isLoading} />
       </div>
 
       <Modal open={aberto} onClose={() => setAberto(false)} title="Novo Associado" tamanho="xl">
