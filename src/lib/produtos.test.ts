@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  produtoAtendeTipo, produtosParaTipo, rotuloTiposDoProduto, regraRastreadorCobra, semRastreadorDaRegra,
+  produtoAtendeTipo, produtosParaTipo, rotuloTiposDoProduto, regraRastreadorCobra, semRastreadorDaRegra, opcionaisOferecidos, coberturasDoVeiculo,
   type TiposPorProduto,
 } from './produtos';
 
@@ -75,5 +75,46 @@ describe('rastreador opcional x regra do tipo (0090)', () => {
   });
   it('o que ja esta gravado continua na lista', () => {
     expect(semRastreadorDaRegra(lista, true, ['rast']).map((p) => p.id)).toEqual(['rast', 'rastreamento', 'app']);
+  });
+});
+
+describe('opcionaisOferecidos', () => {
+  const moto = 't-moto';
+  const carro = 't-carro';
+  const produtos = [
+    { id: 'casco', obrigatorio: true, status: true },
+    { id: 'parabrisa', obrigatorio: false, status: true },
+    { id: 'reserva', obrigatorio: false, status: true },
+    { id: 'rast', obrigatorio: false, status: true, rastreador_avulso: true },
+    { id: 'velho', obrigatorio: false, status: false },
+    { id: 'vida', obrigatorio: false, status: true },
+  ];
+  const mapa = { parabrisa: [carro], reserva: [carro] };
+  it('moto nao ve parabrisa nem carro reserva; obrigatorio, inativo e o do plano saem', () => {
+    const r = opcionaisOferecidos({
+      produtos, tipoVeiculoId: moto, tiposPorProduto: mapa, idsDoPlano: ['vida'], contratados: [],
+      regraRastreadorCobra: false,
+    });
+    expect(r.map((p) => p.id)).toEqual(['rast']);
+  });
+  it('o contratado fica, marcado, mesmo fora do tipo ou inativo', () => {
+    const r = opcionaisOferecidos({
+      produtos, tipoVeiculoId: moto, tiposPorProduto: mapa, idsDoPlano: [], contratados: ['parabrisa', 'velho'],
+      regraRastreadorCobra: true,
+    });
+    expect(r.map((p) => [p.id, p.foraDoTipo])).toEqual([['parabrisa', true], ['velho', false], ['vida', false]]);
+  });
+});
+
+describe('coberturasDoVeiculo', () => {
+  it('separa plano e opcionais e tira a taxa administrativa', () => {
+    const r = coberturasDoVeiculo([
+      { nome: 'Taxa', origem: 'PLANO' as const, categoria: 'ADMIN' },
+      { nome: 'Casco', origem: 'PLANO' as const, categoria: 'CASCO' },
+      { nome: 'Vidros', origem: 'PLANO' as const, categoria: 'VIDROS' },
+      { nome: 'Vida', origem: 'AVULSO' as const, categoria: 'BENEFICIO' },
+    ]);
+    expect(r.plano.map((i) => i.nome)).toEqual(['Casco', 'Vidros']);
+    expect(r.opcionais.map((i) => i.nome)).toEqual(['Vida']);
   });
 });

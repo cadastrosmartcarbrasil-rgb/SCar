@@ -32,6 +32,13 @@ export async function GET(request: Request) {
     .rpc('opcionais_veiculo', { p_veiculo_id: veiculoId });
   // Falha aqui nao pode virar "sem cobertura" silencioso na ficha do atendente.
   if (erroOpcionais) return NextResponse.json({ error: erroOpcionais.message }, { status: 500 });
+  // A categoria separa cobertura de TAXA (a Taxa Administrativa e ADMIN e nao
+  // aparece como cobertura no SAC — coberturasDoVeiculo, src/lib/produtos.ts).
+  const idsProd = (opcionais ?? []).map((o) => o.produto_id);
+  const { data: cats } = idsProd.length
+    ? await supabase.from('produtos').select('id, categoria').in('id', idsProd)
+    : { data: [] as { id: string; categoria: string | null }[] };
+  const categoria = new Map((cats ?? []).map((c) => [c.id, c.categoria as string | null]));
 
   // Rastreamento: quem rastreia o veiculo, telefone da central e link da
   // plataforma — o atendente precisa disso na hora do evento (0049).
@@ -55,6 +62,6 @@ export async function GET(request: Request) {
     plano_nome: plano?.nome ?? null,
     rastreadora: rastreadora ?? null,
     rastreamento: (sitRastreio ?? [])[0] ?? null,
-    opcionais: opcionais ?? [],
+    opcionais: (opcionais ?? []).map((o) => ({ ...o, categoria: categoria.get(o.produto_id) ?? null })),
   });
 }

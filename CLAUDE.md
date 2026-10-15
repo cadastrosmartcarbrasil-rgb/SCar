@@ -3598,6 +3598,22 @@ sem de-para), a **data de corte do financeiro e dos eventos**, e o de-para de **
 - **Telas:** `src/components/sinistros/tramitacao-evento.tsx` (substituiu o card antigo em
   `protocolo-detail.tsx`) e o bloco de pareceres em `central-atendente.tsx`.
 
+## SAC — coberturas e opcionais (15/10/2026, sem migration)
+- **A ficha do veículo no SAC mostra só duas listas:** *Coberturas do plano* (o que o `cotar_plano`
+  dá: base + combo) e *Opcionais contratados* (`veiculo_produtos`) — a Taxa Administrativa (categoria
+  `ADMIN`) é taxa, não cobertura, e saiu. Regra pura `coberturasDoVeiculo` (`src/lib/produtos.ts`); a
+  rota `/api/v1/sac/veiculo` anexa a `categoria` de cada item (a RPC `opcionais_veiculo` não devolve).
+  Valor por item só no opcional (o do plano já está dentro da mensalidade).
+- **"Alterar opcionais" no próprio SAC** (`<ModalOpcionaisVeiculo>`, `src/components/sac/opcionais-veiculo.tsx`):
+  oferece `opcionaisOferecidos` — ativo, não obrigatório, **que atende o tipo do veículo (0089)**, fora
+  do plano e sem o rastreador opcional quando a regra do tipo já cobra (0090); o já contratado fica
+  marcado mesmo fora do tipo. Salva só o diff em `veiculo_produtos` (`useSalvarOpcionaisVeiculo`) e
+  mostra a mensalidade recalculada; regrava `valor_mensalidade` só se havia valor gravado e ele estava
+  em dia com o motor (`podeSincronizarMensalidade`); com `cobranca_externa` nunca regrava (avisa que o
+  valor é do Mutual). **O filtro por tipo depende do cadastro** em Configurações → Produtos: produto
+  sem tipo marcado vale para TODOS (em 15/10, "Protecao Parabrisas" e "MOTOCICLETA - TERCEIROS ATÉ
+  R$ 20.000,00" estavam assim).
+
 ## SAC — alertas, busca e ordenação (0030)
 - **Alerta do veículo tem UMA fonte:** `alertas_veiculo` (linhas de `veiculo_alertas` + o tipo).
   O componente `<AlertasVeiculo veiculoId>` (`src/components/veiculos/alertas-veiculo.tsx`) é o

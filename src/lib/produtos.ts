@@ -84,3 +84,47 @@ export function semRastreadorDaRegra<P extends { id: string; rastreador_avulso?:
   const fica = new Set(manter);
   return produtos.filter((p) => !p.rastreador_avulso || fica.has(p.id));
 }
+
+// ---------------------------------------------------------------------------
+// Opcionais que a tela OFERECE para contratar a parte num veiculo (SAC e ficha):
+// ativos, nao obrigatorios, que atendem o tipo do veiculo (0089), fora do plano
+// (o que o combo ja carrega nao se vende de novo, 0040) e sem o rastreador
+// opcional quando a regra do tipo ja cobra (0090). O que ja esta CONTRATADO
+// continua na lista mesmo se deixou de atender — esconder faria o proximo
+// "salvar" apaga-lo calado —, marcado com `foraDoTipo`.
+// ---------------------------------------------------------------------------
+export function opcionaisOferecidos<P extends {
+  id: string; obrigatorio: boolean; status: boolean; rastreador_avulso?: boolean | null;
+}>(args: {
+  produtos: P[];
+  tipoVeiculoId: string | null | undefined;
+  tiposPorProduto: TiposPorProduto | undefined;
+  idsDoPlano: string[];
+  contratados: Iterable<string>;
+  regraRastreadorCobra: boolean;
+}): (P & { foraDoTipo: boolean })[] {
+  const contratados = new Set(args.contratados);
+  const doPlano = new Set(args.idsDoPlano);
+  const candidatos = args.produtos.filter(
+    (p) => !p.obrigatorio && !doPlano.has(p.id) && (p.status || contratados.has(p.id)),
+  );
+  return semRastreadorDaRegra(
+    produtosParaTipo(candidatos, args.tipoVeiculoId, args.tiposPorProduto, contratados),
+    args.regraRastreadorCobra,
+    contratados,
+  );
+}
+
+/**
+ * O que o SAC mostra como cobertura: o que o plano da (base + combo) e os
+ * opcionais contratados a parte — nada mais. Taxa administrativa e TAXA, nao
+ * cobertura: sai da lista.
+ */
+export function coberturasDoVeiculo<O extends { origem: 'PLANO' | 'AVULSO'; categoria?: string | null }>(
+  itens: O[],
+): { plano: O[]; opcionais: O[] } {
+  return {
+    plano: itens.filter((i) => i.origem === 'PLANO' && i.categoria !== 'ADMIN'),
+    opcionais: itens.filter((i) => i.origem === 'AVULSO'),
+  };
+}

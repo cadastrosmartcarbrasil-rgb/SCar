@@ -823,6 +823,8 @@ export type OpcionalVeiculo = {
   usados: number;
   elegivel: boolean;
   ultimo_uso: string | null;
+  /** Anexada pela rota do SAC (nao vem da RPC): separa cobertura de taxa. */
+  categoria?: string | null;
 };
 
 // Linha do historico financeiro do SAC (RPC titulos_do_cliente)

@@ -159,3 +159,62 @@ export function useVistoriasVeiculo(veiculoId?: string) {
     },
   });
 }
+
+// --- Opcionais contratados a parte, alterados pelo SAC -----------------------
+// So mexe no que mudou (remove os desmarcados, insere os novos) e, quando
+// pedido, regrava a mensalidade: `valor_mensalidade` e OVERRIDE (0024) — trocar
+// opcional sem ele nao muda um centavo do que e cobrado.
+export function useSalvarOpcionaisVeiculo() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<void, Error, {
+    veiculoId: string; atuais: string[]; novos: string[]; valorMensalidade?: number | null;
+  }>({
+    mutationFn: async ({ veiculoId, atuais, novos, valorMensalidade }) => {
+      const sai = atuais.filter((id) => !novos.includes(id));
+      const entra = novos.filter((id) => !atuais.includes(id));
+      if (sai.length) {
+        const { error } = await supabase.from('veiculo_produtos').delete()
+          .eq('veiculo_id', veiculoId).in('produto_id', sai);
+        if (error) throw error;
+      }
+      if (entra.length) {
+        const { error } = await supabase.from('veiculo_produtos')
+          .insert(entra.map((produto_id) => ({ veiculo_id: veiculoId, produto_id })));
+        if (error) throw error;
+      }
+      if (valorMensalidade !== undefined) {
+        const { error } = await supabase.from('veiculos')
+          .update({ valor_mensalidade: valorMensalidade }).eq('id', veiculoId);
+        if (error) throw error;
+      }
+    },
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: ['ficha', 'veiculo-produtos', v.veiculoId] });
+      qc.invalidateQueries({ queryKey: ['sac', 'veiculo', v.veiculoId] });
+      qc.invalidateQueries({ queryKey: ['veiculos'] });
+      qc.invalidateQueries({ queryKey: ['veiculo', v.veiculoId] });
+    },
+  });
+}
+
+/** Mensalidade que o motor calcula para plano + avulsos (leitura, sem gravar). */
+export function useMensalidadeCalculada(args: {
+  fipe: number | null; tipoVeiculoId: string | null; planoId: string | null; avulsos: string[]; ativo?: boolean;
+}) {
+  const supabase = createClient();
+  const chave = [...args.avulsos].sort().join(',');
+  return useQuery<number | null>({
+    queryKey: ['ficha', 'mensalidade-calculada', args.fipe, args.tipoVeiculoId, args.planoId, chave],
+    enabled: (args.ativo ?? true) && !!args.tipoVeiculoId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('cotar_plano', {
+        p_fipe: args.fipe ?? 0, p_tipo_veiculo_id: args.tipoVeiculoId as string,
+        p_plano_id: args.planoId ?? null, p_avulsos_ids: args.avulsos,
+      });
+      if (error) throw error;
+      const v = (data as unknown as CotacaoPlano)?.valor_total_mensalidade;
+      return v == null ? null : Number(v);
+    },
+  });
+}
