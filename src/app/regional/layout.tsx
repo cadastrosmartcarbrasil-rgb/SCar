@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+import { logoOficial } from '@/lib/marca-server';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { SidebarRegional } from '@/components/regional/sidebar-regional';
@@ -38,7 +39,8 @@ export default async function RegionalLayout({ children }: { children: React.Rea
   if (!['gestor_regional', 'admin', 'financeiro'].includes(perfil.papel)) redirect('/dashboard');
 
   const { data: empresa } = await supabase
-    .from('empresa').select('logo_url, razao_social').limit(1).maybeSingle();
+    .from('empresa').select('razao_social').limit(1).maybeSingle();
+  const logoUrl = await logoOficial();
 
   const { data: regionais } = await supabase
     .from('regionais').select('id, nome, codigo, endereco, ativo').order('nome');
@@ -77,7 +79,7 @@ export default async function RegionalLayout({ children }: { children: React.Rea
       matriz: !!nomeMatriz && r.nome.trim().toUpperCase() === nomeMatriz,
     }));
     return (
-      <SelecionarUnidade unidades={unidades} nome={perfil.nome} logoUrl={empresa?.logo_url ?? null} />
+      <SelecionarUnidade unidades={unidades} nome={perfil.nome} logoUrl={logoUrl} />
     );
   }
 
@@ -97,7 +99,7 @@ export default async function RegionalLayout({ children }: { children: React.Rea
           nome={perfil.nome}
           unidade={unidade?.nome ?? 'Unidade'}
           papel={perfil.papel}
-          logoUrl={empresa?.logo_url ?? null}
+          logoUrl={logoUrl}
           podeTrocarUnidade={temAcessoGlobal(perfil.papel)}
         />
         <div className="min-w-0 flex-1 bg-fundo">

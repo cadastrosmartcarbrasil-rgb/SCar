@@ -714,11 +714,15 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Os portais e páginas públicas
   leem `empresa.logo_url`; `public/logo-smartcar.svg` é só o fallback desenhado.
-  **⚠️ `/portal/login` ainda passa `url={null}` FIXO** (`src/app/portal/login/page.tsx:46`), então
-  o associado vê o fallback no login — é o mesmo defeito que a vistoria tinha. A correção exige
-  partir a página em server (busca a `empresa`) + client (o formulário), e ela **não foi feita de
-  propósito**: aquele arquivo é o do gotcha "tela de login sob o layout que exige sessão", que já
-  custou um bug real. Mexer ali é tarefa com teste de ida e volta do login, não ajuste de passagem.
+  **✅ LOGO OFICIAL EM TODAS AS ENTRADAS (15/10/2026):** `logoOficial()` (`src/lib/marca-server.ts`)
+  lê `empresa.logo_url` pelo service_role — a policy `empresa_select` é `is_staff()`, então antes do
+  login a sessão não lê a empresa e a tela caía no SVG de reserva (`/portal/login` com `url={null}`
+  fixo, `/login` sem logo nenhuma). As duas telas de login viraram **page.tsx server** (busca a logo,
+  `force-dynamic`) + formulário client ao lado (`login-staff.tsx`, `login-associado.tsx`) — o
+  `/portal/login` continua FORA de `(associado)`, então o `ƒ` no build é o `force-dynamic`, não o
+  gotcha do layout. `/vendedor` e `/regional` também passaram a usar o helper. **Página nova com
+  logo: use `logoOficial()`, não `from('empresa')` pela sessão.** O SVG de reserva ainda é o desenho
+  antigo — trocar pelo arquivo oficial (e o favicon) é a tarefa seguinte.
 - **SICREDI (API Cobrança) — adaptador pronto, SANDBOX primeiro (13/10/2026).** Decisão do usuário:
   Sicredi para boleto/PIX, Asaas para cartão. `src/lib/pagamentos/sicredi.ts` (testado em
   `sicredi.test.ts`, `fetch` falso): token password-grant com cache e refresh, cadastro
