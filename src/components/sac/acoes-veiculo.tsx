@@ -37,15 +37,36 @@ export function ModalHistoricoFinanceiro({
   placa?: string | null;
   onClose: () => void;
 }) {
-  const { data: titulos, isLoading } = useTitulosCliente(clienteId, veiculoId ?? null);
+  return (
+    <Modal open onClose={onClose} title={`Historico financeiro${placa ? ` — ${placa}` : ''}`} tamanho="lg">
+      <HistoricoFinanceiroLista clienteId={clienteId} veiculoId={veiculoId} />
+    </Modal>
+  );
+}
+
+/**
+ * A lista de boletos do associado (ou de um veiculo) com as DUAS fontes (0099)
+ * e a edicao do boleto em aberto do SCar. Mesma lista no SAC (modal), na ficha
+ * do associado e na ficha do veiculo.
+ */
+export function HistoricoFinanceiroLista({
+  clienteId, veiculoId, limite = 60, alturaMaxima = true,
+}: {
+  clienteId: string;
+  veiculoId?: string | null;
+  limite?: number;
+  alturaMaxima?: boolean;
+}) {
+  const { data: titulos, isLoading, error } = useTitulosCliente(clienteId, veiculoId ?? null, limite);
   const reemitir = useReemitirTitulo();
   const [editando, setEditando] = useState<TituloCliente | null>(null);
 
   return (
-    <Modal open onClose={onClose} title={`Historico financeiro${placa ? ` — ${placa}` : ''}`} tamanho="lg">
+    <>
+      {error && <p className="text-sm text-rose-600">Nao foi possivel carregar o financeiro: {(error as Error).message}</p>}
       {isLoading && <p className="text-sm text-slate-400">Carregando...</p>}
       {!isLoading && (titulos ?? []).length === 0 && (
-        <p className="text-sm text-slate-400">Nenhum boleto para este associado.</p>
+        <p className="text-sm text-slate-400">Nenhum boleto encontrado — nem no SCar, nem no historico do Mutual.</p>
       )}
       {(titulos ?? []).some((t) => t.origem === 'MUTUAL') && (
         <p className="mb-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
@@ -54,7 +75,7 @@ export function ModalHistoricoFinanceiro({
         </p>
       )}
 
-      <ul className="max-h-[60vh] space-y-2 overflow-y-auto">
+      <ul className={`space-y-2 ${alturaMaxima ? 'max-h-[60vh] overflow-y-auto' : ''}`}>
         {(titulos ?? []).map((t) => (
           <li key={t.id} className="rounded-xl border border-slate-200 p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -141,7 +162,7 @@ export function ModalHistoricoFinanceiro({
       </ul>
 
       {editando && <ModalEditarBoleto titulo={editando} onClose={() => setEditando(null)} />}
-    </Modal>
+    </>
   );
 }
 

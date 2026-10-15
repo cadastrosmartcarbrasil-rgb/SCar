@@ -1,14 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ROTULO_SITUACAO_HISTORICO, type SituacaoHistorico } from '@/lib/eventos-historico';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   Search, User, Phone, Mail, Loader2, CheckCircle2, XCircle, ShieldCheck,
   Layers, SplitSquareHorizontal, ChevronLeft, Send,
-  Car, AlertTriangle, LifeBuoy, Settings2, Bell, FileSignature, ClipboardCheck, X, Ticket, Satellite,
+  Car, AlertTriangle, LifeBuoy, Bell, FileSignature, ClipboardCheck, X, Ticket, Satellite,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -18,7 +17,7 @@ import {
   useSacBusca, useVisao360, useVeiculoDetalhe, useToggleFaturamento, useGerarBoleto,
   useAbrirAtendimento, useAtendimentosVeiculo, type BuscaHit, type Visao360, type VeiculoDetalhe,
 } from '@/hooks/use-sac';
-import { SERVICOS_SAC, STATUS_ATENDIMENTO_LABEL, STATUS_EVENTO_LABEL, type ServicoSac } from '@/lib/sac-servicos';
+import { SERVICOS_SAC, STATUS_ATENDIMENTO_LABEL, type ServicoSac } from '@/lib/sac-servicos';
 import { formatarChip } from '@/lib/rastreador';
 import { CentralAtendente } from '@/components/sac/central-atendente';
 import { usePerfilAtual } from '@/hooks/use-config';
@@ -29,11 +28,12 @@ import { AlertasVeiculo } from '@/components/veiculos/alertas-veiculo';
 import { useAbrirProtocolo } from '@/hooks/use-protocolos';
 import { CATEGORIAS_PROTOCOLO, PRIORIDADES } from '@/lib/protocolos';
 import { CentralProtocolos } from '@/components/protocolos/central-protocolos';
+import { TabelaEventos } from '@/components/cadastro/vida-cadastro';
 import { STATUS_ACIONAMENTO_LABEL } from '@/lib/assistencia';
 import { statusVeiculoResumo, primeiraAtivacao } from '@/lib/sac';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type {
-  ClientesRow, OpcionalVeiculo, PrioridadeAtendimento, StatusEvento, TipoAtendimento, TipoFaturamento,
+  ClientesRow, OpcionalVeiculo, PrioridadeAtendimento, TipoAtendimento, TipoFaturamento,
 } from '@/lib/database.types';
 
 type Aba = 'veiculos' | 'eventos' | 'protocolos';
@@ -153,62 +153,8 @@ function ListaEventos({ v360 }: { v360: Visao360 }) {
   if (v360.eventos.length === 0) {
     return <p className="text-sm text-slate-400">Nenhum evento registrado para este associado — nem no SCar, nem no historico do Mutual.</p>;
   }
-  return (
-    <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-superficie shadow-sm">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
-            <th className="px-4 py-2.5">Protocolo</th>
-            <th className="px-4 py-2.5">Veiculo</th>
-            <th className="px-4 py-2.5">Tipo</th>
-            <th className="px-4 py-2.5">Data</th>
-            <th className="px-4 py-2.5">Status</th>
-            <th className="px-4 py-2.5"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {v360.eventos.map((e) => {
-            const mutual = e.origem === 'MUTUAL';
-            const st = mutual ? null : STATUS_EVENTO_LABEL[e.status as StatusEvento];
-            return (
-              <tr key={`${e.origem}-${e.id}`} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/60">
-                <td className="px-4 py-2.5 font-mono text-xs text-slate-500">
-                  {e.numero_protocolo ?? '—'}
-                  {mutual && <span className="ml-1.5 rounded bg-violet-50 px-1.5 py-0.5 font-sans text-[10px] font-semibold text-violet-700">Mutual</span>}
-                </td>
-                <td className="px-4 py-2.5">{e.placa ? <span className="rounded bg-slate-100 px-2 py-0.5 font-mono text-xs font-semibold text-slate-700">{e.placa}</span> : '—'}</td>
-                <td className="px-4 py-2.5 text-slate-600">
-                  {e.tipo ?? '—'}
-                  {e.envolvimento && <span className="block text-[11px] text-slate-400">{e.envolvimento}</span>}
-                </td>
-                <td className="tnum px-4 py-2.5 text-slate-600">{e.data_ocorrencia ? formatDate(e.data_ocorrencia) : '—'}</td>
-                <td className="px-4 py-2.5">
-                  {mutual ? (
-                    <span className="text-xs text-slate-500">
-                      {e.status === 'CONCLUIDO' && e.data_conclusao
-                        ? `Concluido em ${formatDate(e.data_conclusao)}`
-                        : ROTULO_SITUACAO_HISTORICO[e.status as SituacaoHistorico]}
-                    </span>
-                  ) : (
-                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${st?.cor ?? 'bg-slate-100 text-slate-600'}`}>{st?.label ?? e.status}</span>
-                  )}
-                </td>
-                <td className="px-4 py-2.5 text-right">
-                  {mutual ? (
-                    <span className="text-[11px] text-slate-400">so consulta</span>
-                  ) : (
-                    <Link href={`/sinistros/${e.id}`} className="inline-flex items-center gap-1 text-xs font-medium text-cyan-700 hover:text-cyan-800">
-                      <Settings2 className="h-3.5 w-3.5" /> Gerenciar
-                    </Link>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
+  // A mesma tabela da ficha do associado e da ficha do veiculo.
+  return <TabelaEventos eventos={v360.eventos} />;
 }
 
 // Alertas ativos do associado — abrem no mesmo instante ao localizar.

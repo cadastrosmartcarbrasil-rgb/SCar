@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { editavelNoScar, unirHistoricoPortal, unirHistoricoSac } from './historico-financeiro';
+import { editavelNoScar, resumoHistoricoFinanceiro, unirHistoricoPortal, unirHistoricoSac } from './historico-financeiro';
+import { unirEventosCliente } from './eventos-historico';
 import type { BoletoMutualCliente, PortalBoletoMutual, PortalTitulo, TituloCliente } from './database.types';
 
 const scar = (id: string, venc: string, status = 'aberto'): TituloCliente => ({
@@ -51,5 +52,34 @@ describe('editavelNoScar', () => {
     expect(editavelNoScar({ origem: 'MUTUAL', status: 'vencido' })).toBe(false);
     expect(editavelNoScar({ origem: 'SCAR', status: 'vencido' })).toBe(true);
     expect(editavelNoScar({ status: 'pago' })).toBe(false);
+  });
+});
+
+
+describe('resumoHistoricoFinanceiro', () => {
+  it('separa pago, em aberto e vencido e ignora cancelado', () => {
+    const r = resumoHistoricoFinanceiro([
+      { status: 'pago', data_vencimento: '2026-08-10', valor: 100, valor_pago: 102.5 },
+      { status: 'pendente', data_vencimento: '2026-09-10', valor: 100 },
+      { status: 'vencido', data_vencimento: '2026-07-10', valor: 100 },
+      { status: 'pendente', data_vencimento: '2026-11-10', valor: 120 },
+      { status: 'cancelado', data_vencimento: '2026-06-10', valor: 999 },
+    ], '2026-10-15');
+    expect(r).toEqual({ total: 420, pago: 102.5, aberto: 120, vencido: 200, qtdVencidos: 2, qtd: 4 });
+  });
+});
+
+describe('unirEventosCliente', () => {
+  const scar = [{ id: 's1', veiculo_id: 'v1', numero_protocolo: 'EVT-1', status: 'ABERTO', data_ocorrencia: '2026-09-01', tipos_evento: { nome: 'COLISAO' }, veiculos: { placa: 'AAA1A11' } }];
+  const mutual = [{ id: 'm1', veiculo_id: 'v2', placa: 'BBB2B22', protocolo: '123', data_evento: '2025-03-01', data_conclusao: null, tipos: ['PARABRISA'], envolvimento: 'VITIMA' }];
+  it('une as duas fontes, mais recente primeiro', () => {
+    const r = unirEventosCliente(scar, mutual);
+    expect(r.map((e) => [e.origem, e.placa, e.tipo, e.status])).toEqual([
+      ['SCAR', 'AAA1A11', 'COLISAO', 'ABERTO'],
+      ['MUTUAL', 'BBB2B22', 'PARABRISA', 'SEM_ENCERRAMENTO'],
+    ]);
+  });
+  it('filtra pelo veiculo', () => {
+    expect(unirEventosCliente(scar, mutual, 'v2').map((e) => e.id)).toEqual(['m1']);
   });
 });

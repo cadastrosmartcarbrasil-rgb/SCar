@@ -196,10 +196,10 @@ export function useAtendentes() {
 // ---------------------------------------------------------------------------
 // Historico financeiro do SAC (boletos do associado/veiculo)
 // ---------------------------------------------------------------------------
-export function useTitulosCliente(clienteId: string | null, veiculoId?: string | null) {
+export function useTitulosCliente(clienteId: string | null, veiculoId?: string | null, limite = 60) {
   const supabase = createClient();
   return useQuery<TituloCliente[]>({
-    queryKey: ['sac', 'titulos', clienteId ?? '', veiculoId ?? 'todos'],
+    queryKey: ['sac', 'titulos', clienteId ?? '', veiculoId ?? 'todos', limite],
     enabled: !!clienteId,
     queryFn: async () => {
       // 0099: as duas fontes — os titulos do SCar e o historico do Mutual (so consulta).
@@ -207,12 +207,12 @@ export function useTitulosCliente(clienteId: string | null, veiculoId?: string |
         supabase.rpc('titulos_do_cliente', {
           p_cliente_id: clienteId as string,
           p_veiculo_id: veiculoId ?? null,
-          p_limite: 60,
+          p_limite: limite,
         }),
         supabase.rpc('boletos_mutual_do_cliente', {
           p_cliente_id: clienteId as string,
           p_veiculo_id: veiculoId ?? null,
-          p_limite: 60,
+          p_limite: limite,
         }),
       ]);
       if (scar.error) throw scar.error;

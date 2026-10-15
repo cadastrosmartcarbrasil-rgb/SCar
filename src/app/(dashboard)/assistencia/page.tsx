@@ -1,10 +1,10 @@
 'use client';
 
 import { Suspense, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { LifeBuoy, ListChecks, Settings2, Truck, Wallet } from 'lucide-react';
-import { PainelAcionamento } from '@/components/assistencia/painel-acionamento';
+import { PainelAcionamento, OrdemServico } from '@/components/assistencia/painel-acionamento';
 import { AcionamentosLista } from '@/components/assistencia/acionamentos-lista';
 import { Servicos24h } from '@/components/assistencia/servicos-24h';
 import { Prestadores24h } from '@/components/assistencia/prestadores-24h';
@@ -13,8 +13,17 @@ type Aba = 'painel' | 'acionamentos' | 'servicos' | 'prestadores';
 
 function Conteudo() {
   const params = useSearchParams();
+  const router = useRouter();
   const placa = params.get('placa');
+  // ?acionamento=<id>: atalho das fichas do associado e do veiculo para a OS.
+  const acionamentoId = params.get('acionamento');
   const [aba, setAba] = useState<Aba>('painel');
+
+  if (acionamentoId) {
+    return (
+      <OrdemServico acionamentoId={acionamentoId} onVoltar={() => router.back()} />
+    );
+  }
 
   const abas: { id: Aba; label: string; icon: React.ElementType }[] = [
     { id: 'painel', label: 'Painel de Acionamento', icon: LifeBuoy },

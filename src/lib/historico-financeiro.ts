@@ -67,3 +67,34 @@ export function unirHistoricoPortal(scar: PortalTitulo[], mutual: PortalBoletoMu
 export function editavelNoScar(t: { origem?: 'SCAR' | 'MUTUAL'; status: string }): boolean {
   return t.origem !== 'MUTUAL' && t.status !== 'pago' && t.status !== 'cancelado';
 }
+
+/** Situacao de leitura do boleto: pendente ja vencido conta como vencido. */
+function situacaoDoBoleto(t: { status: string; data_vencimento: string }, hoje: string): 'pago' | 'aberto' | 'vencido' | 'cancelado' {
+  if (t.status === 'pago') return 'pago';
+  if (t.status === 'cancelado') return 'cancelado';
+  if (t.status === 'vencido' || t.data_vencimento < hoje) return 'vencido';
+  return 'aberto';
+}
+
+/**
+ * Os quatro numeros da aba Financeiro (associado e veiculo), sobre as DUAS fontes.
+ * Cancelado nao entra no total: nao e divida nem receita.
+ */
+export function resumoHistoricoFinanceiro(
+  titulos: { status: string; data_vencimento: string; valor: number | string; valor_pago?: number | string | null }[],
+  hoje: string,
+) {
+  const r = { total: 0, pago: 0, aberto: 0, vencido: 0, qtdVencidos: 0, qtd: 0 };
+  for (const t of titulos) {
+    const s = situacaoDoBoleto(t, hoje);
+    if (s === 'cancelado') continue;
+    const valor = Number(t.valor) || 0;
+    r.qtd += 1;
+    r.total += valor;
+    if (s === 'pago') r.pago += Number(t.valor_pago ?? 0) || valor;
+    else if (s === 'vencido') { r.vencido += valor; r.qtdVencidos += 1; }
+    else r.aberto += valor;
+  }
+  for (const k of ['total', 'pago', 'aberto', 'vencido'] as const) r[k] = Math.round(r[k] * 100) / 100;
+  return r;
+}

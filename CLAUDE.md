@@ -2300,6 +2300,28 @@ unidade** — 0084, com prévia, fila de trabalho por motivo e desfazer)
 veículo, manutenção, painel de divergências com o cadastro da frota e relatórios de custo,
 recuperação e giro).
 
+## FICHAS DO ADMINISTRATIVO — a vida do associado e do veículo (15/10/2026, sem migration)
+Pedido do usuário: o SAC é a tela do atendimento, mas o administrativo precisa da mesma vida pelas
+categorias **Associados** e **Veículos**.
+- **`/associados/[id]`**: abas Dados · Veículos (**linha clicável → ficha do veículo**) · Financeiro ·
+  Eventos · **Protocolos** · **Assistência 24h** · Comunicações. O Financeiro lia SÓ
+  `titulos_financeiros` (por isso vinha vazio) e os Eventos só `eventos_sinistro` — agora são as
+  DUAS fontes, as mesmas do SAC.
+- **`/veiculos/[id]`** (nova): Dados (+ alertas) · Financeiro · Eventos · Protocolos · Assistência 24h;
+  *Editar cadastro* abre o modal de `/veiculos?editar=<id>&voltar=/veiculos/<id>` e volta para a
+  ficha ao fechar (o `voltar` só aceita `/veiculos/<uuid>`). Em `/veiculos` a placa abre a ficha.
+- **Componentes únicos:** `src/components/cadastro/vida-cadastro.tsx` (`FinanceiroCadastro`,
+  `EventosCadastro`, `ProtocolosCadastro`, `AcionamentosCadastro`, `TabelaEventos` — esta também na
+  aba Eventos do SAC); a lista de boletos é `HistoricoFinanceiroLista` (`acoes-veiculo.tsx`, o modal
+  do SAC a embrulha). Hooks em `src/hooks/use-vida-cadastro.ts`. Puras testadas:
+  `unirEventosCliente` (`eventos-historico.ts`, usada também por `/api/v1/sac/visao-360`) e
+  `resumoHistoricoFinanceiro` (`historico-financeiro.ts`). Limite das fichas: 500 por fonte.
+- **`/assistencia?acionamento=<id>`** abre direto a OS (atalho das fichas).
+- **Limite conhecido:** boleto/evento do Mutual sem `veiculo_id` (≈22% dos boletos, 242 dos 829
+  eventos em 15/10) aparece na ficha do ASSOCIADO, não na do veículo; e fatura agrupada do SCar
+  (sem veículo) idem. `veiculos.regional_id` e `regional_preco_id` apontam ambos para `regionais`:
+  embed tem de ser `regionais!veiculos_regional_id_fkey(...)`.
+
 ## INADIMPLÊNCIA E COBRANÇAS (0097) — Fase 1
 > Especificação, fórmulas, regras bancárias, permissões e fases em
 > **`docs/modulos/cobranca-inadimplencia.md`** — leia antes de mexer.

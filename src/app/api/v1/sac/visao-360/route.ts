@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { resumoFinanceiro, veiculoInadimplente, type TituloResumo, type TituloVeiculo } from '@/lib/sac';
-import { rotuloEnvolvimento, rotuloTipos, situacaoHistorico } from '@/lib/eventos-historico';
+import { unirEventosCliente, type EventoScarLeitura } from '@/lib/eventos-historico';
 
 // GET /api/v1/sac/visao-360?cliente_id=|placa=|cpf=
 // Payload LEVE do associado: dados + resumo financeiro + LISTA resumida de
@@ -111,32 +111,11 @@ export async function GET(request: Request) {
     mensagem: a.mensagem,
   }));
 
-  const eventosOut = [
-    ...(eventos ?? []).map((e) => ({
-      id: e.id,
-      origem: 'SCAR' as const,
-      veiculo_id: e.veiculo_id,
-      placa: (e.veiculos as unknown as { placa: string } | null)?.placa ?? null,
-      numero_protocolo: e.numero_protocolo,
-      tipo: (e.tipos_evento as unknown as { nome: string } | null)?.nome ?? null,
-      status: e.status as string,
-      data_ocorrencia: e.data_ocorrencia as string | null,
-      data_conclusao: null as string | null,
-      envolvimento: null as string | null,
-    })),
-    ...(eventosMutual ?? []).map((e) => ({
-      id: e.id,
-      origem: 'MUTUAL' as const,
-      veiculo_id: e.veiculo_id,
-      placa: e.placa,
-      numero_protocolo: e.protocolo,
-      tipo: rotuloTipos(e.tipos),
-      status: situacaoHistorico(e),
-      data_ocorrencia: e.data_evento,
-      data_conclusao: e.data_conclusao,
-      envolvimento: rotuloEnvolvimento(e.envolvimento),
-    })),
-  ].sort((a, b) => (b.data_ocorrencia ?? '').localeCompare(a.data_ocorrencia ?? ''));
+  // A mesma uniao da ficha do associado e da ficha do veiculo (src/lib/eventos-historico.ts).
+  const eventosOut = unirEventosCliente(
+    (eventos ?? []) as unknown as EventoScarLeitura[],
+    eventosMutual ?? [],
+  );
 
   const resumo = resumoFinanceiro(
     (titulos ?? []).map<TituloResumo>((t) => ({ status: t.status, data_vencimento: t.data_vencimento, valor: Number(t.valor) })),

@@ -1,11 +1,12 @@
 'use client';
 
+import Link from 'next/link';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   Plus, Pencil, Trash2, Car, Search, Loader2, Calculator, Bell, Satellite,
-  ArrowUpRight, ArrowDownRight, ArrowLeftRight, AlertTriangle,
+  ArrowUpRight, ArrowDownRight, ArrowLeftRight, AlertTriangle, FileText,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
@@ -161,14 +162,26 @@ function VeiculosConteudo() {
   // refetch da lista (o save invalida ['veiculos']) e no proprio setAberto(false).
   const editarId = params.get('editar');
   const deepLinkTratado = useRef<string | null>(null);
+  // ?voltar=/veiculos/<id>: veio da ficha do veiculo — fechar o modal devolve para la.
+  // So caminho interno de veiculo, para o parametro nao virar redirecionamento aberto.
+  const voltarPara = useRef<string | null>(null);
   useEffect(() => {
     if (!editarId || deepLinkTratado.current === editarId) return;
     const v = (veiculos ?? []).find((x) => x.id === editarId);
     if (!v) return;
     deepLinkTratado.current = editarId;
+    const voltar = params.get('voltar');
+    voltarPara.current = voltar && /^\/veiculos\/[0-9a-f-]{36}$/.test(voltar) ? voltar : null;
     editar(v);
     router.replace('/veiculos', { scroll: false });
-  }, [editarId, veiculos, router]);
+  }, [editarId, veiculos, router, params]);
+
+  function fecharModal() {
+    setAberto(false);
+    const destino = voltarPara.current;
+    voltarPara.current = null;
+    if (destino) router.push(destino);
+  }
 
   // So o que atende o tipo do veiculo (0089). Avulso ja gravado que nao atende
   // continua na lista, marcado — esconder faria o proximo "salvar" apaga-lo calado.
@@ -409,7 +422,7 @@ function VeiculosConteudo() {
     }, {
       onSuccess: () => {
         toast.success('Veiculo salvo');
-        setAberto(false);
+        fecharModal();
       },
       onError: (err) => {
         const m = (err as Error).message;
@@ -476,7 +489,11 @@ function VeiculosConteudo() {
               const aviso = avisoDeTolerancia(tolerancia(v, diasTolerancia));
               return (
                 <tr key={v.id} className="border-b border-slate-50 last:border-0">
-                  <td className="px-4 py-2 font-mono font-medium text-slate-800">{v.placa}</td>
+                  <td className="px-4 py-2 font-mono font-medium">
+                    <Link href={`/veiculos/${v.id}`} className="text-brand-600 hover:underline" title="Abrir a ficha do veiculo">
+                      {v.placa}
+                    </Link>
+                  </td>
                   <td className="px-4 py-2 text-slate-600">
                     <span className="inline-flex items-center gap-2">
                       <Car className="h-4 w-4 text-brand-500" />
@@ -508,6 +525,13 @@ function VeiculosConteudo() {
                   </td>
                   <td className="px-4 py-2">
                     <div className="flex justify-end gap-1">
+                      <Link
+                        href={`/veiculos/${v.id}`}
+                        title="Ficha: financeiro, eventos, protocolos e 24h"
+                        className="rounded p-1.5 text-slate-500 hover:bg-slate-100"
+                      >
+                        <FileText className="h-4 w-4" />
+                      </Link>
                       <button
                         onClick={() => editar(v)}
                         className="rounded p-1.5 text-slate-500 hover:bg-slate-100"
@@ -539,7 +563,7 @@ function VeiculosConteudo() {
         </table>
       </div>
 
-      <Modal open={aberto} onClose={() => setAberto(false)} title={form.id ? `Editar ${form.placa}` : 'Novo Veiculo (Contrato)'} tamanho="xl">
+      <Modal open={aberto} onClose={fecharModal} title={form.id ? `Editar ${form.placa}` : 'Novo Veiculo (Contrato)'} tamanho="xl">
         <datalist id="dl-marcas">
           {(marcas ?? []).map((m) => (
             <option key={m.id} value={m.nome} />
@@ -979,7 +1003,7 @@ function VeiculosConteudo() {
           </div>
 
           <div className="flex justify-end gap-2 border-t border-slate-100 pt-3">
-            <Button type="button" variant="secondary" onClick={() => setAberto(false)}>
+            <Button type="button" variant="secondary" onClick={fecharModal}>
               Cancelar
             </Button>
             <Button type="submit" disabled={salvar.isPending}>

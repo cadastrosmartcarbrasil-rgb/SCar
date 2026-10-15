@@ -13,18 +13,24 @@ import {
   Mail,
   Smartphone,
   Plus,
+  ClipboardList,
+  LifeBuoy,
+  ChevronRight,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { AssociadoForm } from '@/components/associados/associado-form';
-import { useAssociado, useTitulosAssociado, useEventosAssociado, useComunicacoes } from '@/hooks/use-associado-panel';
+import { useAssociado, useComunicacoes } from '@/hooks/use-associado-panel';
+import {
+  AcionamentosCadastro, EventosCadastro, FinanceiroCadastro, ProtocolosCadastro,
+} from '@/components/cadastro/vida-cadastro';
+import { statusVeiculoResumo } from '@/lib/sac';
 import { useVeiculos } from '@/hooks/use-veiculos';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { formatarDocumento } from '@/lib/documento';
-import { STATUS_TITULO_LABEL, TIPO_EVENTO_LABEL, PIPELINE_SINISTRO } from '@/types/domain';
 import type { EnderecoAssociado } from '@/hooks/use-associados';
-import type { CanalComunicacao, StatusEvento } from '@/lib/database.types';
+import type { CanalComunicacao } from '@/lib/database.types';
 
-type Aba = 'dados' | 'veiculos' | 'financeiro' | 'eventos' | 'comunicacoes';
+type Aba = 'dados' | 'veiculos' | 'financeiro' | 'eventos' | 'protocolos' | 'assistencia' | 'comunicacoes';
 
 export default function AssociadoPanel({ params }: { params: { id: string } }) {
   const id = params.id;
@@ -40,6 +46,8 @@ export default function AssociadoPanel({ params }: { params: { id: string } }) {
     { id: 'veiculos', label: 'Veiculos', icon: Car },
     { id: 'financeiro', label: 'Financeiro', icon: DollarSign },
     { id: 'eventos', label: 'Eventos', icon: AlertTriangle },
+    { id: 'protocolos', label: 'Protocolos', icon: ClipboardList },
+    { id: 'assistencia', label: 'Assistencia 24h', icon: LifeBuoy },
     { id: 'comunicacoes', label: 'Comunicacoes', icon: MessagesSquare },
   ];
 
@@ -93,8 +101,10 @@ export default function AssociadoPanel({ params }: { params: { id: string } }) {
           </Card>
         )}
         {aba === 'veiculos' && <AbaVeiculos associadoId={id} />}
-        {aba === 'financeiro' && <AbaFinanceiro associadoId={id} />}
-        {aba === 'eventos' && <AbaEventos associadoId={id} />}
+        {aba === 'financeiro' && <FinanceiroCadastro clienteId={id} />}
+        {aba === 'eventos' && <EventosCadastro clienteId={id} />}
+        {aba === 'protocolos' && <ProtocolosCadastro clienteId={id} />}
+        {aba === 'assistencia' && <AcionamentosCadastro clienteId={id} />}
         {aba === 'comunicacoes' && <AbaComunicacoes associadoId={id} />}
       </div>
     </div>
@@ -103,12 +113,13 @@ export default function AssociadoPanel({ params }: { params: { id: string } }) {
 
 // --- Veiculos -------------------------------------------------------------
 function AbaVeiculos({ associadoId }: { associadoId: string }) {
+  const router = useRouter();
   const { data: veiculos, isLoading } = useVeiculos(associadoId);
   return (
     <Card>
       <CardContent className="space-y-3 pt-5">
         <div className="flex items-center justify-between">
-          <p className="text-sm text-slate-500">Veiculos vinculados a este associado.</p>
+          <p className="text-sm text-slate-500">Veiculos vinculados a este associado. Clique num veiculo para abrir o cadastro dele.</p>
           <Link href="/veiculos" className="inline-flex items-center gap-1 rounded-md bg-acao px-3 py-1.5 text-sm text-white hover:bg-acao-escura">
             <Plus className="h-4 w-4" /> Novo veiculo
           </Link>
@@ -125,142 +136,26 @@ function AbaVeiculos({ associadoId }: { associadoId: string }) {
                 <th className="py-2">Veiculo</th>
                 <th className="py-2">FIPE</th>
                 <th className="py-2">Situacao</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(veiculos ?? []).map((v) => (
-                <tr key={v.id} className="border-b border-slate-50">
-                  <td className="py-2 font-mono">{v.placa}</td>
-                  <td className="py-2">{[v.marca, v.modelo].filter(Boolean).join(' ') || '-'}</td>
-                  <td className="py-2">{v.valor_fipe ? formatCurrency(v.valor_fipe) : '-'}</td>
-                  <td className="py-2 capitalize">{v.status}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-// --- Financeiro -----------------------------------------------------------
-function AbaFinanceiro({ associadoId }: { associadoId: string }) {
-  const { data: titulos, isLoading } = useTitulosAssociado(associadoId);
-  const t = titulos ?? [];
-  const total = t.reduce((s, x) => s + Number(x.valor), 0);
-  const pago = t.filter((x) => x.status === 'pago').reduce((s, x) => s + Number(x.valor_pago ?? x.valor), 0);
-  const pendente = t.filter((x) => x.status === 'pendente').reduce((s, x) => s + Number(x.valor), 0);
-  const vencido = t.filter((x) => x.status === 'vencido').reduce((s, x) => s + Number(x.valor), 0);
-
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Resumo titulo="Total" valor={total} cor="text-slate-800" />
-        <Resumo titulo="Pago" valor={pago} cor="text-emerald-600" />
-        <Resumo titulo="Pendente" valor={pendente} cor="text-amber-600" />
-        <Resumo titulo="Vencido" valor={vencido} cor="text-rose-600" />
-      </div>
-      <Card>
-        <CardContent className="pt-5">
-          {isLoading ? (
-            <p className="text-sm text-slate-400">Carregando...</p>
-          ) : t.length === 0 ? (
-            <p className="text-sm text-slate-400">Nenhum titulo/boleto para este associado.</p>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
-                  <th className="py-2">Vencimento</th>
-                  <th className="py-2">Valor</th>
-                  <th className="py-2">Pago em</th>
-                  <th className="py-2">Situacao</th>
-                  <th className="py-2">Boleto</th>
-                </tr>
-              </thead>
-              <tbody>
-                {t.map((x) => {
-                  const st = STATUS_TITULO_LABEL[x.status];
-                  return (
-                    <tr key={x.id} className="border-b border-slate-50">
-                      <td className="py-2">{formatDate(x.data_vencimento)}</td>
-                      <td className="py-2">{formatCurrency(x.valor)}</td>
-                      <td className="py-2">{x.data_pagamento ? formatDate(x.data_pagamento) : '-'}</td>
-                      <td className="py-2">
-                        <span className={`rounded px-2 py-0.5 text-xs ${st.cor}`}>{st.label}</span>
-                      </td>
-                      <td className="py-2">
-                        {x.url_boleto ? (
-                          <a href={x.url_boleto} target="_blank" className="text-brand-600 hover:underline">
-                            2a via
-                          </a>
-                        ) : (
-                          '-'
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-function Resumo({ titulo, valor, cor }: { titulo: string; valor: number; cor: string }) {
-  return (
-    <Card>
-      <CardContent className="pt-5">
-        <p className="text-xs text-slate-500">{titulo}</p>
-        <p className={`mt-1 text-lg font-semibold ${cor}`}>{formatCurrency(valor)}</p>
-      </CardContent>
-    </Card>
-  );
-}
-
-// --- Eventos --------------------------------------------------------------
-function AbaEventos({ associadoId }: { associadoId: string }) {
-  const { data: eventos, isLoading } = useEventosAssociado(associadoId);
-  const statusLabel = (s: StatusEvento) => PIPELINE_SINISTRO.find((c) => c.status === s);
-  return (
-    <Card>
-      <CardContent className="pt-5">
-        {isLoading ? (
-          <p className="text-sm text-slate-400">Carregando...</p>
-        ) : (eventos ?? []).length === 0 ? (
-          <p className="text-sm text-slate-400">Nenhum evento (sinistro) registrado.</p>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
-                <th className="py-2">Protocolo</th>
-                <th className="py-2">Tipo</th>
-                <th className="py-2">Ocorrencia</th>
-                <th className="py-2">Status</th>
                 <th className="py-2"></th>
               </tr>
             </thead>
             <tbody>
-              {(eventos ?? []).map((e) => {
-                const col = statusLabel(e.status);
+              {(veiculos ?? []).map((v) => {
+                const st = statusVeiculoResumo(v.status, false);
                 return (
-                  <tr key={e.id} className="border-b border-slate-50">
-                    <td className="py-2 font-mono text-brand-600">{e.numero_protocolo}</td>
+                  <tr
+                    key={v.id}
+                    onClick={() => router.push(`/veiculos/${v.id}`)}
+                    className="cursor-pointer border-b border-slate-50 hover:bg-slate-50"
+                    title="Abrir o cadastro do veiculo"
+                  >
+                    <td className="py-2 font-mono font-medium text-brand-600">{v.placa}</td>
+                    <td className="py-2">{[v.marca, v.modelo].filter(Boolean).join(' ') || '-'}</td>
+                    <td className="py-2">{v.valor_fipe ? formatCurrency(v.valor_fipe) : '-'}</td>
                     <td className="py-2">
-                      {e.tipos_evento?.nome ?? (e.tipo_evento ? TIPO_EVENTO_LABEL[e.tipo_evento] : '-')}
+                      <span className={`rounded px-2 py-0.5 text-xs ${st.cor}`}>{st.label}</span>
                     </td>
-                    <td className="py-2">{formatDate(e.data_ocorrencia)}</td>
-                    <td className="py-2">
-                      <span className={`rounded border px-2 py-0.5 text-xs ${col?.cor ?? ''}`}>{col?.titulo ?? e.status}</span>
-                    </td>
-                    <td className="py-2 text-right">
-                      <Link href={`/sinistros/${e.id}`} className="text-brand-600 hover:underline">
-                        abrir
-                      </Link>
-                    </td>
+                    <td className="py-2 text-right text-slate-400"><ChevronRight className="inline h-4 w-4" /></td>
                   </tr>
                 );
               })}

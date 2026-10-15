@@ -32,3 +32,80 @@ export function rotuloEnvolvimento(v: string | null | undefined): string | null 
   if (s === 'NAO SE APLICA') return null;
   return v;
 }
+
+// ----------------------------------------------------------------------------
+// Uma lista so de eventos do associado (ou do veiculo): os do SCar
+// (`eventos_sinistro`) e o historico do Mutual (`eventos_historico`). Usada pelo
+// SAC, pela ficha do associado e pela ficha do veiculo — a mesma leitura nas tres.
+// ----------------------------------------------------------------------------
+export type EventoUnificado = {
+  id: string;
+  origem: 'SCAR' | 'MUTUAL';
+  veiculo_id: string | null;
+  placa: string | null;
+  numero_protocolo: string | null;
+  tipo: string | null;
+  /** SCAR: o status do evento. MUTUAL: SituacaoHistorico. */
+  status: string;
+  data_ocorrencia: string | null;
+  data_conclusao: string | null;
+  envolvimento: string | null;
+};
+
+export type EventoScarLeitura = {
+  id: string;
+  veiculo_id: string | null;
+  numero_protocolo: string | null;
+  status: string;
+  data_ocorrencia: string | null;
+  tipos_evento?: { nome: string } | null;
+  veiculos?: { placa: string } | null;
+};
+
+export type EventoMutualLeitura = {
+  id: string;
+  veiculo_id: string | null;
+  placa: string | null;
+  protocolo: string | null;
+  data_evento: string | null;
+  data_conclusao: string | null;
+  tipos: string[] | null;
+  envolvimento: string | null;
+};
+
+/** Mais recente primeiro; sem data vai para o fim. Com `veiculoId`, so os dele. */
+export function unirEventosCliente(
+  scar: EventoScarLeitura[],
+  mutual: EventoMutualLeitura[],
+  veiculoId?: string | null,
+): EventoUnificado[] {
+  const todos: EventoUnificado[] = [
+    ...scar.map((e) => ({
+      id: e.id,
+      origem: 'SCAR' as const,
+      veiculo_id: e.veiculo_id,
+      placa: e.veiculos?.placa ?? null,
+      numero_protocolo: e.numero_protocolo,
+      tipo: e.tipos_evento?.nome ?? null,
+      status: e.status,
+      data_ocorrencia: e.data_ocorrencia,
+      data_conclusao: null,
+      envolvimento: null,
+    })),
+    ...mutual.map((e) => ({
+      id: e.id,
+      origem: 'MUTUAL' as const,
+      veiculo_id: e.veiculo_id,
+      placa: e.placa,
+      numero_protocolo: e.protocolo,
+      tipo: rotuloTipos(e.tipos),
+      status: situacaoHistorico(e),
+      data_ocorrencia: e.data_evento,
+      data_conclusao: e.data_conclusao,
+      envolvimento: rotuloEnvolvimento(e.envolvimento),
+    })),
+  ];
+  return todos
+    .filter((e) => !veiculoId || e.veiculo_id === veiculoId)
+    .sort((a, b) => (b.data_ocorrencia ?? '').localeCompare(a.data_ocorrencia ?? ''));
+}

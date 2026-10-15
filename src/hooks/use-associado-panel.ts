@@ -4,8 +4,6 @@ import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import type {
   ClientesRow,
-  TitulosFinanceirosRow,
-  EventosSinistroRow,
   ComunicacoesRow,
 } from '@/lib/database.types';
 
@@ -18,42 +16,6 @@ export function useAssociado(id: string) {
       const { data, error } = await supabase.from('clientes').select('*').eq('id', id).maybeSingle();
       if (error) throw error;
       return data;
-    },
-  });
-}
-
-export function useTitulosAssociado(id: string) {
-  const supabase = createClient();
-  return useQuery<TitulosFinanceirosRow[]>({
-    queryKey: ['associado', id, 'titulos'],
-    enabled: !!id,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('titulos_financeiros')
-        .select('*')
-        .eq('cliente_id', id)
-        .order('data_vencimento', { ascending: false });
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-}
-
-export type EventoAssociado = EventosSinistroRow & { tipos_evento?: { nome: string } | null };
-
-export function useEventosAssociado(id: string) {
-  const supabase = createClient();
-  return useQuery<EventoAssociado[]>({
-    queryKey: ['associado', id, 'eventos'],
-    enabled: !!id,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('eventos_sinistro')
-        .select('*, tipos_evento(nome)')
-        .eq('cliente_id', id)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as unknown as EventoAssociado[];
     },
   });
 }
