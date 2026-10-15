@@ -35,6 +35,7 @@ import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import type { PapelUsuario } from '@/lib/database.types';
+import { moduloDaRota } from '@/lib/permissoes';
 
 type Item = { href: string; label: string; icon: React.ElementType };
 /** Item com sub-itens (Regionais e Cobranca). */
@@ -167,22 +168,39 @@ function NavGrupo({ grupo, pathname, onNav }: {
   );
 }
 
-function Nav({ pathname, menuGestao, onNav }: {
-  pathname: string; menuGestao: Entrada[]; onNav?: () => void;
+/** O item aparece? Modulo editavel pede o VER do perfil (0111); sem lista, mostra. */
+function visivel(href: string, permissoes: string[] | null): boolean {
+  const m = moduloDaRota(href);
+  if (!m || m.fixo || !permissoes) return true;
+  return permissoes.includes(`${m.chave}.ver`);
+}
+
+function filtrar(entradas: Entrada[], permissoes: string[] | null): Entrada[] {
+  return entradas.flatMap((e): Entrada[] => {
+    if (!ehGrupo(e)) return visivel(e.href, permissoes) ? [e] : [];
+    const itens = e.itens.filter((i) => visivel(i.href, permissoes));
+    return itens.length ? [{ ...e, itens }] : [];
+  });
+}
+
+function Nav({ pathname, menuGestao, onNav, permissoes }: {
+  pathname: string; menuGestao: Entrada[]; onNav?: () => void; permissoes: string[] | null;
 }) {
   return (
     <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2">
       <p className="px-3 pb-1.5 pt-3 text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Operacao</p>
-      {OPERACAO.map((i) => <NavLink key={i.href} item={i} pathname={pathname} onNav={onNav} />)}
+      {(filtrar(OPERACAO, permissoes) as Item[]).map((i) => <NavLink key={i.href} item={i} pathname={pathname} onNav={onNav} />)}
       <p className="px-3 pb-1.5 pt-4 text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Gestao</p>
-      {menuGestao.map((e) => (ehGrupo(e)
+      {filtrar(menuGestao, permissoes).map((e) => (ehGrupo(e)
         ? <NavGrupo key={e.label} grupo={e} pathname={pathname} onNav={onNav} />
         : <NavLink key={e.href} item={e} pathname={pathname} onNav={onNav} />))}
     </nav>
   );
 }
 
-export function Sidebar({ papel, logoUrl }: { papel?: PapelUsuario; logoUrl?: string | null }) {
+export function Sidebar({ papel, logoUrl, permissoes = null }: {
+  papel?: PapelUsuario; logoUrl?: string | null; permissoes?: string[] | null;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
@@ -251,7 +269,7 @@ export function Sidebar({ papel, logoUrl }: { papel?: PapelUsuario; logoUrl?: st
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <Nav pathname={pathname} menuGestao={menuGestao} onNav={() => setAberto(false)} />
+            <Nav pathname={pathname} menuGestao={menuGestao} permissoes={permissoes} onNav={() => setAberto(false)} />
             <button onClick={sair} className="flex items-center gap-3 border-t border-white/10 px-5 py-3.5 text-sm text-white/80 hover:text-white">
               <LogOut className="h-4 w-4" /> Sair
             </button>
@@ -264,7 +282,7 @@ export function Sidebar({ papel, logoUrl }: { papel?: PapelUsuario; logoUrl?: st
         <div className="px-4 py-5">
           <Brand logoUrl={logoUrl} />
         </div>
-        <Nav pathname={pathname} menuGestao={menuGestao} />
+        <Nav pathname={pathname} menuGestao={menuGestao} permissoes={permissoes} />
         <button onClick={sair} className="flex items-center gap-3 border-t border-white/10 px-5 py-3.5 text-sm text-white/80 transition hover:text-white">
           <LogOut className="h-4 w-4" /> Sair
         </button>

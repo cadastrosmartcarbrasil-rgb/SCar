@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { History, KanbanSquare, Plus } from 'lucide-react';
 import { KanbanBoard } from '@/components/sinistros/kanban-board';
 import { HistoricoEventosLista } from '@/components/sinistros/historico-eventos-lista';
+import { SePode } from '@/components/layout/se-pode';
 
 // Duas abas: o PIPELINE (eventos do SCar, operados aqui) e o HISTORICO do
 // sistema anterior (0101, so consulta). A aba vem na URL (?aba=historico) para
@@ -23,12 +24,14 @@ export default function SinistrosPage({ searchParams }: { searchParams: { aba?: 
               : 'Arraste os protocolos entre as colunas para atualizar o status do pipeline.'}
           </p>
         </div>
+        <SePode chave="eventos.criar">
         <Link
           href="/sinistros/novo"
           className="inline-flex items-center gap-1.5 rounded-md bg-acao px-3 py-2 text-sm font-medium text-white hover:bg-acao-escura"
         >
           <Plus className="h-4 w-4" /> Novo Evento
         </Link>
+        </SePode>
       </div>
       <div className="flex gap-1 border-b border-slate-200">
         {abas.map((a) => {

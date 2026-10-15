@@ -36,7 +36,7 @@ export default function LeadDetailPage() {
   const mover = useMoverLead();
   const autorizar = useAutorizarEntrada();
   const { data: checklist } = useChecklistLead(id);
-  const podeAuditar = usePode('auditoria');
+  const podeAuditar = usePode('vendas.fechar');
   const faltando = pendencias((checklist ?? []).map((c) => ({ ...c, detalhe: c.detalhe ?? null })));
 
   const [cpf, setCpf] = useState('');

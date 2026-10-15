@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { Sidebar } from '@/components/layout/sidebar';
 import { SemAcesso } from '@/components/layout/sem-acesso';
+import { GuardaModulo } from '@/components/layout/guarda-modulo';
 
 // Layout do painel de gestao. Garante sessao de staff (perfil em usuarios).
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -40,10 +41,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   const { data: empresa } = await supabase.from('empresa').select('logo_url, nome_fantasia').limit(1).maybeSingle();
+  // Permissoes do perfil (0111): o VER esconde o modulo do menu e barra a tela.
+  // Se a leitura falhar, nao esconde nada (o banco continua decidindo o dado).
+  const { data: permissoes } = await supabase.rpc('minhas_permissoes');
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
-      <Sidebar papel={perfil.papel} logoUrl={empresa?.logo_url ?? null} />
+      <Sidebar papel={perfil.papel} logoUrl={empresa?.logo_url ?? null} permissoes={permissoes ?? null} />
       <div className="min-w-0 flex-1">
         <header className="relative hidden items-center justify-between border-b border-slate-200 bg-superficie px-8 py-3.5 md:flex">
           <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Painel de Gestao</span>
@@ -61,7 +65,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </div>
           <span className="absolute inset-x-0 bottom-0 h-[2px] bg-[linear-gradient(90deg,#1E2B4D_0%,#139AD6_38%,#22A7E4_56%,transparent_92%)] opacity-80" />
         </header>
-        <main className="p-4 md:p-8">{children}</main>
+        <main className="p-4 md:p-8">
+          <GuardaModulo permissoes={permissoes ?? null}>{children}</GuardaModulo>
+        </main>
       </div>
     </div>
   );

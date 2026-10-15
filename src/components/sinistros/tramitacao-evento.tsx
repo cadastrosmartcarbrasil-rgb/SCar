@@ -63,7 +63,7 @@ export function TramitacaoEvento({
   // continuam de todo staff da unidade — juridico e vistoria opinam no sinistro
   // sem serem o time dele. Oferecer o seletor a quem o banco vai recusar seria
   // o mesmo defeito de /precificacao: a tela promete, o banco nega.
-  const podeMudarStatus = usePode('evento');
+  const podeMudarStatus = usePode('eventos.editar');
   const lista = ordenarPareceres(pareceres ?? []);
   const resumo = resumoPareceres(lista);
 

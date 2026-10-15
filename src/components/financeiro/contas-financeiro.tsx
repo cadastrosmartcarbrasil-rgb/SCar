@@ -20,6 +20,7 @@ import type { StatusLancamento, TipoMovimentacao } from '@/lib/database.types';
 import { BaixaModal } from './baixa-modal';
 import { LancamentoModal } from './lancamento-modal';
 import { FiltroPeriodo, Indicador, Selo, Vazio, baixarCsv, periodoPreset, type Periodo } from './ui-financeiro';
+import { usePode } from '@/hooks/use-permissoes';
 
 const CAMPOS_DATA = [
   { valor: 'data_vencimento', rotulo: 'Vencimento' },
@@ -42,6 +43,12 @@ const STATUS_FILTRO: { valor: StatusLancamento | ''; rotulo: string }[] = [
  * a carteira filtrada e o rodape somando o que esta em tela.
  */
 export function ContasFinanceiro() {
+  // Permissoes do perfil (0111): os botoes so aparecem para quem tem a acao.
+  const pode = {
+    criar: usePode('financeiro.criar'), editar: usePode('financeiro.editar'),
+    baixar: usePode('financeiro.baixar'), cancelar: usePode('financeiro.cancelar'),
+    exportar: usePode('financeiro.exportar'),
+  };
   const [periodo, setPeriodo] = useState<Periodo>(() => periodoPreset('mes'));
   const [tipo, setTipo] = useState<TipoMovimentacao | ''>('');
   const [status, setStatus] = useState<StatusLancamento | ''>('');
@@ -151,12 +158,16 @@ export function ContasFinanceiro() {
           </Select>
         </label>
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <Button variant="secondary" onClick={exportar} disabled={lista.length === 0}>
-            <Download className="h-4 w-4" /> Exportar
-          </Button>
-          <Button onClick={() => setEditando({ tipo: 'DESPESA' })}>
-            <Plus className="h-4 w-4" /> Novo lancamento
-          </Button>
+          {pode.exportar && (
+            <Button variant="secondary" onClick={exportar} disabled={lista.length === 0}>
+              <Download className="h-4 w-4" /> Exportar
+            </Button>
+          )}
+          {pode.criar && (
+            <Button onClick={() => setEditando({ tipo: 'DESPESA' })}>
+              <Plus className="h-4 w-4" /> Novo lancamento
+            </Button>
+          )}
         </div>
       </FiltroPeriodo>
 
@@ -271,7 +282,7 @@ export function ContasFinanceiro() {
                   </td>
                   <td className="px-4 py-2.5">
                     <div className="flex items-center justify-end gap-1">
-                      {aberto && (
+                      {aberto && pode.baixar && (
                         <IconeAcao
                           titulo={`Registrar baixa (saldo ${formatCurrency(saldo)})`}
                           onClick={() => setBaixando(l)}
@@ -280,10 +291,12 @@ export function ContasFinanceiro() {
                           <HandCoins className="h-3.5 w-3.5" />
                         </IconeAcao>
                       )}
-                      <IconeAcao titulo="Editar" onClick={() => setEditando(l)} classe="text-slate-600 hover:bg-slate-100">
-                        <Pencil className="h-3.5 w-3.5" />
-                      </IconeAcao>
-                      {l.status !== 'cancelado' && Number(l.valor_pago ?? 0) === 0 && (
+                      {pode.editar && (
+                        <IconeAcao titulo="Editar" onClick={() => setEditando(l)} classe="text-slate-600 hover:bg-slate-100">
+                          <Pencil className="h-3.5 w-3.5" />
+                        </IconeAcao>
+                      )}
+                      {pode.cancelar && l.status !== 'cancelado' && Number(l.valor_pago ?? 0) === 0 && (
                         <IconeAcao
                           titulo="Cancelar titulo"
                           classe="text-rose-600 hover:bg-rose-50"
@@ -316,7 +329,7 @@ export function ContasFinanceiro() {
                         : 'Amplie o periodo nos atalhos acima ou registre a primeira conta a pagar/receber deste mes.'
                     }
                     acao={
-                      !busca && (
+                      !busca && pode.criar && (
                         <Button onClick={() => setEditando({ tipo: 'DESPESA' })}>
                           <Plus className="h-4 w-4" /> Novo lancamento
                         </Button>

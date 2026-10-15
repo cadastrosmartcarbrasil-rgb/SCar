@@ -44,6 +44,7 @@ import type {
   TipoCambio,
   Combustivel,
 } from '@/lib/database.types';
+import { SePode } from '@/components/layout/se-pode';
 
 const NEGOCIACOES: { v: TipoNegociacao; l: string }[] = [
   { v: 'venda', l: 'Venda' },
@@ -447,9 +448,11 @@ function VeiculosConteudo() {
           <h1 className="text-2xl font-semibold text-slate-900">Veiculos / Contratos</h1>
           <p className="text-sm text-slate-500">Frota protegida, vinculada aos associados.</p>
         </div>
+        <SePode chave="veiculos.criar">
         <Button onClick={novo}>
           <Plus className="h-4 w-4" /> Novo Veiculo
         </Button>
+        </SePode>
       </div>
 
       <div className="relative max-w-sm">
@@ -538,6 +541,7 @@ function VeiculosConteudo() {
                       >
                         <Pencil className="h-4 w-4" />
                       </button>
+                      <SePode chave="veiculos.excluir">
                       <button
                         onClick={() => {
                           if (confirm(`Excluir o veiculo ${v.placa}?`))
@@ -547,6 +551,7 @@ function VeiculosConteudo() {
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
+                      </SePode>
                     </div>
                   </td>
                 </tr>

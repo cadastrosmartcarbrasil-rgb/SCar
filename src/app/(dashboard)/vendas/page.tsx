@@ -10,6 +10,7 @@ import { Input, Select } from '@/components/ui/field';
 import { ESTEIRA, STATUS_LEAD } from '@/lib/crm';
 import { formatCurrency } from '@/lib/utils';
 import type { StatusLead } from '@/lib/database.types';
+import { SePode } from '@/components/layout/se-pode';
 
 /** Quantos leads a lista traz por vez. Ver o comentario em `useLeads`. */
 const PAGINA = 100;
@@ -69,12 +70,14 @@ export default function VendasPage() {
               <List className="h-3.5 w-3.5" /> Lista
             </button>
           </div>
+          <SePode chave="vendas.criar">
           <Link
             href="/vendas/novo"
             className="inline-flex items-center gap-1.5 rounded-xl bg-acao px-3 py-2 text-sm font-medium text-white shadow-sm"
           >
             <Plus className="h-4 w-4" /> <span className="hidden sm:inline">Novo lead</span>
           </Link>
+          </SePode>
         </div>
       </div>
 

@@ -21,7 +21,7 @@ export default function TerceiroPage({ params }: { params: { id: string; terceir
   const { data: t, isLoading, error } = useTerceiro(params.terceiroId);
   const [aba, setAba] = useState<Aba>('dados');
   const { data: perfil } = usePerfilAtual();
-  const trata = usePode('evento');
+  const trata = usePode('eventos.editar');
 
   if (isLoading) return <p className="text-sm text-slate-500">Carregando terceiro...</p>;
   if (error || !t) return <p className="text-sm text-rose-600">Terceiro nao encontrado ou sem permissao.</p>;

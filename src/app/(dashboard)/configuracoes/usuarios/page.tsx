@@ -209,7 +209,7 @@ export default function UsuariosPage() {
           <p className="max-w-2xl text-sm text-slate-500">
             Equipe interna: ficha, <strong>papel</strong>, unidade, acesso e redefinicao de senha.
             Troque o papel direto na coluna <strong>Papel</strong>; na aba{' '}
-            <strong>Permissoes por papel</strong> o administrador concede ou retira o que cada papel libera.
+            <strong>Permissoes por perfil</strong> o administrador ajusta, modulo por modulo, o que cada perfil pode ver e fazer.
           </p>
           <p className="mt-1 text-xs text-slate-400">
             <b className="text-slate-500">{ativos}</b> com acesso
@@ -230,7 +230,7 @@ export default function UsuariosPage() {
       <div className="flex gap-1 border-b border-slate-200">
         {([
           { id: 'usuarios', rotulo: 'Usuarios', icone: Users },
-          { id: 'permissoes', rotulo: 'Permissoes por papel', icone: ShieldCheck },
+          { id: 'permissoes', rotulo: 'Permissoes por perfil', icone: ShieldCheck },
         ] as const).map((t) => (
           <button key={t.id} type="button" onClick={() => setAba(t.id)}
             className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm ${aba === t.id

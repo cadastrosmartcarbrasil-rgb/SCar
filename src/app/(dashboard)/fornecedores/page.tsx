@@ -12,6 +12,7 @@ import {
 import { formatarDocumento, formatarTelefone } from '@/lib/documento';
 import { formatCurrency } from '@/lib/utils';
 import type { FornecedoresRow } from '@/lib/database.types';
+import { SePode } from '@/components/layout/se-pode';
 
 // Um cadastro so: fornecedor de pecas, prestador da 24h e rastreadora. Os
 // filtros abaixo sao marcacoes na mesma tabela, nao telas diferentes (0051).
@@ -49,11 +50,13 @@ function Conteudo() {
             empresa de rastreamento. Um cadastro so — o tipo e uma marcacao na ficha.
           </p>
         </div>
+        <SePode chave="fornecedores.criar">
         <Button onClick={() => setEdit(formularioVazio(
           aba === 'prestador' ? 'prestador' : aba === 'rastreadora' ? 'rastreadora' : undefined,
         ))}>
           <Plus className="h-4 w-4" /> Novo fornecedor
         </Button>
+        </SePode>
       </div>
 
       <div className="flex flex-wrap gap-1 border-b border-slate-200">

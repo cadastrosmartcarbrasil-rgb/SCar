@@ -11,6 +11,7 @@ import { useAssociados, useExcluirAssociado } from '@/hooks/use-associados';
 import { AssociadoForm, novoAssociadoVazio } from '@/components/associados/associado-form';
 import { formatarDocumento, soDigitos } from '@/lib/documento';
 import type { StatusCliente } from '@/lib/database.types';
+import { SePode } from '@/components/layout/se-pode';
 
 const SITUACAO_COR: Record<string, string> = {
   ativo: 'bg-emerald-50 text-emerald-700',
@@ -49,9 +50,11 @@ export default function AssociadosPage() {
           <h1 className="text-2xl font-semibold text-slate-900">Associados</h1>
           <p className="text-sm text-slate-500">Clique em um associado para abrir o painel completo.</p>
         </div>
+        <SePode chave="associados.criar">
         <Button onClick={() => setAberto(true)}>
           <Plus className="h-4 w-4" /> Novo Associado
         </Button>
+        </SePode>
       </div>
 
       <div className="relative max-w-sm">
@@ -107,6 +110,7 @@ export default function AssociadosPage() {
                 </td>
                 <td className="px-4 py-2 text-right">
                   <div className="flex items-center justify-end gap-1">
+                    <SePode chave="associados.excluir">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -120,6 +124,7 @@ export default function AssociadosPage() {
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
+                    </SePode>
                     <ChevronRight className="h-4 w-4 text-slate-300" />
                   </div>
                 </td>
