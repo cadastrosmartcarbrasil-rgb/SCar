@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Search } from 'lucide-react';
 import { FormField, Input, Select } from '@/components/ui/field';
 import { useAcionamentos } from '@/hooks/use-assistencia';
-import { STATUS_ACIONAMENTO_LABEL } from '@/lib/assistencia';
+import { STATUS_ACIONAMENTO_LABEL, rotuloAgendamento } from '@/lib/assistencia';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { StatusAcionamento } from '@/lib/database.types';
 import { OrdemServico } from './painel-acionamento';
@@ -76,7 +76,12 @@ export function AcionamentosLista() {
                 <td className="px-4 py-2 font-medium text-slate-700">{a.veiculos?.placa}</td>
                 <td className="px-4 py-2 text-slate-600">{a.clientes?.nome_razao_social}</td>
                 <td className="px-4 py-2 text-slate-600">{a.fornecedores?.razao_social ?? '-'}</td>
-                <td className="px-4 py-2 text-slate-500">{formatDate(a.created_at)}</td>
+                <td className="px-4 py-2 text-slate-500">
+                  {formatDate(a.created_at)}
+                  {a.agendado_para && (
+                    <span className="block text-[11px] text-amber-700">agendado {rotuloAgendamento(a.agendado_para)}</span>
+                  )}
+                </td>
                 <td className="tnum px-4 py-2 text-right">{formatCurrency(Number(a.valor_total))}</td>
                 <td className="px-4 py-2">
                   <span className={`rounded px-2 py-0.5 text-xs ${STATUS_ACIONAMENTO_LABEL[a.status].cor}`}>

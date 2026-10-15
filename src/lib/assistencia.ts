@@ -119,6 +119,8 @@ export interface DadosVoucher {
   valor_km_excedente: number;
   valor_total: number;
   prazo_estimado_min?: number | null;
+  /** 0109: ISO do atendimento agendado; ausente = imediato. */
+  agendado_para?: string | null;
   observacoes?: string | null;
   contato_central?: string | null;
 }
@@ -145,6 +147,7 @@ export function montarVoucherTexto(d: DadosVoucher): string {
     d.distancia_km != null
       ? `Rota autorizada: ${rotuloRota(d.distancia_km, d.duracao_min)}`
       : d.km_previsto ? `KM previsto: ${d.km_previsto} km` : null,
+    d.agendado_para ? `*Atendimento agendado para ${rotuloAgendamento(d.agendado_para)}*` : null,
     d.prazo_estimado_min ? `Prazo combinado: ${d.prazo_estimado_min} min` : null,
     '',
     d.link_navegacao_origem ? `Navegar ate o resgate: ${d.link_navegacao_origem}` : null,
@@ -330,4 +333,33 @@ export function rotuloMes(competencia: string): string {
   const [ano, mes] = competencia.split('-');
   const nomes = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
   return `${nomes[Number(mes) - 1] ?? mes}/${ano.slice(2)}`;
+}
+
+// ---------------------------------------------------------------------------
+// Agendamento do atendimento (0109). O Brasil nao tem horario de verao desde
+// 2019: Sao Paulo e sempre -03:00, e e nele que o atendente combina a hora.
+// ---------------------------------------------------------------------------
+const FUSO_SP_MS = 3 * 60 * 60 * 1000;
+
+/** ISO (qualquer fuso) -> valor de `<input type="datetime-local">` em Sao Paulo. */
+export function paraCampoDataHora(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return '';
+  return new Date(t - FUSO_SP_MS).toISOString().slice(0, 16);
+}
+
+/** Valor do `datetime-local` (hora de Sao Paulo) -> ISO com fuso; vazio = null. */
+export function doCampoDataHora(valor: string | null | undefined): string | null {
+  if (!valor || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(valor)) return null;
+  return `${valor}:00-03:00`;
+}
+
+/** "20/10/2026 as 14:30" em Sao Paulo. */
+export function rotuloAgendamento(iso: string): string {
+  const v = paraCampoDataHora(iso);
+  if (!v) return '';
+  const [d, h] = v.split('T');
+  const [ano, mes, dia] = d.split('-');
+  return `${dia}/${mes}/${ano} as ${h}`;
 }

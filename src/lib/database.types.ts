@@ -1636,6 +1636,8 @@ export type AcionamentosAssistenciaRow = Timestamps & {
   aberto_por: string | null;
   concluido_em: string | null;
   cancelado_motivo: string | null;
+  /** 0109: data/hora combinada com o associado; nulo = imediato. */
+  agendado_para: string | null;
   regional_id: string | null;
   // Geolocalizacao da OS (0031) — espelho plano do jsonb origem/destino,
   // mantido por trigger, mais a rota calculada pelo provedor de mapas.
@@ -3557,6 +3559,10 @@ export type Database = {
           p_prazo_min?: number | null;
           p_observacoes?: string | null;
           p_motivo?: string | null;
+          p_agendado_para?: string | null;
+          p_limpar_agendamento?: boolean;
+          p_solicitante_nome?: string | null;
+          p_solicitante_telefone?: string | null;
         };
         Returns: AcionamentosAssistenciaRow;
       };

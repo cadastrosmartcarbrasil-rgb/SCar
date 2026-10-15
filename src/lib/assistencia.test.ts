@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  paraCampoDataHora, doCampoDataHora, rotuloAgendamento,
   calcularKmExcedente,
   calcularTotalOS,
   avaliarBloqueio,
@@ -344,5 +345,27 @@ describe('painel 24h — tempo medio e tendencia', () => {
   it('rotulo curto do mes', () => {
     expect(rotuloMes('2026-09-01')).toBe('set/26');
     expect(rotuloMes('2025-01-01')).toBe('jan/25');
+  });
+});
+
+describe('agendamento do atendimento (0109)', () => {
+  it('converte ida e volta pelo horario de Sao Paulo', () => {
+    expect(doCampoDataHora('2026-10-20T14:30')).toBe('2026-10-20T14:30:00-03:00');
+    expect(paraCampoDataHora('2026-10-20T17:30:00Z')).toBe('2026-10-20T14:30');
+    expect(paraCampoDataHora(doCampoDataHora('2026-12-31T23:15'))).toBe('2026-12-31T23:15');
+    expect(rotuloAgendamento('2026-10-20T17:30:00+00:00')).toBe('20/10/2026 as 14:30');
+  });
+  it('vazio ou invalido vira nada', () => {
+    expect(doCampoDataHora('')).toBeNull();
+    expect(doCampoDataHora('20/10/2026')).toBeNull();
+    expect(paraCampoDataHora(null)).toBe('');
+  });
+  it('o voucher avisa o agendamento', () => {
+    const t = montarVoucherTexto({
+      codigo_os: 'OS-1', protocolo: 'ASS-1', servico: 'Reboque', prestador: 'Guincho', associado: 'Fulano',
+      veiculo: { placa: 'AAA1A11' }, valor_servico: 100, valor_km_excedente: 0, valor_total: 100,
+      agendado_para: '2026-10-20T17:30:00Z',
+    });
+    expect(t).toContain('Atendimento agendado para 20/10/2026 as 14:30');
   });
 });

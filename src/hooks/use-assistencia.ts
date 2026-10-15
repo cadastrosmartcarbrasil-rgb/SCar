@@ -311,6 +311,10 @@ export function useAtualizarAcionamento() {
     prazo_min?: number | null;
     observacoes?: string | null;
     motivo?: string | null;
+    agendado_para?: string | null;
+    limpar_agendamento?: boolean;
+    solicitante_nome?: string | null;
+    solicitante_telefone?: string | null;
   }>({
     mutationFn: async (c) => {
       const { data, error } = await supabase.rpc('atualizar_acionamento', {
@@ -323,6 +327,10 @@ export function useAtualizarAcionamento() {
         p_prazo_min: c.prazo_min ?? null,
         p_observacoes: c.observacoes ?? null,
         p_motivo: c.motivo ?? null,
+        p_agendado_para: c.agendado_para ?? null,
+        p_limpar_agendamento: c.limpar_agendamento ?? false,
+        p_solicitante_nome: c.solicitante_nome ?? null,
+        p_solicitante_telefone: c.solicitante_telefone ?? null,
       });
       if (error) throw error;
       return data as AcionamentosAssistenciaRow;

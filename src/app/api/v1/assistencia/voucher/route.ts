@@ -84,6 +84,7 @@ export async function POST(request: Request) {
     valor_km_excedente: Number(rel.valor_km_excedente ?? 0),
     valor_total: Number(rel.valor_total ?? 0),
     prazo_estimado_min: rel.prazo_estimado_min,
+    agendado_para: rel.agendado_para ?? null,
     observacoes: rel.observacoes,
     contato_central: empresa?.whatsapp_principal ?? empresa?.telefone_fixo ?? null,
   };
