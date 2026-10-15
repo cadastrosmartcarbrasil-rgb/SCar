@@ -15,7 +15,7 @@ import {
   useSolicitarParecer, useResponderParecer,
 } from '@/hooks/use-eventos';
 import { situacaoParecer, resumoPareceres, ordenarPareceres } from '@/lib/protocolos';
-import { podeTratarEvento } from '@/lib/usuario';
+import { usePode } from '@/hooks/use-permissoes';
 import { PIPELINE_SINISTRO } from '@/types/domain';
 import { formatDate } from '@/lib/utils';
 import type { StatusEvento } from '@/lib/database.types';
@@ -63,7 +63,7 @@ export function TramitacaoEvento({
   // continuam de todo staff da unidade — juridico e vistoria opinam no sinistro
   // sem serem o time dele. Oferecer o seletor a quem o banco vai recusar seria
   // o mesmo defeito de /precificacao: a tela promete, o banco nega.
-  const podeMudarStatus = podeTratarEvento(perfil?.papel);
+  const podeMudarStatus = usePode('evento');
   const lista = ordenarPareceres(pareceres ?? []);
   const resumo = resumoPareceres(lista);
 

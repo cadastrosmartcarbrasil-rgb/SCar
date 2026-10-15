@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { PERMISSOES, permissoesDoPapel, diferencaEntrePapeis } from './permissoes';
+import {
+  PERMISSOES, permissoesDoPapel, diferencaEntrePapeis, nivelEfetivo, concedida, mapaDeConcessoes,
+} from './permissoes';
 import { PAPEIS_USUARIO } from './usuario';
 
 describe('PERMISSOES', () => {
@@ -48,5 +50,52 @@ describe('diferencaEntrePapeis', () => {
 
   it('mesmo papel nao muda nada', () => {
     expect(diferencaEntrePapeis('sinistro', 'sinistro')).toEqual({ ganha: [], perde: [] });
+  });
+});
+
+describe('concessoes editaveis (0110)', () => {
+  const perm = (k: string) => PERMISSOES.find((p) => p.chave === k)!;
+
+  it('as 9 chaves editaveis sao as mesmas da migration', () => {
+    expect(PERMISSOES.filter((p) => p.editavel).map((p) => p.chave).sort()).toEqual([
+      'assistencia', 'auditoria', 'comunicados', 'desconto', 'evento',
+      'fornecedor', 'leads', 'liberar_24h', 'precos',
+    ]);
+  });
+
+  it('sem concessao gravada vale o padrao', () => {
+    expect(nivelEfetivo(perm('evento'), 'sinistro')).toBe('unidade');
+    expect(nivelEfetivo(perm('evento'), 'sinistro', {})).toBe('unidade');
+  });
+
+  it('retirar zera; em leads volta para so os proprios', () => {
+    const c = mapaDeConcessoes([
+      { papel: 'sinistro', permissao: 'evento', concedida: false },
+      { papel: 'gestor_regional', permissao: 'leads', concedida: false },
+    ]);
+    expect(nivelEfetivo(perm('evento'), 'sinistro', c)).toBe('nao');
+    expect(nivelEfetivo(perm('leads'), 'gestor_regional', c)).toBe('proprio');
+    expect(concedida(perm('leads'), 'gestor_regional', c)).toBe(false);
+  });
+
+  it('conceder vale na unidade (ou total para papel global)', () => {
+    const c = mapaDeConcessoes([
+      { papel: 'consultor_vendas', permissao: 'desconto', concedida: true },
+      { papel: 'financeiro', permissao: 'desconto', concedida: true },
+    ]);
+    expect(nivelEfetivo(perm('desconto'), 'consultor_vendas', c)).toBe('unidade');
+    expect(nivelEfetivo(perm('desconto'), 'financeiro', c)).toBe('total');
+  });
+
+  it('admin e estrutura nao mudam por concessao', () => {
+    const c = { admin: { precos: false }, gestor_regional: { configuracoes: true } } as never;
+    expect(nivelEfetivo(perm('precos'), 'admin', c)).toBe('total');
+    expect(nivelEfetivo(perm('configuracoes'), 'gestor_regional', c)).toBe('nao');
+  });
+
+  it('a troca de papel considera as concessoes', () => {
+    const c = mapaDeConcessoes([{ papel: 'consultor_vendas', permissao: 'desconto', concedida: true }]);
+    const d = diferencaEntrePapeis('consultor_vendas', 'gestor_regional', c);
+    expect(d.ganha).not.toContain('Aprovar desconto acima do limite da unidade');
   });
 });

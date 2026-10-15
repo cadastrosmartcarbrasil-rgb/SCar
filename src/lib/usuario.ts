@@ -159,21 +159,3 @@ export function avisoDeDesativacao(u: {
   }
   return linhas.join('\n');
 }
-
-/**
- * Espelho de `pode_tratar_evento()` (0077) — a parte que a TELA precisa saber.
- *
- * Nao e controle de acesso (quem decide e a policy de `eventos_sinistro` e a
- * trava dentro de `transferir_protocolo`, que e security definer e por isso
- * carrega a sua). Serve para o card de tramitacao NAO oferecer um seletor de
- * status que o banco vai recusar — foi exatamente esse o defeito que a
- * varredura dos papeis nomeou em /precificacao: promessa na tela, recusa no
- * banco.
- *
- * `financeiro` entra porque tem acesso global (a nota fiscal do evento e
- * dinheiro e ja aparece no DRE). `auditoria` nao: ela autoriza a entrada na
- * base, que e outro assunto.
- */
-export function podeTratarEvento(papel?: string | null): boolean {
-  return ['admin', 'financeiro', 'sinistro', 'gestor_regional'].includes(papel ?? '');
-}

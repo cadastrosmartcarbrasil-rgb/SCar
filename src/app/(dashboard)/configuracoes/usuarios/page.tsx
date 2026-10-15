@@ -18,6 +18,7 @@ import { opcoesParaEscolher } from '@/lib/regional';
 import { UnidadesSupervisor } from '@/components/usuarios/unidades-supervisor';
 import { MatrizPermissoes, ResumoDoPapel } from '@/components/usuarios/matriz-permissoes';
 import { diferencaEntrePapeis } from '@/lib/permissoes';
+import { useConcessoesPapeis } from '@/hooks/use-permissoes';
 import {
   PAPEIS_USUARIO,
   rotuloPapel,
@@ -57,6 +58,7 @@ export default function UsuariosPage() {
   const { data: perfil } = usePerfilAtual();
   const criar = useCreateUsuario();
   const atualizar = useUpdateUsuario();
+  const { data: concessoes } = useConcessoesPapeis();
 
   const [aba, setAba] = useState<'usuarios' | 'permissoes'>('usuarios');
   const [busca, setBusca] = useState('');
@@ -167,7 +169,7 @@ export default function UsuariosPage() {
       toast.error(`${rotuloPapel(papel)} precisa de unidade: use Editar para escolher o papel e a unidade juntos.`);
       return;
     }
-    const { ganha, perde } = diferencaEntrePapeis(u.papel, papel);
+    const { ganha, perde } = diferencaEntrePapeis(u.papel, papel, concessoes);
     const linhas = [
       `Trocar ${u.nome} de ${rotuloPapel(u.papel)} para ${rotuloPapel(papel)}?`,
       ganha.length ? `\nPassa a poder:\n- ${ganha.join('\n- ')}` : '',
@@ -205,9 +207,9 @@ export default function UsuariosPage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="max-w-2xl text-sm text-slate-500">
-            Equipe interna: ficha, <strong>papel (que e a permissao)</strong>, unidade, acesso e
-            redefinicao de senha. Troque o papel direto na coluna <strong>Papel</strong>; a aba{' '}
-            <strong>Permissoes por papel</strong> mostra o que cada um libera.
+            Equipe interna: ficha, <strong>papel</strong>, unidade, acesso e redefinicao de senha.
+            Troque o papel direto na coluna <strong>Papel</strong>; na aba{' '}
+            <strong>Permissoes por papel</strong> o administrador concede ou retira o que cada papel libera.
           </p>
           <p className="mt-1 text-xs text-slate-400">
             <b className="text-slate-500">{ativos}</b> com acesso
@@ -239,7 +241,7 @@ export default function UsuariosPage() {
         ))}
       </div>
 
-      {aba === 'permissoes' && <MatrizPermissoes contagem={porPapel} />}
+      {aba === 'permissoes' && <MatrizPermissoes contagem={porPapel} editavel={podeGerenciar} />}
 
       {aba === 'usuarios' && (<>
       <div className="flex flex-wrap items-center gap-3">

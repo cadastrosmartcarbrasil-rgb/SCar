@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { EditarCotacao } from '@/components/vendas/editar-cotacao';
 import {
-  useLead, useCotacoes, useHistoricoLead, useMoverLead, useAutorizarEntrada, useMeuPapel,
+  useLead, useCotacoes, useHistoricoLead, useMoverLead, useAutorizarEntrada,
 } from '@/hooks/use-vendas';
 import { Input } from '@/components/ui/field';
 import { Button } from '@/components/ui/button';
@@ -26,16 +26,17 @@ import { AceitePresencial } from '@/components/vendas/aceite-presencial';
 import { linkWhatsApp, mensagemDaProposta } from '@/lib/venda-publica';
 import { useChecklistLead } from '@/hooks/use-vendas';
 import { pendencias, situacaoDoAceite, valorDaCotacao } from '@/lib/vendas';
+import { usePode } from '@/hooks/use-permissoes';
 
 export default function LeadDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: lead, isLoading } = useLead(id);
   const { data: cotacoes } = useCotacoes(id);
   const { data: historico } = useHistoricoLead(id);
-  const { data: papel } = useMeuPapel();
   const mover = useMoverLead();
   const autorizar = useAutorizarEntrada();
   const { data: checklist } = useChecklistLead(id);
+  const podeAuditar = usePode('auditoria');
   const faltando = pendencias((checklist ?? []).map((c) => ({ ...c, detalhe: c.detalhe ?? null })));
 
   const [cpf, setCpf] = useState('');
@@ -46,7 +47,6 @@ export default function LeadDetailPage() {
   if (isLoading) return <p className="py-10 text-center text-sm text-slate-400">Carregando...</p>;
   if (!lead) return <p className="py-10 text-center text-sm text-slate-400">Lead nao encontrado.</p>;
 
-  const podeAuditar = papel === 'auditoria' || papel === 'admin';
   // Um caminho so, igual ao do Kanban: os dois chamam `mover_lead_status`.
   const acoes = acoesDoLead(lead.status);
   // `aceite_cotacao_id` (0042) existia e nenhuma tela lia — ver `situacaoDoAceite`.

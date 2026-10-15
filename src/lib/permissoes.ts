@@ -1,14 +1,14 @@
 // ---------------------------------------------------------------------------
 // O QUE CADA PAPEL PODE FAZER — o mapa que a tela de Usuarios mostra.
 //
-// Neste sistema a PERMISSAO e o PAPEL: quem decide o acesso sao os helpers do
-// banco (`tem_acesso_global`, `pode_regional`, `pode_assistencia`,
-// `pode_tratar_evento`...) e a RLS que os usa. Trocar o papel de alguem em
-// Configuracoes -> Usuarios e Permissoes E ajustar a permissao dele.
+// Quem decide o acesso sao os helpers do banco e a RLS que os usa. Desde a
+// 0110 as permissoes marcadas `editavel` vivem em `papel_permissoes`, que o
+// ADMIN ajusta na grade (concede/retira por papel). As demais sao a ESTRUTURA
+// do sistema (alcance da unidade, Configuracoes) e seguem fixas no papel.
 //
-// Este arquivo NAO e controle de acesso — e a DESCRICAO do que o banco faz,
-// para quem escolhe o papel saber o que esta liberando. Cada linha cita o
-// helper de onde saiu; mexeu num helper (migration), mexa aqui e no teste.
+// Este arquivo NAO e controle de acesso — e a DESCRICAO do que o banco faz.
+// `niveis` e o padrao (o seed da 0110); a grade aplica por cima o que esta
+// gravado na tabela (`nivelEfetivo`). Mexeu num helper, mexa aqui e no teste.
 // ---------------------------------------------------------------------------
 
 import { PAPEIS_USUARIO, type PapelValor } from './usuario';
@@ -30,7 +30,12 @@ export interface Permissao {
   niveis: Record<PapelValor, NivelPermissao>;
   /** Observacao por papel, quando o nivel sozinho nao explica. */
   notas?: Partial<Record<PapelValor, string>>;
+  /** O admin concede/retira por papel (tabela `papel_permissoes`, 0110). */
+  editavel?: boolean;
 }
+
+/** Concessoes gravadas no banco: papel -> chave -> concedida. */
+export type Concessoes = Record<string, Record<string, boolean>>;
 
 const so = (
   papeis: Partial<Record<PapelValor, NivelPermissao>>,
@@ -82,6 +87,7 @@ export const PERMISSOES: Permissao[] = [
   },
   {
     chave: 'leads',
+    editavel: true,
     area: 'Vendas',
     descricao: 'Leads e cotacoes',
     origem: 'pode_ver_carteira_regional() (0038)',
@@ -93,6 +99,7 @@ export const PERMISSOES: Permissao[] = [
   },
   {
     chave: 'desconto',
+    editavel: true,
     area: 'Vendas',
     descricao: 'Aprovar desconto acima do limite da unidade',
     origem: 'pode_aprovar_desconto()',
@@ -100,6 +107,7 @@ export const PERMISSOES: Permissao[] = [
   },
   {
     chave: 'auditoria',
+    editavel: true,
     area: 'Vendas',
     descricao: 'Autorizar a entrada do veiculo na base (Auditoria)',
     origem: 'pode_auditar()',
@@ -107,13 +115,15 @@ export const PERMISSOES: Permissao[] = [
   },
   {
     chave: 'precos',
+    editavel: true,
     area: 'Vendas',
     descricao: 'Alterar a tabela de precos',
-    origem: 'precos_write = tem_acesso_global()',
+    origem: 'pode_editar_precos() (0110)',
     niveis: so({ admin: 'total', financeiro: 'total' }),
   },
   {
     chave: 'evento',
+    editavel: true,
     area: 'Eventos',
     descricao: 'Tratar o evento: mudar a fase, cotar pecas, lancar nota fiscal',
     origem: 'pode_tratar_evento() (0077)',
@@ -121,6 +131,7 @@ export const PERMISSOES: Permissao[] = [
   },
   {
     chave: 'assistencia',
+    editavel: true,
     area: 'Assistencia 24h',
     descricao: 'Operar a 24h: acionar, cotar prestador, gerar OS',
     origem: 'pode_assistencia()',
@@ -130,6 +141,7 @@ export const PERMISSOES: Permissao[] = [
   },
   {
     chave: 'liberar_24h',
+    editavel: true,
     area: 'Assistencia 24h',
     descricao: 'Liberar acionamento bloqueado (alcada)',
     origem: 'pode_liberar_assistencia()',
@@ -158,6 +170,7 @@ export const PERMISSOES: Permissao[] = [
   },
   {
     chave: 'fornecedor',
+    editavel: true,
     area: 'Financeiro',
     descricao: 'Cadastrar fornecedor, prestador e rastreadora',
     origem: 'pode_cadastrar_fornecedor()',
@@ -167,6 +180,7 @@ export const PERMISSOES: Permissao[] = [
   },
   {
     chave: 'comunicados',
+    editavel: true,
     area: 'Equipe',
     descricao: 'Publicar comunicados no mural',
     origem: 'pode_publicar_memo()',
@@ -189,28 +203,72 @@ export const ROTULO_NIVEL: Record<NivelPermissao, string> = {
   nao: 'Sem acesso',
 };
 
+/** Papeis com acesso a todas as unidades — concedida vale 'total' para eles. */
+const PAPEIS_GLOBAIS = ['admin', 'financeiro'];
+
+/**
+ * O nivel que vale HOJE: o padrao do papel com a concessao gravada por cima.
+ * Admin sempre tem o padrao (o banco nao deixa ajusta-lo). Sem concessao
+ * gravada (tabela ainda nao lida) vale o padrao.
+ *  . retirada -> 'nao' (em leads: 'proprio' — sem ver a carteira da unidade
+ *    ele continua vendo os leads que sao dele)
+ *  . concedida -> o padrao, se ele ja concedia; senao 'total' para papel
+ *    global e 'unidade' para os demais (a unidade continua sendo o limite)
+ */
+export function nivelEfetivo(perm: Permissao, papel: string, concessoes?: Concessoes): NivelPermissao {
+  const padrao = (perm.niveis as Record<string, NivelPermissao>)[papel] ?? 'nao';
+  if (!perm.editavel || papel === 'admin') return padrao;
+  const c = concessoes?.[papel]?.[perm.chave];
+  if (c === undefined) return padrao;
+  if (!c) return perm.chave === 'leads' ? 'proprio' : 'nao';
+  if (padrao === 'total' || padrao === 'unidade') return padrao;
+  return PAPEIS_GLOBAIS.includes(papel) ? 'total' : 'unidade';
+}
+
+/** A permissao esta concedida ao papel (para o interruptor da grade)? */
+export function concedida(perm: Permissao, papel: string, concessoes?: Concessoes): boolean {
+  const n = nivelEfetivo(perm, papel, concessoes);
+  return perm.chave === 'leads' ? n !== 'proprio' && n !== 'nao' : n !== 'nao';
+}
+
 /** O que o papel PODE fazer (nivel diferente de 'nao'), na ordem da lista. */
-export function permissoesDoPapel(papel: string): { permissao: Permissao; nivel: NivelPermissao; nota?: string }[] {
+export function permissoesDoPapel(
+  papel: string,
+  concessoes?: Concessoes,
+): { permissao: Permissao; nivel: NivelPermissao; nota?: string }[] {
   return PERMISSOES
     .map((p) => ({
       permissao: p,
-      nivel: (p.niveis as Record<string, NivelPermissao>)[papel] ?? 'nao',
+      nivel: nivelEfetivo(p, papel, concessoes),
       nota: (p.notas as Record<string, string> | undefined)?.[papel],
     }))
     .filter((x) => x.nivel !== 'nao');
+}
+
+/** As linhas de `papel_permissoes` viram o mapa papel -> chave -> concedida. */
+export function mapaDeConcessoes(
+  linhas: { papel: string; permissao: string; concedida: boolean }[] | null | undefined,
+): Concessoes {
+  const m: Concessoes = {};
+  for (const l of linhas ?? []) (m[l.papel] ??= {})[l.permissao] = l.concedida;
+  return m;
 }
 
 /**
  * A troca de papel em uma linha: o que a pessoa GANHA e o que PERDE. E o texto
  * da confirmacao da lista — trocar papel muda acesso na hora.
  */
-export function diferencaEntrePapeis(de: string, para: string): { ganha: string[]; perde: string[] } {
+export function diferencaEntrePapeis(
+  de: string,
+  para: string,
+  concessoes?: Concessoes,
+): { ganha: string[]; perde: string[] } {
   const ganha: string[] = [];
   const perde: string[] = [];
   const ordem: NivelPermissao[] = ['nao', 'proprio', 'unidade', 'total'];
   for (const p of PERMISSOES) {
-    const a = (p.niveis as Record<string, NivelPermissao>)[de] ?? 'nao';
-    const b = (p.niveis as Record<string, NivelPermissao>)[para] ?? 'nao';
+    const a = nivelEfetivo(p, de, concessoes);
+    const b = nivelEfetivo(p, para, concessoes);
     if (a === b) continue;
     if (ordem.indexOf(b) > ordem.indexOf(a)) ganha.push(p.descricao);
     else perde.push(p.descricao);

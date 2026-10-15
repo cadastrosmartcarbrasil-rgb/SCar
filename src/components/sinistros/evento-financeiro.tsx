@@ -7,7 +7,7 @@ import { LancamentoModal } from '@/components/financeiro/lancamento-modal';
 import { BaixaModal } from '@/components/financeiro/baixa-modal';
 import { Selo } from '@/components/financeiro/ui-financeiro';
 import { usePerfilAtual, usePlanoContas } from '@/hooks/use-config';
-import { podeTratarEvento } from '@/lib/usuario';
+import { usePode } from '@/hooks/use-permissoes';
 import { useLancamentosEvento, useMovimentacoesLegadasEvento, useTerceirosEvento } from '@/hooks/use-terceiros';
 import type { LancamentoComRel } from '@/hooks/use-financeiro';
 import { resumoFinanceiroEvento, tipoFavorecido } from '@/lib/terceiros';
@@ -41,7 +41,7 @@ export function EventoFinanceiro({
   const { data: categorias } = usePlanoContas();
   const { data: perfil } = usePerfilAtual();
   // Gastar no evento e TRATAR o evento (0077): o botao so aparece para o time.
-  const trata = podeTratarEvento(perfil?.papel);
+  const trata = usePode('evento');
   // Sugestao de classificacao (0103): reparo de evento. Indenizacao = 3.1.05.
   const categoriaPadrao = (categorias ?? []).find((c) => c.codigo_estruturado === '3.1.04')?.id ?? null;
 

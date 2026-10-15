@@ -10,7 +10,7 @@ import { CotacaoPecas } from '@/components/sinistros/cotacao-pecas';
 import { EventoFinanceiro } from '@/components/sinistros/evento-financeiro';
 import { useTerceiro } from '@/hooks/use-terceiros';
 import { usePerfilAtual } from '@/hooks/use-config';
-import { podeTratarEvento } from '@/lib/usuario';
+import { usePode } from '@/hooks/use-permissoes';
 import { PAPEL_LABEL } from '@/lib/terceiros';
 
 type Aba = 'dados' | 'reparo' | 'financeiro';
@@ -21,7 +21,7 @@ export default function TerceiroPage({ params }: { params: { id: string; terceir
   const { data: t, isLoading, error } = useTerceiro(params.terceiroId);
   const [aba, setAba] = useState<Aba>('dados');
   const { data: perfil } = usePerfilAtual();
-  const trata = podeTratarEvento(perfil?.papel);
+  const trata = usePode('evento');
 
   if (isLoading) return <p className="text-sm text-slate-500">Carregando terceiro...</p>;
   if (error || !t) return <p className="text-sm text-rose-600">Terceiro nao encontrado ou sem permissao.</p>;
