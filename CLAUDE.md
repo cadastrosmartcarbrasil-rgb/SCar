@@ -721,8 +721,13 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
   `force-dynamic`) + formulário client ao lado (`login-staff.tsx`, `login-associado.tsx`) — o
   `/portal/login` continua FORA de `(associado)`, então o `ƒ` no build é o `force-dynamic`, não o
   gotcha do layout. `/vendedor` e `/regional` também passaram a usar o helper. **Página nova com
-  logo: use `logoOficial()`, não `from('empresa')` pela sessão.** O SVG de reserva ainda é o desenho
-  antigo — trocar pelo arquivo oficial (e o favicon) é a tarefa seguinte.
+  logo: use `logoOficial()`, não `from('empresa')` pela sessão.** **Ícone do app instalado e favicon (15/10/2026):** rota `/icones/<32|180|192|512>.png`
+  (`src/app/icones/[arquivo]/route.tsx`, regras em `src/lib/icone-app.ts`, testado) gera o PNG
+  quadrado da logo oficial com margem branca (zona segura do ícone mascarável); manifesto e
+  `layout.tsx` apontam para ela. Termina em `.png` para o middleware deixar passar sem sessão, e
+  `/manifest.webmanifest` entrou nas rotas públicas (antes era redirecionado ao login). Trocar a
+  logo em Configurações → Empresa troca o ícone (cache de 1 h; o app já instalado pode precisar
+  ser reinstalado). O SVG de reserva ainda é o desenho antigo.
 - **SICREDI (API Cobrança) — adaptador pronto, SANDBOX primeiro (13/10/2026).** Decisão do usuário:
   Sicredi para boleto/PIX, Asaas para cartão. `src/lib/pagamentos/sicredi.ts` (testado em
   `sicredi.test.ts`, `fetch` falso): token password-grant com cache e refresh, cadastro

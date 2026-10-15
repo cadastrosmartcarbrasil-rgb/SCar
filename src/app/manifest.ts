@@ -18,8 +18,13 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: '#eef2f8',
     theme_color: '#1E2B4D',
     lang: 'pt-BR',
+    // Gerados da logo OFICIAL (Configuracoes -> Empresa) — src/app/icones.
+    // A margem branca deixa o mesmo PNG servir de icone mascaravel no Android.
     icons: [
-      { src: '/logo-smartcar.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+      { src: '/icones/192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: '/icones/512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: '/icones/192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+      { src: '/icones/512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
   };
 }

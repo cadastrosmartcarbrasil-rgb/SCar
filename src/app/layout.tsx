@@ -9,7 +9,11 @@ export const metadata: Metadata = {
   // Instalavel na tela inicial (PWA) — ver src/app/manifest.ts.
   manifest: '/manifest.webmanifest',
   appleWebApp: { capable: true, statusBarStyle: 'default', title: 'Smart Car' },
-  icons: { icon: '/logo-smartcar.svg', apple: '/logo-smartcar.svg' },
+  // Gerados da logo oficial (src/app/icones/[arquivo]/route.tsx).
+  icons: {
+    icon: [{ url: '/icones/32.png', sizes: '32x32', type: 'image/png' }, { url: '/icones/192.png', sizes: '192x192', type: 'image/png' }],
+    apple: [{ url: '/icones/180.png', sizes: '180x180', type: 'image/png' }],
+  },
 };
 
 export const viewport: Viewport = {
