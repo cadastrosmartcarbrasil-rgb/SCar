@@ -5222,7 +5222,7 @@ no fim — o runner procura por "PASSARAM") e rode `npm run schema`.
   do associado vira lista de ids antes do `or`), `<Paginador>`, filtro de situação em `/veiculos`
   (padrão **Na base**), `?editar=<id>` por `useVeiculo(id)` e **`<SeletorAssociado>`** (digita, até 20)
   no veículo, no lançamento financeiro e na boletagem; instalar rastreador busca por placa
-  (`useBuscaVeiculos`). Medido: a página custa 11 ms no banco. **Tela nova de cadastro grande:
+  (`useBuscaVeiculos`). Medido: a página custa 11 ms no banco. **No ar e conferido pelo usuário em 16/10/2026 ("ficou rápido").** **Tela nova de cadastro grande:
   paginar no banco e buscar por digitação — `lerTodas` só para quem precisa mesmo do conjunto.**
 - **Campo de "ativo" que nenhuma função de segurança lê é uma promessa falsa.** `usuarios.ativo`
   existia desde a 0001 e só a 0068 fez `is_staff()`/`auth_papel()` olharem para ele — 67 migrations
