@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Building2, Users, Landmark, ListTree, Car, BadgeDollarSign, AlertTriangle, Truck, Package, Building, Wallet, Percent, Layers, Bell, Megaphone, Palette,
+  Building2, Users, Landmark, ListTree, Car, BadgeDollarSign, AlertTriangle, Truck, Package, Building, Wallet, Percent, Layers, Bell, Megaphone, Palette, Target,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -24,6 +24,7 @@ const TABS = [
   { href: '/configuracoes/contas-bancarias', label: 'Contas Bancarias', icon: Wallet },
   { href: '/configuracoes/integracoes', label: 'Integracoes Bancarias', icon: Landmark },
   { href: '/configuracoes/plano-contas', label: 'Plano de Contas', icon: ListTree },
+  { href: '/configuracoes/centros-custo', label: 'Centros de Custo', icon: Target },
 ];
 
 export function ConfigTabs() {

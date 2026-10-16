@@ -4001,6 +4001,11 @@ sem de-para), a **data de corte do financeiro e dos eventos**, e o de-para de **
   espelhada em `src/lib/cobranca.ts` (com testes).
 
 ## Financeiro e DRE (0032) — arquitetura
+- **Centros de custo: `Configurações → Centros de Custo` (16/10/2026, sem migration).** Tabela `centros_custo`
+  (0012) não tinha tela — só se escolhia. Agora: criar/editar/inativar com a contagem de lançamentos;
+  **excluir só sem lançamento** (FK `on delete set null` apagaria a classificação em silêncio) e o
+  **ASSIST24 fica travado** (código e exclusão: `centro_custo_assistencia()` acha pelo código e criaria
+  outro). Lançamento novo oferece só os ativos + o já escolhido. Regra pura em `src/lib/centros-custo.ts`.
 - **`/financeiro` tem 3 abas:**
   - **Contas a Pagar / Receber** — 4 indicadores do periodo (a receber, a pagar, resultado de caixa,
     inadimplencia com % da carteira e "vence em 7 dias"), filtro de periodo com atalhos

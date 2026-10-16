@@ -12,6 +12,7 @@ import { SeletorAssociado } from '@/components/associados/seletor-associado';
 import { usePlanoContas, useRegionais } from '@/hooks/use-config';
 import { opcoesParaEscolher } from '@/lib/regional';
 import { useCentrosCusto, useSaveLancamento } from '@/hooks/use-financeiro';
+import { centrosParaEscolher } from '@/lib/centros-custo';
 import { gerarParcelas, type Periodicidade } from '@/lib/financeiro';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { erroFavorecidoEvento } from '@/lib/terceiros';
@@ -251,8 +252,8 @@ export function LancamentoModal({
             <FormField label="Centro de custo">
               <Select value={form.centro_custo_id ?? ''} onChange={(e) => set({ centro_custo_id: e.target.value || null })}>
                 <option value="">-- Nenhum --</option>
-                {(centros ?? []).map((c) => (
-                  <option key={c.id} value={c.id}>{c.nome}</option>
+                {centrosParaEscolher(centros ?? [], form.centro_custo_id).map((c) => (
+                  <option key={c.id} value={c.id}>{c.nome}{c.ativo ? '' : ' (inativo)'}</option>
                 ))}
               </Select>
             </FormField>

@@ -312,6 +312,51 @@ export function useCentrosCusto() {
   });
 }
 
+/** Quantos lancamentos cada centro tem — decide se a exclusao e oferecida. */
+export function useUsoCentrosCusto(ids: string[]) {
+  const supabase = createClient();
+  return useQuery<Record<string, number>>({
+    queryKey: ['centros-custo', 'uso', ids],
+    enabled: ids.length > 0,
+    queryFn: async () => {
+      const pares = await Promise.all(ids.map(async (id) => {
+        const { count, error } = await supabase.from('lancamentos_financeiros')
+          .select('id', { count: 'exact', head: true }).eq('centro_custo_id', id);
+        if (error) throw error;
+        return [id, count ?? 0] as const;
+      }));
+      return Object.fromEntries(pares);
+    },
+  });
+}
+
+export function useSaveCentroCusto() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (c: { id?: string; nome: string; codigo: string | null; ativo: boolean }) => {
+      const payload = { nome: c.nome.trim(), codigo: c.codigo?.trim() || null, ativo: c.ativo };
+      const { error } = c.id
+        ? await supabase.from('centros_custo').update(payload).eq('id', c.id)
+        : await supabase.from('centros_custo').insert(payload);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['centros-custo'] }),
+  });
+}
+
+export function useExcluirCentroCusto() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('centros_custo').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['centros-custo'] }),
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Anexos do lancamento (nota fiscal, contrato, comprovante).
 // Bucket privado 'financeiro' + tabela anexos_financeiros (0012). O arquivo so
