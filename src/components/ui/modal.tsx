@@ -51,7 +51,7 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 pt-16"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 pt-16"
       {...fundo}
     >
       {/* O `stopPropagation` NAO e o que conserta a selecao de texto (o clique
@@ -60,15 +60,15 @@ export function Modal({
           da arvore da pagina: sem ele, um clique no formulario borbulharia ate
           um ancestral clicavel (uma linha de tabela, um cartao). */}
       <div
-        className={`w-full ${LARGURA[tamanho]} rounded-xl bg-superficie shadow-xl`}
+        className={`w-full ${LARGURA[tamanho]} rounded-2xl bg-superficie shadow-2xl ring-1 ring-black/5`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3.5">
           <div>
-            <h2 className="text-base font-semibold text-slate-900">{title}</h2>
+            <h2 className="font-display text-[15px] font-semibold text-slate-900">{title}</h2>
             {subtitulo && <p className="mt-0.5 text-xs text-slate-500">{subtitulo}</p>}
           </div>
-          <button onClick={onClose} className="rounded-md p-1 text-slate-400 hover:bg-slate-100">
+          <button type="button" onClick={onClose} aria-label="Fechar" className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
             <X className="h-5 w-5" />
           </button>
         </div>

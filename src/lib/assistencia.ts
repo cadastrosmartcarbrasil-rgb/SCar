@@ -179,7 +179,7 @@ export function montarVoucherHtml(d: DadosVoucher): string {
       return l.trim() === '' ? '<br/>' : `<p style="margin:2px 0">${texto}</p>`;
     })
     .join('');
-  return `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#1e2b4d">${corpo}</div>`;
+  return `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#142445">${corpo}</div>`;
 }
 
 /** Campos de rota/navegacao do voucher a partir do jsonb origem/destino da OS.

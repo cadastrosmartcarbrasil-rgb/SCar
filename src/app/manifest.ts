@@ -16,7 +16,7 @@ export default function manifest(): MetadataRoute.Manifest {
     display: 'standalone',
     orientation: 'portrait',
     background_color: '#eef2f8',
-    theme_color: '#1E2B4D',
+    theme_color: '#142445',
     lang: 'pt-BR',
     // Gerados da logo OFICIAL (Configuracoes -> Empresa) — src/app/icones.
     // A margem branca deixa o mesmo PNG servir de icone mascaravel no Android.

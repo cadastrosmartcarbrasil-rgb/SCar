@@ -15,7 +15,7 @@ const MES_CURTO = new Intl.DateTimeFormat('pt-BR', { month: 'short', year: '2-di
 const rotuloMes = (iso: string) => MES_CURTO.format(new Date(`${iso}T00:00:00`)).replace('.', '');
 const compacto = (v: number) => (Math.abs(v) >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v));
 
-const COR_FAIXA = ['#22A7E4', '#F5A524', '#F07C29', '#E5484D', '#9B1C1F'];
+const COR_FAIXA = ['#0BACE2', '#F5A524', '#F07C29', '#E5484D', '#9B1C1F'];
 
 /**
  * Tesouraria: fluxo de caixa previsto x realizado e aging da carteira.
@@ -123,15 +123,15 @@ export function FluxoCaixa({ regionalId }: { regionalId?: string | null }) {
                 <AreaChart data={acumulado} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="grad-saldo" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#22A7E4" stopOpacity={0.35} />
-                      <stop offset="100%" stopColor="#22A7E4" stopOpacity={0.02} />
+                      <stop offset="0%" stopColor="#0BACE2" stopOpacity={0.35} />
+                      <stop offset="100%" stopColor="#0BACE2" stopOpacity={0.02} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e8edf5" vertical={false} />
                   <XAxis dataKey="mes" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
                   <YAxis tickFormatter={compacto} tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} width={48} />
                   <Tooltip formatter={(v: number | string) => formatCurrency(Number(v))} contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }} />
-                  <Area type="monotone" dataKey="Acumulado" stroke="#139AD6" strokeWidth={2.5} fill="url(#grad-saldo)" />
+                  <Area type="monotone" dataKey="Acumulado" stroke="#0785B0" strokeWidth={2.5} fill="url(#grad-saldo)" />
                 </AreaChart>
               </ResponsiveContainer>
             )}

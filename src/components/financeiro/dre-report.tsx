@@ -158,10 +158,10 @@ export function DreReport({ regionalId }: { regionalId?: string | null }) {
                   contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }}
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="Receita" fill="#22A7E4" radius={[4, 4, 0, 0]} maxBarSize={26} />
+                <Bar dataKey="Receita" fill="#0BACE2" radius={[4, 4, 0, 0]} maxBarSize={26} />
                 <Bar dataKey="Custos" fill="#F5A524" radius={[4, 4, 0, 0]} maxBarSize={26} />
                 <Bar dataKey="Despesas" fill="#E5484D" radius={[4, 4, 0, 0]} maxBarSize={26} />
-                <Line type="monotone" dataKey="Resultado" stroke="#1E2B4D" strokeWidth={2.5} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="Resultado" stroke="#142445" strokeWidth={2.5} dot={{ r: 3 }} />
               </ComposedChart>
             </ResponsiveContainer>
           )}

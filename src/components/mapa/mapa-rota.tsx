@@ -61,7 +61,7 @@ export function MapaRota({
         marcos.push([origem.lat, origem.lng]);
       }
       if (destino) {
-        L.marker([destino.lat, destino.lng], { icon: pino('B', '#1e2b4d') }).addTo(g).bindPopup('Destino');
+        L.marker([destino.lat, destino.lng], { icon: pino('B', '#142445') }).addTo(g).bindPopup('Destino');
         marcos.push([destino.lat, destino.lng]);
       }
 
@@ -69,7 +69,7 @@ export function MapaRota({
         ? pontos!.map((p) => [p.lat, p.lng] as [number, number])
         : marcos.length === 2 ? marcos : [];
       if (tracado.length > 1) {
-        L.polyline(tracado, { color: '#22A7E4', weight: 5, opacity: 0.9 }).addTo(g);
+        L.polyline(tracado, { color: '#0BACE2', weight: 5, opacity: 0.9 }).addTo(g);
       }
 
       const alvo = tracado.length > 1 ? tracado : marcos;

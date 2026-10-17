@@ -11,6 +11,11 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['var(--font-texto)', 'system-ui', 'sans-serif'],
+        display: ['var(--font-titulo)', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-mono)', 'ui-monospace', 'monospace'],
+      },
       colors: {
         // Marca Smart Car Brasil.
         // brand = NAVY (estrutura + acao primaria, como a barra do site).
@@ -28,16 +33,16 @@ const config: Config = {
         },
         // cyan = CIANO da marca (energia/acento: o "CAR" e o rodape do site).
         cyan: {
-          50: '#E6F4FB',
-          100: '#C9E8F7',
-          200: '#9FD6F1',
-          300: '#63BEE9',
-          400: '#3BB0E6',
-          500: '#22A7E4',
-          600: '#139AD6',
-          700: '#0E7CAE',
-          800: '#0C6389',
-          900: '#0B506E',
+          50: '#E5F6FC',
+          100: '#C4EBF8',
+          200: '#93DAF2',
+          300: '#5FC8EC',
+          400: '#2FBAE7',
+          500: '#0BACE2',
+          600: '#0785B0',
+          700: '#066B8F',
+          800: '#085776',
+          900: '#0A455E',
         },
         // Escala de TEXTO. As faixas 400..700 do slate padrao do Tailwind sao
         // cinza-claro demais para uma marca navy: `text-slate-400` dava 2.56 de
@@ -72,7 +77,7 @@ const config: Config = {
         'acao-escura': 'rgb(var(--acao-escura) / <alpha-value>)',
         // Faixa navy (paginas publicas, topo do portal): escura nos dois temas.
         faixa: 'rgb(var(--faixa) / <alpha-value>)',
-        navy: '#1E2B4D',
+        navy: '#142445',
         status: {
           success: '#12A150',
           warning: '#C08600',

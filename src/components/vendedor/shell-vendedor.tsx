@@ -150,7 +150,7 @@ export function ShellVendedor({ nome, unidade, codigo, logoUrl, papelStaff, chil
               href={i.href}
               className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition ${
                 ativo(i.href)
-                  ? 'bg-white/10 font-semibold text-white shadow-[inset_2px_0_0_0_#22A7E4]'
+                  ? 'bg-white/10 font-semibold text-white shadow-[inset_2px_0_0_0_#0BACE2]'
                   : 'text-white/70 hover:bg-white/5 hover:text-white'
               }`}
             >

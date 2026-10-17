@@ -28,7 +28,14 @@
 :root {
   color-scheme: light;
 
-  --fundo: 238 242 248; /* #EEF2F8 ground levemente frio (vies navy) */
+  /* Fontes da marca, servidas pelo proprio app (pacotes @fontsource): nada
+     depende de rede externa no navegador nem no build. */
+  --font-titulo: 'Montserrat Variable', 'Montserrat', system-ui, sans-serif;
+  --font-texto: 'Barlow', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+
+  --fundo: 242 245 250; /* #F2F5FA ground frio, neutro o bastante para a tabela respirar */
   --superficie: 255 255 255; /* card */
   --superficie-alta: 248 250 252; /* card elevado / cabecalho de tabela */
 
@@ -46,23 +53,23 @@
   --slate-900: 15 23 42;
 
   /* Marca: navy. No claro o pe da escala e claro (chip) e a cabeca e escura (texto). */
-  --brand-50: 234 239 247;
-  --brand-100: 213 223 238;
-  --brand-200: 176 192 220;
-  --brand-300: 131 151 190;
-  --brand-400: 79 99 143;
-  --brand-500: 44 62 102;
-  --brand-600: 30 43 77;
-  --brand-700: 22 33 61;
-  --brand-800: 17 26 48;
-  --brand-900: 14 23 48;
+  --brand-50: 233 238 247;
+  --brand-100: 211 220 238;
+  --brand-200: 172 188 218;
+  --brand-300: 125 146 187;
+  --brand-400: 76 98 143;
+  --brand-500: 40 62 105;
+  --brand-600: 20 36 69; /* #142445 Azul Marinho da marca */
+  --brand-700: 15 27 54;
+  --brand-800: 11 20 41;
+  --brand-900: 8 15 31;
 
   /* Acao primaria: fundo de botao que sempre leva texto branco. */
-  --acao: 30 43 77; /* #1E2B4D — branco por cima da 13.93 */
-  --acao-escura: 22 33 61; /* hover */
+  --acao: 20 36 69; /* #142445 — branco por cima da 15.2 */
+  --acao-escura: 11 20 41; /* hover */
   /* Faixa navy das paginas publicas e do topo do portal. Leva texto branco,
      entao e ESCURA nos dois temas — nunca inverte. */
-  --faixa: 22 33 61; /* #16213D */
+  --faixa: 15 27 54; /* #0F1B36 */
 }
 
 .dark {
@@ -107,6 +114,34 @@ body {
   background: rgb(var(--fundo));
   color: rgb(var(--slate-800));
   -webkit-font-smoothing: antialiased;
+  font-family: var(--font-texto);
+}
+
+/* Titulos em Montserrat (peso da marca); texto corrido em Barlow; placa,
+   chassi e protocolo em IBM Plex Mono (.placa / .codigo). */
+h1, h2, h3 {
+  font-family: var(--font-titulo);
+  letter-spacing: -0.01em;
+}
+
+/* Foco visivel em tudo que e interativo — o campo ja tem o proprio anel. */
+:focus-visible {
+  outline: 2px solid #0bace2;
+  outline-offset: 2px;
+}
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+}
+
+.placa,
+.codigo {
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+.placa {
+  text-transform: uppercase;
 }
 
 /* A troca de tema e suave, mas so nas cores: animar `all` faria layout e
@@ -235,9 +270,9 @@ body {
 .dark .border-teal-200, .dark .border-teal-300 { border-color: rgb(20 184 166 / 0.3); }
 
 /* Ciano da marca: mesma regra, com os nossos valores. */
-.dark .bg-cyan-50, .dark .bg-cyan-100 { background-color: rgb(34 167 228 / 0.15); }
-.dark .text-cyan-700, .dark .text-cyan-800, .dark .text-cyan-900 { color: #63bee9; }
-.dark .border-cyan-200, .dark .border-cyan-300 { border-color: rgb(34 167 228 / 0.3); }
+.dark .bg-cyan-50, .dark .bg-cyan-100 { background-color: rgb(11 172 226 / 0.15); }
+.dark .text-cyan-700, .dark .text-cyan-800, .dark .text-cyan-900 { color: #6ad0f0; }
+.dark .border-cyan-200, .dark .border-cyan-300 { border-color: rgb(11 172 226 / 0.3); }
 
 /* Numeros de "painel de instrumentos": tabulares e alinhados. */
 .tnum {
@@ -245,21 +280,18 @@ body {
   letter-spacing: -0.01em;
 }
 
-/* Cabine (sidebar): fundo navy da marca + pinstripe diagonal do rodape do site.
-   Uma unica declaracao de background (cor solida de fallback + duas camadas de
-   imagem) para nao ser sobrescrita por utilitarios de gradiente do Tailwind.
-   A cabine JA e escura no tema claro; no escuro ela so aprofunda, para nao
-   competir com o conteudo. */
+/* Cabine (sidebar): azul marinho da marca, liso, com a diagonal do rodape do
+   site quase invisivel. Ja e escura no tema claro; no escuro so aprofunda. */
 .cockpit {
-  background-color: #1e2b4d;
+  background-color: #142445;
   background-image:
-    repeating-linear-gradient(-45deg, transparent 0 13px, rgba(255, 255, 255, 0.02) 13px 14px),
-    linear-gradient(180deg, #1e2b4d 0%, #131d38 100%);
+    repeating-linear-gradient(-45deg, transparent 0 13px, rgba(255, 255, 255, 0.015) 13px 14px),
+    linear-gradient(180deg, #142445 0%, #0e1a35 100%);
 }
 
 .dark .cockpit {
-  background-color: #101830;
+  background-color: #0e1a35;
   background-image:
-    repeating-linear-gradient(-45deg, transparent 0 13px, rgba(255, 255, 255, 0.025) 13px 14px),
-    linear-gradient(180deg, #101830 0%, #0a1226 100%);
+    repeating-linear-gradient(-45deg, transparent 0 13px, rgba(255, 255, 255, 0.02) 13px 14px),
+    linear-gradient(180deg, #0e1a35 0%, #09122a 100%);
 }

@@ -62,55 +62,80 @@ function LoginForm({ logoUrl }: { logoUrl: string | null }) {
     router.refresh();
   }
 
+  const campo =
+    'mt-1 w-full rounded-lg border border-slate-300 bg-superficie px-3 py-2.5 text-sm text-slate-900 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30';
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
-      <form onSubmit={onSubmit} className="w-full max-w-sm space-y-4 rounded-xl bg-superficie p-8 shadow-sm">
-        <div className="flex flex-col items-center gap-2 pb-2">
-          <LogoSmartCar url={logoUrl} className="mb-2 h-16 w-auto object-contain" />
-          <h1 className="text-lg font-semibold text-slate-900">Painel de Gestao</h1>
-          <p className="text-xs text-slate-500">Acesso restrito a equipe</p>
-        </div>
-
-        <div>
-          <label className="text-sm text-slate-600">E-mail</label>
-          <input
-            type="email"
-            name="email"
-            autoComplete="username"
-            autoFocus
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-          />
+    <div className="grid min-h-screen bg-fundo md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+      {/* Painel da marca: navy chapado, a única área de cor da tela. */}
+      <aside className="cockpit hidden flex-col justify-between p-12 md:flex">
+        <div className="w-fit rounded-lg bg-white px-4 py-3">
+          <LogoSmartCar url={logoUrl} className="h-12 w-auto object-contain" />
         </div>
         <div>
-          <label className="text-sm text-slate-600">Senha</label>
-          <input
-            type="password"
-            name="password"
-            autoComplete="current-password"
-            required
-            value={senha}
-            onChange={(e) => setSenha(e.target.value)}
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-          />
+          <p className="font-display text-3xl font-semibold leading-tight text-white">
+            Associados, veículos e cobrança num só painel.
+          </p>
+          <p className="mt-3 max-w-md text-sm text-white/70">
+            Atendimento, assistência 24h, eventos e financeiro da Smart Car Brasil, com o acesso de cada pessoa conforme o seu perfil.
+          </p>
         </div>
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-md bg-acao py-2 text-sm font-medium text-white hover:bg-acao-escura disabled:opacity-60"
-        >
-          {loading ? 'Entrando...' : 'Entrar'}
-        </button>
+        <p className="text-xs text-white/60">Smart Car Brasil</p>
+      </aside>
 
-        <p className="text-center text-xs text-slate-400">
-          E associado?{' '}
-          <a href="/portal/login" className="text-brand-600 hover:underline">
-            Acesse o Portal do Associado
-          </a>
-        </p>
-      </form>
+      <main className="flex items-center justify-center px-6 py-12">
+        <form onSubmit={onSubmit} className="w-full max-w-sm space-y-5">
+          <div className="md:hidden">
+            <LogoSmartCar url={logoUrl} className="mb-6 h-14 w-auto object-contain" />
+          </div>
+          <div>
+            <h1 className="font-display text-2xl font-semibold text-slate-900">Entrar no painel</h1>
+            <p className="mt-1 text-sm text-slate-500">Acesso restrito à equipe.</p>
+          </div>
+
+          <div>
+            <label htmlFor="email" className="text-sm font-medium text-slate-700">E-mail</label>
+            <input
+              id="email"
+              type="email"
+              name="email"
+              autoComplete="username"
+              autoFocus
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={campo}
+            />
+          </div>
+          <div>
+            <label htmlFor="password" className="text-sm font-medium text-slate-700">Senha</label>
+            <input
+              id="password"
+              type="password"
+              name="password"
+              autoComplete="current-password"
+              required
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+              className={campo}
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-lg bg-acao py-2.5 text-sm font-semibold text-white transition-colors hover:bg-acao-escura disabled:opacity-60"
+          >
+            {loading ? 'Entrando...' : 'Entrar'}
+          </button>
+
+          <p className="text-sm text-slate-500">
+            É associado?{' '}
+            <a href="/portal/login" className="font-medium text-cyan-700 hover:underline">
+              Acesse o Portal do Associado
+            </a>
+          </p>
+        </form>
+      </main>
     </div>
   );
 }

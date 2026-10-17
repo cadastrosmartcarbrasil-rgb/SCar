@@ -49,28 +49,22 @@ export function LoginAssociado({ logoUrl }: { logoUrl: string | null }) {
 
       <section className="relative overflow-hidden bg-faixa">
         <div
-          className="absolute inset-0 bg-[radial-gradient(120%_120%_at_15%_0%,#2C3E66_0%,#16213D_55%,#0E1730_100%)]"
-          aria-hidden
-        />
-        <div
           className="absolute inset-x-0 bottom-0 h-14 bg-superficie"
           style={{ clipPath: 'polygon(0 62%, 100% 0, 100% 100%, 0 100%)' }}
           aria-hidden
         />
         <div className="relative mx-auto max-w-md px-4 pb-24 pt-10">
-          <p className="text-center text-[11px] font-bold uppercase tracking-[0.25em] text-cyan-400">
-            Area do associado
-          </p>
-          <h1 className="mt-2 text-center text-[26px] font-light uppercase leading-tight tracking-tight text-white">
-            Seus veiculos e<br /><span className="font-bold">suas mensalidades</span>
+          <h1 className="text-center font-display text-[26px] font-semibold leading-tight text-white">
+            Seus veículos e suas mensalidades
           </h1>
+          <p className="mt-2 text-center text-sm text-white/70">Portal do associado</p>
 
           <form
             onSubmit={onSubmit}
-            className="mt-7 space-y-3 rounded-2xl bg-superficie p-6 shadow-[0_10px_40px_-12px_rgba(0,0,0,0.5)]"
+            className="mt-7 space-y-3 rounded-xl bg-superficie p-6 shadow-xl"
           >
             <label className="block">
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+              <span className="text-sm font-medium text-slate-700">
                 CPF ou CNPJ
               </span>
               <input
@@ -82,18 +76,18 @@ export function LoginAssociado({ logoUrl }: { logoUrl: string | null }) {
                   const d = e.target.value.replace(/\D/g, '').slice(0, 14);
                   setDocumento(formatarDocumento(d, d.length > 11 ? 'PJ' : 'PF'));
                 }}
-                className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-center font-mono text-[16px] tracking-wide outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-center font-mono text-[16px] tracking-wide outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
               />
             </label>
 
             <label className="block">
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+              <span className="text-sm font-medium text-slate-700">
                 Senha
               </span>
               <input
                 type="password" value={senha} autoComplete="current-password"
                 onChange={(e) => setSenha(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-[14px] outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-[14px] outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
               />
             </label>
 
@@ -104,7 +98,7 @@ export function LoginAssociado({ logoUrl }: { logoUrl: string | null }) {
             <button
               type="submit"
               disabled={enviando || digitos.length < 11 || !senha}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-acao px-4 py-3 text-[14px] font-semibold text-white transition hover:bg-acao-escura disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-acao px-4 py-3 text-[14px] font-semibold text-white transition hover:bg-acao-escura disabled:opacity-50"
             >
               {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
               Entrar

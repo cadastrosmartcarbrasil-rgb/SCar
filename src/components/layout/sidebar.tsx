@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -30,6 +30,8 @@ import {
   Gauge,
   PhoneCall,
   CalendarDays,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
@@ -37,13 +39,13 @@ import { ThemeToggle } from '@/components/ui/theme-toggle';
 import type { PapelUsuario } from '@/lib/database.types';
 import { moduloDaRota } from '@/lib/permissoes';
 
-type Item = { href: string; label: string; icon: React.ElementType };
+export type Item = { href: string; label: string; icon: React.ElementType };
 /** Item com sub-itens (Regionais e Cobranca). */
 type Grupo = { label: string; icon: React.ElementType; itens: Item[] };
 type Entrada = Item | Grupo;
 const ehGrupo = (e: Entrada): e is Grupo => 'itens' in e;
 
-const OPERACAO: Item[] = [
+export const OPERACAO: Item[] = [
   { href: '/dashboard', label: 'Visao Geral', icon: LayoutDashboard },
   { href: '/sac', label: 'SAC / Atendimento', icon: Headset },
   { href: '/protocolos', label: 'Protocolos', icon: Ticket },
@@ -54,7 +56,7 @@ const OPERACAO: Item[] = [
   { href: '/rastreadores', label: 'Rastreadores', icon: Satellite },
   { href: '/eventos', label: 'Eventos', icon: AlertTriangle },
 ];
-const GESTAO: Entrada[] = [
+export const GESTAO: Entrada[] = [
   // COBRANCA virou grupo (0097): o painel de inadimplencia, o calendario dos 6
   // ciclos e a emissao (faturas, lote e remessas) sao tres trabalhos diferentes.
   {
@@ -78,7 +80,7 @@ const GESTAO: Entrada[] = [
 function Brand({ logoUrl }: { logoUrl?: string | null }) {
   if (!logoUrl) return <Wordmark />;
   return (
-    <div className="rounded-xl bg-superficie px-3 py-2.5 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.35)]">
+    <div className="rounded-lg bg-white px-3 py-2.5">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={logoUrl} alt="Smart Car Brasil" className="mx-auto max-h-12 w-auto object-contain" />
     </div>
@@ -89,18 +91,18 @@ function Brand({ logoUrl }: { logoUrl?: string | null }) {
 function Wordmark() {
   return (
     <div className="flex items-center gap-2.5">
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[radial-gradient(120%_120%_at_30%_20%,#20406e,#12203c)] shadow-[0_0_0_1px_rgba(255,255,255,0.07),0_8px_18px_-8px_#26aeea]">
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white/10 ring-1 ring-white/15">
         <svg viewBox="0 0 32 32" width="22" height="22" fill="none" aria-hidden>
-          <path d="M4 21c6-1 9-4 12-9 2-3.4 4.6-6 8-7-1.6 2.2-2.2 4.4-2.6 7-0.6 4.2-3.4 7.6-8 9-3 .9-6 .6-9.4 0z" fill="#4FC0F2" />
+          <path d="M4 21c6-1 9-4 12-9 2-3.4 4.6-6 8-7-1.6 2.2-2.2 4.4-2.6 7-0.6 4.2-3.4 7.6-8 9-3 .9-6 .6-9.4 0z" fill="#0BACE2" />
           <path d="M7 24c5-.4 8.4-2 11-5.4-1 3.4-3.4 5.8-7 6.4-1.4.2-2.8.1-4-1z" fill="#fff" fillOpacity=".85" />
         </svg>
       </span>
       <span className="leading-none">
-        <span className="text-[15px] font-extrabold tracking-tight text-white">
+        <span className="font-display text-[15px] font-extrabold tracking-tight text-white">
           SMART<span className="text-cyan-400">CAR</span>BRASIL
         </span>
-        <span className="mt-1 block text-[8.5px] font-semibold tracking-[0.3em] text-white/55">
-          PROTECAO VEICULAR
+        <span className="mt-1 block text-[10px] font-medium text-white/60">
+          Proteção veicular
         </span>
       </span>
     </div>
@@ -110,24 +112,27 @@ function Wordmark() {
 const ehAtivo = (pathname: string, href: string) =>
   pathname === href || pathname.startsWith(href + '/');
 
-function NavLink({ item, pathname, onNav, sub }: {
-  item: Item; pathname: string; onNav?: () => void; sub?: boolean;
+function NavLink({ item, pathname, onNav, sub, compacto }: {
+  item: Item; pathname: string; onNav?: () => void; sub?: boolean; compacto?: boolean;
 }) {
   const active = ehAtivo(pathname, item.href);
   return (
     <Link
       href={item.href}
       onClick={onNav}
+      title={compacto ? item.label : undefined}
+      aria-label={compacto ? item.label : undefined}
+      aria-current={active ? 'page' : undefined}
       className={cn(
-        'relative flex items-center gap-3 rounded-[10px] transition',
-        sub ? 'py-2 pl-3 pr-3 text-[13px]' : 'px-3 py-2.5 text-[13.5px]',
+        'flex items-center rounded-lg transition-colors',
+        compacto ? 'h-10 justify-center' : sub ? 'gap-3 py-2 pl-3 pr-3 text-[13px]' : 'gap-3 px-3 py-2.5 text-[13.5px]',
         active
-          ? "bg-cyan-500/15 font-semibold text-white before:absolute before:-left-3 before:top-2 before:bottom-2 before:w-[3px] before:rounded-r before:bg-cyan-400 before:shadow-[0_0_10px_#26aeea] before:content-['']"
-          : 'font-medium text-white/80 hover:bg-white/5 hover:text-white',
+          ? 'bg-cyan-500 font-semibold text-navy'
+          : 'font-medium text-white/80 hover:bg-white/10 hover:text-white',
       )}
     >
-      <item.icon className={cn('shrink-0 opacity-90', sub ? 'h-4 w-4' : 'h-[18px] w-[18px]')} />
-      {item.label}
+      <item.icon className={cn('shrink-0', sub && !compacto ? 'h-4 w-4' : 'h-[18px] w-[18px]')} />
+      {!compacto && item.label}
     </Link>
   );
 }
@@ -136,12 +141,22 @@ function NavLink({ item, pathname, onNav, sub }: {
  * Grupo do menu. Nasce ABERTO quando a pessoa esta dentro dele — esconder o
  * item que mostra onde ela esta e esconder a propria localizacao.
  */
-function NavGrupo({ grupo, pathname, onNav }: {
-  grupo: Grupo; pathname: string; onNav?: () => void;
+function NavGrupo({ grupo, pathname, onNav, compacto }: {
+  grupo: Grupo; pathname: string; onNav?: () => void; compacto?: boolean;
 }) {
   const dentro = grupo.itens.some((i) => ehAtivo(pathname, i.href));
   const [aberto, setAberto] = useState(dentro);
   const mostrar = aberto || dentro;
+  // Recolhida, a barra só tem ícones: o grupo vira a lista dos seus itens.
+  if (compacto) {
+    return (
+      <div className="space-y-1 border-t border-white/10 pt-2">
+        {grupo.itens.map((i) => (
+          <NavLink key={i.href} item={i} pathname={pathname} onNav={onNav} compacto />
+        ))}
+      </div>
+    );
+  }
   return (
     <div>
       <button
@@ -149,16 +164,16 @@ function NavGrupo({ grupo, pathname, onNav }: {
         onClick={() => setAberto(!mostrar)}
         aria-expanded={mostrar}
         className={cn(
-          'flex w-full items-center gap-3 rounded-[10px] px-3 py-2.5 text-[13.5px] transition',
-          dentro ? 'font-semibold text-white' : 'font-medium text-white/80 hover:bg-white/5 hover:text-white',
+          'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13.5px] transition-colors',
+          dentro ? 'font-semibold text-white' : 'font-medium text-white/80 hover:bg-white/10 hover:text-white',
         )}
       >
-        <grupo.icon className="h-[18px] w-[18px] shrink-0 opacity-90" />
+        <grupo.icon className="h-[18px] w-[18px] shrink-0" />
         <span className="flex-1 text-left">{grupo.label}</span>
         <ChevronDown className={cn('h-4 w-4 shrink-0 transition-transform', mostrar && 'rotate-180')} />
       </button>
       {mostrar && (
-        <div className="ml-5 mt-0.5 space-y-0.5 border-l border-white/10 pl-2">
+        <div className="ml-5 mt-0.5 space-y-0.5 border-l border-white/15 pl-2">
           {grupo.itens.map((i) => (
             <NavLink key={i.href} item={i} pathname={pathname} onNav={onNav} sub />
           ))}
@@ -183,17 +198,20 @@ function filtrar(entradas: Entrada[], permissoes: string[] | null): Entrada[] {
   });
 }
 
-function Nav({ pathname, menuGestao, onNav, permissoes }: {
-  pathname: string; menuGestao: Entrada[]; onNav?: () => void; permissoes: string[] | null;
+function Nav({ pathname, menuGestao, onNav, permissoes, compacto }: {
+  pathname: string; menuGestao: Entrada[]; onNav?: () => void; permissoes: string[] | null; compacto?: boolean;
 }) {
+  const titulo = 'px-3 pb-1.5 pt-4 text-xs font-semibold text-white/60';
   return (
-    <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2">
-      <p className="px-3 pb-1.5 pt-3 text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Operacao</p>
-      {(filtrar(OPERACAO, permissoes) as Item[]).map((i) => <NavLink key={i.href} item={i} pathname={pathname} onNav={onNav} />)}
-      <p className="px-3 pb-1.5 pt-4 text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Gestao</p>
+    <nav className={cn('flex-1 space-y-1 overflow-y-auto py-2', compacto ? 'px-2' : 'px-3')} aria-label="Menu principal">
+      {!compacto && <p className={titulo}>Operação</p>}
+      {(filtrar(OPERACAO, permissoes) as Item[]).map((i) => (
+        <NavLink key={i.href} item={i} pathname={pathname} onNav={onNav} compacto={compacto} />
+      ))}
+      {compacto ? <div className="my-2 border-t border-white/10" /> : <p className={titulo}>Gestão</p>}
       {filtrar(menuGestao, permissoes).map((e) => (ehGrupo(e)
-        ? <NavGrupo key={e.label} grupo={e} pathname={pathname} onNav={onNav} />
-        : <NavLink key={e.href} item={e} pathname={pathname} onNav={onNav} />))}
+        ? <NavGrupo key={e.label} grupo={e} pathname={pathname} onNav={onNav} compacto={compacto} />
+        : <NavLink key={e.href} item={e} pathname={pathname} onNav={onNav} compacto={compacto} />))}
     </nav>
   );
 }
@@ -205,6 +223,17 @@ export function Sidebar({ papel, logoUrl, permissoes = null }: {
   const router = useRouter();
   const supabase = createClient();
   const [aberto, setAberto] = useState(false);
+  // Barra recolhida (só ícones): preferência de quem usa, guardada no navegador.
+  const [recolhida, setRecolhida] = useState(false);
+  useEffect(() => {
+    try { setRecolhida(localStorage.getItem('scar:menu-recolhido') === '1'); } catch { /* sem storage */ }
+  }, []);
+  function alternarMenu() {
+    setRecolhida((v) => {
+      try { localStorage.setItem('scar:menu-recolhido', v ? '0' : '1'); } catch { /* sem storage */ }
+      return !v;
+    });
+  }
   // Integracao com o Mutual: consulta e importacao sao da MATRIZ (o banco tambem
   // exige tem_acesso_global em mutual_registrar_captura).
   const integracao = ['admin', 'financeiro'].includes(papel ?? '')
@@ -278,14 +307,53 @@ export function Sidebar({ papel, logoUrl, permissoes = null }: {
       )}
 
       {/* Sidebar desktop (cabine) */}
-      <aside className="cockpit hidden w-64 shrink-0 flex-col md:sticky md:top-0 md:flex md:h-screen">
-        <div className="px-4 py-5">
-          <Brand logoUrl={logoUrl} />
+      <aside
+        className={cn(
+          'cockpit hidden shrink-0 flex-col transition-[width] duration-200 motion-reduce:transition-none md:sticky md:top-0 md:flex md:h-screen',
+          recolhida ? 'w-[72px]' : 'w-64',
+        )}
+      >
+        <div className={cn('py-5', recolhida ? 'px-2' : 'px-4')}>
+          {recolhida ? (
+            <div className="mx-auto grid h-10 w-10 place-items-center rounded-lg bg-white/10 ring-1 ring-white/15" title="Smart Car Brasil">
+              <svg viewBox="0 0 32 32" width="22" height="22" fill="none" aria-hidden>
+                <path d="M4 21c6-1 9-4 12-9 2-3.4 4.6-6 8-7-1.6 2.2-2.2 4.4-2.6 7-0.6 4.2-3.4 7.6-8 9-3 .9-6 .6-9.4 0z" fill="#0BACE2" />
+                <path d="M7 24c5-.4 8.4-2 11-5.4-1 3.4-3.4 5.8-7 6.4-1.4.2-2.8.1-4-1z" fill="#fff" fillOpacity=".85" />
+              </svg>
+            </div>
+          ) : (
+            <Brand logoUrl={logoUrl} />
+          )}
         </div>
-        <Nav pathname={pathname} menuGestao={menuGestao} permissoes={permissoes} />
-        <button onClick={sair} className="flex items-center gap-3 border-t border-white/10 px-5 py-3.5 text-sm text-white/80 transition hover:text-white">
-          <LogOut className="h-4 w-4" /> Sair
-        </button>
+        <Nav pathname={pathname} menuGestao={menuGestao} permissoes={permissoes} compacto={recolhida} />
+        <div className="border-t border-white/10 p-2">
+          <button
+            type="button"
+            onClick={alternarMenu}
+            aria-label={recolhida ? 'Expandir menu' : 'Recolher menu'}
+            title={recolhida ? 'Expandir menu' : 'Recolher menu'}
+            className={cn(
+              'flex h-10 w-full items-center rounded-lg text-sm text-white/80 transition-colors hover:bg-white/10 hover:text-white',
+              recolhida ? 'justify-center' : 'gap-3 px-3',
+            )}
+          >
+            {recolhida ? <PanelLeftOpen className="h-[18px] w-[18px]" /> : <PanelLeftClose className="h-[18px] w-[18px]" />}
+            {!recolhida && 'Recolher menu'}
+          </button>
+          <button
+            type="button"
+            onClick={sair}
+            title={recolhida ? 'Sair' : undefined}
+            aria-label="Sair"
+            className={cn(
+              'flex h-10 w-full items-center rounded-lg text-sm text-white/80 transition-colors hover:bg-white/10 hover:text-white',
+              recolhida ? 'justify-center' : 'gap-3 px-3',
+            )}
+          >
+            <LogOut className="h-[18px] w-[18px]" />
+            {!recolhida && 'Sair'}
+          </button>
+        </div>
       </aside>
     </>
   );

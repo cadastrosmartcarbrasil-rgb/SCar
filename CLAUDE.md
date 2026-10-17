@@ -1255,6 +1255,13 @@ Prioridade: **segurança (RLS)** e **sempre validado** antes de commitar.
 - **Supabase** (Postgres + RLS + Auth + Storage). O caminho de dados usa **`supabase-js`** (respeita RLS),
   NÃO Prisma (Prisma ignora RLS).
 - **TanStack Query** para cache/estado client-side. **Tailwind** + lucide-react + Recharts.
+- **Layout redesenhado (17/10/2026, só visual — nenhuma rota/função mudou):** paleta oficial
+  (Azul Marinho `#142445`, Azul Smart `#0BACE2`, Celeste `#6AA9DE`) nos tokens de `globals.css`;
+  fontes self-hosted via `@fontsource` (Montserrat nos títulos = `font-display`, Barlow no texto,
+  IBM Plex Mono em `.placa`/`.codigo`). Cartões planos com borda (sem sombra decorativa); menu lateral
+  **recolhível** (preferência em `localStorage` `scar:menu-recolhido`) com item ativo em ciano chapado;
+  `src/components/layout/topbar.tsx` mostra área + título da tela (derivado de `OPERACAO`/`GESTAO`
+  exportados pelo `sidebar.tsx`); login da equipe em dois painéis. Rótulos de grupo em sentence case.
 - **Design system (marca Smart Car Brasil):** tema "cockpit". `tailwind.config.ts` define
   `brand` = **NAVY** (`brand-600 #1E2B4D`, a barra do site; acao primaria/estrutura) e `cyan` =
   **CIANO** da marca (`cyan-500 #22A7E4`/`cyan-600 #139AD6`; energia/acento — o "CAR" e o rodape).

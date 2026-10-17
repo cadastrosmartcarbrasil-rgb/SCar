@@ -163,8 +163,8 @@ export default function PainelRegionalPage() {
                 <YAxis type="category" dataKey="nome" width={80} tick={{ fontSize: 11, fill: '#64748b' }} tickLine={false} axisLine={false} />
                 <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }} />
                 <Bar dataKey="Leads" fill="#C9E8F7" radius={[0, 4, 4, 0]} maxBarSize={14} />
-                <Bar dataKey="Convertidos" fill="#22A7E4" radius={[0, 4, 4, 0]} maxBarSize={14}>
-                  {ranking.map((r) => <Cell key={r.nome} fill="#22A7E4" />)}
+                <Bar dataKey="Convertidos" fill="#0BACE2" radius={[0, 4, 4, 0]} maxBarSize={14}>
+                  {ranking.map((r) => <Cell key={r.nome} fill="#0BACE2" />)}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>

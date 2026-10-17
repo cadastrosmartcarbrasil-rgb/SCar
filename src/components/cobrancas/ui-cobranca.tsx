@@ -14,7 +14,7 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 
 // Paleta do sistema (a mesma dos paineis da 24h e das Regionais).
 export const COR = {
-  acento: '#139AD6',
+  acento: '#0785B0',
   verde: '#12A150',
   ambar: '#C77700',
   vermelho: '#E5484D',

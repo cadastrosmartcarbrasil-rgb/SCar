@@ -18,11 +18,11 @@ const TOM_VALOR: Record<Tom, string> = {
   destaque: 'text-brand-700',
 };
 const TOM_ICONE: Record<Tom, string> = {
-  neutro: 'bg-slate-100 text-slate-500',
-  receita: 'bg-emerald-50 text-emerald-600',
-  despesa: 'bg-rose-50 text-rose-600',
-  alerta: 'bg-amber-50 text-amber-600',
-  destaque: 'bg-cyan-50 text-cyan-600',
+  neutro: 'text-slate-400',
+  receita: 'text-emerald-600',
+  despesa: 'text-rose-600',
+  alerta: 'text-amber-600',
+  destaque: 'text-cyan-600',
 };
 
 /**
@@ -52,19 +52,17 @@ export function Indicador({
   formato?: 'moeda' | 'numero' | 'percentual';
 }) {
   return (
-    <div className="rounded-2xl border border-slate-200/80 bg-superficie p-4 shadow-[0_1px_2px_rgba(20,33,61,0.04),0_10px_26px_-16px_rgba(20,33,61,0.18)]">
+    <div className="rounded-xl border border-slate-200 bg-superficie p-4">
       <div className="flex items-start justify-between gap-2">
-        <p className="text-[11.5px] font-semibold uppercase tracking-wide text-slate-500">{titulo}</p>
+        <p className="text-[13px] font-medium text-slate-500">{titulo}</p>
         {Icon && (
-          <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-[10px] ${TOM_ICONE[tom]}`}>
-            <Icon className="h-4 w-4" strokeWidth={2} />
-          </span>
+          <Icon className={`h-[18px] w-[18px] shrink-0 ${TOM_ICONE[tom]}`} strokeWidth={1.75} aria-hidden />
         )}
       </div>
       {carregando ? (
         <div className="mt-3 h-7 w-28 animate-pulse rounded bg-slate-100" />
       ) : (
-        <p className={`tnum mt-2.5 text-[23px] font-bold leading-none ${TOM_VALOR[tom]}`}>
+        <p className={`tnum mt-2 font-display text-[24px] font-semibold leading-none ${TOM_VALOR[tom]}`}>
           {formato === 'moeda' && (
             <span className="mr-1 text-[13px] font-semibold text-slate-400">R$</span>
           )}
@@ -76,7 +74,7 @@ export function Indicador({
           )}
         </p>
       )}
-      {detalhe && <p className="mt-2 text-[11.5px] leading-tight text-slate-500">{detalhe}</p>}
+      {detalhe && <p className="mt-2 text-xs leading-tight text-slate-500">{detalhe}</p>}
     </div>
   );
 }

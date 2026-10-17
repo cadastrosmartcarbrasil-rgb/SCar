@@ -1,4 +1,11 @@
 import type { Metadata, Viewport } from 'next';
+import '@fontsource-variable/montserrat';
+import '@fontsource/barlow/400.css';
+import '@fontsource/barlow/500.css';
+import '@fontsource/barlow/600.css';
+import '@fontsource/barlow/700.css';
+import '@fontsource/ibm-plex-mono/400.css';
+import '@fontsource/ibm-plex-mono/500.css';
 import './globals.css';
 import { Providers } from '@/components/providers';
 import { SCRIPT_TEMA_INICIAL } from '@/lib/tema';
@@ -17,7 +24,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#1E2B4D',
+  themeColor: '#142445',
   width: 'device-width',
   initialScale: 1,
 };

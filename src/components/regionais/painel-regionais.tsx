@@ -34,7 +34,7 @@ import type { RegionaisPainelLinha } from '@/lib/database.types';
 // Toda barra e faixa carrega rotulo visivel: identidade nunca depende da cor.
 // Grafico usa hex fixo, como os demais do sistema.
 // ---------------------------------------------------------------------------
-const COR_ACENTO = '#139AD6';   // carteira / recebido
+const COR_ACENTO = '#0785B0';   // carteira / recebido
 const COR_VERDE  = '#12A150';
 const COR_AMBAR  = '#C77700';
 const COR_VERMELHO = '#E5484D';

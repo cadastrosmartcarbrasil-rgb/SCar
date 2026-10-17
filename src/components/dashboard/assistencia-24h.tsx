@@ -30,7 +30,7 @@ import { formatCurrency, formatDate, formatPercent } from '@/lib/utils';
 // nos DOIS temas (claro e escuro), por isso um acento so + as cores de status.
 // Toda barra/faixa carrega rotulo visivel: identidade nunca depende da cor.
 // ---------------------------------------------------------------------------
-const COR_ACENTO = '#139AD6';   // ciano da marca (cyan-600)
+const COR_ACENTO = '#0785B0';   // ciano da marca (cyan-600)
 const COR_ALERTA = '#E5484D';
 const COR_SITUACAO: Record<GrupoSituacao, string> = {
   ATIVO: '#12A150',

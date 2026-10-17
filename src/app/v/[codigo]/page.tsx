@@ -45,7 +45,7 @@ export default async function HotlinkPage({ params }: { params: { codigo: string
       {/* Hero com o corte diagonal da marca */}
       <section className="relative overflow-hidden bg-faixa">
         <div
-          className="absolute inset-0 bg-[radial-gradient(120%_120%_at_15%_0%,#2C3E66_0%,#16213D_55%,#0E1730_100%)]"
+          className="absolute inset-0 bg-[radial-gradient(120%_120%_at_15%_0%,#2C3E66_0%,#0F1B36_55%,#0E1730_100%)]"
           aria-hidden
         />
         <div
