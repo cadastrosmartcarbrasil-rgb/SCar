@@ -351,6 +351,8 @@ tag = sha) e o VPS só baixa e troca (`scripts/atualizar-vps.sh`, espera a image
 cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 && bash scripts/atualizar-vps.sh
 ```
 Configuração de uma vez (Variables do GitHub, `docker login ghcr.io`, DNS do daemon) em `DEPLOY.md` §2.0.
+**✅ No ar desde 17/10/2026:** Variables cadastradas, `docker login ghcr.io` feito no VPS (token só
+`read:packages`), primeiro deploy por imagem conferido pelo usuário (a compilação no GitHub leva ~3,5 min).
 **Plano B** (compilar no VPS, 10+ min), que continua funcionando:
 ```bash
 cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 \
@@ -2357,7 +2359,9 @@ categorias **Associados** e **Veículos**.
   `src/lib/kanban-eventos.ts` (testada); `useEventos` passou a trazer `regionais(nome)`.
 - **Limpeza dos testes (17/10/2026):** script em `supabase/limpeza/2026-10-17_eventos_negados.sql`
   (os 6 eventos, todos em NEGADO, + a conta a pagar, as movimentações e os protocolos ligados a
-  eles). O `execute_sql` do MCP estourou os 60 s sem gravar nada — rodar pelo SQL Editor.
+  eles). O `execute_sql` do MCP estourou os 60 s sem gravar nada; **rodado pelo usuário e CONFERIDO
+  em 17/10/2026**: `eventos_sinistro` vazia, a conta "OFICINA", as movimentações e os protocolos
+  ligados saíram junto. Os 2 arquivos de anexo seguem no bucket (SQL não apaga storage).
 
 ## INADIMPLÊNCIA E COBRANÇAS (0097) — Fase 1
 > Especificação, fórmulas, regras bancárias, permissões e fases em
