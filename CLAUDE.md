@@ -344,7 +344,14 @@ pelo usuário em 20/09/2026** e a **`0083` conferida no banco em 21/09/2026** (a
 > O backfill da `0078` não preencheu `data_saida` em ninguém, e isso está CERTO: não há nenhum
 > veículo fora da base (`inativo`/`baixado`/`excluido`) para carimbar.
 
-**3. COMO PUBLICAR.** Migrations primeiro (acima), depois o contêiner:
+**3. COMO PUBLICAR.** Migrations primeiro (acima), depois o contêiner. **Desde 17/10/2026 a imagem
+é compilada no GitHub Actions** (`.github/workflows/imagem.yml` → `ghcr.io/cadastrosmartcarbrasil-rgb/scar`,
+tag = sha) e o VPS só baixa e troca (`scripts/atualizar-vps.sh`, espera a imagem do commit ficar pronta):
+```bash
+cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 && bash scripts/atualizar-vps.sh
+```
+Configuração de uma vez (Variables do GitHub, `docker login ghcr.io`, DNS do daemon) em `DEPLOY.md` §2.0.
+**Plano B** (compilar no VPS, 10+ min), que continua funcionando:
 ```bash
 cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 \
   && DOCKER_BUILDKIT=0 docker compose up -d --build
@@ -638,8 +645,8 @@ para testar, aba anônima.
 | Validar tudo antes de commitar | `npm run validate` (tipos → Vitest → migrations+testes de banco+schema → build) |
 | Só os testes de banco | `npm run test:db` · um módulo: `npm run test:db -- 0043` |
 | Regerar o `supabase/schema.sql` | `npm run schema` (rodar SEMPRE após criar/editar migration) |
-| Publicar — **de dentro do VPS** (prompt `root@smartvida:~#`) | `cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 && DOCKER_BUILDKIT=0 docker compose up -d --build` |
-| Publicar — **do seu computador** (PowerShell/terminal local) | `ssh root@appsmartcar.com.br "cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 && DOCKER_BUILDKIT=0 docker compose up -d --build"` |
+| Publicar — **de dentro do VPS** (prompt `root@smartvida:~#`) | `cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 && bash scripts/atualizar-vps.sh` (imagem pronta do GitHub; plano B: `DOCKER_BUILDKIT=0 docker compose up -d --build`) |
+| Publicar — **do seu computador** (PowerShell/terminal local) | `.\scripts\deploy.ps1` ou `npm run deploy` (chamam o `atualizar-vps.sh` no VPS) |
 
 **O `DOCKER_BUILDKIT=0` FAZ PARTE DO COMANDO — nao e contorno de emergencia.** O daemon do Docker
 deste VPS resolve DNS pelo stub do `systemd-resolved`, que ja ficou "no ar e mudo": com o BuildKit

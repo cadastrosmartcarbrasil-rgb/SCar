@@ -36,11 +36,51 @@ todas as migrations) em vez de rodar uma a uma.
 
 ## 2. Aplicação (VPS)
 
+> **DESDE 17/10/2026 O VPS NÃO COMPILA MAIS.** Cada push no branch de deploy faz o
+> GitHub Actions (`.github/workflows/imagem.yml`) compilar a imagem e guardá-la em
+> `ghcr.io/cadastrosmartcarbrasil-rgb/scar` (tag = sha do commit, e `latest`). O
+> deploy virou **baixar a imagem e trocar o contêiner** (~30 s), com
+> `scripts/atualizar-vps.sh`. Compilar aqui levava 10+ min: máquina pequena, swap
+> e o builder clássico (`DOCKER_BUILDKIT=0`). O build local continua como
+> **plano B** e o comando antigo segue funcionando.
+
+### 2.0 Configuração de uma vez só (antes do primeiro deploy por imagem)
+
+1. **GitHub → repositório → Settings → Secrets and variables → Actions → aba
+   Variables → New repository variable**, com os valores do `.env` do VPS
+   (`grep ^NEXT_PUBLIC /opt/scar/.env`). São públicos (vão para o navegador):
+   `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` e
+   `NEXT_PUBLIC_SUPABASE_BUCKET_SINISTROS`. Depois, aba **Actions** → *Imagem de
+   produção* → **Run workflow** (ou qualquer push) e esperar ficar verde.
+2. **Token de leitura do registro:** GitHub → foto → *Settings → Developer
+   settings → Personal access tokens → Tokens (classic) → Generate new token*,
+   escopo **só `read:packages`**, sem expiração curta. No VPS:
+   ```bash
+   docker login ghcr.io -u cadastrosmartcarbrasil-rgb   # cola o token como senha
+   ```
+   Fica salvo em `/root/.docker/config.json`; não vai para o repositório.
+3. **DNS do daemon do Docker** — baixar imagem passa pelo daemon, que é o que
+   falhava (ver "Por que o comando leva `DOCKER_BUILDKIT=0`" abaixo). Aplicar o
+   conserto daquela seção (`ln -sf /run/systemd/resolve/resolv.conf
+   /etc/resolv.conf`, conferindo antes que o arquivo lista `nameserver`) e testar:
+   `docker pull caddy:2-alpine`.
+4. Primeiro deploy: `cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 && bash scripts/atualizar-vps.sh`.
+
+### O deploy do dia a dia
+```bash
+cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 && bash scripts/atualizar-vps.sh
+```
+Se o push foi agora, o script **espera** a imagem do commit ficar pronta no
+GitHub (mostra "GitHub ainda compilando…", até 15 min) e então troca. Voltar para
+uma versão anterior: `bash scripts/atualizar-vps.sh <sha-do-commit>` (o script
+guarda as 3 imagens mais recentes no disco). Erros conhecidos: `denied` /
+`unauthorized` = falta o `docker login` (passo 2); `lookup ... i/o timeout` = DNS
+(passo 3). **Plano B**, compilando no VPS como antes, é o comando da seção (a).
+
 O comando muda conforme **de onde você digita**. Confira o prompt antes:
 
-### (a) Você JÁ está dentro do servidor
-Prompt parecido com `root@smartvida:~#`. É o caso mais comum quando a janela do
-SSH já está aberta:
+### (a) Plano B — compilar no próprio VPS (o jeito antigo, 10+ min)
+Prompt parecido com `root@smartvida:~#`. Use só se o GitHub/registro estiver fora:
 
 ```bash
 cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 && DOCKER_BUILDKIT=0 docker compose up -d --build

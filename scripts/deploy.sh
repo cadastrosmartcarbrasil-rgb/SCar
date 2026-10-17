@@ -34,7 +34,7 @@ ssh "$SERVIDOR" "set -e
   git fetch origin $BRANCH
   git checkout $BRANCH
   git pull origin $BRANCH
-  DOCKER_BUILDKIT=0 docker compose up -d --build"
+  bash scripts/atualizar-vps.sh"
 
 echo
 echo "Deploy concluido. Atualize a pagina com Ctrl+F5."

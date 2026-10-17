@@ -4,13 +4,17 @@
 #
 # Uso no VPS:
 #   1) Preencha o arquivo .env (copie de .env.docker.example)
-#   2) docker compose up -d --build
+#   2) bash scripts/atualizar-vps.sh   (baixa a imagem pronta do GitHub)
+#      plano B, compilando aqui: DOCKER_BUILDKIT=0 docker compose up -d --build
 #
 # O Caddy obtem e renova o certificado SSL do dominio automaticamente
 # (Let's Encrypt), desde que o DNS do dominio ja aponte para o IP do VPS.
 # ============================================================================
 services:
   app:
+    # Imagem compilada pelo GitHub Actions (.github/workflows/imagem.yml).
+    # O `build:` abaixo fica como plano B (compilar no proprio VPS).
+    image: ghcr.io/cadastrosmartcarbrasil-rgb/scar:latest
     build:
       context: .
       args:

@@ -33,7 +33,7 @@ if ($Descobrir) {
 # local e passa; o Dockerfile e generico, entao nada se perde. Ver DEPLOY.md.
 Write-Host "==> $Servidor : $Caminho ($Branch)" -ForegroundColor Cyan
 
-$remoto = "set -e; cd $Caminho; git fetch origin $Branch; git checkout $Branch; git pull origin $Branch; DOCKER_BUILDKIT=0 docker compose up -d --build"
+$remoto = "set -e; cd $Caminho; git fetch origin $Branch; git checkout $Branch; git pull origin $Branch; bash scripts/atualizar-vps.sh"
 ssh $Servidor $remoto
 
 if ($LASTEXITCODE -eq 0) {
