@@ -1457,6 +1457,94 @@ export type EventosSinistroRow = Timestamps & {
   bo_resumo: string | null;
   // 0103 — informado na abertura; libera o cadastro de terceiros
   possui_terceiros: boolean;
+  // 0113 — prazo regulatorio de 90 dias (Art. 22, CNSP 491/2026)
+  documentacao_completa_em: string | null;
+  documentacao_completa_origem: 'AUTOMATICA' | 'MANUAL' | null;
+  documentacao_completa_por: string | null;
+  regulacao_encerrada_em: string | null;
+  recusa_fora_do_prazo: boolean;
+};
+
+// 0113 — catalogo da documentacao exigida do evento
+export type EventoDocumentosModeloRow = Timestamps & {
+  id: string;
+  nome: string;
+  descricao: string | null;
+  obrigatorio: boolean;
+  tipo_evento_id: string | null;
+  ordem: number;
+  ativo: boolean;
+};
+
+export type SituacaoDocumentoEvento = 'PENDENTE' | 'ENTREGUE' | 'DISPENSADO';
+
+// 0113 — as pendencias de documento de cada evento
+export type EventoDocumentosRow = Timestamps & {
+  id: string;
+  evento_id: string;
+  modelo_id: string | null;
+  nome: string;
+  obrigatorio: boolean;
+  situacao: SituacaoDocumentoEvento;
+  complementar: boolean;
+  solicitado_em: string;
+  solicitado_por: string | null;
+  entregue_em: string | null;
+  situacao_em: string;
+  situacao_por: string | null;
+  anexo_id: string | null;
+  observacao: string | null;
+};
+
+// 0113 — trilha do prazo (append-only, escrita por trigger)
+export type EventoPrazoHistoricoRow = {
+  id: string;
+  evento_id: string;
+  tipo: string;
+  detalhe: string | null;
+  documento_id: string | null;
+  dias: number | null;
+  usuario_id: string | null;
+  created_at: string;
+};
+
+export type EventoPrazoAlertasRow = {
+  id: string;
+  evento_id: string;
+  marco: number;
+  dias: number;
+  limite_prazo: string;
+  disparado_em: string;
+  notificado_em: string | null;
+  ciente_em: string | null;
+  ciente_por: string | null;
+};
+
+// 0113 — uma linha de `eventos_prazos`
+export type EventoPrazo = {
+  evento_id: string;
+  numero_protocolo: string | null;
+  status: string;
+  regional_id: string | null;
+  regional_nome: string | null;
+  cliente_nome: string | null;
+  placa: string | null;
+  aviso_em: string;
+  documentacao_completa_em: string | null;
+  documentacao_origem: 'AUTOMATICA' | 'MANUAL' | null;
+  inicio_prazo: string | null;
+  limite_prazo: string | null;
+  dias_transcorridos: number | null;
+  dias_restantes: number | null;
+  dias_desde_aviso: number;
+  nivel: string;
+  docs_obrigatorios: number;
+  docs_pendentes: number;
+  docs_complementares: number;
+  encerrado_em: string | null;
+  recusa_fora_do_prazo: boolean;
+  alertas_sem_ciencia: number;
+  maior_marco_sem_ciencia: number | null;
 };
 
 // 0103 — terceiro vinculado a UM evento (e, por FK composta, ao associado dono do evento)
@@ -3222,6 +3310,13 @@ export type Database = {
         ]
       >;
       tipos_evento: TableDef<TiposEventoRow>;
+      evento_documentos_modelo: TableDef<EventoDocumentosModeloRow, [Rel<'tipo_evento_id', 'tipos_evento'>]>;
+      evento_documentos: TableDef<
+        EventoDocumentosRow,
+        [Rel<'evento_id', 'eventos_sinistro'>, Rel<'anexo_id', 'anexos_evento'>, Rel<'situacao_por', 'usuarios'>]
+      >;
+      evento_prazo_historico: TableDef<EventoPrazoHistoricoRow, [Rel<'evento_id', 'eventos_sinistro'>, Rel<'usuario_id', 'usuarios'>]>;
+      evento_prazo_alertas: TableDef<EventoPrazoAlertasRow, [Rel<'evento_id', 'eventos_sinistro'>]>;
       historico_protocolo: TableDef<HistoricoProtocoloRow>;
       anexos_evento: TableDef<AnexosEventoRow>;
       cotacoes_pecas: TableDef<CotacoesPecasRow, [Rel<'evento_terceiro_id', 'evento_terceiros'>]>;
@@ -4052,6 +4147,19 @@ export type Database = {
         Args: { p_ids: string[] };
         Returns: TransporteEventoHistorico[];
       };
+      eventos_prazos: {
+        Args: { p_regional?: string | null; p_evento?: string | null; p_incluir_encerrados?: boolean };
+        Returns: EventoPrazo[];
+      };
+      marcar_documentacao_completa: {
+        Args: { p_evento: string; p_data?: string | null; p_observacao?: string | null };
+        Returns: undefined;
+      };
+      reabrir_documentacao_evento: { Args: { p_evento: string; p_motivo: string }; Returns: undefined };
+      aplicar_documentos_padrao_evento: { Args: { p_evento: string }; Returns: number };
+      dar_ciencia_prazo_evento: { Args: { p_evento: string }; Returns: number };
+      atualizar_prazos_eventos: { Args: Record<string, never>; Returns: Json };
+      marcar_alertas_prazo_notificados: { Args: { p_ids: string[] }; Returns: number };
       eventos_historico_resumo: { Args: Record<string, never>; Returns: EventosHistoricoResumo[] };
       mutual_importar_eventos_historico: {
         Args: { p_confirmar?: boolean };

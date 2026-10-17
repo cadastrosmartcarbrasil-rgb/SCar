@@ -1,16 +1,19 @@
 import Link from 'next/link';
-import { History, KanbanSquare, Plus } from 'lucide-react';
+import { History, KanbanSquare, Plus, Timer } from 'lucide-react';
 import { KanbanBoard } from '@/components/eventos/kanban-board';
 import { HistoricoEventosLista } from '@/components/eventos/historico-eventos-lista';
+import { PainelPrazos } from '@/components/eventos/painel-prazos';
 import { SePode } from '@/components/layout/se-pode';
 
-// Duas abas: o PIPELINE (eventos do SCar, operados aqui) e o HISTORICO do
-// sistema anterior (0101, so consulta). A aba vem na URL (?aba=historico) para
-// os links da Integracao Mutual e da Visao Geral abrirem direto nela.
+// Tres abas: o PIPELINE (eventos do SCar, operados aqui), o PRAZO REGULATORIO
+// (0113, 90 dias do Art. 22) e o HISTORICO do sistema anterior (0101, so
+// consulta). A aba vem na URL (?aba=historico|prazos) para os links abrirem nela.
 export default function EventosPage({ searchParams }: { searchParams: { aba?: string } }) {
   const historico = searchParams?.aba === 'historico';
+  const prazos = searchParams?.aba === 'prazos';
   const abas = [
-    { href: '/eventos', label: 'Pipeline', icon: KanbanSquare, ativo: !historico },
+    { href: '/eventos', label: 'Pipeline', icon: KanbanSquare, ativo: !historico && !prazos },
+    { href: '/eventos?aba=prazos', label: 'Prazo regulatorio (90 dias)', icon: Timer, ativo: prazos },
     { href: '/eventos?aba=historico', label: 'Historico (Mutual)', icon: History, ativo: historico },
   ];
   return (
@@ -21,6 +24,8 @@ export default function EventosPage({ searchParams }: { searchParams: { aba?: st
           <p className="text-sm text-slate-500">
             {historico
               ? 'Eventos do sistema anterior dos associados ja carregados — so consulta.'
+              : prazos
+              ? 'Prazo de regulacao e liquidacao de 90 dias (Art. 22, CNSP 491/2026) dos eventos em aberto.'
               : 'Arraste os protocolos entre as colunas para atualizar o status do pipeline.'}
           </p>
         </div>
@@ -50,7 +55,7 @@ export default function EventosPage({ searchParams }: { searchParams: { aba?: st
           );
         })}
       </div>
-      {historico ? <HistoricoEventosLista /> : <KanbanBoard />}
+      {historico ? <HistoricoEventosLista /> : prazos ? <PainelPrazos /> : <KanbanBoard />}
     </div>
   );
 }

@@ -3,11 +3,13 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { ChevronDown, ChevronUp, Eye, Maximize2, Minimize2 } from 'lucide-react';
+import { AlertOctagon, ChevronDown, ChevronUp, Eye, Maximize2, Minimize2 } from 'lucide-react';
 import { PIPELINE_SINISTRO, TIPO_EVENTO_LABEL } from '@/types/domain';
 import { useEventos, useAtualizarStatusEvento, type EventoComRelacionamentos } from '@/hooks/use-eventos';
 import { agruparPorRegional, filtrarPorExpansao, veioDoMutual, type ExpansaoColuna } from '@/lib/kanban-eventos';
 import { formatDate } from '@/lib/utils';
+import { useEventosPrazos } from '@/hooks/use-prazo-eventos';
+import { SeloPrazo } from './prazo-regulatorio';
 import type { StatusEvento } from '@/lib/database.types';
 
 // Kanban de eventos (protocolos) com drag-and-drop nativo entre colunas de status.
@@ -17,6 +19,12 @@ import type { StatusEvento } from '@/lib/database.types';
 export function KanbanBoard() {
   const { data: eventos, isLoading } = useEventos();
   const atualizarStatus = useAtualizarStatusEvento();
+  // prazo regulatorio (0113) de cada evento em aberto, para o selo do card
+  const { data: prazos } = useEventosPrazos();
+  const prazoPorId = useMemo(() => new Map((prazos ?? []).map((p) => [p.evento_id, p])), [prazos]);
+  const vencidos = (prazos ?? []).filter((p) => p.nivel === 'VENCIDO').length;
+  const criticos = (prazos ?? []).filter((p) => p.nivel === 'CRITICO').length;
+  const urgentes = (prazos ?? []).filter((p) => p.nivel === 'URGENCIA').length;
   const [dragId, setDragId] = useState<string | null>(null);
   const [expansao, setExpansao] = useState<Partial<Record<StatusEvento, ExpansaoColuna>>>({});
 
@@ -56,6 +64,19 @@ export function KanbanBoard() {
 
   return (
     <div className="space-y-3">
+      {vencidos + criticos + urgentes > 0 && (
+        <Link
+          href="/eventos?aba=prazos"
+          className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800 hover:bg-rose-100"
+        >
+          <AlertOctagon className="h-4 w-4" />
+          <span className="font-semibold">Prazo regulatorio (90 dias):</span>
+          {vencidos > 0 && <span className="font-semibold">{vencidos} vencido(s)</span>}
+          {criticos > 0 && <span>{criticos} critico(s) (85+ dias)</span>}
+          {urgentes > 0 && <span>{urgentes} em urgencia (75+ dias)</span>}
+          <span className="ml-auto text-xs underline">ver painel</span>
+        </Link>
+      )}
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs text-slate-500">
           {eventos?.length ?? 0} protocolo(s) no pipeline. As colunas mostram o resumo por regional — abra para ver os cards.
@@ -167,6 +188,11 @@ export function KanbanBoard() {
                           (evento.tipo_evento ? TIPO_EVENTO_LABEL[evento.tipo_evento] : 'Evento')}
                       </p>
                       <p className="truncate text-xs text-slate-500">{evento.clientes?.nome_razao_social}</p>
+                      {prazoPorId.get(evento.id) && (
+                        <div className="mt-1.5">
+                          <SeloPrazo prazo={prazoPorId.get(evento.id)!} compacto />
+                        </div>
+                      )}
                       <p className="mt-2 flex justify-between gap-2 text-[11px] text-slate-400">
                         <span>Ocorrencia: {formatDate(evento.data_ocorrencia)}</span>
                         {!tituloFiltro && <span className="truncate">{evento.regionais?.nome ?? 'Matriz'}</span>}
