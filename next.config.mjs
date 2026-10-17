@@ -9,6 +9,15 @@ const nextConfig = {
       bodySizeLimit: '10mb',
     },
   },
+  // O modulo "Sinistros" virou "Eventos" (17/10/2026): link antigo salvo em
+  // favorito, WhatsApp ou e-mail continua chegando no lugar certo.
+  async redirects() {
+    return [
+      { source: '/sinistros', destination: '/eventos', permanent: true },
+      { source: '/sinistros/:path*', destination: '/eventos/:path*', permanent: true },
+      { source: '/portal/sinistros/:path*', destination: '/portal/eventos/:path*', permanent: true },
+    ];
+  },
   images: {
     remotePatterns: [
       {

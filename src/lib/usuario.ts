@@ -29,7 +29,7 @@ export const PAPEIS_USUARIO = [
   { valor: 'gestor_regional', rotulo: 'Gestor Regional', nota: 'a unidade dele' },
   { valor: 'consultor_vendas', rotulo: 'Consultor de Vendas', nota: 'a carteira dele' },
   { valor: 'financeiro', rotulo: 'Financeiro', nota: 'acesso global ao dinheiro' },
-  { valor: 'sinistro', rotulo: 'Sinistro', nota: 'trata o evento da unidade' },
+  { valor: 'sinistro', rotulo: 'Eventos', nota: 'trata o evento da unidade' },
   { valor: 'auditoria', rotulo: 'Auditoria', nota: 'autoriza a entrada na base' },
   { valor: 'assistencia_24h', rotulo: 'Assistencia 24h' },
   { valor: 'supervisor', rotulo: 'Supervisor', nota: 'as unidades sob a responsabilidade dele (cobranca)' },

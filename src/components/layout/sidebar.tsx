@@ -52,7 +52,7 @@ const OPERACAO: Item[] = [
   { href: '/associados', label: 'Associados', icon: Users },
   { href: '/veiculos', label: 'Veiculos', icon: Car },
   { href: '/rastreadores', label: 'Rastreadores', icon: Satellite },
-  { href: '/sinistros', label: 'Sinistros', icon: AlertTriangle },
+  { href: '/eventos', label: 'Eventos', icon: AlertTriangle },
 ];
 const GESTAO: Entrada[] = [
   // COBRANCA virou grupo (0097): o painel de inadimplencia, o calendario dos 6

@@ -136,7 +136,7 @@ export function TabelaEventos({ eventos, mostrarPlaca = true }: { eventos: Event
                   {mutual ? (
                     <span className="text-[11px] text-slate-400">so consulta</span>
                   ) : (
-                    <Link href={`/sinistros/${e.id}`} className="inline-flex items-center gap-1 text-xs font-medium text-cyan-700 hover:text-cyan-800">
+                    <Link href={`/eventos/${e.id}`} className="inline-flex items-center gap-1 text-xs font-medium text-cyan-700 hover:text-cyan-800">
                       <Settings2 className="h-3.5 w-3.5" /> Gerenciar
                     </Link>
                   )}

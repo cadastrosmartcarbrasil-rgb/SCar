@@ -87,7 +87,7 @@ export function TerceiroForm({
     <form onSubmit={submit} className="space-y-5">
       {somenteLeitura && (
         <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-          Somente leitura: alterar o terceiro e tratar o evento (time de sinistro, gestor da unidade ou financeiro).
+          Somente leitura: alterar o terceiro e tratar o evento (time de eventos, gestor da unidade ou financeiro).
         </p>
       )}
       <fieldset disabled={somenteLeitura} className="space-y-5">

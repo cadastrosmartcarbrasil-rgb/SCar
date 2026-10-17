@@ -17,6 +17,7 @@ export interface EventoComRelacionamentos extends EventosSinistroRow {
   veiculos?: { placa: string; marca: string | null; modelo: string | null } | null;
   clientes?: { nome_razao_social: string } | null;
   tipos_evento?: { nome: string } | null;
+  regionais?: { nome: string } | null;
 }
 
 const BUCKET = process.env.NEXT_PUBLIC_SUPABASE_BUCKET_SINISTROS ?? 'sinistros-docs';
@@ -30,7 +31,7 @@ export function useEventos() {
       const { data, error } = await supabase
         .from('eventos_sinistro')
         .select(
-          'id, numero_protocolo, veiculo_id, cliente_id, data_ocorrencia, tipo_evento, tipo_evento_id, descricao, status, operador_atual_id, regional_id, created_at, updated_at, veiculos(placa, marca, modelo), clientes(nome_razao_social), tipos_evento(nome)',
+          'id, numero_protocolo, veiculo_id, cliente_id, data_ocorrencia, tipo_evento, tipo_evento_id, descricao, status, operador_atual_id, regional_id, created_at, updated_at, veiculos(placa, marca, modelo), clientes(nome_razao_social), tipos_evento(nome), regionais(nome)',
         )
         .order('created_at', { ascending: false });
       if (error) throw error;

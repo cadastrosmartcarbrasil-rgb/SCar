@@ -2333,6 +2333,25 @@ categorias **Associados** e **Veículos**.
   (sem veículo) idem. `veiculos.regional_id` e `regional_preco_id` apontam ambos para `regionais`:
   embed tem de ser `regionais!veiculos_regional_id_fkey(...)`.
 
+## EVENTOS (antes "Sinistros") — renomeação e Kanban compacto (17/10/2026, sem migration)
+- **O módulo chama-se EVENTOS** em toda a interface. Rotas: `/eventos`, `/eventos/[id]`,
+  `/eventos/novo`, `/eventos/[id]/terceiros/...` e `/portal/eventos/novo`; componentes em
+  `src/components/eventos/`. **Os links antigos `/sinistros/*` e `/portal/sinistros/*`
+  redirecionam (301) em `next.config.mjs`** — não apagar: há link salvo em WhatsApp e favorito.
+- **O que NÃO foi renomeado, de propósito:** banco (`eventos_sinistro`, `status_evento`, o papel
+  `sinistro` — agora rotulado "Eventos" na tela —, o tipo de protocolo `SINISTRO`, o campo
+  `sinistros` das RPCs do painel das regionais), o bucket `sinistros-docs` e a env
+  `NEXT_PUBLIC_SUPABASE_BUCKET_SINISTROS`. Renomear isso é migration + troca de bucket, sem ganho
+  para quem usa. Ficaram também "Sinistralidade" (termo do indicador) e "Apólice / sinistro" no
+  terceiro (é o número do sinistro na seguradora DELE).
+- **Kanban compacto:** cada coluna nasce com o total e a contagem por regional; clicar na unidade
+  abre só os cards dela, "Ver todos" abre a coluna inteira, "Recolher" volta, e há
+  "Expandir/Recolher todas". A coluna aceita o arrasto nos dois modos. Regra pura em
+  `src/lib/kanban-eventos.ts` (testada); `useEventos` passou a trazer `regionais(nome)`.
+- **Limpeza dos testes (17/10/2026):** script em `supabase/limpeza/2026-10-17_eventos_negados.sql`
+  (os 6 eventos, todos em NEGADO, + a conta a pagar, as movimentações e os protocolos ligados a
+  eles). O `execute_sql` do MCP estourou os 60 s sem gravar nada — rodar pelo SQL Editor.
+
 ## INADIMPLÊNCIA E COBRANÇAS (0097) — Fase 1
 > Especificação, fórmulas, regras bancárias, permissões e fases em
 > **`docs/modulos/cobranca-inadimplencia.md`** — leia antes de mexer.

@@ -4,10 +4,10 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, DollarSign, Info, Plus, Wrench } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { TerceiroForm } from '@/components/sinistros/terceiro-form';
-import { StatusTerceiroBadge, VinculoTerceiro } from '@/components/sinistros/terceiros-evento';
-import { CotacaoPecas } from '@/components/sinistros/cotacao-pecas';
-import { EventoFinanceiro } from '@/components/sinistros/evento-financeiro';
+import { TerceiroForm } from '@/components/eventos/terceiro-form';
+import { StatusTerceiroBadge, VinculoTerceiro } from '@/components/eventos/terceiros-evento';
+import { CotacaoPecas } from '@/components/eventos/cotacao-pecas';
+import { EventoFinanceiro } from '@/components/eventos/evento-financeiro';
 import { useTerceiro } from '@/hooks/use-terceiros';
 import { usePerfilAtual } from '@/hooks/use-config';
 import { usePode } from '@/hooks/use-permissoes';
@@ -39,11 +39,11 @@ export default function TerceiroPage({ params }: { params: { id: string; terceir
   return (
     <div className="mx-auto max-w-4xl space-y-4">
       <div className="flex items-center justify-between">
-        <Link href={`/sinistros/${params.id}`} className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700">
+        <Link href={`/eventos/${params.id}`} className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700">
           <ArrowLeft className="h-4 w-4" /> Voltar ao evento
         </Link>
         <Link
-          href={`/sinistros/${params.id}/terceiros/novo`}
+          href={`/eventos/${params.id}/terceiros/novo`}
           className="inline-flex items-center gap-1 text-sm text-brand-600 hover:text-brand-700"
         >
           <Plus className="h-4 w-4" /> Outro terceiro

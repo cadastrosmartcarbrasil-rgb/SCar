@@ -357,7 +357,7 @@ function AtendimentoVeiculo({ clienteId, associado, veiculoId, podeTrocar, onTro
   function acionar(s: ServicoSac) {
     // Evento (sinistro): vai DIRETO para o registro completo, com o veiculo ja selecionado.
     if (s.modo === 'evento') {
-      router.push(`/sinistros/novo?placa=${encodeURIComponent(veiculo?.placa ?? '')}`);
+      router.push(`/eventos/novo?placa=${encodeURIComponent(veiculo?.placa ?? '')}`);
       return;
     }
     // Assistencia 24h: painel proprio, com trava financeira e limites do opcional.

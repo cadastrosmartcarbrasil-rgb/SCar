@@ -212,7 +212,7 @@ function DetalheProtocolo({ protocolo, onVoltar }: { protocolo: ProtocoloLinha; 
             {protocolo.descricao && <p className="mt-1 text-sm text-slate-500">{protocolo.descricao}</p>}
             {protocolo.evento_id && (
               <Link
-                href={`/sinistros/${protocolo.evento_id}`}
+                href={`/eventos/${protocolo.evento_id}`}
                 className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-cyan-700 hover:underline"
               >
                 <ExternalLink className="h-3 w-3" /> Abrir o evento deste protocolo

@@ -66,7 +66,7 @@ export default function NovoEventoPage() {
     toast.success('Veiculo localizado');
   }
 
-  // Prefill vindo do SAC: /sinistros/novo?placa=ABC1D23 -> busca automatica.
+  // Prefill vindo do SAC: /eventos/novo?placa=ABC1D23 -> busca automatica.
   useEffect(() => {
     const p0 = new URLSearchParams(window.location.search).get('placa');
     if (!p0) return;
@@ -127,7 +127,7 @@ export default function NovoEventoPage() {
         onSuccess: (evt) => {
           toast.success(`Evento aberto: ${evt.numero_protocolo}`);
           // Ha terceiro: abre direto o cadastro dele, ja vinculado ao evento/associado.
-          router.push(form.possui_terceiros ? `/sinistros/${evt.id}/terceiros/novo` : `/sinistros/${evt.id}`);
+          router.push(form.possui_terceiros ? `/eventos/${evt.id}/terceiros/novo` : `/eventos/${evt.id}`);
         },
         onError: (err) => toast.error((err as Error).message),
       },
@@ -139,7 +139,7 @@ export default function NovoEventoPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
-      <Link href="/sinistros" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700">
+      <Link href="/eventos" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700">
         <ArrowLeft className="h-4 w-4" /> Voltar aos eventos
       </Link>
       <h1 className="text-2xl font-semibold text-slate-900">Novo Evento</h1>
@@ -333,7 +333,7 @@ export default function NovoEventoPage() {
           )}
 
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="secondary" onClick={() => router.push('/sinistros')}>
+            <Button type="button" variant="secondary" onClick={() => router.push('/eventos')}>
               Cancelar
             </Button>
             <Button type="submit" disabled={criar.isPending}>

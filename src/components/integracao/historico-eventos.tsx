@@ -11,11 +11,11 @@ import { formatDate, formatDateTime } from '@/lib/utils';
 const inteiro = new Intl.NumberFormat('pt-BR');
 
 /**
- * HISTORICO DE EVENTOS (0101). Os eventos/sinistros do Mutual dos associados
+ * HISTORICO DE EVENTOS (0101). Os eventos/eventos do Mutual dos associados
  * ja carregados entram em `eventos_historico` — tabela propria, NAO
  * `eventos_sinistro`: la cada um viraria evento EM ABERTO no Kanban e no
  * painel, porque o Mutual manda "ANDAMENTO" em todos. Aqui e so historia:
- * aparece no SAC, em /sinistros (aba Historico) e na Visao Geral.
+ * aparece no SAC, em /eventos (aba Historico) e na Visao Geral.
  *
  * Ordem certa: puxar "Eventos (EVENT)" em "Puxar dados" -> importar aqui.
  * Re-executavel: so regrava o evento que mudou.
@@ -41,9 +41,9 @@ export function HistoricoEventos() {
   return (
     <div className="space-y-4">
       <p className="text-xs leading-relaxed text-slate-500">
-        Traz os eventos/sinistros do Mutual dos associados <strong>ja carregados</strong> para o historico do SCar —
+        Traz os eventos/eventos do Mutual dos associados <strong>ja carregados</strong> para o historico do SCar —
         aparecem na aba <strong>Eventos</strong> do SAC, em{' '}
-        <Link href="/sinistros?aba=historico" className="font-medium text-cyan-700 underline">Eventos / Sinistros → Historico</Link>{' '}
+        <Link href="/eventos?aba=historico" className="font-medium text-cyan-700 underline">Eventos → Historico</Link>{' '}
         e na Visao Geral. Eles <strong>nao viram evento em aberto</strong>: o Mutual manda o status &quot;ANDAMENTO&quot; em
         todos, entao so a data de conclusao conta como encerramento. Evento de associado ainda nao carregado fica de fora.
       </p>

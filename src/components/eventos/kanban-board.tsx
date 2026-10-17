@@ -1,0 +1,179 @@
+'use client';
+
+import { useMemo, useState } from 'react';
+import Link from 'next/link';
+import { toast } from 'sonner';
+import { ChevronDown, ChevronUp, Eye, Maximize2, Minimize2 } from 'lucide-react';
+import { PIPELINE_SINISTRO, TIPO_EVENTO_LABEL } from '@/types/domain';
+import { useEventos, useAtualizarStatusEvento, type EventoComRelacionamentos } from '@/hooks/use-eventos';
+import { agruparPorRegional, filtrarPorExpansao, type ExpansaoColuna } from '@/lib/kanban-eventos';
+import { formatDate } from '@/lib/utils';
+import type { StatusEvento } from '@/lib/database.types';
+
+// Kanban de eventos (protocolos) com drag-and-drop nativo entre colunas de status.
+// Cada coluna nasce COMPACTA — total + contagem por regional — e so desenha os
+// vcards quando alguem pede ("Ver todos" ou a unidade). A coluna continua sendo
+// alvo de arrasto nos dois modos.
+export function KanbanBoard() {
+  const { data: eventos, isLoading } = useEventos();
+  const atualizarStatus = useAtualizarStatusEvento();
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [expansao, setExpansao] = useState<Partial<Record<StatusEvento, ExpansaoColuna>>>({});
+
+  const porStatus = useMemo(() => {
+    const map = new Map<StatusEvento, EventoComRelacionamentos[]>();
+    for (const col of PIPELINE_SINISTRO) map.set(col.status, []);
+    for (const e of eventos ?? []) map.get(e.status)?.push(e);
+    return map;
+  }, [eventos]);
+
+  const algumaAberta = Object.values(expansao).some((x) => x != null);
+
+  function expandir(status: StatusEvento, valor: ExpansaoColuna) {
+    setExpansao((atual) => ({ ...atual, [status]: valor }));
+  }
+
+  function alternarTudo() {
+    if (algumaAberta) setExpansao({});
+    else setExpansao(Object.fromEntries(PIPELINE_SINISTRO.map((c) => [c.status, 'todos'])));
+  }
+
+  function onDrop(status: StatusEvento) {
+    if (!dragId) return;
+    const evento = eventos?.find((e) => e.id === dragId);
+    setDragId(null);
+    if (!evento || evento.status === status) return;
+    atualizarStatus.mutate(
+      { id: dragId, status },
+      {
+        onSuccess: () => toast.success(`Protocolo movido para ${status}`),
+        onError: (e) => toast.error(`Falha ao mover: ${(e as Error).message}`),
+      },
+    );
+  }
+
+  if (isLoading) return <p className="text-sm text-slate-500">Carregando pipeline...</p>;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs text-slate-500">
+          {eventos?.length ?? 0} protocolo(s) no pipeline. As colunas mostram o resumo por regional — abra para ver os cards.
+        </p>
+        <button
+          type="button"
+          onClick={alternarTudo}
+          className="inline-flex shrink-0 items-center gap-1 rounded-md border border-slate-200 bg-superficie px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+        >
+          {algumaAberta ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+          {algumaAberta ? 'Recolher todas' : 'Expandir todas'}
+        </button>
+      </div>
+
+      <div className="flex gap-4 overflow-x-auto pb-4">
+        {PIPELINE_SINISTRO.map((col) => {
+          const items = porStatus.get(col.status) ?? [];
+          const grupos = agruparPorRegional(items);
+          const atual = expansao[col.status] ?? null;
+          const cards = filtrarPorExpansao(items, atual);
+          const tituloFiltro =
+            atual && atual !== 'todos' ? grupos.find((g) => g.regionalId === atual.regionalId)?.nome : null;
+          return (
+            <div
+              key={col.status}
+              className="flex w-72 shrink-0 flex-col rounded-xl bg-slate-50 p-3"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => onDrop(col.status)}
+            >
+              <div className="mb-3 flex items-center justify-between">
+                <span className={`rounded-md border px-2 py-1 text-xs font-medium ${col.cor}`}>{col.titulo}</span>
+                <span className="tnum text-lg font-semibold text-slate-800">{items.length}</span>
+              </div>
+
+              {items.length === 0 && (
+                <p className="rounded-lg border border-dashed border-slate-200 p-4 text-center text-xs text-slate-400">
+                  Nenhum protocolo
+                </p>
+              )}
+
+              {items.length > 0 && atual === null && (
+                <div className="space-y-2">
+                  <ul className="divide-y divide-slate-200 overflow-hidden rounded-lg border border-slate-200 bg-superficie">
+                    {grupos.map((g) => (
+                      <li key={g.regionalId ?? 'matriz'}>
+                        <button
+                          type="button"
+                          onClick={() => expandir(col.status, { regionalId: g.regionalId })}
+                          title={`Ver os cards de ${g.nome}`}
+                          className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-xs hover:bg-slate-50"
+                        >
+                          <span className="truncate text-slate-700">{g.nome}</span>
+                          <span className="flex items-center gap-1.5">
+                            <span className="tnum font-semibold text-slate-800">{g.quantidade}</span>
+                            <Eye className="h-3.5 w-3.5 text-slate-400" />
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    type="button"
+                    onClick={() => expandir(col.status, 'todos')}
+                    className="inline-flex w-full items-center justify-center gap-1 rounded-md border border-slate-200 bg-superficie px-2 py-1.5 text-xs font-medium text-cyan-700 hover:bg-slate-50"
+                  >
+                    <ChevronDown className="h-3.5 w-3.5" /> Ver todos ({items.length})
+                  </button>
+                </div>
+              )}
+
+              {items.length > 0 && atual !== null && (
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between gap-2 text-[11px] text-slate-500">
+                    <span className="truncate">
+                      {tituloFiltro ? `${tituloFiltro} · ${cards.length}` : `Todos · ${cards.length}`}
+                    </span>
+                    <span className="flex shrink-0 items-center gap-2">
+                      {tituloFiltro && (
+                        <button type="button" onClick={() => expandir(col.status, 'todos')} className="font-medium text-cyan-700 hover:underline">
+                          Ver todos
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => expandir(col.status, null)}
+                        className="inline-flex items-center gap-0.5 font-medium text-slate-600 hover:text-slate-800"
+                      >
+                        <ChevronUp className="h-3.5 w-3.5" /> Recolher
+                      </button>
+                    </span>
+                  </div>
+                  {cards.map((evento) => (
+                    <Link
+                      key={evento.id}
+                      href={`/eventos/${evento.id}`}
+                      draggable
+                      onDragStart={() => setDragId(evento.id)}
+                      className="cursor-grab rounded-lg border border-slate-200 bg-superficie p-3 shadow-sm transition hover:shadow active:cursor-grabbing"
+                    >
+                      <p className="text-xs font-mono text-brand-600">{evento.numero_protocolo}</p>
+                      <p className="mt-1 text-sm font-medium text-slate-800">
+                        {evento.veiculos?.placa ?? 'Veiculo'} -{' '}
+                        {evento.tipos_evento?.nome ??
+                          (evento.tipo_evento ? TIPO_EVENTO_LABEL[evento.tipo_evento] : 'Evento')}
+                      </p>
+                      <p className="truncate text-xs text-slate-500">{evento.clientes?.nome_razao_social}</p>
+                      <p className="mt-2 flex justify-between gap-2 text-[11px] text-slate-400">
+                        <span>Ocorrencia: {formatDate(evento.data_ocorrencia)}</span>
+                        {!tituloFiltro && <span className="truncate">{evento.regionais?.nome ?? 'Matriz'}</span>}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

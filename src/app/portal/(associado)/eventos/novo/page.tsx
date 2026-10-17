@@ -7,12 +7,12 @@ import { ArrowLeft } from 'lucide-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { UploadAnexos } from '@/components/sinistros/upload-anexos';
+import { UploadAnexos } from '@/components/eventos/upload-anexos';
 import { TIPO_EVENTO_LABEL } from '@/types/domain';
 import type { TipoEvento, VeiculosRow } from '@/lib/database.types';
 
-// Portal: abertura de sinistro pelo associado, com upload de fotos pelo celular.
-export default function NovoSinistroPage() {
+// Portal: abertura de evento pelo associado, com upload de fotos pelo celular.
+export default function NovoEventoPage() {
   const supabase = createClient();
   const [veiculoId, setVeiculoId] = useState('');
   const [tipo, setTipo] = useState<TipoEvento>('COLISAO');
@@ -53,7 +53,7 @@ export default function NovoSinistroPage() {
       return novoEvento;
     },
     onSuccess: (evt) => {
-      toast.success(`Sinistro aberto: ${evt.numero_protocolo}`);
+      toast.success(`Evento aberto: ${evt.numero_protocolo}`);
       setEventoCriado(evt.id);
     },
     onError: (e) => toast.error((e as Error).message),
@@ -67,7 +67,7 @@ export default function NovoSinistroPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Abrir novo sinistro</CardTitle>
+          <CardTitle>Abrir novo evento</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {!eventoCriado ? (
@@ -127,13 +127,13 @@ export default function NovoSinistroPage() {
                 disabled={abrir.isPending || !veiculoId}
                 className="w-full rounded-md bg-acao py-2 text-sm font-medium text-white hover:bg-acao-escura disabled:opacity-60"
               >
-                {abrir.isPending ? 'Abrindo...' : 'Abrir sinistro'}
+                {abrir.isPending ? 'Abrindo...' : 'Abrir evento'}
               </button>
             </>
           ) : (
             <div className="space-y-4">
               <p className="rounded-md bg-emerald-50 p-3 text-sm text-emerald-700">
-                Sinistro aberto com sucesso! Agora envie fotos e documentos.
+                Evento aberto com sucesso! Agora envie fotos e documentos.
               </p>
               <UploadAnexos eventoId={eventoCriado} />
               <Link

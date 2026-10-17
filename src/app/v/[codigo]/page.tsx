@@ -107,7 +107,7 @@ export default async function HotlinkPage({ params }: { params: { codigo: string
           {[
             ['Vistoria pelo celular', 'Voce fotografa o veiculo pelo proprio aparelho, guiado passo a passo.'],
             ['Mensalidade so apos aprovacao', 'A cobranca comeca depois que a adesao e aprovada e o veiculo entra na base.'],
-            ['Atendimento com gente', 'SAC, assistencia e sinistro com equipe propria — nao e robo.'],
+            ['Atendimento com gente', 'SAC, assistencia e eventos com equipe propria — nao e robo.'],
           ].map(([titulo, texto]) => (
             <div key={titulo} className="rounded-2xl border border-slate-200 bg-superficie p-4">
               <BadgeCheck className="h-5 w-5 text-cyan-600" />

@@ -1166,11 +1166,11 @@ export default function IntegracaoMutualPage() {
 
       {/* HISTORICO DE EVENTOS (0101) */}
       <Secao
-        titulo="Historico de eventos / sinistros"
+        titulo="Historico de eventos"
         icone={ShieldAlert}
         aberta={ab('eventos')}
         onAlternar={() => alternar('eventos')}
-        custo="Os eventos do Mutual dos associados ja carregados, para o SAC, /sinistros e a Visao Geral."
+        custo="Os eventos do Mutual dos associados ja carregados, para o SAC, /eventos e a Visao Geral."
       >
         <HistoricoEventos />
       </Secao>

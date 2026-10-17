@@ -50,7 +50,7 @@ export interface FiltroEventosHistorico {
 
 export const POR_PAGINA_HISTORICO = 50;
 
-/** A aba Historico de /sinistros — paginada no banco. */
+/** A aba Historico de /eventos — paginada no banco. */
 export function useEventosHistoricoLista(f: FiltroEventosHistorico) {
   const supabase = createClient();
   return useQuery<EventoHistoricoLinha[]>({

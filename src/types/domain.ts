@@ -1,7 +1,7 @@
 // Labels e metadados de apresentacao dos enums do dominio.
 import type { StatusEvento, TipoEvento, StatusTitulo, StatusVeiculo } from '@/lib/database.types';
 
-// Colunas do Kanban de sinistros, na ordem do pipeline.
+// Colunas do Kanban de eventos, na ordem do pipeline.
 export const PIPELINE_SINISTRO: { status: StatusEvento; titulo: string; cor: string }[] = [
   { status: 'ABERTO', titulo: 'Aberto', cor: 'bg-sky-100 text-sky-800 border-sky-200' },
   { status: 'EM_ANALISE', titulo: 'Em Analise', cor: 'bg-amber-100 text-amber-800 border-amber-200' },

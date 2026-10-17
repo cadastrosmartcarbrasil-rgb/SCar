@@ -510,13 +510,13 @@ function EventosBloco({ d, escuro }: { d: PainelVisaoGeral; escuro: boolean }) {
   const frequencia = n(d.kpis.veiculos_base) ? doze / n(d.kpis.veiculos_base) : null;
 
   return (
-    <Secao titulo="Eventos / sinistros e Assistencia 24h" icon={ShieldAlert} acao={<LinkSecao href="/sinistros" texto="Abrir eventos" />}>
+    <Secao titulo="Eventos e Assistencia 24h" icon={ShieldAlert} acao={<LinkSecao href="/eventos" texto="Abrir eventos" />}>
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
-        <Tile titulo="Eventos em aberto (SCar)" icon={AlertTriangle} tom="amber" href="/sinistros" valor={inteiro.format(n(e.abertos))}
+        <Tile titulo="Eventos em aberto (SCar)" icon={AlertTriangle} tom="amber" href="/eventos" valor={inteiro.format(n(e.abertos))}
           detalhe={etapas.filter((x) => !['CONCLUIDO', 'NEGADO'].includes(x.status)).map((x) => `${x.rotulo} ${x.n}`).join(' · ') || 'Nenhum em andamento'} />
         <Tile titulo="Eventos no mes" icon={ShieldAlert} tom="rose" valor={inteiro.format(mes)}
           detalhe={temHistorico ? `${inteiro.format(n(e.novos_mes))} no SCar · ${inteiro.format(n(h?.mes))} no Mutual` : `${inteiro.format(n(e.total))} registrados no total`} />
-        <Tile titulo="Eventos em 12 meses" icon={ShieldAlert} tom="rose" href="/sinistros?aba=historico" valor={inteiro.format(doze)}
+        <Tile titulo="Eventos em 12 meses" icon={ShieldAlert} tom="rose" href="/eventos?aba=historico" valor={inteiro.format(doze)}
           detalhe={frequencia === null ? undefined : `${formatPercent(frequencia)} da frota na base · SCar + historico`} />
         <Tile titulo="Acionamentos 24h no mes" icon={LifeBuoy} tom="cyan" valor={inteiro.format(n(d.assistencia.mes))}
           detalhe={`${inteiro.format(n(d.assistencia.em_aberto))} OS em andamento · custo ${formatCurrency(n(d.assistencia.custo_mes))}`} />

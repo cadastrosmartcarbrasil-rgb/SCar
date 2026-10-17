@@ -13,7 +13,7 @@ import type {
 /** Categorias oferecidas na abertura de protocolo (Central/SAC). */
 export const CATEGORIAS_PROTOCOLO: { value: TipoAtendimento; label: string }[] = [
   { value: 'FINANCEIRO', label: 'Financeiro' },
-  { value: 'SINISTRO', label: 'Sinistro / Evento' },
+  { value: 'SINISTRO', label: 'Evento' },
   { value: 'ASSISTENCIA_24H', label: 'Assistencia 24h' },
   { value: 'DUVIDAS', label: 'Duvidas' },
   { value: 'RECLAMACAO', label: 'Reclamacao' },

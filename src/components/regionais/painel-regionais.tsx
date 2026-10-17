@@ -386,7 +386,7 @@ function Indicadores({ periodo, regionalId }: { periodo: PeriodoPainel; regional
           <Tile
             titulo="Veiculos em evento"
             valor={inteiro.format(r?.veiculos_em_evento ?? 0)}
-            detalhe="Sinistros em atendimento/oficina agora"
+            detalhe="Eventos em atendimento/oficina agora"
             icon={ShieldAlert}
             tom="navy"
             carregando={isLoading}
@@ -461,7 +461,7 @@ function GraficosEvolucao({ periodo, regionalId }: { periodo: PeriodoPainel; reg
 
   function csv() {
     baixarCsv('regionais-evolucao.csv', [
-      ['Periodo', 'Ativos', 'Inadimplentes', 'Sinistros', 'Recebido', 'Gasto em eventos', 'Resultado'],
+      ['Periodo', 'Ativos', 'Inadimplentes', 'Eventos', 'Recebido', 'Gasto em eventos', 'Resultado'],
       ...serie.map((p) => [p.rotulo, p.ativos, p.inadimplentes, p.sinistros, p.recebido, p.gasto_eventos, p.resultado]),
     ]);
   }
@@ -520,13 +520,13 @@ function GraficosEvolucao({ periodo, regionalId }: { periodo: PeriodoPainel; reg
                   stroke={COR_ACENTO} strokeWidth={2} fill="url(#gradAtivos)" />
                 <Line yAxisId="frota" type="monotone" dataKey="inadimplentes" name="Inadimplentes"
                   stroke={COR_AMBAR} strokeWidth={2} dot={false} />
-                <Line yAxisId="ocor" type="monotone" dataKey="sinistros" name="Sinistros"
+                <Line yAxisId="ocor" type="monotone" dataKey="sinistros" name="Eventos"
                   stroke={COR_VERMELHO} strokeWidth={2} strokeDasharray="4 3" dot={false} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
           <p className="mt-2 text-[11.5px] leading-relaxed text-slate-500">
-            Ativos e inadimplentes sao o <b>retrato no fim</b> de cada ponto; sinistros sao os
+            Ativos e inadimplentes sao o <b>retrato no fim</b> de cada ponto; eventos sao os
             <b> abertos</b> naquele intervalo (eixo da direita).
           </p>
         </CardContent>
@@ -575,7 +575,7 @@ const COLUNAS: { chave: OrdemComparativo; rotulo: string; numerica: boolean }[] 
   { chave: 'nome', rotulo: 'Regional', numerica: false },
   { chave: 'ativos', rotulo: 'Ativos', numerica: true },
   { chave: 'inadimplencia', rotulo: 'Inadimplencia', numerica: true },
-  { chave: 'sinistros', rotulo: 'Sinistros', numerica: true },
+  { chave: 'sinistros', rotulo: 'Eventos', numerica: true },
   { chave: 'recebido', rotulo: 'Receita liquida', numerica: true },
   { chave: 'sinistralidade', rotulo: 'Sinistralidade', numerica: true },
 ];
@@ -599,7 +599,7 @@ function Comparativo({ periodo, regionalId }: { periodo: PeriodoPainel; regional
   function csv() {
     baixarCsv('regionais-comparativo.csv', [
       ['Regional', 'Cidade', 'UF', 'Situacao', 'Ativos', 'Novos', 'Cancelados', 'Inadimplentes',
-       'Inadimplencia', 'Sinistros', 'Recebido', 'Gasto em eventos', 'Resultado', 'Sinistralidade'],
+       'Inadimplencia', 'Eventos', 'Recebido', 'Gasto em eventos', 'Resultado', 'Sinistralidade'],
       ...linhas.map((l) => [l.regional, l.cidade, l.uf, l.ativa ? 'Ativa' : 'Inativa',
         l.veiculos_ativos, l.veiculos_novos,
         l.veiculos_cancelados, l.veiculos_inadimplentes, l.inadimplencia, l.sinistros,

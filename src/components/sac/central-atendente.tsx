@@ -123,7 +123,7 @@ function PareceresPendentes() {
           return (
             <Link
               key={p.pedido_id}
-              href={p.evento_id ? `/sinistros/${p.evento_id}` : `/protocolos?protocolo=${p.atendimento_id}`}
+              href={p.evento_id ? `/eventos/${p.evento_id}` : `/protocolos?protocolo=${p.atendimento_id}`}
               className="flex items-center justify-between gap-3 px-4 py-2.5 transition hover:bg-amber-100/40"
             >
               <span className="min-w-0">

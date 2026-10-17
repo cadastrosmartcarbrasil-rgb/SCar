@@ -73,7 +73,7 @@ describe('destinoDoMemo', () => {
 
   it('nomeia a unidade quando o comunicado e local', () => {
     expect(destinoDoMemo('Cuiaba', null)).toBe('Cuiaba');
-    expect(destinoDoMemo('Cuiaba', ['sinistro'])).toBe('Cuiaba · Sinistro');
+    expect(destinoDoMemo('Cuiaba', ['sinistro'])).toBe('Cuiaba · Eventos');
   });
 
   it('reconhece o destino "diretoria" que a franquia usa', () => {

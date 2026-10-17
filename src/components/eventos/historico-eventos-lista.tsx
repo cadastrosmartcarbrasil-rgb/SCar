@@ -19,7 +19,7 @@ const TIPOS_COMUNS = [
 ];
 
 /**
- * A aba Historico de /sinistros (0101): os eventos do Mutual dos associados
+ * A aba Historico de /eventos (0101): os eventos do Mutual dos associados
  * carregados. So consulta — quem opera evento novo e o pipeline ao lado.
  */
 export function HistoricoEventosLista() {

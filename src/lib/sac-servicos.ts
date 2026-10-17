@@ -32,7 +32,7 @@ export interface ServicoSac {
 
 export const SERVICOS_SAC: ServicoSac[] = [
   {
-    id: 'evento', titulo: 'Evento (Sinistro)', descricao: 'Abrir evento — vai direto para o registro completo',
+    id: 'evento', titulo: 'Evento', descricao: 'Abrir evento — vai direto para o registro completo',
     icon: AlertTriangle, cor: 'bg-rose-50 text-rose-600', modo: 'evento',
     tipos: [{ value: 'SINISTRO', label: 'Evento' }],
   },

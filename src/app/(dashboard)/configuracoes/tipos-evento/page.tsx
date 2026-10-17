@@ -16,7 +16,7 @@ export default function TiposEventoPage() {
   return (
     <div className="max-w-xl space-y-4">
       <p className="text-sm text-slate-500">
-        Cadastre os tipos de evento (sinistro) usados na abertura de protocolos: colisao, roubo,
+        Cadastre os tipos de evento usados na abertura de protocolos: colisao, roubo,
         furto, danos a terceiros, etc.
       </p>
 

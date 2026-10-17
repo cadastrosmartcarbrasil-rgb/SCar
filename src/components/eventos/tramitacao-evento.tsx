@@ -141,7 +141,7 @@ export function TramitacaoEvento({
             </FormField>
           ) : (
             <p className="text-xs text-slate-500">
-              Mudar a fase do evento e do time de sinistro. Voce pode transferir
+              Mudar a fase do evento e do time de eventos. Voce pode transferir
               o protocolo e registrar parecer.
             </p>
           )}

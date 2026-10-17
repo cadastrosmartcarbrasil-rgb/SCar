@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
-import { TerceiroForm } from '@/components/sinistros/terceiro-form';
-import { VinculoTerceiro } from '@/components/sinistros/terceiros-evento';
+import { TerceiroForm } from '@/components/eventos/terceiro-form';
+import { VinculoTerceiro } from '@/components/eventos/terceiros-evento';
 import { useEvento } from '@/hooks/use-eventos';
 
 // Cadastro de terceiro. Aberto automaticamente apos abrir um evento marcado
@@ -20,7 +20,7 @@ export default function NovoTerceiroPage({ params }: { params: { id: string } })
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
-      <Link href={`/sinistros/${params.id}`} className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700">
+      <Link href={`/eventos/${params.id}`} className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700">
         <ArrowLeft className="h-4 w-4" /> Voltar ao evento
       </Link>
       <h1 className="text-2xl font-semibold text-slate-900">Novo terceiro</h1>
@@ -28,8 +28,8 @@ export default function NovoTerceiroPage({ params }: { params: { id: string } })
       <TerceiroForm
         eventoId={params.id}
         clienteId={evento.cliente_id}
-        onSalvo={(r) => router.push(`/sinistros/${params.id}/terceiros/${r.id}`)}
-        onCancelar={() => router.push(`/sinistros/${params.id}`)}
+        onSalvo={(r) => router.push(`/eventos/${params.id}/terceiros/${r.id}`)}
+        onCancelar={() => router.push(`/eventos/${params.id}`)}
       />
     </div>
   );

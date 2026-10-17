@@ -25,7 +25,7 @@ export function VinculoTerceiro({
       <span className="font-medium">
         {codigo ? rotuloVinculo(codigo, protocolo, associado) : `Novo terceiro · Evento ${protocolo ?? '-'} · Associado ${associado ?? '-'}`}
       </span>
-      <Link href={`/sinistros/${eventoId}`} className="ml-auto text-xs text-cyan-700 underline-offset-2 hover:underline">
+      <Link href={`/eventos/${eventoId}`} className="ml-auto text-xs text-cyan-700 underline-offset-2 hover:underline">
         abrir evento
       </Link>
     </div>
@@ -46,7 +46,7 @@ export function AvisoTerceiroPendente({ eventoId, possuiTerceiros }: { eventoId:
       <AlertTriangle className="h-4 w-4 shrink-0" />
       Este evento informa terceiro(s) envolvido(s), mas nenhum foi cadastrado.
       <Link
-        href={`/sinistros/${eventoId}/terceiros/novo`}
+        href={`/eventos/${eventoId}/terceiros/novo`}
         className="ml-auto rounded-md bg-amber-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-amber-700"
       >
         Cadastrar terceiro
@@ -67,7 +67,7 @@ export function TerceirosEvento({ eventoId }: { eventoId: string }) {
           Cada terceiro tem tela propria (dados, reparo e financeiro) e fica vinculado a este evento e ao associado.
         </p>
         <Link
-          href={`/sinistros/${eventoId}/terceiros/novo`}
+          href={`/eventos/${eventoId}/terceiros/novo`}
           className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-acao px-3 py-1.5 text-sm font-medium text-white hover:bg-acao-escura"
         >
           <Plus className="h-4 w-4" /> Adicionar terceiro
@@ -84,7 +84,7 @@ export function TerceirosEvento({ eventoId }: { eventoId: string }) {
         <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200">
           {lista.map((t) => (
             <li key={t.id}>
-              <Link href={`/sinistros/${eventoId}/terceiros/${t.id}`} className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50">
+              <Link href={`/eventos/${eventoId}/terceiros/${t.id}`} className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50">
                 <UserRound className="h-4 w-4 text-brand-500" />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-slate-800">
