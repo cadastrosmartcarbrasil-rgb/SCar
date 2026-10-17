@@ -8,9 +8,30 @@
 
 export const PRAZO_REGULATORIO_DIAS = 90;
 
-/** Os marcos de alerta. 91 = vencido (o dia 90 ainda esta dentro). */
-export const MARCOS_PRAZO = [30, 60, 75, 85, 91] as const;
-export type MarcoPrazo = (typeof MARCOS_PRAZO)[number];
+/**
+ * Os 4 marcos de alerta (0114): configurados em Configuracoes -> Prazos e
+ * Documentos do Evento (`empresa`). O vencido nao e marco: e "passou de 90".
+ */
+export interface MarcosPrazo {
+  aviso: number;
+  atencao: number;
+  urgencia: number;
+  critico: number;
+}
+
+export const MARCOS_PADRAO: MarcosPrazo = { aviso: 30, atencao: 60, urgencia: 75, critico: 85 };
+
+/** O banco recusa o mesmo (chk_empresa_prazo_evento_marcos); aqui a tela explica antes. */
+export function validarMarcos(m: MarcosPrazo): string | null {
+  const v = [m.aviso, m.atencao, m.urgencia, m.critico];
+  if (v.some((x) => !Number.isInteger(x))) return 'Informe os quatro marcos em dias inteiros.';
+  if (m.aviso < 1) return 'O aviso precisa ser de pelo menos 1 dia.';
+  if (!(m.aviso < m.atencao && m.atencao < m.urgencia && m.urgencia < m.critico)) {
+    return 'Os marcos precisam ser crescentes: aviso < atencao < urgencia < critico.';
+  }
+  if (m.critico > PRAZO_REGULATORIO_DIAS) return `O critico nao pode passar de ${PRAZO_REGULATORIO_DIAS} dias (prazo legal).`;
+  return null;
+}
 
 export type NivelPrazo =
   | 'DOCUMENTACAO_PENDENTE'
@@ -24,14 +45,19 @@ export type NivelPrazo =
   | 'ENCERRADO_FORA_DO_PRAZO'
   | 'ENCERRADO_SEM_PRAZO';
 
-export function nivelDoPrazo(dias: number | null, iniciado: boolean, encerrado: boolean): NivelPrazo {
+export function nivelDoPrazo(
+  dias: number | null,
+  iniciado: boolean,
+  encerrado: boolean,
+  marcos: MarcosPrazo = MARCOS_PADRAO,
+): NivelPrazo {
   if (!iniciado || dias == null) return encerrado ? 'ENCERRADO_SEM_PRAZO' : 'DOCUMENTACAO_PENDENTE';
   if (encerrado) return dias > PRAZO_REGULATORIO_DIAS ? 'ENCERRADO_FORA_DO_PRAZO' : 'ENCERRADO_NO_PRAZO';
   if (dias > PRAZO_REGULATORIO_DIAS) return 'VENCIDO';
-  if (dias >= 85) return 'CRITICO';
-  if (dias >= 75) return 'URGENCIA';
-  if (dias >= 60) return 'ATENCAO';
-  if (dias >= 30) return 'AVISO';
+  if (dias >= marcos.critico) return 'CRITICO';
+  if (dias >= marcos.urgencia) return 'URGENCIA';
+  if (dias >= marcos.atencao) return 'ATENCAO';
+  if (dias >= marcos.aviso) return 'AVISO';
   return 'NO_PRAZO';
 }
 
@@ -60,6 +86,7 @@ export interface EntradaPrazo {
   documentacaoCompleta: string | null;
   encerradoEm?: string | null;
   hoje: string;
+  marcos?: MarcosPrazo;
 }
 
 export interface CalculoPrazo {
@@ -85,7 +112,7 @@ export function calcularPrazo(e: EntradaPrazo): CalculoPrazo {
     dias,
     restantes: limite && !e.encerradoEm ? diasEntre(e.hoje, limite) : null,
     diasDesdeAviso: diasEntre(e.aviso, ref),
-    nivel: nivelDoPrazo(dias, inicio != null, !!e.encerradoEm),
+    nivel: nivelDoPrazo(dias, inicio != null, !!e.encerradoEm, e.marcos),
   };
 }
 
@@ -117,31 +144,31 @@ export const ESTILO_NIVEL: Record<NivelPrazo, EstiloNivel> = {
     rotulo: 'No prazo',
     selo: 'border-emerald-200 bg-emerald-50 text-emerald-800',
     barra: 'bg-emerald-500',
-    descricao: 'Menos de 30 dias desde a documentacao completa.',
+    descricao: 'Antes do primeiro marco de alerta.',
   },
   AVISO: {
-    rotulo: 'Aviso · 30 dias',
+    rotulo: 'Aviso preventivo',
     selo: 'border-emerald-300 bg-emerald-100 text-emerald-900',
     barra: 'bg-emerald-500',
-    descricao: 'Aviso preventivo: passou de 30 dias.',
+    descricao: 'Aviso preventivo: passou do primeiro marco.',
   },
   ATENCAO: {
-    rotulo: 'Atencao · 60 dias',
+    rotulo: 'Atencao',
     selo: 'border-amber-300 bg-amber-100 text-amber-900',
     barra: 'bg-amber-500',
-    descricao: 'Meio do caminho: passou de 60 dias.',
+    descricao: 'Meio do caminho: passou do marco de atencao.',
   },
   URGENCIA: {
-    rotulo: 'Urgencia · 75 dias',
+    rotulo: 'Urgencia',
     selo: 'border-orange-300 bg-orange-100 text-orange-900',
     barra: 'bg-orange-500',
-    descricao: 'Risco operacional: passou de 75 dias.',
+    descricao: 'Risco operacional: passou do marco de urgencia.',
   },
   CRITICO: {
-    rotulo: 'Critico · 85 dias',
+    rotulo: 'Critico',
     selo: 'border-rose-300 bg-rose-100 text-rose-900',
     barra: 'bg-rose-600',
-    descricao: 'Alerta vermelho para a diretoria: passou de 85 dias.',
+    descricao: 'Alerta vermelho para a diretoria: passou do marco critico.',
   },
   VENCIDO: {
     rotulo: 'Prazo vencido',
@@ -173,6 +200,18 @@ export function estiloDoNivel(nivel: string): EstiloNivel {
   return ESTILO_NIVEL[nivel as NivelPrazo] ?? {
     rotulo: nivel, selo: 'border-slate-200 bg-slate-100 text-slate-700', barra: 'bg-slate-400', descricao: nivel,
   };
+}
+
+/** A descricao com os numeros em vigor ("passou de 60 dias"). */
+export function descricaoDoNivel(nivel: string, marcos: MarcosPrazo = MARCOS_PADRAO): string {
+  switch (nivel) {
+    case 'NO_PRAZO': return `Menos de ${marcos.aviso} dias desde a documentacao completa.`;
+    case 'AVISO': return `Aviso preventivo: passou de ${marcos.aviso} dias.`;
+    case 'ATENCAO': return `Meio do caminho: passou de ${marcos.atencao} dias.`;
+    case 'URGENCIA': return `Risco operacional: passou de ${marcos.urgencia} dias.`;
+    case 'CRITICO': return `Alerta vermelho para a diretoria: passou de ${marcos.critico} dias.`;
+    default: return estiloDoNivel(nivel).descricao;
+  }
 }
 
 export function rotuloMarco(marco: number): string {
@@ -218,6 +257,7 @@ export interface AlertaNovo {
   evento_id: string;
   numero_protocolo: string | null;
   marco: number;
+  nivel: string;
   dias: number;
   limite_prazo: string;
   regional_id: string | null;
@@ -226,14 +266,14 @@ export interface AlertaNovo {
   cliente_nome: string | null;
 }
 
-/** So o critico (85) e o vencido viram e-mail para a diretoria; os demais ficam na tela. */
-export const MARCOS_COM_EMAIL = [85, 91];
+/** So o CRITICO e o VENCIDO viram e-mail para a diretoria; os demais ficam na tela. */
+export const NIVEIS_COM_EMAIL = ['CRITICO', 'VENCIDO'];
 
 /** Um aviso por evento (o maior marco novo): a rotina que pegou o atraso nao manda cinco e-mails do mesmo evento. */
 export function alertasParaEmail(alertas: AlertaNovo[]): AlertaNovo[] {
   const porEvento = new Map<string, AlertaNovo>();
   for (const a of alertas) {
-    if (!MARCOS_COM_EMAIL.includes(a.marco)) continue;
+    if (!NIVEIS_COM_EMAIL.includes(a.nivel)) continue;
     const atual = porEvento.get(a.evento_id);
     if (!atual || a.marco > atual.marco) porEvento.set(a.evento_id, a);
   }
@@ -246,12 +286,12 @@ function dataBr(iso: string): string {
 }
 
 export function linhaDoAlerta(a: AlertaNovo): string {
-  const situacao = a.marco >= 91 ? 'VENCIDO' : `${a.dias} dias (critico)`;
+  const situacao = a.nivel === 'VENCIDO' ? 'VENCIDO' : `${a.dias} dias (critico)`;
   return `${a.numero_protocolo ?? '-'} · ${a.placa ?? '-'} · ${a.cliente_nome ?? '-'} · ${a.regional_nome ?? 'Matriz'} · ${situacao} · limite ${dataBr(a.limite_prazo)}`;
 }
 
 export function assuntoEmailPrazos(alertas: AlertaNovo[]): string {
-  const vencidos = alertas.filter((a) => a.marco >= 91).length;
+  const vencidos = alertas.filter((a) => a.nivel === 'VENCIDO').length;
   const criticos = alertas.length - vencidos;
   const partes = [vencidos > 0 && `${vencidos} vencido(s)`, criticos > 0 && `${criticos} critico(s)`].filter(Boolean);
   return `Prazo regulatorio de eventos (Art. 22): ${partes.join(' e ')}`;

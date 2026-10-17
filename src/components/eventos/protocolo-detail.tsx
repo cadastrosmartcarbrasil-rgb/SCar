@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Clock, Paperclip, Wrench, Info, DollarSign, Users, ListChecks } from 'lucide-react';
+import { Clock, Paperclip, Wrench, Info, DollarSign, Users, ListChecks, Pencil } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { UploadAnexos } from './upload-anexos';
 import { CotacaoPecas } from './cotacao-pecas';
@@ -13,6 +13,8 @@ import { useUsuarios } from '@/hooks/use-config';
 import { TramitacaoEvento } from './tramitacao-evento';
 import { CartaoPrazoEvento, DocumentosEvento } from './prazo-regulatorio';
 import { useDocumentosEvento } from '@/hooks/use-prazo-eventos';
+import { EditarEventoModal } from './editar-evento';
+import { SePode } from '@/components/layout/se-pode';
 import { PIPELINE_SINISTRO, TIPO_EVENTO_LABEL } from '@/types/domain';
 import { formatDate, formatCurrency } from '@/lib/utils';
 import type { StatusEvento, TipoEvento, Json } from '@/lib/database.types';
@@ -36,6 +38,7 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
   const { data: terceiros } = useTerceirosEvento(eventoId);
   const { data: documentos } = useDocumentosEvento(eventoId);
   const [aba, setAba] = useState<Aba>('info');
+  const [editando, setEditando] = useState(false);
 
   if (isLoading || !evento) return <p className="text-sm text-slate-500">Carregando protocolo...</p>;
 
@@ -78,7 +81,18 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
                   {tipoNome} - {veiculo?.placa}
                 </CardTitle>
               </div>
-              <StatusBadge status={evento.status} />
+              <div className="flex items-center gap-2">
+                <SePode chave="eventos.editar">
+                  <button
+                    type="button"
+                    onClick={() => setEditando(true)}
+                    className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-superficie px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                  >
+                    <Pencil className="h-3.5 w-3.5" /> Editar evento
+                  </button>
+                </SePode>
+                <StatusBadge status={evento.status} />
+              </div>
             </div>
           </CardHeader>
 
@@ -206,6 +220,8 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
           </CardContent>
         </Card>
       </div>
+
+      <EditarEventoModal evento={evento} open={editando} onClose={() => setEditando(false)} />
 
       {/* Tramitacao + pareceres (0059): passar a bola de verdade e pedir analise */}
       <div>

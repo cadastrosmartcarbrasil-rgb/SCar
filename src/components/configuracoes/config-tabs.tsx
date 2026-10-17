@@ -17,7 +17,7 @@ const TABS = [
   { href: '/configuracoes/cores', label: 'Cores', icon: Palette },
   { href: '/configuracoes/cotas-participacao', label: 'Cotas de Participacao', icon: Percent },
   { href: '/configuracoes/tipos-evento', label: 'Tipos de Evento', icon: AlertTriangle },
-  { href: '/configuracoes/documentos-evento', label: 'Documentos do Evento', icon: FileCheck2 },
+  { href: '/configuracoes/documentos-evento', label: 'Prazos e Documentos do Evento', icon: FileCheck2 },
   { href: '/configuracoes/alertas', label: 'Alertas', icon: Bell },
   { href: '/configuracoes/comunicados', label: 'Comunicados', icon: Megaphone },
   { href: '/configuracoes/produtos', label: 'Produtos', icon: Package },

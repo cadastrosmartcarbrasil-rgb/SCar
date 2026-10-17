@@ -131,8 +131,13 @@ export function PainelPrazos() {
             Limpar filtro ({estiloDoNivel(nivel).rotulo})
           </button>
         )}
+        {perfil?.papel === 'admin' && (
+          <Link href="/configuracoes/documentos-evento" className="ml-auto text-sm font-medium text-cyan-700 hover:underline">
+            Configurar marcos e documentos
+          </Link>
+        )}
         {global && (
-          <Button variant="ghost" className="ml-auto" disabled={rodando} onClick={rodarRotina}
+          <Button variant="ghost" className={perfil?.papel === 'admin' ? '' : 'ml-auto'} disabled={rodando} onClick={rodarRotina}
             title="A rotina roda sozinha todo dia; use para disparar os alertas agora">
             <RefreshCw className={cn('h-4 w-4', rodando && 'animate-spin')} /> Rodar rotina de alertas
           </Button>

@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  MARCOS_PADRAO,
   alertasParaEmail,
+  descricaoDoNivel,
+  validarMarcos,
   assuntoEmailPrazos,
   calcularPrazo,
   contarPorNivel,
@@ -107,7 +110,9 @@ describe('apresentacao', () => {
 
 describe('e-mail da rotina', () => {
   const a = (evento: string, marco: number, limite = '2026-12-01') => ({
-    alerta_id: `${evento}-${marco}`, evento_id: evento, numero_protocolo: `EVT-${evento}`, marco, dias: marco,
+    alerta_id: `${evento}-${marco}`, evento_id: evento, numero_protocolo: `EVT-${evento}`, marco,
+    nivel: ({ 30: 'AVISO', 60: 'ATENCAO', 75: 'URGENCIA', 85: 'CRITICO', 91: 'VENCIDO' } as Record<number, string>)[marco],
+    dias: marco,
     limite_prazo: limite, regional_id: null, regional_nome: null, placa: 'ABC1D23', cliente_nome: 'FULANO',
   });
   it('so 85 e vencido, um por evento (o maior)', () => {
@@ -117,5 +122,27 @@ describe('e-mail da rotina', () => {
   it('assunto e linha', () => {
     expect(assuntoEmailPrazos([a('1', 91), a('3', 85)])).toBe('Prazo regulatorio de eventos (Art. 22): 1 vencido(s) e 1 critico(s)');
     expect(linhaDoAlerta(a('1', 91, '2026-12-01'))).toBe('EVT-1 · ABC1D23 · FULANO · Matriz · VENCIDO · limite 01/12/2026');
+  });
+});
+
+describe('marcos configuraveis (0114)', () => {
+  const m = { aviso: 20, atencao: 50, urgencia: 70, critico: 80 };
+  it('o nivel segue os marcos', () => {
+    expect(nivelDoPrazo(55, true, false, m)).toBe('ATENCAO');
+    expect(nivelDoPrazo(55, true, false)).toBe('AVISO');
+    expect(nivelDoPrazo(80, true, false, m)).toBe('CRITICO');
+    expect(nivelDoPrazo(91, true, false, m)).toBe('VENCIDO');
+    expect(calcularPrazo({ aviso: '2026-01-01', documentacaoCompleta: '2026-01-01', hoje: '2026-02-20', marcos: m }).nivel).toBe('ATENCAO');
+  });
+  it('validacao espelha o CHECK do banco', () => {
+    expect(validarMarcos(MARCOS_PADRAO)).toBeNull();
+    expect(validarMarcos(m)).toBeNull();
+    expect(validarMarcos({ ...m, atencao: 20 })).toMatch(/crescentes/);
+    expect(validarMarcos({ ...m, critico: 91 })).toMatch(/90/);
+    expect(validarMarcos({ ...m, aviso: 0 })).toMatch(/1 dia/);
+  });
+  it('descricao com os numeros em vigor', () => {
+    expect(descricaoDoNivel('ATENCAO', m)).toBe('Meio do caminho: passou de 50 dias.');
+    expect(descricaoDoNivel('VENCIDO', m)).toMatch(/90 dias/);
   });
 });

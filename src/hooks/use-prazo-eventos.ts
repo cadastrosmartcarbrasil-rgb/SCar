@@ -5,6 +5,7 @@
 // tramitacao) ja invalida ['eventos'], e o prazo acompanha sem codigo a mais.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
+import { MARCOS_PADRAO, type MarcosPrazo } from '@/lib/prazo-regulatorio';
 import type {
   EventoDocumentosModeloRow,
   EventoDocumentosRow,
@@ -12,6 +13,39 @@ import type {
   EventoPrazoHistoricoRow,
   SituacaoDocumentoEvento,
 } from '@/lib/database.types';
+
+/** Os marcos de alerta em vigor (0114). Enquanto carrega, os padroes 30/60/75/85. */
+export function useMarcosPrazo() {
+  const supabase = createClient();
+  const q = useQuery<MarcosPrazo>({
+    queryKey: ['config', 'marcos-prazo-evento'],
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('configuracao_prazo_evento');
+      if (error) throw error;
+      const l = data?.[0];
+      return l ? { aviso: l.aviso, atencao: l.atencao, urgencia: l.urgencia, critico: l.critico } : MARCOS_PADRAO;
+    },
+  });
+  return { ...q, marcos: q.data ?? MARCOS_PADRAO };
+}
+
+export function useSalvarMarcosPrazo() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (m: MarcosPrazo) => {
+      const { error } = await supabase.rpc('salvar_marcos_prazo_evento', {
+        p_aviso: m.aviso, p_atencao: m.atencao, p_urgencia: m.urgencia, p_critico: m.critico,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['config', 'marcos-prazo-evento'] });
+      qc.invalidateQueries({ queryKey: ['eventos'] });
+    },
+  });
+}
 
 export function useEventosPrazos(opts: { incluirEncerrados?: boolean } = {}) {
   const supabase = createClient();

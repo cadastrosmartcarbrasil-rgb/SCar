@@ -23,11 +23,13 @@ import {
   useEventoPrazo,
   useHistoricoPrazo,
   useMarcarDocumentacaoCompleta,
+  useMarcosPrazo,
   useReabrirDocumentacao,
   useRemoverDocumentoEvento,
 } from '@/hooks/use-prazo-eventos';
 import {
   PRAZO_REGULATORIO_DIAS,
+  descricaoDoNivel,
   estiloDoNivel,
   fracaoDoPrazo,
   nivelGrave,
@@ -73,32 +75,33 @@ export function SeloPrazo({ prazo, compacto = false }: { prazo: EventoPrazo; com
   );
 }
 
-const MARCAS_BARRA = [30, 60, 75, 85];
-
-/** A barra dos 90 dias, com as faixas de cor ao fundo e as marcas de alerta. */
+/** A barra dos 90 dias, com as faixas de cor ao fundo e as marcas de alerta (configuradas, 0114). */
 export function BarraPrazo({ prazo, fina = false }: { prazo: EventoPrazo; fina?: boolean }) {
+  const { marcos } = useMarcosPrazo();
   const e = estiloDoNivel(prazo.nivel);
   const frac = fracaoDoPrazo(prazo.dias_transcorridos);
+  const MARCAS_BARRA = [marcos.aviso, marcos.atencao, marcos.urgencia, marcos.critico];
+  const pct = (d: number) => `${(d / PRAZO_REGULATORIO_DIAS) * 100}%`;
   return (
     <div className="w-full">
       <div className={cn('relative w-full overflow-hidden rounded-full bg-slate-100', fina ? 'h-1.5' : 'h-3')}>
-        {/* faixas: verde 0-60 · amarelo 60-75 · laranja 75-85 · vermelho 85-90 */}
+        {/* faixas: verde ate a atencao · amarelo ate a urgencia · laranja ate o critico · vermelho ate 90 */}
         <div className="absolute inset-0 flex opacity-25">
-          <div className="h-full bg-emerald-400" style={{ width: `${(60 / 90) * 100}%` }} />
-          <div className="h-full bg-amber-400" style={{ width: `${(15 / 90) * 100}%` }} />
-          <div className="h-full bg-orange-400" style={{ width: `${(10 / 90) * 100}%` }} />
-          <div className="h-full bg-rose-500" style={{ width: `${(5 / 90) * 100}%` }} />
+          <div className="h-full bg-emerald-400" style={{ width: pct(marcos.atencao) }} />
+          <div className="h-full bg-amber-400" style={{ width: pct(marcos.urgencia - marcos.atencao) }} />
+          <div className="h-full bg-orange-400" style={{ width: pct(marcos.critico - marcos.urgencia) }} />
+          <div className="h-full bg-rose-500" style={{ width: pct(PRAZO_REGULATORIO_DIAS - marcos.critico) }} />
         </div>
         <div className={cn('relative h-full rounded-full transition-all', e.barra)} style={{ width: `${frac * 100}%` }} />
         {!fina &&
           MARCAS_BARRA.map((m) => (
-            <span key={m} className="absolute top-0 h-full w-px bg-slate-500/50" style={{ left: `${(m / 90) * 100}%` }} />
+            <span key={m} className="absolute top-0 h-full w-px bg-slate-500/50" style={{ left: pct(m) }} />
           ))}
       </div>
       {!fina && (
         <div className="relative mt-1 h-3 text-[10px] text-slate-500">
           {[...MARCAS_BARRA, 90].map((m) => (
-            <span key={m} className="tnum absolute -translate-x-1/2" style={{ left: `${(m / 90) * 100}%` }}>
+            <span key={m} className="tnum absolute -translate-x-1/2" style={{ left: pct(m) }}>
               {m}
             </span>
           ))}
@@ -113,6 +116,7 @@ export function BarraPrazo({ prazo, fina = false }: { prazo: EventoPrazo; fina?:
 // ---------------------------------------------------------------------------
 export function CartaoPrazoEvento({ eventoId, onVerDocumentos }: { eventoId: string; onVerDocumentos?: () => void }) {
   const { data: prazo, isLoading } = useEventoPrazo(eventoId);
+  const { marcos } = useMarcosPrazo();
   const podeTratar = usePode('eventos.editar');
   const { data: perfil } = usePerfilAtual();
   const global = perfil?.papel === 'admin' || perfil?.papel === 'financeiro';
@@ -179,7 +183,7 @@ export function CartaoPrazoEvento({ eventoId, onVerDocumentos }: { eventoId: str
           </div>
         </dl>
 
-        <p className="text-xs text-slate-500">{e.descricao}</p>
+        <p className="text-xs text-slate-500">{descricaoDoNivel(prazo.nivel, marcos)}</p>
 
         {prazo.nivel === 'VENCIDO' && (
           <p className="rounded-md border border-rose-300 bg-rose-50 p-2 text-xs font-medium text-rose-800">

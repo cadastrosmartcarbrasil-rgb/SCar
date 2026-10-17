@@ -281,3 +281,36 @@ export function useSignedUrl() {
     },
   });
 }
+
+// Edicao dos dados do evento (completar o que faltou na abertura). A RLS de
+// update e `pode_tratar_evento` (0077/0111 = perfil com eventos.editar na unidade).
+export type EdicaoEvento = Pick<
+  EventosSinistroRow,
+  | 'data_ocorrencia'
+  | 'data_comunicacao'
+  | 'tipo_evento_id'
+  | 'tipo_envolvimento'
+  | 'possui_terceiros'
+  | 'local_evento'
+  | 'valor_fipe_atualizado'
+  | 'valor_participacao'
+  | 'bo_numero'
+  | 'bo_data'
+  | 'bo_unidade'
+  | 'bo_resumo'
+  | 'descricao'
+>;
+
+export function useAtualizarEvento() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, dados }: { id: string; dados: EdicaoEvento }) => {
+      const { data, error } = await supabase.from('eventos_sinistro').update(dados).eq('id', id).select('id');
+      if (error) throw error;
+      // RLS de update nao levanta erro: so nao alcanca a linha.
+      if (!data || data.length === 0) throw new Error('Seu perfil nao pode editar este evento.');
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['eventos'] }),
+  });
+}

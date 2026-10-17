@@ -1512,6 +1512,7 @@ export type EventoPrazoAlertasRow = {
   id: string;
   evento_id: string;
   marco: number;
+  nivel: 'AVISO' | 'ATENCAO' | 'URGENCIA' | 'CRITICO' | 'VENCIDO';
   dias: number;
   limite_prazo: string;
   disparado_em: string;
@@ -4160,6 +4161,14 @@ export type Database = {
       dar_ciencia_prazo_evento: { Args: { p_evento: string }; Returns: number };
       atualizar_prazos_eventos: { Args: Record<string, never>; Returns: Json };
       marcar_alertas_prazo_notificados: { Args: { p_ids: string[] }; Returns: number };
+      configuracao_prazo_evento: {
+        Args: Record<string, never>;
+        Returns: { prazo_dias: number; aviso: number; atencao: number; urgencia: number; critico: number }[];
+      };
+      salvar_marcos_prazo_evento: {
+        Args: { p_aviso: number; p_atencao: number; p_urgencia: number; p_critico: number };
+        Returns: undefined;
+      };
       eventos_historico_resumo: { Args: Record<string, never>; Returns: EventosHistoricoResumo[] };
       mutual_importar_eventos_historico: {
         Args: { p_confirmar?: boolean };
