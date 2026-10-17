@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { agruparPorRegional, filtrarPorExpansao, ROTULO_SEM_UNIDADE } from './kanban-eventos';
+import { agruparPorRegional, filtrarPorExpansao, ROTULO_SEM_UNIDADE, veioDoMutual } from './kanban-eventos';
 
 const ev = (regional_id: string | null, nome?: string) => ({
   regional_id,
@@ -37,5 +37,13 @@ describe('filtrarPorExpansao', () => {
   it('por unidade traz so a dela, inclusive a matriz', () => {
     expect(filtrarPorExpansao(lista, { regionalId: 'a' })).toHaveLength(1);
     expect(filtrarPorExpansao(lista, { regionalId: null })).toEqual([ev(null)]);
+  });
+});
+
+describe('veioDoMutual', () => {
+  it('reconhece a frase que a RPC da 0112 grava', () => {
+    expect(veioDoMutual('Trazido do historico do Mutual em 17/10/2026.\nProtocolo no Mutual: 9001.')).toBe(true);
+    expect(veioDoMutual('Colisao na avenida')).toBe(false);
+    expect(veioDoMutual(null)).toBe(false);
   });
 });

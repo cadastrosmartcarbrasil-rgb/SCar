@@ -887,7 +887,18 @@ export type EventoHistoricoLinha = EventoMutualCliente & {
   cliente_id: string;
   associado: string;
   unidade: string | null;
+  /** 0112: o evento do Kanban criado a partir deste historico (nulo = nao levado). */
+  evento_id: string | null;
+  evento_protocolo: string | null;
+  evento_status: string | null;
   total_registros: number;
+};
+export type TransporteEventoHistorico = {
+  historico_id: string;
+  evento_id: string | null;
+  numero_protocolo: string | null;
+  situacao: string;
+  motivo: string | null;
 };
 export type EventosHistoricoResumo = {
   eventos: number;
@@ -4033,8 +4044,13 @@ export type Database = {
         Args: {
           p_busca?: string | null; p_tipo?: string | null; p_de?: string | null; p_ate?: string | null;
           p_regional_id?: string | null; p_limite?: number; p_offset?: number;
+          p_no_kanban?: boolean | null;
         };
         Returns: EventoHistoricoLinha[];
+      };
+      transportar_eventos_historico: {
+        Args: { p_ids: string[] };
+        Returns: TransporteEventoHistorico[];
       };
       eventos_historico_resumo: { Args: Record<string, never>; Returns: EventosHistoricoResumo[] };
       mutual_importar_eventos_historico: {

@@ -109,3 +109,43 @@ export function unirEventosCliente(
     .filter((e) => !veiculoId || e.veiculo_id === veiculoId)
     .sort((a, b) => (b.data_ocorrencia ?? '').localeCompare(a.data_ocorrencia ?? ''));
 }
+
+// ----------------------------------------------------------------------------
+// LEVAR AO KANBAN (0112) — o evento do historico ESCOLHIDO vira evento do SCar,
+// sempre em ABERTO. Nada vai sozinho: o Mutual nao diz quem ainda esta em
+// tratamento. A regra que vale e a do banco (`transportar_eventos_historico`);
+// aqui e o espelho para a tela nao oferecer o que o banco recusa.
+// ----------------------------------------------------------------------------
+export type SituacaoTransporte =
+  | 'LEVADO' | 'JA_NO_KANBAN' | 'SEM_VEICULO' | 'SEM_DATA' | 'FORA_DA_UNIDADE' | 'NAO_ENCONTRADO';
+
+export const ROTULO_TRANSPORTE: Record<SituacaoTransporte, string> = {
+  LEVADO: 'levados ao Kanban',
+  JA_NO_KANBAN: 'ja estavam no Kanban',
+  SEM_VEICULO: 'sem veiculo na base',
+  SEM_DATA: 'sem data da ocorrencia',
+  FORA_DA_UNIDADE: 'de outra unidade',
+  NAO_ENCONTRADO: 'nao encontrados',
+};
+
+/** Pode ir ao Kanban? Ja levado, sem veiculo ou sem data nao vao. */
+export function podeLevarAoKanban(e: {
+  evento_id?: string | null; veiculo_id: string | null; data_evento: string | null;
+}): { pode: boolean; motivo: string | null } {
+  if (e.evento_id) return { pode: false, motivo: 'Ja esta no Kanban' };
+  if (!e.veiculo_id) return { pode: false, motivo: 'Veiculo fora da base' };
+  if (!e.data_evento) return { pode: false, motivo: 'Sem data da ocorrencia' };
+  return { pode: true, motivo: null };
+}
+
+/** "3 levados ao Kanban · 1 sem veiculo na base" — a ordem de ROTULO_TRANSPORTE. */
+export function resumoTransporte(linhas: { situacao: string }[]): {
+  levados: number; texto: string;
+} {
+  const cont = new Map<string, number>();
+  for (const l of linhas) cont.set(l.situacao, (cont.get(l.situacao) ?? 0) + 1);
+  const partes = (Object.keys(ROTULO_TRANSPORTE) as SituacaoTransporte[])
+    .filter((s) => cont.get(s))
+    .map((s) => `${cont.get(s)} ${ROTULO_TRANSPORTE[s]}`);
+  return { levados: cont.get('LEVADO') ?? 0, texto: partes.join(' · ') || 'Nada a levar' };
+}

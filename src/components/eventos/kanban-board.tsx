@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { ChevronDown, ChevronUp, Eye, Maximize2, Minimize2 } from 'lucide-react';
 import { PIPELINE_SINISTRO, TIPO_EVENTO_LABEL } from '@/types/domain';
 import { useEventos, useAtualizarStatusEvento, type EventoComRelacionamentos } from '@/hooks/use-eventos';
-import { agruparPorRegional, filtrarPorExpansao, type ExpansaoColuna } from '@/lib/kanban-eventos';
+import { agruparPorRegional, filtrarPorExpansao, veioDoMutual, type ExpansaoColuna } from '@/lib/kanban-eventos';
 import { formatDate } from '@/lib/utils';
 import type { StatusEvento } from '@/lib/database.types';
 
@@ -155,7 +155,12 @@ export function KanbanBoard() {
                       onDragStart={() => setDragId(evento.id)}
                       className="cursor-grab rounded-lg border border-slate-200 bg-superficie p-3 shadow-sm transition hover:shadow active:cursor-grabbing"
                     >
-                      <p className="text-xs font-mono text-brand-600">{evento.numero_protocolo}</p>
+                      <p className="flex items-center justify-between gap-2 text-xs font-mono text-brand-600">
+                        {evento.numero_protocolo}
+                        {veioDoMutual(evento.descricao) && (
+                          <span className="rounded bg-violet-100 px-1.5 py-0.5 font-sans text-[10px] font-semibold uppercase text-violet-700">Mutual</span>
+                        )}
+                      </p>
                       <p className="mt-1 text-sm font-medium text-slate-800">
                         {evento.veiculos?.placa ?? 'Veiculo'} -{' '}
                         {evento.tipos_evento?.nome ??

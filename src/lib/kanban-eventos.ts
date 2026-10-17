@@ -47,3 +47,12 @@ export function filtrarPorExpansao<T extends EventoDoKanban>(eventos: T[], expan
   if (expansao === 'todos') return eventos;
   return eventos.filter((e) => (e.regional_id ?? null) === expansao.regionalId);
 }
+
+/**
+ * O evento nasceu do historico do Mutual (0112)? A RPC `transportar_eventos_historico`
+ * abre a descricao com esta frase — e ela que o card usa para mostrar o selo.
+ */
+export const PREFIXO_DO_MUTUAL = 'Trazido do historico do Mutual';
+export function veioDoMutual(descricao: string | null | undefined): boolean {
+  return (descricao ?? '').startsWith(PREFIXO_DO_MUTUAL);
+}

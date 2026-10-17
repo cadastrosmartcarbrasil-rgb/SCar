@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import type {
-  EventoHistoricoLinha, EventosHistoricoResumo, ImportacaoEventosHistorico,
+  EventoHistoricoLinha, EventosHistoricoResumo, ImportacaoEventosHistorico, TransporteEventoHistorico,
 } from '@/lib/database.types';
 
 const RAIZ = ['eventos-historico'] as const;
@@ -45,6 +45,8 @@ export interface FiltroEventosHistorico {
   tipo: string | null;
   de: string | null;
   ate: string | null;
+  /** 0112: null = todos · false = ainda nao levados ao Kanban · true = ja levados. */
+  noKanban: boolean | null;
   pagina: number;
 }
 
@@ -64,10 +66,33 @@ export function useEventosHistoricoLista(f: FiltroEventosHistorico) {
         p_ate: f.ate,
         p_limite: POR_PAGINA_HISTORICO,
         p_offset: f.pagina * POR_PAGINA_HISTORICO,
+        p_no_kanban: f.noKanban,
       });
       if (error) throw error;
       return data ?? [];
     },
     placeholderData: (anterior) => anterior,
+  });
+}
+
+/**
+ * Leva ao Kanban os eventos ESCOLHIDOS do historico (0112) — sempre em ABERTO.
+ * Devolve uma linha por id com a situacao (LEVADO, JA_NO_KANBAN, SEM_VEICULO...).
+ */
+export function useTransportarEventosHistorico() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: string[]): Promise<TransporteEventoHistorico[]> => {
+      const { data, error } = await supabase.rpc('transportar_eventos_historico', { p_ids: ids });
+      if (error) throw error;
+      return data ?? [];
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: RAIZ });
+      qc.invalidateQueries({ queryKey: ['eventos'] });
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
+      qc.invalidateQueries({ queryKey: ['sac'] });
+    },
   });
 }
