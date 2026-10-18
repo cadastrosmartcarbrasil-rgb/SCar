@@ -3,14 +3,14 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import {
-  Wallet, MessageCircle, Mail, Pencil, Barcode, QrCode, Copy, RefreshCw, Loader2,
+  Wallet, MessageCircle, Mail, Pencil, Barcode, QrCode, Copy, Repeat2, Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { FormField, Input, Textarea, MoneyInput } from '@/components/ui/field';
-import {
-  useTitulosCliente, useAjustarTitulo, useReemitirTitulo,
-} from '@/hooks/use-protocolos';
+import { useTitulosCliente, useAjustarTitulo } from '@/hooks/use-protocolos';
+import { BoletosNegociados, ModalNegociarBoletos, useContatoAssociado } from '@/components/cobrancas/negociacao-boletos';
+import { ehLinhaSicredi, mensagemDoBoleto, motivoNaoNegociavel } from '@/lib/renegociacao';
 import {
   linkWhatsAppAssociado, mensagemPadrao, assuntoPadrao, linkEmail,
   valorAjustado, validarAjuste,
@@ -58,8 +58,16 @@ export function HistoricoFinanceiroLista({
   alturaMaxima?: boolean;
 }) {
   const { data: titulos, isLoading, error } = useTitulosCliente(clienteId, veiculoId ?? null, limite);
-  const reemitir = useReemitirTitulo();
   const [editando, setEditando] = useState<TituloCliente | null>(null);
+  const contato = useContatoAssociado(clienteId);
+  // 0121: selecao dos boletos em aberto para 2a via / negociacao (Mutual e SCar).
+  const [marcados, setMarcados] = useState<Set<string>>(new Set());
+  const [negociando, setNegociando] = useState<TituloCliente[] | null>(null);
+  const negociaveis = (titulos ?? []).filter((t) => !motivoNaoNegociavel(t));
+  const selecionados = negociaveis.filter((t) => marcados.has(t.id));
+  const alternar = (id: string) => setMarcados((m) => {
+    const n = new Set(m); if (n.has(id)) n.delete(id); else n.add(id); return n;
+  });
 
   return (
     <>
@@ -68,18 +76,44 @@ export function HistoricoFinanceiroLista({
       {!isLoading && (titulos ?? []).length === 0 && (
         <p className="text-sm text-slate-400">Nenhum boleto encontrado — nem no SCar, nem no historico do Mutual.</p>
       )}
+      <BoletosNegociados clienteId={clienteId} />
+      {negociaveis.length > 0 && (
+        <div className="sticky top-0 z-10 mb-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-cyan-200 bg-superficie px-3 py-2">
+          <p className="text-xs text-slate-600">
+            {selecionados.length > 0
+              ? <>Selecionados: <b className="tnum">{selecionados.length}</b> · {formatCurrency(selecionados.reduce((s, t) => s + Number(t.valor), 0))}</>
+              : <>Marque os boletos em aberto para gerar a 2a via ou negociar (um boleto novo, ou parcelado).</>}
+          </p>
+          <span className="flex gap-1">
+            {selecionados.length === 0 && negociaveis.some((t) => t.status === 'vencido') && (
+              <Button variant="ghost" className="px-2 py-1 text-xs"
+                onClick={() => setMarcados(new Set(negociaveis.filter((t) => t.status === 'vencido').map((t) => t.id)))}>
+                Marcar os vencidos
+              </Button>
+            )}
+            <Button className="px-2.5 py-1 text-xs" disabled={selecionados.length === 0} onClick={() => setNegociando(selecionados)}>
+              <Repeat2 className="h-3.5 w-3.5" /> 2a via / negociar
+            </Button>
+          </span>
+        </div>
+      )}
       {(titulos ?? []).some((t) => t.origem === 'MUTUAL') && (
         <p className="mb-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
-          Os boletos marcados <b>Mutual</b> foram emitidos pelo sistema anterior e aparecem so para consulta:
-          a cobranca, a 2a via e qualquer ajuste continuam la. A situacao e a da ultima importacao do historico.
+          Os boletos <b>Mutual</b> foram emitidos pelo sistema anterior. A 2a via vencida e a negociacao geram um
+          boleto NOVO do SCar no Sicredi, e o original recebe baixa no banco.
         </p>
       )}
 
       <ul className={`space-y-2 ${alturaMaxima ? 'max-h-[60vh] overflow-y-auto' : ''}`}>
         {(titulos ?? []).map((t) => (
-          <li key={t.id} className="rounded-xl border border-slate-200 p-3">
+          <li key={t.id} className={`rounded-xl border p-3 ${marcados.has(t.id) ? 'border-cyan-400 bg-cyan-50/40' : 'border-slate-200'}`}>
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
+              <div className="flex items-start gap-2">
+                {!motivoNaoNegociavel(t) && (
+                  <input type="checkbox" className="mt-1 h-4 w-4" checked={marcados.has(t.id)} onChange={() => alternar(t.id)}
+                    aria-label="Selecionar para 2a via / negociacao" />
+                )}
+                <div>
                 <p className="text-sm font-semibold text-slate-800">
                   {formatCurrency(Number(t.valor))}
                   {(Number(t.desconto) > 0 || Number(t.acrescimo) > 0) && (
@@ -95,10 +129,11 @@ export function HistoricoFinanceiroLista({
                   {t.placa ? ` · ${t.placa}` : ' · fatura do associado'}
                   {t.status === 'vencido' && t.dias_atraso > 0 ? ` · ${t.dias_atraso} dia(s) em atraso` : ''}
                 </p>
+                </div>
               </div>
               <span className="flex items-center gap-1">
                 {t.origem === 'MUTUAL' && (
-                  <span className="rounded bg-brand-50 px-2 py-0.5 text-xs text-brand-600" title="Boleto emitido pelo Mutual — so consulta">
+                  <span className="rounded bg-brand-50 px-2 py-0.5 text-xs text-brand-600" title="Boleto emitido pelo Mutual (mesmo beneficiario Sicredi)">
                     Mutual
                   </span>
                 )}
@@ -108,6 +143,23 @@ export function HistoricoFinanceiroLista({
             </div>
 
             <div className="mt-2 flex flex-wrap items-center gap-2">
+              {t.linha_digitavel && ehLinhaSicredi(t.linha_digitavel) && t.status !== 'pago' && t.status !== 'cancelado' && (
+                <a href={t.origem === 'MUTUAL' ? `/api/v1/cobrancas/boleto?boleto_historico_id=${t.id}` : `/api/v1/cobrancas/boleto?titulo_id=${t.id}`}
+                  target="_blank" rel="noreferrer"
+                  className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-xs text-slate-600">
+                  <Barcode className="h-3.5 w-3.5" /> PDF (Sicredi)
+                </a>
+              )}
+              {t.linha_digitavel && t.status === 'aberto' && (
+                <a href={linkWhatsAppAssociado(contato.data?.celular ?? contato.data?.telefone, mensagemDoBoleto({
+                    nome: contato.data?.nome_razao_social ?? '', substitui: false,
+                    boletos: [{ parcela: 1, vencimento: t.data_vencimento, valor: Number(t.valor),
+                      linha_digitavel: t.linha_digitavel, pix_copia_cola: t.pix_copia_cola }] })) ?? undefined}
+                  target="_blank" rel="noreferrer"
+                  className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2 py-1 text-xs text-emerald-700">
+                  <MessageCircle className="h-3.5 w-3.5" /> Enviar 2a via
+                </a>
+              )}
               {t.url_boleto && (
                 <a href={t.url_boleto} target="_blank" rel="noreferrer"
                   className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-xs text-slate-600">
@@ -136,25 +188,16 @@ export function HistoricoFinanceiroLista({
                   <QrCode className="h-3.5 w-3.5" /> Pagina de pagamento (Mutual)
                 </a>
               )}
-              {editavelNoScar(t) && (
-                <>
-                  <Button variant="ghost" className="px-2 py-1 text-xs" onClick={() => setEditando(t)}>
-                    <Pencil className="h-3.5 w-3.5" /> Editar
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    className="px-2 py-1 text-xs"
-                    disabled={reemitir.isPending}
-                    onClick={() =>
-                      reemitir.mutate(t.id, {
-                        onSuccess: () => toast.success('Boleto liberado para 2a via (entra na proxima remessa)'),
-                        onError: (e) => toast.error(e.message),
-                      })
-                    }
-                  >
-                    <RefreshCw className="h-3.5 w-3.5" /> 2a via
-                  </Button>
-                </>
+              {!motivoNaoNegociavel(t) && (
+                <Button variant="ghost" className="px-2 py-1 text-xs" onClick={() => setNegociando([t])}>
+                  <Repeat2 className="h-3.5 w-3.5" /> {t.status === 'vencido' ? '2a via (novo boleto)' : 'Negociar'}
+                </Button>
+              )}
+              {/* Ja registrado no banco: mudar valor/vencimento aqui desencontraria do boleto — use "Negociar". */}
+              {editavelNoScar(t) && !t.linha_digitavel && (
+                <Button variant="ghost" className="px-2 py-1 text-xs" onClick={() => setEditando(t)}>
+                  <Pencil className="h-3.5 w-3.5" /> Editar
+                </Button>
               )}
             </div>
           </li>
@@ -162,6 +205,10 @@ export function HistoricoFinanceiroLista({
       </ul>
 
       {editando && <ModalEditarBoleto titulo={editando} onClose={() => setEditando(null)} />}
+      {negociando && (
+        <ModalNegociarBoletos clienteId={clienteId} selecionados={negociando}
+          onClose={() => { setNegociando(null); setMarcados(new Set()); }} />
+      )}
     </>
   );
 }
@@ -223,8 +270,8 @@ function ModalEditarBoleto({ titulo, onClose }: { titulo: TituloCliente; onClose
         <p className={`rounded-lg p-3 text-sm ${erro ? 'bg-rose-50 text-rose-700' : 'bg-slate-50 text-slate-600'}`}>
           {erro ?? <>Novo valor do boleto: <strong className="tnum">{formatCurrency(final)}</strong></>}
           <span className="mt-1 block text-xs text-slate-500">
-            O valor e sempre recalculado a partir do original — ajustes nao se acumulam. Ao mudar o
-            vencimento, gere a 2a via para o associado receber o boleto novo.
+            O valor e sempre recalculado a partir do original — ajustes nao se acumulam. Este boleto ainda nao
+            foi ao banco: ele sai com estes valores. Boleto ja registrado se muda por &ldquo;Negociar&rdquo;.
           </span>
         </p>
 

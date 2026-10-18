@@ -1311,6 +1311,46 @@ export type TitulosFinanceirosRow = Timestamps & {
   observacao: string | null;
   alterado_por: string | null;
   alterado_em: string | null;
+  // 0121: boleto novo de 2a via / acordo (sem fatura)
+  renegociacao_id?: string | null;
+  renegociacao_parcela?: number | null;
+};
+
+// 0121: renegociacao (2a via vencida / acordo) — boleto novo do SCar + baixa dos originais
+export type BoletoRenegociacao = {
+  id: string;
+  parcela: number;
+  vencimento: string;
+  valor: number;
+  status: string;
+  linha_digitavel: string | null;
+  pix_copia_cola: string | null;
+  nosso_numero: string | null;
+  gateway_erro: string | null;
+};
+export type OrigemRenegociacao = {
+  id: string;
+  origem: 'MUTUAL' | 'SCAR';
+  ref: string;
+  vencimento: string;
+  valor: number;
+  nosso_numero: string | null;
+  baixa_status: 'PENDENTE' | 'BAIXADO' | 'ERRO' | 'SEM_REGISTRO';
+  baixa_erro: string | null;
+};
+export type RenegociacaoCliente = {
+  id: string;
+  tipo: 'SEGUNDA_VIA' | 'ACORDO';
+  situacao: 'EMITINDO' | 'EMITIDA' | 'ERRO';
+  erro: string | null;
+  valor_original: number;
+  valor_total: number;
+  observacao: string | null;
+  acordo_id: string | null;
+  criado_por: string | null;
+  created_at: string;
+  boletos: BoletoRenegociacao[];
+  origens: OrigemRenegociacao[];
 };
 
 // 0025: fila de envio ao banco (remessa de cobranca)
@@ -3509,6 +3549,24 @@ export type Database = {
       notas_fiscais_evento: TableDef<NotasFiscaisEventoRow>;
       email_templates: TableDef<EmailTemplatesRow>;
       integracoes_bancarias: TableDef<IntegracoesBancariasRow, [Rel<'regional_id', 'regionais'>]>;
+      boletos_historico: TableDef<{
+        id: string; origem: string; id_externo: string; cliente_id: string; veiculo_id: string | null;
+        competencia: string | null; vencimento_original: string; data_vencimento: string; valor: number;
+        valor_pago: number | null; data_pagamento: string | null; situacao: string; status_origem: string;
+        em_serasa: boolean; linha_digitavel: string | null; nosso_numero: string | null;
+        renegociacao_id: string | null;
+      }>;
+      cobranca_renegociacoes: TableDef<{
+        id: string; cliente_id: string; regional_id: string | null; tipo: string; acordo_id: string | null;
+        valor_original: number; valor_total: number; observacao: string | null; situacao: string;
+        erro: string | null; integracao_id: string | null; criado_por: string | null;
+        created_at: string; emitida_em: string | null;
+      }>;
+      cobranca_renegociacao_origens: TableDef<{
+        id: string; renegociacao_id: string; origem: string; boleto_historico_id: string | null;
+        titulo_id: string | null; valor: number; vencimento: string; nosso_numero: string | null;
+        baixa_status: string; baixa_erro: string | null; baixado_em: string | null;
+      }>;
       marcas: TableDef<MarcasRow>;
       cores: TableDef<CoresRow>;
       regional_adicional_risco: TableDef<
@@ -4163,6 +4221,24 @@ export type Database = {
         Returns: string;
       };
       cancelar_acordo_cobranca: { Args: { p_acordo_id: string; p_motivo: string }; Returns: undefined };
+      criar_renegociacao: {
+        Args: {
+          p_cliente_id: string;
+          p_tipo: string;
+          p_origens: Json;
+          p_parcelas: Json;
+          p_acordo_id?: string | null;
+          p_observacao?: string | null;
+        };
+        Returns: string;
+      };
+      finalizar_emissao_renegociacao: {
+        Args: { p_id: string; p_integracao_id: string | null; p_retornos: Json };
+        Returns: string;
+      };
+      registrar_baixa_original: { Args: { p_origem_id: string; p_status: string; p_erro?: string | null }; Returns: string };
+      renegociacoes_do_cliente: { Args: { p_cliente_id: string }; Returns: RenegociacaoCliente[] };
+      cobranca_pode_cliente: { Args: { p_cliente_id: string }; Returns: boolean };
       cobranca_parametros: { Args: Record<string, never>; Returns: CobrancaParametros[] };
       salvar_parametros_cobranca: { Args: { p_meta: number; p_limite: number }; Returns: undefined };
       salvar_feriado_cobranca: { Args: { p_data: string; p_descricao: string }; Returns: undefined };

@@ -1,7 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Ban, Loader2, MessageCircle, Phone, Plus, Trash2 } from 'lucide-react';
+import { Ban, Loader2, MessageCircle, Phone, Plus, Repeat2, Trash2 } from 'lucide-react';
+import { ModalHistoricoFinanceiro } from '@/components/sac/acoes-veiculo';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { FormField, Input, MoneyInput, Select, Textarea } from '@/components/ui/field';
@@ -233,6 +234,7 @@ function NovoContato({ linha }: { linha: CobrancaFilaLinha }) {
 function Acordos({ clienteId }: { clienteId: string }) {
   const q = useCobrancaAcordosCliente(clienteId);
   const [cancelando, setCancelando] = useState<CobrancaAcordoSituacao | null>(null);
+  const [boletos, setBoletos] = useState(false);
   const lista = q.data ?? [];
   return (
     <section className="rounded-xl border border-slate-200 p-4">
@@ -261,6 +263,12 @@ function Acordos({ clienteId }: { clienteId: string }) {
               </tbody>
             </table>
             {a.cancelado_em && <p className="mt-1 text-slate-500">Cancelado em {formatDateTime(a.cancelado_em)}: {a.motivo_cancelamento}</p>}
+            {a.status === 'EM_ANDAMENTO' && (
+              <button type="button" onClick={() => setBoletos(true)}
+                className="mr-3 mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-cyan-700 hover:underline">
+                <Repeat2 className="h-3 w-3" /> gerar os boletos do acordo
+              </button>
+            )}
             {a.status === 'EM_ANDAMENTO' || a.status === 'QUEBRADO' ? (
               <button type="button" onClick={() => setCancelando(a)}
                 className="mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-rose-600 hover:underline">
@@ -271,6 +279,7 @@ function Acordos({ clienteId }: { clienteId: string }) {
         ))}
       </ul>
       <CancelarAcordo acordo={cancelando} onClose={() => setCancelando(null)} />
+      {boletos && <ModalHistoricoFinanceiro clienteId={clienteId} onClose={() => setBoletos(false)} />}
     </section>
   );
 }
@@ -311,9 +320,17 @@ const CLASSE_BOLETO: Record<string, string> = {
 function Boletos({ clienteId }: { clienteId: string }) {
   const q = useCobrancaBoletosCliente(clienteId);
   const lista = q.data ?? [];
+  const [negociar, setNegociar] = useState(false);
   return (
     <section className="rounded-xl border border-slate-200 p-4">
-      <h3 className="text-sm font-semibold text-slate-800">Boletos</h3>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold text-slate-800">Boletos</h3>
+        {/* 0121: 2a via e boleto negociado na hora, no Sicredi, com envio ao associado */}
+        <Button className="px-2.5 py-1 text-xs" onClick={() => setNegociar(true)}>
+          <Repeat2 className="h-3.5 w-3.5" /> 2a via / negociar
+        </Button>
+      </div>
+      {negociar && <ModalHistoricoFinanceiro clienteId={clienteId} onClose={() => setNegociar(false)} />}
       <ErroLeitura q={q} />
       <div className="mt-2 max-h-64 overflow-auto">
         <table className="w-full text-xs">
