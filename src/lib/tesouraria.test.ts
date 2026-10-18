@@ -1,0 +1,57 @@
+import { describe, expect, it } from 'vitest';
+import { diaAnteriorIso, primeiroDiaNegativo, projetarFluxo, resumoConciliacao, textosDeMensalidade, totaisFluxo, type DiaFluxo } from './tesouraria';
+
+const dia = (d: string, o: Partial<DiaFluxo> = {}): DiaFluxo => ({
+  dia: d, realizado_entrada: 0, realizado_saida: 0, previsto_entrada: 0, previsto_saida: 0,
+  previsto_boletos: 0, vencido_entrada: 0, vencido_saida: 0, qtd_previsto_saida: 0, ...o,
+});
+
+describe('projetarFluxo', () => {
+  const dias = [
+    dia('2026-10-17', { realizado_entrada: 500, realizado_saida: 100, previsto_saida: 999 }),
+    dia('2026-10-18', { realizado_entrada: 50, previsto_saida: 300, previsto_boletos: 200, vencido_saida: 40, vencido_entrada: 70 }),
+    dia('2026-10-19', { realizado_entrada: 999, previsto_entrada: 100, previsto_saida: 900 }),
+  ];
+
+  it('passado = realizado; hoje = realizado + previsto + vencido das saidas; futuro = previsto', () => {
+    const p = projetarFluxo(dias, 1000, '2026-10-18');
+    expect(p.map((d) => d.situacao)).toEqual(['passado', 'hoje', 'futuro']);
+    expect(p[0]).toMatchObject({ entradas: 500, saidas: 100, saldo: 1400 });
+    expect(p[1]).toMatchObject({ entradas: 250, saidas: 340, saldo: 1310 });
+    expect(p[2]).toMatchObject({ entradas: 100, saidas: 900, saldo: 510, carga: 'atencao' });
+  });
+
+  it('opcoes: sem boletos e com todo o vencido', () => {
+    const p = projetarFluxo(dias, 1000, '2026-10-18', { comBoletos: false, vencidos: 'tudo' });
+    expect(p[1]).toMatchObject({ entradas: 120, saidas: 340 });
+    const n = projetarFluxo(dias, 1000, '2026-10-18', { vencidos: 'nenhum' });
+    expect(n[1].saidas).toBe(300);
+  });
+
+  it('saldo negativo e critico, e o primeiro dia negativo e apontado', () => {
+    const p = projetarFluxo(dias, 0, '2026-10-18');
+    expect(p[2].saldo).toBe(-490);
+    expect(p[2].carga).toBe('critico');
+    expect(primeiroDiaNegativo(p)?.dia).toBe('2026-10-19');
+  });
+
+  it('centavos nao acumulam erro', () => {
+    const p = projetarFluxo([dia('2026-10-01', { realizado_entrada: 0.1 }), dia('2026-10-02', { realizado_entrada: 0.2 })], 0, '2026-10-30');
+    expect(p[1].saldo).toBe(0.3);
+  });
+
+  it('totais', () => {
+    expect(totaisFluxo(dias)).toMatchObject({ realizadoEntrada: 1549, realizadoSaida: 100, previstoSaida: 2199, previstoBoletos: 200 });
+  });
+});
+
+describe('utilitarios', () => {
+  it('textos da regra de mensalidade', () => {
+    expect(textosDeMensalidade('cobranca, LIQUIDACAO\nboleto;ab;COBRANCA')).toEqual(['COBRANCA', 'LIQUIDACAO', 'BOLETO']);
+  });
+  it('dia anterior e resumo', () => {
+    expect(diaAnteriorIso('2026-11-01')).toBe('2026-10-31');
+    expect(resumoConciliacao([{ situacao: 'PENDENTE', valor: 1 }, { situacao: 'CONCILIADO', valor: 2 }]))
+      .toMatchObject({ PENDENTE: 1, CONCILIADO: 1, total: 2 });
+  });
+});

@@ -2254,6 +2254,159 @@ export type ContasBancariasRow = {
   chave_pix: string | null;
   ativo: boolean;
   created_at: string;
+  /** Saldo no FIM do dia saldo_inicial_em (0119). */
+  saldo_inicial: number;
+  saldo_inicial_em: string | null;
+  ofx_mensalidades: ModoMensalidadeOfx;
+  ofx_textos_mensalidade: string[];
+};
+
+export type ModoMensalidadeOfx = 'NENHUM' | 'POR_TEXTO' | 'TODOS_CREDITOS';
+export type SituacaoExtratoItem = 'PENDENTE' | 'SUGERIDO' | 'CONCILIADO' | 'IGNORADO';
+export type TipoConciliacaoExtrato = 'BAIXA' | 'TITULO' | 'TRANSFERENCIA' | 'LANCAMENTO';
+
+export type TransferenciasBancariasRow = {
+  id: string;
+  conta_origem_id: string;
+  conta_destino_id: string;
+  valor: number;
+  data: string;
+  descricao: string | null;
+  status: 'ATIVA' | 'CANCELADA';
+  cancelada_motivo: string | null;
+  created_by: string | null;
+  created_at: string;
+};
+
+export type ExtratoImportacoesRow = {
+  id: string;
+  conta_id: string;
+  arquivo_nome: string | null;
+  arquivo_hash: string | null;
+  data_inicio: string | null;
+  data_fim: string | null;
+  saldo_banco: number | null;
+  saldo_banco_em: string | null;
+  itens: number;
+  novos: number;
+  repetidos: number;
+  sugeridos: number;
+  ignorados: number;
+  created_by: string | null;
+  created_at: string;
+};
+
+export type ExtratoItensRow = {
+  id: string;
+  conta_id: string;
+  importacao_id: string | null;
+  fitid: string;
+  data: string;
+  valor: number;
+  tipo_ofx: string | null;
+  historico: string | null;
+  documento: string | null;
+  situacao: SituacaoExtratoItem;
+  motivo: string | null;
+  sugestao_tipo: 'BAIXA' | 'TITULO' | 'TRANSFERENCIA' | null;
+  sugestao_id: string | null;
+  baixa_id: string | null;
+  titulo_id: string | null;
+  transferencia_id: string | null;
+  conciliado_por: string | null;
+  conciliado_em: string | null;
+  created_at: string;
+};
+
+export type SaldoContaRow = {
+  conta_id: string;
+  nome: string;
+  banco: string | null;
+  tipo: string | null;
+  ativo: boolean;
+  saldo_inicial: number;
+  saldo_inicial_em: string | null;
+  entradas: number;
+  saidas: number;
+  saldo: number;
+  movimentos: number;
+  nao_conciliados: number;
+  extrato_saldo: number | null;
+  extrato_saldo_em: string | null;
+  saldo_sistema_no_extrato: number | null;
+  extrato_diferenca: number | null;
+  itens_pendentes: number;
+  ultima_importacao: string | null;
+};
+
+export type ExtratoContaRow = {
+  data: string;
+  conta_id: string;
+  conta: string;
+  origem: 'BAIXA' | 'TITULO' | 'TRANSFERENCIA';
+  ref_id: string;
+  lancamento_id: string | null;
+  descricao: string | null;
+  documento: string | null;
+  contraparte: string | null;
+  categoria_codigo: string | null;
+  categoria: string | null;
+  centro_custo: string | null;
+  forma: string | null;
+  entrada: number;
+  saida: number;
+  saldo: number | null;
+  saldo_anterior: number;
+  conciliado: boolean;
+  extrato_item_id: string | null;
+};
+
+export type FluxoDiarioRow = {
+  dia: string;
+  realizado_entrada: number;
+  realizado_saida: number;
+  previsto_entrada: number;
+  previsto_saida: number;
+  previsto_boletos: number;
+  vencido_entrada: number;
+  vencido_saida: number;
+  qtd_previsto_saida: number;
+};
+
+export type DemonstrativoRow = {
+  categoria_id: string | null;
+  codigo: string;
+  categoria: string;
+  grupo: string;
+  centro_custo_id: string | null;
+  centro_custo: string;
+  realizado: number;
+  a_realizar: number;
+  vencido: number;
+  quantidade: number;
+};
+
+export type ConferenciaCaixaDreRow = {
+  saldo_inicial: number;
+  saldo_final: number;
+  variacao_saldo: number;
+  resultado_dre_caixa: number;
+  diferenca: number;
+  baixas_sem_conta: number;
+  titulos_fora_do_extrato: number;
+  movimentos_avulsos: number;
+  antes_do_saldo_inicial: number;
+};
+
+export type CandidatoExtratoRow = {
+  tipo: TipoConciliacaoExtrato;
+  ref_id: string;
+  data: string;
+  valor: number;
+  descricao: string | null;
+  contraparte: string | null;
+  valor_igual: boolean;
+  dias: number;
 };
 
 export type LancamentosFinanceirosRow = Timestamps & {
@@ -3482,6 +3635,9 @@ export type Database = {
       >;
       centros_custo: TableDef<CentrosCustoRow>;
       contas_bancarias: TableDef<ContasBancariasRow>;
+      transferencias_bancarias: TableDef<TransferenciasBancariasRow, [Rel<'conta_origem_id', 'contas_bancarias'>, Rel<'conta_destino_id', 'contas_bancarias'>]>;
+      extrato_importacoes: TableDef<ExtratoImportacoesRow, [Rel<'conta_id', 'contas_bancarias'>]>;
+      extrato_itens: TableDef<ExtratoItensRow, [Rel<'conta_id', 'contas_bancarias'>, Rel<'importacao_id', 'extrato_importacoes'>]>;
       lancamentos_financeiros: TableDef<
         LancamentosFinanceirosRow,
         [
@@ -3857,6 +4013,50 @@ export type Database = {
         };
         Returns: { situacao: SituacaoLiquidacaoBanco; titulo_id: string | null; valor_divergente: boolean }[];
       };
+      saldos_contas: { Args: { p_data?: string | null }; Returns: SaldoContaRow[] };
+      saldo_consolidado_em: { Args: { p_data: string; p_conta?: string | null }; Returns: number | null };
+      extrato_conta: {
+        Args: {
+          p_conta: string | null; p_inicio: string; p_fim: string; p_centro?: string | null;
+          p_categoria?: string | null; p_conciliacao?: string | null; p_transferencias?: boolean | null;
+        };
+        Returns: ExtratoContaRow[];
+      };
+      fluxo_caixa_diario: { Args: { p_inicio: string; p_fim: string; p_conta?: string | null }; Returns: FluxoDiarioRow[] };
+      financeiro_demonstrativo: {
+        Args: {
+          p_inicio: string; p_fim: string; p_conta?: string | null; p_centro?: string | null;
+          p_categoria?: string | null; p_status?: string | null;
+        };
+        Returns: DemonstrativoRow[];
+      };
+      conferencia_caixa_dre: { Args: { p_inicio: string; p_fim: string }; Returns: ConferenciaCaixaDreRow[] };
+      importar_extrato_ofx: {
+        Args: {
+          p_conta: string; p_arquivo: string | null; p_hash: string | null; p_data_inicio: string | null;
+          p_data_fim: string | null; p_saldo_banco: number | null; p_saldo_em: string | null; p_itens: Json;
+        };
+        Returns: { importacao_id: string; itens: number; novos: number; repetidos: number; sugeridos: number; ignorados: number }[];
+      };
+      classificar_extrato_itens: { Args: { p_conta: string; p_importacao?: string | null }; Returns: { sugeridos: number; ignorados: number }[] };
+      conciliar_extrato_item: { Args: { p_item: string; p_tipo: TipoConciliacaoExtrato; p_ref: string }; Returns: ExtratoItensRow };
+      confirmar_sugestoes_extrato: { Args: { p_conta: string; p_itens?: string[] | null }; Returns: number };
+      criar_lancamento_extrato: {
+        Args: {
+          p_item: string; p_descricao: string; p_categoria: string; p_centro?: string | null;
+          p_fornecedor?: string | null; p_cliente?: string | null; p_regional?: string | null;
+        };
+        Returns: string;
+      };
+      criar_transferencia_bancaria: {
+        Args: { p_origem: string; p_destino: string; p_valor: number; p_data: string; p_descricao?: string | null };
+        Returns: string;
+      };
+      transferencia_extrato_item: { Args: { p_item: string; p_outra_conta: string; p_descricao?: string | null }; Returns: string };
+      cancelar_transferencia_bancaria: { Args: { p_id: string; p_motivo: string }; Returns: undefined };
+      ignorar_extrato_item: { Args: { p_item: string; p_motivo: string }; Returns: undefined };
+      desfazer_extrato_item: { Args: { p_item: string }; Returns: undefined };
+      candidatos_extrato_item: { Args: { p_item: string; p_dias?: number }; Returns: CandidatoExtratoRow[] };
       reprocessar_liquidacoes_banco: {
         Args: { p_desde?: string | null };
         Returns: { situacao: SituacaoLiquidacaoBanco; quantidade: number; valor: number }[];

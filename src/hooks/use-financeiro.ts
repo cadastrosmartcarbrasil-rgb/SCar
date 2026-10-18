@@ -181,6 +181,7 @@ export function useSaveLancamento() {
       qc.invalidateQueries({ queryKey: ['lancamentos'] });
       qc.invalidateQueries({ queryKey: ['financeiro'] });
       qc.invalidateQueries({ queryKey: ['dre'] });
+      qc.invalidateQueries({ queryKey: ['tesouraria'] });
     },
   });
 }
@@ -201,6 +202,7 @@ export function useCancelarLancamento() {
       qc.invalidateQueries({ queryKey: ['lancamentos'] });
       qc.invalidateQueries({ queryKey: ['financeiro'] });
       qc.invalidateQueries({ queryKey: ['dre'] });
+      qc.invalidateQueries({ queryKey: ['tesouraria'] });
     },
   });
 }
@@ -246,6 +248,7 @@ export function useAddBaixa() {
       qc.invalidateQueries({ queryKey: ['lancamentos'] });
       qc.invalidateQueries({ queryKey: ['financeiro'] });
       qc.invalidateQueries({ queryKey: ['dre'] });
+      qc.invalidateQueries({ queryKey: ['tesouraria'] });
     },
   });
 }
