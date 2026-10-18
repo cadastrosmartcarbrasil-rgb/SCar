@@ -766,8 +766,8 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
   cidade, UF) é recusado antes de ir ao banco, por título. `seuNumero` (máx. 10) = 10 primeiros hex
   do UUID; a correlação forte é o `nosso_numero` devolvido.
 - **✅ 18/10/2026: o contrato de webhook do Sicredi APONTA PARA O SCar** (o Sicredi confirmou: um contrato por
-  beneficiário; substituído pela bancada, mesmo `idContrato` 67f3d103…, `acao: alterado`). O Sicredi expandiu os
-  eventos: `LIQUIDACAO_PIX`, `LIQUIDACAO_COMPE_H5/H6/H8`, `LIQUIDACAO_REDE`, `LIQUIDACAO_CARTORIO`,
+  beneficiário; substituído pela bancada, mesmo `idContrato` 67f3d103…, `acao: alterado`). Conferido pela consulta: url nossa, ATIVO, evento `LIQUIDACAO`, responsável Paulo Borges.
+  Na resposta do PUT o Sicredi expande `LIQUIDACAO` nos eventos: `LIQUIDACAO_PIX`, `LIQUIDACAO_COMPE_H5/H6/H8`, `LIQUIDACAO_REDE`, `LIQUIDACAO_CARTORIO`,
   `AVISO_PAGAMENTO_COMPE` (pode chegar antes da liquidação: vira NAO_CONFIRMADO e o agendador pega) e
   `ESTORNO_LIQUIDACAO_REDE` (**logado e ignorado** — tratar quando o formato real aparecer). Falta ver o 1º aviso
   real no log (`docker compose logs app | grep sicredi-webhook`) e guardá-lo em `sicredi.test.ts`. Os boletos do Mutual dão baixa aqui (0117).
