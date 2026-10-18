@@ -585,6 +585,26 @@ export class SicrediGateway extends BasePaymentGateway {
     return todos;
   }
 
+  /**
+   * Extrato da cobranca ("Francesinha"): os CREDITOS e DEBITOS (tarifas) que o
+   * banco lancou na conta num dia. E dele que sai a DATA DO CREDITO do
+   * fechamento bancario (decisao do usuario, 18/10/2026). O formato do retorno
+   * ainda nao foi visto: por ora volta cru, para a bancada mostrar.
+   * A colecao usa 'DD-MM-AAAA' no sandbox e 'DD/MM/AAAA' em producao.
+   */
+  async movimentacoes(dia: string, tipo: 'CREDITO' | 'DEBITO' | 'AMBOS' = 'AMBOS', pagina = 0): Promise<unknown> {
+    const data = dataSicredi(dia);
+    const q = new URLSearchParams({
+      codigoBeneficiario: this.cfg.codigoBeneficiario,
+      cooperativa: this.cfg.cooperativa,
+      posto: this.cfg.posto,
+      dataLancamento: this.cfg.ambiente === 'sandbox' ? data.replace(/\//g, '-') : data,
+      pagina: String(pagina),
+      tipoMovimento: tipo,
+    });
+    return this.json('GET', `/cobranca/v1/cobranca-financeiro/movimentacoes?${q}`);
+  }
+
   /** Contrato(s) de webhook do beneficiario. */
   async consultarContratosWebhook(): Promise<unknown> {
     const q = new URLSearchParams({

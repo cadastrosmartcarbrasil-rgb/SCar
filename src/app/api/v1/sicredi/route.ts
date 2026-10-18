@@ -19,15 +19,18 @@ import {
 //   POST { action: 'boleto_teste' }      -> registra um boleto FICTICIO (so sandbox)
 //   POST { action: 'consultar', nosso_numero }
 //   POST { action: 'liquidados', dia: 'YYYY-MM-DD' }
+//   POST { action: 'francesinha', dia, pagina? } -> extrato da cobranca (cru)
 //   POST { action: 'pdf', linha_digitavel } -> application/pdf
 //   POST { action: 'webhook_consultar' }  -> contrato de webhook no Sicredi
 //   POST { action: 'webhook_registrar', responsavel, email, telefone, substituir? }
 //        -> cria (ou altera, se ja existe) o contrato apontando para
 //           <este site>/api/v1/sicredi/webhook/<SICREDI_WEBHOOK_SECRET>.
 //           O segredo nunca volta na resposta (sai mascarado).
-//           O contrato e UM por beneficiario: se o existente aponta para
-//           OUTRO sistema (o Mutual, ate o corte de dezembro), recusa com 409
-//           — trocar o destino derruba a baixa dele. So com substituir: true.
+//           O contrato e UM por beneficiario (confirmado pelo Sicredi): se o
+//           existente aponta para OUTRO sistema, recusa com 409 e so troca com
+//           substituir: true. Em 18/10/2026 o do Mutual foi desligado para
+//           operar aqui — os boletos do Mutual passam a baixar por este
+//           sistema (0117).
 //           Consulta que falha tambem recusa: criar no escuro pode duplicar.
 //
 // O boleto de teste NAO e gravado em titulos_financeiros: e so para ver o
@@ -69,13 +72,22 @@ function origemPublica(request: Request): string {
 }
 
 interface Body {
-  action?: 'autenticar' | 'boleto_teste' | 'consultar' | 'liquidados' | 'pdf' | 'webhook_consultar' | 'webhook_registrar';
+  action?:
+    | 'autenticar'
+    | 'boleto_teste'
+    | 'consultar'
+    | 'liquidados'
+    | 'francesinha'
+    | 'pdf'
+    | 'webhook_consultar'
+    | 'webhook_registrar';
   responsavel?: string;
   email?: string;
   telefone?: string;
   nosso_numero?: string;
   linha_digitavel?: string;
   dia?: string;
+  pagina?: number;
   valor?: number;
   substituir?: boolean;
 }
@@ -128,6 +140,12 @@ export async function POST(request: Request) {
         const dia = body.dia ?? new Date().toISOString().slice(0, 10);
         if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) return NextResponse.json({ error: 'dia invalido' }, { status: 400 });
         return NextResponse.json({ ok: true, dia, liquidados: await gw.liquidadosDoDia(dia) });
+      }
+      case 'francesinha': {
+        const dia = body.dia ?? new Date().toISOString().slice(0, 10);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) return NextResponse.json({ error: 'dia invalido' }, { status: 400 });
+        const pagina = Number.isInteger(body.pagina) && (body.pagina ?? 0) >= 0 ? (body.pagina as number) : 0;
+        return NextResponse.json({ ok: true, dia, pagina, movimentacoes: await gw.movimentacoes(dia, 'AMBOS', pagina) });
       }
       case 'pdf': {
         if (!body.linha_digitavel) return NextResponse.json({ error: 'Informe linha_digitavel' }, { status: 400 });

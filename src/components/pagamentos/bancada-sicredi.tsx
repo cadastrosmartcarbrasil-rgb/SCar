@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { BellRing, CheckCircle2, FileText, KeyRound, Landmark, Receipt, Search, XCircle } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
+import { BellRing, CheckCircle2, FileText, KeyRound, Landmark, Receipt, RefreshCw, ScrollText, Search, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/field';
 
@@ -44,6 +45,22 @@ export function BancadaSicredi() {
       const j = await r.json();
       if (!r.ok && !j.resumo) throw new Error(j.error ?? `HTTP ${r.status}`);
       setSaida({ ok: !!j.ok, texto: JSON.stringify(j, null, 2) });
+    } catch (e) {
+      setSaida({ ok: false, texto: (e as Error).message });
+    } finally {
+      setOcupado(null);
+    }
+  }
+
+  // Passa de novo os pagamentos "nao encontrados" (0117): o boleto do Mutual
+  // pode ter sido importado depois do pagamento.
+  async function reprocessar() {
+    setOcupado('reprocessar');
+    setSaida(null);
+    try {
+      const { data, error } = await createClient().rpc('reprocessar_liquidacoes_banco', { p_desde: diaBaixa || null });
+      if (error) throw new Error(error.message);
+      setSaida({ ok: true, texto: JSON.stringify(data, null, 2) });
     } catch (e) {
       setSaida({ ok: false, texto: (e as Error).message });
     } finally {
@@ -99,8 +116,8 @@ export function BancadaSicredi() {
       const j = await r.json();
       if (r.status === 409 && j.contrato_de_terceiro && !extra.substituir) {
         const ok = window.confirm(
-          `${j.error}\n\nSo confirme no dia do corte, quando o boleto deixar de sair por ${j.destino}. ` +
-            'Substituir agora mesmo assim?',
+          `${j.error}\n\nO contrato e um so por beneficiario: confirme apenas se o webhook ja foi desligado em ` +
+            `${j.destino}. A partir dai os boletos dele tambem dao baixa aqui. Substituir?`,
         );
         if (ok) {
           setOcupado(null);
@@ -183,18 +200,31 @@ export function BancadaSicredi() {
               <Button type="button" variant="secondary" disabled={!!ocupado} onClick={() => chamar('liquidados', { dia })}>
                 Pagos no dia
               </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={!!ocupado}
+                onClick={() => chamar('francesinha', { dia })}
+                title="Extrato da cobranca (Francesinha): creditos e tarifas lancados na conta no dia"
+              >
+                <ScrollText className="h-4 w-4" />
+              </Button>
             </div>
           </div>
           <div className="space-y-1 border-t border-slate-200 pt-3">
             <p className="text-xs text-slate-500">
-              Baixa dos pagos: le os boletos pagos no Sicredi e da baixa nos titulos do SCar (o agendador do servidor
-              faz o mesmo sozinho). Sem data: ontem e hoje. Pagamento que nao casa com titulo fica registrado como
-              &quot;nao encontrado&quot;.
+              Baixa dos pagos: le os boletos pagos no Sicredi e da baixa nos titulos do SCar e nos boletos do Mutual
+              (o agendador do servidor faz o mesmo sozinho). Sem data: ontem e hoje. O boleto do Mutual pago a partir de
+              13/10/2026 vira recebimento na conta SICREDI, no financeiro. O que nao casa com nada fica como
+              &quot;nao encontrado&quot;; <em>Reprocessar</em> tenta de novo desde a data (sem data: 13/10/2026).
             </p>
             <div className="flex gap-2">
               <Input type="date" value={diaBaixa} onChange={(e) => setDiaBaixa(e.target.value)} />
               <Button type="button" variant="secondary" disabled={!!ocupado} onClick={darBaixa}>
                 <CheckCircle2 className="h-4 w-4" /> {ocupado === 'baixa' ? 'Dando baixa...' : 'Dar baixa agora'}
+              </Button>
+              <Button type="button" variant="secondary" disabled={!!ocupado} onClick={reprocessar}>
+                <RefreshCw className="h-4 w-4" /> {ocupado === 'reprocessar' ? 'Reprocessando...' : 'Reprocessar'}
               </Button>
             </div>
           </div>

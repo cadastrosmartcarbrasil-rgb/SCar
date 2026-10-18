@@ -1352,6 +1352,10 @@ export type CobrancaLiquidacoesRow = Timestamps & {
   data_pagamento: string;
   valor_pago: number | null;
   titulo_id: string | null;
+  /** 0117: boleto do Mutual que o pagamento casou (pelo nosso numero da linha digitavel). */
+  boleto_historico_id: string | null;
+  /** 0117: recebimento criado no financeiro para esse boleto. */
+  lancamento_id: string | null;
   situacao: SituacaoLiquidacaoBanco;
   valor_divergente: boolean;
   dia_consultado: string;
@@ -3852,6 +3856,10 @@ export type Database = {
           p_payload?: Json | null;
         };
         Returns: { situacao: SituacaoLiquidacaoBanco; titulo_id: string | null; valor_divergente: boolean }[];
+      };
+      reprocessar_liquidacoes_banco: {
+        Args: { p_desde?: string | null };
+        Returns: { situacao: SituacaoLiquidacaoBanco; quantidade: number; valor: number }[];
       };
       criar_remessa_cobranca: {
         Args: { p_titulo_ids: string[]; p_integracao_id?: string | null; p_referencia?: string | null };
