@@ -451,6 +451,15 @@ describe('contrato de webhook de outro sistema', () => {
     expect(contratoWebhookExistente(doMutual)).toEqual({ id: '67f3', url: 'https://webhook.mutualignit.com.br/webhook/sicredi/x' });
     expect(contratoWebhookExistente([])).toBeNull();
   });
+  it('producao devolve UM objeto, nao lista (consulta real de 18/10/2026, url mascarada)', () => {
+    const real = {
+      idContrato: '67f3d1031e53c30cc07fecfe', cooperativa: '0810', posto: '39', codBeneficiario: '02723',
+      eventos: ['LIQUIDACAO'], url: 'https://webhook.mutualignit.com.br/webhook/sicredi/smartcar/***',
+      urlStatus: 'ATIVO', contratoStatus: 'ATIVO', nomeResponsavel: 'X', email: 'x@y.com', telefone: '',
+      enviarIdTituloEmpresa: false,
+    };
+    expect(contratoWebhookExistente(real)).toEqual({ id: '67f3d1031e53c30cc07fecfe', url: real.url });
+  });
   it('so e nosso quando aponta para a nossa rota de webhook', () => {
     const origem = 'https://appsmartcar.com.br';
     expect(webhookEhNosso(doMutual[0].url, origem)).toBe(false);
