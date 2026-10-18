@@ -121,6 +121,18 @@ export function baixasPendentes(origens: OrigemBaixa[]): number {
   return origens.filter((o) => o.baixa_status === 'PENDENTE' || o.baixa_status === 'ERRO').length;
 }
 
+/**
+ * O banco recusou a baixa porque o titulo JA ESTAVA baixado (Sicredi 0078: "titulo ja baixado" —
+ * acontece com boleto vencido ha muito tempo, que o banco baixa sozinho pelo prazo). O objetivo
+ * da baixa — o original nao poder mais ser pago — ja esta cumprido, entao isso conta como BAIXADO,
+ * nao como erro. Liquidado (pago) NAO entra aqui: esse e outro caso e segue como erro.
+ */
+export function baixaJaFeitaNoBanco(mensagem: string | null | undefined): boolean {
+  const m = (mensagem ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  if (/liquidad|pago/.test(m)) return false;
+  return /\b0078\b/.test(m) || /(titulo|boleto) ja (esta )?baixado/.test(m);
+}
+
 export const ROTULO_BAIXA: Record<OrigemBaixa['baixa_status'], string> = {
   PENDENTE: 'baixa pendente',
   BAIXADO: 'baixado no banco',

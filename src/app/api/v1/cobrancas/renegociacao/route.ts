@@ -5,6 +5,7 @@ import {
   escolherIntegracao, getPaymentGateway, MockGateway,
   type CobrancaEmitida, type IntegracaoCandidata, type PaymentGateway,
 } from '@/lib/pagamentos';
+import { baixaJaFeitaNoBanco } from '@/lib/renegociacao';
 import type { Json } from '@/lib/database.types';
 
 // POST /api/v1/cobrancas/renegociacao — 2a via vencida e boleto NEGOCIADO NA HORA (0121).
@@ -55,9 +56,15 @@ async function baixarOriginais(admin: Admin, gateway: PaymentGateway, renegociac
       await gateway.cancelar(o.nosso_numero);
       await admin.rpc('registrar_baixa_original', { p_origem_id: o.id, p_status: 'BAIXADO' });
     } catch (e) {
+      const msg = (e as Error).message;
+      if (baixaJaFeitaNoBanco(msg)) {
+        // O banco ja tinha baixado (prazo vencido): o original nao pode mais ser pago.
+        await admin.rpc('registrar_baixa_original', { p_origem_id: o.id, p_status: 'BAIXADO' });
+        continue;
+      }
       erros++;
       await admin.rpc('registrar_baixa_original', {
-        p_origem_id: o.id, p_status: 'ERRO', p_erro: (e as Error).message.slice(0, 500),
+        p_origem_id: o.id, p_status: 'ERRO', p_erro: msg.slice(0, 500),
       });
     }
   }

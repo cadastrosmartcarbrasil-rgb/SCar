@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  baixasPendentes, ehLinhaSicredi, mensagemDoBoleto, motivoNaoNegociavel, parcelasDaNegociacao,
+  baixaJaFeitaNoBanco, baixasPendentes, ehLinhaSicredi, mensagemDoBoleto, motivoNaoNegociavel, parcelasDaNegociacao,
   podeNegociar, totalOriginais, validarNegociacao, valorNegociado,
 } from './renegociacao';
 
@@ -71,5 +71,12 @@ describe('mensagem e baixas', () => {
   });
   it('conta baixas pendentes', () => {
     expect(baixasPendentes([{ baixa_status: 'BAIXADO' }, { baixa_status: 'ERRO' }, { baixa_status: 'PENDENTE' }, { baixa_status: 'SEM_REGISTRO' }])).toBe(2);
+  });
+  it('titulo ja baixado no banco conta como baixado', () => {
+    expect(baixaJaFeitaNoBanco('Sicredi HTTP 422: 0078 - Instrução inválida: título já baixado.')).toBe(true);
+    expect(baixaJaFeitaNoBanco('titulo ja esta baixado')).toBe(true);
+    expect(baixaJaFeitaNoBanco('Sicredi HTTP 422: título já liquidado')).toBe(false);
+    expect(baixaJaFeitaNoBanco('Sicredi HTTP 500: erro interno')).toBe(false);
+    expect(baixaJaFeitaNoBanco(null)).toBe(false);
   });
 });
