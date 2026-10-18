@@ -116,6 +116,13 @@ export function dataSicredi(iso: string): string {
 
 /** 'DD/MM/YYYY' ou 'YYYY-MM-DD[...]' -> 'YYYY-MM-DD'; outro formato -> null. */
 export function dataIsoDeSicredi(s: unknown): string | null {
+  // O aviso do webhook manda data como lista Java: [2026,10,18,8,27,20,53000000].
+  if (Array.isArray(s)) {
+    const [a, m, d] = s;
+    if (![a, m, d].every((n) => Number.isInteger(n))) return null;
+    if (m < 1 || m > 12 || d < 1 || d > 31 || a < 2000) return null;
+    return `${a}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  }
   if (typeof s !== 'string') return null;
   const br = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
   if (br) return `${br[3]}-${br[2]}-${br[1]}`;
@@ -346,6 +353,8 @@ export interface AvisoWebhookSicredi {
   nossoNumero: string;
   movimento: string | null;
   data: string | null;
+  /** Dia previsto do credito (`dataPrevisaoPagamento`) — pode ser o dia em que `liquidados/dia` lista. */
+  previsao: string | null;
   estorno: boolean;
 }
 
@@ -373,8 +382,9 @@ export function avisosDoWebhook(payload: unknown): AvisoWebhookSicredi[] {
     vistos.add(nn);
     const mov = campo(o, 'movimento', 'evento', 'tipoEvento', 'tipo');
     const dataBruta = o.dataEvento ?? o.dataPagamento ?? o.dataLiquidacao;
-    const data = dataIsoDeSicredi(Array.isArray(dataBruta) ? null : dataBruta);
-    out.push({ nossoNumero: nn, movimento: mov, data, estorno: /ESTORNO/i.test(mov ?? '') });
+    const data = dataIsoDeSicredi(dataBruta);
+    const previsao = dataIsoDeSicredi(o.dataPrevisaoPagamento ?? o.dataPrevisaoCredito ?? o.dataCredito);
+    out.push({ nossoNumero: nn, movimento: mov, data, previsao, estorno: /ESTORNO/i.test(mov ?? '') });
   }
   return out;
 }

@@ -50,6 +50,9 @@ describe('diasParaConfirmar (webhook)', () => {
   });
   it('sem data ou data invalida: ontem e hoje', () => {
     expect(diasParaConfirmar('2026-10-13')).toEqual(['2026-10-12', '2026-10-13']);
+    // previsao do credito: entra quando ja chegou; dia futuro ainda nao tem lista
+    expect(diasParaConfirmar('2026-10-20', '2026-10-18', '2026-10-19')).toEqual(['2026-10-18', '2026-10-19', '2026-10-20']);
+    expect(diasParaConfirmar('2026-10-18', '2026-10-18', '2026-10-19')).toEqual(['2026-10-18', '2026-10-17']);
     expect(diasParaConfirmar('2026-10-13', '13/10/2026')).toEqual(['2026-10-12', '2026-10-13']);
   });
 });

@@ -769,8 +769,11 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
   beneficiário; substituído pela bancada, mesmo `idContrato` 67f3d103…, `acao: alterado`). Conferido pela consulta: url nossa, ATIVO, evento `LIQUIDACAO`, responsável Paulo Borges.
   Na resposta do PUT o Sicredi expande `LIQUIDACAO` nos eventos: `LIQUIDACAO_PIX`, `LIQUIDACAO_COMPE_H5/H6/H8`, `LIQUIDACAO_REDE`, `LIQUIDACAO_CARTORIO`,
   `AVISO_PAGAMENTO_COMPE` (pode chegar antes da liquidação: vira NAO_CONFIRMADO e o agendador pega) e
-  `ESTORNO_LIQUIDACAO_REDE` (**logado e ignorado** — tratar quando o formato real aparecer). Falta ver o 1º aviso
-  real no log (`docker compose logs app | grep sicredi-webhook`) e guardá-lo em `sicredi.test.ts`. Os boletos do Mutual dão baixa aqui (0117).
+  `ESTORNO_LIQUIDACAO_REDE` (**logado e ignorado** — tratar quando o formato real aparecer). **✅ 1º aviso REAL recebido em 18/10/2026** (PIX de R$ 1,00,
+  nosso número 261000090, guardado em `sicredi.test.ts`): datas vêm como LISTA Java (`dataEvento: [2026,10,18,8,27,…]`,
+  `dataPrevisaoPagamento: [2026,10,19]`) — `dataIsoDeSicredi` lê as duas formas. O pagamento NÃO estava ainda em
+  `liquidados/dia` (ontem/hoje) e ficou NAO_CONFIRMADO; a confirmação passou a incluir o dia da previsão do crédito
+  quando ele já chegou, e o agendador pega no dia seguinte. Os boletos do Mutual dão baixa aqui (0117).
 - **(histórico) 🔴 O CONTRATO DE WEBHOOK DO BENEFICIÁRIO É DO MUTUAL (conferido em produção, 13/10/2026).** O
   contrato é UM por beneficiário e o que existe aponta para `webhook.mutualignit.com.br` (responsável
   da mutualtech). Registrar o nosso por PUT TROCARIA o destino e derrubaria a baixa do Mutual, que

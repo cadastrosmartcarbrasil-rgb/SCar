@@ -61,7 +61,7 @@ export async function POST(request: Request, { params }: { params: { segredo: st
       continue;
     }
     let confirmado = false;
-    for (const dia of diasParaConfirmar(hoje, aviso.data)) {
+    for (const dia of diasParaConfirmar(hoje, aviso.data, aviso.previsao)) {
       let lista = cachePorDia.get(dia);
       if (!lista) {
         try {

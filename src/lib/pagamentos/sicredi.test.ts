@@ -404,10 +404,26 @@ describe('webhook — contrato e aviso', () => {
 
   it('aviso: acha o boleto em objeto, lista ou {eventos}, sem repetir', () => {
     expect(avisosDoWebhook({ nossoNumero: '211001292', movimento: 'LIQUIDACAO_PIX', dataEvento: '2026-10-13T10:00:00' }))
-      .toEqual([{ nossoNumero: '211001292', movimento: 'LIQUIDACAO_PIX', data: '2026-10-13', estorno: false }]);
+      .toEqual([{ nossoNumero: '211001292', movimento: 'LIQUIDACAO_PIX', data: '2026-10-13', previsao: null, estorno: false }]);
     expect(avisosDoWebhook([{ nossoNumero: 1 }, { nossoNumero: '1' }, { outro: 2 }]).map((a) => a.nossoNumero)).toEqual(['1']);
     expect(avisosDoWebhook({ eventos: [{ nosso_numero: '9', movimento: 'ESTORNO_LIQUIDACAO' }] })[0].estorno).toBe(true);
     expect(avisosDoWebhook('lixo')).toEqual([]);
+  });
+
+  it('aviso REAL de producao (18/10/2026): datas em lista Java e previsao do credito', () => {
+    const real = {
+      agencia: '0810', posto: '39', beneficiario: '02723', nossoNumero: '261000090',
+      dataEvento: [2026, 10, 18, 8, 27, 20, 53000000], movimento: 'LIQUIDACAO_PIX',
+      valorLiquidacao: 1, valorDesconto: 0, valorJuros: 0, valorMulta: 0, valorAbatimento: 0,
+      idEventoWebhook: 'N081039027232610000909582802235LIQUIDACAO_PIX', id: '6ad4ad18da033a44f37940d7',
+      idMovi: 9582802235, statusUrl: 'ATIVA', deletado: 'N', carteira: 'CARTEIRA SIMPLES',
+      dataPrevisaoPagamento: [2026, 10, 19],
+    };
+    expect(avisosDoWebhook(real)).toEqual([
+      { nossoNumero: '261000090', movimento: 'LIQUIDACAO_PIX', data: '2026-10-18', previsao: '2026-10-19', estorno: false },
+    ]);
+    expect(dataIsoDeSicredi([2026, 13, 1])).toBeNull();
+    expect(dataIsoDeSicredi(['2026', 10, 1])).toBeNull();
     expect(avisosDoWebhook(null)).toEqual([]);
   });
 
