@@ -1624,6 +1624,8 @@ export type ProdutosRow = Timestamps & {
   janela_dias_limite: number;
   /** 0090 — rastreador OPCIONAL: so entra abaixo do minimo da regra do tipo. */
   rastreador_avulso: boolean;
+  /** 0120 — o que a cobertura cobre, mostrado aberto na ficha do veiculo. */
+  descricao_cobertura: string | null;
 };
 
 export type TabelaPrecosFaixaRow = {

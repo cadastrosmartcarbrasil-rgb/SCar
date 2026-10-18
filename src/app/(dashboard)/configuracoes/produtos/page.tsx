@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { Plus, Pencil, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
-import { FormField, Input, MoneyInput, Select } from '@/components/ui/field';
+import { FormField, Input, MoneyInput, Select, Textarea } from '@/components/ui/field';
 import { useProdutos, useSaveProduto, useTiposVeiculo, useTiposPorProduto } from '@/hooks/use-precificacao';
 import { rotuloTiposDoProduto } from '@/lib/produtos';
 import { formatCurrency } from '@/lib/utils';
@@ -161,6 +161,14 @@ export default function ProdutosPage() {
               <Input value={ed?.fornecedor_nome ?? ''} onChange={(e) => setEd((p) => ({ ...p, fornecedor_nome: e.target.value }))} />
             </FormField>
           </div>
+          <FormField label="O que cobre (aparece na ficha do veiculo, no SAC)">
+            <Textarea
+              rows={3}
+              value={ed?.descricao_cobertura ?? ''}
+              onChange={(e) => setEd((p) => ({ ...p, descricao_cobertura: e.target.value }))}
+              placeholder="Ex.: parabrisa, vidros laterais e traseiro; 1 troca a cada 12 meses; participacao de R$ 150."
+            />
+          </FormField>
           <FormField label="Metodo de preco">
             <Select value={ed?.metodo_preco ?? 'FIXO'} onChange={(e) => setEd((p) => ({ ...p, metodo_preco: e.target.value as MetodoPreco }))}>
               {METODOS.map((m) => (

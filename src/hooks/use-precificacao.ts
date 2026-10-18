@@ -267,6 +267,7 @@ export function useSaveProduto() {
         categoria: p.categoria || 'BENEFICIO',
         status: p.status ?? true,
         rastreador_avulso: p.rastreador_avulso ?? false,
+        descricao_cobertura: p.descricao_cobertura?.trim() || null,
       };
       let produtoId = p.id;
       if (produtoId) {

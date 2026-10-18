@@ -29,7 +29,7 @@ import { useAbrirProtocolo } from '@/hooks/use-protocolos';
 import { CATEGORIAS_PROTOCOLO, PRIORIDADES } from '@/lib/protocolos';
 import { CentralProtocolos } from '@/components/protocolos/central-protocolos';
 import { ModalOpcionaisVeiculo } from '@/components/sac/opcionais-veiculo';
-import { coberturasDoVeiculo } from '@/lib/produtos';
+import { CoberturasDetalhadas } from '@/components/veiculos/coberturas-veiculo';
 import { TabelaEventos } from '@/components/cadastro/vida-cadastro';
 import { STATUS_ACIONAMENTO_LABEL } from '@/lib/assistencia';
 import { statusVeiculoResumo, primeiraAtivacao } from '@/lib/sac';
@@ -621,74 +621,25 @@ function FichaExtras({ veiculoId }: { veiculoId: string }) {
   );
 }
 
-// Cobertura do veiculo: o que o PLANO da e os OPCIONAIS contratados a parte —
-// nada mais (taxa administrativa nao e cobertura). "Alterar opcionais" contrata
-// ou retira sem sair do SAC, so com o que atende o tipo do veiculo.
+// Cobertura do veiculo ABERTA (0120): o plano, o texto de cada cobertura, os
+// limites, a participacao e o que nao inclui — o componente e o mesmo da ficha
+// de /veiculos/[id]. "Alterar opcionais" contrata ou retira sem sair do SAC.
 function CoberturasVeiculo({ veiculo }: { veiculo: VeiculoDetalhe }) {
   const [alterando, setAlterando] = useState(false);
-  const { plano, opcionais } = coberturasDoVeiculo(veiculo.opcionais);
   return (
-    <div className="mt-4 space-y-3">
-      <div>
-        <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
-          <ShieldCheck className="h-3.5 w-3.5" /> Coberturas do plano{veiculo.plano_nome ? ` — ${veiculo.plano_nome}` : ''}
-        </p>
-        {plano.length === 0 ? (
-          <p className="text-sm text-slate-400">
-            {veiculo.plano_protecao_id ? 'Nenhuma cobertura calculada para este plano.' : 'Veiculo sem plano definido (ajuste no cadastro do veiculo).'}
-          </p>
-        ) : (
-          <ul className="divide-y divide-slate-100">
-            {plano.map((o) => <OpcionalRow key={o.produto_id} o={o} />)}
-          </ul>
-        )}
-      </div>
-      <div>
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
-            <Layers className="h-3.5 w-3.5" /> Opcionais contratados
-          </p>
+    <div className="mt-4">
+      <CoberturasDetalhadas
+        veiculo={veiculo}
+        acaoOpcionais={(
           <Button variant="secondary" className="px-2.5 py-1 text-xs" onClick={() => setAlterando(true)}>
             <Pencil className="h-3.5 w-3.5" /> Alterar opcionais
           </Button>
-        </div>
-        {opcionais.length === 0 ? (
-          <p className="text-sm text-slate-400">Nenhum opcional contratado a parte.</p>
-        ) : (
-          <ul className="divide-y divide-slate-100">
-            {opcionais.map((o) => <OpcionalRow key={o.produto_id} o={o} />)}
-          </ul>
         )}
-      </div>
+      />
       {alterando && (
         <ModalOpcionaisVeiculo veiculo={veiculo} planoNome={veiculo.plano_nome} onClose={() => setAlterando(false)} />
       )}
     </div>
-  );
-}
-
-// Item da cobertura. Produto com limite mostra o consumo; opcional mostra o
-// valor que soma a mensalidade (o do plano ja esta dentro dele).
-function OpcionalRow({ o }: { o: OpcionalVeiculo }) {
-  return (
-    <li className="flex items-center justify-between gap-3 py-2 text-sm">
-      <span className="flex items-center gap-2 text-slate-700">
-        {o.nome}
-      </span>
-      <div className="flex items-center gap-3">
-        {o.origem === 'AVULSO' && <span className="tnum text-xs text-slate-500">+ {formatCurrency(Number(o.valor))}</span>}
-        {o.tem_limite && (
-          <>
-            <span className="tnum text-xs text-slate-500">{o.usados}/{o.quantidade_limite} usados</span>
-            {o.elegivel ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"><CheckCircle2 className="h-3.5 w-3.5" /> DISPONIVEL</span>
-            ) : (
-              <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-semibold text-rose-700" title={o.ultimo_uso ? `Ultimo uso em ${formatDate(o.ultimo_uso)}` : undefined}><XCircle className="h-3.5 w-3.5" /> LIMITE EXCEDIDO</span>
-            )}
-          </>
-        )}
-      </div>
-    </li>
   );
 }
 

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { AlertasVeiculo } from '@/components/veiculos/alertas-veiculo';
+import { CoberturasDetalhadas } from '@/components/veiculos/coberturas-veiculo';
 import {
   AcionamentosCadastro, EventosCadastro, FinanceiroCadastro, ProtocolosCadastro,
 } from '@/components/cadastro/vida-cadastro';
@@ -130,6 +131,9 @@ export default function FichaVeiculo({ params }: { params: { id: string } }) {
               <AlertasVeiculo veiculoId={v.id} />
             </CardContent>
           </Card>
+          <div className="lg:col-span-3">
+            <CoberturasDetalhadas veiculo={v} />
+          </div>
         </div>
       )}
       {aba === 'financeiro' && <FinanceiroCadastro clienteId={v.cliente_id} veiculoId={v.id} />}
