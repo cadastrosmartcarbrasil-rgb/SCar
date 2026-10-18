@@ -129,6 +129,13 @@ export function HistoricoFinanceiroLista({
                   {t.placa ? ` · ${t.placa}` : ' · fatura do associado'}
                   {t.status === 'vencido' && t.dias_atraso > 0 ? ` · ${t.dias_atraso} dia(s) em atraso` : ''}
                 </p>
+                {t.status === 'pago' && (
+                  <p className="text-xs font-medium text-emerald-700">
+                    {t.data_pagamento ? `Pago em ${formatDate(t.data_pagamento)}` : 'Pago (data não informada)'}
+                    {t.valor_pago != null && Number(t.valor_pago) !== Number(t.valor)
+                      ? ` · ${formatCurrency(Number(t.valor_pago))}` : ''}
+                  </p>
+                )}
                 </div>
               </div>
               <span className="flex items-center gap-1">
