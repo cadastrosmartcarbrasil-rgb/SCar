@@ -3115,6 +3115,27 @@ export type PerfilPermissoesRow = {
   alterado_em: string;
 };
 
+// 0116: permissao extra de um usuario (so soma ao papel)
+export type UsuarioPermissoesRow = {
+  usuario_id: string;
+  modulo: string;
+  acao: string;
+  motivo: string;
+  expira_em: string | null;
+  concedido_por: string | null;
+  concedido_em: string;
+};
+
+export type PermissaoExtraUsuario = {
+  modulo: string;
+  acao: string;
+  motivo: string;
+  expira_em: string | null;
+  vigente: boolean;
+  concedido_por: string | null;
+  concedido_em: string;
+};
+
 export type MutualCapturaRow = {
   id: number;
   entidade: string;
@@ -3478,6 +3499,7 @@ export type Database = {
       integracao_vinculos: TableDef<IntegracaoVinculosRow, [Rel<'criado_por', 'usuarios'>]>;
       papel_permissoes: TableDef<PapelPermissoesRow, [Rel<'alterado_por', 'usuarios'>]>;
       perfil_permissoes: TableDef<PerfilPermissoesRow, [Rel<'alterado_por', 'usuarios'>]>;
+      usuario_permissoes: TableDef<UsuarioPermissoesRow, [Rel<'usuario_id', 'usuarios'>, Rel<'concedido_por', 'usuarios'>]>;
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -4099,6 +4121,18 @@ export type Database = {
       salvar_permissoes_perfil: {
         Args: { p_papel: string; p_celulas: { modulo: string; acao: string; concedida: boolean }[] };
         Returns: number;
+      };
+      permissoes_extras_usuario: { Args: { p_usuario: string }; Returns: PermissaoExtraUsuario[] };
+      salvar_permissoes_usuario: {
+        Args: { p_usuario: string; p_extras: { modulo: string; acao: string; expira_em?: string | null }[]; p_motivo: string | null };
+        Returns: number;
+      };
+      copiar_perfil_usuario: {
+        Args: { p_origem: string; p_destino: string; p_copiar_unidade?: boolean; p_motivo?: string | null };
+        Returns: {
+          papel_de: string; papel_para: string; regional_de: string | null; regional_para: string | null;
+          extras: number; unidades_supervisor: number; aviso: string | null;
+        };
       };
       salvar_permissao_papel: {
         Args: { p_papel: string; p_permissao: string; p_concedida: boolean };

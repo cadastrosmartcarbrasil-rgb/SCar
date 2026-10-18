@@ -250,3 +250,98 @@ export function mudancasDoPerfil(
 export function moduloDaRota(pathname: string): Modulo | undefined {
   return MODULOS.find((m) => m.rotas.some((r) => pathname === r || pathname.startsWith(r + '/')));
 }
+
+// ---------------------------------------------------------------------------
+// PERMISSAO EXTRA POR USUARIO (0116) — so SOMA ao papel, com motivo e validade.
+// No banco: `usuario_permissoes`; `perfil_pode`/`papel_pode` somam o extra
+// vigente. Aqui: o que a tela oferece e como ela resume.
+// ---------------------------------------------------------------------------
+
+/** Um extra gravado: chave 'modulo.acao' (ou a alcada) + validade (ISO, inclusive). */
+export interface ExtraUsuario {
+  chave: string;
+  expira_em: string | null;
+  motivo?: string | null;
+}
+
+/** Linha do banco (modulo/acao; alcada = modulo 'alcada') -> chave da grade. */
+export function chaveDoExtra(modulo: string, acao: string): string {
+  return modulo === 'alcada' ? acao : `${modulo}.${acao}`;
+}
+
+/** Chave da grade -> o par que o banco grava. */
+export function extraParaBanco(chave: string): { modulo: string; acao: string } {
+  const [mod, acao] = chave.split('.');
+  return acao ? { modulo: mod, acao } : { modulo: 'alcada', acao: mod };
+}
+
+/** A chave pode ser concedida por usuario? (modulo fixo nao; o que nao existe nao) */
+export function chavePermiteExtra(chave: string): boolean {
+  const [mod, acao] = chave.split('.');
+  if (!acao) return ALCADAS.some((a) => a.chave === mod);
+  const modulo = moduloPorChave(mod);
+  return !!modulo && !modulo.fixo && celulaAplica(modulo, acao as Acao);
+}
+
+/** O extra vale hoje? `hoje` em 'AAAA-MM-DD' (Sao Paulo). Sem validade = vale. */
+export function extraVigente(expiraEm: string | null | undefined, hoje: string): boolean {
+  return !expiraEm || expiraEm.slice(0, 10) >= hoje;
+}
+
+/** Hoje em Sao Paulo, 'AAAA-MM-DD' — a mesma regua do `data_sp(now())` do banco. */
+export function hojeSaoPaulo(agora: Date = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(agora);
+}
+
+/** O que o usuario pode de fato: o papel + os extras vigentes. */
+export function permissoesEfetivas(
+  papel: string,
+  concessoes: Concessoes | undefined,
+  extras: ExtraUsuario[],
+  hoje: string,
+): string[] {
+  const vig = new Set(extras.filter((e) => extraVigente(e.expira_em, hoje)).map((e) => e.chave));
+  return todasAsChaves().filter((k) => temPermissao(papel, k, concessoes) || (papel !== 'admin' && vig.has(k) && chavePermiteExtra(k)));
+}
+
+/** Diferenca entre a lista gravada e a editada (rotulos para a confirmacao). */
+export function mudancasDosExtras(
+  atuais: string[],
+  novos: string[],
+): { entram: string[]; saem: string[] } {
+  const a = new Set(atuais);
+  const b = new Set(novos);
+  return {
+    entram: novos.filter((k) => !a.has(k)),
+    saem: atuais.filter((k) => !b.has(k)),
+  };
+}
+
+/**
+ * Copiar o perfil: o que o DESTINO ganha e perde em acesso efetivo, e se a
+ * unidade muda. Espelha `copiar_perfil_usuario` (os extras vencidos nao vao).
+ */
+export function resumoDaCopia(
+  origem: { papel: string; regional_id: string | null; extras: ExtraUsuario[] },
+  destino: { papel: string; regional_id: string | null; extras: ExtraUsuario[] },
+  concessoes: Concessoes | undefined,
+  copiarUnidade: boolean,
+  hoje: string,
+): { trocaPapel: boolean; trocaUnidade: boolean; ganha: string[]; perde: string[]; extrasCopiados: number } {
+  const copiados = origem.papel === 'admin' ? [] : origem.extras.filter((e) => extraVigente(e.expira_em, hoje));
+  const antes = new Set(permissoesEfetivas(destino.papel, concessoes, destino.extras, hoje));
+  const depois = new Set(permissoesEfetivas(origem.papel, concessoes, copiados, hoje));
+  const ganha: string[] = [];
+  const perde: string[] = [];
+  for (const k of todasAsChaves()) {
+    if (antes.has(k) === depois.has(k)) continue;
+    (depois.has(k) ? ganha : perde).push(rotuloDaChave(k));
+  }
+  return {
+    trocaPapel: origem.papel !== destino.papel,
+    trocaUnidade: copiarUnidade && (origem.regional_id ?? null) !== (destino.regional_id ?? null),
+    ganha,
+    perde,
+    extrasCopiados: copiados.length,
+  };
+}

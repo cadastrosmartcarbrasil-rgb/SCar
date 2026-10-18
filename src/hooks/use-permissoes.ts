@@ -5,7 +5,9 @@
 // oferecer o que o banco vai recusar (quem decide continua sendo o banco).
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
-import { mapaDeConcessoes, type Concessoes } from '@/lib/permissoes';
+import {
+  mapaDeConcessoes, chaveDoExtra, extraParaBanco, type Concessoes, type ExtraUsuario,
+} from '@/lib/permissoes';
 
 export function useConcessoesPapeis() {
   const supabase = createClient();
@@ -54,5 +56,62 @@ export function useSalvarPermissoesPerfil() {
       return data ?? 0;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['permissoes'] }),
+  });
+}
+
+// ---- 0116: permissao extra por usuario e copia de perfil ----
+
+/** Extras de todos os usuarios (o admin le todos; os demais, os proprios). */
+export function useExtrasUsuarios() {
+  const supabase = createClient();
+  return useQuery<Record<string, ExtraUsuario[]>>({
+    queryKey: ['permissoes', 'extras'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('usuario_permissoes').select('usuario_id, modulo, acao, motivo, expira_em');
+      if (error) throw error;
+      const m: Record<string, ExtraUsuario[]> = {};
+      for (const l of data ?? []) {
+        (m[l.usuario_id] ??= []).push({ chave: chaveDoExtra(l.modulo, l.acao), expira_em: l.expira_em, motivo: l.motivo });
+      }
+      return m;
+    },
+  });
+}
+
+export function useSalvarPermissoesUsuario() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: { usuarioId: string; extras: { chave: string; expira_em: string | null }[]; motivo: string }) => {
+      const { data, error } = await supabase.rpc('salvar_permissoes_usuario', {
+        p_usuario: v.usuarioId,
+        p_extras: v.extras.map((e) => ({ ...extraParaBanco(e.chave), expira_em: e.expira_em })),
+        p_motivo: v.motivo.trim() || null,
+      });
+      if (error) throw error;
+      return data ?? 0;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['permissoes'] }),
+  });
+}
+
+export function useCopiarPerfilUsuario() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: { origemId: string; destinoId: string; copiarUnidade: boolean; motivo: string }) => {
+      const { data, error } = await supabase.rpc('copiar_perfil_usuario', {
+        p_origem: v.origemId, p_destino: v.destinoId,
+        p_copiar_unidade: v.copiarUnidade, p_motivo: v.motivo.trim() || null,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['permissoes'] });
+      qc.invalidateQueries({ queryKey: ['supervisor'] });
+      qc.invalidateQueries({ queryKey: ['config', 'usuarios'] });
+    },
   });
 }

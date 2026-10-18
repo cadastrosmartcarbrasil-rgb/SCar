@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, UserCog, Pencil, KeyRound, ShieldAlert, Search, Loader2, Link2, ShieldCheck, Users } from 'lucide-react';
+import { Plus, UserCog, Pencil, KeyRound, ShieldAlert, Search, Loader2, Link2, ShieldCheck, Users, ShieldPlus, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { FormField, Input, Select } from '@/components/ui/field';
@@ -18,7 +18,8 @@ import { opcoesParaEscolher } from '@/lib/regional';
 import { UnidadesSupervisor } from '@/components/usuarios/unidades-supervisor';
 import { MatrizPermissoes, ResumoDoPapel } from '@/components/usuarios/matriz-permissoes';
 import { diferencaEntrePapeis } from '@/lib/permissoes';
-import { useConcessoesPapeis } from '@/hooks/use-permissoes';
+import { useConcessoesPapeis, useExtrasUsuarios } from '@/hooks/use-permissoes';
+import { ModalPermissoesExtras, ModalCopiarPerfil, SeloExtras } from '@/components/usuarios/permissoes-usuario';
 import {
   PAPEIS_USUARIO,
   rotuloPapel,
@@ -59,6 +60,9 @@ export default function UsuariosPage() {
   const criar = useCreateUsuario();
   const atualizar = useUpdateUsuario();
   const { data: concessoes } = useConcessoesPapeis();
+  const { data: extrasPorUsuario } = useExtrasUsuarios();
+  const [extrasDe, setExtrasDe] = useState<UsuarioListado | null>(null);
+  const [copiarPara, setCopiarPara] = useState<UsuarioListado | null>(null);
 
   const [aba, setAba] = useState<'usuarios' | 'permissoes'>('usuarios');
   const [busca, setBusca] = useState('');
@@ -210,6 +214,8 @@ export default function UsuariosPage() {
             Equipe interna: ficha, <strong>papel</strong>, unidade, acesso e redefinicao de senha.
             Troque o papel direto na coluna <strong>Papel</strong>; na aba{' '}
             <strong>Permissoes por perfil</strong> o administrador ajusta, modulo por modulo, o que cada perfil pode ver e fazer.
+            Em cada usuario, <strong>Extras</strong> concede algo a mais so para aquela pessoa e{' '}
+            <strong>Copiar perfil</strong> da a ela o mesmo acesso de outro usuario.
           </p>
           <p className="mt-1 text-xs text-slate-400">
             <b className="text-slate-500">{ativos}</b> com acesso
@@ -318,6 +324,7 @@ export default function UsuariosPage() {
                       {rotuloPapel(u.papel)}
                     </span>
                   )}
+                  <SeloExtras extras={extrasPorUsuario?.[u.id]} />
                 </td>
                 <td className="px-4 py-2 text-slate-600">{u.regional_nome ?? 'Global'}</td>
                 <td className="px-4 py-2 text-slate-600">
@@ -344,9 +351,19 @@ export default function UsuariosPage() {
                 </td>
                 <td className="px-4 py-2 text-right">
                   {podeGerenciar && (
-                    <Button variant="ghost" className="px-2 py-1 text-xs" onClick={() => abrirEdicao(u)}>
-                      <Pencil className="h-3.5 w-3.5" /> Editar
-                    </Button>
+                    <div className="flex justify-end gap-1">
+                      <Button variant="ghost" className="px-2 py-1 text-xs" onClick={() => abrirEdicao(u)}>
+                        <Pencil className="h-3.5 w-3.5" /> Editar
+                      </Button>
+                      <Button variant="ghost" className="px-2 py-1 text-xs" title="Permissoes extras desta pessoa"
+                        onClick={() => setExtrasDe(u)}>
+                        <ShieldPlus className="h-3.5 w-3.5" /> Extras
+                      </Button>
+                      <Button variant="ghost" className="px-2 py-1 text-xs" title="Copiar o perfil de outro usuario para esta pessoa"
+                        onClick={() => setCopiarPara(u)}>
+                        <Copy className="h-3.5 w-3.5" /> Copiar perfil
+                      </Button>
+                    </div>
                   )}
                 </td>
               </tr>
@@ -569,6 +586,10 @@ export default function UsuariosPage() {
           </form>
         )}
       </Modal>
+
+      <ModalPermissoesExtras usuario={extrasDe} onClose={() => setExtrasDe(null)} />
+      <ModalCopiarPerfil destino={copiarPara} usuarios={usuarios ?? []} onClose={() => setCopiarPara(null)}
+        regionalNome={(id) => (id ? (regionais ?? []).find((r) => r.id === id)?.nome ?? 'Unidade' : 'Global')} />
     </div>
   );
 }

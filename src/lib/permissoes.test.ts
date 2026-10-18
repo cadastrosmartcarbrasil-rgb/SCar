@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
   MODULOS, ACOES, ALCADAS, temPermissao, mapaDeConcessoes, diferencaEntrePapeis,
   mudancasDoPerfil, moduloDaRota, celulaEditavel, todasAsChaves, permissoesDoPapel,
+  chaveDoExtra, extraParaBanco, chavePermiteExtra, extraVigente, hojeSaoPaulo, permissoesEfetivas,
+  mudancasDosExtras, resumoDaCopia, rotuloDaChave,
 } from './permissoes';
 
 describe('grade modulo x acao (0111)', () => {
@@ -71,5 +73,80 @@ describe('grade modulo x acao (0111)', () => {
 
   it('papel desconhecido nao ganha nada', () => {
     expect(permissoesDoPapel('cotador')).toEqual([]);
+  });
+});
+
+describe('permissao extra por usuario (0116)', () => {
+  const hoje = '2026-10-18';
+
+  it('converte entre a chave da grade e o par do banco', () => {
+    expect(chaveDoExtra('veiculos', 'excluir')).toBe('veiculos.excluir');
+    expect(chaveDoExtra('alcada', 'desconto')).toBe('desconto');
+    expect(extraParaBanco('veiculos.excluir')).toEqual({ modulo: 'veiculos', acao: 'excluir' });
+    expect(extraParaBanco('desconto')).toEqual({ modulo: 'alcada', acao: 'desconto' });
+  });
+
+  it('so oferece o que existe e nao e fixo', () => {
+    expect(chavePermiteExtra('veiculos.excluir')).toBe(true);
+    expect(chavePermiteExtra('desconto')).toBe(true);
+    expect(chavePermiteExtra('painel.excluir')).toBe(false);
+    expect(chavePermiteExtra('configuracoes.ver')).toBe(false);
+    expect(chavePermiteExtra('inexistente')).toBe(false);
+  });
+
+  it('validade inclusive; sem validade vale sempre', () => {
+    expect(extraVigente(null, hoje)).toBe(true);
+    expect(extraVigente('2026-10-18', hoje)).toBe(true);
+    expect(extraVigente('2026-10-17', hoje)).toBe(false);
+  });
+
+  it('hoje em Sao Paulo, nao em UTC', () => {
+    // 01:30 UTC de 19/10 ainda e 18/10 em Sao Paulo
+    expect(hojeSaoPaulo(new Date('2026-10-19T01:30:00Z'))).toBe('2026-10-18');
+  });
+
+  it('extra soma ao papel so para a pessoa e so enquanto vigente', () => {
+    const base = permissoesEfetivas('consultor_vendas', undefined, [], hoje);
+    expect(base).not.toContain('veiculos.excluir');
+    const com = permissoesEfetivas('consultor_vendas', undefined,
+      [{ chave: 'veiculos.excluir', expira_em: null }, { chave: 'desconto', expira_em: '2026-01-01' }], hoje);
+    expect(com).toContain('veiculos.excluir');
+    expect(com).not.toContain('desconto');
+    expect(com.length).toBe(base.length + 1);
+  });
+
+  it('extra em modulo fixo e ignorado', () => {
+    const com = permissoesEfetivas('consultor_vendas', undefined, [{ chave: 'configuracoes.ver', expira_em: null }], hoje);
+    expect(com).not.toContain('configuracoes.ver');
+  });
+
+  it('mudancas da lista', () => {
+    expect(mudancasDosExtras(['a', 'b'], ['b', 'c'])).toEqual({ entram: ['c'], saem: ['a'] });
+  });
+
+  it('copiar perfil: diz o que o destino ganha e perde', () => {
+    const r = resumoDaCopia(
+      { papel: 'gestor_regional', regional_id: 'r1', extras: [{ chave: 'financeiro.estornar', expira_em: null }] },
+      { papel: 'consultor_vendas', regional_id: 'r2', extras: [{ chave: 'rastreadores.baixar', expira_em: null }] },
+      undefined, true, hoje,
+    );
+    expect(r.trocaPapel).toBe(true);
+    expect(r.trocaUnidade).toBe(true);
+    expect(r.extrasCopiados).toBe(1);
+    expect(r.ganha).toContain(rotuloDaChave('financeiro.estornar'));
+    expect(r.ganha).toContain(rotuloDaChave('desconto'));
+    expect(r.perde).toContain(rotuloDaChave('rastreadores.baixar'));
+  });
+
+  it('copiar sem a unidade nao a troca; extra vencido da origem nao vai', () => {
+    const r = resumoDaCopia(
+      { papel: 'consultor_vendas', regional_id: 'r1', extras: [{ chave: 'veiculos.excluir', expira_em: '2026-01-01' }] },
+      { papel: 'consultor_vendas', regional_id: 'r2', extras: [] },
+      undefined, false, hoje,
+    );
+    expect(r.trocaUnidade).toBe(false);
+    expect(r.extrasCopiados).toBe(0);
+    expect(r.ganha).toEqual([]);
+    expect(r.perde).toEqual([]);
   });
 });
