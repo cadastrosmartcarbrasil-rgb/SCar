@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Building2, Users, Landmark, ListTree, Car, BadgeDollarSign, AlertTriangle, Truck, Package, Building, Wallet, Percent, Layers, Bell, Megaphone, Palette, Target, FileCheck2,
+  Building2, Users, Landmark, ListTree, Car, BadgeDollarSign, AlertTriangle, Truck, Package, Building, Wallet, Percent, Layers, Bell, Megaphone, Palette, Target, FileCheck2, FileSignature,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -20,6 +20,7 @@ const TABS = [
   { href: '/configuracoes/documentos-evento', label: 'Prazos e Documentos do Evento', icon: FileCheck2 },
   { href: '/configuracoes/alertas', label: 'Alertas', icon: Bell },
   { href: '/configuracoes/comunicados', label: 'Comunicados', icon: Megaphone },
+  { href: '/configuracoes/termos', label: 'Termos', icon: FileSignature },
   { href: '/configuracoes/produtos', label: 'Produtos', icon: Package },
   { href: '/configuracoes/planos', label: 'Planos & Combos', icon: Layers },
   { href: '/configuracoes/contas-bancarias', label: 'Contas Bancarias', icon: Wallet },
@@ -28,11 +29,12 @@ const TABS = [
   { href: '/configuracoes/centros-custo', label: 'Centros de Custo', icon: Target },
 ];
 
-export function ConfigTabs() {
+export function ConfigTabs({ somente }: { somente?: string[] } = {}) {
   const pathname = usePathname();
+  const tabs = somente ? TABS.filter((t) => somente.includes(t.href)) : TABS;
   return (
     <nav className="flex flex-wrap gap-1 border-b border-slate-200">
-      {TABS.map((t) => {
+      {tabs.map((t) => {
         const active = pathname.startsWith(t.href);
         return (
           <Link

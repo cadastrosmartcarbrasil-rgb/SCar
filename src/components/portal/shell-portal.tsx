@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Car, CreditCard, LogOut, Receipt, UserRound } from 'lucide-react';
+import { Car, CreditCard, FileText, LogOut, Receipt, UserRound } from 'lucide-react';
 import { LogoSmartCar } from '@/components/hotlink/marca';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { createClient } from '@/lib/supabase/client';
@@ -11,6 +11,7 @@ const ITENS = [
   { href: '/portal', label: 'Meus veiculos', icon: Car },
   { href: '/portal/financeiro', label: 'Financeiro', icon: Receipt },
   { href: '/portal/pagamento', label: 'Pagamento', icon: CreditCard },
+  { href: '/portal/documentos', label: 'Documentos', icon: FileText },
   { href: '/portal/perfil', label: 'Meu perfil', icon: UserRound },
 ];
 

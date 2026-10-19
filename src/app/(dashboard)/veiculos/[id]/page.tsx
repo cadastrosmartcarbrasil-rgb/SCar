@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import {
-  AlertTriangle, ArrowLeft, Car, ClipboardList, DollarSign, FileText, LifeBuoy, Pencil, UserRound,
+  AlertTriangle, ArrowLeft, Car, ClipboardList, DollarSign, FileSignature, FileText, LifeBuoy, Pencil, UserRound,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { AlertasVeiculo } from '@/components/veiculos/alertas-veiculo';
@@ -14,16 +14,19 @@ import { CoberturasDetalhadas } from '@/components/veiculos/coberturas-veiculo';
 import {
   AcionamentosCadastro, EventosCadastro, FinanceiroCadastro, ProtocolosCadastro,
 } from '@/components/cadastro/vida-cadastro';
+import { TermosDoCadastro } from '@/components/termos/termos-do-cadastro';
+import { usePode } from '@/hooks/use-permissoes';
 import { useVeiculoFicha } from '@/hooks/use-vida-cadastro';
 import { primeiraAtivacao, statusVeiculoResumo } from '@/lib/sac';
 import { formatarDocumento } from '@/lib/documento';
 import { formatCurrency } from '@/lib/utils';
 
-type Aba = 'dados' | 'financeiro' | 'eventos' | 'protocolos' | 'assistencia';
+type Aba = 'dados' | 'financeiro' | 'eventos' | 'protocolos' | 'assistencia' | 'termos';
 
 export default function FichaVeiculo({ params }: { params: { id: string } }) {
   const { data: v, isLoading, error } = useVeiculoFicha(params.id);
   const [aba, setAba] = useState<Aba>('dados');
+  const verTermos = usePode('termos.ver');
 
   if (isLoading) return <p className="text-sm text-slate-500">Carregando veiculo...</p>;
   if (error) return <p className="text-sm text-rose-600">Nao foi possivel carregar: {(error as Error).message}</p>;
@@ -39,6 +42,7 @@ export default function FichaVeiculo({ params }: { params: { id: string } }) {
     { id: 'eventos', label: 'Eventos', icon: AlertTriangle },
     { id: 'protocolos', label: 'Protocolos', icon: ClipboardList },
     { id: 'assistencia', label: 'Assistencia 24h', icon: LifeBuoy },
+    ...(verTermos ? [{ id: 'termos' as Aba, label: 'Termos', icon: FileSignature }] : []),
   ];
 
   return (
@@ -140,6 +144,7 @@ export default function FichaVeiculo({ params }: { params: { id: string } }) {
       {aba === 'eventos' && <EventosCadastro clienteId={v.cliente_id} veiculoId={v.id} />}
       {aba === 'protocolos' && <ProtocolosCadastro clienteId={v.cliente_id} veiculoId={v.id} />}
       {aba === 'assistencia' && <AcionamentosCadastro clienteId={v.cliente_id} veiculoId={v.id} />}
+      {aba === 'termos' && <TermosDoCadastro clienteId={v.cliente_id} veiculoId={v.id} />}
     </div>
   );
 }

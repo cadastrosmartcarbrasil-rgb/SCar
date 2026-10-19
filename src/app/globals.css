@@ -295,3 +295,39 @@ textarea:focus-visible {
     repeating-linear-gradient(-45deg, transparent 0 13px, rgba(255, 255, 255, 0.02) 13px 14px),
     linear-gradient(180deg, #0e1a35 0%, #09122a 100%);
 }
+
+/* ---------------------------------------------------------------------------
+   Termos (0123): o editor e a previa do texto. O campo aparece como etiqueta.
+   --------------------------------------------------------------------------- */
+.termo-editor .ProseMirror,
+.termo-previa {
+  outline: none;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: rgb(var(--slate-800));
+}
+.termo-editor .ProseMirror h1, .termo-previa h1 { font-size: 1.25rem; font-weight: 700; margin: 0.75rem 0 0.4rem; }
+.termo-editor .ProseMirror h2, .termo-previa h2 { font-size: 1.1rem; font-weight: 700; margin: 0.6rem 0 0.35rem; }
+.termo-editor .ProseMirror h3, .termo-previa h3 { font-size: 1rem; font-weight: 600; margin: 0.5rem 0 0.3rem; }
+.termo-editor .ProseMirror p, .termo-previa p { margin: 0.25rem 0; }
+.termo-editor .ProseMirror ul, .termo-previa ul { list-style: disc; padding-left: 1.5rem; }
+.termo-editor .ProseMirror ol, .termo-previa ol { list-style: decimal; padding-left: 1.5rem; }
+.termo-editor .ProseMirror table, .termo-previa table { border-collapse: collapse; width: 100%; margin: 0.5rem 0; table-layout: fixed; }
+.termo-editor .ProseMirror td, .termo-editor .ProseMirror th,
+.termo-previa td, .termo-previa th { border: 1px solid rgb(var(--slate-300)); padding: 0.25rem 0.4rem; vertical-align: top; }
+.termo-editor .ProseMirror th, .termo-previa th { background: rgb(var(--slate-100)); }
+.termo-editor .ProseMirror .selectedCell { background: rgba(11, 172, 226, 0.12); }
+.termo-editor .ProseMirror img, .termo-previa img { max-width: 100%; display: inline-block; }
+.termo-editor .campo-termo,
+.termo-editor .campo-termo-bloco {
+  border-radius: 0.35rem;
+  background: rgba(11, 172, 226, 0.15);
+  color: #0785B0;
+  padding: 0 0.3rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.termo-editor .campo-termo-bloco { display: block; padding: 0.5rem; text-align: center; border: 1px dashed #0BACE2; }
+.termo-editor .ProseMirror-selectednode { outline: 2px solid #0BACE2; }
+.termo-previa .termo-em-branco { color: rgb(var(--slate-400)); }

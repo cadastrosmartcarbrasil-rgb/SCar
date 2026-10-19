@@ -143,6 +143,9 @@ export default function EmpresaPage() {
               <FormField label="Site">
                 <Input type="url" value={form.site ?? ''} onChange={(e) => setF({ site: e.target.value })} placeholder="https://" />
               </FormField>
+              <FormField label="Link do regulamento (citado nos termos)">
+                <Input type="url" value={form.regulamento_url ?? ''} onChange={(e) => setF({ regulamento_url: e.target.value })} placeholder="https://" />
+              </FormField>
             </CardContent>
           </Card>
 

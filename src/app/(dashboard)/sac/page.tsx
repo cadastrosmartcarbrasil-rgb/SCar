@@ -30,6 +30,8 @@ import { CATEGORIAS_PROTOCOLO, PRIORIDADES } from '@/lib/protocolos';
 import { CentralProtocolos } from '@/components/protocolos/central-protocolos';
 import { ModalOpcionaisVeiculo } from '@/components/sac/opcionais-veiculo';
 import { CoberturasDetalhadas } from '@/components/veiculos/coberturas-veiculo';
+import { TermosDoCadastro } from '@/components/termos/termos-do-cadastro';
+import { usePode } from '@/hooks/use-permissoes';
 import { TabelaEventos } from '@/components/cadastro/vida-cadastro';
 import { STATUS_ACIONAMENTO_LABEL } from '@/lib/assistencia';
 import { statusVeiculoResumo, primeiraAtivacao } from '@/lib/sac';
@@ -349,6 +351,8 @@ function AtendimentoVeiculo({ clienteId, associado, veiculoId, podeTrocar, onTro
   const [financeiro, setFinanceiro] = useState(false);
   const [whats, setWhats] = useState(false);
   const [email, setEmail] = useState(false);
+  const [termos, setTermos] = useState(false);
+  const verTermos = usePode('termos.ver');
   const gerarBoleto = useGerarBoleto();
   const { data: atendimentos } = useAtendimentosVeiculo(veiculoId);
   // Historico da Assistencia 24h na propria ficha do veiculo.
@@ -373,6 +377,7 @@ function AtendimentoVeiculo({ clienteId, associado, veiculoId, podeTrocar, onTro
     if (s.modo === 'financeiro') { setFinanceiro(true); return; }
     if (s.modo === 'whatsapp') { setWhats(true); return; }
     if (s.modo === 'email') { setEmail(true); return; }
+    if (s.modo === 'termos') { setTermos(true); return; }
     if (s.modo === 'boleto') {
       gerarBoleto.mutate({ cliente_id: clienteId }, {
         onSuccess: (d) => toast.success(`Faturas da competencia ${d.competencia} prontas (${d.faturas.length})`),
@@ -400,7 +405,7 @@ function AtendimentoVeiculo({ clienteId, associado, veiculoId, podeTrocar, onTro
           <div>
             <p className="mb-2 text-sm font-semibold text-slate-700">O que voce precisa para este veiculo?</p>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {SERVICOS_SAC.map((s) => (
+              {SERVICOS_SAC.filter((s) => s.modo !== 'termos' || verTermos).map((s) => (
                 <button key={s.id} onClick={() => acionar(s)} disabled={s.modo === 'boleto' && gerarBoleto.isPending}
                   className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-superficie p-4 text-left shadow-sm transition hover:border-cyan-400 hover:shadow-md disabled:opacity-60">
                   <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${s.cor}`}>
@@ -480,6 +485,9 @@ function AtendimentoVeiculo({ clienteId, associado, veiculoId, podeTrocar, onTro
           )}
           {whats && <ModalWhatsApp associado={associado} placa={veiculo.placa} onClose={() => setWhats(false)} />}
           {email && <ModalEmail associado={associado} placa={veiculo.placa} onClose={() => setEmail(false)} />}
+          <Modal open={termos} onClose={() => setTermos(false)} title={`Termos — ${veiculo.placa}`} tamanho="xl">
+            {termos && <TermosDoCadastro clienteId={clienteId} veiculoId={veiculo.id} />}
+          </Modal>
         </>
       )}
     </div>

@@ -36,6 +36,7 @@ export function useSaveEmpresa() {
         inscricao_municipal: e.im_isento ? null : e.inscricao_municipal || null,
         im_isento: e.im_isento ?? false,
         site: e.site || null,
+        regulamento_url: e.regulamento_url || null,
         email_principal: e.email_principal || null,
         email_financeiro: e.email_financeiro || null,
         email_juridico: e.email_juridico || null,

@@ -239,9 +239,14 @@ export function Sidebar({ papel, logoUrl, permissoes = null }: {
   const integracao = ['admin', 'financeiro'].includes(papel ?? '')
     ? [{ href: '/integracao/mutual', label: 'Integracao Mutual', icon: Database }]
     : [];
+  // Termos (0123): quem recebeu "gerenciar modelos" como extra ve o atalho
+  // direto para a aba Termos das Configuracoes.
+  const gereTermos = papel !== 'admin' && (permissoes ?? []).some((p) => p.startsWith('termos_modelos.'));
   const gestao = papel === 'admin'
     ? [...GESTAO, ...integracao, { href: '/configuracoes', label: 'Configuracoes', icon: Settings }]
-    : [...GESTAO, ...integracao];
+    : gereTermos
+      ? [...GESTAO, ...integracao, { href: '/configuracoes/termos', label: 'Termos', icon: Settings }]
+      : [...GESTAO, ...integracao];
 
   // REGIONAIS e um grupo, nao um link: o painel (leitura consolidada de todas
   // as unidades, /regionais) e a porta de entrada de UMA unidade (/regional,

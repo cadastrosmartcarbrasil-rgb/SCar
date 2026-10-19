@@ -1420,6 +1420,76 @@ export type CobrancaAvisosBancoRow = Timestamps & {
   recebido_em: string;
 };
 
+/** 0123: termos (modelos, versoes, emitidos). */
+export type TermoModeloRow = Timestamps & {
+  id: string;
+  nome: string;
+  tipo: string;
+  descricao: string | null;
+  escopo: 'ASSOCIADO' | 'GERAL';
+  rascunho_html: string;
+  plano_ids: string[];
+  tipo_veiculo_ids: string[];
+  usos: string[];
+  regional_ids: string[];
+  visivel_portal: boolean;
+  exige_aceite: boolean;
+  declaracoes: Json;
+  ativo: boolean;
+  versao_atual_id: string | null;
+  criado_por: string | null;
+  atualizado_por: string | null;
+};
+export type TermoVersaoRow = {
+  id: string;
+  modelo_id: string;
+  numero: number;
+  nome: string;
+  conteudo_html: string;
+  sha256: string;
+  declaracoes: Json;
+  observacao: string | null;
+  pdf_path: string | null;
+  pdf_sha256: string | null;
+  publicada_por: string | null;
+  publicada_em: string;
+};
+export type SituacaoTermoEmitido = 'EMITIDO' | 'ENVIADO' | 'ACEITO' | 'CANCELADO';
+export type TermoEmitidoRow = {
+  id: string;
+  protocolo: string | null;
+  modelo_id: string;
+  versao_id: string;
+  cliente_id: string;
+  veiculo_id: string | null;
+  regional_id: string | null;
+  titulo: string;
+  conteudo_html: string;
+  html_sha256: string;
+  campos_vazios: string[];
+  pdf_path: string | null;
+  pdf_sha256: string | null;
+  pdf_bytes: number | null;
+  visivel_portal: boolean;
+  situacao: SituacaoTermoEmitido;
+  emitido_por: string | null;
+  emitido_em: string;
+  cancelado_por: string | null;
+  cancelado_em: string | null;
+  cancelamento_motivo: string | null;
+  updated_at: string;
+};
+export type PortalDocumento = {
+  origem: 'EMITIDO' | 'GERAL';
+  id: string;
+  titulo: string;
+  tipo: string;
+  protocolo: string | null;
+  placa: string | null;
+  data: string;
+  tem_pdf: boolean;
+};
+
 // Linha da listagem do modulo Cobranca (RPC listar_cobrancas)
 export type StatusCobranca = 'aberto' | 'pago' | 'vencido' | 'cancelado';
 export type CobrancaLinha = {
@@ -2552,6 +2622,8 @@ export type EmpresaRow = Timestamps & {
   // Recorte do plano de contas que alimenta o painel das regionais (0078).
   painel_conta_de: string | null;
   painel_conta_ate: string | null;
+  // Link do regulamento citado nos termos (0123).
+  regulamento_url: string | null;
 };
 
 export type MandatosRow = Timestamps & {
@@ -3624,6 +3696,12 @@ export type Database = {
       >;
       cobranca_liquidacoes: TableDef<CobrancaLiquidacoesRow, [Rel<'titulo_id', 'titulos_financeiros'>]>;
       cobranca_avisos_banco: TableDef<CobrancaAvisosBancoRow>;
+      termos_modelos: TableDef<TermoModeloRow>;
+      termos_versoes: TableDef<TermoVersaoRow, [Rel<'modelo_id', 'termos_modelos'>]>;
+      termos_emitidos: TableDef<TermoEmitidoRow, [
+        Rel<'modelo_id', 'termos_modelos'>, Rel<'versao_id', 'termos_versoes'>,
+        Rel<'cliente_id', 'clientes'>, Rel<'veiculo_id', 'veiculos'>, Rel<'emitido_por', 'usuarios'>,
+      ]>;
       cobranca_remessa_itens: TableDef<
         CobrancaRemessaItensRow,
         [Rel<'remessa_id', 'cobranca_remessas'>, Rel<'titulo_id', 'titulos_financeiros'>]
@@ -4423,6 +4501,18 @@ export type Database = {
       pode_assistencia: { Args: Record<string, never>; Returns: boolean };
       pode_liberar_assistencia: { Args: Record<string, never>; Returns: boolean };
       minhas_permissoes: { Args: Record<string, never>; Returns: string[] };
+      publicar_versao_termo: { Args: { p_modelo_id: string; p_observacao?: string | null }; Returns: TermoVersaoRow };
+      anexar_pdf_versao_termo: { Args: { p_versao_id: string; p_path: string; p_sha256: string }; Returns: undefined };
+      registrar_termo_emitido: {
+        Args: { p_versao_id: string; p_cliente_id: string; p_veiculo_id: string | null; p_html: string;
+                p_campos_vazios?: string[]; p_visivel_portal?: boolean | null };
+        Returns: TermoEmitidoRow;
+      };
+      anexar_pdf_termo: { Args: { p_id: string; p_path: string; p_sha256: string; p_bytes: number }; Returns: undefined };
+      cancelar_termo_emitido: { Args: { p_id: string; p_motivo: string }; Returns: undefined };
+      portal_termo_emitido: { Args: { p_id: string; p_visivel: boolean }; Returns: undefined };
+      pode_ver_termo_emitido: { Args: { p_id: string }; Returns: boolean };
+      portal_documentos: { Args: Record<string, never>; Returns: PortalDocumento[] };
       salvar_permissoes_perfil: {
         Args: { p_papel: string; p_celulas: { modulo: string; acao: string; concedida: boolean }[] };
         Returns: number;

@@ -36,6 +36,11 @@ ENV NODE_ENV=production \
     PORT=3000 \
     HOSTNAME=0.0.0.0
 
+# Chromium + fontes: o PDF dos termos (0123) e gerado no servidor
+# (puppeteer-core). As fontes Noto/DejaVu cobrem acento e os simbolos ☒/☐.
+RUN apk add --no-cache chromium nss freetype harfbuzz ttf-dejavu font-noto
+ENV CHROMIUM_PATH=/usr/bin/chromium-browser
+
 # Usuario nao-root por seguranca
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
 

@@ -2,7 +2,7 @@
 // Fonte unica reutilizada pelo SAC interno e pelo Portal do Associado.
 import {
   AlertTriangle, LifeBuoy, CreditCard, ClipboardCheck, Pencil, Wallet,
-  MessageCircle, Mail, Ticket,
+  MessageCircle, Mail, Ticket, FileSignature,
   type LucideIcon,
 } from 'lucide-react';
 import type { TipoAtendimento, StatusAtendimento, StatusEvento } from '@/lib/database.types';
@@ -13,10 +13,11 @@ import type { TipoAtendimento, StatusAtendimento, StatusEvento } from '@/lib/dat
 // 'assistencia' leva ao painel da Assistencia 24h com o veiculo selecionado;
 // 'editar'    abre o cadastro do veiculo (unifica os antigos Cadastro/Upgrade);
 // 'financeiro' abre o historico de boletos (com edicao do que esta em aberto);
-// 'whatsapp' / 'email' sao disparos rapidos ao associado.
+// 'whatsapp' / 'email' sao disparos rapidos ao associado;
+// 'termos'   emite e consulta os termos do veiculo (0123).
 export type ModoServico =
   | 'chamado' | 'boleto' | 'evento' | 'assistencia'
-  | 'editar' | 'financeiro' | 'whatsapp' | 'email';
+  | 'editar' | 'financeiro' | 'whatsapp' | 'email' | 'termos';
 
 export interface ServicoSac {
   id: string;
@@ -62,6 +63,11 @@ export const SERVICOS_SAC: ServicoSac[] = [
     id: 'email', titulo: 'Enviar E-mail', descricao: 'Mensagem por e-mail ao associado',
     icon: Mail, cor: 'bg-sky-50 text-sky-600', modo: 'email',
     tipos: [{ value: 'OUTROS', label: 'Contato' }],
+  },
+  {
+    id: 'termos', titulo: 'Termos', descricao: 'Emitir e consultar termos e documentos',
+    icon: FileSignature, cor: 'bg-indigo-50 text-indigo-600', modo: 'termos',
+    tipos: [{ value: 'OUTROS', label: 'Termos' }],
   },
   {
     id: 'protocolo', titulo: 'Abrir Protocolo', descricao: 'Duvidas, reclamacao, financeiro...',
