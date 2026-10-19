@@ -1402,6 +1402,24 @@ export type CobrancaLiquidacoesRow = Timestamps & {
   payload: Json | null;
 };
 
+/** 0122: aviso do banco (webhook) que ainda nao apareceu em liquidados/dia. */
+export type SituacaoAvisoBanco = 'AGUARDANDO' | 'CONFIRMADO' | 'EXPIRADO';
+export type CobrancaAvisosBancoRow = Timestamps & {
+  id: string;
+  provedor: ProvedorBanco;
+  ambiente: 'sandbox' | 'producao';
+  nosso_numero: string;
+  movimento: string | null;
+  data_aviso: string | null;
+  previsao_credito: string | null;
+  payload: Json | null;
+  situacao: SituacaoAvisoBanco;
+  tentativas: number;
+  ultima_tentativa_em: string | null;
+  confirmado_em: string | null;
+  recebido_em: string;
+};
+
 // Linha da listagem do modulo Cobranca (RPC listar_cobrancas)
 export type StatusCobranca = 'aberto' | 'pago' | 'vencido' | 'cancelado';
 export type CobrancaLinha = {
@@ -3605,6 +3623,7 @@ export type Database = {
         [Rel<'integracao_id', 'integracoes_bancarias'>, Rel<'regional_id', 'regionais'>, Rel<'created_by', 'usuarios'>]
       >;
       cobranca_liquidacoes: TableDef<CobrancaLiquidacoesRow, [Rel<'titulo_id', 'titulos_financeiros'>]>;
+      cobranca_avisos_banco: TableDef<CobrancaAvisosBancoRow>;
       cobranca_remessa_itens: TableDef<
         CobrancaRemessaItensRow,
         [Rel<'remessa_id', 'cobranca_remessas'>, Rel<'titulo_id', 'titulos_financeiros'>]

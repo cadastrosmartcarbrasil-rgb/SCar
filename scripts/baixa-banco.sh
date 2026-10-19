@@ -17,4 +17,4 @@ fi
 RESP="$(curl -sS --max-time 120 -X POST -H "x-cron-secret: $SEGREDO" -H 'Content-Type: application/json' -d '{}' \
   -w ' HTTP=%{http_code}' "$URL" 2>&1)"
 # So o resumo vai para o log (o detalhe fica na tabela cobranca_liquidacoes).
-echo "$(date -Is) $(echo "$RESP" | grep -o '"resumo":{[^}]*}\|"error":"[^"]*"\|HTTP=[0-9]*' | tr '\n' ' ')" >> "$LOG"
+echo "$(date -Is) $(echo "$RESP" | grep -o '"resumo":{[^}]*}\|"avisos_pendentes":{[^}]*}\|"error":"[^"]*"\|HTTP=[0-9]*' | tr '\n' ' ')" >> "$LOG"

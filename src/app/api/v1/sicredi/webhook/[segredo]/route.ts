@@ -8,7 +8,12 @@ import {
   mascararSegredo,
   type LiquidacaoSicredi,
 } from '@/lib/pagamentos/sicredi';
-import { registrarLiquidacoesSicredi } from '@/lib/pagamentos/baixa-sicredi';
+import {
+  confirmarAvisos,
+  guardarAvisosPendentes,
+  registrarLiquidacoesSicredi,
+  type AvisoNaoConfirmado,
+} from '@/lib/pagamentos/baixa-sicredi';
 import { diasParaConfirmar, hojeEmSaoPaulo, resumoDaBaixa, segredoConfere, type ResultadoLiquidacao } from '@/lib/baixa-banco';
 
 // POST /api/v1/sicredi/webhook/<SICREDI_WEBHOOK_SECRET> — aviso de LIQUIDACAO.
@@ -19,8 +24,9 @@ import { diasParaConfirmar, hojeEmSaoPaulo, resumoDaBaixa, segredoConfere, type 
 //   2. o corpo do aviso so diz QUAL boleto olhar: a baixa so acontece depois de
 //      o proprio Sicredi confirmar o pagamento em `liquidados/dia`, com as
 //      nossas credenciais, e o valor/data gravados sao os dessa confirmacao.
-// Aviso que ainda nao aparece na lista volta como NAO_CONFIRMADO e o
-// agendador (baixa-banco, 4x ao dia) pega depois. A RPC e re-executavel.
+// Aviso que ainda nao aparece na lista volta como NAO_CONFIRMADO e fica
+// GRAVADO em cobranca_avisos_banco (0122): o agendador (baixa-banco, 4x ao
+// dia) reconfere do dia do aviso ate hoje, ate achar. A RPC e re-executavel.
 // Responde 200 sempre que o segredo confere, para o banco nao reenviar em laco.
 export const dynamic = 'force-dynamic';
 
@@ -52,6 +58,8 @@ export async function POST(request: Request, { params }: { params: { segredo: st
   const cachePorDia = new Map<string, LiquidacaoSicredi[]>();
   const resultados: Array<ResultadoLiquidacao | { nosso_numero: string; situacao: 'NAO_CONFIRMADO' | 'ESTORNO_IGNORADO' }> = [];
   const supabase = createAdminClient();
+  const pendentes: AvisoNaoConfirmado[] = [];
+  const confirmados: string[] = [];
 
   for (const aviso of avisos) {
     if (aviso.estorno) {
@@ -76,11 +84,17 @@ export async function POST(request: Request, { params }: { params: { segredo: st
       if (achados.length) {
         resultados.push(...(await registrarLiquidacoesSicredi(supabase, cfg.ambiente, achados, dia)));
         confirmado = true;
+        confirmados.push(aviso.nossoNumero);
         break;
       }
     }
-    if (!confirmado) resultados.push({ nosso_numero: aviso.nossoNumero, situacao: 'NAO_CONFIRMADO' });
+    if (!confirmado) {
+      resultados.push({ nosso_numero: aviso.nossoNumero, situacao: 'NAO_CONFIRMADO' });
+      pendentes.push(aviso);
+    }
   }
+  await guardarAvisosPendentes(supabase, cfg.ambiente, pendentes, payload);
+  await confirmarAvisos(supabase, cfg.ambiente, confirmados);
 
   const gravados = resultados.filter((r): r is ResultadoLiquidacao => r.situacao !== 'NAO_CONFIRMADO' && r.situacao !== 'ESTORNO_IGNORADO');
   const resumo = { avisos: avisos.length, ...resumoDaBaixa(gravados), nao_confirmados: resultados.filter((r) => r.situacao === 'NAO_CONFIRMADO').length };

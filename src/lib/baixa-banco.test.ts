@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { diaAnterior, diaValido, diasDaBaixa, diasParaConfirmar, hojeEmSaoPaulo, resumoDaBaixa, segredoConfere } from './baixa-banco';
+import {
+  avisoExpirou, diaAnterior, diaValido, diasDaBaixa, diasParaConfirmar, diasParaReconferir, hojeEmSaoPaulo, resumoDaBaixa,
+  segredoConfere,
+} from './baixa-banco';
 
 describe('baixa-banco', () => {
   it('hoje em Sao Paulo, nao em UTC', () => {
@@ -54,5 +57,29 @@ describe('diasParaConfirmar (webhook)', () => {
     expect(diasParaConfirmar('2026-10-20', '2026-10-18', '2026-10-19')).toEqual(['2026-10-18', '2026-10-19', '2026-10-20']);
     expect(diasParaConfirmar('2026-10-18', '2026-10-18', '2026-10-19')).toEqual(['2026-10-18', '2026-10-17']);
     expect(diasParaConfirmar('2026-10-13', '13/10/2026')).toEqual(['2026-10-12', '2026-10-13']);
+  });
+});
+
+describe('reconferencia dos avisos pendentes (0122)', () => {
+  it('do aviso ate hoje, inclusive o dia util seguinte do fim de semana', () => {
+    expect(diasParaReconferir('2026-10-20', '2026-10-18', '2026-10-19')).toEqual(['2026-10-18', '2026-10-19', '2026-10-20']);
+    expect(diasParaReconferir('2026-10-19', '2026-10-18')).toEqual(['2026-10-18', '2026-10-19']);
+  });
+  it('previsao futura nao conta; sem data: ontem e hoje', () => {
+    expect(diasParaReconferir('2026-10-18', '2026-10-18', '2026-10-19')).toEqual(['2026-10-18']);
+    expect(diasParaReconferir('2026-10-18')).toEqual(['2026-10-17', '2026-10-18']);
+    expect(diasParaReconferir('2026-10-18', 'lixo')).toEqual(['2026-10-17', '2026-10-18']);
+  });
+  it('limitado a 10 dias para tras', () => {
+    const d = diasParaReconferir('2026-10-30', '2026-10-01');
+    expect(d).toHaveLength(10);
+    expect(d[0]).toBe('2026-10-21');
+    expect(d[9]).toBe('2026-10-30');
+  });
+  it('expira depois de 15 dias do recebimento', () => {
+    expect(avisoExpirou('2026-10-18T11:00:00Z', '2026-11-02')).toBe(false);
+    expect(avisoExpirou('2026-10-18T11:00:00Z', '2026-11-03')).toBe(true);
+    // 01h UTC do dia 19 ainda e dia 18 em Sao Paulo
+    expect(avisoExpirou('2026-10-19T01:00:00Z', '2026-11-03')).toBe(true);
   });
 });

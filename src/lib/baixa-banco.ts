@@ -86,3 +86,45 @@ export function diasParaConfirmar(hoje: string, dataDoAviso?: string | null, pre
   const dias = [dataDoAviso, prev, diaAnterior(hoje), hoje].filter((d): d is string => diaValido(d));
   return Array.from(new Set(dias));
 }
+
+/** Prazo para um aviso do banco aparecer em `liquidados/dia` antes de virar EXPIRADO (0122). */
+export const PRAZO_AVISO_DIAS = 15;
+/** Quantos dias para tras, no maximo, a reconferencia consulta por aviso. */
+export const JANELA_RECONFERENCIA_DIAS = 10;
+
+function diaSeguinte(iso: string): string {
+  const d = new Date(`${iso}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+function diasEntre(de: string, ate: string): number {
+  return Math.round((Date.parse(`${ate}T12:00:00Z`) - Date.parse(`${de}T12:00:00Z`)) / 86_400_000);
+}
+
+/**
+ * Dias a reconsultar para um aviso que ficou AGUARDANDO (0122): do mais cedo
+ * entre o aviso e a previsao do credito ate HOJE — o pagamento do fim de
+ * semana entra na lista do dia util seguinte, que pode ser qualquer um desses.
+ * Limitado aos ultimos JANELA_RECONFERENCIA_DIAS para nao varrer o mes inteiro;
+ * sem data valida, so ontem e hoje.
+ */
+export function diasParaReconferir(hoje: string, dataDoAviso?: string | null, previsao?: string | null): string[] {
+  const datas = [dataDoAviso, previsao].filter((d): d is string => diaValido(d) && d <= hoje).sort();
+  const limite = (() => {
+    let d = hoje;
+    for (let i = 1; i < JANELA_RECONFERENCIA_DIAS; i++) d = diaAnterior(d);
+    return d;
+  })();
+  let inicio = datas[0] ?? diaAnterior(hoje);
+  if (inicio < limite) inicio = limite;
+  const dias: string[] = [];
+  for (let d = inicio; d <= hoje; d = diaSeguinte(d)) dias.push(d);
+  return dias;
+}
+
+/** O aviso passou do prazo sem aparecer no banco? (conta do recebimento, em dias de SP). */
+export function avisoExpirou(recebidoEm: string, hoje: string, prazo: number = PRAZO_AVISO_DIAS): boolean {
+  const recebido = hojeEmSaoPaulo(new Date(recebidoEm));
+  return diasEntre(recebido, hoje) > prazo;
+}

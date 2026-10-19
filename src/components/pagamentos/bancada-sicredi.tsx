@@ -31,6 +31,7 @@ export function BancadaSicredi() {
   const [whResp, setWhResp] = useState('');
   const [whEmail, setWhEmail] = useState('');
   const [whTel, setWhTel] = useState('');
+  const [versaoAvisos, setVersaoAvisos] = useState(0);
 
   // Baixa dos pagos (0105): sem dia = ontem e hoje, como o agendador faz.
   async function darBaixa() {
@@ -49,6 +50,7 @@ export function BancadaSicredi() {
       setSaida({ ok: false, texto: (e as Error).message });
     } finally {
       setOcupado(null);
+      setVersaoAvisos((v) => v + 1);
     }
   }
 
@@ -228,6 +230,7 @@ export function BancadaSicredi() {
               </Button>
             </div>
           </div>
+          <AvisosPendentes versao={versaoAvisos} />
           <div className="space-y-2 border-t border-slate-200 pt-3">
             <p className="flex items-center gap-1 text-xs font-semibold text-slate-700">
               <BellRing className="h-3.5 w-3.5" /> Webhook de liquidacao
@@ -285,6 +288,84 @@ export function BancadaSicredi() {
           <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-all font-mono text-slate-600">{saida.texto}</pre>
         </div>
       )}
+    </div>
+  );
+}
+
+interface AvisoPendente {
+  id: string;
+  nosso_numero: string;
+  movimento: string | null;
+  data_aviso: string | null;
+  previsao_credito: string | null;
+  situacao: 'AGUARDANDO' | 'CONFIRMADO' | 'EXPIRADO';
+  tentativas: number;
+  recebido_em: string;
+}
+
+/**
+ * Avisos do webhook que o Sicredi ainda nao confirmou em liquidados/dia (0122).
+ * O agendador reconfere sozinho (4x ao dia); aqui so se ve o que esta parado.
+ * EXPIRADO = 15 dias sem aparecer: conferir no internet banking.
+ */
+function AvisosPendentes({ versao }: { versao: number }) {
+  const [avisos, setAvisos] = useState<AvisoPendente[] | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  useEffect(() => {
+    createClient()
+      .from('cobranca_avisos_banco')
+      .select('id, nosso_numero, movimento, data_aviso, previsao_credito, situacao, tentativas, recebido_em')
+      .in('situacao', ['AGUARDANDO', 'EXPIRADO'])
+      .order('recebido_em', { ascending: false })
+      .limit(50)
+      .then(({ data, error }) => {
+        if (error) setErro(error.message);
+        else setAvisos((data ?? []) as AvisoPendente[]);
+      });
+  }, [versao]);
+
+  if (erro) return <p className="text-xs text-red-700">Nao foi possivel ler os avisos pendentes: {erro}</p>;
+  if (!avisos?.length) return null;
+  const fmt = (d: string | null) => (d ? d.split('-').reverse().join('/') : '—');
+  return (
+    <div className="space-y-2 border-t border-slate-200 pt-3">
+      <p className="text-xs font-semibold text-slate-700">
+        Avisos do banco aguardando confirmacao ({avisos.length})
+      </p>
+      <p className="text-xs text-slate-500">
+        O Sicredi avisou o pagamento, mas ele ainda nao aparece na lista de pagos (fim de semana e feriado entram no dia
+        util seguinte). A baixa sai sozinha quando aparecer — o agendador reconfere 4x ao dia, ou use Dar baixa agora.
+      </p>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead className="text-left text-slate-500">
+            <tr>
+              <th className="py-1 pr-3">Nosso numero</th>
+              <th className="py-1 pr-3">Aviso</th>
+              <th className="py-1 pr-3">Previsao do credito</th>
+              <th className="py-1 pr-3">Tentativas</th>
+              <th className="py-1">Situacao</th>
+            </tr>
+          </thead>
+          <tbody>
+            {avisos.map((a) => (
+              <tr key={a.id} className="border-t border-slate-100">
+                <td className="py-1 pr-3 codigo">{a.nosso_numero}</td>
+                <td className="py-1 pr-3">{fmt(a.data_aviso)}</td>
+                <td className="py-1 pr-3">{fmt(a.previsao_credito)}</td>
+                <td className="py-1 pr-3 tnum">{a.tentativas}</td>
+                <td className="py-1">
+                  {a.situacao === 'EXPIRADO' ? (
+                    <span className="font-medium text-red-700">Expirado — conferir no banco</span>
+                  ) : (
+                    <span className="text-amber-700">Aguardando</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

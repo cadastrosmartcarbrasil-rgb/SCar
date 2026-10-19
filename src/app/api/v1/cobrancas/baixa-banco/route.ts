@@ -10,7 +10,8 @@ import {
   segredoConfere,
   type ResultadoLiquidacao,
 } from '@/lib/baixa-banco';
-import { registrarLiquidacoesSicredi } from '@/lib/pagamentos/baixa-sicredi';
+import { reconferirAvisosPendentes, registrarLiquidacoesSicredi } from '@/lib/pagamentos/baixa-sicredi';
+import type { LiquidacaoSicredi } from '@/lib/pagamentos/sicredi';
 
 // POST /api/v1/cobrancas/baixa-banco — BAIXA AUTOMATICA (0105)
 // Le os boletos pagos no Sicredi (`liquidados/dia`) e da baixa nos titulos.
@@ -20,6 +21,8 @@ import { registrarLiquidacoesSicredi } from '@/lib/pagamentos/baixa-sicredi';
 //   * o AGENDADOR do VPS (cron), sem sessao, com o header
 //     `x-cron-secret: $COBRANCA_CRON_SECRET`.
 // Corpo opcional: { dia: 'YYYY-MM-DD' }. Sem dia: ontem e hoje (Sao Paulo).
+// Depois, reconfere os avisos do webhook que ficaram AGUARDANDO (0122): do dia
+// do aviso ate hoje, ate o pagamento aparecer em liquidados/dia.
 //
 // Re-executavel: a trilha (cobranca_liquidacoes) e unica por nosso numero +
 // data, e titulo ja pago vira JA_PAGO sem ser tocado.
@@ -56,9 +59,11 @@ export async function POST(request: Request) {
   }
   const gw = new SicrediGateway(cfg);
 
-  const dias = diasDaBaixa(hojeEmSaoPaulo(), body.dia);
+  const hoje = hojeEmSaoPaulo();
+  const dias = diasDaBaixa(hoje, body.dia);
   const resultados: ResultadoLiquidacao[] = [];
   const falhasConsulta: Array<{ dia: string; erro: string }> = [];
+  const cache = new Map<string, LiquidacaoSicredi[]>();
 
   for (const dia of dias) {
     let liquidados;
@@ -68,13 +73,32 @@ export async function POST(request: Request) {
       falhasConsulta.push({ dia, erro: (e as Error).message });
       continue;
     }
+    cache.set(dia, liquidados);
     resultados.push(...(await registrarLiquidacoesSicredi(supabase, cfg.ambiente, liquidados, dia)));
   }
+
+  // Avisos pendentes: a tabela so aceita escrita do servidor, entao vai pelo
+  // admin client (quem chamou ja foi conferido acima).
+  const avisos = await reconferirAvisosPendentes(createAdminClient(), gw, cfg.ambiente, hoje, cache);
+  resultados.push(...avisos.resultados);
 
   const resumo = resumoDaBaixa(resultados);
   const ok = falhasConsulta.length === 0 && resumo.erros === 0;
   return NextResponse.json(
-    { ok, ambiente: cfg.ambiente, dias, resumo, falhas_consulta: falhasConsulta, resultados },
+    {
+      ok,
+      ambiente: cfg.ambiente,
+      dias,
+      resumo,
+      avisos_pendentes: {
+        reconferidos: avisos.pendentes,
+        confirmados: avisos.confirmados,
+        aguardando: avisos.aguardando,
+        expirados: avisos.expirados,
+      },
+      falhas_consulta: falhasConsulta,
+      resultados,
+    },
     { status: falhasConsulta.length === dias.length ? 502 : 200 },
   );
 }
