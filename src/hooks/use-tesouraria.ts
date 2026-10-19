@@ -18,7 +18,8 @@ import type {
 } from '@/lib/database.types';
 import type { ItemOfx } from '@/lib/ofx';
 
-// Tudo da tesouraria (0119) e da MATRIZ. Mexeu no caixa, invalida a raiz:
+// A tesouraria (0119) e da MATRIZ; desde a 0126 o operador de conta ve e
+// concilia so as contas liberadas para ele. Mexeu no caixa, invalida a raiz:
 // saldo, extrato, fluxo e relatorios leem a MESMA fonte no banco.
 const RAIZ = ['tesouraria'] as const;
 
@@ -392,6 +393,48 @@ export function useConfigurarConta() {
           ofx_textos_mensalidade: a.textos,
         })
         .eq('id', a.id);
+      if (error) throw error;
+    },
+    onSuccess: invalidar,
+  });
+}
+
+/**
+ * Contas que quem esta logado opera (0126): a matriz, todas; o operador (ex.: a
+ * supervisora da 24h no Inter), as liberadas. A tela decide as abas por aqui.
+ */
+export function useMinhasContasBancarias() {
+  const supabase = createClient();
+  return useQuery({
+    queryKey: [...RAIZ, 'minhas-contas'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('minhas_contas_bancarias');
+      if (error) throw error;
+      return ((data ?? []) as unknown as string[]).map(String);
+    },
+  });
+}
+
+export function useOperadoresConta(conta: string | null) {
+  const supabase = createClient();
+  return useQuery({
+    queryKey: [...RAIZ, 'operadores', conta],
+    enabled: !!conta,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('conta_bancaria_operadores')
+        .select('usuario_id').eq('conta_bancaria_id', conta!);
+      if (error) throw error;
+      return (data ?? []).map((r) => r.usuario_id);
+    },
+  });
+}
+
+export function useSalvarOperadoresConta() {
+  const supabase = createClient();
+  const invalidar = useInvalidar();
+  return useMutation({
+    mutationFn: async (a: { conta: string; usuarios: string[] }) => {
+      const { error } = await supabase.rpc('salvar_operadores_conta', { p_conta: a.conta, p_usuarios: a.usuarios });
       if (error) throw error;
     },
     onSuccess: invalidar,

@@ -11,13 +11,15 @@ import { FluxoDiario } from '@/components/financeiro/fluxo-diario';
 import { RelatoriosFinanceiros } from '@/components/financeiro/relatorios-financeiros';
 import { usePerfilAtual } from '@/hooks/use-config';
 import { temAcessoGlobal } from '@/lib/unidade';
+import { useMinhasContasBancarias } from '@/hooks/use-tesouraria';
 
 type Aba = 'contas' | 'saldos' | 'extrato' | 'diario' | 'fluxo' | 'dre' | 'relatorios';
 
-const ABAS: { id: Aba; label: string; descricao: string; icon: React.ElementType; matriz?: boolean }[] = [
+// matriz: so admin/financeiro. operador: tambem quem opera uma conta (0126).
+const ABAS: { id: Aba; label: string; descricao: string; icon: React.ElementType; matriz?: boolean; operador?: boolean }[] = [
   { id: 'contas', label: 'Contas a Pagar / Receber', descricao: 'Carteira, baixas e inadimplencia', icon: Wallet },
-  { id: 'saldos', label: 'Contas e Saldos', descricao: 'Saldo de cada conta, saldo total e conferencia com o DRE', icon: Landmark, matriz: true },
-  { id: 'extrato', label: 'Extrato e Conciliacao', descricao: 'Extrato por conta e conciliacao do OFX do banco', icon: ScrollText, matriz: true },
+  { id: 'saldos', label: 'Contas e Saldos', descricao: 'Saldo de cada conta, saldo total e conferencia com o DRE', icon: Landmark, matriz: true, operador: true },
+  { id: 'extrato', label: 'Extrato e Conciliacao', descricao: 'Extrato por conta e conciliacao do OFX do banco', icon: ScrollText, matriz: true, operador: true },
   { id: 'diario', label: 'Fluxo Diario', descricao: 'Realizado x a realizar dia a dia e a carga de pagamentos', icon: CalendarDays, matriz: true },
   { id: 'fluxo', label: 'Fluxo Mensal', descricao: 'Previsto x realizado por mes e aging', icon: Waves },
   { id: 'dre', label: 'DRE', descricao: 'Resultado por regime e centro de custo', icon: BarChart3 },
@@ -28,9 +30,12 @@ export default function FinanceiroPage() {
   const [aba, setAba] = useState<Aba>('contas');
   const [contaExtrato, setContaExtrato] = useState<string | null>(null);
   const { data: perfil } = usePerfilAtual();
-  // A tesouraria (saldos, extrato, OFX) e da matriz; o banco tambem recusa os demais.
+  // A tesouraria e da matriz; o operador de conta (0126) ve so a conta liberada. O banco confere.
   const matriz = !!perfil && temAcessoGlobal(perfil.papel);
-  const abas = ABAS.filter((a) => !a.matriz || matriz);
+  // quem opera conta bancaria (ex.: a conta da 24h no Inter) ve Saldos e Extrato so dela
+  const { data: minhasContas } = useMinhasContasBancarias();
+  const operador = (minhasContas?.length ?? 0) > 0;
+  const abas = ABAS.filter((a) => !a.matriz || matriz || (a.operador && operador));
   const atual = abas.find((a) => a.id === aba) ?? abas[0];
 
   return (
@@ -59,7 +64,7 @@ export default function FinanceiroPage() {
       </nav>
 
       {atual.id === 'contas' && <ContasFinanceiro />}
-      {atual.id === 'saldos' && <SaldosContas onAbrirExtrato={(id) => { setContaExtrato(id); setAba('extrato'); }} />}
+      {atual.id === 'saldos' && <SaldosContas matriz={matriz} onAbrirExtrato={(id) => { setContaExtrato(id); setAba('extrato'); }} />}
       {atual.id === 'extrato' && <ExtratoConciliacao key={contaExtrato ?? 'todas'} contaInicial={contaExtrato} />}
       {atual.id === 'diario' && <FluxoDiario />}
       {atual.id === 'fluxo' && <FluxoCaixa />}

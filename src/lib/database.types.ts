@@ -2395,6 +2395,13 @@ export type ModoMensalidadeOfx = 'NENHUM' | 'POR_TEXTO' | 'TODOS_CREDITOS';
 export type SituacaoExtratoItem = 'PENDENTE' | 'SUGERIDO' | 'CONCILIADO' | 'IGNORADO';
 export type TipoConciliacaoExtrato = 'BAIXA' | 'TITULO' | 'TRANSFERENCIA' | 'LANCAMENTO';
 
+export type ContaBancariaOperadoresRow = {
+  conta_bancaria_id: string;
+  usuario_id: string;
+  created_by: string | null;
+  created_at: string;
+};
+
 export type TransferenciasBancariasRow = {
   id: string;
   conta_origem_id: string;
@@ -3792,6 +3799,7 @@ export type Database = {
       >;
       centros_custo: TableDef<CentrosCustoRow>;
       contas_bancarias: TableDef<ContasBancariasRow>;
+      conta_bancaria_operadores: TableDef<ContaBancariaOperadoresRow, [Rel<'conta_bancaria_id', 'contas_bancarias'>]>;
       transferencias_bancarias: TableDef<TransferenciasBancariasRow, [Rel<'conta_origem_id', 'contas_bancarias'>, Rel<'conta_destino_id', 'contas_bancarias'>]>;
       extrato_importacoes: TableDef<ExtratoImportacoesRow, [Rel<'conta_id', 'contas_bancarias'>]>;
       extrato_itens: TableDef<ExtratoItensRow, [Rel<'conta_id', 'contas_bancarias'>, Rel<'importacao_id', 'extrato_importacoes'>]>;
@@ -4210,6 +4218,8 @@ export type Database = {
         Returns: string;
       };
       transferencia_extrato_item: { Args: { p_item: string; p_outra_conta: string; p_descricao?: string | null }; Returns: string };
+      minhas_contas_bancarias: { Args: Record<string, never>; Returns: string[] };
+      salvar_operadores_conta: { Args: { p_conta: string; p_usuarios: string[] }; Returns: number };
       cancelar_transferencia_bancaria: { Args: { p_id: string; p_motivo: string }; Returns: undefined };
       ignorar_extrato_item: { Args: { p_item: string; p_motivo: string }; Returns: undefined };
       desfazer_extrato_item: { Args: { p_item: string }; Returns: undefined };

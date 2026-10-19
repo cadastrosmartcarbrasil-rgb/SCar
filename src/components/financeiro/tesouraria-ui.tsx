@@ -2,6 +2,7 @@
 
 import { FileSpreadsheet, FileText, Printer } from 'lucide-react';
 import { useContasBancarias } from '@/hooks/use-financeiro';
+import { useMinhasContasBancarias } from '@/hooks/use-tesouraria';
 import { formatarMoedaBR } from '@/lib/money';
 import { baixarCsv } from './ui-financeiro';
 import { baixarExcel, imprimirRelatorio, type TabelaExportavel } from './exportar';
@@ -31,7 +32,10 @@ export function SeletorConta({
   rotuloConsolidado?: string;
   className?: string;
 }) {
-  const { data: contas } = useContasBancarias();
+  const { data: todas } = useContasBancarias();
+  // so as contas que quem esta logado opera (0126; a matriz opera todas)
+  const { data: minhas } = useMinhasContasBancarias();
+  const contas = (todas ?? []).filter((c) => !minhas || minhas.includes(c.id));
   return (
     <label className={`block ${className}`}>
       <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Conta</span>
@@ -42,7 +46,7 @@ export function SeletorConta({
       >
         {consolidado && <option value="">{rotuloConsolidado}</option>}
         {!consolidado && !value && <option value="">Escolha a conta</option>}
-        {(contas ?? []).map((c) => (
+        {contas.map((c) => (
           <option key={c.id} value={c.id}>
             {c.nome}{c.ativo ? '' : ' (inativa)'}
           </option>

@@ -11,11 +11,16 @@ import {
   useCancelarTransferencia,
   useConferenciaCaixaDre,
   useConfigurarConta,
+  useOperadoresConta,
+  useSalvarOperadoresConta,
   useCriarTransferencia,
   useSaldosContas,
   useTransferencias,
 } from '@/hooks/use-tesouraria';
 import { useContasBancarias } from '@/hooks/use-financeiro';
+import { useUsuarios } from '@/hooks/use-config';
+import { temAcessoGlobal } from '@/lib/unidade';
+import { rotuloPapel } from '@/lib/usuario';
 import { hojeEmSaoPaulo } from '@/lib/baixa-banco';
 import { somarMoeda } from '@/lib/money';
 import { MODOS_MENSALIDADE_OFX, diaAnteriorIso, textosDeMensalidade } from '@/lib/tesouraria';
@@ -29,7 +34,7 @@ import { BotoesExportar, Dinheiro, dataBR } from './tesouraria-ui';
  * saldo inicial + movimentos (baixas, titulos pagos pelo banco e
  * transferencias), a mesma fonte do extrato e do fluxo.
  */
-export function SaldosContas({ onAbrirExtrato }: { onAbrirExtrato: (contaId: string) => void }) {
+export function SaldosContas({ onAbrirExtrato, matriz = true }: { onAbrirExtrato: (contaId: string) => void; matriz?: boolean }) {
   const hoje = hojeEmSaoPaulo();
   const [dataSaldo, setDataSaldo] = useState(hoje);
   const { data: saldos, isLoading, error } = useSaldosContas(dataSaldo);
@@ -113,7 +118,7 @@ export function SaldosContas({ onAbrirExtrato }: { onAbrirExtrato: (contaId: str
             <tbody className="divide-y divide-slate-100">
               {(saldos ?? []).map((s) => (
                 <LinhaConta key={s.conta_id} s={s}
-                  onConfigurar={() => setConfigurar((contas ?? []).find((c) => c.id === s.conta_id) ?? null)}
+                  onConfigurar={matriz ? () => setConfigurar((contas ?? []).find((c) => c.id === s.conta_id) ?? null) : undefined}
                   onExtrato={() => onAbrirExtrato(s.conta_id)} />
               ))}
             </tbody>
@@ -129,7 +134,7 @@ export function SaldosContas({ onAbrirExtrato }: { onAbrirExtrato: (contaId: str
         </CardContent>
       </Card>
 
-      {conf && <ConferenciaDre conf={conf} inicio={mesIni} fim={dataSaldo} />}
+      {matriz && conf && <ConferenciaDre conf={conf} inicio={mesIni} fim={dataSaldo} />}
 
       <ListaTransferencias inicio={mesIni} fim={hoje} />
 
@@ -139,7 +144,7 @@ export function SaldosContas({ onAbrirExtrato }: { onAbrirExtrato: (contaId: str
   );
 }
 
-function LinhaConta({ s, onConfigurar, onExtrato }: { s: SaldoContaRow; onConfigurar: () => void; onExtrato: () => void }) {
+function LinhaConta({ s, onConfigurar, onExtrato }: { s: SaldoContaRow; onConfigurar?: () => void; onExtrato: () => void }) {
   const diverge = s.extrato_diferenca !== null && Math.abs(Number(s.extrato_diferenca)) >= 0.01;
   return (
     <tr className={s.ativo ? '' : 'opacity-60'}>
@@ -173,9 +178,11 @@ function LinhaConta({ s, onConfigurar, onExtrato }: { s: SaldoContaRow; onConfig
       <td className="px-4 py-2.5 text-right">
         <div className="flex justify-end gap-1">
           <button onClick={onExtrato} className="rounded-md px-2 py-1 text-xs font-medium text-cyan-700 hover:bg-cyan-50">Extrato</button>
-          <button onClick={onConfigurar} className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100" title="Configurar saldo inicial e OFX">
-            <Settings2 className="h-4 w-4" />
-          </button>
+          {onConfigurar && (
+            <button onClick={onConfigurar} className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100" title="Configurar saldo inicial, OFX e quem opera a conta">
+              <Settings2 className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </td>
     </tr>
@@ -267,19 +274,33 @@ function ListaTransferencias({ inicio, fim }: { inicio: string; fim: string }) {
 
 function ModalConfigurarConta({ conta, onClose }: { conta: ContasBancariasRow; onClose: () => void }) {
   const salvar = useConfigurarConta();
+  const salvarOperadores = useSalvarOperadoresConta();
+  const { data: usuarios } = useUsuarios();
+  const { data: operadoresAtuais } = useOperadoresConta(conta.id);
+  const [operadores, setOperadores] = useState<string[] | null>(null);
+  const marcados = operadores ?? operadoresAtuais ?? [];
+  // a matriz (admin/financeiro) ja opera todas; a lista e de quem precisa ser liberado
+  const candidatos = (usuarios ?? []).filter((u) => u.ativo && !temAcessoGlobal(u.papel));
   const [saldo, setSaldo] = useState<number | null>(Number(conta.saldo_inicial ?? 0));
   const [em, setEm] = useState(conta.saldo_inicial_em ?? '');
   const [modo, setModo] = useState<ModoMensalidadeOfx>(conta.ofx_mensalidades ?? 'POR_TEXTO');
   const [textos, setTextos] = useState((conta.ofx_textos_mensalidade ?? []).join('\n'));
   const [erro, setErro] = useState('');
   return (
-    <Modal open onClose={onClose} title={`Configurar ${conta.nome}`} subtitulo="Saldo inicial e importacao do OFX" tamanho="lg">
+    <Modal open onClose={onClose} title={`Configurar ${conta.nome}`} subtitulo="Saldo inicial, importacao do OFX e quem opera a conta" tamanho="lg">
       <form className="space-y-4" onSubmit={(e) => {
         e.preventDefault();
         setErro('');
         salvar.mutate(
           { id: conta.id, saldoInicial: saldo ?? 0, saldoInicialEm: em || null, modo, textos: textosDeMensalidade(textos) },
-          { onSuccess: onClose, onError: (er) => setErro(mensagemErro(er)) },
+          {
+            onSuccess: () => {
+              if (operadores === null) { onClose(); return; }
+              salvarOperadores.mutate({ conta: conta.id, usuarios: operadores },
+                { onSuccess: onClose, onError: (er) => setErro(mensagemErro(er)) });
+            },
+            onError: (er) => setErro(mensagemErro(er)),
+          },
         );
       }}>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -311,10 +332,27 @@ function ModalConfigurarConta({ conta, onClose }: { conta: ContasBancariasRow; o
           o que casar vira <b>sugestao de conciliacao</b>, nunca um lancamento novo. A regra so decide o credito que
           sobra — por exemplo, a liquidacao de boletos que o banco credita somada no dia.
         </p>
+        <div className="rounded-lg border border-slate-200 p-3">
+          <p className="text-sm font-medium text-slate-900">Quem opera esta conta (além da matriz)</p>
+          <p className="mt-0.5 text-xs text-slate-500">
+            Quem for marcado vê <b>Contas e Saldos</b> e <b>Extrato e Conciliação</b> só desta conta: importa o OFX,
+            concilia e lança. Configurar a conta, o fluxo diário e o DRE continuam só da matriz.
+          </p>
+          <div className="mt-2 grid max-h-48 grid-cols-1 gap-1 overflow-y-auto sm:grid-cols-2">
+            {candidatos.map((u) => (
+              <label key={u.id} className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={marcados.includes(u.id)}
+                  onChange={(e) => setOperadores(e.target.checked ? [...marcados, u.id] : marcados.filter((x) => x !== u.id))} />
+                <span>{u.nome} <span className="text-xs text-slate-500">· {rotuloPapel(u.papel)}</span></span>
+              </label>
+            ))}
+            {!candidatos.length && <p className="text-xs text-slate-400">Nenhum usuário ativo fora da matriz.</p>}
+          </div>
+        </div>
         {erro && <p className="text-sm text-rose-700">{erro}</p>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>
-          <Button type="submit" disabled={salvar.isPending}>{salvar.isPending ? 'Salvando...' : 'Salvar'}</Button>
+          <Button type="submit" disabled={salvar.isPending || salvarOperadores.isPending}>{salvar.isPending ? 'Salvando...' : 'Salvar'}</Button>
         </div>
       </form>
     </Modal>
