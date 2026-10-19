@@ -50,11 +50,16 @@ const hoje = () => new Date().toLocaleDateString('sv-SE');
  * A FILA DE COBRANCA (0098): quem cobrar agora, na ordem de prioridade —
  * promessa quebrada, retorno atrasado, retorno de hoje, sem contato. Clicar
  * no associado abre a ficha: divida, contato, promessa e historico.
+ *
+ * `unidade` = a fila dentro do PORTAL DA FRANQUIA (/regional): a unidade vem
+ * travada, sem seletor. Quem limita de verdade e o banco (`cobranca_escopo()`):
+ * o gestor so le a propria unidade, peca o id que pedir.
  */
-export function FilaCobranca() {
+export function FilaCobranca({ unidade }: { unidade?: { id: string; nome: string } } = {}) {
   const escopo = useCobrancaEscopo();
   const temAcesso = !!escopo.data && (escopo.data.global || escopo.data.regionais.length > 0);
-  const [regionalId, setRegionalId] = useState<string | null>(null);
+  const [regionalLivre, setRegionalId] = useState<string | null>(null);
+  const regionalId = unidade?.id ?? regionalLivre;
   const [situacao, setSituacao] = useState<SituacaoFila | null>(null);
   const [faixa, setFaixa] = useState<Faixa | null>(null);
   const [digitado, setDigitado] = useState('');
@@ -127,7 +132,16 @@ export function FilaCobranca() {
       <ErroLeitura q={resumo} />
 
       <div className="flex flex-wrap items-end gap-x-5 gap-y-3 rounded-2xl border border-slate-200/80 bg-superficie p-4">
-        <FiltroUnidadeCobranca valor={regionalId} onChange={setRegionalId} />
+        {unidade ? (
+          <div className="block min-w-[170px]">
+            <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Unidade</span>
+            <p className="mt-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-sm font-medium text-slate-700">
+              {unidade.nome}
+            </p>
+          </div>
+        ) : (
+          <FiltroUnidadeCobranca valor={regionalId} onChange={setRegionalId} />
+        )}
         <label className="block min-w-[170px]">
           <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Situação</span>
           <select value={situacao ?? ''} onChange={(e) => setSituacao((e.target.value || null) as SituacaoFila | null)}

@@ -4801,6 +4801,7 @@ precisou de banco:** `cobranca_escopo()` já dava ao `gestor_regional` a própri
 matriz que visita uma unidade passa o id dela. O painel `/regional` ganhou a linha de HOJE
 (associados inadimplentes, vencido em aberto) com o atalho. Medido em 14/10: GN 129/376 ·
 RP 172/998 · SP1 247/760 · MATRIZ 180/430 (associados inadimplentes / com veículo na base).
+**FILA DE COBRANÇA NO PORTAL (19/10/2026, sem migration):** `/regional/fila` (menu *Fila de Cobranca*) é a MESMA `<FilaCobranca unidade={{id, nome}}>` da matriz, com a unidade travada. Quem limita é o banco: `cobranca_fila`/`_resumo`/ficha/`registrar_contato_cobranca` passam por `cobranca_escopo()`/`cobranca_pode_cliente` — gestor, cobrança e supervisor só leem e trabalham a própria unidade, peçam o id que pedirem.
 **Por que a carteira de veículos (painel) e a de associados (cobrança) diferem por poucos:** a
 primeira conta `veiculos.regional_id`, a segunda `clientes.regional_id`; 8 veículos estão numa
 unidade diferente da do associado.
