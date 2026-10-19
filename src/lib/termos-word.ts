@@ -11,8 +11,10 @@
 /** Base64 abaixo disto (~3 KB de arquivo) e caixinha, nao figura. */
 const LIMITE_CAIXINHA_BASE64 = 4000;
 
+import { alinharColunasDasTabelas } from './termos';
+
 export function limparHtmlDoWord(html: string): string {
-  return (html ?? '')
+  return alinharColunasDasTabelas(html ?? '')
     .replace(/<img\b[^>]*\bsrc="data:[^";]+;base64,([^"]*)"[^>]*\/?>/g, (m, b64: string) =>
       b64.length < LIMITE_CAIXINHA_BASE64 ? '☐' : m)
     .replace(/[\uF000-\uF0FF]/g, '☐')

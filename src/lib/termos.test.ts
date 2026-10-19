@@ -142,3 +142,28 @@ describe('limparHtmlDoWord', () => {
     expect(r.match(/<p><\/p>/g)?.length).toBe(1);
   });
 });
+
+import { alinharColunasDasTabelas, precisaEspaco } from './termos';
+
+describe('layout do termo', () => {
+  it('poe espaco entre o rotulo e o valor colado', () => {
+    const r = renderizarTermo('<p><strong>Vencimento:</strong><span data-campo="emissao.data">x</span></p>', { 'emissao.data': '19/10/2026' });
+    expect(r.html).toContain('</strong> 19/10/2026');
+    const r2 = renderizarTermo('<p>Data: <span data-campo="emissao.data">x</span></p>', { 'emissao.data': '19/10/2026' });
+    expect(r2.html).toContain('Data: 19/10/2026');
+  });
+  it('nao poe espaco no inicio da celula/paragrafo nem depois de parentese', () => {
+    expect(precisaEspaco('<td><p>')).toBe(false);
+    expect(precisaEspaco('texto (')).toBe(false);
+    expect(precisaEspaco('Placa:<strong>')).toBe(true);
+    expect(precisaEspaco('Placa:&nbsp;')).toBe(false);
+  });
+  it('estica a ultima celula das linhas curtas (titulo mesclado do Word)', () => {
+    const t = '<table><tr><td colspan="4">T</td></tr><tr><td colspan="2">a</td><td>b</td><td>c</td><td>d</td></tr></table>';
+    expect(alinharColunasDasTabelas(t)).toContain('<td colspan="5">T</td>');
+    const ok = '<table><tr><td>a</td><td>b</td></tr><tr><td>c</td><td>d</td></tr></table>';
+    expect(alinharColunasDasTabelas(ok)).toBe(ok);
+    expect(alinharColunasDasTabelas('<table><tr><td><p><strong><br /></strong>☐ X</p></td></tr></table>'))
+      .toBe('<table><tr><td><p>☐ X</p></td></tr></table>');
+  });
+});

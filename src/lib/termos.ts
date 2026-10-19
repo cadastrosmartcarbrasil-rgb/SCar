@@ -363,11 +363,12 @@ export function renderizarTermo(
 ): { html: string; vazios: string[]; desconhecidos: string[] } {
   const vazios: string[] = [];
   const desconhecidos: string[] = [];
-  const saida = (html ?? '').replace(RE_CAMPO, (_m, tag: string, chave: string) => {
+  const saida = (html ?? '').replace(RE_CAMPO, (_m, tag: string, chave: string, pos: number, texto: string) => {
     const campo = POR_CHAVE.get(chave);
+    const esp = precisaEspaco(texto.slice(0, pos)) ? ' ' : '';
     if (!campo) {
       if (!desconhecidos.includes(chave)) desconhecidos.push(chave);
-      return EM_BRANCO;
+      return esp + EM_BRANCO;
     }
     if (campo.tipo === 'bloco') {
       const b = blocos[chave] ?? '';
@@ -380,11 +381,63 @@ export function renderizarTermo(
     const v = valores[chave] ?? '';
     if (!v) {
       if (!campo.opcional && !vazios.includes(chave)) vazios.push(chave);
-      return EM_BRANCO;
+      return esp + EM_BRANCO;
     }
-    return v === MARCA_PROTOCOLO ? v : escaparHtml(v);
+    return esp + (v === MARCA_PROTOCOLO ? v : escaparHtml(v));
   });
-  return { html: saida, vazios, desconhecidos };
+  return { html: alinharColunasDasTabelas(saida), vazios, desconhecidos };
+}
+
+const TAG_DE_BLOCO = /^<\/?(p|div|td|th|tr|li|ul|ol|table|h[1-6]|br)\b/i;
+
+/**
+ * O campo vem colado no rotulo ("Vencimento:<campo>") — no editor isso parece
+ * separado, no papel sai "Vencimento:Dia 25". Precisa de espaco quando o
+ * ultimo caractere visivel antes do campo e texto na MESMA linha (nao espaco
+ * nem inicio de paragrafo/celula).
+ */
+export function precisaEspaco(antes: string): boolean {
+  let resto = antes;
+  for (;;) {
+    const m = /<[^<>]*>$/.exec(resto);
+    if (!m) break;
+    if (TAG_DE_BLOCO.test(m[0])) return false;
+    resto = resto.slice(0, m.index);
+  }
+  if (!resto || /\s$/.test(resto) || /&(nbsp|#160);$/i.test(resto)) return false;
+  return !/[(\[/"'“‘]$/.test(resto);
+}
+
+const larguraDaLinha = (tr: string) =>
+  [...tr.matchAll(/<t[dh]\b([^>]*)>/g)].reduce((s, m) => s + Number(/colspan="(\d+)"/.exec(m[1])?.[1] ?? 1), 0);
+
+/**
+ * O Word mescla celulas de um jeito que o HTML nao reproduz: o titulo da
+ * tabela ocupa 4 colunas e a linha de baixo soma 5, e sobra uma coluna vazia
+ * a direita. Estica a ultima celula das linhas curtas ate a largura da mais
+ * larga. Tabela com rowspan ou tabela dentro de tabela fica como esta.
+ */
+export function alinharColunasDasTabelas(html: string): string {
+  // quebra de linha no comeco da celula (sobra do Word) empurra o texto para baixo
+  const semQuebraInicial = (html ?? '').replace(
+    /(<t[dh]\b[^>]*>\s*<p>)\s*(?:<strong>\s*<br\s*\/?>\s*<\/strong>|<br\s*\/?>)/g, '$1');
+  return semQuebraInicial.replace(/<table\b[\s\S]*?<\/table>/g, (tabela) => {
+    if (/rowspan="(?!1")/.test(tabela) || tabela.slice(1).includes('<table')) return tabela;
+    const linhas = tabela.match(/<tr\b[\s\S]*?<\/tr>/g) ?? [];
+    if (linhas.length < 2) return tabela;
+    const max = Math.max(...linhas.map(larguraDaLinha));
+    return tabela.replace(/<tr\b[\s\S]*?<\/tr>/g, (tr) => {
+      const falta = max - larguraDaLinha(tr);
+      const celulas = [...tr.matchAll(/<t[dh]\b([^>]*)>/g)];
+      const u = celulas[celulas.length - 1];
+      if (falta <= 0 || !u || u.index === undefined) return tr;
+      const atual = Number(/colspan="(\d+)"/.exec(u[1])?.[1] ?? 1);
+      const nova = /colspan="/.test(u[0])
+        ? u[0].replace(/colspan="\d+"/, `colspan="${atual + falta}"`)
+        : u[0].replace(/^<(t[dh])/, `<$1 colspan="${atual + falta}"`);
+      return tr.slice(0, u.index) + nova + tr.slice(u.index + u[0].length);
+    });
+  });
 }
 
 /** O termo serve para este veiculo? Lista vazia = vale para todos. */
@@ -410,7 +463,7 @@ body { font-family: 'Noto Sans', 'DejaVu Sans', Arial, sans-serif; font-size: 10
 .termo-cabecalho { text-align: center; margin-bottom: 10px; }
 .termo-logo { max-height: 60px; }
 h1, h2, h3 { color: #142445; margin: 10px 0 6px; }
-h1 { font-size: 14pt; } h2 { font-size: 12pt; } h3 { font-size: 11pt; }
+h1 { font-size: 12.5pt; } h2 { font-size: 11.5pt; } h3 { font-size: 11pt; }
 p { margin: 4px 0; text-align: justify; }
 td p, th p { text-align: left; margin: 0; }
 table { border-collapse: collapse; width: 100%; margin: 6px 0; }
