@@ -139,6 +139,7 @@ describe('supervisor e cobranca (0097)', () => {
   });
   it('so o supervisor escolhe varias unidades', () => {
     expect(usaUnidadesDeSupervisor('supervisor')).toBe(true);
+    expect(usaUnidadesDeSupervisor('sinistro')).toBe(true);
     expect(usaUnidadesDeSupervisor('gestor_regional')).toBe(false);
     expect(exigeUnidade('supervisor')).toBe(false);
   });

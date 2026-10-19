@@ -12,7 +12,8 @@ import { Button } from '@/components/ui/button';
  * `definir_regionais_supervisor` — so o admin consegue (o banco recusa os
  * demais). Unidade inativa continua listada se ja estava marcada.
  */
-export function UnidadesSupervisor({ usuarioId }: { usuarioId: string }) {
+export function UnidadesSupervisor({ usuarioId, papel }: { usuarioId: string; papel?: string }) {
+  const eventos = papel === 'sinistro';
   const supabase = createClient();
   const qc = useQueryClient();
   const { data: regionais } = useRegionais();
@@ -35,7 +36,7 @@ export function UnidadesSupervisor({ usuarioId }: { usuarioId: string }) {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success('Unidades do supervisor salvas.');
+      toast.success('Unidades de atuacao salvas.');
       qc.invalidateQueries({ queryKey: ['supervisor', 'regionais', usuarioId] });
     },
     onError: (e) => toast.error((e as Error).message),
@@ -46,9 +47,11 @@ export function UnidadesSupervisor({ usuarioId }: { usuarioId: string }) {
 
   return (
     <div className="rounded-xl border border-cyan-200 bg-cyan-50/40 p-3">
-      <p className="text-[11.5px] font-semibold uppercase tracking-wide text-slate-500">Unidades do supervisor</p>
+      <p className="text-[11.5px] font-semibold uppercase tracking-wide text-slate-500">{eventos ? 'Unidades de atuacao (eventos)' : 'Unidades do supervisor'}</p>
       <p className="mb-2 mt-0.5 text-[11.5px] leading-relaxed text-slate-500">
-        O supervisor enxerga a cobranca dessas unidades (painel, calendario e comparativos).
+        {eventos
+          ? 'A pessoa ve os associados, veiculos e eventos dessas unidades (SAC, fichas, eventos) e trata os eventos delas.'
+          : 'O supervisor enxerga o cadastro e a cobranca dessas unidades (painel, calendario e comparativos).'}
       </p>
       <div className="grid grid-cols-2 gap-1 sm:grid-cols-3">
         {lista.map((r) => (

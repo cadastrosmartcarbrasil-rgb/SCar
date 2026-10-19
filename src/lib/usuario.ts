@@ -37,12 +37,13 @@ export const PAPEIS_USUARIO = [
 ] as const;
 
 /**
- * O supervisor responde por VARIAS unidades (0097, `supervisor_regionais`),
- * escolhidas na edicao do usuario. Hoje o escopo dele vale no modulo de
- * COBRANCA; nos demais modulos ele e staff da unidade do proprio cadastro.
+ * Unidades de ATUACAO (`supervisor_regionais`, marcadas na edicao do usuario):
+ * o supervisor (0097/0115) e o time de EVENTOS, papel `sinistro` (0127),
+ * atendem varias unidades. Na RLS elas valem como as unidades da pessoa; a
+ * COBRANCA (cobranca_escopo) le so as do supervisor.
  */
 export function usaUnidadesDeSupervisor(papel: string): boolean {
-  return papel === 'supervisor';
+  return papel === 'supervisor' || papel === 'sinistro';
 }
 
 export type PapelValor = (typeof PAPEIS_USUARIO)[number]['valor'];

@@ -445,8 +445,8 @@ export default function UsuariosPage() {
             <div className="mt-2"><ResumoDoPapel papel={form.papel} /></div>
             {usaUnidadesDeSupervisor(form.papel) && (
               <p className="mt-1.5 text-[11px] text-cyan-700">
-                Depois de criar, abra a edicao do usuario para marcar as <b>unidades</b> pelas quais o
-                supervisor responde.
+                Depois de criar, abra a edicao do usuario para marcar as <b>unidades</b> em que a pessoa
+                atua — sem unidade marcada ela so ve a do cadastro.
               </p>
             )}
             {exigeUnidade(form.papel) && !form.regional_id && (
@@ -525,7 +525,7 @@ export default function UsuariosPage() {
                 O <b>gestor regional</b> so funciona com uma unidade escolhida.
               </p>
             )}
-            {usaUnidadesDeSupervisor(edicao.papel) && <UnidadesSupervisor usuarioId={edicao.id} />}
+            {usaUnidadesDeSupervisor(edicao.papel) && <UnidadesSupervisor usuarioId={edicao.id} papel={edicao.papel} />}
 
             <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
               <p className="mb-2 text-[11.5px] font-semibold uppercase tracking-wide text-slate-500">
