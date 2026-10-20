@@ -54,7 +54,8 @@ export type TipoEvento = 'ROUBO' | 'FURTO' | 'COLISAO' | 'TERCEIROS' | 'GUINCHO'
 export type StatusEvento =
   | 'ABERTO' | 'EM_ANALISE' | 'COTACAO_PECAS' | 'REPARO' | 'CONCLUIDO' | 'NEGADO';
 export type TipoDocumentoAnexo =
-  | 'FOTO_AVARIA' | 'BOLETIM_OCORRENCIA' | 'CNH' | 'CRLV' | 'NOTA_FISCAL';
+  | 'FOTO_AVARIA' | 'BOLETIM_OCORRENCIA' | 'CNH' | 'CRLV' | 'NOTA_FISCAL'
+  | 'FOTO_VEICULO' | 'FOTO_LOCAL' | 'CROQUI' | 'OUTRO';
 export type StatusCotacao = 'EM_ABERTO' | 'APROVADA' | 'REJEITADA';
 export type CodigoTemplate = 'BOAS_VINDAS' | 'LEMBRETE_BOLETO' | 'NOVO_EVENTO';
 export type ProvedorBanco = 'ASAAS' | 'PJBANK' | 'CORA' | 'INTER' | 'GERENCIANET' | 'SICREDI' | 'OUTRO';
@@ -2720,6 +2721,56 @@ export type AnexosEventoRow = {
   uploaded_by: string | null;
   created_at: string;
   evento_terceiro_id: string | null;
+  comunicacao_id?: string | null;
+  pose?: string | null;
+  enviado_pelo_envolvido?: boolean;
+};
+
+/** 0129: convite de comunicacao de evento (um link por envolvido). */
+export type EventoComunicacaoRow = {
+  id: string;
+  evento_id: string;
+  papel: string;
+  nome: string | null;
+  telefone: string | null;
+  email: string | null;
+  terceiro_id: string | null;
+  token: string;
+  expira_em: string;
+  status: string;
+  rascunho: Json;
+  rascunho_em: string | null;
+  verificado_em: string | null;
+  tentativas_verificacao: number;
+  envios: number;
+  ultimo_envio_canal: string | null;
+  ultimo_envio_em: string | null;
+  primeiro_acesso_em: string | null;
+  ultimo_acesso_em: string | null;
+  respondido_em: string | null;
+  correcao_comentario: string | null;
+  conferido_em: string | null;
+  conferido_por: string | null;
+  revogado_em: string | null;
+  criado_por: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+/** 0129: versao imutavel do que o envolvido (ou a equipe) declarou. */
+export type EventoDeclaracaoRow = {
+  id: string;
+  comunicacao_id: string;
+  evento_id: string;
+  versao: number;
+  dados: Json;
+  origem: 'ENVOLVIDO' | 'EQUIPE';
+  texto_declaracao: string;
+  ip: string | null;
+  user_agent: string | null;
+  registrado_por: string | null;
+  hash_conteudo: string;
+  created_at: string;
 };
 
 export type CotacoesPecasRow = Timestamps & {
@@ -3704,6 +3755,8 @@ export type Database = {
       cobranca_liquidacoes: TableDef<CobrancaLiquidacoesRow, [Rel<'titulo_id', 'titulos_financeiros'>]>;
       cobranca_avisos_banco: TableDef<CobrancaAvisosBancoRow>;
       termos_modelos: TableDef<TermoModeloRow>;
+      evento_comunicacoes: TableDef<EventoComunicacaoRow, [Rel<'evento_id', 'eventos_sinistro'>, Rel<'terceiro_id', 'evento_terceiros'>]>;
+      evento_declaracoes: TableDef<EventoDeclaracaoRow, [Rel<'comunicacao_id', 'evento_comunicacoes'>, Rel<'registrado_por', 'usuarios'>]>;
       termos_versoes: TableDef<TermoVersaoRow, [Rel<'modelo_id', 'termos_modelos'>]>;
       termos_emitidos: TableDef<TermoEmitidoRow, [
         Rel<'modelo_id', 'termos_modelos'>, Rel<'versao_id', 'termos_versoes'>,
@@ -4818,6 +4871,39 @@ export type Database = {
       };
       // --- Link publico da VISTORIA (0076): capacidade propria, com prazo.
       // Nao confundir com `lead_por_token_publico`, que e a da cotacao.
+      criar_comunicacao_evento: {
+        Args: { p_evento_id: string; p_papel: string; p_nome?: string | null; p_telefone?: string | null;
+                p_email?: string | null; p_terceiro_id?: string | null; p_dias?: number };
+        Returns: EventoComunicacaoRow;
+      };
+      registrar_envio_comunicacao: { Args: { p_id: string; p_canal: string }; Returns: EventoComunicacaoRow };
+      renovar_comunicacao_evento: { Args: { p_id: string; p_dias?: number }; Returns: EventoComunicacaoRow };
+      revogar_comunicacao_evento: { Args: { p_id: string; p_motivo?: string | null }; Returns: EventoComunicacaoRow };
+      pedir_correcao_comunicacao: { Args: { p_id: string; p_comentario: string }; Returns: EventoComunicacaoRow };
+      conferir_comunicacao: { Args: { p_id: string }; Returns: EventoComunicacaoRow };
+      registrar_declaracao_equipe: { Args: { p_id: string; p_dados: Json }; Returns: EventoDeclaracaoRow };
+      salvar_rascunho_comunicacao_equipe: { Args: { p_id: string; p_dados: Json }; Returns: undefined };
+      comunicacao_publica_por_token: { Args: { p_token: string }; Returns: EventoComunicacaoRow };
+      comunicacao_publica: { Args: { p_token: string }; Returns: Json };
+      verificar_comunicacao: { Args: { p_token: string; p_doc_inicio: string; p_nascimento?: string | null }; Returns: Json };
+      salvar_rascunho_comunicacao: { Args: { p_token: string; p_dados: Json }; Returns: undefined };
+      enviar_comunicacao: {
+        Args: { p_token: string; p_dados: Json; p_declarou: boolean; p_ip?: string | null; p_user_agent?: string | null };
+        Returns: Json;
+      };
+      registrar_anexo_comunicacao: {
+        Args: { p_token: string; p_pose: string; p_tipo: string; p_url: string; p_tamanho: number; p_arquivo: string };
+        Returns: string;
+      };
+      anexos_comunicacao_publica: {
+        Args: { p_token: string };
+        Returns: { id: string; pose: string | null; tipo: string; arquivo_url: string; nome_original: string | null; created_at: string }[];
+      };
+      remover_anexo_comunicacao: { Args: { p_token: string; p_anexo: string }; Returns: string | null };
+      comunicacoes_resumo_eventos: {
+        Args: { p_eventos: string[] };
+        Returns: { evento_id: string; total: number; respondidas: number }[];
+      };
       vistoria_por_token: {
         Args: { p_token: string };
         Returns: {

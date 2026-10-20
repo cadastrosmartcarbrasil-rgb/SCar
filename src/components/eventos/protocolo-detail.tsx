@@ -1,7 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Clock, Paperclip, Wrench, Info, DollarSign, Users, ListChecks, Pencil } from 'lucide-react';
+import { Clock, Paperclip, Wrench, Info, DollarSign, Users, ListChecks, Pencil, Send } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { ComunicacoesEvento } from './comunicacao/comunicacoes-evento';
+import { useComunicacoesEvento } from '@/hooks/use-comunicacoes';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { UploadAnexos } from './upload-anexos';
 import { CotacaoPecas } from './cotacao-pecas';
@@ -19,7 +22,7 @@ import { PIPELINE_SINISTRO, TIPO_EVENTO_LABEL } from '@/types/domain';
 import { formatDate, formatCurrency } from '@/lib/utils';
 import type { StatusEvento, TipoEvento, Json } from '@/lib/database.types';
 
-type Aba = 'info' | 'documentos' | 'terceiros' | 'reparo' | 'financeiro' | 'anexos' | 'historico';
+type Aba = 'info' | 'comunicacoes' | 'documentos' | 'terceiros' | 'reparo' | 'financeiro' | 'anexos' | 'historico';
 
 interface LocalEvento {
   cep?: string;
@@ -37,7 +40,9 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
   const { data: usuarios } = useUsuarios();
   const { data: terceiros } = useTerceirosEvento(eventoId);
   const { data: documentos } = useDocumentosEvento(eventoId);
-  const [aba, setAba] = useState<Aba>('info');
+  const { data: comunicacoes } = useComunicacoesEvento(eventoId);
+  const abaInicial = useSearchParams()?.get('aba');
+  const [aba, setAba] = useState<Aba>(abaInicial === 'comunicacoes' ? 'comunicacoes' : 'info');
   const [editando, setEditando] = useState(false);
 
   if (isLoading || !evento) return <p className="text-sm text-slate-500">Carregando protocolo...</p>;
@@ -55,6 +60,11 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
 
   const abas: { id: Aba; label: string; icon: React.ElementType }[] = [
     { id: 'info', label: 'Dados', icon: Info },
+    {
+      id: 'comunicacoes',
+      label: `Comunicacoes (${(comunicacoes ?? []).filter((c) => c.declaracoes.length > 0).length}/${(comunicacoes ?? []).filter((c) => c.status !== 'REVOGADO').length})`,
+      icon: Send,
+    },
     {
       id: 'documentos',
       label: `Documentacao (${(documentos ?? []).filter((d) => d.situacao === 'PENDENTE' && d.obrigatorio).length} pend.)`,
@@ -183,6 +193,7 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
                 </div>
               )}
 
+              {aba === 'comunicacoes' && <ComunicacoesEvento eventoId={eventoId} protocolo={evento.numero_protocolo} />}
               {aba === 'documentos' && <DocumentosEvento eventoId={eventoId} />}
               {aba === 'terceiros' && <TerceirosEvento eventoId={eventoId} />}
               {aba === 'financeiro' && (
@@ -239,6 +250,7 @@ const ACAO_HISTORICO: Record<string, string> = {
   PARECER: 'Parecer registrado',
   TERCEIRO: 'Terceiro cadastrado',
   TERCEIRO_STATUS: 'Tratativa do terceiro alterada',
+  COMUNICACAO: 'Comunicacao do envolvido',
 };
 
 function nomeDe(usuarios: { id: string; nome: string }[] | undefined, id: string): string {

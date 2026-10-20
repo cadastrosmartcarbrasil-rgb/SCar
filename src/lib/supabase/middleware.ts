@@ -9,7 +9,7 @@ import type { Database } from '@/lib/database.types';
 // /v/<codigo> e o hotlink de vendas do vendedor (link publico compartilhavel).
 // /vistoria/<token> e a vistoria no celular do cliente (0076) — o link tem
 // prazo proprio e e a unica capacidade de quem nao tem login.
-const PUBLIC_PATHS = ['/login', '/portal/login', '/auth/callback', '/cotacao', '/v', '/vistoria', '/manifest.webmanifest'];
+const PUBLIC_PATHS = ['/login', '/portal/login', '/auth/callback', '/cotacao', '/v', '/vistoria', '/comunicar', '/manifest.webmanifest'];
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });

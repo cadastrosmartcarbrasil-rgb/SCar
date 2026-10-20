@@ -15,6 +15,10 @@ const TIPOS: { value: TipoDocumentoAnexo; label: string }[] = [
   { value: 'CNH', label: 'CNH' },
   { value: 'CRLV', label: 'CRLV' },
   { value: 'NOTA_FISCAL', label: 'Nota Fiscal' },
+  { value: 'FOTO_VEICULO', label: 'Foto do Veiculo' },
+  { value: 'FOTO_LOCAL', label: 'Foto do Local' },
+  { value: 'CROQUI', label: 'Croqui' },
+  { value: 'OUTRO', label: 'Outro documento' },
 ];
 
 // Upload drag-and-drop de fotos/documentos para o Supabase Storage (bucket
@@ -117,7 +121,7 @@ export function UploadAnexos({ eventoId }: { eventoId: string }) {
 
       <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200">
         {(anexos ?? []).map((a) => {
-          const isImg = a.tipo_documento === 'FOTO_AVARIA';
+          const isImg = ['FOTO_AVARIA', 'FOTO_VEICULO', 'FOTO_LOCAL'].includes(a.tipo_documento);
           return (
             <li key={a.id} className="flex items-center justify-between p-3 text-sm">
               <button onClick={() => abrir(a.arquivo_url)} className="flex items-center gap-2 text-left">

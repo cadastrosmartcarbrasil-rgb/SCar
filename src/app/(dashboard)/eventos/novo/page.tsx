@@ -127,7 +127,7 @@ export default function NovoEventoPage() {
         onSuccess: (evt) => {
           toast.success(`Evento aberto: ${evt.numero_protocolo}`);
           // Ha terceiro: abre direto o cadastro dele, ja vinculado ao evento/associado.
-          router.push(form.possui_terceiros ? `/eventos/${evt.id}/terceiros/novo` : `/eventos/${evt.id}`);
+          router.push(form.possui_terceiros ? `/eventos/${evt.id}/terceiros/novo` : `/eventos/${evt.id}?aba=comunicacoes`);
         },
         onError: (err) => toast.error((err as Error).message),
       },

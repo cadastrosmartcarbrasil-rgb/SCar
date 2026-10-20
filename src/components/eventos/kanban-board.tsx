@@ -10,6 +10,7 @@ import { agruparPorRegional, filtrarPorExpansao, veioDoMutual, type ExpansaoColu
 import { formatDate } from '@/lib/utils';
 import { useEventosPrazos } from '@/hooks/use-prazo-eventos';
 import { SeloPrazo } from './prazo-regulatorio';
+import { useResumoComunicacoes } from '@/hooks/use-comunicacoes';
 import type { StatusEvento } from '@/lib/database.types';
 
 // Kanban de eventos (protocolos) com drag-and-drop nativo entre colunas de status.
@@ -22,6 +23,12 @@ export function KanbanBoard() {
   // prazo regulatorio (0113) de cada evento em aberto, para o selo do card
   const { data: prazos } = useEventosPrazos();
   const prazoPorId = useMemo(() => new Map((prazos ?? []).map((p) => [p.evento_id, p])), [prazos]);
+  // comunicacoes dos envolvidos (0129): "Comunicacoes 1/3" no card
+  const idsAbertos = useMemo(
+    () => (eventos ?? []).filter((e) => !['CONCLUIDO', 'NEGADO'].includes(e.status)).map((e) => e.id),
+    [eventos],
+  );
+  const { data: comunicacoes } = useResumoComunicacoes(idsAbertos);
   const vencidos = (prazos ?? []).filter((p) => p.nivel === 'VENCIDO').length;
   const criticos = (prazos ?? []).filter((p) => p.nivel === 'CRITICO').length;
   const urgentes = (prazos ?? []).filter((p) => p.nivel === 'URGENCIA').length;
@@ -188,6 +195,11 @@ export function KanbanBoard() {
                           (evento.tipo_evento ? TIPO_EVENTO_LABEL[evento.tipo_evento] : 'Evento')}
                       </p>
                       <p className="truncate text-xs text-slate-500">{evento.clientes?.nome_razao_social}</p>
+                      {comunicacoes?.get(evento.id) && (
+                        <p className="mt-1 text-[11px] text-slate-500">
+                          Comunicacoes {comunicacoes.get(evento.id)!.respondidas}/{comunicacoes.get(evento.id)!.total}
+                        </p>
+                      )}
                       {prazoPorId.get(evento.id) && (
                         <div className="mt-1.5">
                           <SeloPrazo prazo={prazoPorId.get(evento.id)!} compacto />
