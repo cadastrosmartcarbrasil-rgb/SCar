@@ -5,7 +5,8 @@ import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, Wallet, Landmark, PiggyBank, Banknote, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
-import { FormField, Input, Select } from '@/components/ui/field';
+import { FormField, Input, MoneyInput, Select } from '@/components/ui/field';
+import { formatCurrency, formatDate } from '@/lib/utils';
 import { useContasBancarias, useSaveContaBancaria, useDeleteContaBancaria } from '@/hooks/use-financeiro';
 import type { ContasBancariasRow } from '@/lib/database.types';
 import { ModalOperadoresConta, NomesOperadores } from '@/components/financeiro/operadores-conta';
@@ -26,13 +27,16 @@ export default function ContasBancariasPage() {
   const [operadores, setOperadores] = useState<ContasBancariasRow | null>(null);
 
   function novo() {
-    setEd({ nome: '', tipo: 'corrente', ativo: true });
+    setEd({ nome: '', tipo: 'corrente', ativo: true, saldo_inicial: 0, saldo_inicial_em: null });
     setAberto(true);
   }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!ed?.nome) return toast.error('Informe o nome da conta');
+    if (Number(ed.saldo_inicial ?? 0) !== 0 && !ed.saldo_inicial_em) {
+      return toast.error('Informe a data base do saldo inicial');
+    }
     salvar.mutate(ed, {
       onSuccess: () => { toast.success('Conta salva'); setAberto(false); },
       onError: (err) => toast.error(err.message),
@@ -74,6 +78,12 @@ export default function ContasBancariasPage() {
                   {c.chave_pix && <p className="text-xs text-slate-400">PIX: {c.chave_pix}</p>}
                 </div>
               )}
+              <p className="mt-2 text-xs text-slate-500">
+                Saldo inicial: <span className="tnum font-medium text-slate-700">{formatCurrency(Number(c.saldo_inicial ?? 0))}</span>
+                {c.saldo_inicial_em
+                  ? <> em {formatDate(c.saldo_inicial_em)}</>
+                  : <span className="text-amber-700"> · sem data base</span>}
+              </p>
               <NomesOperadores contaId={c.id} />
               <div className="mt-3 flex justify-end gap-1 border-t border-slate-100 pt-2">
                 <button onClick={() => setOperadores(c)} className="mr-auto flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-cyan-700 hover:bg-cyan-50" title="Liberar a conta para quem não é da matriz">
@@ -119,6 +129,22 @@ export default function ContasBancariasPage() {
               <FormField label="Chave PIX"><Input value={ed?.chave_pix ?? ''} onChange={(e) => setEd((p) => ({ ...p, chave_pix: e.target.value }))} /></FormField>
             </>
           )}
+          <div className="rounded-lg border border-slate-200 p-3">
+            <p className="text-sm font-medium text-slate-900">Saldo inicial</p>
+            <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <FormField label="Saldo do banco no fim do dia">
+                <MoneyInput value={ed?.saldo_inicial ?? 0} onChange={(v) => setEd((p) => ({ ...p, saldo_inicial: v ?? 0 }))} />
+              </FormField>
+              <FormField label="Data base">
+                <Input type="date" value={ed?.saldo_inicial_em ?? ''} onChange={(e) => setEd((p) => ({ ...p, saldo_inicial_em: e.target.value || null }))} />
+              </FormField>
+            </div>
+            <p className="mt-2 text-xs text-slate-500">
+              O saldo da conta passa a ser este valor mais os movimentos <b>depois</b> da data base. Movimentos até
+              essa data não entram no cálculo (já estão dentro do saldo). Use o saldo do extrato do banco no fim do
+              dia anterior ao primeiro movimento registrado no sistema — no Sicredi, 12/10/2026.
+            </p>
+          </div>
           <label className="flex items-center gap-2 text-sm text-slate-600">
             <input type="checkbox" checked={ed?.ativo ?? true} onChange={(e) => setEd((p) => ({ ...p, ativo: e.target.checked }))} className="h-4 w-4 rounded border-slate-300" />
             Conta ativa

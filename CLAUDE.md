@@ -2582,6 +2582,7 @@ saldo de cada conta e o **saldo total resumido**, fluxo diário (realizado × a 
   Configurar a conta, Fluxo Diário, Relatórios, DRE e a conferência caixa × DRE continuam da matriz. Caso de uso:
   FRANCIELLI (supervisora) no INTER, a conta exclusiva de pagamento da 24h. A tela decide as abas por
   `minhas_contas_bancarias()`; quem confere é o banco.
+- **Saldo inicial e data base (20/10/2026, sem migration):** também no cadastro da conta, em Configurações → Contas Bancárias (`useSaveContaBancaria` grava `saldo_inicial`/`saldo_inicial_em`; o cartão mostra o saldo e a data, ou "sem data base"). Valor diferente de zero exige a data. Em 20/10 as 4 contas (ASAAS, BANCO INTER, CAIXA, SICREDI) estavam com R$ 0 e sem data.
 - **Não feito / próximos:** formato real do OFX do Sicredi ainda não visto (guardar um em `ofx.test.ts`); a
   Francesinha (data do crédito, tarifas) segue pendente; títulos do SCar só entram no extrato quando a integração
   SICREDI tiver `conta_bancaria_id` (não há tela — `update integracoes_bancarias set conta_bancaria_id = ...`).

@@ -278,6 +278,9 @@ export function useSaveContaBancaria() {
         tipo: c.tipo || null,
         chave_pix: c.chave_pix || null,
         ativo: c.ativo ?? true,
+        // Saldo inicial (0119): saldo do banco no FIM do dia `saldo_inicial_em`.
+        saldo_inicial: Number(c.saldo_inicial ?? 0),
+        saldo_inicial_em: c.saldo_inicial_em || null,
       };
       if (c.id) {
         const { error } = await supabase.from('contas_bancarias').update(payload).eq('id', c.id);
@@ -287,7 +290,10 @@ export function useSaveContaBancaria() {
         if (error) throw error;
       }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['contas-bancarias'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['contas-bancarias'] });
+      qc.invalidateQueries({ queryKey: ['tesouraria'] });
+    },
   });
 }
 
