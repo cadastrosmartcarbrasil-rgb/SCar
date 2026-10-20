@@ -46,6 +46,20 @@ export function usaUnidadesDeSupervisor(papel: string): boolean {
   return papel === 'supervisor' || papel === 'sinistro';
 }
 
+/**
+ * O PERFIL abre as telas; quem decide QUAIS REGISTROS aparecem e o alcance:
+ * acesso global (admin/financeiro) ou a unidade do cadastro (+ as unidades de
+ * atuacao para supervisor/eventos). Sem nenhum dos dois, a RLS de veiculos,
+ * associados e demais cadastros por unidade devolve ZERO linhas — a pessoa
+ * abre a tela e ela vem vazia. "Global" no seletor so vale para quem tem
+ * acesso global.
+ */
+export function semUnidadeVisivel(papel: string, regionalId: string | null | undefined): boolean {
+  if (papel === 'admin' || papel === 'financeiro') return false;
+  if (usaUnidadesDeSupervisor(papel)) return false;
+  return !regionalId;
+}
+
 export type PapelValor = (typeof PAPEIS_USUARIO)[number]['valor'];
 
 export function rotuloPapel(papel: string): string {

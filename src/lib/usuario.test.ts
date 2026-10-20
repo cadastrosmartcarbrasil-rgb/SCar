@@ -3,6 +3,7 @@ import {
   rotuloPapel,
   exigeUnidade,
   usaUnidadesDeSupervisor,
+  semUnidadeVisivel,
   validarFichaUsuario,
   situacaoUsuario,
   tempoDeCasa,
@@ -142,5 +143,18 @@ describe('supervisor e cobranca (0097)', () => {
     expect(usaUnidadesDeSupervisor('sinistro')).toBe(true);
     expect(usaUnidadesDeSupervisor('gestor_regional')).toBe(false);
     expect(exigeUnidade('supervisor')).toBe(false);
+  });
+});
+
+describe('semUnidadeVisivel', () => {
+  it('sem acesso global e sem unidade nao enxerga cadastro nenhum', () => {
+    expect(semUnidadeVisivel('consultor_vendas', null)).toBe(true);
+    expect(semUnidadeVisivel('cobranca', '')).toBe(true);
+    expect(semUnidadeVisivel('consultor_vendas', 'u1')).toBe(false);
+  });
+  it('global e unidades de atuacao nao entram no aviso', () => {
+    expect(semUnidadeVisivel('admin', null)).toBe(false);
+    expect(semUnidadeVisivel('financeiro', null)).toBe(false);
+    expect(semUnidadeVisivel('supervisor', null)).toBe(false);
   });
 });

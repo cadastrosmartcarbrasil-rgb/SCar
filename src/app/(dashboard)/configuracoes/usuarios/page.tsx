@@ -27,6 +27,7 @@ import {
   rotuloPapel,
   exigeUnidade,
   usaUnidadesDeSupervisor,
+  semUnidadeVisivel,
   validarFichaUsuario,
   situacaoUsuario,
   tempoDeCasa,
@@ -336,7 +337,11 @@ export default function UsuariosPage() {
                   )}
                   <SeloExtras extras={extrasPorUsuario?.[u.id]} />
                 </td>
-                <td className="px-4 py-2 text-slate-600">{u.regional_nome ?? 'Global'}</td>
+                <td className="px-4 py-2 text-slate-600">
+                  {u.regional_nome ?? (semUnidadeVisivel(u.papel, u.regional_id)
+                    ? <span className="text-amber-700" title="Sem unidade: nao ve veiculos nem associados">Sem unidade ⚠</span>
+                    : 'Global')}
+                </td>
                 <td className="px-4 py-2 text-slate-600">
                   {u.data_inicio ? (
                     <>
@@ -462,6 +467,13 @@ export default function UsuariosPage() {
                 atua — sem unidade marcada ela so ve a do cadastro.
               </p>
             )}
+            {semUnidadeVisivel(form.papel, form.regional_id) && (
+              <p className="mt-1.5 text-[11px] text-amber-700">
+                Sem unidade, este perfil <b>nao ve nenhum veiculo, associado nem evento</b> — o perfil
+                libera as telas, mas os registros vem da unidade. &quot;Global&quot; so vale para
+                Administrador e Financeiro. Escolha a unidade em que a pessoa atua.
+              </p>
+            )}
             {exigeUnidade(form.papel) && !form.regional_id && (
               <p className="mt-1.5 text-[11px] text-amber-700">
                 O <b>gestor regional</b> so funciona com uma unidade escolhida — e ela que define o
@@ -535,6 +547,13 @@ export default function UsuariosPage() {
               </FormField>
             </div>
             <ResumoDoPapel papel={chaveDoUsuario(edicao)} />
+            {semUnidadeVisivel(edicao.papel, edicao.regional_id) && (
+              <p className="mt-1.5 text-[11px] text-amber-700">
+                Sem unidade, este perfil <b>nao ve nenhum veiculo, associado nem evento</b> — o perfil
+                libera as telas, mas os registros vem da unidade. &quot;Global&quot; so vale para
+                Administrador e Financeiro. Escolha a unidade em que a pessoa atua.
+              </p>
+            )}
             {exigeUnidade(edicao.papel) && !edicao.regional_id && (
               <p className="text-[11px] text-amber-700">
                 O <b>gestor regional</b> so funciona com uma unidade escolhida.
