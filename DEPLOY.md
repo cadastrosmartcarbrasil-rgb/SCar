@@ -77,6 +77,24 @@ guarda as 3 imagens mais recentes no disco). Erros conhecidos: `denied` /
 `unauthorized` = falta o `docker login` (passo 2); `lookup ... i/o timeout` = DNS
 (passo 3). **Plano B**, compilando no VPS como antes, é o comando da seção (a).
 
+### Pelo GitHub, sem terminal (inclusive pelo celular) — `publicar.yml`
+Aba **Actions → "Publicar em producao" → Run workflow** (o app do GitHub no celular
+tem o mesmo botão). Campo *versão* vazio = o commit mais recente; com o sha completo
+de um commit = volta para aquela versão. No fim ele confere que `/login` responde
+200. **Migrations continuam antes, pelo caminho de sempre** — o botão só troca o app.
+- **Preparar uma vez (no VPS, como root):**
+  `cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 && bash scripts/preparar-deploy-github.sh`
+  — cria a chave `~/.ssh/github_deploy`, autoriza-a **presa ao `scripts/deploy-remoto.sh`**
+  (com ela só dá para atualizar a produção: sem terminal, sem outro comando) e mostra a
+  chave privada.
+- **No GitHub** (Settings → Secrets and variables → Actions → *New repository secret*):
+  `VPS_HOST` (IP ou `appsmartcar.com.br`) e `VPS_CHAVE_SSH` (o bloco BEGIN…END inteiro).
+  Opcionais: `VPS_USUARIO` (padrão root), `VPS_PORTA` (padrão 22), Variable `URL_PRODUCAO`.
+- **Automático (desligado):** Variable `DEPLOY_AUTOMATICO = true` faz publicar sozinho
+  quando a imagem de um push termina de compilar. Ligue só se toda migration for aplicada
+  ANTES do push que depende dela.
+- **Revogar:** apagar a linha `github-deploy-scar` do `~/.ssh/authorized_keys` do VPS.
+
 O comando muda conforme **de onde você digita**. Confira o prompt antes:
 
 ### (a) Plano B — compilar no próprio VPS (o jeito antigo, 10+ min)

@@ -353,6 +353,10 @@ cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 && bash scripts/
 Configuração de uma vez (Variables do GitHub, `docker login ghcr.io`, DNS do daemon) em `DEPLOY.md` §2.0.
 **✅ No ar desde 17/10/2026:** Variables cadastradas, `docker login ghcr.io` feito no VPS (token só
 `read:packages`), primeiro deploy por imagem conferido pelo usuário (a compilação no GitHub leva ~3,5 min).
+**Deploy pelo botão (20/10/2026):** Actions → **"Publicar em producao"** (`.github/workflows/publicar.yml`)
+faz o mesmo `atualizar-vps.sh` por SSH, com uma chave presa ao `scripts/deploy-remoto.sh` (só atualiza).
+Exige preparar o VPS uma vez (`scripts/preparar-deploy-github.sh`) e os Secrets `VPS_HOST`/`VPS_CHAVE_SSH`
+— ver `DEPLOY.md`. Automático só com a Variable `DEPLOY_AUTOMATICO=true` (desligado).
 **Plano B** (compilar no VPS, 10+ min), que continua funcionando:
 ```bash
 cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 \

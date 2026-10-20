@@ -1,0 +1,102 @@
+name: Publicar em producao
+
+# Atualiza o VPS com a imagem pronta (compilada pelo workflow "Imagem de producao").
+#
+# Dois jeitos de disparar:
+#   1. BOTAO: aba Actions -> "Publicar em producao" -> Run workflow (funciona pelo
+#      app do GitHub no celular). Campo "versao" vazio = o ultimo commit do branch;
+#      com o sha de um commit = volta/vai para aquela versao.
+#   2. AUTOMATICO (desligado): com a Variable DEPLOY_AUTOMATICO = true, roda sozinho
+#      quando a imagem de um push termina de compilar com sucesso.
+#
+# Precisa dos Secrets VPS_HOST e VPS_CHAVE_SSH (scripts/preparar-deploy-github.sh
+# gera a chave). Opcionais: VPS_USUARIO (padrao root), VPS_PORTA (padrao 22).
+# A chave so consegue rodar scripts/deploy-remoto.sh no VPS — nada alem disso.
+# Migrations NAO sao aplicadas aqui: continuam antes, pelo caminho de sempre.
+on:
+  workflow_dispatch:
+    inputs:
+      versao:
+        description: 'Sha do commit (vazio = o mais recente do branch)'
+        required: false
+        default: ''
+  workflow_run:
+    workflows: ['Imagem de producao']
+    types: [completed]
+    branches: ['claude/claude-md-opcao-x-98kfj5']
+
+# Um deploy por vez; um novo NAO cancela o que esta no meio.
+concurrency:
+  group: publicar-producao
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publicar:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && vars.DEPLOY_AUTOMATICO == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Conferir os acessos
+        env:
+          HOST: ${{ secrets.VPS_HOST }}
+          CHAVE: ${{ secrets.VPS_CHAVE_SSH }}
+          VERSAO: ${{ github.event.inputs.versao }}
+        run: |
+          falta=0
+          [ -n "$HOST" ]  || { echo "::error::Falta o Secret VPS_HOST (endereco do servidor)"; falta=1; }
+          [ -n "$CHAVE" ] || { echo "::error::Falta o Secret VPS_CHAVE_SSH (rode scripts/preparar-deploy-github.sh no VPS)"; falta=1; }
+          if [ -n "$VERSAO" ] && ! printf '%s' "$VERSAO" | grep -qE '^[0-9a-f]{40}$'; then
+            echo "::error::A versao tem de ser o sha COMPLETO do commit (40 caracteres) ou ficar vazia"; falta=1
+          fi
+          exit $falta
+
+      - name: Preparar a chave
+        env:
+          HOST: ${{ secrets.VPS_HOST }}
+          PORTA: ${{ secrets.VPS_PORTA || '22' }}
+          CHAVE: ${{ secrets.VPS_CHAVE_SSH }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$CHAVE" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
+          ssh-keyscan -p "$PORTA" -T 20 "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          test -s ~/.ssh/known_hosts || { echo "::error::Servidor $HOST nao respondeu na porta $PORTA"; exit 1; }
+
+      - name: Atualizar o servidor
+        env:
+          HOST: ${{ secrets.VPS_HOST }}
+          PORTA: ${{ secrets.VPS_PORTA || '22' }}
+          USUARIO: ${{ secrets.VPS_USUARIO || 'root' }}
+          # botao: o sha digitado (volta para aquela versao, sem git pull) ou vazio;
+          # automatico: sempre vazio = git pull + o commit mais recente (o script do
+          # VPS espera a imagem dele ficar pronta).
+          VERSAO: ${{ github.event.inputs.versao || '' }}
+        run: |
+          echo "Pedido: ${VERSAO:-ultimo commit do branch}"
+          ssh -i ~/.ssh/deploy -p "$PORTA" -o BatchMode=yes -o ServerAliveInterval=30 \
+            "$USUARIO@$HOST" "${VERSAO:-ultimo}"
+
+      - name: Conferir que o sistema respondeu
+        env:
+          URL: ${{ vars.URL_PRODUCAO || 'https://appsmartcar.com.br' }}
+        run: |
+          for i in $(seq 1 12); do
+            codigo=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "$URL/login" || true)
+            if [ "$codigo" = "200" ]; then
+              echo "Sistema no ar ($URL/login respondeu 200)."
+              echo "### Producao atualizada e respondendo em $URL" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            echo "Tentativa $i: $URL/login respondeu '$codigo'; aguardando..."
+            sleep 10
+          done
+          echo "::error::O sistema nao respondeu 200 em 2 minutos. Ver no VPS: docker compose logs app --tail 100"
+          exit 1
+
+      - name: Apagar a chave
+        if: always()
+        run: rm -f ~/.ssh/deploy
