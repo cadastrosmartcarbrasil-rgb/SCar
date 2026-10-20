@@ -14,11 +14,15 @@ import { rotuloPapel } from '@/lib/usuario';
 import {
   ACOES, ALCADAS, MODULOS, ROTULO_ACAO, chaveCelula, celulaAplica, chavePermiteExtra,
   temPermissao, extraVigente, hojeSaoPaulo, mudancasDosExtras, resumoDaCopia, rotuloDaChave,
+  basesDosPerfis, chaveDoUsuario,
   type ExtraUsuario,
 } from '@/lib/permissoes';
 import {
-  useConcessoesPapeis, useExtrasUsuarios, useSalvarPermissoesUsuario, useCopiarPerfilUsuario,
+  useConcessoesPapeis, useExtrasUsuarios, useSalvarPermissoesUsuario, useCopiarPerfilUsuario, usePerfisAcesso,
 } from '@/hooks/use-permissoes';
+
+/** Nome do perfil do usuario: o personalizado (0130) ou o papel. */
+const rotuloDoPerfil = (u: { papel: string; perfil_nome?: string | null }) => u.perfil_nome ?? rotuloPapel(u.papel);
 import { cn } from '@/lib/utils';
 import type { UsuarioListado } from '@/lib/database.types';
 
@@ -42,6 +46,7 @@ export function SeloExtras({ extras }: { extras?: ExtraUsuario[] }) {
 // --------------------------------------------------------------------------
 export function ModalPermissoesExtras({ usuario, onClose }: { usuario: UsuarioListado | null; onClose: () => void }) {
   const { data: concessoes } = useConcessoesPapeis();
+  const { data: perfis } = usePerfisAcesso();
   const { data: extrasPorUsuario, isLoading } = useExtrasUsuarios();
   const salvar = useSalvarPermissoesUsuario();
   const hoje = hojeSaoPaulo();
@@ -65,7 +70,7 @@ export function ModalPermissoesExtras({ usuario, onClose }: { usuario: UsuarioLi
   if (!usuario) return null;
   const papel = usuario.papel;
   const ehAdmin = papel === 'admin';
-  const doPapel = (k: string) => temPermissao(papel, k, concessoes);
+  const doPapel = (k: string) => temPermissao(chaveDoUsuario(usuario), k, concessoes, basesDosPerfis(perfis));
   const alternar = (k: string) =>
     setMarcados((m) => {
       const n = { ...m };
@@ -118,7 +123,7 @@ export function ModalPermissoesExtras({ usuario, onClose }: { usuario: UsuarioLi
   return (
     <Modal open={!!usuario} onClose={onClose} tamanho="xl"
       title={`Permissoes extras — ${usuario.nome}`}
-      subtitulo={`Papel ${rotuloPapel(papel)}. O que vem do papel aparece com ✓; marque o que esta pessoa recebe A MAIS.`}>
+      subtitulo={`Perfil ${rotuloDoPerfil(usuario)}. O que vem do papel aparece com ✓; marque o que esta pessoa recebe A MAIS.`}>
       {ehAdmin ? (
         <p className="text-sm text-slate-600">O administrador ja tem todas as permissoes.</p>
       ) : isLoading ? (
@@ -219,6 +224,7 @@ export function ModalCopiarPerfil({ destino, usuarios, regionalNome, onClose }: 
 }) {
   const { data: concessoes } = useConcessoesPapeis();
   const { data: extras } = useExtrasUsuarios();
+  const { data: perfis } = usePerfisAcesso();
   const copiar = useCopiarPerfilUsuario();
   const [origemId, setOrigemId] = useState('');
   const [copiarUnidade, setCopiarUnidade] = useState(true);
@@ -231,16 +237,16 @@ export function ModalCopiarPerfil({ destino, usuarios, regionalNome, onClose }: 
   const origem = usuarios.find((u) => u.id === origemId);
   const opcoes = usuarios.filter((u) => u.id !== destino.id).sort((a, b) => a.nome.localeCompare(b.nome));
   const resumo = origem && resumoDaCopia(
-    { papel: origem.papel, regional_id: origem.regional_id, extras: extras?.[origem.id] ?? [] },
-    { papel: destino.papel, regional_id: destino.regional_id, extras: extras?.[destino.id] ?? [] },
-    concessoes, copiarUnidade, hoje,
+    { papel: chaveDoUsuario(origem), regional_id: origem.regional_id, extras: extras?.[origem.id] ?? [] },
+    { papel: chaveDoUsuario(destino), regional_id: destino.regional_id, extras: extras?.[destino.id] ?? [] },
+    concessoes, copiarUnidade, hoje, basesDosPerfis(perfis),
   );
   const unidadeFinal = origem ? (copiarUnidade ? origem.regional_id : destino.regional_id) : null;
 
   function confirmar() {
     if (!origem || !destino || !resumo) return;
     const linhas = [
-      resumo.trocaPapel ? `Papel: ${rotuloPapel(destino.papel)} -> ${rotuloPapel(origem.papel)}` : `Papel: ${rotuloPapel(origem.papel)} (igual)`,
+      resumo.trocaPapel ? `Perfil: ${rotuloDoPerfil(destino)} -> ${rotuloDoPerfil(origem)}` : `Perfil: ${rotuloDoPerfil(origem)} (igual)`,
       resumo.trocaUnidade ? `Unidade: ${regionalNome(destino.regional_id)} -> ${regionalNome(origem.regional_id)}` : null,
       `Extras copiados: ${resumo.extrasCopiados}`,
       resumo.ganha.length ? `Ganha ${resumo.ganha.length} permissao(oes)` : null,
@@ -267,7 +273,7 @@ export function ModalCopiarPerfil({ destino, usuarios, regionalNome, onClose }: 
             <option value="">-- escolha o usuario --</option>
             {opcoes.map((u) => (
               <option key={u.id} value={u.id}>
-                {u.nome} · {rotuloPapel(u.papel)}{u.regional_nome ? ` · ${u.regional_nome}` : ''}{!u.ativo ? ' (inativo)' : ''}
+                {u.nome} · {rotuloDoPerfil(u)}{u.regional_nome ? ` · ${u.regional_nome}` : ''}{!u.ativo ? ' (inativo)' : ''}
               </option>
             ))}
           </Select>
@@ -292,8 +298,8 @@ export function ModalCopiarPerfil({ destino, usuarios, regionalNome, onClose }: 
             <p>
               <b className="text-slate-700">Papel:</b>{' '}
               {resumo.trocaPapel
-                ? <>{rotuloPapel(destino.papel)} → <b>{rotuloPapel(origem.papel)}</b></>
-                : <>{rotuloPapel(origem.papel)} (o mesmo)</>}
+                ? <>{rotuloDoPerfil(destino)} → <b>{rotuloDoPerfil(origem)}</b></>
+                : <>{rotuloDoPerfil(origem)} (o mesmo)</>}
               {' · '}<b className="text-slate-700">Unidade:</b> {regionalNome(unidadeFinal)}
               {' · '}<b className="text-slate-700">Extras copiados:</b> {resumo.extrasCopiados}
             </p>

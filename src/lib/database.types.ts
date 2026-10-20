@@ -169,6 +169,19 @@ export type UsuariosRow = Timestamps & {
   data_inicio: string | null;
   data_desligamento: string | null;
   observacoes: string | null;
+  /** perfil personalizado (0130); com ele, `papel` e o papel de base */
+  perfil_id?: string | null;
+};
+
+/** 0130: perfil criado pelo admin (nome + papel de base + grade propria). */
+export type PerfisAcessoRow = {
+  id: string;
+  nome: string;
+  descricao: string | null;
+  papel_base: string;
+  criado_por: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 /** Uma linha de `usuarios_listar` (0068). */
@@ -192,6 +205,8 @@ export type UsuarioListado = {
   vendedor_ativo: boolean | null;
   /** por quantas unidades esta pessoa responde (`regionais.responsavel_id`) */
   responsavel_por: number;
+  perfil_id: string | null;
+  perfil_nome: string | null;
 };
 
 export type VendedoresRow = Timestamps & {
@@ -3645,6 +3660,7 @@ export type Database = {
     Tables: {
       regionais: TableDef<RegionaisRow>;
       usuarios: TableDef<UsuariosRow>;
+      perfis_acesso: TableDef<PerfisAcessoRow>;
       vendedores: TableDef<VendedoresRow>;
       clientes: TableDef<ClientesRow>;
       planos_protecao: TableDef<PlanosProtecaoRow>;
@@ -4900,6 +4916,12 @@ export type Database = {
         Returns: { id: string; pose: string | null; tipo: string; arquivo_url: string; nome_original: string | null; created_at: string }[];
       };
       remover_anexo_comunicacao: { Args: { p_token: string; p_anexo: string }; Returns: string | null };
+      salvar_perfil_acesso: {
+        Args: { p_id: string | null; p_nome: string; p_descricao?: string | null;
+                p_papel_base?: string | null; p_copiar_de?: string | null };
+        Returns: string;
+      };
+      excluir_perfil_acesso: { Args: { p_id: string }; Returns: undefined };
       comunicacoes_resumo_eventos: {
         Args: { p_eventos: string[] };
         Returns: { evento_id: string; total: number; respondidas: number }[];

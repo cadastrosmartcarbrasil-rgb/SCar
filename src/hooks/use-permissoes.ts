@@ -6,7 +6,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import {
-  mapaDeConcessoes, chaveDoExtra, extraParaBanco, type Concessoes, type ExtraUsuario,
+  mapaDeConcessoes, chaveDoExtra, extraParaBanco, type Concessoes, type ExtraUsuario, type PerfilAcesso,
 } from '@/lib/permissoes';
 
 export function useConcessoesPapeis() {
@@ -113,5 +113,48 @@ export function useCopiarPerfilUsuario() {
       qc.invalidateQueries({ queryKey: ['supervisor'] });
       qc.invalidateQueries({ queryKey: ['config', 'usuarios'] });
     },
+  });
+}
+
+// ---- 0130: perfis personalizados (nome + papel de base + grade propria) ----
+
+export function usePerfisAcesso() {
+  const supabase = createClient();
+  return useQuery<PerfilAcesso[]>({
+    queryKey: ['permissoes', 'perfis'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('perfis_acesso').select('id, nome, descricao, papel_base').order('nome');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function useSalvarPerfilAcesso() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: { id: string | null; nome: string; descricao: string; papelBase: string | null; copiarDe?: string | null }) => {
+      const { data, error } = await supabase.rpc('salvar_perfil_acesso', {
+        p_id: v.id, p_nome: v.nome, p_descricao: v.descricao || null,
+        p_papel_base: v.papelBase, p_copiar_de: v.copiarDe ?? null,
+      });
+      if (error) throw error;
+      return data as string;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['permissoes'] }),
+  });
+}
+
+export function useExcluirPerfilAcesso() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.rpc('excluir_perfil_acesso', { p_id: id });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['permissoes'] }),
   });
 }

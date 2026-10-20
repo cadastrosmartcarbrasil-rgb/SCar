@@ -257,6 +257,8 @@ export interface NovoUsuario {
   email: string;
   senha: string;
   papel: UsuariosRow['papel'];
+  /** perfil personalizado (0130); com ele o papel e o de base */
+  perfil_id?: string | null;
   regional_id?: string | null;
   // Ficha (0068) — contato e vinculo de quem responde pelo que faz.
   telefone?: string | null;
@@ -308,6 +310,8 @@ export interface EdicaoUsuario {
   nome?: string;
   email?: string;
   papel?: PapelUsuario;
+  /** perfil personalizado (0130); null = sai do perfil, volta ao papel */
+  perfil_id?: string | null;
   regional_id?: string | null;
   ativo?: boolean;
   /** senha nova (redefinicao pelo admin); vazio = nao mexe na senha */

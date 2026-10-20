@@ -8,6 +8,8 @@ interface Body {
   email: string;
   senha: string;
   papel: PapelUsuario;
+  /** perfil personalizado (0130); o trigger poe o papel de base */
+  perfil_id?: string | null;
   regional_id?: string | null;
   // Ficha (0068)
   telefone?: string | null;
@@ -22,6 +24,8 @@ interface BodyEdicao {
   nome?: string;
   email?: string;
   papel?: PapelUsuario;
+  /** perfil personalizado (0130); null = volta ao papel puro */
+  perfil_id?: string | null;
   regional_id?: string | null;
   ativo?: boolean;
   /** senha nova; so vai para a admin API quando vem preenchida */
@@ -110,6 +114,8 @@ export async function POST(request: Request) {
     cargo: textoOuNulo(body.cargo),
     data_inicio: textoOuNulo(body.data_inicio),
     observacoes: textoOuNulo(body.observacoes),
+    // 0130: o trigger fn_usuarios_perfil poe o papel de base do perfil
+    perfil_id: body.perfil_id || null,
   };
   if (data.user?.id && Object.values(ficha).some((v) => v !== null)) {
     const { error: erroFicha } = await admin
@@ -188,6 +194,8 @@ export async function PATCH(request: Request) {
   if (body.nome !== undefined) patch.nome = body.nome.trim();
   if (mudancaAuth.email) patch.email = mudancaAuth.email;
   if (body.papel !== undefined) patch.papel = body.papel;
+  // 0130: com perfil o trigger poe o papel de base; trocar o papel sem perfil sai dele
+  if (body.perfil_id !== undefined) patch.perfil_id = body.perfil_id || null;
   if (body.regional_id !== undefined) patch.regional_id = body.regional_id || null;
   if (body.ativo !== undefined) patch.ativo = body.ativo;
   // Ficha (0068). `textoOuNulo` devolve undefined quando o campo nem veio, e

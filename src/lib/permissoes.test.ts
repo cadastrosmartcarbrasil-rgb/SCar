@@ -3,7 +3,7 @@ import {
   MODULOS, ACOES, ALCADAS, temPermissao, mapaDeConcessoes, diferencaEntrePapeis,
   mudancasDoPerfil, moduloDaRota, celulaEditavel, todasAsChaves, permissoesDoPapel,
   chaveDoExtra, extraParaBanco, chavePermiteExtra, extraVigente, hojeSaoPaulo, permissoesEfetivas,
-  mudancasDosExtras, resumoDaCopia, rotuloDaChave,
+  mudancasDosExtras, resumoDaCopia, rotuloDaChave, basesDosPerfis, valorDoSeletor, lerSeletor, chaveDoUsuario,
 } from './permissoes';
 
 describe('grade modulo x acao (0111)', () => {
@@ -148,5 +148,39 @@ describe('permissao extra por usuario (0116)', () => {
     expect(r.extrasCopiados).toBe(0);
     expect(r.ganha).toEqual([]);
     expect(r.perde).toEqual([]);
+  });
+});
+
+describe('perfil personalizado (0130)', () => {
+  const ID = '11111111-2222-3333-4444-555555555555';
+  const perfis = [{ id: ID, nome: 'ATENDENTE SAC', descricao: null, papel_base: 'financeiro' }];
+  const bases = basesDosPerfis(perfis);
+
+  it('a grade e a do perfil; modulo fixo e padrao seguem a base', () => {
+    const conc = { [ID]: { 'veiculos.excluir': true, 'associados.ver': false } };
+    expect(temPermissao(ID, 'veiculos.excluir', conc, bases)).toBe(true);
+    expect(temPermissao(ID, 'associados.ver', conc, bases)).toBe(false);
+    // Integracao Mutual e fixa de admin/financeiro: vem da base
+    const mutual = MODULOS.find((m) => m.fixo && m.fixo.includes('financeiro') && !m.fixo.includes('gestor_regional'));
+    if (mutual) expect(temPermissao(ID, `${mutual.chave}.${mutual.acoes[0]}`, conc, bases)).toBe(true);
+    // sem gravacao, cai no padrao da base
+    expect(temPermissao(ID, 'financeiro.estornar', conc, bases)).toBe(true);
+    expect(temPermissao(ID, 'financeiro.estornar', conc)).toBe(false);
+  });
+
+  it('seletor: papel puro x perfil personalizado', () => {
+    expect(valorDoSeletor({ papel: 'financeiro', perfil_id: ID })).toBe(`perfil:${ID}`);
+    expect(valorDoSeletor({ papel: 'auditoria', perfil_id: null })).toBe('auditoria');
+    expect(lerSeletor(`perfil:${ID}`, perfis)).toEqual({ papel: 'financeiro', perfil_id: ID });
+    expect(lerSeletor('auditoria', perfis)).toEqual({ papel: 'auditoria', perfil_id: null });
+    expect(lerSeletor('perfil:outro', perfis)).toBeNull();
+    expect(chaveDoUsuario({ papel: 'financeiro', perfil_id: ID })).toBe(ID);
+    expect(chaveDoUsuario({ papel: 'financeiro' })).toBe('financeiro');
+  });
+
+  it('diferenca entre papel e perfil usa as bases', () => {
+    const conc = { [ID]: { 'veiculos.excluir': false } };
+    const { perde } = diferencaEntrePapeis('financeiro', ID, conc, bases);
+    expect(perde).toContain('Veiculos: Excluir');
   });
 });

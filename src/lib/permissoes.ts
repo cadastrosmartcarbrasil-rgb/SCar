@@ -177,17 +177,60 @@ export function celulaEditavel(modulo: Modulo, acao: Acao, papel: string): boole
  * O papel tem a permissao? `chave` e 'modulo.acao' ou uma alcada. Admin sempre;
  * modulo fixo pela lista; o resto pelo que esta gravado (ou o padrao).
  */
-export function temPermissao(papel: string, chave: string, concessoes?: Concessoes): boolean {
-  if (papel === 'admin') return true;
+export function temPermissao(
+  papel: string, chave: string, concessoes?: Concessoes, bases?: BasesDePerfil,
+): boolean {
+  // `papel` e a CHAVE da grade: um papel ou o id de um perfil personalizado
+  // (0130). O que e estrutura (modulo fixo, padrao) segue o papel de base.
+  const base = bases?.[papel] ?? papel;
+  if (base === 'admin') return true;
   const [mod, acao] = chave.split('.');
   const modulo = acao ? moduloPorChave(mod) : undefined;
   if (acao) {
     if (!modulo || !celulaAplica(modulo, acao as Acao)) return false;
-    if (modulo.fixo) return modulo.fixo.includes(papel);
+    if (modulo.fixo) return modulo.fixo.includes(base);
   }
   const gravado = concessoes?.[papel]?.[chave];
   if (gravado !== undefined) return gravado;
-  return (PADRAO[chave] ?? []).includes(papel);
+  return (PADRAO[chave] ?? []).includes(base);
+}
+
+/** Perfil personalizado (0130): id -> papel de base. */
+export type BasesDePerfil = Record<string, string>;
+
+export interface PerfilAcesso {
+  id: string;
+  nome: string;
+  descricao: string | null;
+  papel_base: string;
+}
+
+export function basesDosPerfis(perfis: PerfilAcesso[] | null | undefined): BasesDePerfil {
+  return Object.fromEntries((perfis ?? []).map((p) => [p.id, p.papel_base]));
+}
+
+/** A chave da grade de um usuario: o perfil personalizado, se houver, ou o papel. */
+export function chaveDoUsuario(u: { papel: string; perfil_id?: string | null }): string {
+  return u.perfil_id ?? u.papel;
+}
+
+/** Valor do seletor de perfil: 'perfil:<id>' para o personalizado, o papel para o resto. */
+export function valorDoSeletor(u: { papel: string; perfil_id?: string | null }): string {
+  return u.perfil_id ? `perfil:${u.perfil_id}` : u.papel;
+}
+
+/** O que o seletor escolheu: papel (base) + perfil personalizado (ou nulo). */
+export function lerSeletor(
+  valor: string, perfis: PerfilAcesso[] | null | undefined,
+): { papel: string; perfil_id: string | null } | null {
+  if (!valor.startsWith('perfil:')) return { papel: valor, perfil_id: null };
+  const p = (perfis ?? []).find((x) => x.id === valor.slice(7));
+  return p ? { papel: p.papel_base, perfil_id: p.id } : null;
+}
+
+/** Nome de uma chave da grade (papel ou perfil personalizado). */
+export function nomeDaChave(chave: string, perfis: PerfilAcesso[] | null | undefined, rotuloPapel: (p: string) => string): string {
+  return (perfis ?? []).find((p) => p.id === chave)?.nome ?? rotuloPapel(chave);
 }
 
 /** As linhas das duas tabelas viram o mapa papel -> chave -> concedida. */
@@ -218,8 +261,8 @@ export function rotuloDaChave(chave: string): string {
 }
 
 /** O que o papel pode (para o resumo embaixo do seletor de papel). */
-export function permissoesDoPapel(papel: string, concessoes?: Concessoes): string[] {
-  return todasAsChaves().filter((k) => temPermissao(papel, k, concessoes));
+export function permissoesDoPapel(papel: string, concessoes?: Concessoes, bases?: BasesDePerfil): string[] {
+  return todasAsChaves().filter((k) => temPermissao(papel, k, concessoes, bases));
 }
 
 /**
@@ -229,12 +272,13 @@ export function diferencaEntrePapeis(
   de: string,
   para: string,
   concessoes?: Concessoes,
+  bases?: BasesDePerfil,
 ): { ganha: string[]; perde: string[] } {
   const ganha: string[] = [];
   const perde: string[] = [];
   for (const k of todasAsChaves()) {
-    const a = temPermissao(de, k, concessoes);
-    const b = temPermissao(para, k, concessoes);
+    const a = temPermissao(de, k, concessoes, bases);
+    const b = temPermissao(para, k, concessoes, bases);
     if (a === b) continue;
     (b ? ganha : perde).push(rotuloDaChave(k));
   }
@@ -246,10 +290,11 @@ export function mudancasDoPerfil(
   papel: string,
   concessoes: Concessoes | undefined,
   editado: Record<string, boolean>,
+  bases?: BasesDePerfil,
 ): { modulo: string; acao: string; concedida: boolean }[] {
   const out: { modulo: string; acao: string; concedida: boolean }[] = [];
   for (const [chave, valor] of Object.entries(editado)) {
-    if (temPermissao(papel, chave, concessoes) === valor) continue;
+    if (temPermissao(papel, chave, concessoes, bases) === valor) continue;
     const [mod, acao] = chave.split('.');
     out.push(acao ? { modulo: mod, acao, concedida: valor } : { modulo: 'alcada', acao: mod, concedida: valor });
   }
@@ -309,9 +354,10 @@ export function permissoesEfetivas(
   concessoes: Concessoes | undefined,
   extras: ExtraUsuario[],
   hoje: string,
+  bases?: BasesDePerfil,
 ): string[] {
   const vig = new Set(extras.filter((e) => extraVigente(e.expira_em, hoje)).map((e) => e.chave));
-  return todasAsChaves().filter((k) => temPermissao(papel, k, concessoes) || (papel !== 'admin' && vig.has(k) && chavePermiteExtra(k)));
+  return todasAsChaves().filter((k) => temPermissao(papel, k, concessoes, bases) || (papel !== 'admin' && vig.has(k) && chavePermiteExtra(k)));
 }
 
 /** Diferenca entre a lista gravada e a editada (rotulos para a confirmacao). */
@@ -337,10 +383,11 @@ export function resumoDaCopia(
   concessoes: Concessoes | undefined,
   copiarUnidade: boolean,
   hoje: string,
+  bases?: BasesDePerfil,
 ): { trocaPapel: boolean; trocaUnidade: boolean; ganha: string[]; perde: string[]; extrasCopiados: number } {
   const copiados = origem.papel === 'admin' ? [] : origem.extras.filter((e) => extraVigente(e.expira_em, hoje));
-  const antes = new Set(permissoesEfetivas(destino.papel, concessoes, destino.extras, hoje));
-  const depois = new Set(permissoesEfetivas(origem.papel, concessoes, copiados, hoje));
+  const antes = new Set(permissoesEfetivas(destino.papel, concessoes, destino.extras, hoje, bases));
+  const depois = new Set(permissoesEfetivas(origem.papel, concessoes, copiados, hoje, bases));
   const ganha: string[] = [];
   const perde: string[] = [];
   for (const k of todasAsChaves()) {

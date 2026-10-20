@@ -17,8 +17,10 @@ import {
 import { opcoesParaEscolher } from '@/lib/regional';
 import { UnidadesSupervisor } from '@/components/usuarios/unidades-supervisor';
 import { MatrizPermissoes, ResumoDoPapel } from '@/components/usuarios/matriz-permissoes';
-import { diferencaEntrePapeis } from '@/lib/permissoes';
-import { useConcessoesPapeis, useExtrasUsuarios } from '@/hooks/use-permissoes';
+import {
+  diferencaEntrePapeis, basesDosPerfis, chaveDoUsuario, valorDoSeletor, lerSeletor, type PerfilAcesso,
+} from '@/lib/permissoes';
+import { useConcessoesPapeis, useExtrasUsuarios, usePerfisAcesso } from '@/hooks/use-permissoes';
 import { ModalPermissoesExtras, ModalCopiarPerfil, SeloExtras } from '@/components/usuarios/permissoes-usuario';
 import {
   PAPEIS_USUARIO,
@@ -40,6 +42,7 @@ type FormEdicao = {
   documento: string;
   cargo: string;
   papel: PapelUsuario;
+  perfil_id: string | null;
   regional_id: string | null;
   ativo: boolean;
   data_inicio: string;
@@ -49,7 +52,7 @@ type FormEdicao = {
 };
 
 const VAZIO: NovoUsuario = {
-  nome: '', email: '', senha: '', papel: 'consultor_vendas', regional_id: null,
+  nome: '', email: '', senha: '', papel: 'consultor_vendas', perfil_id: null, regional_id: null,
   telefone: '', documento: '', cargo: '', data_inicio: '', observacoes: '',
 };
 
@@ -61,6 +64,8 @@ export default function UsuariosPage() {
   const atualizar = useUpdateUsuario();
   const { data: concessoes } = useConcessoesPapeis();
   const { data: extrasPorUsuario } = useExtrasUsuarios();
+  const { data: perfis } = usePerfisAcesso();
+  const bases = basesDosPerfis(perfis);
   const [extrasDe, setExtrasDe] = useState<UsuarioListado | null>(null);
   const [copiarPara, setCopiarPara] = useState<UsuarioListado | null>(null);
 
@@ -91,7 +96,7 @@ export default function UsuariosPage() {
   const ativos = (usuarios ?? []).filter((u) => u.ativo).length;
   const porPapel = useMemo(() => {
     const c: Record<string, number> = {};
-    for (const u of usuarios ?? []) if (u.ativo) c[u.papel] = (c[u.papel] ?? 0) + 1;
+    for (const u of usuarios ?? []) if (u.ativo) c[chaveDoUsuario(u)] = (c[chaveDoUsuario(u)] ?? 0) + 1;
     return c;
   }, [usuarios]);
   const inativos = (usuarios ?? []).length - ativos;
@@ -105,7 +110,7 @@ export default function UsuariosPage() {
     setEdicao({
       id: u.id, nome: u.nome, email: u.email,
       telefone: u.telefone ?? '', documento: u.documento ?? '', cargo: u.cargo ?? '',
-      papel: u.papel, regional_id: u.regional_id, ativo: u.ativo,
+      papel: u.papel, perfil_id: u.perfil_id, regional_id: u.regional_id, ativo: u.ativo,
       data_inicio: u.data_inicio ?? '', data_desligamento: u.data_desligamento ?? '',
       observacoes: u.observacoes ?? '', senha: '',
     });
@@ -145,6 +150,7 @@ export default function UsuariosPage() {
         documento: edicao.documento,
         cargo: edicao.cargo,
         papel: edicao.papel,
+        perfil_id: edicao.perfil_id,
         regional_id: edicao.regional_id,
         ativo: edicao.ativo,
         data_inicio: edicao.data_inicio || null,
@@ -167,24 +173,28 @@ export default function UsuariosPage() {
    * pessoa ganha e perde, porque vale na hora. O gestor regional sem unidade nao
    * funciona — nesse caso manda abrir a edicao para escolher a unidade junto.
    */
-  function trocarPapel(u: UsuarioListado, papel: PapelUsuario) {
-    if (papel === u.papel) return;
+  function trocarPapel(u: UsuarioListado, valor: string) {
+    const escolha = lerSeletor(valor, perfis);
+    if (!escolha || valor === valorDoSeletor(u)) return;
+    const papel = escolha.papel as PapelUsuario;
+    const para = escolha.perfil_id ?? papel;
+    const nomePara = rotuloPerfil(para, perfis);
     if (exigeUnidade(papel) && !u.regional_id) {
-      toast.error(`${rotuloPapel(papel)} precisa de unidade: use Editar para escolher o papel e a unidade juntos.`);
+      toast.error(`${nomePara} precisa de unidade: use Editar para escolher o perfil e a unidade juntos.`);
       return;
     }
-    const { ganha, perde } = diferencaEntrePapeis(u.papel, papel, concessoes);
+    const { ganha, perde } = diferencaEntrePapeis(chaveDoUsuario(u), para, concessoes, bases);
     const linhas = [
-      `Trocar ${u.nome} de ${rotuloPapel(u.papel)} para ${rotuloPapel(papel)}?`,
+      `Trocar ${u.nome} de ${rotuloPerfil(chaveDoUsuario(u), perfis)} para ${nomePara}?`,
       ganha.length ? `\nPassa a poder:\n- ${ganha.join('\n- ')}` : '',
       perde.length ? `\nDeixa de poder:\n- ${perde.join('\n- ')}` : '',
       '\nVale a partir do proximo clique da pessoa no sistema.',
     ];
     if (!confirm(linhas.filter(Boolean).join('\n'))) return;
     atualizar.mutate(
-      { id: u.id, papel },
+      { id: u.id, papel, perfil_id: escolha.perfil_id },
       {
-        onSuccess: () => toast.success(`Papel alterado para ${rotuloPapel(papel)}`),
+        onSuccess: () => toast.success(`Perfil alterado para ${nomePara}`),
         onError: (err) => toast.error(err.message),
       },
     );
@@ -310,18 +320,18 @@ export default function UsuariosPage() {
                 </td>
                 <td className="px-4 py-2">
                   {podeGerenciar ? (
-                    <select value={u.papel} disabled={atualizar.isPending}
-                      aria-label={`Papel de ${u.nome}`}
-                      onChange={(e) => trocarPapel(u, e.target.value as PapelUsuario)}
+                    <select value={valorDoSeletor(u)} disabled={atualizar.isPending}
+                      aria-label={`Perfil de ${u.nome}`}
+                      onChange={(e) => trocarPapel(u, e.target.value)}
                       className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700">
-                      {PAPEIS_USUARIO.map((p) => <option key={p.valor} value={p.valor}>{p.rotulo}</option>)}
-                      {!PAPEIS_USUARIO.some((p) => p.valor === u.papel) && (
+                      <OpcoesPerfil perfis={perfis} />
+                      {!PAPEIS_USUARIO.some((p) => p.valor === u.papel) && !u.perfil_id && (
                         <option value={u.papel}>{u.papel}</option>
                       )}
                     </select>
                   ) : (
                     <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
-                      {rotuloPapel(u.papel)}
+                      {u.perfil_nome ?? rotuloPapel(u.papel)}
                     </span>
                   )}
                   <SeloExtras extras={extrasPorUsuario?.[u.id]} />
@@ -427,9 +437,12 @@ export default function UsuariosPage() {
                 <Input value={form.cargo ?? ''} placeholder="Ex.: Supervisora de Atendimento"
                   onChange={(e) => setForm({ ...form, cargo: e.target.value })} />
               </FormField>
-              <FormField label="Papel *">
-                <Select value={form.papel} onChange={(e) => setForm({ ...form, papel: e.target.value as PapelUsuario })}>
-                  {PAPEIS_USUARIO.map((p) => <option key={p.valor} value={p.valor}>{p.rotulo}</option>)}
+              <FormField label="Perfil *">
+                <Select value={valorDoSeletor(form)} onChange={(e) => {
+                  const esc = lerSeletor(e.target.value, perfis);
+                  if (esc) setForm({ ...form, papel: esc.papel as PapelUsuario, perfil_id: esc.perfil_id });
+                }}>
+                  <OpcoesPerfil perfis={perfis} />
                 </Select>
               </FormField>
               <FormField label={exigeUnidade(form.papel) ? 'Unidade *' : 'Unidade'}>
@@ -442,7 +455,7 @@ export default function UsuariosPage() {
                 </Select>
               </FormField>
             </div>
-            <div className="mt-2"><ResumoDoPapel papel={form.papel} /></div>
+            <div className="mt-2"><ResumoDoPapel papel={chaveDoUsuario(form)} /></div>
             {usaUnidadesDeSupervisor(form.papel) && (
               <p className="mt-1.5 text-[11px] text-cyan-700">
                 Depois de criar, abra a edicao do usuario para marcar as <b>unidades</b> em que a pessoa
@@ -503,10 +516,12 @@ export default function UsuariosPage() {
               </FormField>
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <FormField label="Papel *">
-                <Select value={edicao.papel}
-                  onChange={(e) => setEdicao({ ...edicao, papel: e.target.value as PapelUsuario })}>
-                  {PAPEIS_USUARIO.map((p) => <option key={p.valor} value={p.valor}>{p.rotulo}</option>)}
+              <FormField label="Perfil *">
+                <Select value={valorDoSeletor(edicao)} onChange={(e) => {
+                  const esc = lerSeletor(e.target.value, perfis);
+                  if (esc) setEdicao({ ...edicao, papel: esc.papel as PapelUsuario, perfil_id: esc.perfil_id });
+                }}>
+                  <OpcoesPerfil perfis={perfis} />
                 </Select>
               </FormField>
               <FormField label={exigeUnidade(edicao.papel) ? 'Unidade *' : 'Unidade'}>
@@ -519,7 +534,7 @@ export default function UsuariosPage() {
                 </Select>
               </FormField>
             </div>
-            <ResumoDoPapel papel={edicao.papel} />
+            <ResumoDoPapel papel={chaveDoUsuario(edicao)} />
             {exigeUnidade(edicao.papel) && !edicao.regional_id && (
               <p className="text-[11px] text-amber-700">
                 O <b>gestor regional</b> so funciona com uma unidade escolhida.
@@ -591,5 +606,28 @@ export default function UsuariosPage() {
       <ModalCopiarPerfil destino={copiarPara} usuarios={usuarios ?? []} onClose={() => setCopiarPara(null)}
         regionalNome={(id) => (id ? (regionais ?? []).find((r) => r.id === id)?.nome ?? 'Unidade' : 'Global')} />
     </div>
+  );
+}
+
+/** Nome de uma chave de grade: o perfil personalizado (0130) ou o papel. */
+function rotuloPerfil(chave: string, perfis: PerfilAcesso[] | undefined) {
+  return perfis?.find((p) => p.id === chave)?.nome ?? rotuloPapel(chave);
+}
+
+/** As opcoes do seletor de perfil: os papeis do sistema e os perfis criados pelo admin. */
+function OpcoesPerfil({ perfis }: { perfis: PerfilAcesso[] | undefined }) {
+  return (
+    <>
+      <optgroup label="Perfis do sistema">
+        {PAPEIS_USUARIO.map((p) => <option key={p.valor} value={p.valor}>{p.rotulo}</option>)}
+      </optgroup>
+      {(perfis ?? []).length > 0 && (
+        <optgroup label="Perfis personalizados">
+          {(perfis ?? []).map((p) => (
+            <option key={p.id} value={`perfil:${p.id}`}>{p.nome} ({rotuloPapel(p.papel_base)})</option>
+          ))}
+        </optgroup>
+      )}
+    </>
   );
 }
