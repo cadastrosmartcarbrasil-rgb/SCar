@@ -53,6 +53,19 @@ describe('valoresDoTermo', () => {
     expect(v['emissao.protocolo']).toBe(MARCA_PROTOCOLO);
   });
 
+  it('rastreador: o equipamento do parque vence a ficha, com o status numerado', () => {
+    const v = valoresDoTermo(fontes({
+      veiculo: { placa: 'ABC1D23', rastreador_imei: '111111111111111' },
+      rastreador: { imei: '359999999999999', status: 'ATIVO', unidade: 'GRANDE NATAL' },
+    }));
+    expect(v['veiculo.rastreador_imei']).toBe('359999999999999');
+    expect(v['veiculo.rastreador_status']).toBe('2 - Ativo / Instalado');
+    expect(v['veiculo.rastreador_unidade']).toBe('GRANDE NATAL');
+    const sem = valoresDoTermo(fontes({ veiculo: { placa: 'ABC1D23', rastreador_imei: '111111111111111' } }));
+    expect(sem['veiculo.rastreador_imei']).toBe('111111111111111');
+    expect(sem['veiculo.rastreador_status']).toBe('');
+  });
+
   it('marcas de cobertura e de uso', () => {
     const v = valoresDoTermo(fontes());
     expect(v['coberturas.marca_casco']).toBe('☒');

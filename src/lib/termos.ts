@@ -14,6 +14,7 @@
 
 import { agruparCoberturas, grupoDaCobertura, textoDoLimite, type GrupoCobertura, type ItemCobertura } from './coberturas';
 import { formatarCEP, formatarDocumento, formatarTelefone } from './documento';
+import { STATUS_RASTREADOR } from './rastreador';
 
 export const MARCA_PROTOCOLO = '{{PROTOCOLO_DO_TERMO}}';
 
@@ -92,6 +93,8 @@ export const CAMPOS_TERMO: CampoTermo[] = [
   C('Veículo', 'veiculo.alienado', 'Alienado (Sim/Não)'),
   C('Veículo', 'veiculo.financeira', 'Instituição financeira', { opcional: true }),
   C('Veículo', 'veiculo.rastreador_imei', 'IMEI do rastreador', { opcional: true }),
+  C('Veículo', 'veiculo.rastreador_status', 'Status do rastreador', { opcional: true }),
+  C('Veículo', 'veiculo.rastreador_unidade', 'Unidade do rastreador', { opcional: true }),
   C('Veículo', 'veiculo.marca_uso_particular', '☒ se uso particular', { tipo: 'marca' }),
   C('Veículo', 'veiculo.marca_uso_trabalho', '☒ se uso de trabalho/aplicativo', { tipo: 'marca' }),
   C('Veículo', 'veiculo.marca_moto', '☒ se for moto', { tipo: 'marca' }),
@@ -166,6 +169,8 @@ export interface FontesTermo {
     status?: string | null;
   } | null;
   tipoVeiculo?: string | null;
+  /** O equipamento instalado no veiculo (parque de rastreadores, 0050). */
+  rastreador?: { imei: string; status: string; unidade?: string | null } | null;
   plano?: { nome: string; descricao_comercial?: string | null } | null;
   cota?: { codigo: string; percentual?: number | null } | null;
   mensalidade?: number | null;
@@ -211,6 +216,13 @@ function enderecoCompleto(e: Endereco): string {
 }
 
 const ROTULO_USO: Record<string, string> = { passeio: 'Particular', app: 'Aplicativo', comercial: 'Comercial' };
+/** '2 - Ativo / Instalado', a numeracao que a equipe fala. */
+function rotuloStatusRastreador(status: string | null | undefined): string {
+  if (!status) return '';
+  const m = STATUS_RASTREADOR.find((x) => x.status === status);
+  return m ? `${m.numero} - ${m.rotulo}` : status;
+}
+
 const marca = (sim: boolean) => (sim ? '☒' : '☐');
 
 function gruposContratados(itens: ItemCobertura[]): Set<GrupoCobertura> {
@@ -271,7 +283,9 @@ export function valoresDoTermo(f: FontesTermo): Record<string, string> {
     'veiculo.uso': ROTULO_USO[uso] ?? uso,
     'veiculo.alienado': v ? (v.alienado ? 'Sim' : 'Não') : '',
     'veiculo.financeira': v?.alienado ? txt(v.alienado_financeira) : '',
-    'veiculo.rastreador_imei': txt(v?.rastreador_imei),
+    'veiculo.rastreador_imei': txt(f.rastreador?.imei) || txt(v?.rastreador_imei),
+    'veiculo.rastreador_status': rotuloStatusRastreador(f.rastreador?.status),
+    'veiculo.rastreador_unidade': txt(f.rastreador?.unidade),
     'veiculo.marca_uso_particular': marca(uso === 'passeio'),
     'veiculo.marca_uso_trabalho': marca(uso === 'app' || uso === 'comercial'),
     'veiculo.marca_moto': marca(/moto/i.test(txt(f.tipoVeiculo))),

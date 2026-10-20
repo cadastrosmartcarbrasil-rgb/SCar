@@ -44,7 +44,7 @@ export async function carregarFontesTermo(
     base.veiculo = v as unknown as FontesTermo['veiculo'];
     regionalId = v.regional_id ?? regionalId;
 
-    const [tipo, plano, cota, vend, opc, prods, part, adesao, mens] = await Promise.all([
+    const [tipo, plano, cota, vend, opc, prods, part, adesao, mens, rast] = await Promise.all([
       v.tipo_veiculo_id ? supabase.from('tipos_veiculo').select('nome').eq('id', v.tipo_veiculo_id).maybeSingle() : null,
       v.plano_protecao_id ? supabase.from('planos_protecao').select('nome, descricao_comercial').eq('id', v.plano_protecao_id).maybeSingle() : null,
       v.cota_participacao_id ? supabase.from('cotas_participacao').select('codigo, percentual').eq('id', v.cota_participacao_id).maybeSingle() : null,
@@ -55,7 +55,13 @@ export async function carregarFontesTermo(
       v.valor_fipe && v.tipo_veiculo_id
         ? supabase.rpc('calcular_adesao', { p_fipe: v.valor_fipe, p_tipo_veiculo_id: v.tipo_veiculo_id }) : null,
       v.valor_mensalidade ? null : supabase.rpc('valor_mensalidade_veiculo', { p_veiculo_id: v.id }),
+      // O equipamento do veiculo: o ativo vence; sem ativo, o mais recente.
+      supabase.from('rastreadores').select('imei, status, updated_at, regionais(nome)')
+        .eq('veiculo_id', v.id).order('updated_at', { ascending: false }).limit(10),
     ]);
+    const lista = (rast.data ?? []) as { imei: string; status: string; regionais: { nome: string } | null }[];
+    const eq = lista.find((r) => r.status === 'ATIVO') ?? lista[0];
+    base.rastreador = eq ? { imei: eq.imei, status: eq.status, unidade: eq.regionais?.nome ?? null } : null;
     base.tipoVeiculo = tipo?.data?.nome ?? null;
     base.plano = plano?.data ?? null;
     base.cota = cota?.data ? { codigo: cota.data.codigo, percentual: cota.data.percentual } : null;

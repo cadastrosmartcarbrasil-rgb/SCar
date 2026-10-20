@@ -2587,6 +2587,7 @@ modelo só o admin, ou quem recebeu o extra** `termos_modelos.*` (0116); **emite
   PDF sempre por `/api/v1/termos/pdf` (bucket sem policy para `authenticated`).
 - **PDF:** `src/lib/termos-server.ts` (`gerarPdf` com puppeteer-core, sem rede — a logo vai embutida em data URL;
   `CHROMIUM_PATH` ou `/usr/bin/chromium-browser`). `next.config.mjs` marca `puppeteer-core` como externo.
+- **Rastreador no termo (20/10/2026, sem migration):** campos `veiculo.rastreador_imei` (parque `rastreadores` vence a ficha), `veiculo.rastreador_status` ("2 - Ativo / Instalado") e `veiculo.rastreador_unidade` — o equipamento ATIVO do veículo, senão o mais recente. Decisão do usuário: o Termo de Comodato só precisa de IMEI, status, veículo/associado e unidade (os demais dados virão por API da rastreadora); valores do rastreador são únicos da empresa e ficam no texto. O prompt do Cowork (`equipamentos_rastreador`, aceite com OTP) NÃO foi implementado: duplicaria `rastreadores` (0050) e depende do aceite.
 - **Fora desta fase (próxima):** o ACEITE eletrônico (link com prazo, as 6 declarações, IP/dispositivo/hora do
   servidor, confirmação de identidade). As declarações já ficam no modelo. Perguntas abertas: onde o aceite entra
   na venda, canal do código de confirmação (Resend sem chave; WhatsApp sem API), migrados do Mutual.
