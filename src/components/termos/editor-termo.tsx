@@ -200,6 +200,13 @@ export function EditorTermo({ value, onChange, somenteLeitura }: {
     onUpdate: ({ editor: ed }) => onChange(ed.getHTML()),
   });
 
+  // `editable` do useEditor so vale na criacao, e a permissao (usePode) chega
+  // depois: sem isto o editor nascia travado e a barra aparecia sobre um texto
+  // que nao aceitava digitacao.
+  useEffect(() => {
+    if (editor && editor.isEditable === !!somenteLeitura) editor.setEditable(!somenteLeitura);
+  }, [editor, somenteLeitura]);
+
   // Conteudo trocado por fora (abrir outro termo, importar): sincroniza.
   useEffect(() => {
     if (editor && value !== editor.getHTML()) editor.commands.setContent(value, false);
