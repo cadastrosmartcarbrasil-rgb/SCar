@@ -1,5 +1,5 @@
 -- Teste da 0127: o time de eventos ve as unidades de atuacao marcadas; os
--- demais papeis nao ganham nada com uma linha em supervisor_regionais.
+-- demais papeis tambem a seguem desde a 0131.
 \set ON_ERROR_STOP on
 do $$
 declare
@@ -37,13 +37,13 @@ begin
   execute 'reset role';
   raise notice 'OK eventos ve e trata as unidades de atuacao';
 
-  -- consultor com linha em supervisor_regionais nao ganha nada
+  -- desde a 0131 as unidades de atuacao valem para qualquer papel
   perform set_config('request.jwt.claim.sub', u_con::text, false);
   execute 'set local role authenticated';
   select count(*) into n from clientes where id in (c_a, c_b);
   execute 'reset role';
-  assert n = 0, 'consultor nao ganha unidade de atuacao, viu ' || n;
-  raise notice 'OK os demais papeis nao mudam';
+  assert n = 1, 'consultor com a unidade A marcada ve 1 associado (0131), viu ' || n;
+  raise notice 'OK os demais papeis seguem a unidade de atuacao (0131)';
 
   raise notice '=== TESTES 0127 PASSARAM ===';
 end $$;

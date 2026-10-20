@@ -138,10 +138,13 @@ describe('supervisor e cobranca (0097)', () => {
     expect(valores).toContain('cobranca');
     expect(rotuloPapel('supervisor')).toBe('Supervisor');
   });
-  it('so o supervisor escolhe varias unidades', () => {
+  it('todo papel sem acesso global tem unidades de atuacao (0131)', () => {
     expect(usaUnidadesDeSupervisor('supervisor')).toBe(true);
     expect(usaUnidadesDeSupervisor('sinistro')).toBe(true);
-    expect(usaUnidadesDeSupervisor('gestor_regional')).toBe(false);
+    expect(usaUnidadesDeSupervisor('gestor_regional')).toBe(true);
+    expect(usaUnidadesDeSupervisor('consultor_vendas')).toBe(true);
+    expect(usaUnidadesDeSupervisor('admin')).toBe(false);
+    expect(usaUnidadesDeSupervisor('financeiro')).toBe(false);
     expect(exigeUnidade('supervisor')).toBe(false);
   });
 });
@@ -152,9 +155,10 @@ describe('semUnidadeVisivel', () => {
     expect(semUnidadeVisivel('cobranca', '')).toBe(true);
     expect(semUnidadeVisivel('consultor_vendas', 'u1')).toBe(false);
   });
-  it('global e unidades de atuacao nao entram no aviso', () => {
+  it('global e unidades de atuacao marcadas nao entram no aviso', () => {
     expect(semUnidadeVisivel('admin', null)).toBe(false);
     expect(semUnidadeVisivel('financeiro', null)).toBe(false);
-    expect(semUnidadeVisivel('supervisor', null)).toBe(false);
+    expect(semUnidadeVisivel('supervisor', null)).toBe(true);
+    expect(semUnidadeVisivel('consultor_vendas', null, 4)).toBe(false);
   });
 });

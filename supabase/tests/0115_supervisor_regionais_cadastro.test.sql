@@ -20,7 +20,7 @@ begin
     (u_ges,'Gestor A','ges115@t.com','gestor_regional', r_a),
     (u_con,'Consultor sem unidade','con115@t.com','consultor_vendas', null);
   insert into supervisor_regionais (usuario_id, regional_id) values (u_sup, r_a), (u_sup, r_b);
-  -- consultor com linha em supervisor_regionais NAO ganha nada (so o papel supervisor)
+  -- consultor com linha em supervisor_regionais: desde a 0131 ganha a unidade r_c
   insert into supervisor_regionais (usuario_id, regional_id) values (u_con, r_c);
 
   select id into tv from tipos_veiculo where nome ilike 'passeio%' limit 1;
@@ -75,12 +75,12 @@ begin
   execute 'reset role';
   assert n = 1, 'o gestor ve so a unidade dele, viu ' || n;
 
-  -- ------------------------------------------- outro papel com linha: nada
+  -- ------------------------------------------- outro papel com linha: desde a 0131 ve a unidade marcada
   perform set_config('request.jwt.claim.sub', u_con::text, false);
   execute 'set local role authenticated';
   select count(*) into n from veiculos where placa like 'SUP1%15';
   execute 'reset role';
-  assert n = 0, 'so o papel supervisor le supervisor_regionais, viu ' || n;
+  assert n = 1, 'desde a 0131 o consultor ve a unidade de atuacao marcada (r_c), viu ' || n;
 
   -- ------------------------------------------- supervisor inativo: nada
   perform set_config('request.jwt.claim.sub', '', false);

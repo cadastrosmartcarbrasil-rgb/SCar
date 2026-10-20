@@ -37,27 +37,27 @@ export const PAPEIS_USUARIO = [
 ] as const;
 
 /**
- * Unidades de ATUACAO (`supervisor_regionais`, marcadas na edicao do usuario):
- * o supervisor (0097/0115) e o time de EVENTOS, papel `sinistro` (0127),
- * atendem varias unidades. Na RLS elas valem como as unidades da pessoa; a
- * COBRANCA (cobranca_escopo) le so as do supervisor.
+ * Unidades de ATUACAO (`supervisor_regionais`): desde a 0131 valem para todo
+ * papel sem acesso global — somam-se a unidade do cadastro no que a pessoa ve.
+ * Admin e financeiro ja veem tudo. A COBRANCA (cobranca_escopo) le so as do
+ * supervisor, e a carteira de leads do consultor continua so dele.
  */
 export function usaUnidadesDeSupervisor(papel: string): boolean {
-  return papel === 'supervisor' || papel === 'sinistro';
+  return papel !== 'admin' && papel !== 'financeiro';
 }
 
 /**
  * O PERFIL abre as telas; quem decide QUAIS REGISTROS aparecem e o alcance:
- * acesso global (admin/financeiro) ou a unidade do cadastro (+ as unidades de
- * atuacao para supervisor/eventos). Sem nenhum dos dois, a RLS de veiculos,
- * associados e demais cadastros por unidade devolve ZERO linhas — a pessoa
- * abre a tela e ela vem vazia. "Global" no seletor so vale para quem tem
- * acesso global.
+ * acesso global (admin/financeiro), a unidade do cadastro ou as unidades de
+ * atuacao (0131). Sem nenhum dos tres, a RLS de veiculos, associados e demais
+ * cadastros por unidade devolve ZERO linhas — a tela abre vazia. "Global" no
+ * seletor so vale para quem tem acesso global.
  */
-export function semUnidadeVisivel(papel: string, regionalId: string | null | undefined): boolean {
-  if (papel === 'admin' || papel === 'financeiro') return false;
-  if (usaUnidadesDeSupervisor(papel)) return false;
-  return !regionalId;
+export function semUnidadeVisivel(
+  papel: string, regionalId: string | null | undefined, unidadesAtuacao = 0,
+): boolean {
+  if (!usaUnidadesDeSupervisor(papel)) return false;
+  return !regionalId && unidadesAtuacao <= 0;
 }
 
 export type PapelValor = (typeof PAPEIS_USUARIO)[number]['valor'];

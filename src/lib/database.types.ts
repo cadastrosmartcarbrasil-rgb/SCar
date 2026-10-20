@@ -207,6 +207,8 @@ export type UsuarioListado = {
   responsavel_por: number;
   perfil_id: string | null;
   perfil_nome: string | null;
+  /** unidades de atuacao marcadas (supervisor_regionais, 0131) */
+  unidades_atuacao: number;
 };
 
 export type VendedoresRow = Timestamps & {
