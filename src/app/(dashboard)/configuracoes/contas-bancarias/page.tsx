@@ -2,12 +2,13 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Wallet, Landmark, PiggyBank, Banknote } from 'lucide-react';
+import { Plus, Pencil, Trash2, Wallet, Landmark, PiggyBank, Banknote, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { FormField, Input, Select } from '@/components/ui/field';
 import { useContasBancarias, useSaveContaBancaria, useDeleteContaBancaria } from '@/hooks/use-financeiro';
 import type { ContasBancariasRow } from '@/lib/database.types';
+import { ModalOperadoresConta, NomesOperadores } from '@/components/financeiro/operadores-conta';
 
 const TIPOS = [
   { v: 'corrente', l: 'Conta Corrente', icon: Landmark },
@@ -22,6 +23,7 @@ export default function ContasBancariasPage() {
   const excluir = useDeleteContaBancaria();
   const [aberto, setAberto] = useState(false);
   const [ed, setEd] = useState<Partial<ContasBancariasRow> | null>(null);
+  const [operadores, setOperadores] = useState<ContasBancariasRow | null>(null);
 
   function novo() {
     setEd({ nome: '', tipo: 'corrente', ativo: true });
@@ -72,7 +74,11 @@ export default function ContasBancariasPage() {
                   {c.chave_pix && <p className="text-xs text-slate-400">PIX: {c.chave_pix}</p>}
                 </div>
               )}
+              <NomesOperadores contaId={c.id} />
               <div className="mt-3 flex justify-end gap-1 border-t border-slate-100 pt-2">
+                <button onClick={() => setOperadores(c)} className="mr-auto flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-cyan-700 hover:bg-cyan-50" title="Liberar a conta para quem não é da matriz">
+                  <Users className="h-3.5 w-3.5" /> Quem opera
+                </button>
                 <button onClick={() => { setEd(c); setAberto(true); }} className="rounded p-1.5 text-slate-500 hover:bg-slate-100"><Pencil className="h-4 w-4" /></button>
                 <button onClick={() => { if (confirm(`Excluir a conta "${c.nome}"?`)) excluir.mutate(c.id, { onError: (er) => toast.error(er.message) }); }} className="rounded p-1.5 text-rose-500 hover:bg-rose-50"><Trash2 className="h-4 w-4" /></button>
               </div>
@@ -86,6 +92,8 @@ export default function ContasBancariasPage() {
           </div>
         )}
       </div>
+
+      {operadores && <ModalOperadoresConta conta={operadores} onClose={() => setOperadores(null)} />}
 
       <Modal open={aberto} onClose={() => setAberto(false)} title={ed?.id ? 'Editar Conta' : 'Nova Conta'} tamanho="lg">
         <form onSubmit={submit} className="space-y-3">

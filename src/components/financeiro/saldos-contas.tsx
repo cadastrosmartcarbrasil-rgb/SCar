@@ -18,9 +18,7 @@ import {
   useTransferencias,
 } from '@/hooks/use-tesouraria';
 import { useContasBancarias } from '@/hooks/use-financeiro';
-import { useUsuarios } from '@/hooks/use-config';
-import { temAcessoGlobal } from '@/lib/unidade';
-import { rotuloPapel } from '@/lib/usuario';
+import { ListaOperadores, NomesOperadores } from './operadores-conta';
 import { hojeEmSaoPaulo } from '@/lib/baixa-banco';
 import { somarMoeda } from '@/lib/money';
 import { MODOS_MENSALIDADE_OFX, diaAnteriorIso, textosDeMensalidade } from '@/lib/tesouraria';
@@ -151,6 +149,7 @@ function LinhaConta({ s, onConfigurar, onExtrato }: { s: SaldoContaRow; onConfig
       <td className="px-4 py-2.5">
         <p className="font-medium text-slate-900">{s.nome}{!s.ativo && ' (inativa)'}</p>
         <p className="text-xs text-slate-500">{s.banco ?? s.tipo ?? '—'} · {s.movimentos} movimento(s)</p>
+        <NomesOperadores contaId={s.conta_id} />
       </td>
       <td className="px-4 py-2.5 text-right">
         <Dinheiro v={s.saldo_inicial} />
@@ -179,8 +178,8 @@ function LinhaConta({ s, onConfigurar, onExtrato }: { s: SaldoContaRow; onConfig
         <div className="flex justify-end gap-1">
           <button onClick={onExtrato} className="rounded-md px-2 py-1 text-xs font-medium text-cyan-700 hover:bg-cyan-50">Extrato</button>
           {onConfigurar && (
-            <button onClick={onConfigurar} className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100" title="Configurar saldo inicial, OFX e quem opera a conta">
-              <Settings2 className="h-4 w-4" />
+            <button onClick={onConfigurar} className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100" title="Saldo inicial, OFX e quem opera a conta">
+              <Settings2 className="h-3.5 w-3.5" /> Configurar
             </button>
           )}
         </div>
@@ -275,12 +274,9 @@ function ListaTransferencias({ inicio, fim }: { inicio: string; fim: string }) {
 function ModalConfigurarConta({ conta, onClose }: { conta: ContasBancariasRow; onClose: () => void }) {
   const salvar = useConfigurarConta();
   const salvarOperadores = useSalvarOperadoresConta();
-  const { data: usuarios } = useUsuarios();
   const { data: operadoresAtuais } = useOperadoresConta(conta.id);
   const [operadores, setOperadores] = useState<string[] | null>(null);
   const marcados = operadores ?? operadoresAtuais ?? [];
-  // a matriz (admin/financeiro) ja opera todas; a lista e de quem precisa ser liberado
-  const candidatos = (usuarios ?? []).filter((u) => u.ativo && !temAcessoGlobal(u.papel));
   const [saldo, setSaldo] = useState<number | null>(Number(conta.saldo_inicial ?? 0));
   const [em, setEm] = useState(conta.saldo_inicial_em ?? '');
   const [modo, setModo] = useState<ModoMensalidadeOfx>(conta.ofx_mensalidades ?? 'POR_TEXTO');
@@ -338,16 +334,7 @@ function ModalConfigurarConta({ conta, onClose }: { conta: ContasBancariasRow; o
             Quem for marcado vê <b>Contas e Saldos</b> e <b>Extrato e Conciliação</b> só desta conta: importa o OFX,
             concilia e lança. Configurar a conta, o fluxo diário e o DRE continuam só da matriz.
           </p>
-          <div className="mt-2 grid max-h-48 grid-cols-1 gap-1 overflow-y-auto sm:grid-cols-2">
-            {candidatos.map((u) => (
-              <label key={u.id} className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={marcados.includes(u.id)}
-                  onChange={(e) => setOperadores(e.target.checked ? [...marcados, u.id] : marcados.filter((x) => x !== u.id))} />
-                <span>{u.nome} <span className="text-xs text-slate-500">· {rotuloPapel(u.papel)}</span></span>
-              </label>
-            ))}
-            {!candidatos.length && <p className="text-xs text-slate-400">Nenhum usuário ativo fora da matriz.</p>}
-          </div>
+          <div className="mt-2"><ListaOperadores marcados={marcados} onChange={setOperadores} /></div>
         </div>
         {erro && <p className="text-sm text-rose-700">{erro}</p>}
         <div className="flex justify-end gap-2">

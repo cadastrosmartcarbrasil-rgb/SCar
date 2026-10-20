@@ -429,6 +429,22 @@ export function useOperadoresConta(conta: string | null) {
   });
 }
 
+/** Todos os operadores de todas as contas (0126), para mostrar quem opera cada uma. */
+export function useOperadoresTodasContas() {
+  const supabase = createClient();
+  return useQuery({
+    queryKey: [...RAIZ, 'operadores', 'todas'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('conta_bancaria_operadores')
+        .select('conta_bancaria_id, usuario_id');
+      if (error) throw error;
+      const mapa: Record<string, string[]> = {};
+      for (const r of data ?? []) (mapa[r.conta_bancaria_id] ??= []).push(r.usuario_id);
+      return mapa;
+    },
+  });
+}
+
 export function useSalvarOperadoresConta() {
   const supabase = createClient();
   const invalidar = useInvalidar();
