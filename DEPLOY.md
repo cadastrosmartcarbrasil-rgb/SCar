@@ -82,6 +82,9 @@ Aba **Actions → "Publicar em producao" → Run workflow** (o app do GitHub no 
 tem o mesmo botão). Campo *versão* vazio = o commit mais recente; com o sha completo
 de um commit = volta para aquela versão. No fim ele confere que `/login` responde
 200. **Migrations continuam antes, pelo caminho de sempre** — o botão só troca o app.
+- **Antes de tudo: o branch padrão do GitHub tem de ser `claude/claude-md-opcao-x-98kfj5`**
+  (Settings → General → Default branch). O botão *Run workflow* e o modo automático só
+  existem para workflow que está no branch PADRÃO, e hoje o padrão é o branch morto.
 - **Preparar uma vez (no VPS, como root):**
   `cd /opt/scar && git pull origin claude/claude-md-opcao-x-98kfj5 && bash scripts/preparar-deploy-github.sh`
   — cria a chave `~/.ssh/github_deploy`, autoriza-a **presa ao `scripts/deploy-remoto.sh`**
