@@ -29,14 +29,14 @@ export function validarCentroCusto(
 ): string | null {
   if (!chave(c.nome)) return 'Informe o nome do centro de custo.';
   const outros = existentes.filter((e) => e.id !== c.id);
-  if (outros.some((e) => chave(e.nome) === chave(c.nome))) return 'Ja existe um centro de custo com esse nome.';
+  if (outros.some((e) => chave(e.nome) === chave(c.nome))) return 'Já existe um centro de custo com esse nome.';
   if (chave(c.codigo) && outros.some((e) => chave(e.codigo) === chave(c.codigo)))
-    return 'Ja existe um centro de custo com esse codigo.';
+    return 'Já existe um centro de custo com esse código.';
   const original = existentes.find((e) => e.id === c.id);
   if (original && ehCentroDoSistema(original) && chave(c.codigo) !== CODIGO_ASSISTENCIA)
-    return 'O codigo ASSIST24 e usado pela Assistencia 24h e nao pode ser trocado.';
+    return 'O código ASSIST24 e usado pela Assistência 24h e não pode ser trocado.';
   if (!original && chave(c.codigo) === CODIGO_ASSISTENCIA)
-    return 'O codigo ASSIST24 e reservado para a Assistencia 24h.';
+    return 'O código ASSIST24 e reservado para a Assistência 24h.';
   return null;
 }
 

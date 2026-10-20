@@ -5,14 +5,14 @@ export type CategoriaMemo = 'COMUNICADO' | 'SCRIPT' | 'URGENTE';
 export type PrioridadeMemo = 'BAIXA' | 'MEDIA' | 'ALTA';
 
 export const CATEGORIAS: { valor: CategoriaMemo; rotulo: string; descricao: string; cor: string }[] = [
-  { valor: 'COMUNICADO', rotulo: 'Comunicado', descricao: 'Aviso institucional da gestao', cor: 'bg-cyan-50 text-cyan-700' },
-  { valor: 'SCRIPT', rotulo: 'Script / Procedimento', descricao: 'Como atender determinada situacao', cor: 'bg-violet-50 text-violet-700' },
+  { valor: 'COMUNICADO', rotulo: 'Comunicado', descricao: 'Aviso institucional da gestão', cor: 'bg-cyan-50 text-cyan-700' },
+  { valor: 'SCRIPT', rotulo: 'Script / Procedimento', descricao: 'Como atender determinada situação', cor: 'bg-violet-50 text-violet-700' },
   { valor: 'URGENTE', rotulo: 'Urgente', descricao: 'Precisa ser visto agora', cor: 'bg-rose-50 text-rose-700' },
 ];
 
 export const PRIORIDADES: { valor: PrioridadeMemo; rotulo: string; cor: string }[] = [
   { valor: 'ALTA', rotulo: 'Alta', cor: 'bg-rose-50 text-rose-700' },
-  { valor: 'MEDIA', rotulo: 'Media', cor: 'bg-amber-50 text-amber-700' },
+  { valor: 'MEDIA', rotulo: 'Média', cor: 'bg-amber-50 text-amber-700' },
   { valor: 'BAIXA', rotulo: 'Baixa', cor: 'bg-slate-100 text-slate-600' },
 ];
 
@@ -61,7 +61,7 @@ export function ordenarMemos<T extends MemoBase>(memos: T[]): T[] {
 export function resumoLeitura(leituras: number, destinatarios: number): string {
   if (destinatarios <= 0) return `${leituras} leitura(s)`;
   const pct = Math.round((leituras / destinatarios) * 100);
-  return `${leituras} de ${destinatarios} deram ciencia (${pct}%)`;
+  return `${leituras} de ${destinatarios} deram ciência (${pct}%)`;
 }
 
 /**
@@ -76,7 +76,7 @@ export const PAPEIS_MEMO: { valor: string; rotulo: string }[] = [
   { valor: 'financeiro', rotulo: 'Financeiro' },
   { valor: 'sinistro', rotulo: 'Eventos' },
   { valor: 'auditoria', rotulo: 'Auditoria' },
-  { valor: 'assistencia_24h', rotulo: 'Assistencia 24h' },
+  { valor: 'assistencia_24h', rotulo: 'Assistência 24h' },
 ];
 
 /** Espelha `papeis_diretoria()` no banco (0056). */
@@ -101,7 +101,7 @@ export function destinoDoMemo(
     papeis!.length === PAPEIS_DIRETORIA.length &&
     papeis!.every((p) => PAPEIS_DIRETORIA.includes(p));
 
-  if (!regional && soDiretoria) return 'Diretoria / administracao';
+  if (!regional && soDiretoria) return 'Diretoria / administração';
   const onde = regional ?? 'Todas as unidades';
   if (!temPapeis) return onde;
   return `${onde} · ${papeis!.map(papelMemoRotulo).join(', ')}`;

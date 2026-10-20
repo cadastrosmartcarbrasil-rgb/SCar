@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request, { params }: { params: { arquivo: string } }) {
   const tamanho = tamanhoDoArquivo(params.arquivo);
-  if (!tamanho) return new NextResponse('Nao encontrado', { status: 404 });
+  if (!tamanho) return new NextResponse('Não encontrado', { status: 404 });
 
   const reserva = () => NextResponse.redirect(new URL('/logo-smartcar.svg', request.url));
   const url = await logoOficial();

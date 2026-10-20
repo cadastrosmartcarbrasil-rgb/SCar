@@ -13,7 +13,7 @@ import { formatDateTime } from '@/lib/utils';
 import type { AcionamentoAnexosRow, TipoAnexoAcionamento } from '@/lib/database.types';
 
 const TIPOS: { valor: TipoAnexoAcionamento; rotulo: string }[] = [
-  { valor: 'FOTO_VEICULO', rotulo: 'Foto do veiculo' },
+  { valor: 'FOTO_VEICULO', rotulo: 'Foto do veículo' },
   { valor: 'FOTO_LOCAL',   rotulo: 'Foto do local' },
   { valor: 'DOCUMENTO',    rotulo: 'Documento' },
   { valor: 'COMPROVANTE',  rotulo: 'Comprovante' },
@@ -69,7 +69,7 @@ export function AnexosAcionamento({ acionamentoId }: { acionamentoId: string }) 
     try {
       window.open(await urlAssinada.mutateAsync(path), '_blank', 'noopener');
     } catch {
-      toast.error('Nao consegui abrir o arquivo');
+      toast.error('Não consegui abrir o arquivo');
     }
   }
 
@@ -123,7 +123,7 @@ export function AnexosAcionamento({ acionamentoId }: { acionamentoId: string }) 
             Anexar {ROTULO_TIPO[tipo].toLowerCase()}
           </span>
           <span className="text-[11px] text-slate-400">
-            Imagem ou PDF · a foto e reduzida automaticamente (ate {LADO_MAXIMO}px) antes de subir
+            Imagem ou PDF · a foto é reduzida automaticamente (até {LADO_MAXIMO}px) antes de subir
           </span>
         </button>
 
@@ -168,7 +168,7 @@ export function AnexosAcionamento({ acionamentoId }: { acionamentoId: string }) 
                       <p className="tnum truncate text-[10.5px] text-slate-400">
                         {formatDateTime(a.created_at)}
                         {a.tamanho_bytes != null && ` · ${tamanhoLegivel(a.tamanho_bytes)}`}
-                        {quebrou && <span className="font-semibold text-rose-600"> · nao carregou</span>}
+                        {quebrou && <span className="font-semibold text-rose-600"> · não carregou</span>}
                       </p>
                     </div>
                     <button
@@ -218,8 +218,8 @@ export function AnexosAcionamento({ acionamentoId }: { acionamentoId: string }) 
 
         {!isLoading && lista.length === 0 && (
           <p className="text-center text-[11.5px] text-slate-400">
-            Nenhum anexo ainda. A foto do veiculo antes do atendimento e a melhor defesa contra
-            contestacao de avaria.
+            Nenhum anexo ainda. A foto do veículo antes do atendimento e a melhor defesa contra
+            contestação de avaria.
           </p>
         )}
       </div>

@@ -92,11 +92,11 @@ describe('apresentacao', () => {
   it('texto', () => {
     const base = { dias_desde_aviso: 12 };
     expect(textoDoPrazo({ ...base, nivel: 'DOCUMENTACAO_PENDENTE', dias_transcorridos: null, dias_restantes: null }))
-      .toBe('Aguardando documentacao · 12 dia(s) desde o aviso');
+      .toBe('Aguardando documentação · 12 dia(s) desde o aviso');
     expect(textoDoPrazo({ ...base, nivel: 'AVISO', dias_transcorridos: 40, dias_restantes: 50 })).toBe('40 de 90 dias · faltam 50');
     expect(textoDoPrazo({ ...base, nivel: 'CRITICO', dias_transcorridos: 90, dias_restantes: 0 })).toBe('90 de 90 dias · vence HOJE');
     expect(textoDoPrazo({ ...base, nivel: 'VENCIDO', dias_transcorridos: 100, dias_restantes: -10 }))
-      .toBe('100 dias · vencido ha 10 dia(s)');
+      .toBe('100 dias · vencido há 10 dia(s)');
     expect(textoDoPrazo({ ...base, nivel: 'ENCERRADO_NO_PRAZO', dias_transcorridos: 20, dias_restantes: null }))
       .toBe('Encerrado com 20 de 90 dias');
   });
@@ -120,7 +120,7 @@ describe('e-mail da rotina', () => {
     expect(r.map((x) => `${x.evento_id}:${x.marco}`)).toEqual(['1:91', '3:85']);
   });
   it('assunto e linha', () => {
-    expect(assuntoEmailPrazos([a('1', 91), a('3', 85)])).toBe('Prazo regulatorio de eventos (Art. 22): 1 vencido(s) e 1 critico(s)');
+    expect(assuntoEmailPrazos([a('1', 91), a('3', 85)])).toBe('Prazo regulatório de eventos (Art. 22): 1 vencido(s) e 1 critico(s)');
     expect(linhaDoAlerta(a('1', 91, '2026-12-01'))).toBe('EVT-1 · ABC1D23 · FULANO · Matriz · VENCIDO · limite 01/12/2026');
   });
 });

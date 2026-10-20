@@ -46,7 +46,7 @@ function Vazio({ texto }: { texto: string }) {
 function Erro({ error }: { error: unknown }) {
   if (!error) return null;
   const msg = (error as { message?: string })?.message ?? String(error);
-  return <p className="text-sm text-rose-600">Nao foi possivel carregar: {msg}</p>;
+  return <p className="text-sm text-rose-600">Não foi possível carregar: {msg}</p>;
 }
 
 // --- Financeiro ---------------------------------------------------------------
@@ -125,7 +125,7 @@ export function TabelaEventos({ eventos, mostrarPlaca = true }: { eventos: Event
                   {mutual ? (
                     <span className="text-xs text-slate-500">
                       {e.status === 'CONCLUIDO' && e.data_conclusao
-                        ? `Concluido em ${formatDate(e.data_conclusao)}`
+                        ? `Concluído em ${formatDate(e.data_conclusao)}`
                         : ROTULO_SITUACAO_HISTORICO[e.status as SituacaoHistorico]}
                     </span>
                   ) : (
@@ -134,7 +134,7 @@ export function TabelaEventos({ eventos, mostrarPlaca = true }: { eventos: Event
                 </td>
                 <td className="px-4 py-2.5 text-right">
                   {mutual ? (
-                    <span className="text-[11px] text-slate-400">so consulta</span>
+                    <span className="text-[11px] text-slate-400">só consulta</span>
                   ) : (
                     <Link href={`/eventos/${e.id}`} className="inline-flex items-center gap-1 text-xs font-medium text-cyan-700 hover:text-cyan-800">
                       <Settings2 className="h-3.5 w-3.5" /> Gerenciar
@@ -154,12 +154,12 @@ export function EventosCadastro({ clienteId, veiculoId }: Alvo) {
   const { data, isLoading, error } = useEventosCadastro({ clienteId, veiculoId });
   if (isLoading) return <Vazio texto="Carregando..." />;
   if (error) return <Erro error={error} />;
-  if (!data?.length) return <Vazio texto="Nenhum evento registrado — nem no SCar, nem no historico do Mutual." />;
+  if (!data?.length) return <Vazio texto="Nenhum evento registrado — nem no SCar, nem no histórico do Mutual." />;
   const mutual = data.filter((e) => e.origem === 'MUTUAL').length;
   return (
     <div className="space-y-2">
       <p className="text-xs text-slate-500">
-        {data.length} evento(s){mutual ? ` · ${mutual} do historico do Mutual (so consulta)` : ''}
+        {data.length} evento(s){mutual ? ` · ${mutual} do histórico do Mutual (só consulta)` : ''}
       </p>
       <TabelaEventos eventos={data} mostrarPlaca={!veiculoId} />
     </div>
@@ -227,7 +227,7 @@ export function AcionamentosCadastro({ clienteId, veiculoId }: Alvo) {
   const { data, isLoading, error } = useAcionamentosCadastro({ clienteId, veiculoId });
   if (isLoading) return <Vazio texto="Carregando..." />;
   if (error) return <Erro error={error} />;
-  if (!data?.length) return <Vazio texto="Nenhum acionamento da Assistencia 24h." />;
+  if (!data?.length) return <Vazio texto="Nenhum acionamento da Assistência 24h." />;
   const custo = data.filter((a) => a.status !== 'CANCELADO').reduce((s, a) => s + Number(a.valor_total || 0), 0);
   return (
     <div className="space-y-2">
@@ -240,7 +240,7 @@ export function AcionamentosCadastro({ clienteId, veiculoId }: Alvo) {
             <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
               <th className="px-4 py-2.5">Protocolo / OS</th>
               {!veiculoId && <th className="px-4 py-2.5">Veiculo</th>}
-              <th className="px-4 py-2.5">Servico</th>
+              <th className="px-4 py-2.5">Serviço</th>
               <th className="px-4 py-2.5">Prestador</th>
               <th className="px-4 py-2.5">Data</th>
               <th className="px-4 py-2.5 text-right">Valor</th>

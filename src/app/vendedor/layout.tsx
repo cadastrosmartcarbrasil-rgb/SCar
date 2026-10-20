@@ -31,18 +31,18 @@ export default async function VendedorLayout({ children }: { children: React.Rea
       <main className="grid min-h-screen place-items-center bg-fundo px-4">
         <div className="max-w-md rounded-2xl border border-amber-200 bg-superficie p-6 text-center">
           <p className="text-sm font-semibold text-slate-800">
-            {desativado ? 'Acesso desativado' : 'Cadastro de vendedor nao encontrado'}
+            {desativado ? 'Acesso desativado' : 'Cadastro de vendedor não encontrado'}
           </p>
           <p className="mt-1 text-xs leading-relaxed text-slate-500">
             {desativado ? (
               <>
-                O seu acesso foi desativado pela administracao. O seu historico continua no
-                sistema — peca a um administrador para reativa-lo em Configuracoes &rarr; Usuarios.
+                O seu acesso foi desativado pela administração. O seu histórico continua no
+                sistema — peça a um administrador para reativa-lo em Configurações &rarr; Usuários.
               </>
             ) : (
               <>
-                Este login ainda nao esta ligado a um cadastro de vendedor ativo. Peca a sua
-                franquia para vincular o acesso em Configuracoes &rarr; Vendedores.
+                Este login ainda não está ligado a um cadastro de vendedor ativo. Peça a sua
+                franquia para vincular o acesso em Configurações &rarr; Vendedores.
               </>
             )}
           </p>

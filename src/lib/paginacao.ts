@@ -25,5 +25,5 @@ export async function lerTodas<T>(
     todas.push(...linhas);
     if (linhas.length < tamanho) return todas;
   }
-  throw new Error('Leitura paginada passou do limite de paginas — a consulta nao termina.');
+  throw new Error('Leitura paginada passou do limite de páginas — a consulta não termina.');
 }

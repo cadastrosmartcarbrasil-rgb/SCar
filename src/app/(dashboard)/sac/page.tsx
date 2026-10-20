@@ -68,7 +68,7 @@ export default function SacPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">SAC · Atendimento</h1>
-        <p className="mt-0.5 text-sm text-slate-500">Selecione o associado, depois o veiculo. O detalhe carrega ao clicar.</p>
+        <p className="mt-0.5 text-sm text-slate-500">Selecione o associado, depois o veículo. O detalhe carrega ao clicar.</p>
       </div>
 
       {/* Busca global */}
@@ -107,7 +107,7 @@ export default function SacPage() {
         // Erro visivel em vez de tela vazia: dado que nao carregou nao pode
         // passar a impressao de "associado sem veiculo/sem pendencia".
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-          Nao foi possivel carregar o atendimento: {(erro360 as Error).message}
+          Não foi possível carregar o atendimento: {(erro360 as Error).message}
         </div>
       )}
 
@@ -118,7 +118,7 @@ export default function SacPage() {
 
           {/* Abas: Veiculos | Eventos do associado */}
           <div className="flex gap-1 border-b border-slate-200">
-            {([['veiculos', 'Veiculos', Car, v360.veiculos.length], ['eventos', 'Eventos', AlertTriangle, v360.eventos.length], ['protocolos', 'Protocolos', Ticket, null]] as const).map(([id, label, Icon, n]) => (
+            {([['veiculos', 'Veículos', Car, v360.veiculos.length], ['eventos', 'Eventos', AlertTriangle, v360.eventos.length], ['protocolos', 'Protocolos', Ticket, null]] as const).map(([id, label, Icon, n]) => (
               <button key={id} onClick={() => setAba(id)}
                 className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm transition ${aba === id ? 'border-brand-600 font-medium text-brand-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
                 <Icon className="h-4 w-4" /> {label}
@@ -155,7 +155,7 @@ export default function SacPage() {
 // Aba Eventos: sinistros do associado com atalhos de gerenciamento.
 function ListaEventos({ v360 }: { v360: Visao360 }) {
   if (v360.eventos.length === 0) {
-    return <p className="text-sm text-slate-400">Nenhum evento registrado para este associado — nem no SCar, nem no historico do Mutual.</p>;
+    return <p className="text-sm text-slate-400">Nenhum evento registrado para este associado — nem no SCar, nem no histórico do Mutual.</p>;
   }
   // A mesma tabela da ficha do associado e da ficha do veiculo.
   return <TabelaEventos eventos={v360.eventos} />;
@@ -250,7 +250,7 @@ function ModalProtocoloAssociado({ associado, onClose }: { associado: ClientesRo
           <p className="text-[11px] font-semibold uppercase text-slate-400">Associado</p>
           <p className="mt-0.5 font-medium text-slate-700">{associado.nome_razao_social}</p>
           <p className="text-xs text-slate-400">
-            {associado.cpf_cnpj} · protocolo sem veiculo vinculado (assunto geral)
+            {associado.cpf_cnpj} · protocolo sem veículo vinculado (assunto geral)
           </p>
         </div>
 
@@ -265,10 +265,10 @@ function ModalProtocoloAssociado({ associado, onClose }: { associado: ClientesRo
           </Select>
         </FormField>
         <FormField label="Assunto">
-          <Input value={assunto} onChange={(e) => setAssunto(e.target.value)} placeholder="Resumo da solicitacao" />
+          <Input value={assunto} onChange={(e) => setAssunto(e.target.value)} placeholder="Resumo da solicitação" />
         </FormField>
-        <FormField label="Descricao">
-          <Textarea rows={3} value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Detalhe a solicitacao..." />
+        <FormField label="Descrição">
+          <Textarea rows={3} value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Detalhe a solicitação..." />
         </FormField>
 
         <div className="flex justify-end gap-2 pt-1">
@@ -285,11 +285,11 @@ function ModalProtocoloAssociado({ associado, onClose }: { associado: ClientesRo
 // Passo 1: LISTA resumida (tabela leve). So Placa, Marca/Modelo, Ano e Status.
 function ListaVeiculos({ v360, onSelect }: { v360: Visao360; onSelect: (id: string) => void }) {
   if (v360.veiculos.length === 0) {
-    return <p className="text-sm text-slate-400">Este associado nao possui veiculos cadastrados.</p>;
+    return <p className="text-sm text-slate-400">Este associado não possui veículos cadastrados.</p>;
   }
   return (
     <div>
-      <p className="mb-2 text-sm font-semibold text-slate-700">Veiculos ({v360.veiculos.length}) — clique para atender</p>
+      <p className="mb-2 text-sm font-semibold text-slate-700">Veículos ({v360.veiculos.length}) — clique para atender</p>
       <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-superficie shadow-sm">
         <table className="w-full text-sm">
           <thead>
@@ -297,7 +297,7 @@ function ListaVeiculos({ v360, onSelect }: { v360: Visao360; onSelect: (id: stri
               <th className="px-4 py-2.5">Placa</th>
               <th className="px-4 py-2.5">Marca / Modelo</th>
               <th className="px-4 py-2.5">Ano</th>
-              <th className="px-4 py-2.5">Ativacao</th>
+              <th className="px-4 py-2.5">Ativação</th>
               <th className="px-4 py-2.5">Status</th>
               <th className="px-4 py-2.5"></th>
             </tr>
@@ -380,7 +380,7 @@ function AtendimentoVeiculo({ clienteId, associado, veiculoId, podeTrocar, onTro
     if (s.modo === 'termos') { setTermos(true); return; }
     if (s.modo === 'boleto') {
       gerarBoleto.mutate({ cliente_id: clienteId }, {
-        onSuccess: (d) => toast.success(`Faturas da competencia ${d.competencia} prontas (${d.faturas.length})`),
+        onSuccess: (d) => toast.success(`Faturas da competência ${d.competencia} prontas (${d.faturas.length})`),
         onError: (e) => toast.error(e.message),
       });
       return;
@@ -392,18 +392,18 @@ function AtendimentoVeiculo({ clienteId, associado, veiculoId, podeTrocar, onTro
     <div className="space-y-5">
       {podeTrocar && (
         <button onClick={onTrocar} className="inline-flex items-center gap-1 text-sm font-medium text-cyan-700 hover:text-cyan-800">
-          <ChevronLeft className="h-4 w-4" /> Voltar a lista de veiculos
+          <ChevronLeft className="h-4 w-4" /> Voltar a lista de veículos
         </button>
       )}
 
       {isLoading || !veiculo ? (
-        <Card><CardContent className="py-10 text-center text-sm text-slate-400"><Loader2 className="mx-auto h-5 w-5 animate-spin" /> Carregando detalhes do veiculo...</CardContent></Card>
+        <Card><CardContent className="py-10 text-center text-sm text-slate-400"><Loader2 className="mx-auto h-5 w-5 animate-spin" /> Carregando detalhes do veículo...</CardContent></Card>
       ) : (
         <>
           <VeiculoDetalheCard clienteId={clienteId} veiculo={veiculo} />
 
           <div>
-            <p className="mb-2 text-sm font-semibold text-slate-700">O que voce precisa para este veiculo?</p>
+            <p className="mb-2 text-sm font-semibold text-slate-700">O que você precisa para este veículo?</p>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {SERVICOS_SAC.filter((s) => s.modo !== 'termos' || verTermos).map((s) => (
                 <button key={s.id} onClick={() => acionar(s)} disabled={s.modo === 'boleto' && gerarBoleto.isPending}
@@ -423,7 +423,7 @@ function AtendimentoVeiculo({ clienteId, associado, veiculoId, podeTrocar, onTro
           {(atendimentos?.length ?? 0) > 0 && (
             <Card>
               <CardContent className="pt-5">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Atendimentos deste veiculo</p>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Atendimentos deste veículo</p>
                 <ul className="divide-y divide-slate-100">
                   {atendimentos!.map((a) => (
                     <li key={a.id} className="flex items-center justify-between gap-2 py-2 text-sm">
@@ -445,7 +445,7 @@ function AtendimentoVeiculo({ clienteId, associado, veiculoId, podeTrocar, onTro
           {(acionamentos24h?.length ?? 0) > 0 && (
             <Card>
               <CardContent className="pt-5">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Assistencia 24h deste veiculo</p>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Assistência 24h deste veículo</p>
                 <ul className="divide-y divide-slate-100">
                   {acionamentos24h!.map((h) => (
                     <li key={h.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
@@ -466,7 +466,7 @@ function AtendimentoVeiculo({ clienteId, associado, veiculoId, podeTrocar, onTro
                 </ul>
                 <Link href={`/assistencia?placa=${encodeURIComponent(veiculo.placa)}`}
                   className="mt-2 inline-block text-xs font-medium text-cyan-700 hover:underline">
-                  Abrir painel da Assistencia 24h
+                  Abrir painel da Assistência 24h
                 </Link>
               </CardContent>
             </Card>
@@ -535,11 +535,11 @@ function VeiculoDetalheCard({ clienteId, veiculo }: { clienteId: string; veiculo
           {dado('Renavam', veiculo.renavam)}
           {dado('Ano', veiculo.ano_modelo)}
           {dado('Cor', veiculo.cor)}
-          {dado('Combustivel', veiculo.combustivel)}
+          {dado('Combustível', veiculo.combustivel)}
           {dado('Categoria', veiculo.categoria)}
           {dado('FIPE', veiculo.valor_fipe != null ? formatCurrency(veiculo.valor_fipe) : null)}
           {dado('Plano', veiculo.plano_nome)}
-          {dado('Primeira ativacao', ativacao?.data, ativacao?.tempo ? `ha ${ativacao.tempo}` : null)}
+          {dado('Primeira ativação', ativacao?.data, ativacao?.tempo ? `ha ${ativacao.tempo}` : null)}
         </div>
 
         {(veiculo.rastreadora || veiculo.rastreador_imei) && (
@@ -576,7 +576,7 @@ function VeiculoDetalheCard({ clienteId, veiculo }: { clienteId: string; veiculo
         {/* Pendencias do veiculo: o mesmo alerta que aparece no card da lista,
             aqui com o botao de resolver (0030). */}
         <div className="mt-4">
-          <AlertasVeiculo veiculoId={veiculo.id} titulo="Alertas / pendencias deste veiculo" />
+          <AlertasVeiculo veiculoId={veiculo.id} titulo="Alertas / pendências deste veículo" />
         </div>
 
         <FichaExtras veiculoId={veiculo.id} />
@@ -593,10 +593,10 @@ function FichaExtras({ veiculoId }: { veiculoId: string }) {
     <div className="mt-5 grid gap-4 sm:grid-cols-2">
       <div className="rounded-xl border border-slate-200 p-3">
         <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
-          <FileSignature className="h-3.5 w-3.5" /> Contratos de adesao
+          <FileSignature className="h-3.5 w-3.5" /> Contratos de adesão
         </p>
         {(contratos?.length ?? 0) === 0 ? (
-          <p className="text-xs text-slate-400">Nenhum contrato. O termo sera emitido ao concluir a venda (aceite eletronico).</p>
+          <p className="text-xs text-slate-400">Nenhum contrato. O termo será emitido ao concluir a venda (aceite eletrônico).</p>
         ) : (
           <ul className="space-y-1.5">
             {contratos!.map((c) => (
@@ -613,7 +613,7 @@ function FichaExtras({ veiculoId }: { veiculoId: string }) {
           <ClipboardCheck className="h-3.5 w-3.5" /> Vistorias
         </p>
         {(vistorias?.length ?? 0) === 0 ? (
-          <p className="text-xs text-slate-400">Nenhuma vistoria registrada para este veiculo.</p>
+          <p className="text-xs text-slate-400">Nenhuma vistoria registrada para este veículo.</p>
         ) : (
           <ul className="space-y-1.5">
             {vistorias!.map((vi) => (
@@ -683,7 +683,7 @@ function ServicoModal({ servico, veiculo, clienteId, onClose }: {
     <Modal open onClose={onClose} title={servico.titulo} tamanho="lg">
       <form onSubmit={enviar} className="space-y-3">
         <div className="rounded-lg bg-slate-50 p-3 text-sm">
-          <p className="text-[11px] font-semibold uppercase text-slate-400">Veiculo do atendimento</p>
+          <p className="text-[11px] font-semibold uppercase text-slate-400">Veículo do atendimento</p>
           <p className="mt-0.5 font-medium text-slate-700">
             <span className="font-mono">{veiculo.placa}</span> · {[veiculo.marca, veiculo.modelo].filter(Boolean).join(' ')} {veiculo.ano_modelo ?? ''}
           </p>
@@ -691,7 +691,7 @@ function ServicoModal({ servico, veiculo, clienteId, onClose }: {
         </div>
 
         {servico.tipos.length > 1 && (
-          <FormField label="Tipo de solicitacao">
+          <FormField label="Tipo de solicitação">
             <Select value={tipo} onChange={(e) => setTipo(e.target.value as TipoAtendimento)}>
               {servico.tipos.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
             </Select>
@@ -712,14 +712,14 @@ function ServicoModal({ servico, veiculo, clienteId, onClose }: {
         <FormField label="Assunto">
           <Input value={assunto} onChange={(e) => setAssunto(e.target.value)} />
         </FormField>
-        <FormField label="Descricao">
-          <Textarea rows={3} value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Detalhe a solicitacao..." />
+        <FormField label="Descrição">
+          <Textarea rows={3} value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Detalhe a solicitação..." />
         </FormField>
 
         <div className="flex justify-end gap-2 pt-1">
           <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>
           <Button type="submit" disabled={abrir.isPending}>
-            {abrir.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Abrir solicitacao
+            {abrir.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Abrir solicitação
           </Button>
         </div>
       </form>

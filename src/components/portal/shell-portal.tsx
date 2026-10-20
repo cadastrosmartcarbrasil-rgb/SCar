@@ -8,7 +8,7 @@ import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { createClient } from '@/lib/supabase/client';
 
 const ITENS = [
-  { href: '/portal', label: 'Meus veiculos', icon: Car },
+  { href: '/portal', label: 'Meus veículos', icon: Car },
   { href: '/portal/financeiro', label: 'Financeiro', icon: Receipt },
   { href: '/portal/pagamento', label: 'Pagamento', icon: CreditCard },
   { href: '/portal/documentos', label: 'Documentos', icon: FileText },
@@ -44,7 +44,7 @@ export function ShellPortal({ nome, logoUrl, children }: {
             <ThemeToggle />
             <span className="hidden text-right text-[12px] leading-tight text-slate-500 sm:block">
               <span className="block font-semibold text-slate-800">{nome}</span>
-              Area do associado
+              Área do associado
             </span>
             <button
               onClick={sair}

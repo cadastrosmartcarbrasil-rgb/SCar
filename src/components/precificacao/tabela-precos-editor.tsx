@@ -115,9 +115,9 @@ export function TabelaPrecosEditor() {
   }
 
   function salvarTudo() {
-    if (!tipoId) return toast.error('Selecione o tipo de veiculo');
+    if (!tipoId) return toast.error('Selecione o tipo de veículo');
     for (const b of bandas) {
-      if (b.fipe_maximo < b.fipe_minimo) return toast.error('Ha faixa com FIPE maximo menor que o minimo');
+      if (b.fipe_maximo < b.fipe_minimo) return toast.error('Há faixa com FIPE máximo menor que o mínimo');
     }
     const faixas = bandas.flatMap((b) =>
       faixaProdutos.map((p) => ({
@@ -149,7 +149,7 @@ export function TabelaPrecosEditor() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="w-64">
-          <label className="text-xs text-slate-500">Tipo de veiculo</label>
+          <label className="text-xs text-slate-500">Tipo de veículo</label>
           <Select value={tipoId} onChange={(e) => setTipoId(e.target.value)}>
             <option value="">-- Selecione --</option>
             {(tipos ?? []).map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
@@ -178,10 +178,10 @@ export function TabelaPrecosEditor() {
           <div className="flex flex-wrap items-end gap-4">
             <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
               <input type="checkbox" checked={regra.exige} onChange={(e) => setRegra({ ...regra, exige: e.target.checked })} className="h-4 w-4 rounded border-slate-300" />
-              Exige rastreador (gatilho de isencao)
+              Exige rastreador (gatilho de isenção)
             </label>
             <div>
-              <label className="text-xs text-slate-500">Isento ate FIPE (R$)</label>
+              <label className="text-xs text-slate-500">Isento até FIPE (R$)</label>
               <NumInput value={regra.limite} onChange={(v) => setRegra({ ...regra, limite: v })} w="w-28" />
             </div>
             <div>
@@ -203,7 +203,7 @@ export function TabelaPrecosEditor() {
             </Button>
           </div>
           <p className="mt-2 text-xs text-slate-400">
-            Acima do limite FIPE, o rastreador entra automaticamente na cotacao base. Abaixo, e isento (R$ 0).
+            Acima do limite FIPE, o rastreador entra automaticamente na cotação base. Abaixo, e isento (R$ 0).
           </p>
         </div>
       )}
@@ -213,7 +213,7 @@ export function TabelaPrecosEditor() {
       {tipoId && <AdicionalRiscoRegional tipoVeiculoId={tipoId} />}
 
       {!tipoId ? (
-        <p className="text-sm text-slate-400">Selecione um tipo de veiculo para editar a matriz de precos.</p>
+        <p className="text-sm text-slate-400">Selecione um tipo de veículo para editar a matriz de preços.</p>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-slate-200 bg-superficie">
           <table className="w-full text-sm">
@@ -223,7 +223,7 @@ export function TabelaPrecosEditor() {
                 <th className="px-2 py-2">FIPE max</th>
                 {faixaProdutos.map((p) => <th key={p.id} className="px-2 py-2">{p.nome}</th>)}
                 <th className="px-2 py-2">Particip.</th>
-                <th className="px-2 py-2">Adesao (R$)</th>
+                <th className="px-2 py-2">Adesão (R$)</th>
                 <th className="px-2 py-2"></th>
               </tr>
             </thead>
@@ -259,8 +259,8 @@ export function TabelaPrecosEditor() {
         </div>
       )}
       <p className="text-xs text-slate-400">
-        Os valores por produto sao mensais (R$). O reajuste multiplica todos os valores; revise e clique em Salvar.
-        Salvar substitui a tabela do tipo selecionado de forma atomica.
+        Os valores por produto são mensais (R$). O reajuste multiplica todos os valores; revise e clique em Salvar.
+        Salvar substitui a tabela do tipo selecionado de forma atômica.
       </p>
     </div>
   );

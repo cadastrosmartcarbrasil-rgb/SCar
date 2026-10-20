@@ -31,8 +31,8 @@ export function HistoricoEventos() {
       onSuccess: (t) => {
         if (!t) return;
         toast.success(confirmar
-          ? `Historico atualizado: ${inteiro.format(t.gravados)} eventos novos ou alterados.`
-          : `Simulacao: ${inteiro.format(t.importaveis)} de ${inteiro.format(t.lidos)} eventos entram.`);
+          ? `Histórico atualizado: ${inteiro.format(t.gravados)} eventos novos ou alterados.`
+          : `Simulação: ${inteiro.format(t.importaveis)} de ${inteiro.format(t.lidos)} eventos entram.`);
       },
       onError: (e) => toast.error((e as Error).message ?? 'Falha ao importar.'),
     });
@@ -41,20 +41,20 @@ export function HistoricoEventos() {
   return (
     <div className="space-y-4">
       <p className="text-xs leading-relaxed text-slate-500">
-        Traz os eventos/eventos do Mutual dos associados <strong>ja carregados</strong> para o historico do SCar —
+        Traz os eventos/eventos do Mutual dos associados <strong>já carregados</strong> para o histórico do SCar —
         aparecem na aba <strong>Eventos</strong> do SAC, em{' '}
-        <Link href="/eventos?aba=historico" className="font-medium text-cyan-700 underline">Eventos → Historico</Link>{' '}
-        e na Visao Geral. Eles <strong>nao viram evento em aberto</strong>: o Mutual manda o status &quot;ANDAMENTO&quot; em
-        todos, entao so a data de conclusao conta como encerramento. Evento de associado ainda nao carregado fica de fora.
+        <Link href="/eventos?aba=historico" className="font-medium text-cyan-700 underline">Eventos → Histórico</Link>{' '}
+        e na Visão Geral. Eles <strong>não viram evento em aberto</strong>: o Mutual manda o status &quot;ANDAMENTO&quot; em
+        todos, então só a data de conclusão conta como encerramento. Evento de associado ainda não carregado fica de fora.
       </p>
       <ErroLeitura q={q} />
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Numero rotulo="Eventos no historico" valor={inteiro.format(r?.eventos ?? 0)}
-          detalhe={`${inteiro.format(r?.associados ?? 0)} associados · ${inteiro.format(r?.veiculos ?? 0)} veiculos`} />
-        <Numero rotulo="De veiculo fora da base" valor={inteiro.format(r?.sem_veiculo ?? 0)}
+        <Numero rotulo="Eventos no histórico" valor={inteiro.format(r?.eventos ?? 0)}
+          detalhe={`${inteiro.format(r?.associados ?? 0)} associados · ${inteiro.format(r?.veiculos ?? 0)} veículos`} />
+        <Numero rotulo="De veículo fora da base" valor={inteiro.format(r?.sem_veiculo ?? 0)}
           detalhe="carro antigo do associado — fica com a placa" />
-        <Numero rotulo="Periodo" valor={r?.primeiro_evento ? `${formatDate(r.primeiro_evento)} a ${formatDate(r.ultimo_evento)}` : '—'} />
+        <Numero rotulo="Período" valor={r?.primeiro_evento ? `${formatDate(r.primeiro_evento)} a ${formatDate(r.ultimo_evento)}` : '—'} />
         <Numero rotulo="Eventos capturados (EVENT)" valor={inteiro.format(r?.capturados ?? 0)}
           detalhe={r?.ultima_captura ? `captura de ${formatDateTime(r.ultima_captura)}` : 'nunca puxados'} />
       </div>
@@ -62,13 +62,13 @@ export function HistoricoEventos() {
       <div className="flex flex-wrap items-center gap-3">
         <Button onClick={() => rodar(true)} disabled={importar.isPending || !r?.capturados}>
           {importar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldAlert className="h-4 w-4" />}
-          {importar.isPending ? 'Importando…' : 'Importar / atualizar historico'}
+          {importar.isPending ? 'Importando…' : 'Importar / atualizar histórico'}
         </Button>
         <Button variant="secondary" onClick={() => rodar(false)} disabled={importar.isPending || !r?.capturados}>
           Simular
         </Button>
         {r?.ultima_importacao && (
-          <span className="text-xs text-slate-500">Ultima atualizacao: {formatDateTime(r.ultima_importacao)}</span>
+          <span className="text-xs text-slate-500">Última atualização: {formatDateTime(r.ultima_importacao)}</span>
         )}
       </div>
 
@@ -76,9 +76,9 @@ export function HistoricoEventos() {
         <p className="tnum text-xs text-slate-600">
           {inteiro.format(ultimo.lidos)} eventos lidos · <b>{inteiro.format(ultimo.importaveis)} de associados na base</b>
           {importar.variables && <> · <b>{inteiro.format(ultimo.gravados)} gravados</b></>}
-          {' '}· {inteiro.format(ultimo.sem_associado)} de associado ainda nao carregado (ficam de fora)
-          · {inteiro.format(ultimo.sem_veiculo_na_base)} de veiculo fora da base
-          {ultimo.data_invalida > 0 && <> · {inteiro.format(ultimo.data_invalida)} com data invalida (entram sem data)</>}
+          {' '}· {inteiro.format(ultimo.sem_associado)} de associado ainda não carregado (ficam de fora)
+          · {inteiro.format(ultimo.sem_veiculo_na_base)} de veículo fora da base
+          {ultimo.data_invalida > 0 && <> · {inteiro.format(ultimo.data_invalida)} com data inválida (entram sem data)</>}
         </p>
       )}
     </div>

@@ -30,7 +30,7 @@ async function geo<T>(body: unknown): Promise<T> {
     body: JSON.stringify(body),
   });
   if (!r.ok) {
-    throw new Error(((await r.json().catch(() => ({}))) as { error?: string }).error ?? 'Falha no servico de mapas');
+    throw new Error(((await r.json().catch(() => ({}))) as { error?: string }).error ?? 'Falha no serviço de mapas');
   }
   return r.json() as Promise<T>;
 }

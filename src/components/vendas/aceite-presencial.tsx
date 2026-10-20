@@ -64,12 +64,12 @@ export function AceitePresencial({ lead, cotacao, onClose }: {
           </p>
           {adesao > 0 && (
             <p className="mt-0.5 flex items-center justify-between text-slate-600">
-              <span>Adesao (unica)</span> <b className="tnum">{formatCurrency(adesao)}</b>
+              <span>Adesão (única)</span> <b className="tnum">{formatCurrency(adesao)}</b>
             </p>
           )}
           <p className="mt-1.5 text-[11.5px] leading-snug text-slate-600">
-            Leia os valores e o que esta incluso para o cliente antes de registrar. O aceite fica
-            gravado com data, hora e o seu usuario.
+            Leia os valores e o que está incluso para o cliente antes de registrar. O aceite fica
+            gravado com data, hora e o seu usuário.
           </p>
         </div>
 
@@ -87,7 +87,7 @@ export function AceitePresencial({ lead, cotacao, onClose }: {
             inputMode="numeric"
           />
           {documento.length >= 11 && !docValido && (
-            <p className="mt-0.5 text-[11px] text-rose-500">CPF/CNPJ invalido.</p>
+            <p className="mt-0.5 text-[11px] text-rose-500">CPF/CNPJ inválido.</p>
           )}
         </FormField>
 
@@ -98,12 +98,12 @@ export function AceitePresencial({ lead, cotacao, onClose }: {
           />
           <span>
             Declaro que apresentei a proposta e que o cliente, presente neste atendimento,
-            concordou com os valores e com as condicoes acima.
+            concordou com os valores e com as condições acima.
           </span>
         </label>
 
         <p className="text-[11px] leading-snug text-slate-400">
-          Se o cliente preferir aceitar pelo proprio celular, envie o link da proposta pelo
+          Se o cliente preferir aceitar pelo próprio celular, envie o link da proposta pelo
           WhatsApp — o aceite dele entra como &quot;pelo cliente&quot;, com IP e dispositivo.
         </p>
 

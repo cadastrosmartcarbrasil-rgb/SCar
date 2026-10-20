@@ -62,19 +62,19 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
     { id: 'info', label: 'Dados', icon: Info },
     {
       id: 'comunicacoes',
-      label: `Comunicacoes (${(comunicacoes ?? []).filter((c) => c.declaracoes.length > 0).length}/${(comunicacoes ?? []).filter((c) => c.status !== 'REVOGADO').length})`,
+      label: `Comunicações (${(comunicacoes ?? []).filter((c) => c.declaracoes.length > 0).length}/${(comunicacoes ?? []).filter((c) => c.status !== 'REVOGADO').length})`,
       icon: Send,
     },
     {
       id: 'documentos',
-      label: `Documentacao (${(documentos ?? []).filter((d) => d.situacao === 'PENDENTE' && d.obrigatorio).length} pend.)`,
+      label: `Documentação (${(documentos ?? []).filter((d) => d.situacao === 'PENDENTE' && d.obrigatorio).length} pend.)`,
       icon: ListChecks,
     },
     { id: 'terceiros', label: `Terceiros (${terceiros?.length ?? 0})`, icon: Users },
     { id: 'reparo', label: 'Reparo', icon: Wrench },
     { id: 'financeiro', label: 'Financeiro', icon: DollarSign },
     { id: 'anexos', label: 'Anexos', icon: Paperclip },
-    { id: 'historico', label: 'Historico', icon: Clock },
+    { id: 'historico', label: 'Histórico', icon: Clock },
   ];
 
   return (
@@ -127,7 +127,7 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
                 <div className="space-y-5 text-sm">
                   <Secao titulo="Envolvidos e datas">
                     <Campo label="Associado" value={cliente?.nome_razao_social} />
-                    <Campo label="Matricula" value={cliente?.matricula} />
+                    <Campo label="Matrícula" value={cliente?.matricula} />
                     <Campo label="Veiculo" value={`${veiculo?.marca ?? ''} ${veiculo?.modelo ?? ''} - ${veiculo?.placa ?? ''}`} />
                     <Campo label="Contato" value={cliente?.celular || cliente?.telefone} />
                     <Campo label="Papel do associado" value={evento.tipo_envolvimento === 'CAUSADOR' ? 'Causador' : evento.tipo_envolvimento === 'VITIMA' ? 'Vitima' : 'A apurar'} />
@@ -137,7 +137,7 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
                     />
                     <Campo label="Tipo de evento" value={tipoNome} />
                     <Campo label="Data do evento" value={formatDate(evento.data_ocorrencia)} />
-                    <Campo label="Data do aviso (comunicacao)" value={evento.data_comunicacao ? formatDate(evento.data_comunicacao) : '-'} />
+                    <Campo label="Data do aviso (comunicação)" value={evento.data_comunicacao ? formatDate(evento.data_comunicacao) : '-'} />
                     <Campo label="Aberto em" value={formatDate(evento.created_at)} />
                   </Secao>
 
@@ -149,8 +149,8 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
                     <Campo label="CEP" value={local.cep} />
                   </Secao>
 
-                  <Secao titulo="Boletim de Ocorrencia">
-                    <Campo label="Numero" value={evento.bo_numero} />
+                  <Secao titulo="Boletim de Ocorrência">
+                    <Campo label="Número" value={evento.bo_numero} />
                     <Campo label="Data" value={evento.bo_data ? formatDate(evento.bo_data) : '-'} />
                     <Campo label="Unidade" value={evento.bo_unidade} />
                     <div className="col-span-2">
@@ -161,12 +161,12 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
 
                   <Secao titulo="Valores">
                     <Campo label="FIPE atualizado" value={evento.valor_fipe_atualizado != null ? formatCurrency(evento.valor_fipe_atualizado) : '-'} />
-                    <Campo label="Participacao (franquia)" value={evento.valor_participacao != null ? formatCurrency(evento.valor_participacao) : '-'} />
+                    <Campo label="Participação (franquia)" value={evento.valor_participacao != null ? formatCurrency(evento.valor_participacao) : '-'} />
                   </Secao>
 
                   {evento.descricao && (
                     <div>
-                      <dt className="text-slate-500">Descricao / relato</dt>
+                      <dt className="text-slate-500">Descrição / relato</dt>
                       <dd className="text-slate-800">{evento.descricao}</dd>
                     </div>
                   )}
@@ -177,16 +177,16 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
                 <div className="space-y-6">
                   <div>
                     <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
-                      <Wrench className="h-4 w-4" /> Reparo do veiculo (proprio)
+                      <Wrench className="h-4 w-4" /> Reparo do veículo (próprio)
                     </h3>
                     <CotacaoPecas eventoId={eventoId} tipoReparo="PROPRIO" />
                   </div>
                   <div className="border-t border-slate-200 pt-5">
                     <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
-                      <Wrench className="h-4 w-4" /> Reparo de veiculo de terceiro
+                      <Wrench className="h-4 w-4" /> Reparo de veículo de terceiro
                     </h3>
                     <p className="mb-2 text-xs text-slate-500">
-                      Visao geral. Para orcar o reparo de um terceiro especifico, abra o terceiro na aba Terceiros.
+                      Visão geral. Para orçar o reparo de um terceiro específico, abra o terceiro na aba Terceiros.
                     </p>
                     <CotacaoPecas eventoId={eventoId} tipoReparo="TERCEIRO" />
                   </div>
@@ -224,7 +224,7 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
                       <p className="text-[11px] text-slate-400">{formatDate(h.created_at)}</p>
                     </li>
                   ))}
-                  {(historico ?? []).length === 0 && <li className="text-sm text-slate-400">Sem tramitacoes.</li>}
+                  {(historico ?? []).length === 0 && <li className="text-sm text-slate-400">Sem tramitações.</li>}
                 </ol>
               )}
             </div>
@@ -250,7 +250,7 @@ const ACAO_HISTORICO: Record<string, string> = {
   PARECER: 'Parecer registrado',
   TERCEIRO: 'Terceiro cadastrado',
   TERCEIRO_STATUS: 'Tratativa do terceiro alterada',
-  COMUNICACAO: 'Comunicacao do envolvido',
+  COMUNICACAO: 'Comunicação do envolvido',
 };
 
 function nomeDe(usuarios: { id: string; nome: string }[] | undefined, id: string): string {

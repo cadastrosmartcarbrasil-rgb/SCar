@@ -51,7 +51,7 @@ describe('mensagem e baixas', () => {
   it('mensagem de 2a via traz linha e PIX e avisa da substituicao', () => {
     const m = mensagemDoBoleto({ nome: 'MARIA DA SILVA', boletos: [
       { parcela: 1, vencimento: '2026-10-20', valor: 105.5, linha_digitavel: '7489 1', pix_copia_cola: '000201' }] });
-    expect(m).toContain('Ola, Maria!');
+    expect(m).toContain('Olá, Maria!');
     expect(m).toContain('Linha digitavel: 7489 1');
     expect(m).toContain('PIX copia e cola: 000201');
     expect(m).toContain('pague somente este');

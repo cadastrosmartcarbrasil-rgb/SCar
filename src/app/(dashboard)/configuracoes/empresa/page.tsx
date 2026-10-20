@@ -44,14 +44,14 @@ export default function EmpresaPage() {
   async function onCepBlur() {
     if (soDigitos(end.cep ?? '').length !== 8) return;
     const r = await buscarCep(end.cep ?? '');
-    if (!r) return toast.error('CEP nao encontrado');
+    if (!r) return toast.error('CEP não encontrado');
     setEnd({ logradouro: r.logradouro, bairro: r.bairro, cidade: r.cidade, uf: r.estado });
   }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.razao_social) return toast.error('Informe a razao social');
-    if (form.cnpj && !validarCNPJ(form.cnpj)) return toast.error('CNPJ invalido');
+    if (!form.razao_social) return toast.error('Informe a razão social');
+    if (form.cnpj && !validarCNPJ(form.cnpj)) return toast.error('CNPJ inválido');
     salvar.mutate(form, {
       onSuccess: (emp) => {
         toast.success('Empresa salva');
@@ -97,7 +97,7 @@ export default function EmpresaPage() {
               </div>
               <div>
                 <p className="text-sm font-medium text-slate-700">Logomarca</p>
-                <p className="mb-2 text-xs text-slate-400">PNG, JPG ou SVG - ate 5MB</p>
+                <p className="mb-2 text-xs text-slate-400">PNG, JPG ou SVG - até 5MB</p>
                 <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50">
                   <UploadCloud className="h-4 w-4" /> {uploadLogo.isPending ? 'Enviando...' : 'Enviar logo'}
                   <input type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" className="hidden" onChange={(e) => onLogo(e.target.files?.[0])} />
@@ -111,7 +111,7 @@ export default function EmpresaPage() {
             <CardContent className="space-y-4 pt-5">
               <h2 className="text-sm font-semibold text-slate-700">Dados cadastrais</h2>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <FormField label="Razao social *">
+                <FormField label="Razão social *">
                   <Input value={form.razao_social ?? ''} onChange={(e) => setF({ razao_social: e.target.value })} />
                 </FormField>
                 <FormField label="Nome fantasia">
@@ -127,13 +127,13 @@ export default function EmpresaPage() {
                     {cnpjValido === false && <X className="absolute right-2.5 top-2.5 h-4 w-4 text-rose-500" />}
                   </div>
                 </FormField>
-                <FormField label="Inscricao Estadual">
+                <FormField label="Inscrição Estadual">
                   <Input value={form.inscricao_estadual ?? ''} disabled={form.ie_isento} onChange={(e) => setF({ inscricao_estadual: e.target.value })} placeholder={form.ie_isento ? 'Isento' : ''} />
                   <label className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
                     <input type="checkbox" checked={form.ie_isento ?? false} onChange={(e) => setF({ ie_isento: e.target.checked })} /> Isento
                   </label>
                 </FormField>
-                <FormField label="Inscricao Municipal">
+                <FormField label="Inscrição Municipal">
                   <Input value={form.inscricao_municipal ?? ''} disabled={form.im_isento} onChange={(e) => setF({ inscricao_municipal: e.target.value })} placeholder={form.im_isento ? 'Isento' : ''} />
                   <label className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
                     <input type="checkbox" checked={form.im_isento ?? false} onChange={(e) => setF({ im_isento: e.target.checked })} /> Isento
@@ -169,13 +169,13 @@ export default function EmpresaPage() {
           {/* Endereco */}
           <Card>
             <CardContent className="space-y-4 pt-5">
-              <h2 className="flex items-center gap-1.5 text-sm font-semibold text-slate-700"><MapPin className="h-4 w-4" /> Endereco</h2>
+              <h2 className="flex items-center gap-1.5 text-sm font-semibold text-slate-700"><MapPin className="h-4 w-4" /> Endereço</h2>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <FormField label="CEP"><Input value={end.cep ? formatarCEP(end.cep) : ''} onChange={(e) => setEnd({ cep: soDigitos(e.target.value) })} onBlur={onCepBlur} placeholder="00000-000" /></FormField>
                 <FormField label="Logradouro" className="col-span-2 sm:col-span-3"><Input value={end.logradouro ?? ''} onChange={(e) => setEnd({ logradouro: e.target.value })} /></FormField>
               </div>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <FormField label="Numero"><Input value={end.numero ?? ''} onChange={(e) => setEnd({ numero: e.target.value })} /></FormField>
+                <FormField label="Número"><Input value={end.numero ?? ''} onChange={(e) => setEnd({ numero: e.target.value })} /></FormField>
                 <FormField label="Complemento" className="col-span-2 sm:col-span-3"><Input value={end.complemento ?? ''} onChange={(e) => setEnd({ complemento: e.target.value })} /></FormField>
               </div>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -189,9 +189,9 @@ export default function EmpresaPage() {
           {/* Politica de cobranca */}
           <Card>
             <CardContent className="space-y-4 pt-5">
-              <h2 className="text-sm font-semibold text-slate-700">Politica de cobranca</h2>
+              <h2 className="text-sm font-semibold text-slate-700">Política de cobrança</h2>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <FormField label="Tolerancia da inadimplencia (dias)">
+                <FormField label="Tolerância da inadimplência (dias)">
                   <Input
                     type="number"
                     min={0}
@@ -201,11 +201,11 @@ export default function EmpresaPage() {
                   />
                 </FormField>
                 <p className="text-xs text-slate-500 sm:col-span-2 sm:self-center">
-                  Mensalidade em atraso poe o veiculo em <strong>Inadimplente</strong>, que ja
-                  bloqueia todos os beneficios (assistencia 24h, evento, carro reserva). Passados
-                  estes dias sem regularizar, ele vira <strong>Inativo</strong> e a cobranca
-                  encerra. Durante a tolerancia a mensalidade <strong>continua sendo gerada</strong> —
-                  o contrato ainda existe. Use <strong>0</strong> para inativar sem tolerancia.
+                  Mensalidade em atraso põe o veículo em <strong>Inadimplente</strong>, que já
+                  bloqueia todos os benefícios (assistência 24h, evento, carro reserva). Passados
+                  estes dias sem regularizar, ele vira <strong>Inativo</strong> e a cobrança
+                  encerra. Durante a tolerância a mensalidade <strong>continua sendo gerada</strong> —
+                  o contrato ainda existe. Use <strong>0</strong> para inativar sem tolerância.
                 </p>
               </div>
             </CardContent>
@@ -258,17 +258,17 @@ function AbaDiretoria({ empresaId }: { empresaId: string }) {
 
       <Modal open={!!novo} onClose={() => setNovo(null)} title="Novo mandato" tamanho="lg">
         <form onSubmit={(e) => { e.preventDefault();
-            if (!novo?.data_fim || novo.data_fim <= (novo.data_inicio ?? '')) return toast.error('Data fim deve ser posterior a data inicio');
+            if (!novo?.data_fim || novo.data_fim <= (novo.data_inicio ?? '')) return toast.error('Data fim deve ser posterior a data início');
             salvarMandato.mutate(novo, { onSuccess: (m) => { toast.success('Mandato criado'); setMandatoSel(m.id); setNovo(null); }, onError: (er) => toast.error(er.message) }); }}
           className="space-y-3">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <FormField label="Inicio do mandato *"><Input type="date" value={novo?.data_inicio ?? ''} onChange={(e) => setNovo((p) => ({ ...p, data_inicio: e.target.value }))} /></FormField>
+            <FormField label="Início do mandato *"><Input type="date" value={novo?.data_inicio ?? ''} onChange={(e) => setNovo((p) => ({ ...p, data_inicio: e.target.value }))} /></FormField>
             <FormField label="Fim do mandato *"><Input type="date" value={novo?.data_fim ?? ''} onChange={(e) => setNovo((p) => ({ ...p, data_fim: e.target.value }))} /></FormField>
           </div>
           <FormField label="Status">
             <Select value={novo?.status ?? 'VIGENTE'} onChange={(e) => setNovo((p) => ({ ...p, status: e.target.value as MandatosRow['status'] }))}>
               <option value="VIGENTE">Vigente</option>
-              <option value="EM_RENOVACAO">Em Renovacao</option>
+              <option value="EM_RENOVACAO">Em Renovação</option>
               <option value="EXPIRADO">Expirado</option>
             </Select>
           </FormField>
@@ -316,7 +316,7 @@ function MembrosDiretoria({ mandato }: { mandato: MandatosRow }) {
 
       <Modal open={!!ed} onClose={() => setEd(null)} title={ed?.id ? 'Editar membro' : 'Novo membro'} tamanho="lg">
         <form onSubmit={(e) => { e.preventDefault(); if (!ed?.nome_completo) return toast.error('Informe o nome');
-            salvar.mutate(ed, { onSuccess: () => { toast.success('Salvo'); setEd(null); }, onError: (er) => toast.error(er.message.includes('cpf') ? 'CPF invalido' : er.message) }); }}
+            salvar.mutate(ed, { onSuccess: () => { toast.success('Salvo'); setEd(null); }, onError: (er) => toast.error(er.message.includes('cpf') ? 'CPF inválido' : er.message) }); }}
           className="space-y-3">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <FormField label="Cargo *"><Input value={ed?.cargo ?? ''} onChange={(e) => setEd((p) => ({ ...p, cargo: e.target.value }))} placeholder="Presidente, Tesoureiro..." /></FormField>

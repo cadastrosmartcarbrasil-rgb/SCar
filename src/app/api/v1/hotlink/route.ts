@@ -19,10 +19,10 @@ export async function POST(req: Request) {
   const placa = String(body?.placa ?? '').trim().toUpperCase();
   const cpfCnpj = String(body?.cpf_cnpj ?? '').trim();
 
-  if (!codigo) return NextResponse.json({ error: 'Link invalido' }, { status: 400 });
+  if (!codigo) return NextResponse.json({ error: 'Link inválido' }, { status: 400 });
   if (nome.length < 3) return NextResponse.json({ error: 'Informe seu nome' }, { status: 400 });
   if (celular.replace(/\D/g, '').length < 10) {
-    return NextResponse.json({ error: 'Informe um celular valido' }, { status: 400 });
+    return NextResponse.json({ error: 'Informe um celular válido' }, { status: 400 });
   }
 
   const admin = createAdminClient();
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
   const r = data?.[0];
-  if (!r) return NextResponse.json({ error: 'Nao consegui registrar o contato' }, { status: 400 });
+  if (!r) return NextResponse.json({ error: 'Não consegui registrar o contato' }, { status: 400 });
 
   // O visitante nao precisa saber que foi classificado como duplicado ou
   // carteira: recebe uma mensagem honesta, sem expor a regra interna.

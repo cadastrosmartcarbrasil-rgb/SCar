@@ -20,9 +20,9 @@ export function Servicos24h() {
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!edit?.descricao?.trim()) return toast.error('Informe a descricao do servico');
+    if (!edit?.descricao?.trim()) return toast.error('Informe a descrição do serviço');
     salvar.mutate(edit, {
-      onSuccess: () => { toast.success('Servico salvo'); setEdit(null); },
+      onSuccess: () => { toast.success('Serviço salvo'); setEdit(null); },
       onError: (err) => toast.error(err.message),
     });
   }
@@ -35,7 +35,7 @@ export function Servicos24h() {
           (usada em tempo real no painel do atendente).
         </p>
         <Button onClick={() => setEdit({ ativo: true, limite_quantidade: 2, limite_janela_meses: 12, ordem: 0 })}>
-          <Plus className="h-4 w-4" /> Novo servico
+          <Plus className="h-4 w-4" /> Novo serviço
         </Button>
       </div>
 
@@ -43,13 +43,13 @@ export function Servicos24h() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
-              <th className="px-4 py-2">Servico</th>
-              <th className="px-4 py-2 text-right">Valor padrao</th>
+              <th className="px-4 py-2">Serviço</th>
+              <th className="px-4 py-2 text-right">Valor padrão</th>
               <th className="px-4 py-2">KM excedente</th>
               <th className="px-4 py-2">Limite de uso</th>
               <th className="px-4 py-2">Plano de contas</th>
               <th className="px-4 py-2">Status</th>
-              <th className="px-4 py-2 text-right">Acoes</th>
+              <th className="px-4 py-2 text-right">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -60,8 +60,8 @@ export function Servicos24h() {
                 <td className="tnum px-4 py-2 text-right">{formatCurrency(Number(s.valor_padrao))}</td>
                 <td className="px-4 py-2 text-slate-600">
                   {s.cobra_km_excedente
-                    ? `${formatCurrency(Number(s.valor_km_excedente))}/km apos ${s.km_franquia} km`
-                    : <span className="text-slate-400">Nao cobra</span>}
+                    ? `${formatCurrency(Number(s.valor_km_excedente))}/km após ${s.km_franquia} km`
+                    : <span className="text-slate-400">Não cobra</span>}
                 </td>
                 <td className="px-4 py-2 text-slate-600">
                   {s.computa_limite
@@ -87,9 +87,9 @@ export function Servicos24h() {
         </table>
       </div>
 
-      <Modal open={!!edit} onClose={() => setEdit(null)} title={edit?.id ? 'Editar servico 24h' : 'Novo servico 24h'} tamanho="lg">
+      <Modal open={!!edit} onClose={() => setEdit(null)} title={edit?.id ? 'Editar serviço 24h' : 'Novo serviço 24h'} tamanho="lg">
         <form onSubmit={submit} className="space-y-3">
-          <FormField label="Descricao do servico">
+          <FormField label="Descrição do serviço">
             <Input
               value={edit?.descricao ?? ''}
               onChange={(e) => setEdit({ ...edit, descricao: e.target.value })}
@@ -98,7 +98,7 @@ export function Servicos24h() {
           </FormField>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <FormField label="Valor padrao pago ao prestador">
+            <FormField label="Valor padrão pago ao prestador">
               <MoneyInput value={edit?.valor_padrao ?? 0} onChange={(v) => setEdit({ ...edit, valor_padrao: v ?? 0 })} />
             </FormField>
             <FormField label="Plano de contas (contas a pagar)">
@@ -121,11 +121,11 @@ export function Servicos24h() {
                 checked={edit?.cobra_km_excedente ?? false}
                 onChange={(e) => setEdit({ ...edit, cobra_km_excedente: e.target.checked })}
               />
-              Cobranca de KM excedente
+              Cobrança de KM excedente
             </label>
             {edit?.cobra_km_excedente && (
               <div className="mt-2 grid gap-3 sm:grid-cols-2">
-                <FormField label="Valor padrao do KM excedente">
+                <FormField label="Valor padrão do KM excedente">
                   <MoneyInput value={edit?.valor_km_excedente ?? 0} onChange={(v) => setEdit({ ...edit, valor_km_excedente: v ?? 0 })} />
                 </FormField>
                 <FormField label="KM de franquia (inclusos)">
@@ -146,7 +146,7 @@ export function Servicos24h() {
                 checked={edit?.computa_limite ?? false}
                 onChange={(e) => setEdit({ ...edit, computa_limite: e.target.checked })}
               />
-              Computar utilizacao no limite do opcional
+              Computar utilização no limite do opcional
             </label>
             {edit?.computa_limite && (
               <div className="mt-2 grid gap-3 sm:grid-cols-2">
@@ -157,7 +157,7 @@ export function Servicos24h() {
                     onChange={(e) => setEdit({ ...edit, limite_quantidade: Number(e.target.value) })}
                   />
                 </FormField>
-                <FormField label="Periodo (meses, janela flutuante)">
+                <FormField label="Período (meses, janela flutuante)">
                   <Input
                     type="number" min={1}
                     value={edit?.limite_janela_meses ?? 12}
@@ -165,14 +165,14 @@ export function Servicos24h() {
                   />
                 </FormField>
                 <p className="text-xs text-slate-500 sm:col-span-2">
-                  Ex.: 2 utilizacoes a cada 12 meses — o painel do atendente mostra o consumo em tempo real.
+                  Ex.: 2 utilizações a cada 12 meses — o painel do atendente mostra o consumo em tempo real.
                 </p>
               </div>
             )}
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <FormField label="Ordem de exibicao">
+            <FormField label="Ordem de exibição">
               <Input
                 type="number"
                 value={edit?.ordem ?? 0}

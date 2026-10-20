@@ -22,8 +22,8 @@ export default function ComunicadosPage() {
         <p className="max-w-2xl text-sm text-slate-500">
           Mural interno: comunicados, scripts de atendimento e avisos urgentes. Aparecem na{' '}
           <strong>Central do Atendente</strong> (tela do SAC, antes de buscar o associado) para quem
-          for endereçado. Com <strong>leitura obrigatoria</strong>, ficam em destaque ate a pessoa dar
-          ciencia — e voce acompanha quantos leram.
+          for endereçado. Com <strong>leitura obrigatória</strong>, ficam em destaque até a pessoa dar
+          ciência — e você acompanha quantos leram.
         </p>
         <Button onClick={() => setForm(memoVazio())}><Plus className="h-4 w-4" /> Novo comunicado</Button>
       </div>
@@ -34,10 +34,10 @@ export default function ComunicadosPage() {
             <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
               <th className="px-4 py-2">Comunicado</th>
               <th className="px-4 py-2">Para quem</th>
-              <th className="px-4 py-2">Ciencia</th>
+              <th className="px-4 py-2">Ciência</th>
               <th className="px-4 py-2">Conversa</th>
               <th className="px-4 py-2">Publicado</th>
-              <th className="px-4 py-2 text-right">Acoes</th>
+              <th className="px-4 py-2 text-right">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -53,7 +53,7 @@ export default function ComunicadosPage() {
                       <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${pri.cor}`}>{pri.rotulo}</span>
                       {m.exige_leitura && (
                         <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
-                          ciencia obrigatoria
+                          ciência obrigatória
                         </span>
                       )}
                       {!m.publicado && (
@@ -66,13 +66,13 @@ export default function ComunicadosPage() {
                   <td className="px-4 py-2 text-slate-600">
                     {m.regional ?? 'Todas as unidades'}
                     <span className="block text-[11px] text-slate-400">
-                      {m.papeis?.length ? m.papeis.map(papelMemoRotulo).join(', ') : 'Todos os papeis'}
+                      {m.papeis?.length ? m.papeis.map(papelMemoRotulo).join(', ') : 'Todos os papéis'}
                     </span>
                     {/* endereço sem ninguem ativo: o comunicado nao chega a tela de
                         pessoa alguma, e isso precisa aparecer aqui e nao virar duvida */}
                     {m.destinatarios === 0 && (
                       <span className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-rose-600">
-                        <AlertTriangle className="h-3 w-3" /> nenhum usuario ativo neste endereço
+                        <AlertTriangle className="h-3 w-3" /> nenhum usuário ativo neste endereço
                       </span>
                     )}
                   </td>
@@ -101,7 +101,7 @@ export default function ComunicadosPage() {
                   </td>
                   <td className="px-4 py-2 text-slate-600">
                     {formatDate(m.publicado_em)}
-                    {m.expira_em && <span className="block text-[11px] text-slate-400">ate {formatDate(m.expira_em)}</span>}
+                    {m.expira_em && <span className="block text-[11px] text-slate-400">até {formatDate(m.expira_em)}</span>}
                   </td>
                   <td className="px-4 py-2">
                     <div className="flex justify-end gap-1">

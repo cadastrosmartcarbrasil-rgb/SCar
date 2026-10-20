@@ -21,10 +21,10 @@ export default function ComissoesVendedorPage() {
 
   function exportar() {
     baixarCsv(`minhas-comissoes-${periodo.inicio}-a-${periodo.fim}.csv`, [
-      ['Data', 'Placa', 'Associado', 'Tipo', 'Valor', 'Situacao'],
+      ['Data', 'Placa', 'Associado', 'Tipo', 'Valor', 'Situação'],
       ...(comissoes ?? []).map((c) => [
         c.created_at.slice(0, 10), c.placa ?? '', c.associado ?? '',
-        c.is_adesao ? 'Adesao' : 'Recorrente', Number(c.valor_comissao), c.status_pagamento,
+        c.is_adesao ? 'Adesão' : 'Recorrente', Number(c.valor_comissao), c.status_pagamento,
       ]),
     ]);
   }
@@ -32,19 +32,19 @@ export default function ComissoesVendedorPage() {
   return (
     <div className="space-y-4">
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Minhas comissoes</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Minhas comissões</h1>
         <p className="mt-0.5 text-sm text-slate-500">
-          O que voce tem a receber e o que ja foi pago.
+          O que você tem a receber e o que já foi pago.
         </p>
       </header>
 
       <div className="grid gap-3 sm:grid-cols-3">
         <Indicador titulo="A receber" valor={totais.pendente} icon={HandCoins} tom="alerta"
-          detalhe="Ainda nao repassado pela franquia" carregando={isLoading} />
-        <Indicador titulo="Recebido no periodo" valor={totais.pago} icon={Wallet} tom="receita"
-          detalhe="Ja pago a voce" carregando={isLoading} />
-        <Indicador titulo="Total no periodo" valor={totais.total} icon={HandCoins} tom="neutro"
-          detalhe={`${formatCurrency(totais.adesao)} de adesao · ${formatCurrency(totais.recorrente)} recorrente`}
+          detalhe="Ainda não repassado pela franquia" carregando={isLoading} />
+        <Indicador titulo="Recebido no período" valor={totais.pago} icon={Wallet} tom="receita"
+          detalhe="Já pago a você" carregando={isLoading} />
+        <Indicador titulo="Total no período" valor={totais.total} icon={HandCoins} tom="neutro"
+          detalhe={`${formatCurrency(totais.adesao)} de adesão · ${formatCurrency(totais.recorrente)} recorrente`}
           carregando={isLoading} />
       </div>
 
@@ -66,8 +66,8 @@ export default function ComissoesVendedorPage() {
           ) : (comissoes ?? []).length === 0 ? (
             <Vazio
               icon={HandCoins}
-              titulo="Nenhuma comissao no periodo"
-              descricao="A comissao aparece aqui quando a sua venda entra na base e o titulo e liquidado."
+              titulo="Nenhuma comissão no período"
+              descricao="A comissão aparece aqui quando a sua venda entra na base e o título e liquidado."
             />
           ) : (
             <div className="-mx-4 overflow-x-auto sm:mx-0">
@@ -79,7 +79,7 @@ export default function ComissoesVendedorPage() {
                     <th className="py-2.5 font-semibold">Placa</th>
                     <th className="py-2.5 font-semibold">Tipo</th>
                     <th className="py-2.5 text-right font-semibold">Valor</th>
-                    <th className="py-2.5 font-semibold">Situacao</th>
+                    <th className="py-2.5 font-semibold">Situação</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -92,7 +92,7 @@ export default function ComissoesVendedorPage() {
                         <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
                           c.is_adesao ? 'bg-cyan-50 text-cyan-700' : 'bg-slate-100 text-slate-600'
                         }`}>
-                          {c.is_adesao ? 'Adesao' : 'Recorrente'}
+                          {c.is_adesao ? 'Adesão' : 'Recorrente'}
                         </span>
                       </td>
                       <td className="tnum py-2.5 text-right font-semibold text-slate-800">
@@ -117,9 +117,9 @@ export default function ComissoesVendedorPage() {
       </Card>
 
       <p className="rounded-xl border border-slate-200 bg-superficie px-3 py-2.5 text-[11.5px] leading-relaxed text-slate-500">
-        A adesao recebida por voce <b>na hora</b> fica integralmente com voce e nao passa pelo
-        financeiro da empresa — por isso ela nao aparece neste extrato. O que esta aqui e o que a
-        empresa recebeu (boleto, PIX ou cartao) e vai repassar a voce.
+        A adesão recebida por você <b>na hora</b> fica integralmente com você e não passa pelo
+        financeiro da empresa — por isso ela não aparece neste extrato. O que está aqui é o que a
+        empresa recebeu (boleto, PIX ou cartão) e vai repassar a você.
       </p>
     </div>
   );

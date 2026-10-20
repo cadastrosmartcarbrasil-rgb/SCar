@@ -49,7 +49,7 @@ export default function VendasPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-slate-900 md:text-2xl">Vendas / CRM</h1>
-          <p className="text-sm text-slate-500">Leads, cotacoes e esteira de aprovacao.</p>
+          <p className="text-sm text-slate-500">Leads, cotações e esteira de aprovação.</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex rounded-xl border border-slate-200 bg-superficie p-0.5">
@@ -195,7 +195,7 @@ export default function VendasPage() {
         <div className="flex flex-col items-center gap-2 pt-1">
           <p className="text-[11.5px] text-slate-400">
             {(leads ?? []).length} lead{(leads ?? []).length > 1 ? 's' : ''} em tela
-            {(leads ?? []).length >= limite ? ' — ha mais alem deste ponto' : ''}
+            {(leads ?? []).length >= limite ? ' — há mais além deste ponto' : ''}
           </p>
           {(leads ?? []).length >= limite && (
             <button

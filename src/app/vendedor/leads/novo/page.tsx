@@ -22,7 +22,7 @@ export default function NovoLeadVendedorPage() {
       p_placa: d.placa ?? null,
     });
     if (error) throw error;
-    if (!id) throw new Error('Nao consegui criar o lead');
+    if (!id) throw new Error('Não consegui criar o lead');
 
     const { error: erroFicha } = await supabase
       .from('leads')

@@ -41,9 +41,9 @@ interface Estado {
 }
 
 const MOTIVOS: Record<string, { titulo: string; texto: string }> = {
-  LINK_INVALIDO: { titulo: 'Link nao encontrado', texto: 'Confira se o endereco veio completo na mensagem. Se continuar assim, fale com a nossa central.' },
-  LINK_EXPIRADO: { titulo: 'Este link expirou', texto: 'Por seguranca o link vale por alguns dias. Peca um novo a nossa central — leva um minuto.' },
-  LINK_REVOGADO: { titulo: 'Este link foi cancelado', texto: 'A nossa central cancelou este link. Se ainda precisa enviar informacoes, peca um novo.' },
+  LINK_INVALIDO: { titulo: 'Link não encontrado', texto: 'Confira se o endereço veio completo na mensagem. Se continuar assim, fale com a nossa central.' },
+  LINK_EXPIRADO: { titulo: 'Este link expirou', texto: 'Por segurança o link vale por alguns dias. Peça um novo a nossa central — leva um minuto.' },
+  LINK_REVOGADO: { titulo: 'Este link foi cancelado', texto: 'A nossa central cancelou este link. Se ainda precisa enviar informações, peça um novo.' },
 };
 
 async function chamar<T = Record<string, unknown>>(corpo: Record<string, unknown>): Promise<T> {
@@ -51,7 +51,7 @@ async function chamar<T = Record<string, unknown>>(corpo: Record<string, unknown
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo),
   });
   const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(j.error ?? 'Nao foi possivel concluir agora');
+  if (!r.ok) throw new Error(j.error ?? 'Não foi possível concluir agora');
   return j as T;
 }
 
@@ -116,7 +116,7 @@ export function ComunicacaoPublica({ token, logoUrl }: { token: string; logoUrl:
     form.append('file', file);
     const r = await fetch('/api/v1/comunicar/anexo', { method: 'POST', body: form });
     const j = await r.json().catch(() => ({}));
-    if (!r.ok) { toast.error(j.error ?? 'Nao consegui enviar o arquivo'); return; }
+    if (!r.ok) { toast.error(j.error ?? 'Não consegui enviar o arquivo'); return; }
     setAnexos((a) => [...a, { id: j.id, pose: pose.codigo, nome_original: file.name }]);
     toast.success('Arquivo recebido');
   }
@@ -134,7 +134,7 @@ export function ComunicacaoPublica({ token, logoUrl }: { token: string; logoUrl:
       if (timer.current) clearTimeout(timer.current);
       await chamar({ acao: 'enviar', token, dados, declarou });
       try { localStorage.removeItem(CHAVE_LOCAL(token)); } catch { /* ok */ }
-      toast.success('Comunicacao enviada');
+      toast.success('Comunicação enviada');
       await ler();
       window.scrollTo({ top: 0 });
     } catch (err) { toast.error((err as Error).message); }
@@ -145,7 +145,7 @@ export function ComunicacaoPublica({ token, logoUrl }: { token: string; logoUrl:
 
   return (
     <div className="flex min-h-screen flex-col bg-fundo">
-      <CabecalhoMarca logoUrl={logoUrl} subtitulo="Comunicacao de evento" />
+      <CabecalhoMarca logoUrl={logoUrl} subtitulo="Comunicação de evento" />
       <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-6">
         {!estado && (
           <div className="flex items-center justify-center gap-2 py-20 text-slate-500">
@@ -163,27 +163,27 @@ export function ComunicacaoPublica({ token, logoUrl }: { token: string; logoUrl:
           <div className="space-y-4">
             <div className="rounded-2xl border border-slate-200 bg-superficie p-4">
               <p className="text-lg font-semibold text-slate-900">
-                {primeiroNome ? `Ola, ${primeiroNome}!` : 'Ola!'}
+                {primeiroNome ? `Olá, ${primeiroNome}!` : 'Olá!'}
               </p>
               <p className="mt-1 text-sm text-slate-600">
                 Protocolo <span className="font-mono font-semibold">{estado.protocolo}</span>
                 {estado.papel && !ehTerceiro(estado.papel) && estado.papel !== 'testemunha'
                   && estado.data_evento && <> · evento de {formatDate(estado.data_evento)}</>}
               </p>
-              {estado.papel && <p className="mt-1 text-xs text-slate-500">Voce esta informando como: {rotuloPapel(estado.papel)}</p>}
+              {estado.papel && <p className="mt-1 text-xs text-slate-500">Você está informando como: {rotuloPapel(estado.papel)}</p>}
               <p className="mt-2 text-sm text-slate-600">
-                Comunique o quanto antes. Preencha o que souber — as informacoes ficam salvas enquanto voce preenche.
+                Comunique o quanto antes. Preencha o que souber — as informações ficam salvas enquanto você preenche.
               </p>
             </div>
 
             {['ENVIADO', 'CONFERIDO'].includes(estado.status ?? '') && (
-              <Aviso icone="ok" titulo="Recebemos a sua comunicacao">
+              <Aviso icone="ok" titulo="Recebemos a sua comunicação">
                 <p>Obrigado! A nossa equipe vai analisar e entra em contato se precisar de algo mais.</p>
                 <dl className="mt-3 grid grid-cols-1 gap-1 text-xs sm:grid-cols-2">
                   <div><dt className="text-slate-500">Protocolo</dt><dd className="font-mono">{estado.protocolo}</dd></div>
                   <div><dt className="text-slate-500">Enviado em</dt><dd>{estado.enviado_em ? new Date(estado.enviado_em).toLocaleString('pt-BR') : '—'}</dd></div>
-                  <div><dt className="text-slate-500">Versao</dt><dd>{estado.versao ?? 1}</dd></div>
-                  <div className="sm:col-span-2"><dt className="text-slate-500">Codigo de conferencia</dt><dd className="break-all font-mono">{estado.hash}</dd></div>
+                  <div><dt className="text-slate-500">Versão</dt><dd>{estado.versao ?? 1}</dd></div>
+                  <div className="sm:col-span-2"><dt className="text-slate-500">Código de conferência</dt><dd className="break-all font-mono">{estado.hash}</dd></div>
                 </dl>
                 <p className="mt-3 text-xs text-slate-500">
                   {estado.papel && ehTerceiro(estado.papel) ? TEXTOS.naoReconheceTerceiro : TEXTOS.naoReconhece}
@@ -201,14 +201,14 @@ export function ComunicacaoPublica({ token, logoUrl }: { token: string; logoUrl:
               !aceitouAviso ? (
                 <div className="rounded-2xl border border-slate-200 bg-superficie p-4">
                   <p className="flex items-center gap-2 font-semibold text-slate-900">
-                    <ShieldCheck className="h-5 w-5 text-cyan-600" /> Antes de comecar
+                    <ShieldCheck className="h-5 w-5 text-cyan-600" /> Antes de começar
                   </p>
                   <p className="mt-2 text-sm text-slate-600">{TEXTOS.privacidade}</p>
                   <button
                     onClick={() => setAceitouAviso(true)}
                     className="mt-4 w-full rounded-xl bg-acao px-4 py-3 font-semibold text-white hover:bg-acao-escura"
                   >
-                    Entendi, comecar
+                    Entendi, começar
                   </button>
                 </div>
               ) : estado.precisa_verificar ? (
@@ -236,7 +236,7 @@ export function ComunicacaoPublica({ token, logoUrl }: { token: string; logoUrl:
 
             {estado.expira_em && editavel && (
               <p className="text-center text-xs text-slate-500">
-                Este link vale ate {new Date(estado.expira_em).toLocaleDateString('pt-BR')}.
+                Este link vale até {new Date(estado.expira_em).toLocaleDateString('pt-BR')}.
               </p>
             )}
           </div>
@@ -263,14 +263,14 @@ function Verificacao({ token, estado, onOk }: { token: string; estado: Estado; o
       });
       if (r.ok) { await onOk(); return; }
       if (r.motivo === 'BLOQUEADO') setBloqueado(true);
-      else toast.error('Os dados nao conferem. Confira e tente de novo.');
+      else toast.error('Os dados não conferem. Confira e tente de novo.');
     } catch (err) { toast.error((err as Error).message); }
     finally { setEnviando(false); }
   }
 
   if (bloqueado) {
     return (
-      <Aviso icone="alerta" titulo="Confirmacao bloqueada">
+      <Aviso icone="alerta" titulo="Confirmação bloqueada">
         Foram muitas tentativas. Fale com a nossa central para receber um link novo.
       </Aviso>
     );
@@ -278,11 +278,11 @@ function Verificacao({ token, estado, onOk }: { token: string; estado: Estado; o
 
   return (
     <form onSubmit={confirmar} className="space-y-3 rounded-2xl border border-slate-200 bg-superficie p-4">
-      <p className="font-semibold text-slate-900">Confirme que e voce</p>
+      <p className="font-semibold text-slate-900">Confirme que é você</p>
       <p className="text-sm text-slate-600">
         {seis
-          ? 'Digite os 6 primeiros numeros do seu CPF.'
-          : 'Digite os 3 primeiros numeros do seu CPF e a sua data de nascimento.'}
+          ? 'Digite os 6 primeiros números do seu CPF.'
+          : 'Digite os 3 primeiros números do seu CPF e a sua data de nascimento.'}
       </p>
       <input
         inputMode="numeric" autoComplete="off" maxLength={seis ? 6 : 3} required

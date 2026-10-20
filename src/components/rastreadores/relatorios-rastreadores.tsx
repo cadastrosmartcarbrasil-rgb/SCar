@@ -80,13 +80,13 @@ export function RelatoriosRastreadores() {
 
       {/* Posicao por unidade */}
       <section className="rounded-lg border border-slate-200 bg-superficie p-4">
-        <h2 className="mb-3 text-sm font-semibold text-slate-700">Posicao de estoque por unidade</h2>
+        <h2 className="mb-3 text-sm font-semibold text-slate-700">Posição de estoque por unidade</h2>
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
               <th className="py-2">Unidade</th><th className="py-2">Total</th>
               <th className="py-2">Instalados</th><th className="py-2">Em estoque</th>
-              <th className="py-2">Instalacoes</th><th className="py-2 text-right">Dias medios em estoque</th>
+              <th className="py-2">Instalações</th><th className="py-2 text-right">Dias médios em estoque</th>
             </tr>
           </thead>
           <tbody>

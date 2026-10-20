@@ -23,10 +23,10 @@ const semana = (iso: string) => DIA_SEMANA[new Date(`${iso}T12:00:00Z`).getUTCDa
 const compacto = (v: number) => (Math.abs(v) >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(Math.round(v)));
 
 const ATALHOS = [
-  { r: 'Proximos 15 dias', a: 0, b: 15 },
-  { r: 'Proximos 30 dias', a: 0, b: 30 },
+  { r: 'Próximos 15 dias', a: 0, b: 15 },
+  { r: 'Próximos 30 dias', a: 0, b: 30 },
   { r: '7 dias atras + 30 a frente', a: -7, b: 30 },
-  { r: 'Ultimos 30 dias', a: -30, b: 0 },
+  { r: 'Últimos 30 dias', a: -30, b: 0 },
 ];
 
 /**
@@ -62,9 +62,9 @@ export function FluxoDiario() {
   }));
 
   const tabela = () => ({
-    titulo: 'Fluxo de caixa diario',
-    subtitulo: `${dataBR(inicio)} a ${dataBR(fim)} · saldo inicial ${Number(saldoIni ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} · realizado ate ${dataBR(hoje)}, previsto depois`,
-    cabecalho: ['Dia', 'Semana', 'Situacao', 'Recebido', 'Pago', 'A receber', 'Boletos previstos', 'A pagar', 'Vencido a pagar', 'Entradas', 'Saidas', 'Resultado', 'Saldo'],
+    titulo: 'Fluxo de caixa diário',
+    subtitulo: `${dataBR(inicio)} a ${dataBR(fim)} · saldo inicial ${Number(saldoIni ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} · realizado até ${dataBR(hoje)}, previsto depois`,
+    cabecalho: ['Dia', 'Semana', 'Situação', 'Recebido', 'Pago', 'A receber', 'Boletos previstos', 'A pagar', 'Vencido a pagar', 'Entradas', 'Saídas', 'Resultado', 'Saldo'],
     linhas: proj.map((d) => [
       dataBR(d.dia), semana(d.dia), d.situacao === 'passado' ? 'Realizado' : d.situacao === 'hoje' ? 'Hoje' : 'A realizar',
       d.realizado_entrada, d.realizado_saida, d.previsto_entrada, d.previsto_boletos, d.previsto_saida, d.vencido_saida,
@@ -92,16 +92,16 @@ export function FluxoDiario() {
           <input type="date" value={inicio} onChange={(e) => setInicio(e.target.value)} className="tnum mt-1 block rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm" />
         </label>
         <label className="block">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Ate</span>
+          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Até</span>
           <input type="date" value={fim} onChange={(e) => setFim(e.target.value)} className="tnum mt-1 block rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm" />
         </label>
         <SeletorConta value={conta} onChange={setConta} className="min-w-[200px]" />
         <label className="block">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Vencido e nao pago</span>
+          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Vencido e não pago</span>
           <select className={SELECT_CLS} value={vencidos} onChange={(e) => setVencidos(e.target.value as typeof vencidos)}>
-            <option value="saidas">Contar so os pagamentos atrasados (prudente)</option>
+            <option value="saidas">Contar só os pagamentos atrasados (prudente)</option>
             <option value="tudo">Contar pagamentos e recebimentos atrasados</option>
-            <option value="nenhum">Nao contar atrasados</option>
+            <option value="nenhum">Não contar atrasados</option>
           </select>
         </label>
         <label className="flex items-center gap-1.5 pb-2 text-sm text-slate-600">
@@ -112,23 +112,23 @@ export function FluxoDiario() {
 
       {conta && (
         <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
-          Com uma conta escolhida o fluxo mostra so o realizado dela: os lancamentos a realizar ainda nao tem conta definida
-          e aparecem apenas na visao consolidada.
+          Com uma conta escolhida o fluxo mostra só o realizado dela: os lançamentos a realizar ainda não tem conta definida
+          e aparecem apenas na visão consolidada.
         </p>
       )}
       {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{mensagemErro(error)}</p>}
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <Indicador titulo="Saldo hoje" valor={saldoHoje} icon={Landmark} tom={saldoHoje < 0 ? 'despesa' : 'destaque'} carregando={isLoading} />
-        <Indicador titulo="Recebido no periodo" valor={tot.realizadoEntrada} icon={ArrowUpCircle} tom="receita" carregando={isLoading}
+        <Indicador titulo="Recebido no período" valor={tot.realizadoEntrada} icon={ArrowUpCircle} tom="receita" carregando={isLoading}
           detalhe={`Pago: ${formatCurrency(tot.realizadoSaida)}`} />
         <Indicador titulo="A receber" valor={tot.previstoEntrada + (comBoletos ? tot.previstoBoletos : 0)} icon={CalendarClock} tom="receita"
           detalhe={comBoletos ? `inclui ${formatCurrency(tot.previstoBoletos)} de boletos a vencer` : 'sem os boletos de mensalidade'} carregando={isLoading} />
         <Indicador titulo="A pagar" valor={tot.previstoSaida + (vencidos !== 'nenhum' ? tot.vencidoSaida : 0)} icon={ArrowDownCircle} tom="despesa"
-          detalhe={tot.vencidoSaida ? `${formatCurrency(tot.vencidoSaida)} ja vencido` : 'nada vencido'} carregando={isLoading} />
+          detalhe={tot.vencidoSaida ? `${formatCurrency(tot.vencidoSaida)} já vencido` : 'nada vencido'} carregando={isLoading} />
         <Indicador titulo={`Saldo projetado em ${dataBR(fim)}`} valor={saldoFinal} icon={negativo ? AlertTriangle : Landmark}
           tom={saldoFinal < 0 ? 'despesa' : 'neutro'} carregando={isLoading}
-          detalhe={negativo ? `fica negativo em ${dataBR(negativo.dia)}` : 'nao fica negativo no periodo'} />
+          detalhe={negativo ? `fica negativo em ${dataBR(negativo.dia)}` : 'não fica negativo no período'} />
       </div>
 
       <Card>
@@ -149,19 +149,19 @@ export function FluxoDiario() {
               </ComposedChart>
             </ResponsiveContainer>
           </div>
-          <p className="mt-2 text-xs text-slate-500">Ate hoje as barras sao o realizado; depois, o previsto. A linha e o saldo no fim de cada dia.</p>
+          <p className="mt-2 text-xs text-slate-500">Até hoje as barras são o realizado; depois, o previsto. A linha e o saldo no fim de cada dia.</p>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>Grade diaria</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Grade diária</CardTitle></CardHeader>
         <CardContent className="overflow-x-auto p-0">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-3 py-2">Dia</th>
                 <th className="px-3 py-2 text-right">Entradas</th>
-                <th className="px-3 py-2 text-right">Saidas</th>
+                <th className="px-3 py-2 text-right">Saídas</th>
                 <th className="px-3 py-2 text-right">Resultado</th>
                 <th className="px-3 py-2 text-right">Saldo</th>
                 <th className="px-3 py-2">Carga do dia</th>

@@ -23,11 +23,11 @@ export type SecaoComunicacao =
   | 'fotos' | 'vitimas' | 'final';
 
 export const PAPEIS_COMUNICACAO: { valor: PapelComunicacao; rotulo: string; descricao: string }[] = [
-  { valor: 'associado', rotulo: 'Associado', descricao: 'Titular do veiculo protegido' },
-  { valor: 'condutor_associado', rotulo: 'Condutor do veiculo do associado', descricao: 'Outra pessoa dirigindo o veiculo protegido' },
-  { valor: 'terceiro_condutor', rotulo: 'Terceiro (condutor)', descricao: 'Quem dirigia o outro veiculo' },
-  { valor: 'terceiro_proprietario', rotulo: 'Terceiro (proprietario)', descricao: 'Dono do outro veiculo ou bem, se nao era quem dirigia' },
-  { valor: 'passageiro_vitima', rotulo: 'Passageiro / vitima', descricao: 'Passageiro, pedestre ou ciclista' },
+  { valor: 'associado', rotulo: 'Associado', descricao: 'Titular do veículo protegido' },
+  { valor: 'condutor_associado', rotulo: 'Condutor do veículo do associado', descricao: 'Outra pessoa dirigindo o veículo protegido' },
+  { valor: 'terceiro_condutor', rotulo: 'Terceiro (condutor)', descricao: 'Quem dirigia o outro veículo' },
+  { valor: 'terceiro_proprietario', rotulo: 'Terceiro (proprietário)', descricao: 'Dono do outro veículo ou bem, se não era quem dirigia' },
+  { valor: 'passageiro_vitima', rotulo: 'Passageiro / vítima', descricao: 'Passageiro, pedestre ou ciclista' },
   { valor: 'testemunha', rotulo: 'Testemunha', descricao: 'Quem presenciou o evento' },
 ];
 
@@ -52,7 +52,7 @@ export const ROTULO_SECAO: Record<SecaoComunicacao, string> = {
   veiculo: 'Veiculo',
   evento: 'O que aconteceu',
   condutor: 'Quem dirigia',
-  veiculo_terceiro: 'O outro veiculo',
+  veiculo_terceiro: 'O outro veículo',
   fotos: 'Fotos e documentos',
   vitimas: 'Pessoas feridas',
   final: 'Croqui e envio',
@@ -71,7 +71,7 @@ const P = (codigo: string, nome: string, instrucao: string, tipo = 'FOTO_VEICULO
   ({ codigo, nome, instrucao, tipo, documento });
 
 const POSES_VEICULO_ASSOCIADO: PoseComunicacao[] = [
-  P('FRENTE', 'Frente do veiculo', 'De frente, a uns 3 metros, pegando o carro inteiro.'),
+  P('FRENTE', 'Frente do veículo', 'De frente, a uns 3 metros, pegando o carro inteiro.'),
   P('TRASEIRA', 'Traseira', 'De tras, a uns 3 metros.'),
   P('LATERAL_ESQ', 'Lateral esquerda', 'Do lado do motorista, pegando o carro inteiro.'),
   P('LATERAL_DIR', 'Lateral direita', 'Do lado do passageiro, pegando o carro inteiro.'),
@@ -83,8 +83,8 @@ const POSES_VEICULO_ASSOCIADO: PoseComunicacao[] = [
 
 const DOC = {
   CNH: P('CNH', 'CNH de quem dirigia', 'Frente da CNH aberta, legivel.', 'CNH', true),
-  CRLV: P('CRLV', 'Documento do veiculo (CRLV)', 'O documento inteiro, legivel.', 'CRLV', true),
-  BO: P('BO', 'Boletim de ocorrencia', 'Se ja tiver, foto ou PDF do boletim.', 'BOLETIM_OCORRENCIA', true),
+  CRLV: P('CRLV', 'Documento do veículo (CRLV)', 'O documento inteiro, legivel.', 'CRLV', true),
+  BO: P('BO', 'Boletim de ocorrência', 'Se já tiver, foto ou PDF do boletim.', 'BOLETIM_OCORRENCIA', true),
 };
 
 export const POSES_POR_PAPEL: Record<PapelComunicacao, PoseComunicacao[]> = {
@@ -92,13 +92,13 @@ export const POSES_POR_PAPEL: Record<PapelComunicacao, PoseComunicacao[]> = {
   condutor_associado: [...POSES_VEICULO_ASSOCIADO, DOC.CNH, DOC.BO],
   terceiro_condutor: [
     P('PLACA', 'Placa do seu veiculo', 'A placa legivel.'),
-    P('DANO', 'Dano no seu veiculo', 'De perto, mostrando bem a parte danificada.', 'FOTO_AVARIA'),
-    P('GERAL', 'Visao geral', 'Os dois veiculos, se ainda estiverem no local.', 'FOTO_LOCAL'),
+    P('DANO', 'Dano no seu veículo', 'De perto, mostrando bem a parte danificada.', 'FOTO_AVARIA'),
+    P('GERAL', 'Visão geral', 'Os dois veículos, se ainda estiverem no local.', 'FOTO_LOCAL'),
     DOC.CNH, DOC.CRLV, DOC.BO,
   ],
   terceiro_proprietario: [
     P('PLACA', 'Placa do seu veiculo', 'A placa legivel.'),
-    P('DANO', 'Dano no seu veiculo ou bem', 'De perto, mostrando bem a parte danificada.', 'FOTO_AVARIA'),
+    P('DANO', 'Dano no seu veículo ou bem', 'De perto, mostrando bem a parte danificada.', 'FOTO_AVARIA'),
     DOC.CRLV,
   ],
   passageiro_vitima: [],
@@ -106,7 +106,7 @@ export const POSES_POR_PAPEL: Record<PapelComunicacao, PoseComunicacao[]> = {
 };
 
 export const POSE_CROQUI: PoseComunicacao =
-  P('CROQUI', 'Croqui (desenho do evento)', 'Desenhe num papel como os veiculos estavam e fotografe.', 'CROQUI');
+  P('CROQUI', 'Croqui (desenho do evento)', 'Desenhe num papel como os veículos estavam e fotografe.', 'CROQUI');
 
 export const OPCOES = {
   natureza: ['Colisao', 'Capotamento', 'Furto', 'Roubo', 'Incendio', 'Fenomeno da natureza', 'Danos a terceiros', 'Outro'],
@@ -203,7 +203,7 @@ export const ROTULO_SITUACAO: Record<SituacaoComunicacao, { texto: string; cor: 
   ABERTO: { texto: 'Aguardando', cor: 'bg-slate-100 text-slate-700' },
   EM_PREENCHIMENTO: { texto: 'Preenchendo', cor: 'bg-cyan-50 text-cyan-800' },
   ENVIADO: { texto: 'Recebida', cor: 'bg-emerald-50 text-emerald-700' },
-  CORRECAO: { texto: 'Correcao pedida', cor: 'bg-amber-50 text-amber-800' },
+  CORRECAO: { texto: 'Correção pedida', cor: 'bg-amber-50 text-amber-800' },
   CONFERIDO: { texto: 'Conferida', cor: 'bg-emerald-100 text-emerald-800' },
   REVOGADO: { texto: 'Cancelado', cor: 'bg-rose-50 text-rose-700' },
   EXPIRADO: { texto: 'Link vencido', cor: 'bg-rose-50 text-rose-700' },
@@ -215,21 +215,21 @@ export function linkComunicacao(origem: string, token: string): string {
 
 /** Mensagem do WhatsApp. Ao terceiro, nada de associado nem de valores. */
 export function mensagemComunicacao(p: { papel: string; nome?: string | null; protocolo?: string | null; link: string }): string {
-  const ola = p.nome ? `Ola, ${p.nome.split(' ')[0]}!` : 'Ola!';
+  const ola = p.nome ? `Olá, ${p.nome.split(' ')[0]}!` : 'Olá!';
   const proto = p.protocolo ? ` (protocolo ${p.protocolo})` : '';
   const pedido = ehTerceiro(p.papel) || p.papel === 'testemunha' || p.papel === 'passageiro_vitima'
-    ? `A Smart Car Brasil esta registrando um evento de transito${proto} em que voce esteve envolvido(a). Pedimos que conte o que aconteceu e, se puder, envie fotos por este link:`
-    : `Recebemos a comunicacao do evento com o seu veiculo${proto}. Para agilizar, conte o que aconteceu e envie as fotos por este link:`;
-  return `${ola} ${pedido}\n${p.link}\nLeva poucos minutos e voce pode parar e continuar depois. Comunique o quanto antes.`;
+    ? `A Smart Car Brasil esta registrando um evento de transito${proto} em que você esteve envolvido(a). Pedimos que conte o que aconteceu e, se puder, envie fotos por este link:`
+    : `Recebemos a comunicação do evento com o seu veículo${proto}. Para agilizar, conte o que aconteceu e envie as fotos por este link:`;
+  return `${ola} ${pedido}\n${p.link}\nLeva poucos minutos e você pode parar e continuar depois. Comunique o quanto antes.`;
 }
 
 export const TEXTOS = {
-  privacidade: 'A Smart Car Brasil Protecao Patrimonial Mutualista coleta estes dados para apurar o evento ocorrido, registrar o protocolo e exercer seus direitos. Voce informa somente o que sabe. Seus dados sao usados para essa finalidade e guardados pelo prazo necessario.',
-  declaracao: 'Declaro que as informacoes prestadas sao verdadeiras e completas, e autorizo a Smart Car Brasil a verifica-las junto aos orgaos competentes e aos demais envolvidos.',
-  naoReconhece: 'Esta comunicacao nao e reconhecimento de responsabilidade, de culpa nem de cobertura. A analise e feita depois, conforme o contrato e o regulamento.',
-  naoReconheceTerceiro: 'Esta comunicacao nao e reconhecimento de responsabilidade nem de culpa. A analise e feita depois pela Smart Car Brasil.',
-  relato: 'Conte so o que voce viu e fez, em ordem. Nao precisa dizer de quem foi a culpa.',
-  equipe: 'Registrado pela equipe da Smart Car Brasil com as informacoes prestadas pelo envolvido.',
+  privacidade: 'A Smart Car Brasil Proteção Patrimonial Mutualista coleta estes dados para apurar o evento ocorrido, registrar o protocolo e exercer seus direitos. Você informa somente o que sabe. Seus dados são usados para essa finalidade e guardados pelo prazo necessário.',
+  declaracao: 'Declaro que as informações prestadas são verdadeiras e completas, e autorizo a Smart Car Brasil a verifica-las junto aos órgãos competentes e aos demais envolvidos.',
+  naoReconhece: 'Esta comunicação não é reconhecimento de responsabilidade, de culpa nem de cobertura. A análise é feita depois, conforme o contrato e o regulamento.',
+  naoReconheceTerceiro: 'Esta comunicação não é reconhecimento de responsabilidade nem de culpa. A análise é feita depois pela Smart Car Brasil.',
+  relato: 'Conte só o que você viu e fez, em ordem. Não precisa dizer de quem foi a culpa.',
+  equipe: 'Registrado pela equipe da Smart Car Brasil com as informações prestadas pelo envolvido.',
 } as const;
 
 /** Palavras que nao aparecem para o envolvido (teste varre os textos). */
@@ -268,21 +268,21 @@ export function linhasDaDeclaracao(papel: PapelComunicacao, d: DadosComunicacao)
   const sim = (b?: boolean) => (b === undefined ? '' : b ? 'Sim' : 'Nao');
   const id = d.identificacao ?? {}; const e = d.evento ?? {}; const c = d.condutor ?? {}; const v = d.veiculo_terceiro ?? {};
   const blocos: { secao: string; itens: [string, string | undefined][] }[] = [
-    { secao: 'Identificacao', itens: [['Nome', id.nome], ['CPF/CNPJ', id.cpf], ['Telefone', id.telefone], ['E-mail', id.email], ['Cidade/UF', [id.cidade, id.uf].filter(Boolean).join('/')]] },
+    { secao: 'Identificação', itens: [['Nome', id.nome], ['CPF/CNPJ', id.cpf], ['Telefone', id.telefone], ['E-mail', id.email], ['Cidade/UF', [id.cidade, id.uf].filter(Boolean).join('/')]] },
   ];
   const s = SECOES_POR_PAPEL[papel];
   if (s.includes('veiculo')) blocos.push({ secao: 'Veiculo', itens: [['Km aproximado', d.veiculo?.km]] });
   if (s.includes('evento')) blocos.push({ secao: 'O evento', itens: [
-    ['Data', e.data], ['Hora', e.hora], ['Endereco', e.endereco], ['Referencia', e.referencia],
+    ['Data', e.data], ['Hora', e.hora], ['Endereço', e.endereco], ['Referência', e.referencia],
     ['Cidade/UF', [e.cidade, e.uf].filter(Boolean).join('/')], ['Natureza', e.natureza], ['Colidiu com', e.colidiu_com],
-    ['Via', e.via], ['Pista', e.pista], ['Luz', e.luz], ['Sinalizacao', e.sinalizacao], ['Velocidade', e.velocidade],
-    ['Boletim de ocorrencia', [e.bo_numero, e.bo_orgao].filter(Boolean).join(' · ')], ['Relato', e.relato],
+    ['Via', e.via], ['Pista', e.pista], ['Luz', e.luz], ['Sinalização', e.sinalizacao], ['Velocidade', e.velocidade],
+    ['Boletim de ocorrência', [e.bo_numero, e.bo_orgao].filter(Boolean).join(' · ')], ['Relato', e.relato],
   ] });
   if (s.includes('condutor')) blocos.push({ secao: 'Quem dirigia', itens: [
     ['Era o titular', sim(c.e_titular)], ['Nome', c.nome], ['CPF', c.cpf], ['Habilitado', sim(c.habilitado)],
     ['CNH', [c.cnh_numero, c.cnh_categoria, c.cnh_validade].filter(Boolean).join(' · ')], ['Uso', c.uso],
   ] });
-  if (s.includes('veiculo_terceiro')) blocos.push({ secao: 'O outro veiculo', itens: [
+  if (s.includes('veiculo_terceiro')) blocos.push({ secao: 'O outro veículo', itens: [
     ['Placa', v.placa], ['Marca/modelo', v.marca_modelo], ['Cor', v.cor],
     ['Tem protecao/seguro', sim(v.tem_protecao)], ['Empresa', v.empresa_protecao], ['Contrato', v.contrato_protecao],
   ] });

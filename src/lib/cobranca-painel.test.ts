@@ -93,7 +93,7 @@ describe('leitura automatica', () => {
   it('carteira cresce e inadimplencia cai = positivo', () => {
     const anterior = { ...base, valor_emitido: 500, valor_aberto_vencido: 400 };
     const f = leituraAutomatica(base, anterior);
-    expect(f.some((x) => x.tom === 'positivo' && x.texto.includes('cresceu e a inadimplencia caiu'))).toBe(true);
+    expect(f.some((x) => x.tom === 'positivo' && x.texto.includes('cresceu e a inadimplência caiu'))).toBe(true);
   });
   it('sem dado nao fala', () => {
     expect(leituraAutomatica(null, null)).toEqual([]);

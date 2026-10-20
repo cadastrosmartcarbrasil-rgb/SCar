@@ -16,7 +16,7 @@ import { numeroValido, ultimosDigitos, validarCartao } from '@/lib/cartao';
 export async function POST(request: Request) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Sessao expirada.' }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'Sessão expirada.' }, { status: 401 });
 
   const body = await request.json().catch(() => null);
   const numero = String(body?.numero ?? '').replace(/\D/g, '');
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   const erro = validarCartao({ numero, nome, validade, cvv });
   if (erro) return NextResponse.json({ error: erro }, { status: 400 });
   if (!numeroValido(numero)) {
-    return NextResponse.json({ error: 'Confira o numero do cartao' }, { status: 400 });
+    return NextResponse.json({ error: 'Confira o número do cartão' }, { status: 400 });
   }
 
   const [mes, ano] = validade.replace(/\D/g, '').match(/.{1,2}/g) ?? [];
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     .select('id, nome_razao_social, cpf_cnpj, email, telefone, endereco')
     .eq('auth_user_id', user.id)
     .maybeSingle();
-  if (!cliente) return NextResponse.json({ error: 'Cadastro nao encontrado.' }, { status: 404 });
+  if (!cliente) return NextResponse.json({ error: 'Cadastro não encontrado.' }, { status: 404 });
 
   const endereco = (cliente.endereco ?? {}) as Record<string, string>;
 
@@ -85,7 +85,7 @@ export async function POST(request: Request) {
     // A mensagem do gateway pode conter detalhe tecnico: nao vai crua ao cliente.
     console.error('[portal/cartao] falha ao tokenizar', (e as Error).name);
     return NextResponse.json(
-      { error: 'Nao consegui validar o cartao agora. Confira os dados ou tente mais tarde.' },
+      { error: 'Não consegui validar o cartão agora. Confira os dados ou tente mais tarde.' },
       { status: 400 },
     );
   }

@@ -43,17 +43,17 @@ export default function AssociadoPanel({ params }: { params: { id: string } }) {
   const verTermos = usePode('termos.ver');
 
   if (isLoading) return <p className="text-sm text-slate-500">Carregando painel...</p>;
-  if (!associado) return <p className="text-sm text-slate-500">Associado nao encontrado.</p>;
+  if (!associado) return <p className="text-sm text-slate-500">Associado não encontrado.</p>;
 
   const abas: { id: Aba; label: string; icon: React.ElementType }[] = [
     { id: 'dados', label: 'Dados', icon: UserRound },
-    { id: 'veiculos', label: 'Veiculos', icon: Car },
+    { id: 'veiculos', label: 'Veículos', icon: Car },
     { id: 'financeiro', label: 'Financeiro', icon: DollarSign },
     { id: 'eventos', label: 'Eventos', icon: AlertTriangle },
     { id: 'protocolos', label: 'Protocolos', icon: ClipboardList },
-    { id: 'assistencia', label: 'Assistencia 24h', icon: LifeBuoy },
+    { id: 'assistencia', label: 'Assistência 24h', icon: LifeBuoy },
     ...(verTermos ? [{ id: 'termos' as Aba, label: 'Termos', icon: FileSignature }] : []),
-    { id: 'comunicacoes', label: 'Comunicacoes', icon: MessagesSquare },
+    { id: 'comunicacoes', label: 'Comunicações', icon: MessagesSquare },
   ];
 
   return (
@@ -70,7 +70,7 @@ export default function AssociadoPanel({ params }: { params: { id: string } }) {
         <div className="flex-1">
           <h1 className="text-xl font-semibold text-slate-900">{associado.nome_razao_social}</h1>
           <p className="text-sm text-slate-500">
-            Matricula <span className="font-mono text-brand-600">{associado.matricula ?? '-'}</span> ·{' '}
+            Matrícula <span className="font-mono text-brand-600">{associado.matricula ?? '-'}</span> ·{' '}
             {associado.cpf_cnpj ? formatarDocumento(associado.cpf_cnpj, associado.tipo_pessoa) : '-'} ·{' '}
             {associado.celular || associado.telefone || associado.email || 'sem contato'}
           </p>
@@ -125,15 +125,15 @@ function AbaVeiculos({ associadoId }: { associadoId: string }) {
     <Card>
       <CardContent className="space-y-3 pt-5">
         <div className="flex items-center justify-between">
-          <p className="text-sm text-slate-500">Veiculos vinculados a este associado. Clique num veiculo para abrir o cadastro dele.</p>
+          <p className="text-sm text-slate-500">Veículos vinculados a este associado. Clique num veículo para abrir o cadastro dele.</p>
           <Link href="/veiculos" className="inline-flex items-center gap-1 rounded-md bg-acao px-3 py-1.5 text-sm text-white hover:bg-acao-escura">
-            <Plus className="h-4 w-4" /> Novo veiculo
+            <Plus className="h-4 w-4" /> Novo veículo
           </Link>
         </div>
         {isLoading ? (
           <p className="text-sm text-slate-400">Carregando...</p>
         ) : (veiculos ?? []).length === 0 ? (
-          <p className="text-sm text-slate-400">Nenhum veiculo vinculado.</p>
+          <p className="text-sm text-slate-400">Nenhum veículo vinculado.</p>
         ) : (
           <table className="w-full text-sm">
             <thead>
@@ -141,7 +141,7 @@ function AbaVeiculos({ associadoId }: { associadoId: string }) {
                 <th className="py-2">Placa</th>
                 <th className="py-2">Veiculo</th>
                 <th className="py-2">FIPE</th>
-                <th className="py-2">Situacao</th>
+                <th className="py-2">Situação</th>
                 <th className="py-2"></th>
               </tr>
             </thead>
@@ -153,7 +153,7 @@ function AbaVeiculos({ associadoId }: { associadoId: string }) {
                     key={v.id}
                     onClick={() => router.push(`/veiculos/${v.id}`)}
                     className="cursor-pointer border-b border-slate-50 hover:bg-slate-50"
-                    title="Abrir o cadastro do veiculo"
+                    title="Abrir o cadastro do veículo"
                   >
                     <td className="py-2 font-mono font-medium text-brand-600">{v.placa}</td>
                     <td className="py-2">{[v.marca, v.modelo].filter(Boolean).join(' ') || '-'}</td>
@@ -204,14 +204,14 @@ function AbaComunicacoes({ associadoId }: { associadoId: string }) {
         </div>
 
         <p className="rounded-md bg-sky-50 p-3 text-xs text-sky-700">
-          O envio de e-mail, SMS e WhatsApp sera construido em breve. Esta aba ja registra e exibe o
-          historico de comunicacoes enviadas ao associado.
+          O envio de e-mail, SMS e WhatsApp será construído em breve. Esta aba já registra e exibe o
+          histórico de comunicações enviadas ao associado.
         </p>
 
         {isLoading ? (
           <p className="text-sm text-slate-400">Carregando...</p>
         ) : (comunicacoes ?? []).length === 0 ? (
-          <p className="text-sm text-slate-400">Nenhuma comunicacao registrada.</p>
+          <p className="text-sm text-slate-400">Nenhuma comunicação registrada.</p>
         ) : (
           <table className="w-full text-sm">
             <thead>

@@ -68,7 +68,7 @@ export function FaturasCompetencia() {
           toast.success(
             r.faturas_geradas > 0
               ? `${r.faturas_geradas} fatura(s) geradas — ${formatCurrency(r.valor_total)} (${r.associados} associados)`
-              : 'Nenhuma fatura nova: a competencia ja estava gerada',
+              : 'Nenhuma fatura nova: a competência já estava gerada',
           );
         },
         onError: (e) => toast.error(e.message),
@@ -83,8 +83,8 @@ export function FaturasCompetencia() {
         onSuccess: (r) =>
           toast.success(
             r.titulos_emitidos > 0
-              ? `${r.titulos_emitidos} titulo(s) emitidos — ${formatCurrency(r.valor_total)}`
-              : 'Nenhuma fatura aberta sem titulo',
+              ? `${r.titulos_emitidos} título(s) emitidos — ${formatCurrency(r.valor_total)}`
+              : 'Nenhuma fatura aberta sem título',
           ),
         onError: (e) => toast.error(e.message),
       },
@@ -96,7 +96,7 @@ export function FaturasCompetencia() {
       {/* Filtros + acoes do lote */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-wrap items-end gap-3">
-          <FormField label="Competencia">
+          <FormField label="Competência">
             <Input type="month" value={mes} onChange={(e) => setMes(e.target.value || mesAtual())} />
           </FormField>
           <FormField label="Regional">
@@ -120,10 +120,10 @@ export function FaturasCompetencia() {
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" onClick={emitirTitulosLote} disabled={emitirLote.isPending || kpis.semTitulo === 0}>
-            <FileText className="h-4 w-4" /> Emitir titulos ({kpis.semTitulo})
+            <FileText className="h-4 w-4" /> Emitir títulos ({kpis.semTitulo})
           </Button>
           <Button onClick={() => setGerando(true)}>
-            <PlayCircle className="h-4 w-4" /> Gerar cobrancas
+            <PlayCircle className="h-4 w-4" /> Gerar cobranças
           </Button>
         </div>
       </div>
@@ -153,8 +153,8 @@ export function FaturasCompetencia() {
               <th className="px-4 py-2">Vencimento</th>
               <th className="px-4 py-2 text-right">Valor</th>
               <th className="px-4 py-2">Status</th>
-              <th className="px-4 py-2">Titulo</th>
-              <th className="px-4 py-2 text-right">Acoes</th>
+              <th className="px-4 py-2">Título</th>
+              <th className="px-4 py-2 text-right">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -164,7 +164,7 @@ export function FaturasCompetencia() {
             {!isLoading && (faturas ?? []).length === 0 && (
               <tr>
                 <td colSpan={7} className="px-4 py-8 text-center text-slate-400">
-                  Nenhuma fatura em {rotuloCompetencia(competencia)}. Use &quot;Gerar cobrancas&quot;.
+                  Nenhuma fatura em {rotuloCompetencia(competencia)}. Use &quot;Gerar cobranças&quot;.
                 </td>
               </tr>
             )}
@@ -176,7 +176,7 @@ export function FaturasCompetencia() {
                 onToggle={() => setExpandida(expandida === f.id ? null : f.id)}
                 onEmitir={() =>
                   emitirUma.mutate(f.id, {
-                    onSuccess: () => toast.success('Titulo emitido'),
+                    onSuccess: () => toast.success('Título emitido'),
                     onError: (e) => toast.error(e.message),
                   })
                 }
@@ -192,19 +192,19 @@ export function FaturasCompetencia() {
         </table>
       </div>
 
-      <Modal open={gerando} onClose={() => setGerando(false)} title={`Gerar cobrancas — ${rotuloCompetencia(competencia)}`}>
+      <Modal open={gerando} onClose={() => setGerando(false)} title={`Gerar cobranças — ${rotuloCompetencia(competencia)}`}>
         <div className="space-y-3 text-sm text-slate-600">
           <p>
-            Gera a fatura de cada associado com veiculo em vigencia (ativo, em evento ou vistoria
-            pendente) na competencia, respeitando o modo de faturamento de cada veiculo:
+            Gera a fatura de cada associado com veículo em vigência (ativo, em evento ou vistoria
+            pendente) na competência, respeitando o modo de faturamento de cada veículo:
           </p>
           <ul className="list-disc space-y-1 pl-5">
-            <li><strong>Agrupado</strong>: uma fatura por associado, no dia de vencimento mais usado entre os veiculos.</li>
-            <li><strong>Individual</strong>: uma fatura por veiculo, no dia de vencimento da ficha dele.</li>
-            <li>Valor = mensalidade da ficha do veiculo; sem ela, o motor de precos (plano + opcionais).</li>
+            <li><strong>Agrupado</strong>: uma fatura por associado, no dia de vencimento mais usado entre os veículos.</li>
+            <li><strong>Individual</strong>: uma fatura por veículo, no dia de vencimento da ficha dele.</li>
+            <li>Valor = mensalidade da ficha do veículo; sem ela, o motor de preços (plano + opcionais).</li>
           </ul>
           <p className="rounded-lg bg-slate-50 p-3 text-xs">
-            A operacao e <strong>idempotente</strong>: faturas ja emitidas nesta competencia nao sao
+            A operação e <strong>idempotente</strong>: faturas já emitidas nesta competência não são
             recriadas nem alteradas. Regional: <strong>{regionais?.find((r) => r.id === regionalId)?.nome ?? 'Todas'}</strong>.
           </p>
           <div className="flex justify-end gap-2 pt-1">
@@ -272,7 +272,7 @@ function FaturaLinha({
           <div className="flex justify-end gap-1">
             {fatura.status === 'ABERTA' && !fatura.titulo_id && (
               <Button variant="ghost" className="px-2 py-1 text-xs" onClick={onEmitir}>
-                <FileText className="h-3.5 w-3.5" /> Emitir titulo
+                <FileText className="h-3.5 w-3.5" /> Emitir título
               </Button>
             )}
             {fatura.status !== 'PAGA' && fatura.status !== 'CANCELADA' && (
@@ -286,7 +286,7 @@ function FaturaLinha({
       {aberta && agrupada && (
         <tr className="border-b border-slate-50 bg-slate-50/60">
           <td colSpan={7} className="px-8 py-2">
-            <p className="mb-1 text-xs uppercase tracking-wide text-slate-400">Veiculos da fatura</p>
+            <p className="mb-1 text-xs uppercase tracking-wide text-slate-400">Veículos da fatura</p>
             <ul className="space-y-1 text-sm text-slate-600">
               {(itens ?? []).map((i) => (
                 <li key={i.id} className="flex justify-between border-b border-slate-100 py-1 last:border-0">

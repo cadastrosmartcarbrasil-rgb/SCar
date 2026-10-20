@@ -24,15 +24,15 @@ import type { FotoVistoriaModelo } from '@/lib/database.types';
  */
 const MOTIVOS: Record<string, { titulo: string; texto: string }> = {
   LINK_INVALIDO: {
-    titulo: 'Link nao encontrado',
-    texto: 'Confira se o endereco veio completo na mensagem. Se continuar assim, fale com o seu consultor.',
+    titulo: 'Link não encontrado',
+    texto: 'Confira se o endereço veio completo na mensagem. Se continuar assim, fale com o seu consultor.',
   },
   LINK_EXPIRADO: {
     titulo: 'Este link expirou',
-    texto: 'Por seguranca o link vale por alguns dias. Peca um novo ao seu consultor — leva um minuto.',
+    texto: 'Por segurança o link vale por alguns dias. Peça um novo ao seu consultor — leva um minuto.',
   },
   ATENDIMENTO_ENCERRADO: {
-    titulo: 'Vistoria ja concluida',
+    titulo: 'Vistoria já concluída',
     texto: 'Este atendimento foi finalizado. Se precisar enviar fotos novas, fale com o seu consultor.',
   },
 };
@@ -74,7 +74,7 @@ export function VistoriaPublica({
 
       const res = await fetch('/api/v1/vistoria/foto', { method: 'POST', body: form });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body?.error || 'Nao consegui enviar a foto');
+      if (!res.ok) throw new Error(body?.error || 'Não consegui enviar a foto');
 
       setPoses(body.poses ?? []);
       toast.success('Foto recebida!');
@@ -105,8 +105,8 @@ export function VistoriaPublica({
           {nome ? `${nome.split(' ')[0]}, ` : ''}vamos fotografar o seu carro
         </h1>
         <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
-          Sao {progresso.obrigatorias} fotos obrigatorias. Siga a dica de cada uma — leva uns 3 minutos, e e o
-          ultimo passo para a sua protecao comecar.
+          São {progresso.obrigatorias} fotos obrigatórias. Siga a dica de cada uma — leva uns 3 minutos, e e o
+          último passo para a sua proteção começar.
         </p>
 
         {(veiculo.placa || veiculo.modelo) && (
@@ -124,7 +124,7 @@ export function VistoriaPublica({
             </span>
             {expiraEm && !completa && (
               <span className="flex items-center gap-1 text-[11.5px] text-slate-400">
-                <Clock className="h-3 w-3" /> ate {formatDate(expiraEm)}
+                <Clock className="h-3 w-3" /> até {formatDate(expiraEm)}
               </span>
             )}
           </div>
@@ -141,7 +141,7 @@ export function VistoriaPublica({
             <CheckCircle2 className="mt-px h-4 w-4 shrink-0" />
             <span>
               Recebemos todas as fotos. Nossa equipe vai conferir e o seu consultor entra em
-              contato. <b>Nao precisa fazer mais nada.</b>
+              contato. <b>Não precisa fazer mais nada.</b>
             </span>
           </p>
         )}
@@ -203,7 +203,7 @@ export function VistoriaPublica({
 
       <p className="mt-4 flex items-start gap-1.5 px-1 text-[11.5px] leading-relaxed text-slate-400">
         <ShieldCheck className="mt-px h-3.5 w-3.5 shrink-0" />
-        As fotos vao direto para a sua proposta e sao usadas so na analise do seu veiculo.
+        As fotos vão direto para a sua proposta e são usadas só na análise do seu veículo.
       </p>
     </Pagina>
   );
@@ -212,7 +212,7 @@ export function VistoriaPublica({
 function Pagina({ children, logoUrl }: { children: React.ReactNode; logoUrl: string | null }) {
   return (
     <div className="min-h-screen bg-fundo">
-      <CabecalhoMarca logoUrl={logoUrl} subtitulo="Vistoria do veiculo" />
+      <CabecalhoMarca logoUrl={logoUrl} subtitulo="Vistoria do veículo" />
       <main className="mx-auto w-full max-w-lg px-4 pb-10">{children}</main>
       <RodapeMarca />
     </div>

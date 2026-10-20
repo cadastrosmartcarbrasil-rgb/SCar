@@ -14,13 +14,13 @@ import type {
 export const CATEGORIAS_PROTOCOLO: { value: TipoAtendimento; label: string }[] = [
   { value: 'FINANCEIRO', label: 'Financeiro' },
   { value: 'SINISTRO', label: 'Evento' },
-  { value: 'ASSISTENCIA_24H', label: 'Assistencia 24h' },
-  { value: 'DUVIDAS', label: 'Duvidas' },
-  { value: 'RECLAMACAO', label: 'Reclamacao' },
+  { value: 'ASSISTENCIA_24H', label: 'Assistência 24h' },
+  { value: 'DUVIDAS', label: 'Dúvidas' },
+  { value: 'RECLAMACAO', label: 'Reclamação' },
   { value: 'UPGRADE_COBERTURA', label: 'Upgrade / Cobertura' },
   { value: 'SEGUNDA_VIA_BOLETO', label: '2a via de boleto' },
-  { value: 'VISTORIA_ACESSORIOS', label: 'Vistoria / Acessorios' },
-  { value: 'ALTERACAO_CADASTRAL', label: 'Alteracao cadastral' },
+  { value: 'VISTORIA_ACESSORIOS', label: 'Vistoria / Acessórios' },
+  { value: 'ALTERACAO_CADASTRAL', label: 'Alteração cadastral' },
   { value: 'CANCELAMENTO', label: 'Cancelamento' },
   { value: 'OUTROS', label: 'Outros' },
 ];
@@ -35,14 +35,14 @@ export const PRIORIDADES: { value: PrioridadeAtendimento; label: string; cor: st
 export const STATUS_PROTOCOLO: Record<StatusAtendimento, { label: string; cor: string }> = {
   ABERTO: { label: 'Aberto', cor: 'bg-cyan-50 text-cyan-700' },
   EM_ANDAMENTO: { label: 'Em atendimento', cor: 'bg-amber-50 text-amber-700' },
-  CONCLUIDO: { label: 'Concluido', cor: 'bg-emerald-50 text-emerald-700' },
+  CONCLUIDO: { label: 'Concluído', cor: 'bg-emerald-50 text-emerald-700' },
   CANCELADO: { label: 'Cancelado', cor: 'bg-slate-100 text-slate-500' },
 };
 
 export const TIPO_INTERACAO_LABEL: Record<TipoInteracaoProtocolo, string> = {
-  COMENTARIO: 'Comentario',
-  STATUS: 'Mudanca de status',
-  TRANSFERENCIA: 'Transferencia',
+  COMENTARIO: 'Comentário',
+  STATUS: 'Mudança de status',
+  TRANSFERENCIA: 'Transferência',
   ENCERRAMENTO: 'Encerramento',
   PARECER_SOLICITADO: 'Parecer solicitado',
   PARECER: 'Parecer',
@@ -89,9 +89,9 @@ export interface DadosMensagem {
 export function mensagemPadrao(d: DadosMensagem): string {
   const empresa = d.empresa ?? 'Smart Car Brasil';
   const primeiro = (d.associado ?? '').trim().split(/\s+/)[0] || 'associado';
-  const veiculo = d.placa ? ` referente ao veiculo ${d.placa}` : '';
+  const veiculo = d.placa ? ` referente ao veículo ${d.placa}` : '';
   return [
-    `Ola, ${primeiro}! Aqui e ${d.atendente ?? 'a equipe'} da ${empresa}.`,
+    `Olá, ${primeiro}! Aqui e ${d.atendente ?? 'a equipe'} da ${empresa}.`,
     `Estamos entrando em contato${veiculo}.`,
     'Podemos falar agora?',
   ].join(' ');
@@ -100,7 +100,7 @@ export function mensagemPadrao(d: DadosMensagem): string {
 /** Assunto sugerido para o e-mail rapido. */
 export function assuntoPadrao(d: DadosMensagem): string {
   const empresa = d.empresa ?? 'Smart Car Brasil';
-  return d.placa ? `${empresa} — atendimento sobre o veiculo ${d.placa}` : `${empresa} — atendimento`;
+  return d.placa ? `${empresa} — atendimento sobre o veículo ${d.placa}` : `${empresa} — atendimento`;
 }
 
 /** mailto: com assunto e corpo preenchidos (fallback do envio rapido). */
@@ -127,9 +127,9 @@ export function tituloEditavel(status: string): boolean {
 
 /** Validação do ajuste antes de mandar ao banco. */
 export function validarAjuste(original: number, desconto: number, acrescimo: number): string | null {
-  if (desconto < 0 || acrescimo < 0) return 'Desconto e acrescimo nao podem ser negativos';
+  if (desconto < 0 || acrescimo < 0) return 'Desconto e acréscimo não podem ser negativos';
   if (desconto > (Number(original) || 0) + (Number(acrescimo) || 0)) {
-    return 'Desconto maior que o valor do titulo';
+    return 'Desconto maior que o valor do título';
   }
   return null;
 }
@@ -152,10 +152,10 @@ export interface ParecerBase {
 export function situacaoParecer(p: ParecerBase): { rotulo: string; cor: string; atrasado: boolean } {
   if (p.respondido) return { rotulo: 'Respondido', cor: 'bg-emerald-50 text-emerald-700', atrasado: false };
   if (p.dias_esperando >= PARECER_ATRASADO_DIAS) {
-    return { rotulo: `Atrasado ha ${p.dias_esperando} dias`, cor: 'bg-rose-50 text-rose-700', atrasado: true };
+    return { rotulo: `Atrasado há ${p.dias_esperando} dias`, cor: 'bg-rose-50 text-rose-700', atrasado: true };
   }
   if (p.dias_esperando >= PARECER_COBRAR_DIAS) {
-    return { rotulo: `Aguardando ha ${p.dias_esperando} dias`, cor: 'bg-amber-50 text-amber-700', atrasado: false };
+    return { rotulo: `Aguardando há ${p.dias_esperando} dias`, cor: 'bg-amber-50 text-amber-700', atrasado: false };
   }
   return { rotulo: 'Aguardando', cor: 'bg-slate-100 text-slate-600', atrasado: false };
 }

@@ -36,7 +36,7 @@ export function LinkDaVistoria({ leadId, celular, nome, compacto }: {
         // "Reaproveitado" nao e detalhe tecnico: quem clica de novo precisa
         // saber que o link ja enviado continua valendo, senao reenvia achando
         // que o anterior morreu.
-        toast.success(l.reaproveitado ? 'Este link ja estava valendo' : 'Link da vistoria gerado');
+        toast.success(l.reaproveitado ? 'Este link já estava valendo' : 'Link da vistoria gerado');
       },
       onError: (e) => toast.error(e.message),
     });
@@ -100,7 +100,7 @@ export function LinkDaVistoria({ leadId, celular, nome, compacto }: {
         </a>
       </div>
       <p className="mt-2 text-[11px] text-slate-500">
-        Vale ate {formatDate(link.expiraEm)}. Depois disso e so gerar outro aqui.
+        Vale até {formatDate(link.expiraEm)}. Depois disso é só gerar outro aqui.
       </p>
     </div>
   );

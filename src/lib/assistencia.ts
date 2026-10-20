@@ -67,7 +67,7 @@ export function avaliarBloqueio(
 ): Bloqueio {
   const motivos: string[] = [];
   if (!situacao) {
-    return { bloqueado: true, motivos: ['Veiculo nao localizado'], exigeLiberacao: false };
+    return { bloqueado: true, motivos: ['Veículo não localizado'], exigeLiberacao: false };
   }
   motivos.push(...(situacao.motivos ?? []));
   if (elegibilidade && elegibilidade.computa_limite && !elegibilidade.elegivel) {
@@ -86,10 +86,10 @@ export function rotuloLimite(e: ElegibilidadeAssistencia): string {
 
 export const STATUS_ACIONAMENTO_LABEL: Record<StatusAcionamento, { label: string; cor: string }> = {
   ABERTO: { label: 'Aberto', cor: 'bg-cyan-50 text-cyan-700' },
-  EM_COTACAO: { label: 'Em cotacao', cor: 'bg-amber-50 text-amber-700' },
+  EM_COTACAO: { label: 'Em cotação', cor: 'bg-amber-50 text-amber-700' },
   AUTORIZADO: { label: 'OS autorizada', cor: 'bg-brand-50 text-brand-700' },
   EM_ATENDIMENTO: { label: 'Em atendimento', cor: 'bg-sky-50 text-sky-700' },
-  CONCLUIDO: { label: 'Concluido', cor: 'bg-emerald-50 text-emerald-700' },
+  CONCLUIDO: { label: 'Concluído', cor: 'bg-emerald-50 text-emerald-700' },
   CANCELADO: { label: 'Cancelado', cor: 'bg-slate-100 text-slate-600' },
 };
 
@@ -132,15 +132,15 @@ const brl = (v: number) =>
 export function montarVoucherTexto(d: DadosVoucher): string {
   const veiculo = [d.veiculo.marca, d.veiculo.modelo, d.veiculo.cor].filter(Boolean).join(' ');
   const linhas = [
-    `*${(d.empresa ?? 'Smart Car Brasil').toUpperCase()} — ASSISTENCIA 24H*`,
-    `Ordem de Servico: *${d.codigo_os}*  (protocolo ${d.protocolo})`,
+    `*${(d.empresa ?? 'Smart Car Brasil').toUpperCase()} — ASSISTÊNCIA 24H*`,
+    `Ordem de Serviço: *${d.codigo_os}*  (protocolo ${d.protocolo})`,
     '',
     `Prestador: ${d.prestador}`,
-    `Servico: ${d.servico}`,
+    `Serviço: ${d.servico}`,
     '',
     `Associado: ${d.associado}`,
     d.solicitante ? `Solicitante: ${d.solicitante}${d.telefone ? ` — ${d.telefone}` : ''}` : null,
-    `Veiculo: ${d.veiculo.placa}${veiculo ? ` — ${veiculo}` : ''}`,
+    `Veículo: ${d.veiculo.placa}${veiculo ? ` — ${veiculo}` : ''}`,
     '',
     d.origem ? `Local de origem: ${d.origem}` : null,
     d.destino ? `Destino: ${d.destino}` : null,
@@ -150,18 +150,18 @@ export function montarVoucherTexto(d: DadosVoucher): string {
     d.agendado_para ? `*Atendimento agendado para ${rotuloAgendamento(d.agendado_para)}*` : null,
     d.prazo_estimado_min ? `Prazo combinado: ${d.prazo_estimado_min} min` : null,
     '',
-    d.link_navegacao_origem ? `Navegar ate o resgate: ${d.link_navegacao_origem}` : null,
+    d.link_navegacao_origem ? `Navegar até o resgate: ${d.link_navegacao_origem}` : null,
     d.link_rota ? `Rota completa (Google Maps): ${d.link_rota}` : null,
-    d.link_navegacao_destino ? `Navegar ate o destino: ${d.link_navegacao_destino}` : null,
+    d.link_navegacao_destino ? `Navegar até o destino: ${d.link_navegacao_destino}` : null,
     d.link_rota || d.link_navegacao_origem ? '' : null,
-    `Valor do servico: ${brl(d.valor_servico)}`,
+    `Valor do serviço: ${brl(d.valor_servico)}`,
     d.valor_km_excedente > 0 ? `KM excedente: ${brl(d.valor_km_excedente)}` : null,
     `*Valor total autorizado: ${brl(d.valor_total)}*`,
     '',
-    d.observacoes ? `Observacoes: ${d.observacoes}` : null,
-    '*A rota e a quilometragem autorizadas sao estritamente as cadastradas nesta OS.*',
-    'Qualquer alteracao de trajeto, destino ou KM precisa de nova autorizacao da central ANTES da execucao — trecho nao autorizado nao e pago.',
-    'Ao finalizar, informe a central para liberacao do pagamento.',
+    d.observacoes ? `Observações: ${d.observacoes}` : null,
+    '*A rota e a quilometragem autorizadas são estritamente as cadastradas nesta OS.*',
+    'Qualquer alteração de trajeto, destino ou KM precisa de nova autorização da central ANTES da execução — trecho não autorizado não é pago.',
+    'Ao finalizar, informe a central para liberação do pagamento.',
     d.contato_central ? `Central 24h: ${d.contato_central}` : null,
   ];
   return linhas.filter((l) => l !== null).join('\n');

@@ -10,7 +10,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 export async function POST(req: Request) {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 });
+  if (!auth.user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
 
   const { data: perfil } = await supabase
     .from('usuarios').select('papel, regional_id').eq('id', auth.user.id).single();
@@ -26,9 +26,9 @@ export async function POST(req: Request) {
   const senha = String(body?.senha ?? '');
   const vendedorId = String(body?.vendedorId ?? '');
 
-  if (!vendedorId) return NextResponse.json({ error: 'Vendedor nao informado' }, { status: 400 });
+  if (!vendedorId) return NextResponse.json({ error: 'Vendedor não informado' }, { status: 400 });
   if (!/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(email)) {
-    return NextResponse.json({ error: 'E-mail invalido' }, { status: 400 });
+    return NextResponse.json({ error: 'E-mail inválido' }, { status: 400 });
   }
   if (senha.length < 8) {
     return NextResponse.json({ error: 'A senha precisa de ao menos 8 caracteres' }, { status: 400 });
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
 
   const { data: vendedor } = await supabase
     .from('vendedores').select('id, nome, regional_id, usuario_id').eq('id', vendedorId).single();
-  if (!vendedor) return NextResponse.json({ error: 'Vendedor nao encontrado' }, { status: 404 });
+  if (!vendedor) return NextResponse.json({ error: 'Vendedor não encontrado' }, { status: 404 });
 
   // Gestor regional so mexe na propria regional.
   if (perfil.papel === 'gestor_regional' && vendedor.regional_id !== perfil.regional_id) {

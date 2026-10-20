@@ -16,8 +16,8 @@ export default function NovoEventoPortalPage() {
         <PhoneCall className="mx-auto h-8 w-8 text-brand-600" />
         <h1 className="mt-3 text-lg font-semibold text-slate-900">Comunicar um evento</h1>
         <p className="mt-2 text-sm text-slate-600">
-          Para comunicar um evento (colisao, roubo, furto ou outro), fale com a nossa central de atendimento. A equipe
-          registra o evento e orienta sobre os documentos necessarios.
+          Para comunicar um evento (colisão, roubo, furto ou outro), fale com a nossa central de atendimento. A equipe
+          registra o evento e orienta sobre os documentos necessários.
         </p>
       </div>
     </div>

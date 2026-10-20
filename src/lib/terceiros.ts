@@ -18,7 +18,7 @@ export const PAPEL_LABEL: Record<TipoEnvolvimento, string> = {
 };
 
 export const STATUS_TERCEIRO: Record<StatusTerceiro, { label: string; cor: string }> = {
-  EM_ANALISE: { label: 'Em analise', cor: 'border-sky-200 bg-sky-50 text-sky-700' },
+  EM_ANALISE: { label: 'Em análise', cor: 'border-sky-200 bg-sky-50 text-sky-700' },
   AGUARDANDO_DOCUMENTOS: { label: 'Aguardando documentos', cor: 'border-amber-200 bg-amber-50 text-amber-700' },
   EM_REPARO: { label: 'Em reparo', cor: 'border-indigo-200 bg-indigo-50 text-indigo-700' },
   ACORDO: { label: 'Acordo', cor: 'border-violet-200 bg-violet-50 text-violet-700' },

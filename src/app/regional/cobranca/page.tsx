@@ -13,10 +13,10 @@ export default function CobrancaRegionalPage() {
   return (
     <div className="space-y-5">
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Inadimplencia e Cobrancas</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Inadimplência e Cobranças</h1>
         <p className="mt-0.5 text-sm text-slate-500">
-          {nome} — quem precisa ser cobrado, quanto, e como o recebimento evolui. Boleto que ainda nao
-          venceu nao entra em nenhuma taxa; todo numero abre os boletos que o compoem.
+          {nome} — quem precisa ser cobrado, quanto, e como o recebimento evolui. Boleto que ainda não
+          venceu não entra em nenhuma taxa; todo número abre os boletos que o compõem.
         </p>
       </header>
       {regionalId ? <PainelInadimplencia unidade={{ id: regionalId, nome }} /> : null}

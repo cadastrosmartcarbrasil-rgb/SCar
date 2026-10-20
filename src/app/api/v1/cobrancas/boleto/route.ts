@@ -16,18 +16,18 @@ type Admin = ReturnType<typeof createAdminClient>;
 async function autorizar(tituloIds: string[]) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { erro: NextResponse.json({ error: 'Nao autenticado' }, { status: 401 }) };
+  if (!user) return { erro: NextResponse.json({ error: 'Não autenticado' }, { status: 401 }) };
   const admin = createAdminClient();
   const { data: titulos } = await admin.from('titulos_financeiros')
     .select('id, cliente_id, valor, data_vencimento, linha_digitavel, pix_copia_cola, renegociacao_parcela, integracao_id, status')
     .in('id', tituloIds);
   if (!titulos || titulos.length !== tituloIds.length) {
-    return { erro: NextResponse.json({ error: 'Boleto nao encontrado' }, { status: 404 }) };
+    return { erro: NextResponse.json({ error: 'Boleto não encontrado' }, { status: 404 }) };
   }
   const clientes = Array.from(new Set(titulos.map((t) => t.cliente_id)));
   if (clientes.length !== 1) return { erro: NextResponse.json({ error: 'Boletos de associados diferentes' }, { status: 400 }) };
   const { data: pode } = await supabase.rpc('cobranca_pode_cliente', { p_cliente_id: clientes[0] });
-  if (!pode) return { erro: NextResponse.json({ error: 'Fora do seu escopo de cobranca' }, { status: 403 }) };
+  if (!pode) return { erro: NextResponse.json({ error: 'Fora do seu escopo de cobrança' }, { status: 403 }) };
   return { admin, titulos, clienteId: clientes[0] };
 }
 
@@ -36,7 +36,7 @@ async function gatewaySicredi(admin: Admin, integracaoId: string | null) {
     ? await admin.from('integracoes_bancarias').select('*').eq('id', integracaoId).maybeSingle()
     : { data: null };
   const gw = getPaymentGateway((integ ?? { provedor: 'SICREDI' }) as GatewayConfig);
-  if (!(gw instanceof SicrediGateway)) throw new Error('O PDF so sai pelo Sicredi.');
+  if (!(gw instanceof SicrediGateway)) throw new Error('O PDF só sai pelo Sicredi.');
   return gw;
 }
 
@@ -45,11 +45,11 @@ export async function GET(request: Request) {
   const historicoId = params.get('boleto_historico_id');
   if (historicoId) return pdfDoMutual(historicoId);
   const id = params.get('titulo_id');
-  if (!id) return NextResponse.json({ error: 'titulo_id obrigatorio' }, { status: 400 });
+  if (!id) return NextResponse.json({ error: 'titulo_id obrigatório' }, { status: 400 });
   const a = await autorizar([id]);
   if ('erro' in a) return a.erro;
   const t = a.titulos[0];
-  if (!t.linha_digitavel) return NextResponse.json({ error: 'O banco ainda nao registrou este boleto' }, { status: 400 });
+  if (!t.linha_digitavel) return NextResponse.json({ error: 'O banco ainda não registrou este boleto' }, { status: 400 });
   try {
     const gw = await gatewaySicredi(a.admin, t.integracao_id);
     const pdf = await gw.pdf(t.linha_digitavel);
@@ -73,13 +73,13 @@ export async function GET(request: Request) {
 async function pdfDoMutual(id: string) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   const admin = createAdminClient();
   const { data: h } = await admin.from('boletos_historico')
     .select('cliente_id, linha_digitavel, data_vencimento, situacao').eq('id', id).maybeSingle();
-  if (!h) return NextResponse.json({ error: 'Boleto nao encontrado' }, { status: 404 });
+  if (!h) return NextResponse.json({ error: 'Boleto não encontrado' }, { status: 404 });
   const { data: pode } = await supabase.rpc('cobranca_pode_cliente', { p_cliente_id: h.cliente_id });
-  if (!pode) return NextResponse.json({ error: 'Fora do seu escopo de cobranca' }, { status: 403 });
+  if (!pode) return NextResponse.json({ error: 'Fora do seu escopo de cobrança' }, { status: 403 });
   if (!h.linha_digitavel || !h.linha_digitavel.replace(/\D/g, '').startsWith('748')) {
     return NextResponse.json({ error: 'Boleto sem linha do Sicredi' }, { status: 400 });
   }
@@ -101,7 +101,7 @@ async function pdfDoMutual(id: string) {
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as { titulo_ids?: string[]; email?: string | null };
   const ids = (body.titulo_ids ?? []).filter(Boolean);
-  if (ids.length === 0) return NextResponse.json({ error: 'titulo_ids obrigatorio' }, { status: 400 });
+  if (ids.length === 0) return NextResponse.json({ error: 'titulo_ids obrigatório' }, { status: 400 });
   const a = await autorizar(ids);
   if ('erro' in a) return a.erro;
 
@@ -120,10 +120,10 @@ export async function POST(request: Request) {
   const texto = mensagemDoBoleto({ nome: cli?.nome_razao_social ?? '', boletos });
 
   if (!process.env.RESEND_API_KEY) {
-    return NextResponse.json({ enviado: false, texto, aviso: 'RESEND_API_KEY nao configurada: copie o texto e envie manualmente.' });
+    return NextResponse.json({ enviado: false, texto, aviso: 'RESEND_API_KEY não configurada: copie o texto e envie manualmente.' });
   }
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(destino)) {
-    return NextResponse.json({ error: 'Associado sem e-mail valido no cadastro.' }, { status: 400 });
+    return NextResponse.json({ error: 'Associado sem e-mail válido no cadastro.' }, { status: 400 });
   }
 
   // PDF anexado quando o banco devolve; sem ele, segue so com a linha e o PIX.

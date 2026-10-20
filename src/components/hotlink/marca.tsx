@@ -51,7 +51,7 @@ export function CabecalhoMarca({ logoUrl, subtitulo }: {
       </div>
       <div className="bg-faixa">
         <p className="mx-auto max-w-5xl px-4 py-2.5 text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-white/90">
-          {subtitulo ?? 'Protecao Veicular'}
+          {subtitulo ?? 'Proteção Veicular'}
         </p>
       </div>
     </header>
@@ -78,7 +78,7 @@ export function RodapeMarca() {
         Smart Car Brasil
       </p>
       <p className="mt-1 text-[11px] text-white/50">
-        Associacao de protecao veicular · smartcarbrasil.com.br
+        Associação de proteção veicular · smartcarbrasil.com.br
       </p>
     </footer>
   );

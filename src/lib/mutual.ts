@@ -364,13 +364,13 @@ export type MotivoQuarentena =
   | 'SEM_DATA_ATIVACAO' | 'SEM_VALOR_COBRADO' | 'SEM_DIA_VENCIMENTO';
 
 export const ROTULO_QUARENTENA: Record<MotivoQuarentena, string> = {
-  PLACA_PENDENTE_0KM: 'Veiculo 0 km — placa ainda nao emplacada',
-  SEM_PLACA_NEM_CHASSI: 'Sem placa E sem chassi (nao ha como identificar o veiculo)',
+  PLACA_PENDENTE_0KM: 'Veículo 0 km — placa ainda não emplacada',
+  SEM_PLACA_NEM_CHASSI: 'Sem placa E sem chassi (não há como identificar o veículo)',
   SEM_CPF: 'Associado sem CPF/CNPJ',
   SEM_NOME: 'Associado sem nome',
-  SEM_DATA_ATIVACAO: 'Sem data de ativacao (viraria hoje)',
-  SEM_VALOR_COBRADO: 'Sem valor cobrado (pararia de faturar em silencio)',
-  SEM_DIA_VENCIMENTO: 'Sem dia de vencimento (cairia no padrao legado)',
+  SEM_DATA_ATIVACAO: 'Sem data de ativação (viraria hoje)',
+  SEM_VALOR_COBRADO: 'Sem valor cobrado (pararia de faturar em silêncio)',
+  SEM_DIA_VENCIMENTO: 'Sem dia de vencimento (cairia no padrão legado)',
 };
 
 /**
@@ -607,7 +607,7 @@ export function porMacrorregiao(
 ): { macrorregiao: string; equipes: EquipeVendas[]; faturaveis: number }[] {
   const mapa = new Map<string, EquipeVendas[]>();
   for (const e of equipes) {
-    const chave = e.macrorregiao ?? '(sem macrorregiao)';
+    const chave = e.macrorregiao ?? '(sem macrorregião)';
     mapa.set(chave, [...(mapa.get(chave) ?? []), e]);
   }
   return [...mapa.entries()]
@@ -728,13 +728,13 @@ export function somarBlocosCarga(blocos: ResultadoBlocoCarga[]): ResultadoBlocoC
  * vendedor. Os demais sao a fila de quem fica sem.
  */
 export const ROTULO_MOTIVO_VENDEDOR: Record<string, string> = {
-  LIGAR: 'Sera ligado ao vendedor',
-  JA_LIGADO: 'Ja ligado ao vendedor certo',
-  MANTIDO: 'Ja tem outro vendedor (nao e trocado)',
+  LIGAR: 'Será ligado ao vendedor',
+  JA_LIGADO: 'Já ligado ao vendedor certo',
+  MANTIDO: 'Já tem outro vendedor (não é trocado)',
   SEM_CONSULTOR: 'Contrato sem consultor no Mutual',
-  CONSULTOR_NAO_CAPTURADO: 'Consultor nao puxado (puxe Consultores)',
-  EMAIL_AMBIGUO: 'Sem CPF que case, e o e-mail e de varios vendedores',
-  CONSULTOR_SEM_VENDEDOR: 'Consultor nao esta no cadastro de vendedores',
+  CONSULTOR_NAO_CAPTURADO: 'Consultor não puxado (puxe Consultores)',
+  EMAIL_AMBIGUO: 'Sem CPF que case, e o e-mail e de vários vendedores',
+  CONSULTOR_SEM_VENDEDOR: 'Consultor não está no cadastro de vendedores',
   UNIDADE_DIFERENTE: 'O vendedor e de outra unidade',
 };
 
@@ -803,7 +803,7 @@ export function familiaDaRecusa(problema: string): string {
   if (problema.startsWith('Associado sem nome')) return 'Associado sem nome';
   if (problema.startsWith('Sem data de ativacao')) return 'Sem data de ativacao';
   if (problema.includes('repetid')) return 'Repetido dentro do lote';
-  if (problema.includes('ja cadastrad')) return 'Ja cadastrado em outro veiculo';
+  if (problema.includes('ja cadastrad')) return 'Já cadastrado em outro veículo';
   return problema;
 }
 
@@ -1039,19 +1039,19 @@ export function mensagemDeFalhaDeLeitura(erro: unknown): string {
   // cada diagnostico varre os ~17,7 mil objetos capturados.
   if (texto.includes('statement timeout') || texto.includes('57014') || texto.includes('canceling statement')) {
     return 'A consulta passou do tempo limite (8s) e o banco a cancelou. '
-      + 'Nao e falta de dado: e o tamanho da varredura. Feche as secoes de diagnostico '
-      + 'que nao estiver usando e abra uma por vez.';
+      + 'Não é falta de dado: e o tamanho da varredura. Feche as seções de diagnóstico '
+      + 'que não estiver usando e abra uma por vez.';
   }
   if (texto.includes('somente a equipe')) {
-    return 'Esta leitura e so para a equipe (admin ou financeiro).';
+    return 'Esta leitura é só para a equipe (admin ou financeiro).';
   }
   if (texto.includes('permission denied')) {
-    return 'Sem permissao para esta leitura no banco.';
+    return 'Sem permissão para esta leitura no banco.';
   }
   if (texto.includes('could not find the function') || texto.includes('schema cache')) {
-    return 'A funcao nao existe no banco ainda — falta rodar a migration desta secao.';
+    return 'A função não existe no banco ainda — falta rodar a migration desta seção.';
   }
-  return bruto || 'A leitura falhou e o banco nao disse por que.';
+  return bruto || 'A leitura falhou e o banco não disse por que.';
 }
 
 /** O texto de um erro, seja ele `Error`, objeto do PostgREST ou string. */

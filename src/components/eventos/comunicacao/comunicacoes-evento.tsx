@@ -64,7 +64,7 @@ export function ComunicacoesEvento({ eventoId, protocolo }: { eventoId: string; 
       await navigator.clipboard.writeText(mensagemComunicacao({ papel: c.papel, nome: c.nome, protocolo, link: link(c) }));
       toast.success('Mensagem com o link copiada');
       void acao.mutateAsync({ tipo: 'envio', id: c.id, canal: 'COPIADO' }).catch(() => undefined);
-    } catch { toast.error('Nao consegui copiar'); }
+    } catch { toast.error('Não consegui copiar'); }
   }
 
   if (isLoading) return <p className="text-sm text-slate-500">Carregando...</p>;
@@ -75,7 +75,7 @@ export function ComunicacoesEvento({ eventoId, protocolo }: { eventoId: string; 
         <div>
           <p className="text-sm font-semibold text-slate-800">Quem precisa comunicar</p>
           <p className="text-xs text-slate-500">
-            Um link por envolvido. Quem nao consegue usar o celular, a equipe preenche por ele.
+            Um link por envolvido. Quem não consegue usar o celular, a equipe preenche por ele.
             {lista?.length ? ` ${respondidas.length} de ${lista.filter((c) => c.status !== 'REVOGADO').length} responderam.` : ''}
           </p>
         </div>
@@ -102,18 +102,18 @@ export function ComunicacoesEvento({ eventoId, protocolo }: { eventoId: string; 
                 </p>
                 <p className="text-xs text-slate-500">
                   {[c.telefone, c.email].filter(Boolean).join(' · ') || 'sem contato'}
-                  {c.ultimo_envio_em && <> · enviado {c.envios}x, ultimo {formatDateTime(c.ultimo_envio_em)}</>}
+                  {c.ultimo_envio_em && <> · enviado {c.envios}x, último {formatDateTime(c.ultimo_envio_em)}</>}
                   {c.primeiro_acesso_em && <> · abriu em {formatDateTime(c.primeiro_acesso_em)}</>}
                 </p>
                 {ativo && !respondeu && (
-                  <p className="text-xs text-slate-500">Link vale ate {formatDateTime(c.expira_em)}</p>
+                  <p className="text-xs text-slate-500">Link vale até {formatDateTime(c.expira_em)}</p>
                 )}
               </div>
               <span className={cn('rounded-md px-2 py-1 text-xs font-medium', r.cor)}>{r.texto}</span>
             </div>
 
             {c.status === 'CORRECAO' && c.correcao_comentario && (
-              <p className="mt-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-800">Correcao pedida: {c.correcao_comentario}</p>
+              <p className="mt-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-800">Correção pedida: {c.correcao_comentario}</p>
             )}
 
             <div className="mt-3 flex flex-wrap gap-2">
@@ -142,9 +142,9 @@ export function ComunicacoesEvento({ eventoId, protocolo }: { eventoId: string; 
               {podeTratar && ['ENVIADO', 'CONFERIDO'].includes(c.status) && (
                 <Button variant="ghost" onClick={() => {
                   const comentario = window.prompt('O que o envolvido precisa corrigir ou completar?');
-                  if (comentario?.trim()) void executar({ tipo: 'correcao', id: c.id, comentario }, 'Correcao pedida — reenvie o link');
+                  if (comentario?.trim()) void executar({ tipo: 'correcao', id: c.id, comentario }, 'Correção pedida — reenvie o link');
                 }}>
-                  <Undo2 className="mr-1 h-4 w-4" /> Pedir correcao
+                  <Undo2 className="mr-1 h-4 w-4" /> Pedir correção
                 </Button>
               )}
               {ativo && !respondeu && (
@@ -166,7 +166,7 @@ export function ComunicacoesEvento({ eventoId, protocolo }: { eventoId: string; 
       {comparacao.length > 0 && (
         <div className="rounded-xl border border-slate-200 bg-superficie p-4">
           <p className="text-sm font-semibold text-slate-800">Comparar o que cada um disse</p>
-          <p className="mb-2 text-xs text-slate-500">Em amarelo, onde as versoes nao batem. O comparador so destaca — quem decide e a analise.</p>
+          <p className="mb-2 text-xs text-slate-500">Em amarelo, onde as versões não batem. O comparador só destaca — quem decide é a análise.</p>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
@@ -208,7 +208,7 @@ function Versoes({ c }: { c: ComunicacaoCompleta }) {
           {c.declaracoes.map((d, i) => (
             <button key={d.id} onClick={() => setAberta(i)}
               className={cn('rounded-md px-2 py-1 text-xs', i === aberta ? 'bg-acao text-white' : 'bg-slate-100 text-slate-700')}>
-              Versao {d.versao}
+              Versão {d.versao}
             </button>
           ))}
         </div>
@@ -294,7 +294,7 @@ function NovoEnvolvido({ open, onClose, eventoId, jaTemAssociado }: {
   async function salvar() {
     try {
       await criar.mutateAsync({ papel, nome, telefone, email, terceiro_id: ehTerceiro(papel) ? terceiroId || null : null });
-      toast.success('Envolvido incluido — agora envie o link');
+      toast.success('Envolvido incluído — agora envie o link');
       setNome(''); setTelefone(''); setEmail(''); setTerceiroId('');
       onClose();
     } catch (e) { toast.error((e as Error).message); }
@@ -314,7 +314,7 @@ function NovoEnvolvido({ open, onClose, eventoId, jaTemAssociado }: {
           <p className="text-xs text-slate-500">Nome e telefone vem do cadastro do associado se ficarem em branco.</p>
         )}
         {ehTerceiro(papel) && !!terceiros?.length && (
-          <FormField label="Terceiro ja cadastrado (opcional)">
+          <FormField label="Terceiro já cadastrado (opcional)">
             <Select value={terceiroId} onChange={(e) => escolherTerceiro(e.target.value)}>
               <option value="">— novo —</option>
               {terceiros.map((t) => <option key={t.id} value={t.id}>{t.codigo} · {t.nome}</option>)}
@@ -354,7 +354,7 @@ function PreencherPelaEquipe({ c, eventoId, onClose }: { c: ComunicacaoCompleta;
 
   return (
     <Modal open onClose={onClose} title={`Preencher pela equipe — ${c.nome || rotuloPapel(c.papel)}`}
-      subtitulo="Para quem nao consegue usar o link. Fica registrado que foi a equipe." tamanho="xl">
+      subtitulo="Para quem não consegue usar o link. Fica registrado que foi a equipe." tamanho="xl">
       <FormularioComunicacao
         papel={c.papel as PapelComunicacao}
         dados={dados}
@@ -369,7 +369,7 @@ function PreencherPelaEquipe({ c, eventoId, onClose }: { c: ComunicacaoCompleta;
           if (timer.current) clearTimeout(timer.current);
           try {
             await salvar.mutateAsync({ id: c.id, dados, enviar: true });
-            toast.success('Comunicacao registrada');
+            toast.success('Comunicação registrada');
             onClose();
           } catch (e) { toast.error((e as Error).message); }
         }}
@@ -391,7 +391,7 @@ function QrDoLink({ url, nome, onClose }: { url: string; nome: string | null; on
     <Modal open onClose={onClose} title={`QR do link${nome ? ` — ${nome}` : ''}`} tamanho="md">
       <div className="flex flex-col items-center gap-3">
         {img ? <img src={img} alt="QR do link" className="h-64 w-64" /> : <p className="text-sm text-slate-500">Gerando...</p>}
-        <p className="text-center text-xs text-slate-500">Para quem esta no balcao: aponte a camera do celular.</p>
+        <p className="text-center text-xs text-slate-500">Para quem está no balcão: aponte a camera do celular.</p>
         <p className="flex items-center gap-1 break-all text-xs text-slate-400"><CheckCircle2 className="h-3 w-3" /> {url}</p>
       </div>
     </Modal>

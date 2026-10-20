@@ -68,17 +68,17 @@ export default function PortalPerfilPage() {
       <header>
         <h1 className="text-[22px] font-bold tracking-tight text-brand-800">Meu perfil</h1>
         <p className="mt-0.5 text-[13px] text-slate-500">
-          Mantenha seu contato atualizado — e por ele que falamos com voce.
+          Mantenha seu contato atualizado — e por ele que falamos com você.
         </p>
       </header>
 
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-1.5">
-            <UserRound className="h-4 w-4 text-slate-400" /> Identificacao
+            <UserRound className="h-4 w-4 text-slate-400" /> Identificação
           </CardTitle>
           <p className="text-xs text-slate-500">
-            Nome e documento sao do seu cadastro na associacao. Para corrigir, fale com o atendimento.
+            Nome e documento são do seu cadastro na associação. Para corrigir, fale com o atendimento.
           </p>
         </CardHeader>
         <CardContent className="grid gap-3 text-[13px] sm:grid-cols-2">
@@ -89,7 +89,7 @@ export default function PortalPerfilPage() {
           />
           <Campo rotulo="Associado desde"
             valor={p?.associado_desde ? formatDate(p.associado_desde) : '—'} />
-          <Campo rotulo="Veiculos ativos" valor={String(p?.veiculos_ativos ?? 0)} />
+          <Campo rotulo="Veículos ativos" valor={String(p?.veiculos_ativos ?? 0)} />
         </CardContent>
       </Card>
 
@@ -97,7 +97,7 @@ export default function PortalPerfilPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-1.5">
-              <MapPin className="h-4 w-4 text-slate-400" /> Contato e endereco
+              <MapPin className="h-4 w-4 text-slate-400" /> Contato e endereço
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -122,7 +122,7 @@ export default function PortalPerfilPage() {
                 onChange={(v) => setEndereco((e) => ({ ...e, logradouro: v }))} />
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
-              <Entrada rotulo="Numero" valor={endereco.numero ?? ''}
+              <Entrada rotulo="Número" valor={endereco.numero ?? ''}
                 onChange={(v) => setEndereco((e) => ({ ...e, numero: v }))} />
               <Entrada rotulo="Complemento" valor={endereco.complemento ?? ''} className="sm:col-span-2"
                 onChange={(v) => setEndereco((e) => ({ ...e, complemento: v }))} />
@@ -178,7 +178,7 @@ function TrocarSenha() {
         body: JSON.stringify({ senha, confirmacao }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error ?? 'Nao consegui trocar a senha');
+      if (!res.ok) throw new Error(json?.error ?? 'Não consegui trocar a senha');
       setSenha('');
       setConfirmacao('');
       toast.success('Senha alterada');

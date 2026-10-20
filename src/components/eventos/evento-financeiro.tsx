@@ -68,16 +68,16 @@ export function EventoFinanceiro({
         <Box titulo="A pagar (total)" valor={r.aPagar} detalhe={`em aberto ${formatCurrency(r.saldoPagar)}`} cor="text-rose-600" />
         <Box titulo="Pago" valor={r.pago} cor="text-slate-800" />
         <Box titulo="A receber" valor={r.aReceber} detalhe={`em aberto ${formatCurrency(r.saldoReceber)}`} cor="text-emerald-600" />
-        <Box titulo={terceiroId ? 'Custo do terceiro' : 'Custo liquido do evento'} valor={r.custoLiquido} cor="text-brand-700" />
+        <Box titulo={terceiroId ? 'Custo do terceiro' : 'Custo líquido do evento'} valor={r.custoLiquido} cor="text-brand-700" />
       </div>
 
       <div className="flex items-center justify-between">
         <p className="text-xs text-slate-500">
-          Lancamentos entram no Contas a Pagar/Receber e no DRE. Conta a pagar exige fornecedor ou terceiro.
+          Lançamentos entram no Contas a Pagar/Receber e no DRE. Conta a pagar exige fornecedor ou terceiro.
         </p>
         {trata && (
           <Button type="button" onClick={novo}>
-            <Plus className="h-4 w-4" /> Novo lancamento
+            <Plus className="h-4 w-4" /> Novo lançamento
           </Button>
         )}
       </div>
@@ -85,16 +85,16 @@ export function EventoFinanceiro({
       {isLoading ? (
         <p className="text-sm text-slate-400">Carregando...</p>
       ) : lista.length === 0 ? (
-        <p className="text-sm text-slate-400">Nenhum lancamento {terceiroId ? 'para este terceiro' : 'neste evento'}.</p>
+        <p className="text-sm text-slate-400">Nenhum lançamento {terceiroId ? 'para este terceiro' : 'neste evento'}.</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
                 <th className="py-2">Vencimento</th>
-                <th className="py-2">Descricao</th>
+                <th className="py-2">Descrição</th>
                 <th className="py-2">Favorecido / Pagador</th>
-                <th className="py-2">Situacao</th>
+                <th className="py-2">Situação</th>
                 <th className="py-2 text-right">Valor</th>
                 <th className="py-2 text-right">Saldo</th>
                 <th className="py-2" />
@@ -141,7 +141,7 @@ export function EventoFinanceiro({
       {(legado ?? []).length > 0 && (
         <div className="rounded-lg border border-dashed border-slate-300 p-3">
           <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase text-slate-400">
-            <Receipt className="h-3.5 w-3.5" /> Movimentacoes antigas (antes do controle por favorecido) · somente leitura
+            <Receipt className="h-3.5 w-3.5" /> Movimentações antigas (antes do controle por favorecido) · somente leitura
           </p>
           <table className="w-full text-xs text-slate-500">
             <tbody>

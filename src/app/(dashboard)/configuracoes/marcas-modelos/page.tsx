@@ -19,7 +19,7 @@ import type { StatusCadastro, ModelosRow, MarcasRow } from '@/lib/database.types
 
 const STATUS: { value: StatusCadastro; label: string }[] = [
   { value: 'ATIVO', label: 'Ativo' },
-  { value: 'INATIVO', label: 'Inativo (nao aceito)' },
+  { value: 'INATIVO', label: 'Inativo (não aceito)' },
   { value: 'SUSPENSO', label: 'Suspenso' },
 ];
 
@@ -88,9 +88,9 @@ export default function MarcasModelosPage() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-slate-500">
-        Catalogo de marcas e modelos (padrao SGA). Cada modelo tem tipo do veiculo, idade maxima
-        aceita e status de aceitacao (Ativo, Inativo = nao aceito, Suspenso). Alimenta o cadastro
-        de veiculos e a precificacao.
+        Catálogo de marcas e modelos (padrão SGA). Cada modelo tem tipo do veículo, idade máxima
+        aceita e status de aceitação (Ativo, Inativo = não aceito, Suspenso). Alimenta o cadastro
+        de veículos e a precificação.
       </p>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -203,7 +203,7 @@ export default function MarcasModelosPage() {
                 <Input
                   value={novoTipo}
                   onChange={(e) => setNovoTipo(e.target.value)}
-                  placeholder="Tipo do veiculo"
+                  placeholder="Tipo do veículo"
                   className="mt-0"
                 />
                 <Input

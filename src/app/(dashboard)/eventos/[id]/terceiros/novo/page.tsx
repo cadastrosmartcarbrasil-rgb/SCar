@@ -14,7 +14,7 @@ export default function NovoTerceiroPage({ params }: { params: { id: string } })
   const { data: evento, isLoading } = useEvento(params.id);
 
   if (isLoading) return <p className="text-sm text-slate-500">Carregando evento...</p>;
-  if (!evento) return <p className="text-sm text-rose-600">Evento nao encontrado ou sem permissao.</p>;
+  if (!evento) return <p className="text-sm text-rose-600">Evento não encontrado ou sem permissão.</p>;
 
   const associado = (evento as { clientes?: { nome_razao_social: string } | null }).clientes?.nome_razao_social ?? null;
 

@@ -120,7 +120,7 @@ export interface PaymentGateway {
 /** Gateway configurado mas ainda sem implementacao real (fase de transicao). */
 export class GatewayNaoImplementadoError extends Error {
   constructor(provedor: ProvedorBanco, acao: string) {
-    super(`Integracao ${provedor} ainda nao implementada (${acao}). Configure o gateway em Configuracoes -> Integracoes bancarias.`);
+    super(`Integração ${provedor} ainda não implementada (${acao}). Configure o gateway em Configurações -> Integrações bancárias.`);
     this.name = 'GatewayNaoImplementadoError';
   }
 }

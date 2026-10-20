@@ -13,7 +13,7 @@ import { ModalOperadoresConta, NomesOperadores } from '@/components/financeiro/o
 
 const TIPOS = [
   { v: 'corrente', l: 'Conta Corrente', icon: Landmark },
-  { v: 'poupanca', l: 'Poupanca', icon: PiggyBank },
+  { v: 'poupanca', l: 'Poupança', icon: PiggyBank },
   { v: 'caixa', l: 'Caixa (Dinheiro)', icon: Banknote },
 ];
 const tipoMeta = (t: string | null) => TIPOS.find((x) => x.v === t) ?? TIPOS[0];
@@ -47,7 +47,7 @@ export default function ContasBancariasPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-slate-500">
-          Cadastre as contas bancarias e o caixa da empresa. Sao usadas nas baixas financeiras
+          Cadastre as contas bancárias e o caixa da empresa. São usadas nas baixas financeiras
           (origem/destino do recurso).
         </p>
         <Button onClick={novo}><Plus className="h-4 w-4" /> Nova Conta</Button>
@@ -123,7 +123,7 @@ export default function ContasBancariasPage() {
                 <Input value={ed?.banco ?? ''} onChange={(e) => setEd((p) => ({ ...p, banco: e.target.value }))} placeholder="Ex.: Banco do Brasil, Itau, Inter" />
               </FormField>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <FormField label="Agencia"><Input value={ed?.agencia ?? ''} onChange={(e) => setEd((p) => ({ ...p, agencia: e.target.value }))} /></FormField>
+                <FormField label="Agência"><Input value={ed?.agencia ?? ''} onChange={(e) => setEd((p) => ({ ...p, agencia: e.target.value }))} /></FormField>
                 <FormField label="Conta"><Input value={ed?.conta ?? ''} onChange={(e) => setEd((p) => ({ ...p, conta: e.target.value }))} /></FormField>
               </div>
               <FormField label="Chave PIX"><Input value={ed?.chave_pix ?? ''} onChange={(e) => setEd((p) => ({ ...p, chave_pix: e.target.value }))} /></FormField>

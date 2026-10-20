@@ -41,11 +41,11 @@ export default function PortalPagamentoPage() {
         body: JSON.stringify(form),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error ?? 'Nao consegui cadastrar o cartao');
+      if (!res.ok) throw new Error(json?.error ?? 'Não consegui cadastrar o cartão');
       // Some com os dados da memoria da tela assim que o token volta.
       setForm({ numero: '', nome: '', validade: '', cvv: '' });
       setMostrarForm(false);
-      toast.success('Cartao cadastrado. As proximas mensalidades serao debitadas nele.');
+      toast.success('Cartão cadastrado. As próximas mensalidades serão debitadas nele.');
       refetch();
     } catch (err) {
       setErro((err as Error).message);
@@ -59,7 +59,7 @@ export default function PortalPagamentoPage() {
       <header>
         <h1 className="text-[22px] font-bold tracking-tight text-brand-800">Pagamento</h1>
         <p className="mt-0.5 text-[13px] text-slate-500">
-          Cadastre um cartao e a mensalidade e debitada automaticamente — sem boleto para lembrar.
+          Cadastre um cartão e a mensalidade e debitada automaticamente — sem boleto para lembrar.
         </p>
       </header>
 
@@ -84,19 +84,19 @@ export default function PortalPagamentoPage() {
                 </p>
                 {c.principal && (
                   <span className="mt-1 inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-[10.5px] font-bold uppercase text-emerald-700 ring-1 ring-inset ring-emerald-200">
-                    cobranca automatica
+                    cobrança automática
                   </span>
                 )}
               </div>
               <button
                 onClick={() => {
-                  if (!confirm('Remover este cartao? As proximas mensalidades voltam a ser por boleto.')) return;
+                  if (!confirm('Remover este cartão? As próximas mensalidades voltam a ser por boleto.')) return;
                   remover.mutate(c.id, {
-                    onSuccess: () => toast.success('Cartao removido'),
+                    onSuccess: () => toast.success('Cartão removido'),
                     onError: (e) => toast.error(e.message),
                   });
                 }}
-                aria-label="Remover cartao"
+                aria-label="Remover cartão"
                 className="shrink-0 rounded-lg p-2 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
               >
                 <Trash2 className="h-4 w-4" />
@@ -109,7 +109,7 @@ export default function PortalPagamentoPage() {
           <CardContent className="p-6 text-center">
             <CreditCard className="mx-auto h-8 w-8 text-slate-300" />
             <p className="mt-2 text-[13px] text-slate-500">
-              Voce ainda nao tem cartao cadastrado. Suas mensalidades vem por boleto.
+              Você ainda não tem cartão cadastrado. Suas mensalidades vem por boleto.
             </p>
           </CardContent>
         </Card>
@@ -121,7 +121,7 @@ export default function PortalPagamentoPage() {
           className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-acao px-4 py-3 text-[14px] font-semibold text-white transition hover:bg-acao-escura"
         >
           <CreditCard className="h-4 w-4" />
-          {(cartoes ?? []).length > 0 ? 'Trocar o cartao' : 'Cadastrar cartao'}
+          {(cartoes ?? []).length > 0 ? 'Trocar o cartão' : 'Cadastrar cartão'}
         </button>
       ) : (
         <Card>
@@ -129,24 +129,24 @@ export default function PortalPagamentoPage() {
             <form onSubmit={salvar} className="space-y-3">
               <p className="flex items-start gap-1.5 rounded-xl bg-slate-50 px-3 py-2.5 text-[11.5px] leading-relaxed text-slate-600">
                 <Lock className="mt-px h-3.5 w-3.5 shrink-0 text-slate-400" />
-                O numero do seu cartao vai direto para a operadora e <b>nao fica guardado
-                conosco</b>. Aqui ficam apenas a bandeira e os 4 ultimos digitos, para voce
-                reconhecer o cartao nesta tela.
+                O número do seu cartão vai direto para a operadora e <b>não fica guardado
+                conosco</b>. Aqui ficam apenas a bandeira e os 4 últimos dígitos, para você
+                reconhecer o cartão nesta tela.
               </p>
 
-              <Campo rotulo="Numero do cartao" valor={formatarNumero(form.numero)} mono
+              <Campo rotulo="Número do cartão" valor={formatarNumero(form.numero)} mono
                 inputMode="numeric" autoFocus
                 onChange={(v) => setForm({ ...form, numero: v })}
                 sufixo={bandeira !== 'DESCONHECIDA' ? bandeira : undefined} />
 
-              <Campo rotulo="Nome como esta no cartao" valor={form.nome}
+              <Campo rotulo="Nome como está no cartão" valor={form.nome}
                 onChange={(v) => setForm({ ...form, nome: v.toUpperCase() })} />
 
               <div className="grid grid-cols-2 gap-3">
                 <Campo rotulo="Validade (MM/AA)" valor={formatarValidade(form.validade)} mono
                   inputMode="numeric"
                   onChange={(v) => setForm({ ...form, validade: v })} />
-                <Campo rotulo="Cod. seguranca" valor={form.cvv} mono inputMode="numeric"
+                <Campo rotulo="Cod. segurança" valor={form.cvv} mono inputMode="numeric"
                   onChange={(v) => setForm({ ...form, cvv: v.replace(/\D/g, '').slice(0, 4) })} />
               </div>
 
@@ -168,7 +168,7 @@ export default function PortalPagamentoPage() {
                   className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-acao px-4 py-2.5 text-[13px] font-semibold text-white transition hover:bg-acao-escura disabled:opacity-50"
                 >
                   {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
-                  Salvar cartao
+                  Salvar cartão
                 </button>
               </div>
             </form>
@@ -177,8 +177,8 @@ export default function PortalPagamentoPage() {
       )}
 
       <p className="px-1 text-[11.5px] leading-relaxed text-slate-400">
-        A cobranca no cartao acontece no vencimento de cada mensalidade. Boletos ja emitidos
-        continuam validos e podem ser pagos normalmente em <b>Financeiro</b>.
+        A cobrança no cartão acontece no vencimento de cada mensalidade. Boletos já emitidos
+        continuam válidos e podem ser pagos normalmente em <b>Financeiro</b>.
       </p>
     </div>
   );

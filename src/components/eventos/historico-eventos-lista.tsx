@@ -80,12 +80,12 @@ export function HistoricoEventosLista() {
       <div className="flex items-start gap-3 rounded-2xl border border-violet-200 bg-violet-50/60 px-4 py-3 text-sm text-slate-700">
         <History className="mt-0.5 h-4 w-4 shrink-0 text-violet-600" />
         <p>
-          Eventos registrados no <b>sistema anterior (Mutual)</b> dos associados ja carregados
-          {resumo.data ? <> — <b className="tnum">{inteiro.format(resumo.data.eventos)}</b> no historico</> : null}.
-          Ficam <b>so na consulta</b> ate alguem escolher: marque os que ainda estao em tratamento e use{' '}
+          Eventos registrados no <b>sistema anterior (Mutual)</b> dos associados já carregados
+          {resumo.data ? <> — <b className="tnum">{inteiro.format(resumo.data.eventos)}</b> no histórico</> : null}.
+          Ficam <b>só na consulta</b> até alguém escolher: marque os que ainda estão em tratamento e use{' '}
           <b>Levar ao Kanban</b> — cada um vira um evento em <b>Aberto</b> para a equipe completar. O status que o
-          Mutual envia nao informa a situacao; so a <b>data de conclusao</b> prova o encerramento. Para atualizar, use{' '}
-          <Link href="/integracao/mutual" className="font-medium text-cyan-700 underline">Integracao Mutual</Link>.
+          Mutual envia não informa a situação; só a <b>data de conclusão</b> prova o encerramento. Para atualizar, use{' '}
+          <Link href="/integracao/mutual" className="font-medium text-cyan-700 underline">Integração Mutual</Link>.
         </p>
       </div>
 
@@ -121,8 +121,8 @@ export function HistoricoEventosLista() {
             className="mt-1 block rounded-lg border border-slate-300 bg-superficie px-2.5 py-1.5 text-sm focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
           >
             <option value="">Todos</option>
-            <option value="nao">Ainda nao levados</option>
-            <option value="sim">Ja no Kanban</option>
+            <option value="nao">Ainda não levados</option>
+            <option value="sim">Já no Kanban</option>
           </select>
         </label>
         <label className="block">
@@ -131,7 +131,7 @@ export function HistoricoEventosLista() {
             className="mt-1 block rounded-lg border border-slate-300 bg-superficie px-2.5 py-1.5 text-sm" />
         </label>
         <label className="block">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Ate</span>
+          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Até</span>
           <input type="date" value={f.ate ?? ''} onChange={(e) => muda({ ate: e.target.value || null })}
             className="mt-1 block rounded-lg border border-slate-300 bg-superficie px-2.5 py-1.5 text-sm" />
         </label>
@@ -158,7 +158,7 @@ export function HistoricoEventosLista() {
               {podeLevar && (
                 <th className="w-8 px-3 py-2.5">
                   <input type="checkbox" checked={todosMarcados} disabled={elegiveis.length === 0}
-                    onChange={alternarPagina} aria-label="Marcar os que podem ir ao Kanban nesta pagina" />
+                    onChange={alternarPagina} aria-label="Marcar os que podem ir ao Kanban nesta página" />
                 </th>
               )}
               <th className="px-4 py-2.5">Protocolo</th>
@@ -167,7 +167,7 @@ export function HistoricoEventosLista() {
               <th className="px-4 py-2.5">Veiculo</th>
               <th className="px-4 py-2.5">Tipo</th>
               <th className="px-4 py-2.5 text-right">Valor</th>
-              <th className="px-4 py-2.5">Situacao</th>
+              <th className="px-4 py-2.5">Situação</th>
               <th className="px-4 py-2.5">Kanban</th>
             </tr>
           </thead>
@@ -176,7 +176,7 @@ export function HistoricoEventosLista() {
               <tr><td colSpan={podeLevar ? 9 : 8} className="px-4 py-10 text-center text-slate-400">Carregando…</td></tr>
             ) : linhas.length === 0 ? (
               <tr><td colSpan={podeLevar ? 9 : 8} className="px-4 py-10 text-center text-slate-400">
-                {resumo.data?.eventos ? 'Nenhum evento com esses filtros.' : 'O historico ainda nao foi importado — Integracao Mutual → Historico de eventos.'}
+                {resumo.data?.eventos ? 'Nenhum evento com esses filtros.' : 'O histórico ainda não foi importado — Integração Mutual → Histórico de eventos.'}
               </td></tr>
             ) : linhas.map((e) => {
               const sit = situacaoHistorico(e);
@@ -207,7 +207,7 @@ export function HistoricoEventosLista() {
                   </td>
                   <td className="tnum px-4 py-2.5 text-right text-slate-600">{Number(e.valor_total ?? 0) !== 0 ? formatCurrency(Number(e.valor_total)) : '—'}</td>
                   <td className="px-4 py-2.5 text-xs text-slate-500">
-                    {sit === 'CONCLUIDO' && e.data_conclusao ? `Concluido em ${formatDate(e.data_conclusao)}` : ROTULO_SITUACAO_HISTORICO[sit]}
+                    {sit === 'CONCLUIDO' && e.data_conclusao ? `Concluído em ${formatDate(e.data_conclusao)}` : ROTULO_SITUACAO_HISTORICO[sit]}
                   </td>
                   <td className="px-4 py-2.5 text-xs">
                     {e.evento_id ? (
@@ -232,7 +232,7 @@ export function HistoricoEventosLista() {
 
       {total > 0 && (
         <div className="flex items-center justify-between text-xs text-slate-500">
-          <span className="tnum">{inteiro.format(total)} eventos · pagina {f.pagina + 1} de {paginas}</span>
+          <span className="tnum">{inteiro.format(total)} eventos · página {f.pagina + 1} de {paginas}</span>
           <div className="flex gap-2">
             <button type="button" disabled={f.pagina === 0} onClick={() => setF((a) => ({ ...a, pagina: a.pagina - 1 }))}
               className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-2.5 py-1 disabled:opacity-40">
@@ -240,7 +240,7 @@ export function HistoricoEventosLista() {
             </button>
             <button type="button" disabled={f.pagina + 1 >= paginas} onClick={() => setF((a) => ({ ...a, pagina: a.pagina + 1 }))}
               className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-2.5 py-1 disabled:opacity-40">
-              Proxima <ChevronRight className="h-3.5 w-3.5" />
+              Próxima <ChevronRight className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>
@@ -254,12 +254,12 @@ export function HistoricoEventosLista() {
       >
         <div className="space-y-3 text-sm text-slate-600">
           <p>
-            Cada evento escolhido vira um <b>evento novo no Kanban, na coluna Aberto</b>, com associado, veiculo, data e
-            unidade. O protocolo, os tipos, o envolvimento e o valor do Mutual vao na descricao, para a equipe completar o resto.
+            Cada evento escolhido vira um <b>evento novo no Kanban, na coluna Aberto</b>, com associado, veículo, data e
+            unidade. O protocolo, os tipos, o envolvimento e o valor do Mutual vão na descrição, para a equipe completar o resto.
           </p>
           <p className="text-xs text-slate-500">
             O evento levado passa a contar como evento do sistema (inclusive nos limites de uso dos opcionais) e sai da
-            contagem do historico. Se for levado por engano, apagar o evento no Kanban devolve-o para ca.
+            contagem do histórico. Se for levado por engano, apagar o evento no Kanban devolve-o para ca.
           </p>
           <div className="flex justify-end gap-2 pt-1">
             <Button type="button" variant="secondary" onClick={() => setConfirmar(null)} disabled={transportar.isPending}>Cancelar</Button>

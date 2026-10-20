@@ -8,12 +8,12 @@ import { AssistenciaPainel } from '@/components/dashboard/assistencia-24h';
 type Aba = 'geral' | 'assistencia';
 
 const ABAS: { id: Aba; label: string; icon: React.ElementType; descricao: string }[] = [
-  { id: 'geral', label: 'Visao Geral', icon: LayoutDashboard, descricao: 'A operacao inteira numa tela: carteira, crescimento, eventos, comercial e financeiro.' },
+  { id: 'geral', label: 'Visão Geral', icon: LayoutDashboard, descricao: 'A operação inteira numa tela: carteira, crescimento, eventos, comercial e financeiro.' },
   {
     id: 'assistencia',
-    label: 'Assistencia 24h',
+    label: 'Assistência 24h',
     icon: LifeBuoy,
-    descricao: 'Consumo, custo e incidencia geografica da maior saida de caixa da protecao veicular.',
+    descricao: 'Consumo, custo e incidência geográfica da maior saída de caixa da proteção veicular.',
   },
 ];
 

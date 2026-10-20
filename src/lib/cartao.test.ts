@@ -102,10 +102,10 @@ describe('validarCartao', () => {
   });
 
   it('reclama de um problema por vez, na ordem do formulario', () => {
-    expect(validarCartao({ ...ok, numero: '4111111111111112' }, hoje)).toMatch(/numero/i);
+    expect(validarCartao({ ...ok, numero: '4111111111111112' }, hoje)).toMatch(/número/i);
     expect(validarCartao({ ...ok, nome: 'CARLOS' }, hoje)).toMatch(/nome/i);
     expect(validarCartao({ ...ok, validade: '1' }, hoje)).toMatch(/validade/i);
     expect(validarCartao({ ...ok, validade: '01/26' }, hoje)).toMatch(/vencido/i);
-    expect(validarCartao({ ...ok, cvv: '12' }, hoje)).toMatch(/seguranca/i);
+    expect(validarCartao({ ...ok, cvv: '12' }, hoje)).toMatch(/segurança/i);
   });
 });

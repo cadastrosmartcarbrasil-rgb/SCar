@@ -18,7 +18,7 @@ import { SePode } from '@/components/layout/se-pode';
 // filtros abaixo sao marcacoes na mesma tabela, nao telas diferentes (0051).
 const ABAS: { id: TipoFornecedor; label: string; icon: React.ElementType }[] = [
   { id: 'todos', label: 'Todos', icon: Store },
-  { id: 'geral', label: 'Pecas e servicos', icon: Store },
+  { id: 'geral', label: 'Peças e serviços', icon: Store },
   { id: 'prestador', label: 'Prestadores 24h', icon: LifeBuoy },
   { id: 'rastreadora', label: 'Rastreadoras', icon: Satellite },
 ];
@@ -46,8 +46,8 @@ function Conteudo() {
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Fornecedores</h1>
           <p className="max-w-2xl text-sm text-slate-500">
-            Quem presta servico para a associacao: oficina e pecas, prestador da Assistencia 24h e
-            empresa de rastreamento. Um cadastro so — o tipo e uma marcacao na ficha.
+            Quem presta serviço para a associação: oficina e peças, prestador da Assistência 24h e
+            empresa de rastreamento. Um cadastro só — o tipo é uma marcação na ficha.
           </p>
         </div>
         <SePode chave="fornecedores.criar">
@@ -73,7 +73,7 @@ function Conteudo() {
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
         <input value={busca} onChange={(e) => setBusca(e.target.value)}
-          placeholder="Buscar por nome fantasia, razao social, CNPJ ou cobertura"
+          placeholder="Buscar por nome fantasia, razão social, CNPJ ou cobertura"
           className="w-full rounded-md border border-slate-300 py-2 pl-9 pr-3 text-sm" />
       </div>
 
@@ -86,7 +86,7 @@ function Conteudo() {
               <th className="px-4 py-2">Documento</th>
               <th className="px-4 py-2">Contato</th>
               <th className="px-4 py-2">Ativo</th>
-              <th className="px-4 py-2 text-right">Acoes</th>
+              <th className="px-4 py-2 text-right">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -110,7 +110,7 @@ function Conteudo() {
                       </span>
                     )}
                     {!f.prestador_assistencia && !f.empresa_rastreamento && (
-                      <span className="rounded bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">Pecas / servicos</span>
+                      <span className="rounded bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">Peças / serviços</span>
                     )}
                   </div>
                   {f.empresa_rastreamento && Number(f.custo_mensal_equipamento ?? 0) > 0 && (

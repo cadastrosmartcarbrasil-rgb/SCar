@@ -59,7 +59,7 @@ export function DashboardCobranca() {
         <Kpi
           titulo="Total emitido"
           valor={formatCurrency(Number(resumo?.emitido_valor ?? 0))}
-          detalhe={`${resumo?.emitido_qtd ?? 0} boleto(s) no periodo`}
+          detalhe={`${resumo?.emitido_qtd ?? 0} boleto(s) no período`}
           icone={TrendingUp}
           cor="text-brand-700"
           carregando={carregandoKpis}
@@ -79,7 +79,7 @@ export function DashboardCobranca() {
         <Kpi
           titulo="Inadimplencia"
           valor={`${Number(inad ?? 0).toFixed(2).replace('.', ',')}%`}
-          detalhe={`${formatCurrency(Number(resumo?.vencido_valor ?? 0))} em atraso · ${resumo?.vencido_qtd ?? 0} titulo(s)`}
+          detalhe={`${formatCurrency(Number(resumo?.vencido_valor ?? 0))} em atraso · ${resumo?.vencido_qtd ?? 0} título(s)`}
           icone={AlertTriangle}
           cor={Number(inad ?? 0) > 10 ? 'text-rose-700' : 'text-amber-700'}
           carregando={carregandoKpis}
@@ -116,7 +116,7 @@ export function DashboardCobranca() {
               onChange={(e) => setFiltro((f) => ({ ...f, inicio: e.target.value || null }))}
             />
           </FormField>
-          <FormField label="Vencimento ate">
+          <FormField label="Vencimento até">
             <Input
               type="date"
               value={filtro.fim ?? ''}
@@ -188,7 +188,7 @@ export function DashboardCobranca() {
             <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
               <th className="px-4 py-2">Associado</th>
               <th className="px-4 py-2">Placa(s)</th>
-              <th className="px-4 py-2">Competencia</th>
+              <th className="px-4 py-2">Competência</th>
               <th className="px-4 py-2">Vencimento</th>
               <th className="px-4 py-2 text-right">Valor</th>
               <th className="px-4 py-2">Status</th>
@@ -198,7 +198,7 @@ export function DashboardCobranca() {
           <tbody>
             {isLoading && <tr><td colSpan={7} className="px-4 py-6 text-center text-slate-400">Carregando...</td></tr>}
             {!isLoading && (lista ?? []).length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400">Nenhuma cobranca com esses filtros.</td></tr>
+              <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400">Nenhuma cobrança com esses filtros.</td></tr>
             )}
             {(lista ?? []).map((c) => (
               <tr key={c.titulo_id} className="border-b border-slate-50 last:border-0">
@@ -237,7 +237,7 @@ export function DashboardCobranca() {
                         <QrCode className="h-3.5 w-3.5" /> PIX
                       </button>
                     )}
-                    {!c.url_boleto && !c.pix_copia_cola && <span className="text-slate-400">nao registrado</span>}
+                    {!c.url_boleto && !c.pix_copia_cola && <span className="text-slate-400">não registrado</span>}
                   </div>
                 </td>
               </tr>

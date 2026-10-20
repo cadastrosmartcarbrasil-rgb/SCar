@@ -28,9 +28,9 @@ export default function FichaVeiculo({ params }: { params: { id: string } }) {
   const [aba, setAba] = useState<Aba>('dados');
   const verTermos = usePode('termos.ver');
 
-  if (isLoading) return <p className="text-sm text-slate-500">Carregando veiculo...</p>;
-  if (error) return <p className="text-sm text-rose-600">Nao foi possivel carregar: {(error as Error).message}</p>;
-  if (!v) return <p className="text-sm text-slate-500">Veiculo nao encontrado (ou fora da sua unidade).</p>;
+  if (isLoading) return <p className="text-sm text-slate-500">Carregando veículo...</p>;
+  if (error) return <p className="text-sm text-rose-600">Não foi possível carregar: {(error as Error).message}</p>;
+  if (!v) return <p className="text-sm text-slate-500">Veículo não encontrado (ou fora da sua unidade).</p>;
 
   const st = statusVeiculoResumo(v.status, false);
   const ativacao = primeiraAtivacao(v.data_ativacao);
@@ -41,7 +41,7 @@ export default function FichaVeiculo({ params }: { params: { id: string } }) {
     { id: 'financeiro', label: 'Financeiro', icon: DollarSign },
     { id: 'eventos', label: 'Eventos', icon: AlertTriangle },
     { id: 'protocolos', label: 'Protocolos', icon: ClipboardList },
-    { id: 'assistencia', label: 'Assistencia 24h', icon: LifeBuoy },
+    { id: 'assistencia', label: 'Assistência 24h', icon: LifeBuoy },
     ...(verTermos ? [{ id: 'termos' as Aba, label: 'Termos', icon: FileSignature }] : []),
   ];
 
@@ -51,7 +51,7 @@ export default function FichaVeiculo({ params }: { params: { id: string } }) {
         href={v.clientes ? `/associados/${v.clientes.id}` : '/veiculos'}
         className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"
       >
-        <ArrowLeft className="h-4 w-4" /> {v.clientes ? 'Voltar ao associado' : 'Voltar aos veiculos'}
+        <ArrowLeft className="h-4 w-4" /> {v.clientes ? 'Voltar ao associado' : 'Voltar aos veículos'}
       </Link>
 
       <div className="flex flex-wrap items-center gap-4 rounded-xl border border-slate-200 bg-superficie p-5">
@@ -71,7 +71,7 @@ export default function FichaVeiculo({ params }: { params: { id: string } }) {
               <Link href={`/associados/${v.clientes.id}`} className="inline-flex items-center gap-1 text-brand-600 hover:underline">
                 <UserRound className="h-3.5 w-3.5" /> {v.clientes.nome_razao_social}
               </Link>
-              {' · '}Matricula {v.clientes.matricula ?? '-'} · {formatarDocumento(v.clientes.cpf_cnpj, v.clientes.tipo_pessoa as 'PF' | 'PJ')}
+              {' · '}Matrícula {v.clientes.matricula ?? '-'} · {formatarDocumento(v.clientes.cpf_cnpj, v.clientes.tipo_pessoa as 'PF' | 'PJ')}
             </p>
           )}
         </div>
@@ -107,20 +107,20 @@ export default function FichaVeiculo({ params }: { params: { id: string } }) {
             <CardContent className="pt-5">
               <dl className="grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
                 <Item rotulo="Plano" valor={v.planos_protecao?.nome ?? 'Sem plano'} />
-                <Item rotulo="Tipo de veiculo" valor={v.tipos_veiculo?.nome} />
+                <Item rotulo="Tipo de veículo" valor={v.tipos_veiculo?.nome} />
                 <Item rotulo="Unidade" valor={v.regionais?.nome ?? 'Matriz'} />
                 <Item rotulo="Valor FIPE" valor={v.valor_fipe ? formatCurrency(v.valor_fipe) : null} />
                 <Item
                   rotulo="Mensalidade"
-                  valor={v.valor_mensalidade ? formatCurrency(v.valor_mensalidade) : 'Pelo plano (cotacao)'}
+                  valor={v.valor_mensalidade ? formatCurrency(v.valor_mensalidade) : 'Pelo plano (cotação)'}
                 />
                 <Item rotulo="Dia de vencimento" valor={v.dia_vencimento ? String(v.dia_vencimento) : null} />
                 <Item
-                  rotulo="Cobranca"
+                  rotulo="Cobrança"
                   valor={v.cobranca_externa ? 'Externa (sistema anterior)' : 'Emitida pelo SCar'}
                 />
                 <Item
-                  rotulo="Primeira ativacao"
+                  rotulo="Primeira ativação"
                   valor={ativacao ? `${ativacao.data}${ativacao.tempo ? ` · ${ativacao.tempo}` : ''}` : null}
                 />
                 <Item rotulo="Chassi" valor={v.chassi} mono />

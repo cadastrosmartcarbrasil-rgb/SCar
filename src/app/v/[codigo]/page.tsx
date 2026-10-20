@@ -17,10 +17,10 @@ import { CotacaoPublica } from '@/components/hotlink/cotacao-publica';
 export const dynamic = 'force-dynamic';
 
 const BENEFICIOS = [
-  { icone: ShieldCheck, titulo: 'Protecao completa', texto: 'Roubo, furto, colisao e incendio, com participacao definida em contrato.' },
-  { icone: Wrench, titulo: 'Assistencia 24 horas', texto: 'Guincho, chaveiro, pane seca e troca de pneu, a qualquer hora.' },
-  { icone: MapPin, titulo: 'Cobertura nacional', texto: 'Rede de prestadores em todo o Brasil, sem carencia para assistencia.' },
-  { icone: Clock, titulo: 'Adesao rapida', texto: 'Cotacao na hora pela placa e vistoria feita pelo celular.' },
+  { icone: ShieldCheck, titulo: 'Proteção completa', texto: 'Roubo, furto, colisão e incêndio, com participação definida em contrato.' },
+  { icone: Wrench, titulo: 'Assistência 24 horas', texto: 'Guincho, chaveiro, pane seca e troca de pneu, a qualquer hora.' },
+  { icone: MapPin, titulo: 'Cobertura nacional', texto: 'Rede de prestadores em todo o Brasil, sem carência para assistência.' },
+  { icone: Clock, titulo: 'Adesão rápida', texto: 'Cotação na hora pela placa e vistoria feita pelo celular.' },
 ];
 
 export default async function HotlinkPage({ params }: { params: { codigo: string } }) {
@@ -56,15 +56,15 @@ export default async function HotlinkPage({ params }: { params: { codigo: string
         <div className="relative mx-auto grid max-w-5xl gap-8 px-4 pb-24 pt-10 lg:grid-cols-[1fr_400px] lg:pb-28">
           <div className="text-white">
             <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-cyan-400">
-              {ehVendedor ? 'Atendimento personalizado' : 'Cotacao online'}
+              {ehVendedor ? 'Atendimento personalizado' : 'Cotação online'}
             </p>
             <h1 className="mt-3 text-[30px] font-light uppercase leading-[1.15] tracking-tight sm:text-[38px]">
-              Seu veiculo protegido<br />
+              Seu veículo protegido<br />
               <span className="font-bold">com quem cuida de verdade</span>
             </h1>
             <p className="mt-4 max-w-md text-[14px] leading-relaxed text-white/70">
-              Faca sua cotacao em menos de um minuto. Sem burocracia, sem analise de perfil
-              e com assistencia 24 horas em todo o Brasil.
+              Faça sua cotação em menos de um minuto. Sem burocracia, sem análise de perfil
+              e com assistência 24 horas em todo o Brasil.
             </p>
 
             {ehVendedor && (
@@ -105,9 +105,9 @@ export default async function HotlinkPage({ params }: { params: { codigo: string
       <section className="mx-auto max-w-5xl px-4 py-10">
         <div className="grid gap-4 sm:grid-cols-3">
           {[
-            ['Vistoria pelo celular', 'Voce fotografa o veiculo pelo proprio aparelho, guiado passo a passo.'],
-            ['Mensalidade so apos aprovacao', 'A cobranca comeca depois que a adesao e aprovada e o veiculo entra na base.'],
-            ['Atendimento com gente', 'SAC, assistencia e eventos com equipe propria — nao e robo.'],
+            ['Vistoria pelo celular', 'Você fotografa o veículo pelo próprio aparelho, guiado passo a passo.'],
+            ['Mensalidade só após aprovação', 'A cobrança começa depois que a adesão e aprovada e o veículo entra na base.'],
+            ['Atendimento com gente', 'SAC, assistência e eventos com equipe própria — não e robo.'],
           ].map(([titulo, texto]) => (
             <div key={titulo} className="rounded-2xl border border-slate-200 bg-superficie p-4">
               <BadgeCheck className="h-5 w-5 text-cyan-600" />

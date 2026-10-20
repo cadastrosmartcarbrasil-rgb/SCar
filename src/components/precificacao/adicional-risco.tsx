@@ -63,8 +63,8 @@ function Linha({ linha, tipoVeiculoId }: { linha: AdicionalRiscoLinha; tipoVeicu
                 onSuccess: () =>
                   toast.success(
                     valor && valor > 0
-                      ? `${linha.regional_nome}: +${formatCurrency(valor)} por mes.`
-                      : `${linha.regional_nome} voltou ao preco da matriz.`,
+                      ? `${linha.regional_nome}: +${formatCurrency(valor)} por mês.`
+                      : `${linha.regional_nome} voltou ao preço da matriz.`,
                   ),
                 onError: (e) => toast.error(e.message),
               },
@@ -103,9 +103,9 @@ export function AdicionalRiscoRegional({ tipoVeiculoId }: { tipoVeiculoId: strin
         <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
         <span>
           Um valor por unidade cobre <strong>todas as faixas FIPE</strong> deste tipo, somado{' '}
-          <strong>uma vez</strong> sobre a mensalidade — nao por produto. Campo vazio = preco da
-          matriz. <strong>Nao altera adesao nem participacao</strong>, e veiculo que ja esta na base
-          mantem o adicional da entrada.
+          <strong>uma vez</strong> sobre a mensalidade — não por produto. Campo vazio = preço da
+          matriz. <strong>Não altera adesão nem participação</strong>, e veículo que já está na base
+          mantém o adicional da entrada.
         </span>
       </p>
 
@@ -119,7 +119,7 @@ export function AdicionalRiscoRegional({ tipoVeiculoId }: { tipoVeiculoId: strin
                 <th className="px-2 py-2">Unidade</th>
                 <th className="px-2 py-2">Adicional</th>
                 <th className="px-2 py-2">Justificativa</th>
-                <th className="px-2 py-2 text-right">Veiculos</th>
+                <th className="px-2 py-2 text-right">Veículos</th>
                 <th className="px-2 py-2" />
                 <th className="px-2 py-2" />
               </tr>
@@ -142,8 +142,8 @@ export function AdicionalRiscoRegional({ tipoVeiculoId }: { tipoVeiculoId: strin
 
       {resumo.veiculosAfetados > 0 && (
         <p className="mt-2 text-xs text-slate-400">
-          {resumo.veiculosAfetados} veiculo(s) ja foram precificados por uma unidade com adicional.
-          Reajustar aqui vale para <strong>venda nova</strong>; quem ja esta na base mantem o valor
+          {resumo.veiculosAfetados} veículo(s) já foram precificados por uma unidade com adicional.
+          Reajustar aqui vale para <strong>venda nova</strong>; quem já está na base mantém o valor
           da entrada.
         </p>
       )}

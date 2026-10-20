@@ -46,8 +46,8 @@ export default function CentrosCustoPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm text-slate-500">
-          Centros de custo classificam os lancamentos do Financeiro e filtram o DRE. Os inativos deixam de
-          ser oferecidos em lancamento novo, mas continuam nos relatorios.
+          Centros de custo classificam os lançamentos do Financeiro e filtram o DRE. Os inativos deixam de
+          ser oferecidos em lançamento novo, mas continuam nos relatórios.
         </p>
         <Button onClick={() => setEd({ nome: '', codigo: '', ativo: true })}>
           <Plus className="h-4 w-4" /> Novo centro de custo
@@ -58,11 +58,11 @@ export default function CentrosCustoPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
-              <th className="px-4 py-2">Codigo</th>
+              <th className="px-4 py-2">Código</th>
               <th className="px-4 py-2">Nome</th>
-              <th className="px-4 py-2 text-right">Lancamentos</th>
+              <th className="px-4 py-2 text-right">Lançamentos</th>
               <th className="px-4 py-2">Status</th>
-              <th className="px-4 py-2 text-right">Acoes</th>
+              <th className="px-4 py-2 text-right">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -80,7 +80,7 @@ export default function CentrosCustoPage() {
                     <span className="inline-flex items-center gap-1.5">
                       {c.nome}
                       {sistema && (
-                        <span title="Usado pela Assistencia 24h" className="inline-flex items-center gap-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-500">
+                        <span title="Usado pela Assistência 24h" className="inline-flex items-center gap-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-500">
                           <Lock className="h-3 w-3" /> sistema
                         </span>
                       )}
@@ -98,13 +98,13 @@ export default function CentrosCustoPage() {
                       <button
                         disabled={!podeExcluir}
                         title={
-                          sistema ? 'Centro da Assistencia 24h: nao pode ser excluido'
-                            : podeExcluir ? 'Excluir' : 'Tem lancamentos: inative em vez de excluir'
+                          sistema ? 'Centro da Assistência 24h: não pode ser excluído'
+                            : podeExcluir ? 'Excluir' : 'Tem lançamentos: inative em vez de excluir'
                         }
                         onClick={() => {
                           if (confirm(`Excluir o centro de custo "${c.nome}"?`))
                             excluir.mutate(c.id, {
-                              onSuccess: () => toast.success('Centro de custo excluido'),
+                              onSuccess: () => toast.success('Centro de custo excluído'),
                               onError: (err) => toast.error((err as Error).message),
                             });
                         }}
@@ -128,7 +128,7 @@ export default function CentrosCustoPage() {
         {ed && (
           <form onSubmit={submit} className="space-y-3">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <FormField label="Codigo">
+              <FormField label="Código">
                 <Input value={ed.codigo} disabled={travado} placeholder="ADM"
                   onChange={(e) => setEd({ ...ed, codigo: e.target.value })} />
               </FormField>
@@ -138,7 +138,7 @@ export default function CentrosCustoPage() {
             </div>
             {travado && (
               <p className="text-xs text-slate-500">
-                O codigo ASSIST24 e usado pela Assistencia 24h para lancar o custo das OS; ele fica travado.
+                O código ASSIST24 e usado pela Assistência 24h para lançar o custo das OS; ele fica travado.
               </p>
             )}
             <label className="flex items-center gap-2 text-sm text-slate-600">

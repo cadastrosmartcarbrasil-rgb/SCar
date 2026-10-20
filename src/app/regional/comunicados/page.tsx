@@ -86,7 +86,7 @@ export default function ComunicadosRegionalPage() {
           {mural.isLoading && <p className="text-sm text-slate-400">Carregando...</p>}
           {!mural.isLoading && recebidos.length === 0 && (
             <p className="rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-400">
-              Nenhum comunicado para voce agora.
+              Nenhum comunicado para você agora.
             </p>
           )}
           {recebidos.map((m) => {
@@ -100,7 +100,7 @@ export default function ComunicadosRegionalPage() {
                   <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${pri.cor}`}>{pri.rotulo}</span>
                   {m.exige_leitura && (
                     <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
-                      ciencia obrigatoria
+                      ciência obrigatória
                     </span>
                   )}
                   {resumoRespostas(m.respostas, m.respostas_nao_lidas) && (
@@ -116,8 +116,8 @@ export default function ComunicadosRegionalPage() {
                 <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{m.mensagem}</p>
                 <p className="mt-2 text-[11px] text-slate-400">
                   {m.autor} · {formatDate(m.publicado_em)}
-                  {m.expira_em ? ` · vale ate ${formatDate(m.expira_em)}` : ''}
-                  {m.lido_em ? ' · ciencia dada' : ''}
+                  {m.expira_em ? ` · vale até ${formatDate(m.expira_em)}` : ''}
+                  {m.lido_em ? ' · ciência dada' : ''}
                 </p>
                 <div className="mt-3 border-t border-slate-100 pt-3">
                   <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
@@ -128,7 +128,7 @@ export default function ComunicadosRegionalPage() {
                 {m.pendente_ciencia && (
                   <button
                     onClick={() => marcar.mutate(m.id, {
-                      onSuccess: () => toast.success('Ciencia registrada'),
+                      onSuccess: () => toast.success('Ciência registrada'),
                       onError: (e) => toast.error(e.message),
                     })}
                     disabled={marcar.isPending}
@@ -151,8 +151,8 @@ export default function ComunicadosRegionalPage() {
               <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
                 <th className="px-4 py-2">Comunicado</th>
                 <th className="px-4 py-2">Para quem</th>
-                <th className="px-4 py-2">Ciencia</th>
-                <th className="px-4 py-2 text-right">Acoes</th>
+                <th className="px-4 py-2">Ciência</th>
+                <th className="px-4 py-2 text-right">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -171,7 +171,7 @@ export default function ComunicadosRegionalPage() {
                         <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${cat.cor}`}>{cat.rotulo}</span>
                         {m.exige_leitura && (
                           <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
-                            ciencia
+                            ciência
                           </span>
                         )}
                         {!m.publicado && (
@@ -184,7 +184,7 @@ export default function ComunicadosRegionalPage() {
                     <td className="px-4 py-2 text-slate-600">
                       {paraDiretoria ? (
                         <span className="inline-flex items-center gap-1.5 text-brand-700">
-                          <Building2 className="h-3.5 w-3.5" /> Diretoria / administracao
+                          <Building2 className="h-3.5 w-3.5" /> Diretoria / administração
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1.5">
@@ -192,11 +192,11 @@ export default function ComunicadosRegionalPage() {
                         </span>
                       )}
                       <span className="block text-[11px] text-slate-400">
-                        {m.papeis?.length ? m.papeis.map(papelMemoRotulo).join(', ') : 'Todos os papeis'}
+                        {m.papeis?.length ? m.papeis.map(papelMemoRotulo).join(', ') : 'Todos os papéis'}
                       </span>
                       {m.destinatarios === 0 && (
                         <span className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-rose-600">
-                          <AlertTriangle className="h-3 w-3" /> nenhum usuario ativo neste endereço
+                          <AlertTriangle className="h-3 w-3" /> nenhum usuário ativo neste endereço
                         </span>
                       )}
                     </td>
@@ -257,7 +257,7 @@ export default function ComunicadosRegionalPage() {
               {!enviados.isLoading && (enviados.data ?? []).length === 0 && (
                 <tr><td colSpan={4} className="px-4 py-8 text-center text-slate-400">
                   <Megaphone className="mx-auto mb-2 h-6 w-6 text-slate-300" />
-                  A unidade ainda nao enviou nenhum comunicado.
+                  A unidade ainda não enviou nenhum comunicado.
                 </td></tr>
               )}
             </tbody>

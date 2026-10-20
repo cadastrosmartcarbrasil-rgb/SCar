@@ -39,12 +39,12 @@ export interface Modulo {
 }
 
 export const MODULOS: Modulo[] = [
-  { chave: 'painel', rotulo: 'Painel / Visao Geral', acoes: ['ver', 'exportar'], rotas: ['/dashboard'] },
+  { chave: 'painel', rotulo: 'Painel / Visão Geral', acoes: ['ver', 'exportar'], rotas: ['/dashboard'] },
   { chave: 'sac', rotulo: 'SAC / Atendimento', acoes: ['ver', 'criar', 'editar', 'transferir', 'fechar'],
     notas: { criar: 'abrir protocolo', fechar: 'encerrar protocolo' }, rotas: ['/sac'] },
   { chave: 'protocolos', rotulo: 'Protocolos', acoes: ['ver', 'criar', 'editar', 'transferir', 'fechar'],
     notas: { fechar: 'encerrar' }, rotas: ['/protocolos'] },
-  { chave: 'assistencia', rotulo: 'Assistencia 24h',
+  { chave: 'assistencia', rotulo: 'Assistência 24h',
     acoes: ['ver', 'criar', 'editar', 'cancelar', 'transferir', 'fechar'],
     notas: { criar: 'acionar', transferir: 'trocar prestador', fechar: 'concluir a OS' }, rotas: ['/assistencia'] },
   { chave: 'vendas', rotulo: 'Vendas / CRM',
@@ -53,18 +53,18 @@ export const MODULOS: Modulo[] = [
     rotas: ['/vendas'] },
   { chave: 'associados', rotulo: 'Associados', acoes: ['ver', 'criar', 'editar', 'excluir', 'exportar'],
     rotas: ['/associados'] },
-  { chave: 'veiculos', rotulo: 'Veiculos', acoes: ['ver', 'criar', 'editar', 'excluir', 'exportar', 'cancelar'],
+  { chave: 'veiculos', rotulo: 'Veículos', acoes: ['ver', 'criar', 'editar', 'excluir', 'exportar', 'cancelar'],
     notas: { cancelar: 'inativar / cancelar contrato' }, rotas: ['/veiculos'] },
   { chave: 'rastreadores', rotulo: 'Rastreadores', acoes: ['ver', 'criar', 'editar', 'transferir', 'baixar'],
-    notas: { baixar: 'baixa de patrimonio' }, rotas: ['/rastreadores'] },
+    notas: { baixar: 'baixa de patrimônio' }, rotas: ['/rastreadores'] },
   { chave: 'eventos', rotulo: 'Eventos',
     acoes: ['ver', 'criar', 'editar', 'excluir', 'exportar', 'cancelar', 'transferir', 'fechar'],
-    notas: { editar: 'tratar: fase, pecas, nota fiscal', transferir: 'tramitar e pedir parecer' },
+    notas: { editar: 'tratar: fase, peças, nota fiscal', transferir: 'tramitar e pedir parecer' },
     rotas: ['/eventos'] },
-  { chave: 'cobranca', rotulo: 'Cobranca', acoes: ['ver', 'criar', 'editar', 'exportar', 'baixar', 'cancelar'],
+  { chave: 'cobranca', rotulo: 'Cobrança', acoes: ['ver', 'criar', 'editar', 'exportar', 'baixar', 'cancelar'],
     notas: { criar: 'gerar faturas e remessas', editar: 'ajustar boleto' }, rotas: ['/cobrancas'] },
-  { chave: 'precificacao', rotulo: 'Precificacao', acoes: ['ver', 'editar', 'exportar'],
-    notas: { editar: 'alterar a tabela de precos' }, rotas: ['/precificacao'] },
+  { chave: 'precificacao', rotulo: 'Precificação', acoes: ['ver', 'editar', 'exportar'],
+    notas: { editar: 'alterar a tabela de preços' }, rotas: ['/precificacao'] },
   { chave: 'fornecedores', rotulo: 'Fornecedores', acoes: ['ver', 'criar', 'editar', 'excluir', 'exportar'],
     rotas: ['/fornecedores'] },
   { chave: 'financeiro', rotulo: 'Financeiro / DRE',
@@ -76,15 +76,15 @@ export const MODULOS: Modulo[] = [
     notas: { criar: 'emitir termo para o associado', exportar: 'baixar o PDF', cancelar: 'cancelar termo emitido' },
     rotas: [] },
   { chave: 'termos_modelos', rotulo: 'Termos — gerenciar modelos', acoes: ['ver', 'criar', 'editar', 'excluir'],
-    notas: { criar: 'criar modelo e publicar versao', editar: 'editar o texto e publicar versao' },
+    notas: { criar: 'criar modelo e publicar versão', editar: 'editar o texto e publicar versão' },
     rotas: [] },
   { chave: 'regionais', rotulo: 'Regionais (dashboard e portal)', acoes: ['ver', 'exportar'],
     rotas: ['/regionais'], fixo: ['admin', 'financeiro', 'gestor_regional'] },
-  { chave: 'mutual', rotulo: 'Integracao Mutual', acoes: ['ver', 'criar', 'editar'],
+  { chave: 'mutual', rotulo: 'Integração Mutual', acoes: ['ver', 'criar', 'editar'],
     rotas: ['/integracao'], fixo: ['admin', 'financeiro'] },
-  { chave: 'usuarios', rotulo: 'Usuarios e permissoes', acoes: ['ver', 'criar', 'editar', 'excluir'],
+  { chave: 'usuarios', rotulo: 'Usuários e permissões', acoes: ['ver', 'criar', 'editar', 'excluir'],
     rotas: [], fixo: ['admin'] },
-  { chave: 'configuracoes', rotulo: 'Configuracoes', acoes: ['ver', 'editar'],
+  { chave: 'configuracoes', rotulo: 'Configurações', acoes: ['ver', 'editar'],
     rotas: ['/configuracoes'], fixo: ['admin'] },
 ];
 
@@ -92,7 +92,7 @@ export const MODULOS: Modulo[] = [
 export const ALCADAS = [
   { chave: 'desconto', rotulo: 'Aprovar desconto acima do limite da unidade' },
   { chave: 'liberar_24h', rotulo: 'Liberar acionamento da 24h bloqueado' },
-  { chave: 'leads', rotulo: 'Ver a carteira de leads da unidade inteira (sem ela: so os leads dele)' },
+  { chave: 'leads', rotulo: 'Ver a carteira de leads da unidade inteira (sem ela: só os leads dele)' },
 ] as const;
 
 /** Chave de celula: 'modulo.acao'. */

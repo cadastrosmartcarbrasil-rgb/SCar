@@ -9,7 +9,7 @@
 
 export class TarefaDescartada extends Error {
   constructor() {
-    super('Leitura descartada antes de comecar (a tela nao precisa mais dela)');
+    super('Leitura descartada antes de começar (a tela não precisa mais dela)');
     this.name = 'AbortError';
   }
 }

@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   const token = String(body?.token ?? '').trim();
   const placa = normalizarPlaca(String(body?.placa ?? '').trim());
 
-  if (!token) return NextResponse.json({ error: 'Sessao expirada' }, { status: 400 });
+  if (!token) return NextResponse.json({ error: 'Sessão expirada' }, { status: 400 });
   if (!placaCompleta(placa)) {
     return NextResponse.json({ error: 'Informe a placa completa' }, { status: 400 });
   }
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
   const admin = createAdminClient();
   const { data: sessoes } = await admin.rpc('lead_por_token_publico', { p_token: token });
   const lead = sessoes?.[0];
-  if (!lead) return NextResponse.json({ error: 'Sessao invalida' }, { status: 404 });
+  if (!lead) return NextResponse.json({ error: 'Sessão inválida' }, { status: 404 });
 
   const { data: tipos } = await admin
     .from('tipos_veiculo').select('id, nome').eq('status', true).order('nome');

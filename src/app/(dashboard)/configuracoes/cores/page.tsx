@@ -18,7 +18,7 @@ import { corNormalizada } from '@/lib/cores';
 import type { CorListada } from '@/lib/database.types';
 
 function mensagem(e: unknown) {
-  return e instanceof Error ? e.message : 'Nao foi possivel concluir.';
+  return e instanceof Error ? e.message : 'Não foi possível concluir.';
 }
 
 /** Uma linha do catalogo: a cor, seus apelidos e quantos registros a usam. */
@@ -56,7 +56,7 @@ function LinhaCor({ cor }: { cor: CorListada }) {
           <p className="text-xs text-slate-500 tnum">
             {emUso === 0
               ? 'nenhum registro usa'
-              : `${cor.veiculos} veiculo(s) · ${cor.leads} lead(s)`}
+              : `${cor.veiculos} veículo(s) · ${cor.leads} lead(s)`}
           </p>
         </div>
 
@@ -80,7 +80,7 @@ function LinhaCor({ cor }: { cor: CorListada }) {
         <Button
           variant="ghost"
           disabled={emUso > 0}
-          title={emUso > 0 ? 'Ha registros usando esta cor — inative em vez de excluir.' : 'Excluir'}
+          title={emUso > 0 ? 'Há registros usando esta cor — inative em vez de excluir.' : 'Excluir'}
           onClick={async () => {
             if (!confirm(`Excluir a cor ${cor.nome}?`)) return;
             try {
@@ -144,13 +144,13 @@ export default function CoresPage() {
       <header>
         <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-800">
           <Palette className="h-5 w-5 text-cyan-600" />
-          Cores do veiculo
+          Cores do veículo
         </h2>
         <p className="mt-1 max-w-3xl text-sm text-slate-600">
-          O vocabulario e o do documento: o CRLV tem dezesseis cores e so essas. O que a ficha
-          grava passa por aqui — &quot;prata metalico&quot;, &quot;Prata&quot; e &quot;PRATEADO&quot;
-          viram <strong>PRATA</strong>. Cor que o catalogo nao reconhece{' '}
-          <strong>nao e recusada</strong>: ela entra e aparece na fila abaixo.
+          O vocabulário e o do documento: o CRLV tem dezesseis cores e só essas. O que a ficha
+          grava passa por aqui — &quot;prata metálico&quot;, &quot;Prata&quot; e &quot;PRATEADO&quot;
+          viram <strong>PRATA</strong>. Cor que o catálogo não reconhece{' '}
+          <strong>não é recusada</strong>: ela entra e aparece na fila abaixo.
         </p>
       </header>
 
@@ -160,7 +160,7 @@ export default function CoresPage() {
           <Input
             value={nova}
             onChange={(e) => setNova(e.target.value)}
-            placeholder="ex.: VERDE AGUA"
+            placeholder="ex.: VERDE ÁGUA"
             className="w-48"
           />
         </FormField>
@@ -204,21 +204,21 @@ export default function CoresPage() {
       <section>
         <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-800">
           <AlertTriangle className="h-4 w-4 text-amber-500" />
-          Cores que o catalogo nao reconheceu
+          Cores que o catálogo não reconheceu
         </h3>
         <p className="mt-1 text-xs text-slate-500">
-          Vieram da consulta por placa, de uma digitacao antiga ou da carga. Cada uma vira um
+          Vieram da consulta por placa, de uma digitação antiga ou da carga. Cada uma vira um
           apelido de uma cor existente ou uma cor nova — as fichas seguem valendo enquanto isso.
         </p>
         {(fila ?? []).length === 0 ? (
-          <p className="mt-2 text-sm text-slate-500">Nada pendente: todas as cores gravadas estao no catalogo.</p>
+          <p className="mt-2 text-sm text-slate-500">Nada pendente: todas as cores gravadas estão no catálogo.</p>
         ) : (
           <ul className="mt-2 divide-y divide-slate-200 rounded-xl border border-slate-200 bg-superficie">
             {(fila ?? []).map((f) => (
               <li key={f.cor} className="flex items-center justify-between px-3 py-2 text-sm">
                 <span className="font-medium text-slate-700">{f.cor}</span>
                 <span className="tnum text-xs text-slate-500">
-                  {f.veiculos} veiculo(s) · {f.leads} lead(s)
+                  {f.veiculos} veículo(s) · {f.leads} lead(s)
                 </span>
               </li>
             ))}
@@ -233,8 +233,8 @@ export default function CoresPage() {
           De-para do Mutual (/vehicle/color/)
         </h3>
         <p className="mt-1 text-xs text-slate-500">
-          A cor do sistema atual que ainda nao tem par aqui. <strong>Vazio sem ter capturado
-          /vehicle/color/ nao prova nada</strong> — puxe a entidade em Integracao Mutual antes de
+          A cor do sistema atual que ainda não tem par aqui. <strong>Vazio sem ter capturado
+          /vehicle/color/ não prova nada</strong> — puxe a entidade em Integração Mutual antes de
           ler esta lista.
         </p>
         {(mutual ?? []).length === 0 ? (

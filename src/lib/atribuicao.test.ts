@@ -77,13 +77,13 @@ describe('apoio de tela', () => {
   });
 
   it('traduz o motivo da atribuicao', () => {
-    expect(rotuloMotivo('RODIZIO')).toBe('Distribuido por rodizio');
+    expect(rotuloMotivo('RODIZIO')).toBe('Distribuído por rodízio');
     expect(rotuloMotivo('QUALQUER_COISA')).toBe('QUALQUER_COISA');
     expect(rotuloMotivo(null)).toBe('—');
   });
 
   it('nao promete atendimento novo a quem ja e associado', () => {
-    expect(mensagemAoVisitante('CARTEIRA')).toMatch(/ja e nosso associado/i);
+    expect(mensagemAoVisitante('CARTEIRA')).toMatch(/já é nosso associado/i);
     expect(mensagemAoVisitante('DUPLICADO', 'Amanda')).toMatch(/Amanda/);
     expect(mensagemAoVisitante('NOVO')).toMatch(/Recebemos/);
   });

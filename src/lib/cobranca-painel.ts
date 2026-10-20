@@ -77,11 +77,11 @@ export interface Taxas {
 export type ChaveTaxa = keyof Taxas;
 
 export const ROTULO_TAXA: Record<ChaveTaxa, string> = {
-  inadFinanceira: 'Inadimplencia financeira',
-  inadClientes: 'Inadimplencia por clientes',
-  recuperacao: 'Taxa de recuperacao',
+  inadFinanceira: 'Inadimplência financeira',
+  inadClientes: 'Inadimplência por clientes',
+  recuperacao: 'Taxa de recuperação',
   pontualidade: 'Pagamento no prazo',
-  inadInicial: 'Inadimplencia no 1º boleto',
+  inadInicial: 'Inadimplência no 1º boleto',
 };
 
 /** Subir e bom? (define a cor da seta). */
@@ -161,7 +161,7 @@ export function semaforo(taxa: number | null, meta: number, limite: number): Sem
 
 export const ROTULO_SEMAFORO: Record<Semaforo, string> = {
   verde: 'Dentro da meta',
-  ambar: 'Atencao',
+  ambar: 'Atenção',
   vermelho: 'Acima do limite',
   sem_dados: 'Sem vencidos',
 };
@@ -212,12 +212,12 @@ export function leituraAutomatica(
   if (ta.inadFinanceira !== null) {
     const c = compararTaxa(ta.inadFinanceira, tp.inadFinanceira);
     if (c.pp === null || c.pp === 0) {
-      frases.push({ tom: 'neutro', texto: `Inadimplencia financeira de ${pctTxt(ta.inadFinanceira)}: ${brl(n(atual.valor_aberto_vencido))} vencidos sem pagamento.` });
+      frases.push({ tom: 'neutro', texto: `Inadimplência financeira de ${pctTxt(ta.inadFinanceira)}: ${brl(n(atual.valor_aberto_vencido))} vencidos sem pagamento.` });
     } else {
       const rel = c.relativa === null ? '' : ` (${c.relativa > 0 ? '+' : ''}${pctTxt(c.relativa)} relativo)`;
       frases.push({
         tom: c.pp > 0 ? 'negativo' : 'positivo',
-        texto: `A inadimplencia financeira ${c.pp > 0 ? 'subiu' : 'caiu'} ${textoPp(Math.abs(c.pp)).replace('+', '')}${rel} contra ${rotuloAnterior}: ${pctTxt(ta.inadFinanceira)} hoje, ${brl(n(atual.valor_aberto_vencido))} em aberto.`,
+        texto: `A inadimplência financeira ${c.pp > 0 ? 'subiu' : 'caiu'} ${textoPp(Math.abs(c.pp)).replace('+', '')}${rel} contra ${rotuloAnterior}: ${pctTxt(ta.inadFinanceira)} hoje, ${brl(n(atual.valor_aberto_vencido))} em aberto.`,
       });
     }
   }
@@ -235,14 +235,14 @@ export function leituraAutomatica(
     const tom: Tom = ta.inadInicial > (tp.inadInicial ?? ta.inadInicial) ? 'negativo' : 'neutro';
     frases.push({
       tom,
-      texto: `${n(atual.primeiros_venceram)} associados tiveram o 1º boleto vencido no periodo e ${n(atual.primeiros_nao_pagos)} nao pagaram: inadimplencia inicial de ${pctTxt(ta.inadInicial)}.`,
+      texto: `${n(atual.primeiros_venceram)} associados tiveram o 1º boleto vencido no período e ${n(atual.primeiros_nao_pagos)} não pagaram: inadimplência inicial de ${pctTxt(ta.inadInicial)}.`,
     });
   }
 
   if (n(atual.reincidentes) > 0) {
     frases.push({
       tom: 'atencao',
-      texto: `${n(atual.reincidentes)} dos ${n(atual.clientes_inadimplentes)} inadimplentes ja tinham atrasado nos 12 meses anteriores (reincidentes).`,
+      texto: `${n(atual.reincidentes)} dos ${n(atual.clientes_inadimplentes)} inadimplentes já tinham atrasado nos 12 meses anteriores (reincidentes).`,
     });
   }
 
@@ -251,9 +251,9 @@ export function leituraAutomatica(
   const inadRel = compararTaxa(ta.inadFinanceira, tp.inadFinanceira).relativa;
   if (emit !== null && inadRel !== null && anterior) {
     if (emit > 0 && inadRel < 0) {
-      frases.push({ tom: 'positivo', texto: 'A carteira faturada cresceu e a inadimplencia caiu.' });
+      frases.push({ tom: 'positivo', texto: 'A carteira faturada cresceu e a inadimplência caiu.' });
     } else if (emit > 0 && inadRel > emit) {
-      frases.push({ tom: 'negativo', texto: 'A carteira faturada cresceu, mas a inadimplencia cresceu mais: o crescimento nao esta sendo acompanhado pela mesma qualidade de recebimento.' });
+      frases.push({ tom: 'negativo', texto: 'A carteira faturada cresceu, mas a inadimplência cresceu mais: o crescimento não está sendo acompanhado pela mesma qualidade de recebimento.' });
     }
   }
   return frases;
@@ -280,9 +280,9 @@ export interface PeriodoCobranca { inicio: string; fim: string }
 export type PresetCobranca = 'mes_atual' | 'mes_anterior' | 'tres_meses' | 'ano';
 
 export const PRESETS_COBRANCA: { chave: PresetCobranca; rotulo: string }[] = [
-  { chave: 'mes_atual', rotulo: 'Mes atual' },
-  { chave: 'mes_anterior', rotulo: 'Mes anterior' },
-  { chave: 'tres_meses', rotulo: 'Ultimos 3 meses' },
+  { chave: 'mes_atual', rotulo: 'Mês atual' },
+  { chave: 'mes_anterior', rotulo: 'Mês anterior' },
+  { chave: 'tres_meses', rotulo: 'Últimos 3 meses' },
   { chave: 'ano', rotulo: 'Ano atual' },
 ];
 
@@ -323,10 +323,10 @@ export function ehMesCheio(p: PeriodoCobranca): boolean {
 /** Como chamar cada recorte na tela. */
 export function rotuloRecorte(recorte: string, mesCheio: boolean): string {
   switch (recorte) {
-    case 'atual': return mesCheio ? 'Mes' : 'Periodo';
-    case 'anterior_1': return mesCheio ? 'Mes anterior' : 'Periodo anterior';
-    case 'media_3': return mesCheio ? 'Media 3 meses' : 'Media 3 periodos';
-    case 'ano_anterior': return mesCheio ? 'Mesmo mes ano passado' : 'Ano anterior';
+    case 'atual': return mesCheio ? 'Mês' : 'Período';
+    case 'anterior_1': return mesCheio ? 'Mês anterior' : 'Período anterior';
+    case 'media_3': return mesCheio ? 'Média 3 meses' : 'Média 3 períodos';
+    case 'ano_anterior': return mesCheio ? 'Mesmo mês ano passado' : 'Ano anterior';
     default: return recorte;
   }
 }

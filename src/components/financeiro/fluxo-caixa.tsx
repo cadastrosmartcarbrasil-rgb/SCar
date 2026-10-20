@@ -67,13 +67,13 @@ export function FluxoCaixa({ regionalId }: { regionalId?: string | null }) {
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Indicador titulo="Entradas previstas" valor={previstoTotal.entrada} icon={ArrowUpCircle} tom="receita"
-          detalhe="Titulos a receber com vencimento no intervalo" />
+          detalhe="Títulos a receber com vencimento no intervalo" />
         <Indicador titulo="Saidas previstas" valor={previstoTotal.saida} icon={ArrowDownCircle} tom="despesa"
-          detalhe="Titulos a pagar com vencimento no intervalo" />
+          detalhe="Títulos a pagar com vencimento no intervalo" />
         <Indicador
           titulo="Saldo projetado" valor={previstoTotal.entrada - previstoTotal.saida} icon={Waves}
           tom={previstoTotal.entrada - previstoTotal.saida >= 0 ? 'receita' : 'despesa'}
-          detalhe="Diferenca entre o previsto de entradas e saidas no intervalo"
+          detalhe="Diferença entre o previsto de entradas e saídas no intervalo"
         />
         <Indicador
           titulo="Carteira vencida" valor={somarMoeda(resumo?.vencido_receber, resumo?.vencido_pagar)} icon={AlertTriangle} tom="alerta"
@@ -84,13 +84,13 @@ export function FluxoCaixa({ regionalId }: { regionalId?: string | null }) {
       <Card>
         <CardHeader>
           <CardTitle>Fluxo de caixa mensal — previsto x realizado</CardTitle>
-          <p className="text-xs text-slate-500">Barras acima do eixo sao entradas; abaixo, saidas.</p>
+          <p className="text-xs text-slate-500">Barras acima do eixo são entradas; abaixo, saídas.</p>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="h-64 animate-pulse rounded-xl bg-slate-100" />
           ) : serie.length === 0 ? (
-            <Vazio icon={Activity} titulo="Sem titulos no intervalo" descricao="Escolha um periodo maior nos atalhos acima ou lance contas a pagar/receber." />
+            <Vazio icon={Activity} titulo="Sem títulos no intervalo" descricao="Escolha um período maior nos atalhos acima ou lance contas a pagar/receber." />
           ) : (
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={serie} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} stackOffset="sign">
@@ -117,7 +117,7 @@ export function FluxoCaixa({ regionalId }: { regionalId?: string | null }) {
           <CardHeader><CardTitle>Saldo acumulado projetado</CardTitle></CardHeader>
           <CardContent>
             {acumulado.length === 0 ? (
-              <Vazio icon={Activity} titulo="Sem projecao" descricao="Sem titulos no intervalo escolhido." />
+              <Vazio icon={Activity} titulo="Sem projeção" descricao="Sem títulos no intervalo escolhido." />
             ) : (
               <ResponsiveContainer width="100%" height={220}>
                 <AreaChart data={acumulado} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
@@ -147,7 +147,7 @@ export function FluxoCaixa({ regionalId }: { regionalId?: string | null }) {
             <TabelaAging titulo="A receber" linhas={receber} />
             <TabelaAging titulo="A pagar" linhas={pagar} />
             {receber.length === 0 && pagar.length === 0 && (
-              <Vazio icon={AlertTriangle} titulo="Carteira limpa" descricao="Nenhum titulo em aberto no momento." />
+              <Vazio icon={AlertTriangle} titulo="Carteira limpa" descricao="Nenhum título em aberto no momento." />
             )}
           </CardContent>
         </Card>

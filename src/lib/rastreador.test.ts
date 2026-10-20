@@ -72,9 +72,9 @@ describe('validacao do formulario', () => {
   });
   it('reclama de tamanho invalido', () => {
     expect(validarRastreador({ ...base, rastreador_imei: '123', empresa_rastreamento_id: 'er-1' }))
-      .toBe('IMEI deve ter de 14 a 17 digitos');
+      .toBe('IMEI deve ter de 14 a 17 dígitos');
     expect(validarRastreador({ ...base, rastreador_chip: '123', empresa_rastreamento_id: 'er-1' }))
-      .toBe('Numero do chip deve ter de 8 a 22 digitos');
+      .toBe('Número do chip deve ter de 8 a 22 dígitos');
   });
   it('completo passa', () => {
     expect(validarRastreador({ rastreador_imei: '860123456789012', rastreador_chip: '5511998877665', empresa_rastreamento_id: 'er-1' })).toBeNull();
@@ -143,7 +143,7 @@ describe('prazos (contados de status_desde)', () => {
   it('manutencao arrastada so destaca, sem sugerir', () => {
     const a = alertaDePrazo('MANUTENCAO', '2026-08-01T12:00:00Z', HOJE);
     expect(a?.sugestao).toBeNull();
-    expect(a?.mensagem).toContain('manutencao');
+    expect(a?.mensagem).toContain('manutenção');
   });
   it('equipamento em estoque nao tem prazo', () => {
     expect(alertaDePrazo('DISPONIVEL', '2020-01-01T12:00:00Z', HOJE)).toBeNull();
@@ -156,7 +156,7 @@ describe('prazos (contados de status_desde)', () => {
 
 describe('divergencias', () => {
   it('traduz o tipo do banco para a tela', () => {
-    expect(rotuloDivergencia('FICHA_SEM_EQUIPAMENTO')).toBe('Ficha do veiculo sem equipamento cadastrado');
+    expect(rotuloDivergencia('FICHA_SEM_EQUIPAMENTO')).toBe('Ficha do veículo sem equipamento cadastrado');
     expect(rotuloDivergencia('TIPO_QUE_NAO_EXISTE')).toBe('TIPO_QUE_NAO_EXISTE');
   });
 });

@@ -24,10 +24,10 @@ export default function TerceiroPage({ params }: { params: { id: string; terceir
   const trata = usePode('eventos.editar');
 
   if (isLoading) return <p className="text-sm text-slate-500">Carregando terceiro...</p>;
-  if (error || !t) return <p className="text-sm text-rose-600">Terceiro nao encontrado ou sem permissao.</p>;
+  if (error || !t) return <p className="text-sm text-rose-600">Terceiro não encontrado ou sem permissão.</p>;
   // URL coerente com o vinculo: o terceiro so abre dentro do proprio evento.
   if (t.evento_id !== params.id) {
-    return <p className="text-sm text-rose-600">Este terceiro nao pertence ao evento informado.</p>;
+    return <p className="text-sm text-rose-600">Este terceiro não pertence ao evento informado.</p>;
   }
 
   const abas: { id: Aba; label: string; icon: React.ElementType }[] = [

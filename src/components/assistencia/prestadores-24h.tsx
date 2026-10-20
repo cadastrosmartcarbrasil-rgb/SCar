@@ -70,7 +70,7 @@ export function Prestadores24h() {
     salvar.mutate(
       { ...servicoDe, servicos: vinculos },
       {
-        onSuccess: () => { toast.success('Servicos do prestador atualizados'); setServicoDe(null); setVinculos([]); },
+        onSuccess: () => { toast.success('Serviços do prestador atualizados'); setServicoDe(null); setVinculos([]); },
         onError: (err) => toast.error(err.message),
       },
     );
@@ -80,8 +80,8 @@ export function Prestadores24h() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="max-w-2xl text-sm text-slate-500">
-          Prestadores de guincho e servicos 24h, com os servicos que atendem e os valores acordados
-          (usados na cotacao). O cadastro da empresa e o mesmo de{' '}
+          Prestadores de guincho e serviços 24h, com os serviços que atendem e os valores acordados
+          (usados na cotação). O cadastro da empresa e o mesmo de{' '}
           <Link href="/fornecedores?tipo=prestador" className="text-cyan-700 hover:underline">Fornecedores</Link>.
         </p>
         <Button onClick={() => setCadastro(formularioVazio('prestador'))}>
@@ -92,7 +92,7 @@ export function Prestadores24h() {
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
         <input value={busca} onChange={(e) => setBusca(e.target.value)}
-          placeholder="Buscar por nome fantasia, razao social, CNPJ ou cobertura"
+          placeholder="Buscar por nome fantasia, razão social, CNPJ ou cobertura"
           className="w-full rounded-md border border-slate-300 py-2 pl-9 pr-3 text-sm" />
       </div>
 
@@ -105,7 +105,7 @@ export function Prestadores24h() {
               <th className="px-4 py-2">Contato</th>
               <th className="px-4 py-2">Cobertura</th>
               <th className="px-4 py-2">Status</th>
-              <th className="px-4 py-2 text-right">Acoes</th>
+              <th className="px-4 py-2 text-right">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -138,7 +138,7 @@ export function Prestadores24h() {
                 <td className="px-4 py-2">
                   <div className="flex justify-end gap-1">
                     <Button variant="ghost" className="px-2 py-1 text-xs" onClick={() => setServicoDe(p)}>
-                      <Wrench className="h-3.5 w-3.5" /> Servicos e valores
+                      <Wrench className="h-3.5 w-3.5" /> Serviços e valores
                     </Button>
                     <Button variant="ghost" className="px-2 py-1 text-xs"
                       onClick={() => setCadastro({ ...p, endereco: (p.endereco as EnderecoFornecedor) ?? {} })}>
@@ -165,7 +165,7 @@ export function Prestadores24h() {
 
       {/* O que e desta tela: servicos atendidos e valores acordados */}
       <Modal open={!!servicoDe} onClose={() => setServicoDe(null)} tamanho="lg"
-        title="Servicos e valores"
+        title="Serviços e valores"
         subtitulo={servicoDe ? (servicoDe.nome_fantasia?.trim() || servicoDe.razao_social) : undefined}>
         <form onSubmit={salvarServicos} className="space-y-3">
           <div className="space-y-2">
@@ -203,7 +203,7 @@ export function Prestadores24h() {
               );
             })}
             {(servicos ?? []).length === 0 && (
-              <p className="text-sm text-slate-400">Cadastre os servicos 24h primeiro (aba Servicos 24h).</p>
+              <p className="text-sm text-slate-400">Cadastre os serviços 24h primeiro (aba Serviços 24h).</p>
             )}
           </div>
 
@@ -213,7 +213,7 @@ export function Prestadores24h() {
             </p>
           )}
 
-          <FormField label="Observacoes do prestador">
+          <FormField label="Observações do prestador">
             <Input value={servicoDe?.observacoes ?? ''}
               onChange={(e) => setServicoDe((p) => (p ? { ...p, observacoes: e.target.value } : p))} />
           </FormField>

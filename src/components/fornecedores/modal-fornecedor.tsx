@@ -61,18 +61,18 @@ export function ModalFornecedor({
   async function onCepBlur() {
     if (soDigitos(end.cep ?? '').length !== 8) return;
     const r = await buscarCep(end.cep ?? '');
-    if (!r) return toast.error('CEP nao encontrado');
+    if (!r) return toast.error('CEP não encontrado');
     setEnd({ logradouro: r.logradouro, bairro: r.bairro, cidade: r.cidade, uf: r.estado });
   }
 
   async function consultar() {
-    if (!validarDocumento(form.documento ?? '', 'PJ')) return toast.error('CNPJ invalido');
+    if (!validarDocumento(form.documento ?? '', 'PJ')) return toast.error('CNPJ inválido');
     setConsultando(true);
     const d = await consultarCnpj(form.documento ?? '');
     setConsultando(false);
     if (!d.found) {
-      if (d.nao_encontrado) return toast.error('CNPJ nao encontrado na Receita. Confira o numero.');
-      return toast.error('Nao foi possivel consultar o CNPJ agora — preencha os dados manualmente.', {
+      if (d.nao_encontrado) return toast.error('CNPJ não encontrado na Receita. Confira o número.');
+      return toast.error('Não foi possível consultar o CNPJ agora — preencha os dados manualmente.', {
         description: d.tentativas?.length ? d.tentativas.join(' · ') : undefined,
       });
     }
@@ -104,12 +104,12 @@ export function ModalFornecedor({
     // Documento e OPCIONAL (0051): rastreadora e prestador pequeno as vezes
     // entram sem CNPJ. Mas se foi digitado, tem de ser valido.
     if (form.documento && !validarDocumento(form.documento, tipo)) {
-      return toast.error(tipo === 'PF' ? 'CPF invalido' : 'CNPJ invalido');
+      return toast.error(tipo === 'PF' ? 'CPF inválido' : 'CNPJ inválido');
     }
     salvar.mutate(form, {
       onSuccess: (id) => { toast.success('Fornecedor salvo'); onSaved?.(id); onClose(); },
       onError: (err) => toast.error(
-        err.message.includes('documento') ? 'Documento ja cadastrado em outro fornecedor' : err.message,
+        err.message.includes('documento') ? 'Documento já cadastrado em outro fornecedor' : err.message,
       ),
     });
   }
@@ -117,7 +117,7 @@ export function ModalFornecedor({
   return (
     <Modal open={aberto} onClose={onClose} tamanho="xl"
       title={titulo ?? (form.id ? `Editar ${form.nome_fantasia || form.razao_social}` : 'Novo fornecedor')}
-      subtitulo="Prestador da 24h, rastreadora e fornecedor de pecas ficam no mesmo cadastro.">
+      subtitulo="Prestador da 24h, rastreadora e fornecedor de peças ficam no mesmo cadastro.">
       <form onSubmit={submit} className="space-y-3">
         {/* O que esta empresa e para nos */}
         <div className="rounded-lg border border-slate-200 p-3">
@@ -127,7 +127,7 @@ export function ModalFornecedor({
               <input type="checkbox" checked={form.prestador_assistencia ?? false}
                 onChange={(e) => setF({ prestador_assistencia: e.target.checked })}
                 className="h-4 w-4 rounded border-slate-300" />
-              <LifeBuoy className="h-4 w-4 text-amber-500" /> Prestador da Assistencia 24h
+              <LifeBuoy className="h-4 w-4 text-amber-500" /> Prestador da Assistência 24h
             </label>
             <label className="flex items-center gap-2 text-sm text-slate-700">
               <input type="checkbox" checked={form.empresa_rastreamento ?? false}
@@ -138,7 +138,7 @@ export function ModalFornecedor({
           </div>
           <p className="mt-1 text-xs text-slate-400">
             Pode marcar os dois — a mesma empresa as vezes reboca e rastreia. Sem marcar nada, e um
-            fornecedor comum (pecas, servicos, oficina).
+            fornecedor comum (peças, serviços, oficina).
           </p>
         </div>
 
@@ -169,7 +169,7 @@ export function ModalFornecedor({
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <FormField label={tipo === 'PJ' ? 'Razao social *' : 'Nome *'}>
+          <FormField label={tipo === 'PJ' ? 'Razão social *' : 'Nome *'}>
             <Input value={form.razao_social ?? ''} onChange={(e) => setF({ razao_social: e.target.value })} />
           </FormField>
           <FormField label="Nome fantasia">
@@ -178,7 +178,7 @@ export function ModalFornecedor({
         </div>
         {tipo === 'PJ' && (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <FormField label="Situacao cadastral"><Input value={form.situacao_cadastral ?? ''} onChange={(e) => setF({ situacao_cadastral: e.target.value })} /></FormField>
+            <FormField label="Situação cadastral"><Input value={form.situacao_cadastral ?? ''} onChange={(e) => setF({ situacao_cadastral: e.target.value })} /></FormField>
             <FormField label="CNAE principal"><Input value={form.cnae_principal ?? ''} onChange={(e) => setF({ cnae_principal: e.target.value })} /></FormField>
           </div>
         )}
@@ -192,7 +192,7 @@ export function ModalFornecedor({
         {form.prestador_assistencia && (
           <div className="space-y-3 rounded-lg border border-amber-200 p-3">
             <p className="flex items-center gap-1.5 text-sm font-medium text-slate-600">
-              <LifeBuoy className="h-4 w-4 text-amber-500" /> Assistencia 24h
+              <LifeBuoy className="h-4 w-4 text-amber-500" /> Assistência 24h
             </p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <FormField label="WhatsApp (voucher)">
@@ -206,7 +206,7 @@ export function ModalFornecedor({
               </FormField>
             </div>
             <p className="text-xs text-slate-400">
-              Os servicos que ele atende e os valores acordados ficam em Assistencia 24h &gt; Prestadores.
+              Os serviços que ele atende e os valores acordados ficam em Assistência 24h &gt; Prestadores.
             </p>
           </div>
         )}
@@ -228,19 +228,19 @@ export function ModalFornecedor({
               </FormField>
             </div>
             <p className="text-xs text-slate-400">
-              O custo alimenta o relatorio &quot;custo mensal por plataforma&quot; do modulo de Rastreadores.
+              O custo alimenta o relatório &quot;custo mensal por plataforma&quot; do módulo de Rastreadores.
             </p>
           </div>
         )}
 
         <div className="rounded-lg border border-slate-200 p-3">
-          <p className="mb-2 text-sm font-medium text-slate-600">Endereco</p>
+          <p className="mb-2 text-sm font-medium text-slate-600">Endereço</p>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <FormField label="CEP"><Input value={end.cep ?? ''} onChange={(e) => setEnd({ cep: e.target.value })} onBlur={onCepBlur} /></FormField>
             <FormField label="Logradouro" className="col-span-2 sm:col-span-3"><Input value={end.logradouro ?? ''} onChange={(e) => setEnd({ logradouro: e.target.value })} /></FormField>
           </div>
           <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <FormField label="Numero"><Input value={end.numero ?? ''} onChange={(e) => setEnd({ numero: e.target.value })} /></FormField>
+            <FormField label="Número"><Input value={end.numero ?? ''} onChange={(e) => setEnd({ numero: e.target.value })} /></FormField>
             <FormField label="Bairro" className="col-span-2"><Input value={end.bairro ?? ''} onChange={(e) => setEnd({ bairro: e.target.value })} /></FormField>
             <FormField label="UF"><Input maxLength={2} value={end.uf ?? ''} onChange={(e) => setEnd({ uf: e.target.value.toUpperCase() })} /></FormField>
           </div>
@@ -249,7 +249,7 @@ export function ModalFornecedor({
           </div>
         </div>
 
-        <FormField label="Observacoes">
+        <FormField label="Observações">
           <Textarea rows={2} value={form.observacoes ?? ''} onChange={(e) => setF({ observacoes: e.target.value })} />
         </FormField>
 

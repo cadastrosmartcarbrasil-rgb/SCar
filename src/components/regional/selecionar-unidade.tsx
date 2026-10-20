@@ -96,7 +96,7 @@ export function SelecionarUnidade({
                     )}
                   </span>
                   <span className="mt-0.5 block truncate text-xs uppercase text-slate-500">
-                    {u.local || 'Local nao informado'}
+                    {u.local || 'Local não informado'}
                     {u.codigo ? ` · ${u.codigo}` : ''}
                   </span>
                 </span>
@@ -108,7 +108,7 @@ export function SelecionarUnidade({
             <li className="rounded-xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-400">
               <Building2 className="mx-auto mb-2 h-5 w-5 text-slate-300" />
               {unidades.length === 0
-                ? 'Nenhuma unidade cadastrada. Cadastre em Configuracoes > Regionais.'
+                ? 'Nenhuma unidade cadastrada. Cadastre em Configurações > Regionais.'
                 : 'Nenhuma unidade com esse nome.'}
             </li>
           )}
@@ -127,7 +127,7 @@ export function SelecionarUnidade({
             href="/dashboard"
             className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
           >
-            <ChevronLeft className="h-4 w-4" /> Voltar ao sistema de gestao
+            <ChevronLeft className="h-4 w-4" /> Voltar ao sistema de gestão
           </Link>
         </div>
       </div>

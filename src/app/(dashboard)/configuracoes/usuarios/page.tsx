@@ -122,12 +122,12 @@ export default function UsuariosPage() {
     const erros = validarFichaUsuario(form);
     if (erros.length) return toast.error(erros[0]);
     if (!form.senha || form.senha.length < 6) {
-      return toast.error('A senha provisoria deve ter ao menos 6 caracteres');
+      return toast.error('A senha provisória deve ter ao menos 6 caracteres');
     }
     criar.mutate(form, {
       onSuccess: (r: { aviso?: string }) => {
         if (r?.aviso) toast.warning(r.aviso);
-        else toast.success('Usuario criado');
+        else toast.success('Usuário criado');
         setNovoAberto(false);
       },
       onError: (err) => toast.error((err as Error).message),
@@ -161,7 +161,7 @@ export default function UsuariosPage() {
       },
       {
         onSuccess: (r) => {
-          toast.success(r.senha_redefinida ? 'Usuario salvo e senha redefinida' : 'Usuario salvo');
+          toast.success(r.senha_redefinida ? 'Usuário salvo e senha redefinida' : 'Usuário salvo');
           setEdicao(null);
         },
         onError: (err) => toast.error(err.message),
@@ -189,7 +189,7 @@ export default function UsuariosPage() {
       `Trocar ${u.nome} de ${rotuloPerfil(chaveDoUsuario(u), perfis)} para ${nomePara}?`,
       ganha.length ? `\nPassa a poder:\n- ${ganha.join('\n- ')}` : '',
       perde.length ? `\nDeixa de poder:\n- ${perde.join('\n- ')}` : '',
-      '\nVale a partir do proximo clique da pessoa no sistema.',
+      '\nVale a partir do próximo clique da pessoa no sistema.',
     ];
     if (!confirm(linhas.filter(Boolean).join('\n'))) return;
     atualizar.mutate(
@@ -222,32 +222,32 @@ export default function UsuariosPage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="max-w-2xl text-sm text-slate-500">
-            Equipe interna: ficha, <strong>papel</strong>, unidade, acesso e redefinicao de senha.
+            Equipe interna: ficha, <strong>papel</strong>, unidade, acesso e redefinição de senha.
             Troque o papel direto na coluna <strong>Papel</strong>; na aba{' '}
-            <strong>Permissoes por perfil</strong> o administrador ajusta, modulo por modulo, o que cada perfil pode ver e fazer.
-            Em cada usuario, <strong>Extras</strong> concede algo a mais so para aquela pessoa e{' '}
-            <strong>Copiar perfil</strong> da a ela o mesmo acesso de outro usuario.
+            <strong>Permissões por perfil</strong> o administrador ajusta, módulo por módulo, o que cada perfil pode ver e fazer.
+            Em cada usuário, <strong>Extras</strong> concede algo a mais só para aquela pessoa e{' '}
+            <strong>Copiar perfil</strong> da a ela o mesmo acesso de outro usuário.
           </p>
           <p className="mt-1 text-xs text-slate-400">
             <b className="text-slate-500">{ativos}</b> com acesso
             {inativos > 0 && <> · <b className="text-slate-500">{inativos}</b> desativado(s)</>}
           </p>
         </div>
-        {podeGerenciar && <Button onClick={novo}><Plus className="h-4 w-4" /> Novo usuario</Button>}
+        {podeGerenciar && <Button onClick={novo}><Plus className="h-4 w-4" /> Novo usuário</Button>}
       </div>
 
       {perfil && !podeGerenciar && (
         <p className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
           <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
-          Somente o <strong>administrador</strong> cria, edita e redefine senha da equipe. Voce esta
-          como <strong>{rotuloPapel(perfil.papel)}</strong> e ve esta lista em modo leitura.
+          Somente o <strong>administrador</strong> cria, edita e redefine senha da equipe. Você está
+          como <strong>{rotuloPapel(perfil.papel)}</strong> e vê esta lista em modo leitura.
         </p>
       )}
 
       <div className="flex gap-1 border-b border-slate-200">
         {([
-          { id: 'usuarios', rotulo: 'Usuarios', icone: Users },
-          { id: 'permissoes', rotulo: 'Permissoes por perfil', icone: ShieldCheck },
+          { id: 'usuarios', rotulo: 'Usuários', icone: Users },
+          { id: 'permissoes', rotulo: 'Permissões por perfil', icone: ShieldCheck },
         ] as const).map((t) => (
           <button key={t.id} type="button" onClick={() => setAba(t.id)}
             className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm ${aba === t.id
@@ -285,7 +285,7 @@ export default function UsuariosPage() {
               <th className="px-4 py-2">Unidade</th>
               <th className="px-4 py-2">Desde</th>
               <th className="px-4 py-2">Acesso</th>
-              <th className="px-4 py-2 text-right">Acoes</th>
+              <th className="px-4 py-2 text-right">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -299,17 +299,17 @@ export default function UsuariosPage() {
                     <UserCog className={`h-4 w-4 ${u.ativo ? 'text-brand-500' : 'text-slate-400'}`} />
                     <span className={u.ativo ? '' : 'text-slate-500'}>{u.nome}</span>
                     {u.id === perfil?.id && (
-                      <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">voce</span>
+                      <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">você</span>
                     )}
                     {u.vendedor_ativo && (
-                      <span title={`Tambem e vendedor (hotlink /v/${u.vendedor_codigo ?? ''})`}
+                      <span title={`Também e vendedor (hotlink /v/${u.vendedor_codigo ?? ''})`}
                         className="inline-flex items-center gap-0.5 rounded bg-cyan-50 px-1.5 py-0.5 text-[10px] font-semibold text-cyan-700">
                         <Link2 className="h-3 w-3" /> vendedor
                       </span>
                     )}
                   </span>
                   <span className="mt-0.5 block text-xs text-slate-400">
-                    {u.cargo || 'Cargo nao informado'}
+                    {u.cargo || 'Cargo não informado'}
                     {u.responsavel_por > 0 && (
                       <> · responde por {u.responsavel_por} unidade{u.responsavel_por > 1 ? 's' : ''}</>
                     )}
@@ -339,12 +339,12 @@ export default function UsuariosPage() {
                 </td>
                 <td className="px-4 py-2 text-slate-600">
                   {u.regional_nome ?? (semUnidadeVisivel(u.papel, u.regional_id, u.unidades_atuacao)
-                    ? <span className="text-amber-700" title="Sem unidade: nao ve veiculos nem associados">Sem unidade ⚠</span>
+                    ? <span className="text-amber-700" title="Sem unidade: não vê veículos nem associados">Sem unidade ⚠</span>
                     : u.unidades_atuacao > 0 && usaUnidadesDeSupervisor(u.papel)
-                      ? `${u.unidades_atuacao} ${u.unidades_atuacao === 1 ? 'unidade' : 'unidades'} de atuacao`
+                      ? `${u.unidades_atuacao} ${u.unidades_atuacao === 1 ? 'unidade' : 'unidades'} de atuação`
                       : 'Global')}
                   {u.regional_nome && u.unidades_atuacao > 0 && usaUnidadesDeSupervisor(u.papel) && (
-                    <span className="block text-[11px] text-slate-500">+ {u.unidades_atuacao} de atuacao</span>
+                    <span className="block text-[11px] text-slate-500">+ {u.unidades_atuacao} de atuação</span>
                   )}
                 </td>
                 <td className="px-4 py-2 text-slate-600">
@@ -375,11 +375,11 @@ export default function UsuariosPage() {
                       <Button variant="ghost" className="px-2 py-1 text-xs" onClick={() => abrirEdicao(u)}>
                         <Pencil className="h-3.5 w-3.5" /> Editar
                       </Button>
-                      <Button variant="ghost" className="px-2 py-1 text-xs" title="Permissoes extras desta pessoa"
+                      <Button variant="ghost" className="px-2 py-1 text-xs" title="Permissões extras desta pessoa"
                         onClick={() => setExtrasDe(u)}>
                         <ShieldPlus className="h-3.5 w-3.5" /> Extras
                       </Button>
-                      <Button variant="ghost" className="px-2 py-1 text-xs" title="Copiar o perfil de outro usuario para esta pessoa"
+                      <Button variant="ghost" className="px-2 py-1 text-xs" title="Copiar o perfil de outro usuário para esta pessoa"
                         onClick={() => setCopiarPara(u)}>
                         <Copy className="h-3.5 w-3.5" /> Copiar perfil
                       </Button>
@@ -389,7 +389,7 @@ export default function UsuariosPage() {
               </tr>
             ))}
             {!isLoading && filtrados.length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-6 text-center text-slate-400">Nenhum usuario encontrado.</td></tr>
+              <tr><td colSpan={7} className="px-4 py-6 text-center text-slate-400">Nenhum usuário encontrado.</td></tr>
             )}
           </tbody>
         </table>
@@ -397,13 +397,13 @@ export default function UsuariosPage() {
 
       <p className="text-xs leading-relaxed text-slate-400">
         <b className="text-slate-500">Desativar corta o acesso na hora</b> — a pessoa deixa de
-        entrar e deixa de ser reconhecida como equipe pela seguranca do banco. O historico do que
-        ela ja fez continua inteiro. O sistema recusa desativar o <b>ultimo administrador ativo</b>.
+        entrar e deixa de ser reconhecida como equipe pela segurança do banco. O histórico do que
+        ela já fez continua inteiro. O sistema recusa desativar o <b>último administrador ativo</b>.
       </p>
       </>)}
 
       {/* ------------------------------------------------------------ novo */}
-      <Modal open={novoAberto} onClose={() => setNovoAberto(false)} title="Novo usuario" tamanho="xl">
+      <Modal open={novoAberto} onClose={() => setNovoAberto(false)} title="Novo usuário" tamanho="xl">
         <form onSubmit={criarUsuario} className="space-y-3">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <FormField label="Nome completo *" className="sm:col-span-2">
@@ -423,24 +423,24 @@ export default function UsuariosPage() {
               <Input value={form.telefone ?? ''} placeholder="(65) 99999-0000"
                 onChange={(e) => setForm({ ...form, telefone: e.target.value })} />
             </FormField>
-            <FormField label="Data de inicio">
+            <FormField label="Data de início">
               <Input type="date" value={form.data_inicio ?? ''}
                 onChange={(e) => setForm({ ...form, data_inicio: e.target.value })} />
             </FormField>
           </div>
-          <FormField label="Senha provisoria * (min. 6 caracteres)">
+          <FormField label="Senha provisória * (min. 6 caracteres)">
             <Input type="text" value={form.senha} caixa="original"
               onChange={(e) => setForm({ ...form, senha: e.target.value })}
-              placeholder="O usuario podera troca-la depois" />
+              placeholder="O usuário poderá troca-la depois" />
           </FormField>
 
           <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
             <p className="text-[11.5px] font-semibold uppercase tracking-wide text-slate-500">
-              Funcao e permissao
+              Função e permissão
             </p>
             <p className="mb-2 mt-0.5 text-[11.5px] leading-relaxed text-slate-500">
-              <b>Cargo</b> e a funcao na empresa (aparece nas telas de equipe). <b>Papel</b> e o que
-              o sistema deixa fazer — sao coisas diferentes de proposito.
+              <b>Cargo</b> e a função na empresa (aparece nas telas de equipe). <b>Papel</b> e o que
+              o sistema deixa fazer — são coisas diferentes de propósito.
             </p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <FormField label="Cargo">
@@ -468,26 +468,26 @@ export default function UsuariosPage() {
             <div className="mt-2"><ResumoDoPapel papel={chaveDoUsuario(form)} /></div>
             {usaUnidadesDeSupervisor(form.papel) && (
               <p className="mt-1.5 text-[11px] text-cyan-700">
-                Depois de criar, abra a edicao do usuario para marcar as <b>unidades de atuacao</b> —
-                quem atende varias unidades (ou todas) ve os associados e veiculos delas.
+                Depois de criar, abra a edição do usuário para marcar as <b>unidades de atuação</b> —
+                quem atende várias unidades (ou todas) vê os associados e veículos delas.
               </p>
             )}
             {semUnidadeVisivel(form.papel, form.regional_id) && (
               <p className="mt-1.5 text-[11px] text-amber-700">
-                Sem unidade, este perfil <b>nao ve nenhum veiculo, associado nem evento</b> — o perfil
-                libera as telas, mas os registros vem da unidade. &quot;Global&quot; so vale para
-                Administrador e Financeiro. Escolha a unidade ou marque as unidades de atuacao.
+                Sem unidade, este perfil <b>não vê nenhum veículo, associado nem evento</b> — o perfil
+                libera as telas, mas os registros vem da unidade. &quot;Global&quot; só vale para
+                Administrador e Financeiro. Escolha a unidade ou marque as unidades de atuação.
               </p>
             )}
             {exigeUnidade(form.papel) && !form.regional_id && (
               <p className="mt-1.5 text-[11px] text-amber-700">
-                O <b>gestor regional</b> so funciona com uma unidade escolhida — e ela que define o
+                O <b>gestor regional</b> só funciona com uma unidade escolhida — e ela que define o
                 portal da franquia e o que ele enxerga.
               </p>
             )}
           </div>
 
-          <FormField label="Observacoes">
+          <FormField label="Observações">
             <textarea rows={2} value={form.observacoes ?? ''}
               onChange={(e) => setForm({ ...form, observacoes: e.target.value })}
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
@@ -497,7 +497,7 @@ export default function UsuariosPage() {
           <div className="flex justify-end gap-2 border-t border-slate-100 pt-3">
             <Button type="button" variant="secondary" onClick={() => setNovoAberto(false)}>Cancelar</Button>
             <Button type="submit" disabled={criar.isPending}>
-              {criar.isPending ? 'Criando...' : 'Criar usuario'}
+              {criar.isPending ? 'Criando...' : 'Criar usuário'}
             </Button>
           </div>
         </form>
@@ -505,8 +505,8 @@ export default function UsuariosPage() {
 
       {/* --------------------------------------------------------- edicao */}
       <Modal open={!!edicao} onClose={() => setEdicao(null)} tamanho="xl"
-        title={edicao ? `Editar ${edicao.nome}` : 'Editar usuario'}
-        subtitulo="Ficha, papel, unidade, acesso e redefinicao de senha.">
+        title={edicao ? `Editar ${edicao.nome}` : 'Editar usuário'}
+        subtitulo="Ficha, papel, unidade, acesso e redefinição de senha.">
         {edicao && (
           <form onSubmit={salvarEdicao} className="space-y-3">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -555,24 +555,24 @@ export default function UsuariosPage() {
             {semUnidadeVisivel(edicao.papel, edicao.regional_id,
               usuarios?.find((x) => x.id === edicao.id)?.unidades_atuacao ?? 0) && (
               <p className="mt-1.5 text-[11px] text-amber-700">
-                Sem unidade, este perfil <b>nao ve nenhum veiculo, associado nem evento</b> — o perfil
-                libera as telas, mas os registros vem da unidade. &quot;Global&quot; so vale para
-                Administrador e Financeiro. Escolha a unidade ou marque as unidades de atuacao.
+                Sem unidade, este perfil <b>não vê nenhum veículo, associado nem evento</b> — o perfil
+                libera as telas, mas os registros vem da unidade. &quot;Global&quot; só vale para
+                Administrador e Financeiro. Escolha a unidade ou marque as unidades de atuação.
               </p>
             )}
             {exigeUnidade(edicao.papel) && !edicao.regional_id && (
               <p className="text-[11px] text-amber-700">
-                O <b>gestor regional</b> so funciona com uma unidade escolhida.
+                O <b>gestor regional</b> só funciona com uma unidade escolhida.
               </p>
             )}
             {usaUnidadesDeSupervisor(edicao.papel) && <UnidadesSupervisor usuarioId={edicao.id} papel={edicao.papel} />}
 
             <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
               <p className="mb-2 text-[11.5px] font-semibold uppercase tracking-wide text-slate-500">
-                Periodo e acesso
+                Período e acesso
               </p>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <FormField label="Data de inicio">
+                <FormField label="Data de início">
                   <Input type="date" value={edicao.data_inicio}
                     onChange={(e) => setEdicao({ ...edicao, data_inicio: e.target.value })} />
                 </FormField>
@@ -591,13 +591,13 @@ export default function UsuariosPage() {
                   Acesso ativo
                   <span className="block text-[11px] leading-relaxed text-slate-500">
                     Desmarcar <b>corta o acesso na hora</b>: a pessoa deixa de entrar e de ser
-                    reconhecida como equipe pela seguranca do banco. O historico fica intacto.
+                    reconhecida como equipe pela segurança do banco. O histórico fica intacto.
                   </span>
                 </span>
               </label>
             </div>
 
-            <FormField label="Observacoes">
+            <FormField label="Observações">
               <textarea rows={2} value={edicao.observacoes}
                 onChange={(e) => setEdicao({ ...edicao, observacoes: e.target.value })}
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
@@ -607,13 +607,13 @@ export default function UsuariosPage() {
               <p className="flex items-center gap-1.5 text-sm font-medium text-slate-600">
                 <KeyRound className="h-4 w-4 text-amber-500" /> Redefinir senha
               </p>
-              <FormField label="Senha nova (deixe em branco para nao mexer)">
+              <FormField label="Senha nova (deixe em branco para não mexer)">
                 <Input type="text" value={edicao.senha} placeholder="min. 6 caracteres" caixa="original"
                   onChange={(e) => setEdicao({ ...edicao, senha: e.target.value })} />
               </FormField>
               <p className="text-xs text-slate-400">
-                A senha e trocada na hora e a pessoa entra com ela no proximo acesso. Avise por um
-                canal separado — nada e enviado por e-mail daqui.
+                A senha e trocada na hora e a pessoa entra com ela no próximo acesso. Avise por um
+                canal separado — nada é enviado por e-mail daqui.
               </p>
             </div>
 

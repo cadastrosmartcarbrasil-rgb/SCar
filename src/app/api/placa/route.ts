@@ -10,12 +10,12 @@ export async function POST(request: Request) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
 
   const { placa } = await request.json();
   const p = String(placa ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
   if (p.length < 7) {
-    return NextResponse.json({ error: 'Placa invalida' }, { status: 400 });
+    return NextResponse.json({ error: 'Placa inválida' }, { status: 400 });
   }
 
   const apiUrl = process.env.PLACA_API_URL;

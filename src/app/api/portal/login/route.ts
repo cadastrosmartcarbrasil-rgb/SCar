@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Informe CPF/CNPJ e senha.' }, { status: 400 });
   }
   if (!validarDocumento(doc, doc.length > 11 ? 'PJ' : 'PF')) {
-    return NextResponse.json({ error: 'CPF/CNPJ invalido.' }, { status: 400 });
+    return NextResponse.json({ error: 'CPF/CNPJ inválido.' }, { status: 400 });
   }
 
   // Freio de tentativas. A senha do primeiro acesso e o proprio documento
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
 
   // Mesma resposta para "nao existe" e "senha errada": nao confirmamos a quem
   // pergunta se um CPF e ou nao associado da casa.
-  const invalido = NextResponse.json({ error: 'Credenciais invalidas.' }, { status: 401 });
+  const invalido = NextResponse.json({ error: 'Credenciais inválidas.' }, { status: 401 });
   if (!cliente) return invalido;
   if (cliente.status === 'cancelado') {
     return NextResponse.json(

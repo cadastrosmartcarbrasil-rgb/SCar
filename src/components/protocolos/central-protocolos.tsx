@@ -69,7 +69,7 @@ export function CentralProtocolos({
             />
           </div>
         </FormField>
-        <FormField label="Situacao">
+        <FormField label="Situação">
           <Select
             value={filtro.status ?? ''}
             onChange={(e) => setFiltro((f) => ({ ...f, status: e.target.value || null }))}
@@ -78,7 +78,7 @@ export function CentralProtocolos({
             <option value="">Todos</option>
             <option value="ABERTO">Aberto</option>
             <option value="EM_ANDAMENTO">Em atendimento</option>
-            <option value="CONCLUIDO">Concluido</option>
+            <option value="CONCLUIDO">Concluído</option>
             <option value="CANCELADO">Cancelado</option>
           </Select>
         </FormField>
@@ -91,7 +91,7 @@ export function CentralProtocolos({
             {PRIORIDADES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
           </Select>
         </FormField>
-        <FormField label="Responsavel">
+        <FormField label="Responsável">
           <Select
             value={filtro.responsavel ?? ''}
             onChange={(e) => setFiltro((f) => ({ ...f, responsavel: e.target.value || null }))}
@@ -112,10 +112,10 @@ export function CentralProtocolos({
               <th className="px-4 py-2">Associado / Item</th>
               <th className="px-4 py-2">Categoria</th>
               <th className="px-4 py-2">Assunto</th>
-              <th className="px-4 py-2">Responsavel</th>
+              <th className="px-4 py-2">Responsável</th>
               <th className="px-4 py-2">Prioridade</th>
               <th className="px-4 py-2">Status</th>
-              <th className="px-4 py-2 text-right">Aberto ha</th>
+              <th className="px-4 py-2 text-right">Aberto há</th>
             </tr>
           </thead>
           <tbody>
@@ -155,7 +155,7 @@ export function CentralProtocolos({
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-2 text-slate-600">{p.responsavel ?? <span className="text-rose-500">sem responsavel</span>}</td>
+                <td className="px-4 py-2 text-slate-600">{p.responsavel ?? <span className="text-rose-500">sem responsável</span>}</td>
                 <td className="px-4 py-2">
                   <span className={`rounded px-2 py-0.5 text-xs ${corPrioridade(p.prioridade)}`}>{p.prioridade}</span>
                 </td>
@@ -227,7 +227,7 @@ function DetalheProtocolo({ protocolo, onVoltar }: { protocolo: ProtocoloLinha; 
               {protocolo.prioridade}
             </span>
             <span className="flex items-center gap-1 text-xs text-slate-400">
-              <User className="h-3 w-3" /> {protocolo.responsavel ?? 'sem responsavel'}
+              <User className="h-3 w-3" /> {protocolo.responsavel ?? 'sem responsável'}
             </span>
           </div>
         </div>
@@ -272,7 +272,7 @@ function DetalheProtocolo({ protocolo, onVoltar }: { protocolo: ProtocoloLinha; 
       {/* Historico de interacoes */}
       <div className="rounded-2xl border border-slate-200 bg-superficie">
         <div className="border-b border-slate-200 px-5 py-3">
-          <h3 className="text-sm font-semibold text-slate-900">Historico do atendimento</h3>
+          <h3 className="text-sm font-semibold text-slate-900">Histórico do atendimento</h3>
         </div>
         <ul className="divide-y divide-slate-100">
           {(interacoes ?? []).map((i) => (
@@ -295,13 +295,13 @@ function DetalheProtocolo({ protocolo, onVoltar }: { protocolo: ProtocoloLinha; 
               {i.mensagem && <p className="mt-0.5 text-slate-600">{i.mensagem}</p>}
               {!i.interno && (
                 <span className="mt-1 inline-block rounded bg-cyan-50 px-1.5 py-0.5 text-[10px] text-cyan-700">
-                  visivel ao associado
+                  visível ao associado
                 </span>
               )}
             </li>
           ))}
           {(interacoes ?? []).length === 0 && (
-            <li className="px-5 py-6 text-center text-sm text-slate-400">Sem interacoes ainda.</li>
+            <li className="px-5 py-6 text-center text-sm text-slate-400">Sem interações ainda.</li>
           )}
         </ul>
 
@@ -309,15 +309,15 @@ function DetalheProtocolo({ protocolo, onVoltar }: { protocolo: ProtocoloLinha; 
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              if (!mensagem.trim()) return toast.error('Escreva a interacao');
+              if (!mensagem.trim()) return toast.error('Escreva a interação');
               comentar.mutate(
                 { atendimento_id: protocolo.id, mensagem },
-                { onSuccess: () => { setMensagem(''); toast.success('Interacao registrada'); }, onError: (err) => toast.error(err.message) },
+                { onSuccess: () => { setMensagem(''); toast.success('Interação registrada'); }, onError: (err) => toast.error(err.message) },
               );
             }}
             className="border-t border-slate-100 p-4"
           >
-            <FormField label="Nova interacao">
+            <FormField label="Nova interação">
               <Textarea
                 rows={2}
                 value={mensagem}
@@ -380,7 +380,7 @@ function DetalheProtocolo({ protocolo, onVoltar }: { protocolo: ProtocoloLinha; 
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            if (!encerrando?.trim()) return toast.error('Descreva a solucao');
+            if (!encerrando?.trim()) return toast.error('Descreva a solução');
             encerrar.mutate(
               { atendimento_id: protocolo.id, solucao: encerrando },
               {
@@ -391,7 +391,7 @@ function DetalheProtocolo({ protocolo, onVoltar }: { protocolo: ProtocoloLinha; 
           }}
           className="space-y-3"
         >
-          <FormField label="Solucao (obrigatoria)">
+          <FormField label="Solução (obrigatória)">
             <Textarea
               rows={3}
               value={encerrando ?? ''}

@@ -13,10 +13,10 @@ export default function FilaCobrancaRegionalPage() {
   return (
     <div className="space-y-5">
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Fila de Cobranca</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Fila de Cobrança</h1>
         <p className="mt-0.5 text-sm text-slate-500">
           {nome} — quem cobrar agora, na ordem: promessa quebrada, retorno atrasado, retorno de hoje e quem
-          ainda nao foi contatado. Todo contato fica no historico — e nao se apaga.
+          ainda não foi contatado. Todo contato fica no histórico — e não se apaga.
         </p>
       </header>
       {regionalId ? <FilaCobranca unidade={{ id: regionalId, nome }} /> : null}

@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { VistoriaPublica } from '@/components/vistoria/vistoria-publica';
 
-export const metadata: Metadata = { title: 'Fotos do seu veiculo' };
+export const metadata: Metadata = { title: 'Fotos do seu veículo' };
 export const dynamic = 'force-dynamic';
 
 /**

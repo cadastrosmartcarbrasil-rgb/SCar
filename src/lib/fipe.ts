@@ -16,7 +16,7 @@ export type FipeTipo = 'carros' | 'motos' | 'caminhoes';
 export const FIPE_TIPOS: { value: FipeTipo; label: string; codigo: number }[] = [
   { value: 'carros', label: 'Carro', codigo: 1 },
   { value: 'motos', label: 'Moto', codigo: 2 },
-  { value: 'caminhoes', label: 'Caminhao', codigo: 3 },
+  { value: 'caminhoes', label: 'Caminhão', codigo: 3 },
 ];
 
 // "22159.00" (placafipe) e "R$ 228.091,00" (formato BR) -> numero.

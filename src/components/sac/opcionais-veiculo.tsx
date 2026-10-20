@@ -101,19 +101,19 @@ export function ModalOpcionaisVeiculo({ veiculo, planoNome, onClose }: {
     <Modal open onClose={onClose} title={`Opcionais — ${veiculo.placa}`} tamanho="lg">
       <div className="space-y-3">
         <p className="text-sm text-slate-600">
-          Plano: <b>{planoNome ?? 'Sem plano'}</b> · Tipo: <b>{nomeTipo}</b>. Aparecem so os opcionais que atendem
-          este tipo de veiculo e que o plano ainda nao inclui.
+          Plano: <b>{planoNome ?? 'Sem plano'}</b> · Tipo: <b>{nomeTipo}</b>. Aparecem só os opcionais que atendem
+          este tipo de veículo e que o plano ainda não inclui.
         </p>
         {!veiculo.tipo_veiculo_id && (
           <p className="rounded-lg bg-amber-50 p-2 text-xs text-amber-800">
-            O veiculo esta sem tipo: defina o tipo no cadastro para os opcionais serem filtrados e calculados.
+            O veículo está sem tipo: defina o tipo no cadastro para os opcionais serem filtrados e calculados.
           </p>
         )}
 
         {isLoading || !marcados ? (
           <p className="text-sm text-slate-400">Carregando...</p>
         ) : oferecidos.length === 0 ? (
-          <p className="text-sm text-slate-400">Nenhum opcional disponivel para este tipo de veiculo.</p>
+          <p className="text-sm text-slate-400">Nenhum opcional disponível para este tipo de veículo.</p>
         ) : (
           <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200">
             {oferecidos.map((p) => (
@@ -127,7 +127,7 @@ export function ModalOpcionaisVeiculo({ veiculo, planoNome, onClose }: {
                     {p.nome}
                     {p.foraDoTipo && (
                       <span className="rounded bg-amber-100 px-1.5 py-px text-[10px] uppercase text-amber-800">
-                        nao atende este tipo — nao e cobrado
+                        não atende este tipo — não é cobrado
                       </span>
                     )}
                     {!p.status && (
@@ -156,7 +156,7 @@ export function ModalOpcionaisVeiculo({ veiculo, planoNome, onClose }: {
           </p>
           {veiculo.cobranca_externa ? (
             <p className="mt-1 text-xs text-amber-800">
-              A mensalidade deste veiculo e cobrada no sistema anterior (Mutual): ajuste o valor la tambem.
+              A mensalidade deste veículo é cobrada no sistema anterior (Mutual): ajuste o valor la também.
             </p>
           ) : gravado != null && (
             <label className="mt-2 flex items-center gap-2 text-xs text-slate-700">

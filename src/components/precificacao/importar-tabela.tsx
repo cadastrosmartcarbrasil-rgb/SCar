@@ -26,7 +26,7 @@ async function matrizDeXlsx(arquivo: File): Promise<string[][]> {
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(await arquivo.arrayBuffer());
   const ws = wb.worksheets[0];
-  if (!ws) throw new Error('A planilha nao tem nenhuma aba.');
+  if (!ws) throw new Error('A planilha não tem nenhuma aba.');
 
   const linhas: string[][] = [];
   ws.eachRow((row) => {
@@ -112,7 +112,7 @@ export function ImportarTabela() {
     async (aceitos: File[]) => {
       const file = aceitos[0];
       if (!file) return;
-      if (!tipoId) return toast.error('Escolha o tipo de veiculo antes de subir a planilha');
+      if (!tipoId) return toast.error('Escolha o tipo de veículo antes de subir a planilha');
 
       setLendo(true);
       try {
@@ -122,7 +122,7 @@ export function ImportarTabela() {
         setResultado(interpretarPlanilha(matriz, colunasProduto));
         setArquivo(file.name);
       } catch (err) {
-        toast.error(`Nao consegui ler o arquivo: ${(err as Error).message}`);
+        toast.error(`Não consegui ler o arquivo: ${(err as Error).message}`);
       } finally {
         setLendo(false);
       }
@@ -140,7 +140,7 @@ export function ImportarTabela() {
   });
 
   function baixarModelo() {
-    if (!tipoId) return toast.error('Escolha o tipo de veiculo');
+    if (!tipoId) return toast.error('Escolha o tipo de veículo');
     const nome = (tipos ?? []).find((t) => t.id === tipoId)?.nome ?? 'tabela';
     const csv = gerarModeloCsv(colunasProduto, bandasAtuais);
     baixarCsv(`precos-${nome.toLowerCase().replace(/\s+/g, '-')}.csv`, csv.split('\r\n').map((l) => l.split(';')));
@@ -190,15 +190,15 @@ export function ImportarTabela() {
         <CardHeader>
           <CardTitle>Importar tabela por planilha</CardTitle>
           <p className="text-xs leading-relaxed text-slate-500">
-            Uma planilha por <b>tipo de veiculo</b> — que ja e como o banco guarda os precos.
-            A importacao <b>substitui</b> a tabela inteira daquele tipo (faixas, participacao e
-            adesao); os demais tipos nao sao tocados. Voce ve a previa do que muda antes de gravar.
+            Uma planilha por <b>tipo de veículo</b> — que já é como o banco guarda os preços.
+            A importação <b>substitui</b> a tabela inteira daquele tipo (faixas, participação e
+            adesão); os demais tipos não são tocados. Você vê a prévia do que muda antes de gravar.
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap items-end gap-3">
             <div className="w-64">
-              <label className="text-xs text-slate-500">Tipo de veiculo *</label>
+              <label className="text-xs text-slate-500">Tipo de veículo *</label>
               <Select value={tipoId} onChange={(e) => { setTipoId(e.target.value); setResultado(null); }}>
                 <option value="">-- Selecione --</option>
                 {(tipos ?? []).map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
@@ -212,9 +212,9 @@ export function ImportarTabela() {
           {tipoId && (
             <p className="flex items-start gap-1.5 rounded-lg bg-slate-50 px-3 py-2 text-[11.5px] leading-relaxed text-slate-600">
               <Info className="mt-px h-3.5 w-3.5 shrink-0 text-slate-400" />
-              O modelo ja vem preenchido com a tabela em vigor deste tipo ({bandasAtuais.length} faixa(s)).
-              Colunas: <b>FIPE_MINIMO</b>, <b>FIPE_MAXIMO</b>, <b>PARTICIPACAO</b>, <b>PARTICIPACAO_TIPO</b>{' '}
-              (VALOR ou PERCENTUAL), <b>ADESAO</b> e uma coluna por produto obrigatorio
+              O modelo já vem preenchido com a tabela em vigor deste tipo ({bandasAtuais.length} faixa(s)).
+              Colunas: <b>FIPE_MINIMO</b>, <b>FIPE_MAXIMO</b>, <b>PARTICIPAÇÃO</b>, <b>PARTICIPACAO_TIPO</b>{' '}
+              (VALOR ou PERCENTUAL), <b>ADESÃO</b> e uma coluna por produto obrigatório
               {colunasProduto.length > 0 && <> ({colunasProduto.map((p) => p.nome).join(', ')})</>}.
             </p>
           )}
@@ -233,7 +233,7 @@ export function ImportarTabela() {
               <>
                 <UploadCloud className="h-5 w-5 text-slate-400" />
                 <p className="text-xs font-medium text-slate-600">
-                  {tipoId ? <>Arraste a planilha ou <span className="text-cyan-700 underline">selecione do computador</span></> : 'Escolha o tipo de veiculo para liberar o envio'}
+                  {tipoId ? <>Arraste a planilha ou <span className="text-cyan-700 underline">selecione do computador</span></> : 'Escolha o tipo de veículo para liberar o envio'}
                 </p>
                 <p className="text-[11px] text-slate-400">.xlsx ou .csv · valores em formato brasileiro (1.234,56)</p>
               </>
@@ -245,19 +245,19 @@ export function ImportarTabela() {
       {resultado && (
         <Card>
           <CardHeader className="flex-row items-center justify-between">
-            <CardTitle>Previa · {arquivo}</CardTitle>
+            <CardTitle>Prévia · {arquivo}</CardTitle>
             <button
               onClick={() => { setResultado(null); setArquivo(''); }}
               className="rounded-lg p-1 text-slate-400 transition hover:bg-slate-100"
               title="Descartar"
-              aria-label="Descartar importacao"
+              aria-label="Descartar importação"
             >
               <X className="h-4 w-4" />
             </button>
           </CardHeader>
           <CardContent className="space-y-4">
             {resultado.erros.length > 0 && (
-              <Alerta tom="erro" titulo="A planilha nao pode ser importada" itens={resultado.erros} />
+              <Alerta tom="erro" titulo="A planilha não pode ser importada" itens={resultado.erros} />
             )}
             {resultado.avisos.length > 0 && (
               <Alerta tom="aviso" titulo="Confira antes de gravar" itens={resultado.avisos} />
@@ -269,13 +269,13 @@ export function ImportarTabela() {
                   <Contador rotulo="Faixas na planilha" valor={resultado.bandas.length} />
                   <Contador rotulo="Novas" valor={diff.adicionadas.length} tom="verde" />
                   <Contador rotulo="Alteradas" valor={diff.alteradas.length} tom="ambar" />
-                  <Contador rotulo="Que serao removidas" valor={diff.removidas.length} tom="vermelho" />
+                  <Contador rotulo="Que serão removidas" valor={diff.removidas.length} tom="vermelho" />
                 </div>
 
                 {diff.removidas.length > 0 && (
                   <Alerta
                     tom="aviso"
-                    titulo={`${diff.removidas.length} faixa(s) em vigor nao estao na planilha e serao apagadas`}
+                    titulo={`${diff.removidas.length} faixa(s) em vigor não estão na planilha e serão apagadas`}
                     itens={diff.removidas.map((b) => `FIPE ${formatCurrency(b.fipe_minimo)} a ${formatCurrency(b.fipe_maximo)}`)}
                   />
                 )}
@@ -285,10 +285,10 @@ export function ImportarTabela() {
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50 text-left uppercase tracking-wide text-slate-400">
                         <th className="px-3 py-2">Faixa FIPE</th>
-                        <th className="px-3 py-2 text-right">Participacao</th>
-                        <th className="px-3 py-2 text-right">Adesao</th>
+                        <th className="px-3 py-2 text-right">Participação</th>
+                        <th className="px-3 py-2 text-right">Adesão</th>
                         {colunasProduto.map((p) => <th key={p.id} className="px-3 py-2 text-right">{p.nome}</th>)}
-                        <th className="px-3 py-2">Situacao</th>
+                        <th className="px-3 py-2">Situação</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -316,7 +316,7 @@ export function ImportarTabela() {
                               );
                             })}
                             <td className="px-3 py-1.5">
-                              {nova ? <Selo tom="verde">Nova</Selo> : alt ? <Selo tom="ambar">Alterada</Selo> : <Selo tom="cinza">Sem mudanca</Selo>}
+                              {nova ? <Selo tom="verde">Nova</Selo> : alt ? <Selo tom="ambar">Alterada</Selo> : <Selo tom="cinza">Sem mudança</Selo>}
                             </td>
                           </tr>
                         );
@@ -330,12 +330,12 @@ export function ImportarTabela() {
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4">
               <p className="text-[11.5px] text-slate-500">
                 Gravar substitui a tabela inteira de{' '}
-                <b>{(tipos ?? []).find((t) => t.id === tipoId)?.nome}</b>. Os outros tipos nao mudam.
+                <b>{(tipos ?? []).find((t) => t.id === tipoId)?.nome}</b>. Os outros tipos não mudam.
               </p>
               <div className="flex gap-2">
                 <Button variant="secondary" onClick={() => { setResultado(null); setArquivo(''); }}>Descartar</Button>
                 <Button onClick={confirmar} disabled={bloqueado || salvar.isPending}>
-                  {salvar.isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Gravando...</> : <><Check className="h-4 w-4" /> Confirmar importacao</>}
+                  {salvar.isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Gravando...</> : <><Check className="h-4 w-4" /> Confirmar importação</>}
                 </Button>
               </div>
             </div>
@@ -346,8 +346,8 @@ export function ImportarTabela() {
       {!resultado && (
         <p className="flex items-center gap-1.5 text-[11.5px] text-slate-400">
           <FileSpreadsheet className="h-3.5 w-3.5" />
-          Para atualizar muitos precos de uma vez: baixe o modelo do tipo, edite no Excel e suba de volta.
-          <ArrowRight className="h-3 w-3" /> nada e gravado sem a sua confirmacao.
+          Para atualizar muitos preços de uma vez: baixe o modelo do tipo, edite no Excel e suba de volta.
+          <ArrowRight className="h-3 w-3" /> nada é gravado sem a sua confirmação.
         </p>
       )}
     </div>

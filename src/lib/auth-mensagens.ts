@@ -21,20 +21,20 @@ export function ehSessaoCorrompida(mensagem: string | null | undefined): boolean
 
 export function mensagemDeLogin(mensagem: string | null | undefined): string {
   const m = (mensagem ?? '').toLowerCase();
-  if (!m) return 'Nao foi possivel entrar. Tente de novo.';
+  if (!m) return 'Não foi possível entrar. Tente de novo.';
   if (m.includes('invalid login credentials')) return 'E-mail ou senha incorretos.';
-  if (m.includes('email not confirmed')) return 'E-mail ainda nao confirmado. Fale com o administrador.';
+  if (m.includes('email not confirmed')) return 'E-mail ainda não confirmado. Fale com o administrador.';
   if (m.includes('user is banned') || m.includes('user not found')) return 'E-mail ou senha incorretos.';
   if (m.includes('too many requests') || m.includes('rate limit')) {
     return 'Tentativas demais. Espere um minuto e tente de novo.';
   }
   if (ehSessaoCorrompida(m)) {
-    return 'A sessao anterior expirou. Limpamos o acesso — clique em Entrar de novo.';
+    return 'A sessão anterior expirou. Limpamos o acesso — clique em Entrar de novo.';
   }
   if (m.includes('failed to fetch') || m.includes('networkerror') || m.includes('load failed')) {
-    return 'Sem conexao com o servidor. Confira a internet e tente de novo.';
+    return 'Sem conexão com o servidor. Confira a internet e tente de novo.';
   }
-  return 'Nao foi possivel entrar. Tente de novo.';
+  return 'Não foi possível entrar. Tente de novo.';
 }
 
 /**

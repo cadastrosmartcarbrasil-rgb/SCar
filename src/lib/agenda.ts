@@ -13,16 +13,16 @@
 import type { ResultadoInteracaoLead, TipoInteracaoLead } from '@/lib/database.types';
 
 export const TIPO_INTERACAO: Record<TipoInteracaoLead, { label: string; curto: string }> = {
-  LIGACAO:    { label: 'Ligacao',     curto: 'Ligou' },
+  LIGACAO:    { label: 'Ligação',     curto: 'Ligou' },
   WHATSAPP:   { label: 'WhatsApp',    curto: 'WhatsApp' },
   EMAIL:      { label: 'E-mail',      curto: 'E-mail' },
   VISITA:     { label: 'Visita',      curto: 'Visita' },
-  OBSERVACAO: { label: 'Observacao',  curto: 'Nota' },
+  OBSERVACAO: { label: 'Observação',  curto: 'Nota' },
 };
 
 export const RESULTADO_INTERACAO: Record<ResultadoInteracaoLead, { label: string; cor: string }> = {
   FALOU:        { label: 'Falou com o cliente', cor: 'bg-emerald-100 text-emerald-700' },
-  NAO_ATENDEU:  { label: 'Nao atendeu',         cor: 'bg-slate-100 text-slate-600' },
+  NAO_ATENDEU:  { label: 'Não atendeu',         cor: 'bg-slate-100 text-slate-600' },
   AGENDOU:      { label: 'Retorno agendado',    cor: 'bg-cyan-100 text-cyan-700' },
   SEM_INTERESSE:{ label: 'Sem interesse',       cor: 'bg-rose-100 text-rose-700' },
 };
@@ -56,8 +56,8 @@ export function diasParado(
 
 export function rotuloParado(dias: number): string {
   if (dias <= 0) return 'trabalhado hoje';
-  if (dias === 1) return 'parado ha 1 dia';
-  return `parado ha ${dias} dias`;
+  if (dias === 1) return 'parado há 1 dia';
+  return `parado há ${dias} dias`;
 }
 
 /**
@@ -96,10 +96,10 @@ export function rotuloRetorno(
   if (dias === null) return null;
   const hora = new Date(proximoContatoEm as string)
     .toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  if (dias > 1) return `atrasado ha ${dias} dias`;
+  if (dias > 1) return `atrasado há ${dias} dias`;
   if (dias === 1) return 'atrasado desde ontem';
-  if (dias === 0) return `hoje as ${hora}`;
-  if (dias === -1) return `amanha as ${hora}`;
+  if (dias === 0) return `hoje às ${hora}`;
+  if (dias === -1) return `amanhã às ${hora}`;
   return new Date(proximoContatoEm as string)
     .toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 }

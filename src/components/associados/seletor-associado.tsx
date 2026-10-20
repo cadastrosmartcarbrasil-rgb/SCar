@@ -50,7 +50,7 @@ export function SeletorAssociado({ value, onChange, placeholder, permiteLimpar =
         value={termo}
         onChange={(e) => setTermo(e.target.value)}
         onKeyDown={(e) => { if (e.key === 'Escape' && value) setAberto(false); }}
-        placeholder={placeholder ?? 'Digite nome, CPF/CNPJ ou matricula'}
+        placeholder={placeholder ?? 'Digite nome, CPF/CNPJ ou matrícula'}
         className="w-full rounded-md border border-slate-300 bg-superficie py-2 pl-9 pr-3 text-sm"
       />
       {adiado.trim().length >= 2 && (

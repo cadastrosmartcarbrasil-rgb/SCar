@@ -79,8 +79,8 @@ export function situacaoRastreamento(v: DadosRastreador, exige = false): Situaca
 export function validarRastreador(v: DadosRastreador): string | null {
   const imei = normalizarDigitos(v.rastreador_imei);
   const chip = normalizarDigitos(v.rastreador_chip);
-  if (imei && !imeiFormatoValido(imei)) return 'IMEI deve ter de 14 a 17 digitos';
-  if (chip && !chipFormatoValido(chip)) return 'Numero do chip deve ter de 8 a 22 digitos';
+  if (imei && !imeiFormatoValido(imei)) return 'IMEI deve ter de 14 a 17 dígitos';
+  if (chip && !chipFormatoValido(chip)) return 'Número do chip deve ter de 8 a 22 dígitos';
   if ((imei || chip) && !v.empresa_rastreamento_id) return 'Informe a empresa de rastreamento ("Rastreador por")';
   return null;
 }
@@ -107,17 +107,17 @@ export interface StatusMeta {
 }
 
 export const STATUS_RASTREADOR: StatusMeta[] = [
-  { status: 'DISPONIVEL', numero: 1, rotulo: 'Disponivel', descricao: 'Em estoque, pronto para instalar', cor: 'bg-emerald-50 text-emerald-700' },
-  { status: 'ATIVO', numero: 2, rotulo: 'Ativo / Instalado', descricao: 'Instalado em veiculo', cor: 'bg-cyan-50 text-cyan-700' },
+  { status: 'DISPONIVEL', numero: 1, rotulo: 'Disponível', descricao: 'Em estoque, pronto para instalar', cor: 'bg-emerald-50 text-emerald-700' },
+  { status: 'ATIVO', numero: 2, rotulo: 'Ativo / Instalado', descricao: 'Instalado em veículo', cor: 'bg-cyan-50 text-cyan-700' },
   { status: 'INADIMPLENTE', numero: 3, rotulo: 'Inadimplente', descricao: '35+ dias sem pagamento — tentar recuperar', cor: 'bg-amber-50 text-amber-700' },
-  { status: 'INATIVO', numero: 4, rotulo: 'Inativo', descricao: 'Pedir devolucao do equipamento', cor: 'bg-amber-50 text-amber-700' },
-  { status: 'A_DEVOLVER', numero: 5, rotulo: 'A devolver', descricao: 'Devolucao solicitada — prazo de 5 dias', cor: 'bg-amber-50 text-amber-800' },
-  { status: 'COBRAR_RASTREADOR', numero: 6, rotulo: 'Cobrar rastreador', descricao: 'Equipamento nao devolvido — cobrar', cor: 'bg-rose-50 text-rose-700' },
+  { status: 'INATIVO', numero: 4, rotulo: 'Inativo', descricao: 'Pedir devolução do equipamento', cor: 'bg-amber-50 text-amber-700' },
+  { status: 'A_DEVOLVER', numero: 5, rotulo: 'A devolver', descricao: 'Devolução solicitada — prazo de 5 dias', cor: 'bg-amber-50 text-amber-800' },
+  { status: 'COBRAR_RASTREADOR', numero: 6, rotulo: 'Cobrar rastreador', descricao: 'Equipamento não devolvido — cobrar', cor: 'bg-rose-50 text-rose-700' },
   { status: 'BOLETO_GERADO', numero: 7, rotulo: 'Boleto gerado', descricao: 'Boleto do equipamento emitido', cor: 'bg-rose-50 text-rose-700' },
-  { status: 'PENDENCIA_DADOS', numero: 8, rotulo: 'Pendencia de dados', descricao: 'Cadastro incompleto', cor: 'bg-slate-100 text-slate-600' },
-  { status: 'MANUTENCAO', numero: 9, rotulo: 'Manutencao', descricao: 'Em reparo', cor: 'bg-slate-100 text-slate-600' },
+  { status: 'PENDENCIA_DADOS', numero: 8, rotulo: 'Pendência de dados', descricao: 'Cadastro incompleto', cor: 'bg-slate-100 text-slate-600' },
+  { status: 'MANUTENCAO', numero: 9, rotulo: 'Manutenção', descricao: 'Em reparo', cor: 'bg-slate-100 text-slate-600' },
   { status: 'DUPLICADO', numero: 10, rotulo: 'Duplicado', descricao: 'Registro repetido', cor: 'bg-slate-100 text-slate-500' },
-  { status: 'BAIXADO', numero: 11, rotulo: 'Baixado', descricao: 'Sem condicao de uso', cor: 'bg-slate-100 text-slate-500' },
+  { status: 'BAIXADO', numero: 11, rotulo: 'Baixado', descricao: 'Sem condição de uso', cor: 'bg-slate-100 text-slate-500' },
 ];
 
 export function statusMeta(status: StatusRastreador): StatusMeta {
@@ -172,26 +172,26 @@ export function alertaDePrazo(
   if (Number.isNaN(desde.getTime())) return null;
   const dias = Math.floor((hoje.getTime() - desde.getTime()) / 86_400_000);
   if (status === 'A_DEVOLVER' && dias > 5)
-    return { mensagem: `Devolucao pedida ha ${dias} dias (prazo de 5)`, sugestao: 'COBRAR_RASTREADOR', dias };
+    return { mensagem: `Devolução pedida há ${dias} dias (prazo de 5)`, sugestao: 'COBRAR_RASTREADOR', dias };
   if (status === 'INADIMPLENTE' && dias > 35)
-    return { mensagem: `Inadimplente ha ${dias} dias`, sugestao: 'A_DEVOLVER', dias };
+    return { mensagem: `Inadimplente há ${dias} dias`, sugestao: 'A_DEVOLVER', dias };
   if (status === 'MANUTENCAO' && dias > 30)
-    return { mensagem: `Ha ${dias} dias em manutencao`, sugestao: null, dias };
+    return { mensagem: `Há ${dias} dias em manutenção`, sugestao: null, dias };
   if (status === 'BOLETO_GERADO' && dias > 30)
-    return { mensagem: `Boleto emitido ha ${dias} dias sem desfecho`, sugestao: null, dias };
+    return { mensagem: `Boleto emitido há ${dias} dias sem desfecho`, sugestao: null, dias };
   return null;
 }
 
 /** Tipos de divergencia (espelha `rastreadores_divergencias`). */
 export const DIVERGENCIAS: { tipo: string; rotulo: string; severidade: 'ALTA' | 'MEDIA' | 'BAIXA' }[] = [
-  { tipo: 'VEICULO_SEM_RASTREADOR', rotulo: 'Veiculo sem rastreador', severidade: 'ALTA' },
-  { tipo: 'RASTREADOR_ORFAO', rotulo: 'Equipamento ativo sem veiculo', severidade: 'ALTA' },
-  { tipo: 'RASTREADOR_EM_VEICULO_INATIVO', rotulo: 'Equipamento em veiculo fora da base', severidade: 'ALTA' },
+  { tipo: 'VEICULO_SEM_RASTREADOR', rotulo: 'Veículo sem rastreador', severidade: 'ALTA' },
+  { tipo: 'RASTREADOR_ORFAO', rotulo: 'Equipamento ativo sem veículo', severidade: 'ALTA' },
+  { tipo: 'RASTREADOR_EM_VEICULO_INATIVO', rotulo: 'Equipamento em veículo fora da base', severidade: 'ALTA' },
   { tipo: 'INADIMPLENTE_COM_EQUIPAMENTO_ATIVO', rotulo: 'Inadimplente com equipamento ativo', severidade: 'ALTA' },
-  { tipo: 'VEICULO_COM_MAIS_DE_UM_ATIVO', rotulo: 'Mais de um equipamento no veiculo', severidade: 'ALTA' },
-  { tipo: 'EQUIPAMENTO_DUPLICADO', rotulo: 'Numero de serie repetido', severidade: 'ALTA' },
+  { tipo: 'VEICULO_COM_MAIS_DE_UM_ATIVO', rotulo: 'Mais de um equipamento no veículo', severidade: 'ALTA' },
+  { tipo: 'EQUIPAMENTO_DUPLICADO', rotulo: 'Número de série repetido', severidade: 'ALTA' },
   { tipo: 'STATUS_INCOERENTE', rotulo: 'Status incoerente ou prazo estourado', severidade: 'MEDIA' },
-  { tipo: 'FICHA_SEM_EQUIPAMENTO', rotulo: 'Ficha do veiculo sem equipamento cadastrado', severidade: 'MEDIA' },
+  { tipo: 'FICHA_SEM_EQUIPAMENTO', rotulo: 'Ficha do veículo sem equipamento cadastrado', severidade: 'MEDIA' },
   { tipo: 'CADASTRO_INCOMPLETO', rotulo: 'Cadastro incompleto', severidade: 'BAIXA' },
 ];
 

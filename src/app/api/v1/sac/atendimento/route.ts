@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 async function guard() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { supabase, erro: NextResponse.json({ error: 'Nao autenticado' }, { status: 401 }) };
+  if (!user) return { supabase, erro: NextResponse.json({ error: 'Não autenticado' }, { status: 401 }) };
   return { supabase, erro: null as null | NextResponse };
 }
 
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     assunto?: string; descricao?: string; dados?: Json;
   };
   if (!body.veiculo_id || !body.tipo) {
-    return NextResponse.json({ error: 'veiculo_id e tipo sao obrigatorios' }, { status: 400 });
+    return NextResponse.json({ error: 'veiculo_id e tipo são obrigatórios' }, { status: 400 });
   }
 
   const { data, error } = await supabase.rpc('abrir_atendimento', {
@@ -43,7 +43,7 @@ export async function GET(request: Request) {
   if (erro) return erro;
 
   const veiculoId = new URL(request.url).searchParams.get('veiculo_id');
-  if (!veiculoId) return NextResponse.json({ error: 'veiculo_id obrigatorio' }, { status: 400 });
+  if (!veiculoId) return NextResponse.json({ error: 'veiculo_id obrigatório' }, { status: 400 });
 
   // RLS garante que so retorna o que o usuario pode ver (staff regional ou dono).
   const { data, error } = await supabase

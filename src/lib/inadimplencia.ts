@@ -86,7 +86,7 @@ export function tolerancia(
  */
 export function avisoDeTolerancia(t: Tolerancia): string | null {
   if (!t.inadimplente) return null;
-  if (t.vencida) return 'Tolerancia vencida — sera inativado';
-  if (t.diasRestantes === 1) return 'Inativa amanha';
+  if (t.vencida) return 'Tolerância vencida — será inativado';
+  if (t.diasRestantes === 1) return 'Inativa amanhã';
   return `Inativa em ${t.diasRestantes} dias`;
 }

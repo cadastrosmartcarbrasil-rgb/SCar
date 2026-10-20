@@ -71,12 +71,12 @@ export function BaixaModal({ lancamento, onClose }: { lancamento: LancamentoComR
       open
       onClose={onClose}
       tamanho="lg"
-      title={receita ? 'Receber titulo' : 'Pagar titulo'}
+      title={receita ? 'Receber título' : 'Pagar título'}
       subtitulo={lancamento.descricao}
     >
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
         <Resumo rotulo="Valor original" valor={formatCurrency(lancamento.valor_original)} />
-        <Resumo rotulo="Ja liquidado" valor={formatCurrency(Number(lancamento.valor_original) - saldoAtual)} />
+        <Resumo rotulo="Já liquidado" valor={formatCurrency(Number(lancamento.valor_original) - saldoAtual)} />
         <Resumo
           rotulo="Saldo devedor"
           valor={formatCurrency(saldoAtual)}
@@ -119,26 +119,26 @@ export function BaixaModal({ lancamento, onClose }: { lancamento: LancamentoComR
               {(contas ?? []).map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
             </Select>
           </FormField>
-          <FormField label="Identificador da transacao / PIX (E2E)">
+          <FormField label="Identificador da transação / PIX (E2E)">
             <Input
               value={form.end_to_end_id_pix ?? ''}
               onChange={(e) => setForm({ ...form, end_to_end_id_pix: e.target.value })}
-              placeholder="Usado na conciliacao bancaria"
+              placeholder="Usado na conciliação bancária"
             />
           </FormField>
         </div>
 
         <div className="tnum flex flex-wrap justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2.5 text-sm">
-          <span className="text-slate-500">Valor liquido da baixa <b className="text-slate-800">{formatCurrency(liquido)}</b></span>
+          <span className="text-slate-500">Valor líquido da baixa <b className="text-slate-800">{formatCurrency(liquido)}</b></span>
           <span className={restante > 0.004 ? 'text-amber-700' : 'text-emerald-700'}>
-            {restante > 0.004 ? `Restara ${formatCurrency(restante)} em aberto` : 'Titulo sera quitado'}
+            {restante > 0.004 ? `Restará ${formatCurrency(restante)} em aberto` : 'Título será quitado'}
           </span>
         </div>
 
         {(baixas ?? []).length > 0 && (
           <div className="rounded-xl border border-slate-200">
             <p className="flex items-center gap-1.5 border-b border-slate-200 px-3 py-2 text-[11.5px] font-semibold uppercase tracking-wide text-slate-500">
-              <History className="h-3.5 w-3.5" /> Baixas ja registradas
+              <History className="h-3.5 w-3.5" /> Baixas já registradas
             </p>
             <table className="w-full text-xs">
               <tbody>

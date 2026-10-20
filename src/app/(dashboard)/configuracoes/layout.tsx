@@ -24,7 +24,7 @@ export default async function ConfiguracoesLayout({ children }: { children: Reac
     if (termos) {
       return (
         <div className="space-y-6">
-          <h1 className="text-2xl font-semibold text-slate-900">Configuracoes</h1>
+          <h1 className="text-2xl font-semibold text-slate-900">Configurações</h1>
           <ConfigTabs somente={['/configuracoes/termos']} />
           <SoTermos>{children}</SoTermos>
         </div>
@@ -32,14 +32,14 @@ export default async function ConfiguracoesLayout({ children }: { children: Reac
     }
     return (
       <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800">
-        Acesso restrito. Somente administradores podem acessar as Configuracoes.
+        Acesso restrito. Somente administradores podem acessar as Configurações.
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-slate-900">Configuracoes</h1>
+      <h1 className="text-2xl font-semibold text-slate-900">Configurações</h1>
       <ConfigTabs />
       <div>{children}</div>
     </div>

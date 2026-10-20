@@ -80,7 +80,7 @@ export function FinanceiroRegional({ regionalId }: { regionalId: string | null }
             : 'nada vencido'}
         />
         <Indicador
-          titulo="Saldo liquidado no periodo" valor={resumo?.saldo_periodo} icon={Scale}
+          titulo="Saldo liquidado no período" valor={resumo?.saldo_periodo} icon={Scale}
           tom={Number(resumo?.saldo_periodo ?? 0) >= 0 ? 'receita' : 'despesa'}
           detalhe={`${formatCurrency(Number(resumo?.recebido_periodo ?? 0))} recebido · ${formatCurrency(Number(resumo?.pago_periodo ?? 0))} pago`}
         />

@@ -16,7 +16,7 @@ import type { VendedoresRow } from '@/lib/database.types';
 const DIAS_SEMANA = [
   { valor: 1, rotulo: 'Segunda-feira' }, { valor: 2, rotulo: 'Terca-feira' },
   { valor: 3, rotulo: 'Quarta-feira' }, { valor: 4, rotulo: 'Quinta-feira' },
-  { valor: 5, rotulo: 'Sexta-feira' }, { valor: 6, rotulo: 'Sabado' }, { valor: 7, rotulo: 'Domingo' },
+  { valor: 5, rotulo: 'Sexta-feira' }, { valor: 6, rotulo: 'Sábado' }, { valor: 7, rotulo: 'Domingo' },
 ];
 
 const pct = (v: number | null | undefined) =>
@@ -83,7 +83,7 @@ export function ModalVendedor({ inicial, onClose, regionalFixa }: {
     e.preventDefault();
     if (!form.nome?.trim()) return toast.error('Informe o nome do vendedor');
     if (!validacao.ok) return toast.error(validacao.erros[0]);
-    if (senha && senha !== confirmar) return toast.error('As senhas nao conferem');
+    if (senha && senha !== confirmar) return toast.error('As senhas não conferem');
     if (senha && senha.length < 8) return toast.error('A senha precisa de ao menos 8 caracteres');
     if (senha && !form.email?.trim()) return toast.error('Informe o e-mail para criar o acesso ao portal');
 
@@ -131,7 +131,7 @@ export function ModalVendedor({ inicial, onClose, regionalFixa }: {
               {opcoesParaEscolher(regionais, form.regional_id).map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
             </Select>
           </FormField>
-          <FormField label="Codigo (hotlink)">
+          <FormField label="Código (hotlink)">
             <div className="flex gap-2">
               <Input
                 value={form.codigo ?? ''}
@@ -152,15 +152,15 @@ export function ModalVendedor({ inicial, onClose, regionalFixa }: {
           </FormField>
         </div>
 
-        <Secao titulo="Comissao individual" tom="ambar">
+        <Secao titulo="Comissão individual" tom="ambar">
           {!form.regional_id ? (
             <p className="text-[11.5px] text-amber-800">
-              Escolha a franquia: a comissao do vendedor sai do que ela recebe.
+              Escolha a franquia: a comissão do vendedor sai do que ela recebe.
             </p>
           ) : (
             <p className="text-[11.5px] text-amber-800">
-              Teto de <b>{regional?.nome}</b>: entrada ate <b className="tnum">{pct(teto.adesao)}</b>,
-              recorrencia ate <b className="tnum">{pct(teto.recorrente)}</b>.
+              Teto de <b>{regional?.nome}</b>: entrada até <b className="tnum">{pct(teto.adesao)}</b>,
+              recorrência até <b className="tnum">{pct(teto.recorrente)}</b>.
             </p>
           )}
           <div className="grid gap-3 sm:grid-cols-2">
@@ -170,7 +170,7 @@ export function ModalVendedor({ inicial, onClose, regionalFixa }: {
                 onChange={(v) => set({ taxa_comissao_adesao: (v ?? 0) / 100 })}
               />
             </FormField>
-            <FormField label="% Recorrencia">
+            <FormField label="% Recorrência">
               <PercentInput
                 value={form.taxa_comissao_recorrente == null ? null : Number(form.taxa_comissao_recorrente) * 100}
                 onChange={(v) => set({ taxa_comissao_recorrente: (v ?? 0) / 100 })}
@@ -191,14 +191,14 @@ export function ModalVendedor({ inicial, onClose, regionalFixa }: {
                   value={form.dia_pagto_entrada ?? ''}
                   onChange={(e) => set({ dia_pagto_entrada: e.target.value ? Number(e.target.value) : null })}
                 >
-                  <option value="">Padrao franquia</option>
+                  <option value="">Padrão franquia</option>
                   {DIAS_SEMANA.map((d) => <option key={d.valor} value={d.valor}>{d.rotulo}</option>)}
                 </Select>
                 <p className="mt-1 text-[10.5px] uppercase tracking-wide text-slate-400">
-                  Comissao de adesao — paga semanalmente
+                  Comissão de adesão — paga semanalmente
                 </p>
               </FormField>
-              <FormField label="Dia pagto recorrencia (mes)">
+              <FormField label="Dia pagto recorrência (mês)">
                 <Input
                   type="number" min={1} max={31} className="tnum"
                   value={form.dia_pagto_recorrencia ?? ''}
@@ -206,17 +206,17 @@ export function ModalVendedor({ inicial, onClose, regionalFixa }: {
                   placeholder="Ex: 5"
                 />
                 <p className="mt-1 text-[10.5px] uppercase tracking-wide text-slate-400">
-                  Comissao mensal — ultimo dia util do mes anterior
+                  Comissão mensal — último dia útil do mês anterior
                 </p>
               </FormField>
             </div>
           </div>
         </Secao>
 
-        <Secao titulo="Dados bancarios">
+        <Secao titulo="Dados bancários">
           <div className="grid gap-3 sm:grid-cols-2">
             <FormField label="Banco"><Input value={form.banco ?? ''} onChange={(e) => set({ banco: e.target.value })} /></FormField>
-            <FormField label="Agencia"><Input value={form.agencia ?? ''} onChange={(e) => set({ agencia: e.target.value })} /></FormField>
+            <FormField label="Agência"><Input value={form.agencia ?? ''} onChange={(e) => set({ agencia: e.target.value })} /></FormField>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <FormField label="Conta"><Input value={form.conta ?? ''} onChange={(e) => set({ conta: e.target.value })} /></FormField>
@@ -227,7 +227,7 @@ export function ModalVendedor({ inicial, onClose, regionalFixa }: {
         <Secao titulo={form.usuario_id ? 'Redefinir senha do portal' : 'Criar acesso ao portal'} tom="azul">
           <p className="text-[11.5px] text-sky-800">
             {form.usuario_id
-              ? 'O vendedor ja acessa o portal. Preencha para trocar a senha; deixe vazio para manter.'
+              ? 'O vendedor já acessa o portal. Preencha para trocar a senha; deixe vazio para manter.'
               : 'Preencha para criar o login do vendedor (usa o e-mail acima). Deixe vazio para cadastrar sem acesso agora.'}
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -239,7 +239,7 @@ export function ModalVendedor({ inicial, onClose, regionalFixa }: {
             </FormField>
           </div>
           {!regionalFixa && (usuarios ?? []).length > 0 && !form.usuario_id && (
-            <FormField label="Ou vincular a um usuario ja existente">
+            <FormField label="Ou vincular a um usuário já existente">
               <Select value={form.usuario_id ?? ''} onChange={(e) => set({ usuario_id: e.target.value || null })}>
                 <option value="">-- Nenhum --</option>
                 {(usuarios ?? []).map((u) => <option key={u.id} value={u.id}>{u.nome} ({u.email})</option>)}
@@ -248,7 +248,7 @@ export function ModalVendedor({ inicial, onClose, regionalFixa }: {
           )}
         </Secao>
 
-        <FormField label="Observacoes">
+        <FormField label="Observações">
           <Textarea rows={2} value={form.observacoes ?? ''} onChange={(e) => set({ observacoes: e.target.value })} />
         </FormField>
 

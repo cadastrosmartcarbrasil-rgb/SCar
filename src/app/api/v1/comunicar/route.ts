@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     | { acao?: string; token?: string; doc?: string; nascimento?: string; dados?: DadosComunicacao; declarou?: boolean; anexo_id?: string }
     | null;
   const token = String(corpo?.token ?? '').trim();
-  if (!corpo || !token) return erro('Envio invalido');
+  if (!corpo || !token) return erro('Envio inválido');
 
   const ip = ipDe(req) ?? 'sem-ip';
   const limite = consumirTentativa(`comunicar:${ip}`, 300, 600);
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
 
   // As escritas precisam saber o papel para limpar o que nao e dele.
   const { data: com } = await admin.rpc('comunicacao_publica_por_token', { p_token: token });
-  if (!com?.id) return erro('Link invalido', 403);
+  if (!com?.id) return erro('Link inválido', 403);
   const papel = com.papel as PapelComunicacao;
 
   if (corpo.acao === 'rascunho') {

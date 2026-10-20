@@ -99,7 +99,7 @@ export default function PlanosPage() {
   function remover(p: PlanosProtecaoRow) {
     if (!confirm(`Excluir o plano "${p.nome}"?`)) return;
     excluir.mutate(p.id, {
-      onSuccess: () => toast.success('Plano excluido'),
+      onSuccess: () => toast.success('Plano excluído'),
       onError: (err) => toast.error(err.message),
     });
   }
@@ -110,10 +110,10 @@ export default function PlanosPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="max-w-2xl text-sm text-slate-500">
-          Combos comerciais (ex.: Prata, Ouro, Diamante). Todo plano ja inclui a cotacao base
-          (casco + taxa admin + assistencia 24h + rastreador se aplicavel); aqui voce amarra os
-          opcionais que compoem cada nivel. Plano marcado como <strong>sem protecao de casco</strong>{' '}
-          (ex.: so terceiros, rastreamento) nao leva o casco da base.
+          Combos comerciais (ex.: Prata, Ouro, Diamante). Todo plano já inclui a cotação base
+          (casco + taxa admin + assistência 24h + rastreador se aplicável); aqui você amarra os
+          opcionais que compõem cada nível. Plano marcado como <strong>sem proteção de casco</strong>{' '}
+          (ex.: só terceiros, rastreamento) não leva o casco da base.
         </p>
         <Button onClick={novo}><Plus className="h-4 w-4" /> Novo Plano</Button>
       </div>
@@ -137,11 +137,11 @@ export default function PlanosPage() {
                   <Input value={ed.nome} onChange={(e) => setEd({ ...ed, nome: e.target.value })} placeholder="Ex.: Plano Ouro" />
                 </FormField>
               </div>
-              <FormField label="Nivel (ordem)">
+              <FormField label="Nível (ordem)">
                 <Input type="number" value={ed.nivel} onChange={(e) => setEd({ ...ed, nivel: Number(e.target.value) || 0 })} />
               </FormField>
             </div>
-            <FormField label="Descricao comercial">
+            <FormField label="Descrição comercial">
               <textarea
                 value={ed.descricao_comercial}
                 onChange={(e) => setEd({ ...ed, descricao_comercial: e.target.value })}
@@ -168,14 +168,14 @@ export default function PlanosPage() {
                       <span className="rounded bg-slate-100 px-1.5 text-[10px] uppercase text-slate-500">{p.categoria}</span>
                     </span>
                     {tiposPorProduto?.[p.id]?.length ? (
-                      <span className="text-[11px] text-slate-500">so {rotuloTiposDoProduto(p.id, tiposPorProduto, nomeDoTipo)}</span>
+                      <span className="text-[11px] text-slate-500">só {rotuloTiposDoProduto(p.id, tiposPorProduto, nomeDoTipo)}</span>
                     ) : null}
                   </label>
                 ))}
               </div>
               <p className="mt-1 text-xs text-slate-400">
-                A cotacao base entra automaticamente; marque apenas os adicionais. O plano pode servir
-                varios tipos de veiculo: cada veiculo so leva (e so paga) o opcional que atende o tipo dele.
+                A cotação base entra automaticamente; marque apenas os adicionais. O plano pode servir
+                vários tipos de veículo: cada veículo só leva (e só paga) o opcional que atende o tipo dele.
               </p>
             </div>
 
@@ -187,10 +187,10 @@ export default function PlanosPage() {
                 className="mt-0.5 h-4 w-4 rounded border-slate-300"
               />
               <span>
-                <span className="font-medium text-slate-700">Sem protecao de casco</span>
+                <span className="font-medium text-slate-700">Sem proteção de casco</span>
                 <span className="block text-xs text-slate-500">
-                  O casco da cotacao base sai do preco e da ficha do SAC. Use para planos so de
-                  terceiros, rastreamento ou assistencia. Taxa administrativa, assistencia 24h e a
+                  O casco da cotação base sai do preço e da ficha do SAC. Use para planos só de
+                  terceiros, rastreamento ou assistência. Taxa administrativa, assistência 24h e a
                   regra do rastreador continuam.
                 </span>
               </span>
@@ -234,7 +234,7 @@ function PlanoCard({ plano, onEdit, onDelete }: { plano: PlanosProtecaoRow; onEd
       <div className="mt-3">
         <p className="text-[10px] font-medium uppercase text-slate-400">Opcionais</p>
         {nomes.length === 0 ? (
-          <p className="text-xs text-slate-400">{plano.sem_casco ? 'Somente cotacao base, sem o casco.' : 'Somente cotacao base.'}</p>
+          <p className="text-xs text-slate-400">{plano.sem_casco ? 'Somente cotação base, sem o casco.' : 'Somente cotação base.'}</p>
         ) : (
           <ul className="mt-1 flex flex-wrap gap-1">
             {nomes.map((n) => (

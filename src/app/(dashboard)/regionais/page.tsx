@@ -20,7 +20,7 @@ export default function RegionaisPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Regionais</h1>
           <p className="mt-0.5 text-sm text-slate-500">
-            Carteira, inadimplencia, eventos e resultado das unidades — consolidado e por regional.
+            Carteira, inadimplência, eventos e resultado das unidades — consolidado e por regional.
           </p>
         </div>
         <Link

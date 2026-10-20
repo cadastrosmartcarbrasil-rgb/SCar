@@ -1285,6 +1285,14 @@ Prioridade: **segurança (RLS)** e **sempre validado** antes de commitar.
   WCAG AA (mínimo 4.5); agora dá 5.35. Redefinir a paleta escurece **todas as telas de uma vez**,
   e foi seguro porque essas faixas são usadas só como cor de TEXTO (zero `bg-`/`border-` nelas).
   **50..300 e 800/900 não foram tocados:** são fundo, borda e título.
+- **Revisão de português (20/10/2026, só texto):** ~2.700 textos de tela ganharam acento e cedilha
+  (não, veículo, cotação, histórico…). Feito por AST (só JSX, atributos de tela, rótulos e mensagens),
+  com prova de que cada linha mudou SÓ por acento. **Ficaram sem acento, de propósito**, textos que
+  são gravados ou comparados como valor: opções de natureza/"colidiu com" da comunicação de evento,
+  motivos de perda, subtipos da 24h, tipos de documento da empresa, sinônimos de cabeçalho da
+  importação de vendedores, o prefixo "Trazido do historico do Mutual" (o banco grava assim) e "Pix
+  Copia e Cola" (nome oficial). Mensagens que vêm do BANCO (SQL) continuam sem acento — corrigir é
+  migration. **Texto novo: escreva já com acento**; identificador, coluna e valor gravado, nunca.
 - **Edge Functions (Deno)** para webhook bancário e e-mail (Resend).
 - **RLS é a espinha de segurança.** Toda tabela tem policies; multi-tenant por `regional`.
 

@@ -50,7 +50,7 @@ export default function PortalFinanceiroPage() {
           <Indicador rotulo="Em aberto" valor={formatCurrency(fin.em_aberto)}
             nota={fin.qtd_vencidos > 0 ? `${fin.qtd_vencidos} em atraso` : 'nenhum atraso'}
             tom={fin.qtd_vencidos > 0 ? 'alerta' : 'neutro'} />
-          <Indicador rotulo="Proximo vencimento"
+          <Indicador rotulo="Próximo vencimento"
             valor={fin.proximo_vencimento ? formatDate(fin.proximo_vencimento) : '—'}
             nota={fin.proximo_valor ? formatCurrency(fin.proximo_valor) : 'sem boleto a vencer'} />
           <Indicador rotulo="Pago em 12 meses" valor={formatCurrency(fin.pago_12_meses)}
@@ -167,7 +167,7 @@ function ModalSegundaVia({ titulo, onClose }: { titulo: PortalTitulo; onClose: (
         id: titulo.id, data_vencimento: titulo.data_vencimento, valor: titulo.valor,
         linha_digitavel: titulo.linha_digitavel, url_boleto: titulo.url_boleto, pix_copia_cola: null,
         disponivel: tem,
-        aviso: tem ? null : 'Este boleto foi emitido pelo sistema anterior e nao temos a linha digitavel dele. Fale com a associacao para receber a 2a via.',
+        aviso: tem ? null : 'Este boleto foi emitido pelo sistema anterior e não temos a linha digitável dele. Fale com a associação para receber a 2a via.',
       });
       return;
     }
@@ -180,7 +180,7 @@ function ModalSegundaVia({ titulo, onClose }: { titulo: PortalTitulo; onClose: (
       setCopiado(qual);
       setTimeout(() => setCopiado(null), 2500);
     } catch {
-      toast.error('Nao consegui copiar. Selecione o texto manualmente.');
+      toast.error('Não consegui copiar. Selecione o texto manualmente.');
     }
   }
 
@@ -218,7 +218,7 @@ function ModalSegundaVia({ titulo, onClose }: { titulo: PortalTitulo; onClose: (
             {dados.linha_digitavel && (
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                  Linha digitavel
+                  Linha digitável
                 </p>
                 <p className="tnum mt-1 break-all rounded-lg bg-slate-50 px-3 py-2 font-mono text-[12px] text-slate-700">
                   {dados.linha_digitavel}
@@ -228,7 +228,7 @@ function ModalSegundaVia({ titulo, onClose }: { titulo: PortalTitulo; onClose: (
                   className="mt-1.5 flex w-full items-center justify-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-[12px] font-semibold text-slate-600 transition hover:bg-slate-50"
                 >
                   {copiado === 'linha' ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
-                  {copiado === 'linha' ? 'Copiado!' : 'Copiar linha digitavel'}
+                  {copiado === 'linha' ? 'Copiado!' : 'Copiar linha digitável'}
                 </button>
               </div>
             )}
@@ -239,7 +239,7 @@ function ModalSegundaVia({ titulo, onClose }: { titulo: PortalTitulo; onClose: (
                 className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-2.5 text-[12.5px] font-bold text-emerald-700 transition hover:bg-emerald-100"
               >
                 {copiado === 'pix' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                {copiado === 'pix' ? 'PIX copiado!' : 'Copiar codigo PIX'}
+                {copiado === 'pix' ? 'PIX copiado!' : 'Copiar código PIX'}
               </button>
             )}
 

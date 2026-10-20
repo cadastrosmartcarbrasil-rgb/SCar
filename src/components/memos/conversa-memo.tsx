@@ -43,7 +43,7 @@ export function ConversaMemo({
     if (!lista.length) {
       return (
         <p className="rounded-lg border border-dashed border-slate-200 px-3 py-4 text-center text-sm text-slate-400">
-          Ninguem respondeu este comunicado ainda.
+          Ninguém respondeu este comunicado ainda.
         </p>
       );
     }

@@ -27,7 +27,7 @@ describe('categorias e status do protocolo', () => {
   });
   it('rotula a categoria e a prioridade', () => {
     expect(rotuloCategoria('FINANCEIRO')).toBe('Financeiro');
-    expect(rotuloCategoria('RECLAMACAO')).toBe('Reclamacao');
+    expect(rotuloCategoria('RECLAMACAO')).toBe('Reclamação');
     expect(corPrioridade('URGENTE')).toContain('rose');
   });
   it('todo status tem rotulo', () => {
@@ -69,7 +69,7 @@ describe('disparos rapidos do SAC', () => {
 
   it('mensagem padrao usa o primeiro nome e a placa', () => {
     const txt = mensagemPadrao({ associado: 'Joana Maria Silva', placa: 'ABC1D23', atendente: 'Carlos' });
-    expect(txt).toContain('Ola, Joana!');
+    expect(txt).toContain('Olá, Joana!');
     expect(txt).toContain('Carlos');
     expect(txt).toContain('ABC1D23');
   });
@@ -118,7 +118,7 @@ describe('pareceres do protocolo (0059)', () => {
     expect(situacaoParecer(p(false, 0)).rotulo).toBe('Aguardando');
     expect(situacaoParecer(p(false, 3)).cor).toContain('amber');
     expect(situacaoParecer(p(false, 7)).atrasado).toBe(true);
-    expect(situacaoParecer(p(false, 9)).rotulo).toBe('Atrasado ha 9 dias');
+    expect(situacaoParecer(p(false, 9)).rotulo).toBe('Atrasado há 9 dias');
   });
 
   it('respondido nunca conta como atrasado, por mais que tenha demorado', () => {

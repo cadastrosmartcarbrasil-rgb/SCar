@@ -32,7 +32,7 @@ export function LoginAssociado({ logoUrl }: { logoUrl: string | null }) {
         body: JSON.stringify({ cpf_cnpj: digitos, senha }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error ?? 'Nao consegui entrar');
+      if (!res.ok) throw new Error(json?.error ?? 'Não consegui entrar');
       router.push('/portal');
       router.refresh();
     } catch (err) {
@@ -107,7 +107,7 @@ export function LoginAssociado({ logoUrl }: { logoUrl: string | null }) {
             <p className="flex items-start gap-1.5 rounded-lg bg-slate-50 px-3 py-2.5 text-[11.5px] leading-relaxed text-slate-500">
               <ShieldCheck className="mt-px h-3.5 w-3.5 shrink-0 text-cyan-600" />
               <span>
-                <b>Primeiro acesso?</b> Use o seu CPF tambem como senha. Vamos pedir que voce crie
+                <b>Primeiro acesso?</b> Use o seu CPF também como senha. Vamos pedir que você crie
                 uma senha sua logo em seguida.
               </span>
             </p>

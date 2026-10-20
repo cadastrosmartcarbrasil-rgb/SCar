@@ -35,6 +35,6 @@ export async function consultarCnpj(cnpj: string): Promise<DadosCnpj> {
     if (!res.ok) return { found: false, tentativas: [`servidor: HTTP ${res.status}`] };
     return res.json();
   } catch {
-    return { found: false, tentativas: ['sem conexao com o servidor'] };
+    return { found: false, tentativas: ['sem conexão com o servidor'] };
   }
 }

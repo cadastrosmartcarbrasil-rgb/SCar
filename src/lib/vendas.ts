@@ -63,7 +63,7 @@ export const FORMA_ADESAO_ROTULO: Record<FormaAdesao, string> = {
   VENDEDOR_NA_HORA: 'Vendedor recebeu na hora',
   BOLETO: 'Boleto',
   PIX: 'PIX',
-  CARTAO: 'Cartao',
+  CARTAO: 'Cartão',
 };
 
 /** O dinheiro passou pela conta da associacao? So entao entra no DRE. */
@@ -100,7 +100,7 @@ export function ratearAdesao(
       vendedor: total,
       associacao: 0,
       entraNoCaixa: false,
-      resumo: 'Recebida pelo vendedor: nada entra no financeiro da associacao.',
+      resumo: 'Recebida pelo vendedor: nada entra no financeiro da associação.',
     };
   }
 
@@ -180,7 +180,7 @@ export const ABAS_FECHAMENTO = [
   { id: 'associado', titulo: 'Associado',  grupo: 'Associado' },
   { id: 'veiculo',   titulo: 'Veiculo',    grupo: 'Veiculo' },
   { id: 'vistoria',  titulo: 'Documentos e fotos', grupo: 'Documentos' },
-  { id: 'adesao',    titulo: 'Adesao',     grupo: 'Venda' },
+  { id: 'adesao',    titulo: 'Adesão',     grupo: 'Venda' },
 ] as const;
 
 export type AbaFechamento = (typeof ABAS_FECHAMENTO)[number]['id'];
@@ -268,7 +268,7 @@ const CAMPOS: {
   { campo: 'chassi',         rotulo: 'Chassi',            naFicha: 'chassi',         noRegistro: 'chassi' },
   { campo: 'numero_motor',   rotulo: 'No do motor',       naFicha: 'numero_motor',   noRegistro: 'numeroMotor' },
   { campo: 'cor',            rotulo: 'Cor',               naFicha: 'cor',            noRegistro: 'cor' },
-  { campo: 'ano_fabricacao', rotulo: 'Ano de fabricacao', naFicha: 'ano_fabricacao', noRegistro: 'anoFabricacao' },
+  { campo: 'ano_fabricacao', rotulo: 'Ano de fabricação', naFicha: 'ano_fabricacao', noRegistro: 'anoFabricacao' },
   { campo: 'ano_modelo',     rotulo: 'Ano modelo',        naFicha: 'ano_modelo',     noRegistro: 'anoModelo' },
   { campo: 'marca',          rotulo: 'Marca',             naFicha: 'marca',          noRegistro: 'marca' },
   { campo: 'modelo',         rotulo: 'Modelo',            naFicha: 'modelo',         noRegistro: 'modelo' },

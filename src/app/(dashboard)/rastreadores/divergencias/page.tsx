@@ -12,9 +12,9 @@ export default function DivergenciasPage() {
         <ChevronLeft className="h-4 w-4" /> Rastreadores
       </Link>
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Divergencias</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">Divergências</h1>
         <p className="text-sm text-slate-500">
-          Onde o parque de equipamentos e o cadastro de veiculos discordam.
+          Onde o parque de equipamentos e o cadastro de veículos discordam.
         </p>
       </div>
       <DivergenciasRastreadores />

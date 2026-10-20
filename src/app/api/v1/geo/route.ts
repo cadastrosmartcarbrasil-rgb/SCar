@@ -102,9 +102,9 @@ async function calcularRota(origem: Coordenada, destino: Coordenada): Promise<Ro
 export async function POST(request: Request) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   const { data: perfil } = await supabase.from('usuarios').select('papel').eq('id', user.id).maybeSingle();
-  if (!perfil) return NextResponse.json({ error: 'Sem permissao' }, { status: 403 });
+  if (!perfil) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
 
   const body = (await request.json().catch(() => ({}))) as {
     action?: string;
@@ -116,9 +116,9 @@ export async function POST(request: Request) {
   try {
     if (body.action === 'geocode') {
       const termo = (body.endereco ?? '').trim();
-      if (termo.length < 5) return NextResponse.json({ error: 'Informe o endereco completo' }, { status: 400 });
+      if (termo.length < 5) return NextResponse.json({ error: 'Informe o endereço completo' }, { status: 400 });
       const r = await geocodificar(termo);
-      if (!r) return NextResponse.json({ error: 'Endereco nao localizado no mapa' }, { status: 404 });
+      if (!r) return NextResponse.json({ error: 'Endereço não localizado no mapa' }, { status: 404 });
       return NextResponse.json(r);
     }
 
@@ -131,16 +131,16 @@ export async function POST(request: Request) {
         return g ? { lat: g.lat, lng: g.lng } : null;
       };
       const [o, d] = await Promise.all([resolver(body.origem), resolver(body.destino)]);
-      if (!o || !d) return NextResponse.json({ error: 'Informe origem e destino validos' }, { status: 400 });
+      if (!o || !d) return NextResponse.json({ error: 'Informe origem e destino válidos' }, { status: 400 });
       const rota = await calcularRota(o, d);
-      if (!rota) return NextResponse.json({ error: 'Nao foi possivel calcular a rota' }, { status: 502 });
+      if (!rota) return NextResponse.json({ error: 'Não foi possível calcular a rota' }, { status: 502 });
       return NextResponse.json({ ...rota, origem: o, destino: d });
     }
 
-    return NextResponse.json({ error: 'action invalida (geocode | rota)' }, { status: 400 });
+    return NextResponse.json({ error: 'action inválida (geocode | rota)' }, { status: 400 });
   } catch (e) {
     // Provedor fora do ar nao pode derrubar o acionamento: a tela cai no modo
     // manual (atendente digita o KM) e o atendimento segue.
-    return NextResponse.json({ error: (e as Error).message || 'Servico de mapas indisponivel' }, { status: 502 });
+    return NextResponse.json({ error: (e as Error).message || 'Serviço de mapas indisponível' }, { status: 502 });
   }
 }

@@ -7,9 +7,9 @@ export const ESTEIRA: StatusLead[] = [
 
 export const STATUS_LEAD: Record<StatusLead, { label: string; cor: string; curto: string }> = {
   NOVO:             { label: 'Novo Lead',        curto: 'Novo',       cor: 'bg-slate-100 text-slate-700' },
-  ORCAMENTO_GERADO: { label: 'Cotacao Criada',   curto: 'Cotacao',    cor: 'bg-sky-100 text-sky-700' },
+  ORCAMENTO_GERADO: { label: 'Cotação Criada',   curto: 'Cotação',    cor: 'bg-sky-100 text-sky-700' },
   PROPOSTA_ENVIADA: { label: 'Proposta Enviada', curto: 'Proposta',   cor: 'bg-indigo-100 text-indigo-700' },
-  EM_NEGOCIACAO:    { label: 'Em Negociacao',    curto: 'Negociacao', cor: 'bg-cyan-100 text-cyan-700' },
+  EM_NEGOCIACAO:    { label: 'Em Negociação',    curto: 'Negociação', cor: 'bg-cyan-100 text-cyan-700' },
   APROVADO:         { label: 'Aprovado',         curto: 'Aprovado',   cor: 'bg-violet-100 text-violet-700' },
   EM_AUDITORIA:     { label: 'Em Auditoria',     curto: 'Auditoria',  cor: 'bg-amber-100 text-amber-800' },
   ATIVO:            { label: 'Ativo na Base',    curto: 'Ativo',      cor: 'bg-emerald-100 text-emerald-700' },
@@ -37,11 +37,11 @@ export interface ColunaKanban {
 
 export const COLUNAS_KANBAN: ColunaKanban[] = [
   { id: 'NOVO', titulo: 'Novo Lead', descricao: 'Contato recebido', aceita: ['NOVO'], cor: 'border-slate-300' },
-  { id: 'ORCAMENTO_GERADO', titulo: 'Cotacao Criada', descricao: 'Orcamento montado', aceita: ['ORCAMENTO_GERADO'], cor: 'border-sky-300' },
+  { id: 'ORCAMENTO_GERADO', titulo: 'Cotação Criada', descricao: 'Orçamento montado', aceita: ['ORCAMENTO_GERADO'], cor: 'border-sky-300' },
   { id: 'PROPOSTA_ENVIADA', titulo: 'Proposta Enviada', descricao: 'Link enviado ao cliente', aceita: ['PROPOSTA_ENVIADA'], cor: 'border-indigo-300' },
-  { id: 'EM_NEGOCIACAO', titulo: 'Em Negociacao', descricao: 'Ajustando valores/itens', aceita: ['EM_NEGOCIACAO'], cor: 'border-cyan-300' },
+  { id: 'EM_NEGOCIACAO', titulo: 'Em Negociação', descricao: 'Ajustando valores/itens', aceita: ['EM_NEGOCIACAO'], cor: 'border-cyan-300' },
   { id: 'APROVADO', titulo: 'Aprovado (Auditoria)', descricao: 'Enviado para auditoria', aceita: ['APROVADO', 'EM_AUDITORIA', 'ATIVO'], cor: 'border-violet-300' },
-  { id: 'PERDIDO', titulo: 'Perdido', descricao: 'Negociacao encerrada', aceita: ['PERDIDO'], cor: 'border-rose-300' },
+  { id: 'PERDIDO', titulo: 'Perdido', descricao: 'Negociação encerrada', aceita: ['PERDIDO'], cor: 'border-rose-300' },
 ];
 
 /** Em qual coluna o lead aparece. */
@@ -144,9 +144,9 @@ export interface AcaoLead {
 /** Como cada etapa e anunciada no botao (verbo do que acabou de acontecer). */
 export const ROTULO_DESTINO: Record<StatusKanban, string> = {
   NOVO: 'Voltar para Novo',
-  ORCAMENTO_GERADO: 'Marcar cotacao criada',
+  ORCAMENTO_GERADO: 'Marcar cotação criada',
   PROPOSTA_ENVIADA: 'Marcar proposta enviada',
-  EM_NEGOCIACAO: 'Entrou em negociacao',
+  EM_NEGOCIACAO: 'Entrou em negociação',
   APROVADO: 'Cliente aprovou (-> Auditoria)',
   PERDIDO: 'Perdido',
 };

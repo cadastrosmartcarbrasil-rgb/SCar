@@ -28,7 +28,7 @@ export async function POST(request: Request) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
 
   // Valida papel: apenas admin/financeiro emitem em lote.
   const { data: perfil } = await supabase
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     .eq('id', user.id)
     .maybeSingle();
   if (!perfil || !['admin', 'financeiro'].includes(perfil.papel)) {
-    return NextResponse.json({ error: 'Sem permissao' }, { status: 403 });
+    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
   }
 
   const body = (await request.json()) as EmitirLoteBody;
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
     const plano = (v as { planos_protecao?: { taxa_administrativa: number } }).planos_protecao;
     const valor = Number(plano?.taxa_administrativa ?? 0);
     if (!cliente || valor <= 0) {
-      falhas.push({ veiculo_id: v.id, motivo: 'Sem plano/valor valido' });
+      falhas.push({ veiculo_id: v.id, motivo: 'Sem plano/valor válido' });
       continue;
     }
 

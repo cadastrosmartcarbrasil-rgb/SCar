@@ -41,9 +41,9 @@ export default function LeadsRegionalPage() {
     const vendedorId = destino[leadId];
     if (!vendedorId) return toast.error('Escolha o vendedor');
     atribuir.mutate(
-      { leadId, vendedorId, motivo: 'MANUAL', observacao: 'Distribuido pelo gestor da unidade' },
+      { leadId, vendedorId, motivo: 'MANUAL', observacao: 'Distribuído pelo gestor da unidade' },
       {
-        onSuccess: () => toast.success('Lead distribuido'),
+        onSuccess: () => toast.success('Lead distribuído'),
         onError: (e: unknown) => toast.error((e as Error).message),
       },
     );
@@ -52,7 +52,7 @@ export default function LeadsRegionalPage() {
   function devolverParados() {
     liberar.mutate(regionalId, {
       onSuccess: (n) => toast.success(
-        n === 0 ? 'Nenhum lead parado alem do prazo' : `${n} lead(s) devolvido(s) ao pool`),
+        n === 0 ? 'Nenhum lead parado além do prazo' : `${n} lead(s) devolvido(s) ao pool`),
       onError: (e: unknown) => toast.error((e as Error).message),
     });
   }
@@ -87,7 +87,7 @@ export default function LeadsRegionalPage() {
         <CardContent>
           {(pool ?? []).length === 0 ? (
             <p className="py-2 text-center text-[12.5px] text-slate-400">
-              Nenhum lead esperando distribuicao.
+              Nenhum lead esperando distribuição.
             </p>
           ) : (
             <ul className="divide-y divide-slate-100">
@@ -98,7 +98,7 @@ export default function LeadsRegionalPage() {
                       {l.nome}
                       {l.carteira && (
                         <span className="ml-2 rounded-full bg-violet-50 px-2 py-0.5 text-[10.5px] font-semibold text-violet-700 ring-1 ring-inset ring-violet-200">
-                          ja e associado
+                          já é associado
                         </span>
                       )}
                     </p>
@@ -106,7 +106,7 @@ export default function LeadsRegionalPage() {
                       {l.celular}
                       {l.placa && <span className="ml-1.5 font-mono uppercase">{l.placa}</span>}
                       {l.origem_hotlink && <span className="ml-1.5 text-cyan-600">via /v/{l.origem_hotlink}</span>}
-                      {l.parado_dias > 0 && <span className="ml-1.5">· parado ha {l.parado_dias} dia(s)</span>}
+                      {l.parado_dias > 0 && <span className="ml-1.5">· parado há {l.parado_dias} dia(s)</span>}
                     </p>
                   </div>
                   <div className="flex shrink-0 gap-2">
@@ -150,8 +150,8 @@ export default function LeadsRegionalPage() {
           ) : (leads ?? []).length === 0 ? (
             <Vazio
               icon={Zap}
-              titulo={somenteHotlink ? 'Nenhum lead por hotlink no periodo' : 'Nenhum lead no periodo'}
-              descricao="Distribua os hotlinks da equipe: cada cotacao aberta pelo link entra aqui ja vinculada ao vendedor."
+              titulo={somenteHotlink ? 'Nenhum lead por hotlink no período' : 'Nenhum lead no período'}
+              descricao="Distribua os hotlinks da equipe: cada cotação aberta pelo link entra aqui já vinculada ao vendedor."
             />
           ) : (
             <table className="w-full min-w-[820px] text-sm">
@@ -161,7 +161,7 @@ export default function LeadsRegionalPage() {
                   <th className="py-2.5 font-semibold">Vendedor</th>
                   <th className="py-2.5 font-semibold">Origem</th>
                   <th className="py-2.5 font-semibold">Entrada</th>
-                  <th className="py-2.5 font-semibold">Situacao</th>
+                  <th className="py-2.5 font-semibold">Situação</th>
                   <th className="py-2.5 text-right font-semibold">Abrir</th>
                 </tr>
               </thead>

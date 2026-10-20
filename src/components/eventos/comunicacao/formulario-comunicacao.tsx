@@ -113,10 +113,10 @@ export function FormularioComunicacao({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <FormField label="Data"><Input type="date" value={ev.data ?? ''} onChange={(e) => set('evento', { data: e.target.value })} /></FormField>
           <FormField label="Hora aproximada"><Input type="time" value={ev.hora ?? ''} onChange={(e) => set('evento', { hora: e.target.value })} /></FormField>
-          <FormField label="Endereco do local (rua, numero ou km)" className="sm:col-span-2">
+          <FormField label="Endereço do local (rua, número ou km)" className="sm:col-span-2">
             <Input value={ev.endereco ?? ''} onChange={(e) => set('evento', { endereco: e.target.value })} />
           </FormField>
-          <FormField label="Ponto de referencia"><Input value={ev.referencia ?? ''} onChange={(e) => set('evento', { referencia: e.target.value })} /></FormField>
+          <FormField label="Ponto de referência"><Input value={ev.referencia ?? ''} onChange={(e) => set('evento', { referencia: e.target.value })} /></FormField>
           <div className="grid grid-cols-[1fr_5rem] gap-2">
             <FormField label="Cidade"><Input value={ev.cidade ?? ''} onChange={(e) => set('evento', { cidade: e.target.value })} /></FormField>
             <FormField label="UF"><Input maxLength={2} value={ev.uf ?? ''} onChange={(e) => set('evento', { uf: e.target.value })} /></FormField>
@@ -128,21 +128,21 @@ export function FormularioComunicacao({
             <Opcoes label="Pista" valor={ev.pista} opcoes={OPCOES.pista} onChange={(v) => set('evento', { pista: v })} />
             <Opcoes label="Luz" valor={ev.luz} opcoes={OPCOES.luz} onChange={(v) => set('evento', { luz: v })} />
           </div>
-          <FormField label="Sinalizacao no local (semaforo, placa...)"><Input value={ev.sinalizacao ?? ''} onChange={(e) => set('evento', { sinalizacao: e.target.value })} /></FormField>
+          <FormField label="Sinalização no local (semáforo, placa...)"><Input value={ev.sinalizacao ?? ''} onChange={(e) => set('evento', { sinalizacao: e.target.value })} /></FormField>
           <FormField label="Velocidade aproximada (km/h)"><Input inputMode="numeric" value={ev.velocidade ?? ''} onChange={(e) => set('evento', { velocidade: e.target.value })} /></FormField>
           <FormField label="Conte o que aconteceu" className="sm:col-span-2">
             <p className="text-xs text-slate-500">{TEXTOS.relato}</p>
             <Textarea rows={6} value={ev.relato ?? ''} onChange={(e) => set('evento', { relato: e.target.value })} />
           </FormField>
-          <FormField label="Boletim de ocorrencia: numero (se tiver)"><Input value={ev.bo_numero ?? ''} onChange={(e) => set('evento', { bo_numero: e.target.value })} /></FormField>
-          <FormField label="Orgao / UF do boletim"><Input value={ev.bo_orgao ?? ''} onChange={(e) => set('evento', { bo_orgao: e.target.value })} /></FormField>
+          <FormField label="Boletim de ocorrência: número (se tiver)"><Input value={ev.bo_numero ?? ''} onChange={(e) => set('evento', { bo_numero: e.target.value })} /></FormField>
+          <FormField label="Órgão / UF do boletim"><Input value={ev.bo_orgao ?? ''} onChange={(e) => set('evento', { bo_orgao: e.target.value })} /></FormField>
         </div>
       )}
 
       {atual === 'condutor' && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {!terceiro && (
-            <SimNao label={papel === 'associado' ? 'Era voce quem dirigia?' : 'Quem dirigia era o titular do veiculo?'}
+            <SimNao label={papel === 'associado' ? 'Era você quem dirigia?' : 'Quem dirigia era o titular do veículo?'}
               valor={cd.e_titular} onChange={(v) => set('condutor', { e_titular: v })} />
           )}
           {(terceiro || cd.e_titular === false) && (
@@ -152,11 +152,11 @@ export function FormularioComunicacao({
             </>
           )}
           <SimNao label="Quem dirigia era habilitado?" valor={cd.habilitado} onChange={(v) => set('condutor', { habilitado: v })} />
-          <FormField label="Numero da CNH"><Input inputMode="numeric" value={cd.cnh_numero ?? ''} onChange={(e) => set('condutor', { cnh_numero: e.target.value })} /></FormField>
+          <FormField label="Número da CNH"><Input inputMode="numeric" value={cd.cnh_numero ?? ''} onChange={(e) => set('condutor', { cnh_numero: e.target.value })} /></FormField>
           <FormField label="Categoria"><Input maxLength={3} value={cd.cnh_categoria ?? ''} onChange={(e) => set('condutor', { cnh_categoria: e.target.value })} /></FormField>
           <FormField label="Validade da CNH"><Input type="date" value={cd.cnh_validade ?? ''} onChange={(e) => set('condutor', { cnh_validade: e.target.value })} /></FormField>
           {!terceiro && (
-            <Opcoes label="Uso do veiculo no momento" valor={cd.uso} opcoes={OPCOES.uso} onChange={(v) => set('condutor', { uso: v })} />
+            <Opcoes label="Uso do veículo no momento" valor={cd.uso} opcoes={OPCOES.uso} onChange={(v) => set('condutor', { uso: v })} />
           )}
           <p className="text-xs text-slate-500 sm:col-span-2">A foto da CNH vai na etapa de fotos.</p>
         </div>
@@ -167,11 +167,11 @@ export function FormularioComunicacao({
           <FormField label="Placa"><Input value={vt.placa ?? ''} onChange={(e) => set('veiculo_terceiro', { placa: e.target.value })} /></FormField>
           <FormField label="Marca / modelo"><Input value={vt.marca_modelo ?? ''} onChange={(e) => set('veiculo_terceiro', { marca_modelo: e.target.value })} /></FormField>
           <FormField label="Cor"><Input value={vt.cor ?? ''} onChange={(e) => set('veiculo_terceiro', { cor: e.target.value })} /></FormField>
-          <SimNao label="Seu veiculo tem seguro ou protecao veicular?" valor={vt.tem_protecao} onChange={(v) => set('veiculo_terceiro', { tem_protecao: v })} />
+          <SimNao label="Seu veículo tem seguro ou proteção veicular?" valor={vt.tem_protecao} onChange={(v) => set('veiculo_terceiro', { tem_protecao: v })} />
           {vt.tem_protecao && (
             <>
-              <FormField label="Qual empresa ou associacao"><Input value={vt.empresa_protecao ?? ''} onChange={(e) => set('veiculo_terceiro', { empresa_protecao: e.target.value })} /></FormField>
-              <FormField label="Numero do contrato (se souber)"><Input value={vt.contrato_protecao ?? ''} onChange={(e) => set('veiculo_terceiro', { contrato_protecao: e.target.value })} /></FormField>
+              <FormField label="Qual empresa ou associação"><Input value={vt.empresa_protecao ?? ''} onChange={(e) => set('veiculo_terceiro', { empresa_protecao: e.target.value })} /></FormField>
+              <FormField label="Número do contrato (se souber)"><Input value={vt.contrato_protecao ?? ''} onChange={(e) => set('veiculo_terceiro', { contrato_protecao: e.target.value })} /></FormField>
             </>
           )}
         </div>
@@ -183,14 +183,14 @@ export function FormularioComunicacao({
 
       {atual === 'vitimas' && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <SimNao label="Alguem se feriu?" valor={vi.houve} onChange={(v) => set('vitimas', { houve: v })} />
+          <SimNao label="Alguém se feriu?" valor={vi.houve} onChange={(v) => set('vitimas', { houve: v })} />
           {vi.houve && papel !== 'passageiro_vitima' && (
             <>
               <FormField label="Quantas pessoas"><Input inputMode="numeric" value={vi.quantidade ?? ''} onChange={(e) => set('vitimas', { quantidade: e.target.value })} /></FormField>
               <FormField label="Socorro prestado (SAMU, bombeiros...)"><Input value={vi.socorro ?? ''} onChange={(e) => set('vitimas', { socorro: e.target.value })} /></FormField>
             </>
           )}
-          <p className="text-xs text-slate-500 sm:col-span-2">Nao precisa contar detalhes de saude aqui. Se for preciso, a equipe liga para voce.</p>
+          <p className="text-xs text-slate-500 sm:col-span-2">Não precisa contar detalhes de saúde aqui. Se for preciso, a equipe liga para você.</p>
         </div>
       )}
 
@@ -223,7 +223,7 @@ export function FormularioComunicacao({
           <Button className="w-full sm:w-auto" disabled={enviando || pendencias.length > 0 || (modo === 'publico' && !declarou)}
             onClick={() => onEnviar(modo === 'publico' ? declarou : false)}>
             {enviando ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Send className="mr-1 h-4 w-4" />}
-            {modo === 'publico' ? 'Enviar comunicacao' : 'Registrar comunicacao'}
+            {modo === 'publico' ? 'Enviar comunicação' : 'Registrar comunicação'}
           </Button>
         </div>
       )}
@@ -233,7 +233,7 @@ export function FormularioComunicacao({
           <ChevronLeft className="mr-1 h-4 w-4" /> Voltar
         </Button>
         {passo < secoes.length - 1 && (
-          <Button onClick={() => setPasso((p) => p + 1)}>Proximo <ChevronRight className="ml-1 h-4 w-4" /></Button>
+          <Button onClick={() => setPasso((p) => p + 1)}>Próximo <ChevronRight className="ml-1 h-4 w-4" /></Button>
         )}
       </div>
     </div>
@@ -274,10 +274,10 @@ function ListaFotos({ poses, anexos, onAnexar, onRemover }: {
   onAnexar: (pose: PoseComunicacao, file: File) => Promise<void>;
   onRemover?: (id: string) => Promise<void>;
 }) {
-  if (!poses.length) return <p className="text-sm text-slate-500">Nao ha fotos para enviar nesta etapa.</p>;
+  if (!poses.length) return <p className="text-sm text-slate-500">Não há fotos para enviar nesta etapa.</p>;
   return (
     <div className="space-y-2">
-      <p className="text-xs text-slate-500">As fotos nao sao obrigatorias, mas ajudam muito a analise. Envie as que puder.</p>
+      <p className="text-xs text-slate-500">As fotos não são obrigatórias, mas ajudam muito a análise. Envie as que puder.</p>
       {poses.map((p) => (
         <ItemFoto key={p.codigo} pose={p} enviados={anexos.filter((a) => a.pose === p.codigo)} onAnexar={onAnexar} onRemover={onRemover} />
       ))}

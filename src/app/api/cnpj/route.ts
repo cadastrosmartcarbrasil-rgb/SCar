@@ -12,11 +12,11 @@ export async function POST(request: Request) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
 
   const { cnpj } = await request.json();
   const c = String(cnpj ?? '').replace(/\D/g, '');
-  if (c.length !== 14) return NextResponse.json({ found: false, error: 'CNPJ invalido' });
+  if (c.length !== 14) return NextResponse.json({ found: false, error: 'CNPJ inválido' });
 
   const tentativas: string[] = [];
   let naoExiste = 0;

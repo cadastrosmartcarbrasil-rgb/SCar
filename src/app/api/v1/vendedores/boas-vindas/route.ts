@@ -12,7 +12,7 @@ const LIMITE_ANEXO = 5 * 1024 * 1024; // ~5 MB
 export async function POST(req: Request) {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 });
+  if (!auth.user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
 
   const form = await req.formData();
   const vendedorId = String(form.get('vendedor_id') ?? '');
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   const contrato = form.get('contrato') as File | null;
 
   if (!/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(email)) {
-    return NextResponse.json({ error: 'E-mail de destino invalido' }, { status: 400 });
+    return NextResponse.json({ error: 'E-mail de destino inválido' }, { status: 400 });
   }
   if (contrato && contrato.size > LIMITE_ANEXO) {
     return NextResponse.json({ error: 'O contrato passa de 5 MB' }, { status: 400 });
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
     .select('id, nome, codigo, regional_id, regionais(nome)')
     .eq('id', vendedorId)
     .single();
-  if (!v) return NextResponse.json({ error: 'Vendedor nao encontrado' }, { status: 404 });
+  if (!v) return NextResponse.json({ error: 'Vendedor não encontrado' }, { status: 404 });
 
   const unidade = (v as unknown as { regionais?: { nome: string } | null }).regionais?.nome ?? '-';
   const origem = new URL(req.url).origin;
@@ -50,17 +50,17 @@ export async function POST(req: Request) {
 
   const assunto = `Bem-vindo(a) a Smart Car Brasil, ${v.nome}!`;
   const texto = [
-    `Ola, ${v.nome}!`,
+    `Olá, ${v.nome}!`,
     '',
     `Seu cadastro de vendedor foi criado na unidade ${unidade}.`,
-    `Seu codigo de vendedor e ${v.codigo}.`,
+    `Seu código de vendedor e ${v.codigo}.`,
     '',
     `Seu link de vendas (hotlink): ${hotlink}`,
-    'Toda cotacao iniciada por esse link ja entra vinculada a voce.',
+    'Toda cotação iniciada por esse link já entra vinculada a você.',
     '',
     contratoPath
       ? 'Segue em anexo o contrato para assinatura digital.'
-      : 'O contrato sera enviado em seguida.',
+      : 'O contrato será enviado em seguida.',
     '',
     'Qualquer duvida, fale com a sua unidade.',
   ].join('\n');
@@ -108,6 +108,6 @@ export async function POST(req: Request) {
     assunto,
     texto,
     contrato_url: contratoPath,
-    aviso: enviado ? null : 'RESEND_API_KEY nao configurada: o contrato foi guardado, mas o e-mail nao saiu. Copie o texto e envie manualmente.',
+    aviso: enviado ? null : 'RESEND_API_KEY não configurada: o contrato foi guardado, mas o e-mail não saiu. Copie o texto e envie manualmente.',
   });
 }

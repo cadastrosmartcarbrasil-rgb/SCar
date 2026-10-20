@@ -87,9 +87,9 @@ export function EditarCotacao({
 
   if (!podeEditarCotacao(lead.status)) {
     return (
-      <Modal open onClose={onClose} title="Cotacao bloqueada">
+      <Modal open onClose={onClose} title="Cotação bloqueada">
         <p className="text-sm text-slate-600">
-          O lead ja foi enviado para a auditoria ({lead.status}); a cotacao ficou congelada como
+          O lead já foi enviado para a auditoria ({lead.status}); a cotação ficou congelada como
           documento da venda.
         </p>
         <div className="mt-3 flex justify-end"><Button onClick={onClose}>Entendi</Button></div>
@@ -116,7 +116,7 @@ export function EditarCotacao({
       },
       {
         onSuccess: (c) => {
-          toast.success(`Cotacao atualizada — ${formatCurrency(Number(c.total_com_desconto ?? c.total_mensalidade))}/mes`);
+          toast.success(`Cotação atualizada — ${formatCurrency(Number(c.total_com_desconto ?? c.total_mensalidade))}/mes`);
           onClose();
         },
         onError: (err) => toast.error(err.message),
@@ -165,7 +165,7 @@ export function EditarCotacao({
   }
 
   return (
-    <Modal open onClose={onClose} title="Editar cotacao" tamanho="lg">
+    <Modal open onClose={onClose} title="Editar cotação" tamanho="lg">
       <form onSubmit={salvar} className="space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
           <FormField label="Valor FIPE">
@@ -184,7 +184,7 @@ export function EditarCotacao({
         {/* Itens obrigatorios: travados */}
         <div className="rounded-lg border border-slate-200 p-3">
           <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
-            <Lock className="h-3.5 w-3.5" /> Itens do plano (nao removiveis)
+            <Lock className="h-3.5 w-3.5" /> Itens do plano (não removíveis)
           </p>
           <ul className="space-y-1 text-sm">
             {(obrigatorios ?? []).map((o) => (
@@ -207,7 +207,7 @@ export function EditarCotacao({
           {noPlano.length > 0 && (
             <div className="mb-3">
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                Ja incluidos neste plano
+                Já incluídos neste plano
               </p>
               <div className="grid gap-1 sm:grid-cols-2">
                 {noPlano.map((p) => (
@@ -238,12 +238,12 @@ export function EditarCotacao({
                 {p.nome}
                 {p.foraDoTipo && (
                   <span className="rounded bg-amber-100 px-1.5 py-px text-[10px] uppercase text-amber-800">
-                    nao atende este tipo — nao e cobrado
+                    não atende este tipo — não é cobrado
                   </span>
                 )}
               </label>
             ))}
-            {livres.length === 0 && <p className="text-sm text-slate-400">Nenhum opcional disponivel.</p>}
+            {livres.length === 0 && <p className="text-sm text-slate-400">Nenhum opcional disponível.</p>}
           </div>
         </div>
 
@@ -285,12 +285,12 @@ export function EditarCotacao({
           {previa.exigeAprovacao && (
             <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-amber-800">
               <Percent className="h-3.5 w-3.5" />
-              Acima do limite da franquia — ao salvar, sera pedida a aprovacao de um Gestor/Diretor.
+              Acima do limite da franquia — ao salvar, será pedida a aprovação de um Gestor/Diretor.
             </p>
           )}
           {cotacao.desconto_aprovado_por && (
             <p className="mt-1 text-xs text-violet-700">
-              Desconto atual liberado por excecao{cotacao.desconto_justificativa ? `: ${cotacao.desconto_justificativa}` : ''}.
+              Desconto atual liberado por exceção{cotacao.desconto_justificativa ? `: ${cotacao.desconto_justificativa}` : ''}.
             </p>
           )}
         </div>
@@ -299,18 +299,18 @@ export function EditarCotacao({
           <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>
           <Button type="submit" disabled={atualizar.isPending}>
             {atualizar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            {previa.exigeAprovacao ? 'Salvar e pedir aprovacao' : 'Salvar cotacao'}
+            {previa.exigeAprovacao ? 'Salvar e pedir aprovação' : 'Salvar cotação'}
           </Button>
         </div>
       </form>
 
       {/* Alcada de excecao */}
       {alcada && (
-        <Modal open onClose={() => setAlcada(null)} title="Aprovacao de desconto">
+        <Modal open onClose={() => setAlcada(null)} title="Aprovação de desconto">
           <form onSubmit={confirmarAlcada} className="space-y-3">
             <p className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
               O desconto de <strong>{desconto}%</strong> passa do limite de {limite}% da franquia.
-              Um Gestor/Diretor precisa autorizar com as proprias credenciais.
+              Um Gestor/Diretor precisa autorizar com as próprias credenciais.
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
               <FormField label="E-mail do gestor">
@@ -324,7 +324,7 @@ export function EditarCotacao({
               <FormField label="Justificativa" className="sm:col-span-2">
                 <Input value={alcada.justificativa}
                   onChange={(e) => setAlcada({ ...alcada, justificativa: e.target.value })}
-                  placeholder="Ex.: cliente com 3 veiculos, proposta da concorrencia" />
+                  placeholder="Ex.: cliente com 3 veículos, proposta da concorrência" />
               </FormField>
             </div>
             <div className="flex justify-end gap-2">

@@ -58,7 +58,7 @@ export default function PerfilVendedorPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-1.5">
-            <UserRound className="h-4 w-4 text-slate-400" /> Identificacao
+            <UserRound className="h-4 w-4 text-slate-400" /> Identificação
           </CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 text-[13px] sm:grid-cols-2">
@@ -82,7 +82,7 @@ export default function PerfilVendedorPage() {
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="font-mono text-[13px] text-brand-700">
-            {p?.codigo ? `/v/${p.codigo}` : 'codigo ainda nao gerado'}
+            {p?.codigo ? `/v/${p.codigo}` : 'código ainda não gerado'}
           </p>
           <BotoesHotlink codigo={p?.codigo ?? null} />
         </CardContent>
@@ -95,7 +95,7 @@ export default function PerfilVendedorPage() {
               <Landmark className="h-4 w-4 text-slate-400" /> Contato e recebimento
             </CardTitle>
             <p className="text-xs text-slate-500">
-              E para onde a franquia envia o repasse da sua comissao.
+              E para onde a franquia envia o repasse da sua comissão.
             </p>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -112,7 +112,7 @@ export default function PerfilVendedorPage() {
               <FormField label="Banco">
                 <Input value={form.banco} onChange={(e) => set('banco', e.target.value)} />
               </FormField>
-              <FormField label="Agencia">
+              <FormField label="Agência">
                 <Input value={form.agencia} onChange={(e) => set('agencia', e.target.value)} />
               </FormField>
               <FormField label="Conta">
@@ -131,22 +131,22 @@ export default function PerfilVendedorPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-1.5">
-            <Lock className="h-4 w-4 text-slate-400" /> Comissao e prazo
+            <Lock className="h-4 w-4 text-slate-400" /> Comissão e prazo
           </CardTitle>
           <p className="text-xs text-slate-500">
             Definidos pela sua franquia. Para alterar, fale com o gestor da unidade.
           </p>
         </CardHeader>
         <CardContent className="grid gap-3 text-[13px] sm:grid-cols-2">
-          <Campo rotulo="Comissao de adesao" valor={percent(p?.taxa_adesao)} />
-          <Campo rotulo="Comissao recorrente" valor={percent(p?.taxa_recorrente)} />
+          <Campo rotulo="Comissão de adesão" valor={percent(p?.taxa_adesao)} />
+          <Campo rotulo="Comissão recorrente" valor={percent(p?.taxa_recorrente)} />
           <Campo
-            rotulo="Pagamento da adesao"
-            valor={p?.dia_entrada ? `toda ${rotuloDiaSemana(p.dia_entrada)}${p.entrada_herdada ? ' (padrao da franquia)' : ''}` : 'a combinar'}
+            rotulo="Pagamento da adesão"
+            valor={p?.dia_entrada ? `toda ${rotuloDiaSemana(p.dia_entrada)}${p.entrada_herdada ? ' (padrão da franquia)' : ''}` : 'a combinar'}
           />
           <Campo
-            rotulo="Pagamento da recorrencia"
-            valor={p?.dia_recorrencia ? `todo dia ${p.dia_recorrencia}${p.recorrencia_herdada ? ' (padrao da franquia)' : ''}` : 'a combinar'}
+            rotulo="Pagamento da recorrência"
+            valor={p?.dia_recorrencia ? `todo dia ${p.dia_recorrencia}${p.recorrencia_herdada ? ' (padrão da franquia)' : ''}` : 'a combinar'}
           />
         </CardContent>
       </Card>

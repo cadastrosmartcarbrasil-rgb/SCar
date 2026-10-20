@@ -118,8 +118,8 @@ export function BancadaSicredi() {
       const j = await r.json();
       if (r.status === 409 && j.contrato_de_terceiro && !extra.substituir) {
         const ok = window.confirm(
-          `${j.error}\n\nO contrato e um so por beneficiario: confirme apenas se o webhook ja foi desligado em ` +
-            `${j.destino}. A partir dai os boletos dele tambem dao baixa aqui. Substituir?`,
+          `${j.error}\n\nO contrato é um só por beneficiário: confirme apenas se o webhook já foi desligado em ` +
+            `${j.destino}. A partir daí os boletos dele também dão baixa aqui. Substituir?`,
         );
         if (ok) {
           setOcupado(null);
@@ -144,7 +144,7 @@ export function BancadaSicredi() {
     <div className="space-y-4 rounded-lg border border-slate-200 bg-superficie p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="flex items-center gap-2 font-semibold text-slate-800">
-          <Landmark className="h-4 w-4 text-brand-500" /> Sicredi — API Cobranca
+          <Landmark className="h-4 w-4 text-brand-500" /> Sicredi — API Cobrança
         </h3>
         {sit && (
           <span
@@ -156,13 +156,13 @@ export function BancadaSicredi() {
                   : 'bg-sky-50 text-sky-700'
             }`}
           >
-            {!pronto ? 'nao configurado' : sit.ambiente === 'producao' ? 'PRODUCAO' : 'sandbox'}
+            {!pronto ? 'não configurado' : sit.ambiente === 'producao' ? 'PRODUCAO' : 'sandbox'}
           </span>
         )}
       </div>
       <p className="text-xs text-slate-500">
-        As credenciais ficam nas variaveis SICREDI_* do servidor (.env do VPS + docker-compose), nunca nesta tela.
-        Os testes abaixo nao geram titulo no sistema.
+        As credenciais ficam nas variáveis SICREDI_* do servidor (.env do VPS + docker-compose), nunca nesta tela.
+        Os testes abaixo não geram título no sistema.
       </p>
 
       {erroSit && <p className="text-sm text-rose-600">{erroSit}</p>}
@@ -176,7 +176,7 @@ export function BancadaSicredi() {
         <>
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="secondary" onClick={() => chamar('autenticar')} disabled={!!ocupado}>
-              <KeyRound className="h-4 w-4" /> {ocupado === 'autenticar' ? 'Testando...' : 'Testar autenticacao'}
+              <KeyRound className="h-4 w-4" /> {ocupado === 'autenticar' ? 'Testando...' : 'Testar autenticação'}
             </Button>
             {sit.ambiente === 'sandbox' && (
               <Button type="button" variant="secondary" onClick={() => chamar('boleto_teste')} disabled={!!ocupado}>
@@ -186,13 +186,13 @@ export function BancadaSicredi() {
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="flex gap-2">
-              <Input placeholder="Nosso numero" value={nossoNumero} onChange={(e) => setNossoNumero(e.target.value)} />
+              <Input placeholder="Nosso número" value={nossoNumero} onChange={(e) => setNossoNumero(e.target.value)} />
               <Button type="button" variant="secondary" disabled={!nossoNumero || !!ocupado} onClick={() => chamar('consultar', { nosso_numero: nossoNumero })} title="Consultar">
                 <Search className="h-4 w-4" />
               </Button>
             </div>
             <div className="flex gap-2">
-              <Input placeholder="Linha digitavel" value={linha} onChange={(e) => setLinha(e.target.value)} />
+              <Input placeholder="Linha digitável" value={linha} onChange={(e) => setLinha(e.target.value)} />
               <Button type="button" variant="secondary" disabled={!linha || !!ocupado} onClick={() => chamar('pdf', { linha_digitavel: linha })} title="PDF">
                 <FileText className="h-4 w-4" />
               </Button>
@@ -207,7 +207,7 @@ export function BancadaSicredi() {
                 variant="secondary"
                 disabled={!!ocupado}
                 onClick={() => chamar('francesinha', { dia })}
-                title="Extrato da cobranca (Francesinha): creditos e tarifas lancados na conta no dia"
+                title="Extrato da cobrança (Francesinha): créditos e tarifas lançados na conta no dia"
               >
                 <ScrollText className="h-4 w-4" />
               </Button>
@@ -215,10 +215,10 @@ export function BancadaSicredi() {
           </div>
           <div className="space-y-1 border-t border-slate-200 pt-3">
             <p className="text-xs text-slate-500">
-              Baixa dos pagos: le os boletos pagos no Sicredi e da baixa nos titulos do SCar e nos boletos do Mutual
+              Baixa dos pagos: lê os boletos pagos no Sicredi e da baixa nos títulos do SCar e nos boletos do Mutual
               (o agendador do servidor faz o mesmo sozinho). Sem data: ontem e hoje. O boleto do Mutual pago a partir de
-              13/10/2026 vira recebimento na conta SICREDI, no financeiro. O que nao casa com nada fica como
-              &quot;nao encontrado&quot;; <em>Reprocessar</em> tenta de novo desde a data (sem data: 13/10/2026).
+              13/10/2026 vira recebimento na conta SICREDI, no financeiro. O que não casa com nada fica como
+              &quot;não encontrado&quot;; <em>Reprocessar</em> tenta de novo desde a data (sem data: 13/10/2026).
             </p>
             <div className="flex gap-2">
               <Input type="date" value={diaBaixa} onChange={(e) => setDiaBaixa(e.target.value)} />
@@ -233,21 +233,21 @@ export function BancadaSicredi() {
           <AvisosPendentes versao={versaoAvisos} />
           <div className="space-y-2 border-t border-slate-200 pt-3">
             <p className="flex items-center gap-1 text-xs font-semibold text-slate-700">
-              <BellRing className="h-3.5 w-3.5" /> Webhook de liquidacao
+              <BellRing className="h-3.5 w-3.5" /> Webhook de liquidação
             </p>
             <p className="text-xs text-slate-500">
               Cadastra no Sicredi o aviso de pagamento: a cada boleto pago o banco chama este sistema, que confere o
-              pagamento e da a baixa na hora. O agendador continua rodando como rede de seguranca. O endereco usa o
+              pagamento e da a baixa na hora. O agendador continua rodando como rede de segurança. O endereço usa o
               segredo SICREDI_WEBHOOK_SECRET do servidor (aparece mascarado).
             </p>
             {sit.webhook_segredo === false && (
               <p className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
-                Falta SICREDI_WEBHOOK_SECRET no servidor — sem ela nao da para registrar o webhook.
+                Falta SICREDI_WEBHOOK_SECRET no servidor — sem ela não da para registrar o webhook.
               </p>
             )}
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-              <Input placeholder="Responsavel" value={whResp} onChange={(e) => setWhResp(e.target.value)} />
-              <Input type="email" placeholder="E-mail do responsavel" value={whEmail} onChange={(e) => setWhEmail(e.target.value)} />
+              <Input placeholder="Responsável" value={whResp} onChange={(e) => setWhResp(e.target.value)} />
+              <Input type="email" placeholder="E-mail do responsável" value={whEmail} onChange={(e) => setWhEmail(e.target.value)} />
               <Input placeholder="Telefone (opcional)" value={whTel} onChange={(e) => setWhTel(e.target.value)} />
             </div>
             <div className="flex flex-wrap gap-2">
@@ -266,13 +266,13 @@ export function BancadaSicredi() {
           </div>
           <div className="space-y-1 border-t border-slate-200 pt-3">
             <p className="text-xs text-slate-500">
-              Emitir UM titulo pela remessa (o caminho real: cria a remessa, chama o Sicredi e grava linha
-              digitavel/PIX no titulo). So este titulo vai; a fila do mes nao e tocada.
+              Emitir UM título pela remessa (o caminho real: cria a remessa, chama o Sicredi e grava linha
+              digitavel/PIX no título). Só este título vai; a fila do mês não é tocada.
             </p>
             <div className="flex gap-2">
-              <Input placeholder="ID do titulo (uuid)" value={tituloId} onChange={(e) => setTituloId(e.target.value)} caixa="original" />
+              <Input placeholder="ID do título (uuid)" value={tituloId} onChange={(e) => setTituloId(e.target.value)} caixa="original" />
               <Button type="button" variant="secondary" disabled={!/^[0-9a-f-]{36}$/i.test(tituloId.trim()) || !!ocupado} onClick={emitirTitulo}>
-                <Receipt className="h-4 w-4" /> {ocupado === 'remessa' ? 'Emitindo...' : 'Emitir titulo'}
+                <Receipt className="h-4 w-4" /> {ocupado === 'remessa' ? 'Emitindo...' : 'Emitir título'}
               </Button>
             </div>
           </div>
@@ -324,27 +324,27 @@ function AvisosPendentes({ versao }: { versao: number }) {
       });
   }, [versao]);
 
-  if (erro) return <p className="text-xs text-red-700">Nao foi possivel ler os avisos pendentes: {erro}</p>;
+  if (erro) return <p className="text-xs text-red-700">Não foi possível ler os avisos pendentes: {erro}</p>;
   if (!avisos?.length) return null;
   const fmt = (d: string | null) => (d ? d.split('-').reverse().join('/') : '—');
   return (
     <div className="space-y-2 border-t border-slate-200 pt-3">
       <p className="text-xs font-semibold text-slate-700">
-        Avisos do banco aguardando confirmacao ({avisos.length})
+        Avisos do banco aguardando confirmação ({avisos.length})
       </p>
       <p className="text-xs text-slate-500">
-        O Sicredi avisou o pagamento, mas ele ainda nao aparece na lista de pagos (fim de semana e feriado entram no dia
-        util seguinte). A baixa sai sozinha quando aparecer — o agendador reconfere 4x ao dia, ou use Dar baixa agora.
+        O Sicredi avisou o pagamento, mas ele ainda não aparece na lista de pagos (fim de semana e feriado entram no dia
+        útil seguinte). A baixa sai sozinha quando aparecer — o agendador reconfere 4x ao dia, ou use Dar baixa agora.
       </p>
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead className="text-left text-slate-500">
             <tr>
-              <th className="py-1 pr-3">Nosso numero</th>
+              <th className="py-1 pr-3">Nosso número</th>
               <th className="py-1 pr-3">Aviso</th>
-              <th className="py-1 pr-3">Previsao do credito</th>
+              <th className="py-1 pr-3">Previsão do crédito</th>
               <th className="py-1 pr-3">Tentativas</th>
-              <th className="py-1">Situacao</th>
+              <th className="py-1">Situação</th>
             </tr>
           </thead>
           <tbody>

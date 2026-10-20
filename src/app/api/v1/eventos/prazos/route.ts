@@ -27,10 +27,10 @@ export async function POST(request: Request) {
   } else {
     const s = createClient();
     const { data: { user } } = await s.auth.getUser();
-    if (!user) return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 });
+    if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
     const { data: perfil } = await s.from('usuarios').select('papel, ativo').eq('id', user.id).maybeSingle();
     if (!perfil?.ativo || !['admin', 'financeiro'].includes(perfil.papel)) {
-      return NextResponse.json({ error: 'Sem permissao' }, { status: 403 });
+      return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
     }
     supabase = s;
   }
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
       email.destinatarios = destinos.length;
       if (destinos.length > 0) {
         const origem = new URL(request.url).origin;
-        const html = `<p>Eventos que chegaram ao prazo regulatorio critico (Art. 22, Resolucao CNSP 491/2026 — 90 dias para regular e liquidar; vencido, a associacao perde o direito de recusa):</p><ul>${paraEmail
+        const html = `<p>Eventos que chegaram ao prazo regulatório crítico (Art. 22, Resolução CNSP 491/2026 — 90 dias para regular e liquidar; vencido, a associação perde o direito de recusa):</p><ul>${paraEmail
           .map((a) => `<li><a href="${origem}/eventos/${a.evento_id}">${linhaDoAlerta(a)}</a></li>`)
           .join('')}</ul><p><a href="${origem}/eventos?aba=prazos">Abrir o painel de prazos</a></p>`;
         try {

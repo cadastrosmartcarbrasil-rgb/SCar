@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import { logoOficial } from '@/lib/marca-server';
 import { ComunicacaoPublica } from '@/components/eventos/comunicacao/comunicacao-publica';
 
-export const metadata: Metadata = { title: 'Comunicacao de evento' };
+export const metadata: Metadata = { title: 'Comunicação de evento' };
 export const dynamic = 'force-dynamic';
 
 /**

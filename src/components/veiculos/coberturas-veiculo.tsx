@@ -24,7 +24,7 @@ export function CoberturasDetalhadas({
   if (error || !data) {
     return (
       <p className="rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700">
-        Nao foi possivel ler as coberturas deste veiculo. Recarregue a tela antes de informar o associado.
+        Não foi possível ler as coberturas deste veículo. Recarregue a tela antes de informar o associado.
       </p>
     );
   }
@@ -41,7 +41,7 @@ export function CoberturasDetalhadas({
       <header className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-cyan-700">
-            <ShieldCheck className="h-4 w-4" /> O que este veiculo tem
+            <ShieldCheck className="h-4 w-4" /> O que este veículo tem
           </p>
           <p className="mt-0.5 text-base font-semibold text-slate-900">
             {data.plano?.nome ?? (veiculo.plano_protecao_id ? 'Plano' : 'Sem plano definido')}
@@ -56,9 +56,9 @@ export function CoberturasDetalhadas({
 
       {data.participacao != null && (
         <p className="rounded-md bg-superficie px-3 py-2 text-sm text-slate-700">
-          <span className="font-medium">Participacao em evento:</span>{' '}
+          <span className="font-medium">Participação em evento:</span>{' '}
           <span className="tnum font-semibold">{formatCurrency(data.participacao)}</span>
-          <span className="text-slate-500"> (valor que o associado paga no reparo do proprio veiculo)</span>
+          <span className="text-slate-500"> (valor que o associado paga no reparo do próprio veículo)</span>
         </p>
       )}
 
@@ -66,7 +66,7 @@ export function CoberturasDetalhadas({
         <p className="text-sm text-slate-500">
           {veiculo.plano_protecao_id
             ? 'Nenhuma cobertura calculada para este plano.'
-            : 'Veiculo sem plano: ajuste no cadastro do veiculo antes de informar coberturas.'}
+            : 'Veículo sem plano: ajuste no cadastro do veículo antes de informar coberturas.'}
         </p>
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
@@ -84,7 +84,7 @@ export function CoberturasDetalhadas({
       {faltam.length > 0 && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
           <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-amber-800">
-            <CircleSlash className="h-3.5 w-3.5" /> Nao inclui
+            <CircleSlash className="h-3.5 w-3.5" /> Não inclui
           </p>
           <p className="mt-0.5 text-sm text-amber-900">{faltam.map((g) => ROTULO_GRUPO[g]).join(' · ')}</p>
         </div>
@@ -93,7 +93,7 @@ export function CoberturasDetalhadas({
       {semTexto && (
         <p className="flex items-start gap-1.5 text-xs text-slate-500">
           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          Cobertura sem descricao mostra so o nome. O texto se cadastra em Configuracoes → Produtos, campo &ldquo;O que cobre&rdquo;.
+          Cobertura sem descrição mostra só o nome. O texto se cadastra em Configurações → Produtos, campo &ldquo;O que cobre&rdquo;.
         </p>
       )}
     </section>
@@ -120,11 +120,11 @@ function ItemDaCobertura({ i }: { i: ItemCobertura }) {
           <span className="tnum">{limite}</span>
           {i.elegivel ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
-              <CheckCircle2 className="h-3 w-3" /> DISPONIVEL
+              <CheckCircle2 className="h-3 w-3" /> DISPONÍVEL
             </span>
           ) : (
             <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-700">
-              <XCircle className="h-3 w-3" /> LIMITE ATINGIDO{i.ultimo_uso ? ` · ultimo uso ${formatDate(i.ultimo_uso)}` : ''}
+              <XCircle className="h-3 w-3" /> LIMITE ATINGIDO{i.ultimo_uso ? ` · último uso ${formatDate(i.ultimo_uso)}` : ''}
             </span>
           )}
         </p>

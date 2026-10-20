@@ -20,9 +20,9 @@ export function GuardaModulo({ permissoes, children }: {
   return (
     <div className="mx-auto mt-16 max-w-md rounded-2xl border border-slate-200 bg-superficie p-6 text-center">
       <ShieldOff className="mx-auto mb-3 h-8 w-8 text-slate-400" />
-      <p className="font-semibold text-slate-800">Seu perfil nao tem acesso a {modulo.rotulo}</p>
+      <p className="font-semibold text-slate-800">Seu perfil não tem acesso a {modulo.rotulo}</p>
       <p className="mt-1 text-sm text-slate-500">
-        Se precisar, peca ao administrador para liberar em Configuracoes → Usuarios → Permissoes por perfil.
+        Se precisar, peça ao administrador para liberar em Configurações → Usuários → Permissões por perfil.
       </p>
     </div>
   );

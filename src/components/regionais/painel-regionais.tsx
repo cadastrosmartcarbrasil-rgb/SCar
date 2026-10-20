@@ -82,13 +82,13 @@ const CLASSE_DIRECAO: Record<Direcao, string> = {
 function Tendencia({ fracao, subirEBom }: { fracao: number | null; subirEBom: boolean }) {
   const direcao = direcaoVariacao(fracao, subirEBom);
   if (fracao === null) {
-    return <span className="text-[11.5px] text-slate-400">sem base de comparacao</span>;
+    return <span className="text-[11.5px] text-slate-400">sem base de comparação</span>;
   }
   const Icon = fracao === 0 ? Minus : fracao > 0 ? TrendingUp : TrendingDown;
   return (
     <span className={`inline-flex items-center gap-1 text-[11.5px] font-semibold ${CLASSE_DIRECAO[direcao]}`}>
       <Icon className="h-3.5 w-3.5" />
-      {fracao === 0 ? 'estavel' : `${formatPercent(Math.abs(fracao))} vs periodo anterior`}
+      {fracao === 0 ? 'estavel' : `${formatPercent(Math.abs(fracao))} vs período anterior`}
     </span>
   );
 }
@@ -171,7 +171,7 @@ function BarraFiltros({
           />
         </label>
         <label className="block">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Ate</span>
+          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Até</span>
           <input
             type="date"
             value={periodo.fim}
@@ -234,7 +234,7 @@ function ModalContas({ open, onClose }: { open: boolean; onClose: () => void }) 
       setDe(null); setAte(null);
       onClose();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Nao foi possivel salvar o intervalo.');
+      setErro(e instanceof Error ? e.message : 'Não foi possível salvar o intervalo.');
     }
   }
 
@@ -249,8 +249,8 @@ function ModalContas({ open, onClose }: { open: boolean; onClose: () => void }) 
       <div className="space-y-4">
         <p className="flex items-start gap-2 rounded-xl bg-slate-50 p-3 text-[12.5px] leading-relaxed text-slate-600">
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-          O recorte vale para <b>todo mundo</b> — ele muda o numero que a diretoria le, entao fica no
-          cadastro da empresa, nao no navegador de cada um. Deixar em branco significa
+          O recorte vale para <b>todo mundo</b> — ele muda o número que a diretoria lê, então fica no
+          cadastro da empresa, não no navegador de cada um. Deixar em branco significa
           <b> todas as contas</b>. Somente admin/financeiro podem alterar.
         </p>
 
@@ -303,7 +303,7 @@ function ModalContas({ open, onClose }: { open: boolean; onClose: () => void }) 
               ))}
               {(contas ?? []).length === 0 && (
                 <tr><td colSpan={3} className="px-3 py-4 text-center text-slate-400">
-                  Nenhuma conta ativa. Cadastre em Configuracoes &gt; Plano de contas.
+                  Nenhuma conta ativa. Cadastre em Configurações &gt; Plano de contas.
                 </td></tr>
               )}
             </tbody>
@@ -358,16 +358,16 @@ function Indicadores({ periodo, regionalId }: { periodo: PeriodoPainel; regional
         </h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <Tile
-            titulo="Veiculos ativos"
+            titulo="Veículos ativos"
             valor={inteiro.format(r?.veiculos_ativos ?? 0)}
-            detalhe={`${inteiro.format(r?.veiculos_novos ?? 0)} entraram no periodo`}
+            detalhe={`${inteiro.format(r?.veiculos_novos ?? 0)} entraram no período`}
             rodape={<Tendencia fracao={variacao(r?.veiculos_ativos ?? 0, r?.veiculos_ativos_antes ?? 0)} subirEBom />}
             icon={Car}
             tom="cyan"
             carregando={isLoading}
           />
           <Tile
-            titulo="Veiculos inadimplentes"
+            titulo="Veículos inadimplentes"
             valor={inteiro.format(r?.veiculos_inadimplentes ?? 0)}
             detalhe={`${formatPercent(carteiraPct)} da carteira — retrato de hoje`}
             icon={CircleAlert}
@@ -375,16 +375,16 @@ function Indicadores({ periodo, regionalId }: { periodo: PeriodoPainel; regional
             carregando={isLoading}
           />
           <Tile
-            titulo="Veiculos cancelados"
+            titulo="Veículos cancelados"
             valor={inteiro.format(r?.veiculos_cancelados ?? 0)}
-            detalhe="Churn do periodo (saida definitiva da base)"
+            detalhe="Churn do período (saída definitiva da base)"
             rodape={<Tendencia fracao={variacao(r?.veiculos_cancelados ?? 0, r?.veiculos_cancelados_antes ?? 0)} subirEBom={false} />}
             icon={UserMinus}
             tom="rose"
             carregando={isLoading}
           />
           <Tile
-            titulo="Veiculos em evento"
+            titulo="Veículos em evento"
             valor={inteiro.format(r?.veiculos_em_evento ?? 0)}
             detalhe="Eventos em atendimento/oficina agora"
             icon={ShieldAlert}
@@ -402,7 +402,7 @@ function Indicadores({ periodo, regionalId }: { periodo: PeriodoPainel; regional
           <Tile
             titulo="Carteira ativa"
             valor={formatCurrency(r?.carteira_ativa)}
-            detalhe="Mensalidade contratada dos veiculos na base"
+            detalhe="Mensalidade contratada dos veículos na base"
             icon={PiggyBank}
             tom="cyan"
             carregando={isLoading}
@@ -410,7 +410,7 @@ function Indicadores({ periodo, regionalId }: { periodo: PeriodoPainel; regional
           <Tile
             titulo="Valor recebido"
             valor={formatCurrency(r?.valor_recebido)}
-            detalhe="Arrecadacao efetivada no periodo"
+            detalhe="Arrecadação efetivada no período"
             rodape={<Tendencia fracao={variacao(r?.valor_recebido ?? 0, r?.valor_recebido_antes ?? 0)} subirEBom />}
             icon={HandCoins}
             tom="green"
@@ -419,7 +419,7 @@ function Indicadores({ periodo, regionalId }: { periodo: PeriodoPainel; regional
           <Tile
             titulo="Valor inadimplente"
             valor={formatCurrency(r?.valor_inadimplente)}
-            detalhe="Titulo vencido e nao pago (retrato de hoje)"
+            detalhe="Título vencido e não pago (retrato de hoje)"
             icon={ReceiptText}
             tom="rose"
             carregando={isLoading}
@@ -427,7 +427,7 @@ function Indicadores({ periodo, regionalId }: { periodo: PeriodoPainel; regional
           <Tile
             titulo="Valor a receber"
             valor={formatCurrency(r?.valor_a_receber)}
-            detalhe="Boleto em aberto que ainda nao venceu"
+            detalhe="Boleto em aberto que ainda não venceu"
             icon={Landmark}
             tom="slate"
             carregando={isLoading}
@@ -435,7 +435,7 @@ function Indicadores({ periodo, regionalId }: { periodo: PeriodoPainel; regional
           <Tile
             titulo="Gasto em eventos"
             valor={formatCurrency(r?.gasto_eventos)}
-            detalhe="Indenizacao, reparo, guincho e rateio pagos"
+            detalhe="Indenização, reparo, guincho e rateio pagos"
             rodape={<Tendencia fracao={variacao(r?.gasto_eventos ?? 0, r?.gasto_eventos_antes ?? 0)} subirEBom={false} />}
             icon={Wallet}
             tom="amber"
@@ -457,11 +457,11 @@ function GraficosEvolucao({ periodo, regionalId }: { periodo: PeriodoPainel; reg
   );
   const serie = useMemo(() => serieParaGrafico(data ?? []), [data]);
   const granularidade = serie[0]?.granularidade ?? 'DIA';
-  const escala = { DIA: 'dia a dia', SEMANA: 'por semana', MES: 'por mes' }[granularidade];
+  const escala = { DIA: 'dia a dia', SEMANA: 'por semana', MES: 'por mês' }[granularidade];
 
   function csv() {
     baixarCsv('regionais-evolucao.csv', [
-      ['Periodo', 'Ativos', 'Inadimplentes', 'Eventos', 'Recebido', 'Gasto em eventos', 'Resultado'],
+      ['Período', 'Ativos', 'Inadimplentes', 'Eventos', 'Recebido', 'Gasto em eventos', 'Resultado'],
       ...serie.map((p) => [p.rotulo, p.ativos, p.inadimplentes, p.sinistros, p.recebido, p.gasto_eventos, p.resultado]),
     ]);
   }
@@ -481,8 +481,8 @@ function GraficosEvolucao({ periodo, regionalId }: { periodo: PeriodoPainel; reg
         <CardContent>
           <Vazio
             icon={TrendingUp}
-            titulo="Sem movimento no periodo"
-            descricao="Escolha um periodo maior ou confira se a unidade tem carteira ativada."
+            titulo="Sem movimento no período"
+            descricao="Escolha um período maior ou confira se a unidade tem carteira ativada."
           />
         </CardContent>
       </Card>
@@ -493,7 +493,7 @@ function GraficosEvolucao({ periodo, regionalId }: { periodo: PeriodoPainel; reg
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
       <Card className="min-w-0">
         <CardHeader className="flex-row flex-wrap items-center justify-between gap-x-3">
-          <CardTitle>Frota no periodo</CardTitle>
+          <CardTitle>Frota no período</CardTitle>
           <span className="text-[11px] uppercase tracking-wide text-slate-400">{escala}</span>
         </CardHeader>
         <CardContent>
@@ -526,7 +526,7 @@ function GraficosEvolucao({ periodo, regionalId }: { periodo: PeriodoPainel; reg
             </ResponsiveContainer>
           </div>
           <p className="mt-2 text-[11.5px] leading-relaxed text-slate-500">
-            Ativos e inadimplentes sao o <b>retrato no fim</b> de cada ponto; eventos sao os
+            Ativos e inadimplentes são o <b>retrato no fim</b> de cada ponto; eventos são os
             <b> abertos</b> naquele intervalo (eixo da direita).
           </p>
         </CardContent>
@@ -559,8 +559,8 @@ function GraficosEvolucao({ periodo, regionalId }: { periodo: PeriodoPainel; reg
             </ResponsiveContainer>
           </div>
           <p className="mt-2 text-[11.5px] leading-relaxed text-slate-500">
-            O gasto e o que <b>saiu do caixa</b> com evento e assistencia 24h, nao estimativa: e o
-            titulo do Contas a Pagar com baixa registrada.
+            O gasto e o que <b>saiu do caixa</b> com evento e assistência 24h, não estimativa: e o
+            título do Contas a Pagar com baixa registrada.
           </p>
         </CardContent>
       </Card>
@@ -576,7 +576,7 @@ const COLUNAS: { chave: OrdemComparativo; rotulo: string; numerica: boolean }[] 
   { chave: 'ativos', rotulo: 'Ativos', numerica: true },
   { chave: 'inadimplencia', rotulo: 'Inadimplencia', numerica: true },
   { chave: 'sinistros', rotulo: 'Eventos', numerica: true },
-  { chave: 'recebido', rotulo: 'Receita liquida', numerica: true },
+  { chave: 'recebido', rotulo: 'Receita líquida', numerica: true },
   { chave: 'sinistralidade', rotulo: 'Sinistralidade', numerica: true },
 ];
 
@@ -598,7 +598,7 @@ function Comparativo({ periodo, regionalId }: { periodo: PeriodoPainel; regional
 
   function csv() {
     baixarCsv('regionais-comparativo.csv', [
-      ['Regional', 'Cidade', 'UF', 'Situacao', 'Ativos', 'Novos', 'Cancelados', 'Inadimplentes',
+      ['Regional', 'Cidade', 'UF', 'Situação', 'Ativos', 'Novos', 'Cancelados', 'Inadimplentes',
        'Inadimplencia', 'Eventos', 'Recebido', 'Gasto em eventos', 'Resultado', 'Sinistralidade'],
       ...linhas.map((l) => [l.regional, l.cidade, l.uf, l.ativa ? 'Ativa' : 'Inativa',
         l.veiculos_ativos, l.veiculos_novos,
@@ -616,7 +616,7 @@ function Comparativo({ periodo, regionalId }: { periodo: PeriodoPainel; regional
           <Vazio
             icon={Building2}
             titulo="Nenhuma regional para comparar"
-            descricao="Cadastre as unidades em Configuracoes > Regionais. O ranking aparece aqui assim que houver mais de uma."
+            descricao="Cadastre as unidades em Configurações > Regionais. O ranking aparece aqui assim que houver mais de uma."
           />
         </CardContent>
       </Card>
@@ -641,7 +641,7 @@ function Comparativo({ periodo, regionalId }: { periodo: PeriodoPainel; regional
                 <YAxis type="category" dataKey="curto" width={118} tick={EIXO} axisLine={false} tickLine={false} />
                 <Tooltip
                   contentStyle={TOOLTIP_STYLE}
-                  formatter={(v: number) => [inteiro.format(v), 'Veiculos ativos']}
+                  formatter={(v: number) => [inteiro.format(v), 'Veículos ativos']}
                 />
                 <Bar dataKey="veiculos_ativos" radius={[0, 4, 4, 0]} maxBarSize={22}>
                   {barras.map((b) => <Cell key={b.regional_id} fill={COR_RISCO[b.risco]} />)}
@@ -658,8 +658,8 @@ function Comparativo({ periodo, regionalId }: { periodo: PeriodoPainel; regional
             ))}
           </ul>
           <p className="mt-2 text-[11.5px] leading-relaxed text-slate-500">
-            Risco e a <b>pior</b> das duas reguas: sinistralidade acima de 100% (gasta mais com
-            evento do que arrecada) ou inadimplencia acima de 25% da carteira.
+            Risco e a <b>pior</b> das duas réguas: sinistralidade acima de 100% (gasta mais com
+            evento do que arrecada) ou inadimplência acima de 25% da carteira.
           </p>
         </CardContent>
       </Card>
@@ -694,7 +694,7 @@ function Comparativo({ periodo, regionalId }: { periodo: PeriodoPainel; regional
                       </button>
                     </th>
                   ))}
-                  <th className="px-4 py-2.5 text-right font-semibold">Acoes</th>
+                  <th className="px-4 py-2.5 text-right font-semibold">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -735,7 +735,7 @@ function LinhaRegional({ l, destacada }: { l: RegionaisPainelLinha; destacada: b
           )}
         </div>
         <span className="mt-0.5 block text-[11.5px] uppercase text-slate-400">
-          {[l.cidade, l.uf].filter(Boolean).join(' — ') || 'Local nao informado'}
+          {[l.cidade, l.uf].filter(Boolean).join(' — ') || 'Local não informado'}
           {' · '}
           <span className="text-emerald-600">+{inteiro.format(l.veiculos_novos)}</span>
           {' / '}
@@ -804,8 +804,8 @@ export function PainelRegionais() {
           <CardContent>
             <Vazio
               icon={CircleAlert}
-              titulo="Periodo invertido"
-              descricao="A data inicial esta depois da final. Ajuste as datas ou use um dos atalhos."
+              titulo="Período invertido"
+              descricao="A data inicial está depois da final. Ajuste as datas ou use um dos atalhos."
             />
           </CardContent>
         </Card>

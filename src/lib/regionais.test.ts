@@ -187,14 +187,14 @@ describe('intervalo de contas', () => {
     expect(validarIntervaloContas('1.0.00', '3.9.99')).toBeNull();
     expect(validarIntervaloContas('', '')).toBeNull();
     expect(validarIntervaloContas('3.9.99', '1.0.00')).toMatch(/maior que a final/);
-    expect(validarIntervaloContas('1,0', '')).toMatch(/inicial invalida/);
-    expect(validarIntervaloContas('', 'x')).toMatch(/final invalida/);
+    expect(validarIntervaloContas('1,0', '')).toMatch(/inicial inválida/);
+    expect(validarIntervaloContas('', 'x')).toMatch(/final inválida/);
   });
 
   it('rotula o recorte no botao', () => {
     expect(rotuloIntervalo(null, null)).toBe('Todas as contas');
     expect(rotuloIntervalo('1.0.00', '3.9.99')).toBe('1.0.00 a 3.9.99');
     expect(rotuloIntervalo('1.0.00', null)).toBe('de 1.0.00');
-    expect(rotuloIntervalo(null, '3.9.99')).toBe('ate 3.9.99');
+    expect(rotuloIntervalo(null, '3.9.99')).toBe('até 3.9.99');
   });
 });

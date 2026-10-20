@@ -34,21 +34,21 @@ export default function DocumentosEventoPage() {
       <MarcosPrazoConfig />
       <h2 className="text-base font-semibold text-slate-800">Documentos exigidos no evento</h2>
       <p className="text-sm text-slate-500">
-        Documentos que o associado precisa entregar no evento. Os <b>obrigatorios</b> decidem o inicio do prazo
-        regulatorio de 90 dias (Art. 22, CNSP 491/2026): enquanto falta um, o prazo nao corre; quando o ultimo chega, ele
-        comeca na data da entrega. Ajuste a lista ao que o contrato da associacao exige.
+        Documentos que o associado precisa entregar no evento. Os <b>obrigatórios</b> decidem o início do prazo
+        regulatório de 90 dias (Art. 22, CNSP 491/2026): enquanto falta um, o prazo não corre; quando o último chega, ele
+        começa na data da entrega. Ajuste a lista ao que o contrato da associação exige.
       </p>
 
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_220px_auto_auto] sm:items-center">
-        <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: Boletim de Ocorrencia" className="mt-0" />
+        <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: Boletim de Ocorrência" className="mt-0" />
         <Select value={tipo} onChange={(e) => setTipo(e.target.value)} className="mt-0">
           <option value="">Todos os tipos de evento</option>
           {(tipos ?? []).map((t) => (
-            <option key={t.id} value={t.id}>So para: {t.nome}</option>
+            <option key={t.id} value={t.id}>Só para: {t.nome}</option>
           ))}
         </Select>
         <label className="flex items-center gap-1.5 text-sm text-slate-600">
-          <input type="checkbox" checked={obrig} onChange={(e) => setObrig(e.target.checked)} /> Obrigatorio
+          <input type="checkbox" checked={obrig} onChange={(e) => setObrig(e.target.checked)} /> Obrigatório
         </label>
         <Button
           disabled={!nome.trim() || salvar.isPending}
@@ -58,7 +58,7 @@ export default function DocumentosEventoPage() {
               {
                 onSuccess: () => {
                   setNome('');
-                  toast.success('Documento incluido na lista.');
+                  toast.success('Documento incluído na lista.');
                 },
                 onError: erro,
               },
@@ -76,7 +76,7 @@ export default function DocumentosEventoPage() {
             <div className={m.ativo ? '' : 'opacity-50'}>
               <p className="font-medium text-slate-800">{m.nome}</p>
               <p className="text-xs text-slate-500">
-                {m.tipos_evento?.nome ? `So para ${m.tipos_evento.nome}` : 'Todos os tipos'}
+                {m.tipos_evento?.nome ? `Só para ${m.tipos_evento.nome}` : 'Todos os tipos'}
                 {m.descricao ? ` · ${m.descricao}` : ''}
               </p>
             </div>
@@ -87,7 +87,7 @@ export default function DocumentosEventoPage() {
                   checked={m.obrigatorio}
                   onChange={(e) => salvar.mutate({ ...m, obrigatorio: e.target.checked }, { onError: erro })}
                 />
-                Obrigatorio
+                Obrigatório
               </label>
               <label className="flex items-center gap-1 text-xs text-slate-600">
                 <input
@@ -98,9 +98,9 @@ export default function DocumentosEventoPage() {
                 Ativo
               </label>
               <button
-                title="Excluir da lista (os eventos que ja pediram este documento nao mudam)"
+                title="Excluir da lista (os eventos que já pediram este documento não mudam)"
                 onClick={() => {
-                  if (confirm(`Excluir "${m.nome}" da lista? Os eventos que ja pediram este documento nao mudam.`))
+                  if (confirm(`Excluir "${m.nome}" da lista? Os eventos que já pediram este documento não mudam.`))
                     excluir.mutate(m.id, { onError: erro });
                 }}
               >
@@ -114,7 +114,7 @@ export default function DocumentosEventoPage() {
         )}
       </ul>
       <p className="text-xs text-slate-400">
-        Mudar a lista nao altera os eventos em andamento: cada evento guarda o seu proprio checklist.
+        Mudar a lista não altera os eventos em andamento: cada evento guarda o seu próprio checklist.
       </p>
     </div>
   );
@@ -124,9 +124,9 @@ export default function DocumentosEventoPage() {
 // (Art. 22, CNSP 491/2026) e nao se configuram; os 4 marcos sim, so pelo admin.
 const CAMPOS_MARCO: { chave: keyof MarcosPrazo; rotulo: string; ajuda: string; cor: string }[] = [
   { chave: 'aviso', rotulo: 'Aviso preventivo', ajuda: 'primeiro alerta, ainda verde', cor: 'border-emerald-300' },
-  { chave: 'atencao', rotulo: 'Atencao', ajuda: 'meio do caminho, amarelo', cor: 'border-amber-300' },
-  { chave: 'urgencia', rotulo: 'Urgencia', ajuda: 'risco operacional, laranja', cor: 'border-orange-300' },
-  { chave: 'critico', rotulo: 'Critico', ajuda: 'vermelho, e-mail para a diretoria', cor: 'border-rose-300' },
+  { chave: 'atencao', rotulo: 'Atenção', ajuda: 'meio do caminho, amarelo', cor: 'border-amber-300' },
+  { chave: 'urgencia', rotulo: 'Urgência', ajuda: 'risco operacional, laranja', cor: 'border-orange-300' },
+  { chave: 'critico', rotulo: 'Crítico', ajuda: 'vermelho, e-mail para a diretoria', cor: 'border-rose-300' },
 ];
 
 function MarcosPrazoConfig() {
@@ -140,11 +140,11 @@ function MarcosPrazoConfig() {
   return (
     <section className="space-y-3 rounded-xl border border-slate-200 bg-superficie p-4">
       <h2 className="flex items-center gap-2 text-base font-semibold text-slate-800">
-        <Timer className="h-5 w-5 text-brand-600" /> Prazo regulatorio e marcos de alerta (SLA)
+        <Timer className="h-5 w-5 text-brand-600" /> Prazo regulatório e marcos de alerta (SLA)
       </h2>
       <p className="text-sm text-slate-500">
-        O prazo para regular e liquidar o evento e de <b>{PRAZO_REGULATORIO_DIAS} dias corridos</b> (Art. 22 da Resolucao
-        CNSP 491/2026), contados do aviso junto com a documentacao completa — esse numero e legal e nao se altera. Os
+        O prazo para regular e liquidar o evento e de <b>{PRAZO_REGULATORIO_DIAS} dias corridos</b> (Art. 22 da Resolução
+        CNSP 491/2026), contados do aviso junto com a documentação completa — esse número e legal e não se altera. Os
         marcos abaixo decidem quando cada alerta dispara e a cor do evento no Kanban, no painel e na ficha. Acima de{' '}
         {PRAZO_REGULATORIO_DIAS} dias o evento fica <b>vencido</b> (bloqueio de recusa).
       </p>
@@ -176,7 +176,7 @@ function MarcosPrazoConfig() {
       {erro && <p className="text-sm text-rose-600">{erro}</p>}
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs text-slate-500">
-          Mudar um marco recalcula na hora a cor de todos os eventos em aberto. Alertas ja disparados ficam na trilha.
+          Mudar um marco recalcula na hora a cor de todos os eventos em aberto. Alertas já disparados ficam na trilha.
         </p>
         <Button
           disabled={!mudou || !!erro || salvar.isPending}

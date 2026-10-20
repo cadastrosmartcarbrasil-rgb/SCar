@@ -46,7 +46,7 @@ export function GeracaoLote() {
 
   function processar() {
     if (escopo === 'associado' && !clienteId) return toast.error('Selecione o associado');
-    if (escopo === 'veiculos' && veiculoIds.length === 0) return toast.error('Selecione ao menos um veiculo');
+    if (escopo === 'veiculos' && veiculoIds.length === 0) return toast.error('Selecione ao menos um veículo');
     gerar.mutate(
       {
         competencia,
@@ -61,8 +61,8 @@ export function GeracaoLote() {
           setResultado(r);
           toast.success(
             r.total_faturas > 0
-              ? `${r.total_faturas} fatura(s) em ${meses} competencia(s) — ${formatCurrency(r.total_valor)}`
-              : 'Nada novo a gerar: o periodo ja estava boletado',
+              ? `${r.total_faturas} fatura(s) em ${meses} competência(s) — ${formatCurrency(r.total_valor)}`
+              : 'Nada novo a gerar: o período já estava boletado',
           );
         },
         onError: (e) => toast.error(e.message),
@@ -77,8 +77,8 @@ export function GeracaoLote() {
         onSuccess: (r) =>
           toast.success(
             r.enviados > 0
-              ? `Remessa ${r.provedor}: ${r.enviados} titulo(s) registrados${r.erros ? `, ${r.erros} com erro` : ''}`
-              : (r.mensagem ?? 'Nenhum titulo pendente de envio'),
+              ? `Remessa ${r.provedor}: ${r.enviados} título(s) registrados${r.erros ? `, ${r.erros} com erro` : ''}`
+              : (r.mensagem ?? 'Nenhum título pendente de envio'),
           ),
         onError: (e) => toast.error(e.message),
       },
@@ -90,12 +90,12 @@ export function GeracaoLote() {
       <div className="rounded-2xl border border-slate-200 bg-superficie p-5">
         <h2 className="text-base font-semibold text-slate-900">Boletagem recorrente</h2>
         <p className="mt-0.5 text-sm text-slate-500">
-          Gera as faturas e os titulos de varias competencias de uma vez (ex.: proximos 6 meses).
-          A rotina e idempotente: competencia ja boletada nao e recriada.
+          Gera as faturas e os títulos de várias competências de uma vez (ex.: próximos 6 meses).
+          A rotina e idempotente: competência já boletada não é recriada.
         </p>
 
         <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <FormField label="Competencia inicial">
+          <FormField label="Competência inicial">
             <Input type="month" value={competencia} onChange={(e) => setCompetencia(e.target.value || mesAtual())} />
           </FormField>
           <FormField label="Quantidade de meses">
@@ -112,7 +112,7 @@ export function GeracaoLote() {
             >
               <option value="todos">Toda a base</option>
               <option value="associado">Um associado</option>
-              <option value="veiculos">Grupo de veiculos</option>
+              <option value="veiculos">Grupo de veículos</option>
             </Select>
           </FormField>
           <FormField label="Regional">
@@ -137,7 +137,7 @@ export function GeracaoLote() {
 
         {escopo === 'veiculos' && clienteId && (
           <div className="mt-3 rounded-lg border border-slate-200 p-3">
-            <p className="mb-2 text-xs uppercase tracking-wide text-slate-400">Veiculos do associado</p>
+            <p className="mb-2 text-xs uppercase tracking-wide text-slate-400">Veículos do associado</p>
             <div className="grid gap-1 md:grid-cols-2 lg:grid-cols-3">
               {(veiculos ?? []).map((v) => (
                 <label key={v.id} className="flex items-center gap-2 text-sm text-slate-600">
@@ -152,7 +152,7 @@ export function GeracaoLote() {
                   <span className="text-slate-400">{v.modelo ?? ''}</span>
                 </label>
               ))}
-              {(veiculos ?? []).length === 0 && <p className="text-sm text-slate-400">Nenhum veiculo.</p>}
+              {(veiculos ?? []).length === 0 && <p className="text-sm text-slate-400">Nenhum veículo.</p>}
             </div>
           </div>
         )}
@@ -160,7 +160,7 @@ export function GeracaoLote() {
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <label className="flex items-center gap-2 text-sm text-slate-600">
             <input type="checkbox" checked={emitirTitulos} onChange={(e) => setEmitirTitulos(e.target.checked)} />
-            Emitir os titulos financeiros (base do boleto) junto
+            Emitir os títulos financeiros (base do boleto) junto
           </label>
           <div className="flex gap-2">
             <Button variant="secondary" onClick={enviarBanco} disabled={enviar.isPending}>
@@ -178,11 +178,11 @@ export function GeracaoLote() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
-                <th className="px-4 py-2">Competencia</th>
+                <th className="px-4 py-2">Competência</th>
                 <th className="px-4 py-2 text-right">Associados</th>
                 <th className="px-4 py-2 text-right">Faturas</th>
                 <th className="px-4 py-2 text-right">Valor</th>
-                <th className="px-4 py-2 text-right">Titulos emitidos</th>
+                <th className="px-4 py-2 text-right">Títulos emitidos</th>
               </tr>
             </thead>
             <tbody>
@@ -218,15 +218,15 @@ function Remessas() {
     <div className="rounded-2xl border border-slate-200 bg-superficie">
       <div className="flex items-center gap-2 border-b border-slate-200 px-5 py-3">
         <Landmark className="h-4 w-4 text-brand-700" />
-        <h2 className="text-base font-semibold text-slate-900">Remessas bancarias</h2>
+        <h2 className="text-base font-semibold text-slate-900">Remessas bancárias</h2>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
-              <th className="px-4 py-2">Referencia</th>
+              <th className="px-4 py-2">Referência</th>
               <th className="px-4 py-2">Enviada em</th>
-              <th className="px-4 py-2 text-right">Titulos</th>
+              <th className="px-4 py-2 text-right">Títulos</th>
               <th className="px-4 py-2 text-right">Valor</th>
               <th className="px-4 py-2">Status</th>
             </tr>

@@ -64,7 +64,7 @@ export function TerceirosEvento({ eventoId }: { eventoId: string }) {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-xs text-slate-500">
-          Cada terceiro tem tela propria (dados, reparo e financeiro) e fica vinculado a este evento e ao associado.
+          Cada terceiro tem tela própria (dados, reparo e financeiro) e fica vinculado a este evento e ao associado.
         </p>
         <Link
           href={`/eventos/${eventoId}/terceiros/novo`}

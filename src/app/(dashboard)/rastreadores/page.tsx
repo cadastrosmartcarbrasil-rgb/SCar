@@ -13,8 +13,8 @@ export default function RastreadoresPage() {
   const [aba, setAba] = useState<Aba>('parque');
   const abas: { id: Aba; label: string; icon: React.ElementType }[] = [
     { id: 'parque', label: 'Parque de equipamentos', icon: Satellite },
-    { id: 'divergencias', label: 'Divergencias', icon: CircleAlert },
-    { id: 'relatorios', label: 'Relatorios', icon: BarChart3 },
+    { id: 'divergencias', label: 'Divergências', icon: CircleAlert },
+    { id: 'relatorios', label: 'Relatórios', icon: BarChart3 },
   ];
 
   return (
@@ -23,7 +23,7 @@ export default function RastreadoresPage() {
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Rastreadores</h1>
           <p className="text-sm text-slate-500">
-            O parque de equipamentos por IMEI: estoque, instalacao no veiculo, recuperacao e o
+            O parque de equipamentos por IMEI: estoque, instalação no veículo, recuperação e o
             cruzamento com o cadastro da frota.
           </p>
         </div>

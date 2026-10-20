@@ -91,7 +91,7 @@ export function EditarEventoModal({
     setBuscandoCep(true);
     const res = await buscarCep(local.cep ?? '');
     setBuscandoCep(false);
-    if (!res) return toast.error('CEP nao encontrado');
+    if (!res) return toast.error('CEP não encontrado');
     setLocal((l) => ({
       ...l,
       logradouro: res.logradouro || l.logradouro,
@@ -104,8 +104,8 @@ export function EditarEventoModal({
   function salvar(e: React.FormEvent) {
     e.preventDefault();
     if (!form.data_ocorrencia) return toast.error('Informe a data do evento');
-    if (!form.data_comunicacao) return toast.error('Informe a data do aviso (comunicacao)');
-    if (form.data_comunicacao < form.data_ocorrencia) return toast.error('O aviso nao pode ser anterior a data do evento');
+    if (!form.data_comunicacao) return toast.error('Informe a data do aviso (comunicação)');
+    if (form.data_comunicacao < form.data_ocorrencia) return toast.error('O aviso não pode ser anterior a data do evento');
     if (!form.tipo_evento_id) return toast.error('Selecione o tipo de evento');
 
     atualizar.mutate(
@@ -146,7 +146,7 @@ export function EditarEventoModal({
             <FormField label="Data do evento *">
               <Input type="date" value={form.data_ocorrencia} onChange={(e) => setF({ data_ocorrencia: e.target.value })} />
             </FormField>
-            <FormField label="Data do aviso (comunicacao) *">
+            <FormField label="Data do aviso (comunicação) *">
               <Input type="date" value={form.data_comunicacao} onChange={(e) => setF({ data_comunicacao: e.target.value })} />
             </FormField>
             <FormField label="Tipo de evento *">
@@ -168,7 +168,7 @@ export function EditarEventoModal({
             </p>
           )}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <FormField label="Ha terceiros envolvidos?">
+            <FormField label="Há terceiros envolvidos?">
               <Select value={form.possui_terceiros ? 'S' : 'N'} onChange={(e) => setF({ possui_terceiros: e.target.value === 'S' })}>
                 <option value="N">Nao</option>
                 <option value="S">Sim</option>
@@ -182,7 +182,7 @@ export function EditarEventoModal({
               </Select>
             </FormField>
           </div>
-          <FormField label="Descricao / relato">
+          <FormField label="Descrição / relato">
             <Textarea rows={3} value={form.descricao} onChange={(e) => setF({ descricao: e.target.value })} />
           </FormField>
         </section>
@@ -198,7 +198,7 @@ export function EditarEventoModal({
             <FormField label="Rua / Logradouro" className="sm:col-span-3">
               <Input value={local.logradouro ?? ''} onChange={(e) => setL({ logradouro: e.target.value })} />
             </FormField>
-            <FormField label="Numero">
+            <FormField label="Número">
               <Input value={local.numero ?? ''} onChange={(e) => setL({ numero: e.target.value })} />
             </FormField>
             <FormField label="Complemento" className="sm:col-span-3">
@@ -218,16 +218,16 @@ export function EditarEventoModal({
 
         <section className="space-y-3">
           <h3 className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
-            <FileText className="h-4 w-4" /> Boletim de Ocorrencia (B.O.)
+            <FileText className="h-4 w-4" /> Boletim de Ocorrência (B.O.)
           </h3>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <FormField label="Numero do B.O.">
+            <FormField label="Número do B.O.">
               <Input value={form.bo_numero} onChange={(e) => setF({ bo_numero: e.target.value })} />
             </FormField>
             <FormField label="Data do B.O.">
               <Input type="date" value={form.bo_data} onChange={(e) => setF({ bo_data: e.target.value })} />
             </FormField>
-            <FormField label="Unidade responsavel">
+            <FormField label="Unidade responsável">
               <Input value={form.bo_unidade} onChange={(e) => setF({ bo_unidade: e.target.value })} placeholder="Ex.: 1o DP" />
             </FormField>
           </div>
@@ -242,7 +242,7 @@ export function EditarEventoModal({
             <FormField label="Valor FIPE atualizado">
               <MoneyInput value={form.valor_fipe_atualizado} onChange={(v) => setF({ valor_fipe_atualizado: v })} />
             </FormField>
-            <FormField label="Participacao / Franquia">
+            <FormField label="Participação / Franquia">
               <MoneyInput value={form.valor_participacao} onChange={(v) => setF({ valor_participacao: v })} />
             </FormField>
           </div>
@@ -253,7 +253,7 @@ export function EditarEventoModal({
             Cancelar
           </Button>
           <Button type="submit" disabled={atualizar.isPending}>
-            {atualizar.isPending ? 'Salvando...' : 'Salvar alteracoes'}
+            {atualizar.isPending ? 'Salvando...' : 'Salvar alterações'}
           </Button>
         </div>
       </form>

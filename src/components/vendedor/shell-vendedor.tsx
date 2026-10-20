@@ -14,7 +14,7 @@ import { temAcessoGlobal } from '@/lib/unidade';
 const ITENS = [
   { href: '/vendedor', label: 'Painel', icon: LayoutDashboard },
   { href: '/vendedor/leads', label: 'Meus Leads', icon: Zap },
-  { href: '/vendedor/comissoes', label: 'Comissoes', icon: HandCoins },
+  { href: '/vendedor/comissoes', label: 'Comissões', icon: HandCoins },
   { href: '/vendedor/perfil', label: 'Meu Perfil', icon: UserRound },
 ];
 
@@ -27,7 +27,7 @@ export function linkHotlink(codigo: string | null) {
 export function BotoesHotlink({ codigo, compacto }: { codigo: string | null; compacto?: boolean }) {
   async function copiar() {
     const url = linkHotlink(codigo);
-    if (!url) return toast.error('Seu codigo de vendas ainda nao foi gerado');
+    if (!url) return toast.error('Seu código de vendas ainda não foi gerado');
     try {
       await navigator.clipboard.writeText(url);
       toast.success('Link copiado');
@@ -38,12 +38,12 @@ export function BotoesHotlink({ codigo, compacto }: { codigo: string | null; com
 
   async function compartilhar() {
     const url = linkHotlink(codigo);
-    if (!url) return toast.error('Seu codigo de vendas ainda nao foi gerado');
-    const texto = `Faca sua cotacao de protecao veicular Smart Car Brasil: ${url}`;
+    if (!url) return toast.error('Seu código de vendas ainda não foi gerado');
+    const texto = `Faça sua cotação de proteção veicular Smart Car Brasil: ${url}`;
     // Web Share API no celular; no desktop cai no WhatsApp Web.
     if (navigator.share) {
       try {
-        await navigator.share({ title: 'Protecao veicular Smart Car Brasil', text: texto, url });
+        await navigator.share({ title: 'Proteção veicular Smart Car Brasil', text: texto, url });
         return;
       } catch {
         /* usuario cancelou: segue para o WhatsApp */

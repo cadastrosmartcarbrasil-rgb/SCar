@@ -108,7 +108,7 @@ export function ModalNegociarBoletos({
       },
       {
         onSuccess: (r) => {
-          if (r.erros_baixa > 0) toast.warning(`Boleto emitido, mas ${r.erros_baixa} original(is) nao foram baixados — veja abaixo.`);
+          if (r.erros_baixa > 0) toast.warning(`Boleto emitido, mas ${r.erros_baixa} original(is) não foram baixados — veja abaixo.`);
           else toast.success('Boleto emitido no Sicredi e originais baixados.');
           setResultado(r.renegociacao_id);
         },
@@ -121,7 +121,7 @@ export function ModalNegociarBoletos({
     <Modal open onClose={onClose} title={algumVencido ? 'Negociar boleto vencido' : '2a via / negociar boleto'} tamanho="lg">
       <div className="space-y-4">
         <div className="rounded-lg border border-slate-200 p-3">
-          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Boletos que serao substituidos</p>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Boletos que serão substituídos</p>
           <ul className="space-y-0.5 text-sm">
             {selecionados.map((s) => (
               <li key={s.id} className="flex justify-between tnum">
@@ -153,7 +153,7 @@ export function ModalNegociarBoletos({
           <>
             <div className="flex gap-2">
               <Button variant={modo === 'SEGUNDA_VIA' ? 'primary' : 'secondary'} onClick={() => setModo('SEGUNDA_VIA')}>
-                Boleto unico (2a via)
+                Boleto único (2a via)
               </Button>
               <Button variant={modo === 'ACORDO' ? 'primary' : 'secondary'} onClick={() => setModo('ACORDO')}>
                 Parcelar
@@ -168,7 +168,7 @@ export function ModalNegociarBoletos({
                   <Input type="number" min={2} max={36} value={qtd} onChange={(e) => setQtd(Math.max(2, Math.min(36, Number(e.target.value) || 2)))} />
                 </FormField>
               )}
-              <FormField label="Acrescimo (juros/multa)">
+              <FormField label="Acréscimo (juros/multa)">
                 <MoneyInput value={acrescimo} onChange={setAcrescimo} />
               </FormField>
               <FormField label="Desconto">
@@ -178,7 +178,7 @@ export function ModalNegociarBoletos({
           </>
         )}
 
-        <FormField label="Observacao (fica no historico)">
+        <FormField label="Observação (fica no histórico)">
           <Input value={obs} onChange={(e) => setObs(e.target.value)} placeholder="Ex.: negociado por telefone" />
         </FormField>
 
@@ -194,7 +194,7 @@ export function ModalNegociarBoletos({
           </ul>
           <p className="mt-2 text-xs text-slate-500">
             Ao confirmar, o boleto novo e registrado no Sicredi (boleto + PIX) e os originais recebem BAIXA no banco —
-            o associado nao consegue pagar os dois.
+            o associado não consegue pagar os dois.
           </p>
           {erro && <p className="mt-1 text-xs font-medium text-rose-700">{erro}</p>}
         </div>
@@ -239,7 +239,7 @@ export function BoletosNegociados({ clienteId }: { clienteId: string }) {
       {recusadas.map((r) => (
         <p key={r.id} className="rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">
           <TriangleAlert className="mr-1 inline h-3.5 w-3.5" />
-          Ultima tentativa de {formatDate(r.created_at)} recusada pelo banco: {r.erro}. Os boletos originais nao foram alterados.
+          Última tentativa de {formatDate(r.created_at)} recusada pelo banco: {r.erro}. Os boletos originais não foram alterados.
         </p>
       ))}
     </div>
@@ -300,7 +300,7 @@ function LinhaBoletoNovo({ b, varios }: { b: BoletoRenegociacao; varios: boolean
       {b.status !== 'pago' && (
         <span className="flex flex-wrap gap-1">
           {b.linha_digitavel && (
-            <button onClick={() => { navigator.clipboard?.writeText(b.linha_digitavel ?? ''); toast.success('Linha digitavel copiada'); }}
+            <button onClick={() => { navigator.clipboard?.writeText(b.linha_digitavel ?? ''); toast.success('Linha digitável copiada'); }}
               className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-xs text-slate-600">
               <Copy className="h-3.5 w-3.5" /> Linha
             </button>
@@ -338,12 +338,12 @@ export function EnvioBoletos({ clienteId, boletos }: { clienteId: string; boleto
           <MessageCircle className="h-3.5 w-3.5" /> Enviar no WhatsApp
         </a>
       ) : (
-        <span className="text-xs text-amber-700">Sem celular valido no cadastro.</span>
+        <span className="text-xs text-amber-700">Sem celular válido no cadastro.</span>
       )}
       <Button variant="secondary" className="px-3 py-1.5 text-xs" disabled={email.isPending || !contato.data?.email}
         title={contato.data?.email ? `Para ${contato.data.email}` : 'Associado sem e-mail no cadastro'}
         onClick={() => email.mutate({ titulo_ids: boletos.map((b) => b.id) }, {
-          onSuccess: (r) => (r.enviado ? toast.success(`E-mail enviado para ${r.para}`) : toast.warning(r.aviso ?? 'E-mail nao enviado')),
+          onSuccess: (r) => (r.enviado ? toast.success(`E-mail enviado para ${r.para}`) : toast.warning(r.aviso ?? 'E-mail não enviado')),
           onError: (e) => toast.error(e.message),
         })}>
         {email.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />} Enviar por e-mail

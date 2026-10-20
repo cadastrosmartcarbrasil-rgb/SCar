@@ -65,7 +65,7 @@ export function FotosVistoria({ leadId, somenteLeitura, celular, nome }: {
     try {
       window.open(await urlAssinada.mutateAsync(path), '_blank');
     } catch {
-      toast.error('Nao consegui abrir a foto');
+      toast.error('Não consegui abrir a foto');
     }
   }
 
@@ -86,7 +86,7 @@ export function FotosVistoria({ leadId, somenteLeitura, celular, nome }: {
             progresso.completa ? 'text-emerald-800' : 'text-amber-900'}`}>
             {progresso.completa
               ? 'Vistoria completa'
-              : `${progresso.obrigatoriasFeitas} de ${progresso.obrigatorias} fotos obrigatorias`}
+              : `${progresso.obrigatoriasFeitas} de ${progresso.obrigatorias} fotos obrigatórias`}
           </p>
           <span className={`tnum text-[12px] font-bold ${
             progresso.completa ? 'text-emerald-700' : 'text-amber-700'}`}>
@@ -102,7 +102,7 @@ export function FotosVistoria({ leadId, somenteLeitura, celular, nome }: {
         </div>
         {!progresso.completa && proxima && (
           <p className="mt-1.5 text-[11px] text-amber-800">
-            Proxima: <b>{proxima.nome}</b>
+            Próxima: <b>{proxima.nome}</b>
           </p>
         )}
       </div>
@@ -115,8 +115,8 @@ export function FotosVistoria({ leadId, somenteLeitura, celular, nome }: {
 
       {!somenteLeitura && (
         <p className="text-[11px] leading-snug text-slate-400">
-          Pode fotografar direto do celular: a imagem e reduzida automaticamente
-          (ate {LADO_MAXIMO}px, em JPEG) antes de subir, entao nao precisa se preocupar com o
+          Pode fotografar direto do celular: a imagem é reduzida automaticamente
+          (até {LADO_MAXIMO}px, em JPEG) antes de subir, então não precisa se preocupar com o
           tamanho do arquivo.
         </p>
       )}
@@ -219,7 +219,7 @@ function ItemPose({ pose, url, carregandoUrl, enviando, somenteLeitura, onEnviar
             {pose.enviada && <Check className="h-4 w-4 shrink-0 text-emerald-600" strokeWidth={2.5} />}
             {pose.nome}
             {pose.obrigatorio
-              ? <span className="rounded-full bg-rose-50 px-1.5 py-px text-[10px] font-bold uppercase text-rose-600 ring-1 ring-inset ring-rose-200">obrigatoria</span>
+              ? <span className="rounded-full bg-rose-50 px-1.5 py-px text-[10px] font-bold uppercase text-rose-600 ring-1 ring-inset ring-rose-200">obrigatória</span>
               : <span className="rounded-full bg-slate-100 px-1.5 py-px text-[10px] font-medium uppercase text-slate-500">opcional</span>}
             {/* 0076 — a ORIGEM importa para quem audita: foto de quem COMPRA o
                 carro se confere diferente da foto de quem o VENDE. */}
@@ -234,7 +234,7 @@ function ItemPose({ pose, url, carregandoUrl, enviando, somenteLeitura, onEnviar
             <p className="tnum mt-0.5 text-[11px] text-slate-500">
               {pose.enviada_em ? `enviada em ${formatDateTime(pose.enviada_em)}` : 'enviada'}
               {pose.tamanho_bytes != null && ` · ${tamanhoLegivel(pose.tamanho_bytes)}`}
-              {quebrou && <span className="font-semibold text-rose-600"> · nao consegui carregar a imagem</span>}
+              {quebrou && <span className="font-semibold text-rose-600"> · não consegui carregar a imagem</span>}
             </p>
           ) : pose.instrucao ? (
             <p className="mt-0.5 flex items-start gap-1 text-[11.5px] leading-relaxed text-slate-500">

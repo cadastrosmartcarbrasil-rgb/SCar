@@ -100,8 +100,8 @@ export function FilaCobranca({ unidade }: { unidade?: { id: string; nome: string
   const taxa = p ? taxaCumprimento(Number(p.cumpridas), Number(p.quebradas)) : null;
 
   const exportar = () => baixarCsv('fila-cobranca.csv', [
-    ['Associado', 'CPF/CNPJ', 'Celular', 'Regional', 'Placas', 'Boletos', 'Valor vencido', 'Dias', 'Situacao',
-      'Ultimo contato', 'Resultado', 'Retorno'],
+    ['Associado', 'CPF/CNPJ', 'Celular', 'Regional', 'Placas', 'Boletos', 'Valor vencido', 'Dias', 'Situação',
+      'Último contato', 'Resultado', 'Retorno'],
     ...linhas.map((l) => [
       l.associado, l.cpf_cnpj, l.celular ?? l.telefone ?? '', l.regional, l.placas ?? '', Number(l.boletos_vencidos),
       Number(l.valor_vencido), l.dias_atraso, SITUACOES_FILA[l.situacao_fila as SituacaoFila]?.rotulo ?? l.situacao_fila,

@@ -88,7 +88,7 @@ export function LeitorCrlv({
         void varrer();
       });
     } catch {
-      toast.error('Nao consegui abrir a camera. Use "Enviar imagem do CRLV".');
+      toast.error('Não consegui abrir a camera. Use "Enviar imagem do CRLV".');
     }
   }
 
@@ -104,9 +104,9 @@ export function LeitorCrlv({
       const conteudo = await lerQrDeImagem(img, img.naturalWidth, img.naturalHeight);
       URL.revokeObjectURL(url);
       if (conteudo) aceitar(conteudo);
-      else toast.error('Nao achei um QR Code nessa imagem. Tente uma foto mais nitida e enquadrada.');
+      else toast.error('Não achei um QR Code nessa imagem. Tente uma foto mais nitida e enquadrada.');
     } catch {
-      toast.error('Nao consegui ler a imagem.');
+      toast.error('Não consegui ler a imagem.');
     } finally {
       setLendo(false);
     }
@@ -120,9 +120,9 @@ export function LeitorCrlv({
     <div className="space-y-3">
       <p className="flex items-start gap-1.5 rounded-lg bg-slate-50 px-3 py-2 text-[11.5px] leading-relaxed text-slate-600">
         <Info className="mt-px h-3.5 w-3.5 shrink-0 text-slate-400" />
-        O QR do CRLV-e aponta para a validacao no gov.br — ele comprova o documento e costuma
+        O QR do CRLV-e aponta para a validação no gov.br — ele comprova o documento e costuma
         trazer <b>placa, Renavam e chassi</b>. Marca, modelo e ano continuam vindo da consulta da
-        placa (FIPE), que o formulario ja faz.
+        placa (FIPE), que o formulário já faz.
       </p>
 
       {camera ? (
@@ -172,7 +172,7 @@ export function LeitorCrlv({
           {!qrTrouxeDados(resultado) && (
             <p className="mt-1.5 flex items-center gap-1 text-[11px] text-emerald-700">
               <QrCode className="h-3 w-3" />
-              Este QR so traz o link de validacao — preencha os campos do veiculo manualmente.
+              Este QR só traz o link de validação — preencha os campos do veículo manualmente.
             </p>
           )}
         </div>

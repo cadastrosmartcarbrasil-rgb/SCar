@@ -39,18 +39,18 @@ export function SemAcesso({
           <ShieldAlert className="h-6 w-6 text-amber-600" />
         </div>
         <h1 className="text-lg font-semibold text-slate-900">
-          {motivo === 'desativado' ? 'Acesso desativado' : 'Conta sem permissao'}
+          {motivo === 'desativado' ? 'Acesso desativado' : 'Conta sem permissão'}
         </h1>
         {motivo === 'desativado' ? (
           <p className="mt-2 text-sm text-slate-600">
-            O acesso de <strong>{nome || email}</strong> foi desativado pela administracao. O seu
-            historico continua no sistema — para voltar a entrar, peca a um administrador para
-            reativar o seu usuario em <strong>Configuracoes &rarr; Usuarios</strong>.
+            O acesso de <strong>{nome || email}</strong> foi desativado pela administração. O seu
+            histórico continua no sistema — para voltar a entrar, peça a um administrador para
+            reativar o seu usuário em <strong>Configurações &rarr; Usuários</strong>.
           </p>
         ) : (
           <p className="mt-2 text-sm text-slate-600">
-            A conta <strong>{email}</strong> esta autenticada, mas ainda nao tem um perfil de acesso
-            configurado. Peca a um administrador para vincular seu usuario a um papel (equipe) ou a um
+            A conta <strong>{email}</strong> está autenticada, mas ainda não tem um perfil de acesso
+            configurado. Peça a um administrador para vincular seu usuário a um papel (equipe) ou a um
             cadastro de associado.
           </p>
         )}

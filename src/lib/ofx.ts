@@ -101,7 +101,7 @@ export function interpretarOfx(texto: string): ExtratoOfx {
   const avisos: string[] = [];
   if (!/<OFX>/i.test(texto)) {
     return { banco: null, agencia: null, conta: null, dataInicio: null, dataFim: null, saldo: null, saldoEm: null,
-      itens: [], avisos: ['O arquivo nao parece um OFX (falta a marcacao <OFX>).'] };
+      itens: [], avisos: ['O arquivo não parece um OFX (falta a marcação <OFX>).'] };
   }
   const banco = tag(texto, 'BANKID');
   const agencia = tag(texto, 'BRANCHID');

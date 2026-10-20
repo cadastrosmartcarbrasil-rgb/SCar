@@ -69,13 +69,13 @@ export function TramitacaoEvento({
 
   function tramitar() {
     if (!destino && !novoStatus && !parecer.trim()) {
-      return toast.error('Escolha o responsavel, o novo status ou escreva o parecer');
+      return toast.error('Escolha o responsável, o novo status ou escreva o parecer');
     }
     transferir.mutate(
       { destino: destino || null, parecer: parecer || undefined, novoStatus: (novoStatus || undefined) as StatusEvento | undefined },
       {
         onSuccess: () => {
-          toast.success(destino ? 'Protocolo transferido' : 'Tramitacao registrada');
+          toast.success(destino ? 'Protocolo transferido' : 'Tramitação registrada');
           setParecer(''); setNovoStatus(''); setDestino('');
         },
         onError: (err) => toast.error((err as Error).message),
@@ -91,7 +91,7 @@ export function TramitacaoEvento({
       { atendimentoId, usuarios: escolhidos, pergunta },
       {
         onSuccess: (n) => {
-          toast.success(n > 0 ? `Parecer pedido a ${n} pessoa(s)` : 'Essas pessoas ja tinham pedido em aberto');
+          toast.success(n > 0 ? `Parecer pedido a ${n} pessoa(s)` : 'Essas pessoas já tinham pedido em aberto');
           setPergunta(''); setEscolhidos([]); setPedindo(false);
         },
         onError: (err) => toast.error(err.message),
@@ -118,7 +118,7 @@ export function TramitacaoEvento({
         <CardContent className="space-y-3">
           <p className="text-xs text-slate-500">
             Com o protocolo{' '}
-            <strong className="text-slate-700">{responsavelAtual?.nome ?? 'ninguem ainda'}</strong>.
+            <strong className="text-slate-700">{responsavelAtual?.nome ?? 'ninguém ainda'}</strong>.
           </p>
 
           <FormField label="Passar para">
@@ -141,23 +141,23 @@ export function TramitacaoEvento({
             </FormField>
           ) : (
             <p className="text-xs text-slate-500">
-              Mudar a fase do evento e do time de eventos. Voce pode transferir
+              Mudar a fase do evento e do time de eventos. Você pode transferir
               o protocolo e registrar parecer.
             </p>
           )}
 
-          <FormField label="Parecer / observacoes">
+          <FormField label="Parecer / observações">
             <Textarea
               rows={4}
               value={parecer}
               onChange={(e) => setParecer(e.target.value)}
-              placeholder="Descreva a analise ou o motivo da transferencia..."
+              placeholder="Descreva a análise ou o motivo da transferência..."
             />
           </FormField>
 
           <Button onClick={tramitar} disabled={transferir.isPending} className="w-full justify-center">
             {transferir.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRightLeft className="h-4 w-4" />}
-            {destino ? 'Transferir' : 'Registrar tramitacao'}
+            {destino ? 'Transferir' : 'Registrar tramitação'}
           </Button>
 
           {atendimentoId && (
@@ -192,7 +192,7 @@ export function TramitacaoEvento({
                   rows={3}
                   value={pergunta}
                   onChange={(e) => setPergunta(e.target.value)}
-                  placeholder="Ex.: cobre ou nao cobre pela clausula de terceiros? Justifique."
+                  placeholder="Ex.: cobre ou não cobre pela cláusula de terceiros? Justifique."
                 />
               </FormField>
               <div>
@@ -252,7 +252,7 @@ function ItemParecer({
   return (
     <li className={`rounded-lg border p-2.5 ${parecer.respondido ? 'border-slate-200' : 'border-amber-200 bg-amber-50/40'}`}>
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="text-sm font-medium text-slate-800">{parecer.para ?? 'Sem destinatario'}</span>
+        <span className="text-sm font-medium text-slate-800">{parecer.para ?? 'Sem destinatário'}</span>
         <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${sit.cor}`}>{sit.rotulo}</span>
       </div>
       <p className="mt-1 text-xs text-slate-600">{parecer.pergunta}</p>
@@ -294,7 +294,7 @@ function ItemParecer({
         </div>
       ) : (
         <p className="mt-1 flex items-center gap-1 text-[11px] text-slate-400">
-          <Clock className="h-3 w-3" /> Aguardando a analise dessa pessoa.
+          <Clock className="h-3 w-3" /> Aguardando a análise dessa pessoa.
         </p>
       )}
     </li>

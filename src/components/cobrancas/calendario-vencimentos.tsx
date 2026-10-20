@@ -82,17 +82,17 @@ export function CalendarioVencimentos() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-end gap-x-5 gap-y-3 rounded-2xl border border-slate-200/80 bg-superficie p-4">
         <div className="flex items-center gap-2">
-          <button type="button" onClick={() => setMes(deslocarMes(mes, -1))} className="rounded-lg border border-slate-300 p-1.5 hover:bg-slate-50" aria-label="Mes anterior">
+          <button type="button" onClick={() => setMes(deslocarMes(mes, -1))} className="rounded-lg border border-slate-300 p-1.5 hover:bg-slate-50" aria-label="Mês anterior">
             <ChevronLeft className="h-4 w-4" />
           </button>
           <p className="min-w-[170px] text-center text-base font-semibold capitalize text-slate-900">{rotuloMes(mes)}</p>
-          <button type="button" onClick={() => setMes(deslocarMes(mes, 1))} className="rounded-lg border border-slate-300 p-1.5 hover:bg-slate-50" aria-label="Proximo mes">
+          <button type="button" onClick={() => setMes(deslocarMes(mes, 1))} className="rounded-lg border border-slate-300 p-1.5 hover:bg-slate-50" aria-label="Próximo mês">
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
         <FiltroUnidadeCobranca valor={regionalId} onChange={setRegionalId} />
         <button type="button" onClick={() => baixarCsv(`calendario-${mes.slice(0, 7)}.csv`, [
-          ['Ciclo', 'Data', 'Boletos', 'Associados', 'Emitido', 'Pago no prazo', 'Pago em atraso (recuperado)', 'A vencer', 'Vence hoje', 'Vencido em aberto', 'Inadimplencia %', 'Recebido %'],
+          ['Ciclo', 'Data', 'Boletos', 'Associados', 'Emitido', 'Pago no prazo', 'Pago em atraso (recuperado)', 'A vencer', 'Vence hoje', 'Vencido em aberto', 'Inadimplência %', 'Recebido %'],
           ...linhas.map((l) => {
             const t = taxasDoCiclo(l);
             return [l.ciclo, formatDate(l.data_ciclo), num(l.boletos), num(l.clientes), num(l.valor_emitido),
@@ -104,7 +104,7 @@ export function CalendarioVencimentos() {
           <Download className="h-3.5 w-3.5" /> CSV
         </button>
         <p className="text-xs text-slate-500">
-          No mes: emitido <b className="tnum">{formatCurrency(total.emitido)}</b> · recebido{' '}
+          No mês: emitido <b className="tnum">{formatCurrency(total.emitido)}</b> · recebido{' '}
           <b className="tnum">{formatCurrency(total.prazo + total.atraso)}</b> · em aberto vencido{' '}
           <b className="tnum text-rose-600">{formatCurrency(total.aberto)}</b> · a vencer{' '}
           <b className="tnum">{formatCurrency(total.vencer)}</b>
@@ -135,7 +135,7 @@ export function CalendarioVencimentos() {
                     </p>
                   </div>
                   <div className="text-right">
-                    {futuro ? <span className="text-[11px] text-slate-400">ainda nao venceu</span> : <SeloSemaforo s={s} />}
+                    {futuro ? <span className="text-[11px] text-slate-400">ainda não venceu</span> : <SeloSemaforo s={s} />}
                     <p className="tnum mt-1 text-xs text-slate-500">{inteiro.format(num(c.boletos))} boletos · {inteiro.format(num(c.clientes))} assoc.</p>
                   </div>
                 </div>
@@ -157,7 +157,7 @@ export function CalendarioVencimentos() {
                   </div>
                   <div>
                     <p className="tnum text-sm font-semibold text-slate-900">{pct(t.recuperacao)}</p>
-                    <p className="text-[10.5px] text-slate-400">recuperacao</p>
+                    <p className="text-[10.5px] text-slate-400">recuperação</p>
                   </div>
                 </div>
               </div>
@@ -166,9 +166,9 @@ export function CalendarioVencimentos() {
         })}
       </div>
       <p className="text-[11px] text-slate-400">
-        O ciclo vem do dia de vencimento ORIGINAL do boleto. Vencimento em fim de semana ou feriado so conta como
-        vencido depois do proximo dia util; no mes sem dia 30, o ciclo 30 vence no ultimo dia.
-        Inadimplencia = vencido sem pagamento ÷ o que ja venceu no ciclo.
+        O ciclo vem do dia de vencimento ORIGINAL do boleto. Vencimento em fim de semana ou feriado só conta como
+        vencido depois do próximo dia útil; no mês sem dia 30, o ciclo 30 vence no último dia.
+        Inadimplência = vencido sem pagamento ÷ o que já venceu no ciclo.
       </p>
 
       <ModalBoletos filtro={lista} onClose={() => setLista(null)} />

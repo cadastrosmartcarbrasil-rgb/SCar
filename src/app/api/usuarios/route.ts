@@ -52,13 +52,13 @@ const textoOuNulo = (v: string | null | undefined) =>
 async function exigirAdmin() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { erro: NextResponse.json({ error: 'Nao autenticado' }, { status: 401 }) };
+  if (!user) return { erro: NextResponse.json({ error: 'Não autenticado' }, { status: 401 }) };
 
   const { data: perfil } = await supabase
     .from('usuarios').select('papel').eq('id', user.id).maybeSingle();
   if (perfil?.papel !== 'admin') {
     return { erro: NextResponse.json(
-      { error: 'Apenas administradores gerenciam usuarios da equipe.' }, { status: 403 }) };
+      { error: 'Apenas administradores gerenciam usuários da equipe.' }, { status: 403 }) };
   }
   return { userId: user.id };
 }
@@ -70,7 +70,7 @@ export async function POST(request: Request) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
 
   const { data: perfil } = await supabase
     .from('usuarios')
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
     .eq('id', user.id)
     .maybeSingle();
   if (perfil?.papel !== 'admin') {
-    return NextResponse.json({ error: 'Apenas administradores podem criar usuarios.' }, { status: 403 });
+    return NextResponse.json({ error: 'Apenas administradores podem criar usuários.' }, { status: 403 });
   }
 
   const body = (await request.json()) as Body;
@@ -125,7 +125,7 @@ export async function POST(request: Request) {
     if (erroFicha) {
       return NextResponse.json({
         ok: true, id: data.user.id,
-        aviso: `Usuario criado, mas a ficha nao foi salva: ${erroFicha.message}`,
+        aviso: `Usuário criado, mas a ficha não foi salva: ${erroFicha.message}`,
       });
     }
   }
@@ -148,18 +148,18 @@ export async function PATCH(request: Request) {
   if (acesso.erro) return acesso.erro;
 
   const body = (await request.json().catch(() => null)) as BodyEdicao | null;
-  if (!body?.id) return NextResponse.json({ error: 'Informe o usuario.' }, { status: 400 });
+  if (!body?.id) return NextResponse.json({ error: 'Informe o usuário.' }, { status: 400 });
   if (body.senha !== undefined && body.senha !== '' && body.senha.length < 6) {
     return NextResponse.json({ error: 'A senha deve ter ao menos 6 caracteres.' }, { status: 400 });
   }
   if (body.nome !== undefined && !body.nome.trim()) {
-    return NextResponse.json({ error: 'O nome nao pode ficar em branco.' }, { status: 400 });
+    return NextResponse.json({ error: 'O nome não pode ficar em branco.' }, { status: 400 });
   }
 
   const admin = createAdminClient();
   const { data: alvo } = await admin
     .from('usuarios').select('id, papel, ativo, email').eq('id', body.id).maybeSingle();
-  if (!alvo) return NextResponse.json({ error: 'Usuario nao encontrado.' }, { status: 404 });
+  if (!alvo) return NextResponse.json({ error: 'Usuário não encontrado.' }, { status: 404 });
 
   // Trava de porta: o sistema nao pode ficar sem administrador ativo. Vale
   // inclusive para o proprio admin logado tentando se rebaixar/desativar.
@@ -172,7 +172,7 @@ export async function PATCH(request: Request) {
       .eq('papel', 'admin').eq('ativo', true).neq('id', alvo.id);
     if (!count) {
       return NextResponse.json(
-        { error: 'Este e o unico administrador ativo. Promova outro antes de mudar este.' },
+        { error: 'Este e o único administrador ativo. Promova outro antes de mudar este.' },
         { status: 400 },
       );
     }

@@ -33,7 +33,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: Request, { params }: { params: { segredo: string } }) {
   const segredo = process.env[ENV_SICREDI.webhookSecret];
   if (!segredoConfere(params.segredo, segredo)) {
-    return NextResponse.json({ error: 'Nao encontrado' }, { status: 404 });
+    return NextResponse.json({ error: 'Não encontrado' }, { status: 404 });
   }
 
   const texto = await request.text();
@@ -49,7 +49,7 @@ export async function POST(request: Request, { params }: { params: { segredo: st
   const cfg = configSicrediDoAmbiente(process.env);
   if (!cfg) {
     console.error('[sicredi-webhook] SICREDI_* incompletas no servidor');
-    return NextResponse.json({ ok: false, motivo: 'sicredi nao configurado' });
+    return NextResponse.json({ ok: false, motivo: 'sicredi não configurado' });
   }
 
   const avisos = avisosDoWebhook(payload);
@@ -64,7 +64,7 @@ export async function POST(request: Request, { params }: { params: { segredo: st
   for (const aviso of avisos) {
     if (aviso.estorno) {
       // O contrato assina so LIQUIDACAO; estorno ainda nao tem tratamento.
-      console.warn('[sicredi-webhook] estorno recebido e NAO tratado:', aviso.nossoNumero, aviso.movimento);
+      console.warn('[sicredi-webhook] estorno recebido e NÃO tratado:', aviso.nossoNumero, aviso.movimento);
       resultados.push({ nosso_numero: aviso.nossoNumero, situacao: 'ESTORNO_IGNORADO' });
       continue;
     }

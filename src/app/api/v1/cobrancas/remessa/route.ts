@@ -31,10 +31,10 @@ interface Body {
 export async function POST(request: Request) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   const { data: perfil } = await supabase.from('usuarios').select('papel').eq('id', user.id).maybeSingle();
   if (!perfil || !['admin', 'financeiro'].includes(perfil.papel)) {
-    return NextResponse.json({ error: 'Sem permissao' }, { status: 403 });
+    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
   }
 
   const body = (await request.json().catch(() => ({}))) as Body;
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     tituloIds = (fila ?? []).map((t) => t.id);
   }
   if (tituloIds.length === 0) {
-    return NextResponse.json({ ok: true, remessa: null, enviados: 0, mensagem: 'Nenhum titulo pendente de envio' });
+    return NextResponse.json({ ok: true, remessa: null, enviados: 0, mensagem: 'Nenhum título pendente de envio' });
   }
 
   // 0) Gateway ANTES de criar a remessa: a integracao padrao da unidade (ou a
@@ -86,7 +86,7 @@ export async function POST(request: Request) {
     .eq('remessa_id', remessa.id);
 
   if (!itens || itens.length === 0) {
-    return NextResponse.json({ ok: true, remessa, enviados: 0, mensagem: 'Nenhum titulo elegivel no lote' });
+    return NextResponse.json({ ok: true, remessa, enviados: 0, mensagem: 'Nenhum título elegível no lote' });
   }
 
   await supabase.rpc('marcar_remessa_enviada', { p_remessa_id: remessa.id });
@@ -111,7 +111,7 @@ export async function POST(request: Request) {
     titulo_id: i.titulo_id,
     valor: Number(i.titulos_financeiros?.valor ?? 0),
     vencimento: i.titulos_financeiros?.data_vencimento ?? new Date().toISOString().slice(0, 10),
-    descricao: 'Mensalidade de protecao veicular',
+    descricao: 'Mensalidade de proteção veicular',
     pagador: {
       nome: i.titulos_financeiros?.clientes?.nome_razao_social ?? '',
       cpf_cnpj: i.titulos_financeiros?.clientes?.cpf_cnpj ?? '',

@@ -25,7 +25,7 @@ export default function ComissoesRegionalPage() {
   // da franquia (categoria 3.2.01) e a baixa e feita la.
   function repassarComissao(id: string, vendedor: string) {
     repassar.mutate(id, {
-      onSuccess: () => toast.success(`Repasse de ${vendedor} lancado no financeiro da unidade`),
+      onSuccess: () => toast.success(`Repasse de ${vendedor} lançado no financeiro da unidade`),
       onError: (e: unknown) => toast.error((e as Error).message),
     });
   }
@@ -41,10 +41,10 @@ export default function ComissoesRegionalPage() {
 
   function exportar() {
     baixarCsv(`comissoes-${periodo.inicio}-a-${periodo.fim}.csv`, [
-      ['Data', 'Vendedor', 'Placa', 'Tipo', 'Valor', 'Situacao'],
+      ['Data', 'Vendedor', 'Placa', 'Tipo', 'Valor', 'Situação'],
       ...(comissoes ?? []).map((c) => [
         c.created_at.slice(0, 10), c.vendedor_nome, c.placa ?? '',
-        c.is_adesao ? 'Adesao' : 'Recorrente', Number(c.valor_comissao), c.status_pagamento,
+        c.is_adesao ? 'Adesão' : 'Recorrente', Number(c.valor_comissao), c.status_pagamento,
       ]),
     ]);
   }
@@ -52,24 +52,24 @@ export default function ComissoesRegionalPage() {
   return (
     <div className="space-y-5">
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Comissoes</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Comissões</h1>
         <p className="mt-0.5 text-sm text-slate-500">
-          O que a unidade deve aos vendedores e o que ja foi repassado.
+          O que a unidade deve aos vendedores e o que já foi repassado.
         </p>
       </header>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <Indicador titulo="Comissao no periodo" valor={totais.total} icon={BarChart3} tom="neutro"
-          detalhe={`${(comissoes ?? []).length} lancamento(s)`} />
+        <Indicador titulo="Comissão no período" valor={totais.total} icon={BarChart3} tom="neutro"
+          detalhe={`${(comissoes ?? []).length} lançamento(s)`} />
         <Indicador titulo="A repassar" valor={totais.pendente} icon={BarChart3} tom="alerta"
           detalhe="Pendente de pagamento ao vendedor" />
-        <Indicador titulo="De adesao" valor={totais.adesao} icon={BarChart3} tom="destaque"
+        <Indicador titulo="De adesão" valor={totais.adesao} icon={BarChart3} tom="destaque"
           detalhe="Primeira mensalidade da venda" />
       </div>
 
       <FiltroPeriodo periodo={periodo} onChange={setPeriodo}>
         <label className="block">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Situacao</span>
+          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Situação</span>
           <Select className="mt-1 w-40 py-1.5" value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="">Todas</option>
             <option value="pendente">Pendente</option>
@@ -86,8 +86,8 @@ export default function ComissoesRegionalPage() {
           {isLoading ? (
             <p className="py-6 text-center text-sm text-slate-400">Carregando...</p>
           ) : (comissoes ?? []).length === 0 ? (
-            <Vazio icon={BarChart3} titulo="Nenhuma comissao no periodo"
-              descricao="As comissoes aparecem aqui quando uma venda da equipe entra na base." />
+            <Vazio icon={BarChart3} titulo="Nenhuma comissão no período"
+              descricao="As comissões aparecem aqui quando uma venda da equipe entra na base." />
           ) : (
             <table className="w-full min-w-[700px] text-sm">
               <thead>
@@ -97,7 +97,7 @@ export default function ComissoesRegionalPage() {
                   <th className="py-2.5 font-semibold">Veiculo</th>
                   <th className="py-2.5 font-semibold">Tipo</th>
                   <th className="py-2.5 text-right font-semibold">Valor</th>
-                  <th className="py-2.5 font-semibold">Situacao</th>
+                  <th className="py-2.5 font-semibold">Situação</th>
                   <th className="py-2.5" />
                 </tr>
               </thead>
@@ -111,7 +111,7 @@ export default function ComissoesRegionalPage() {
                       <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
                         c.is_adesao ? 'bg-cyan-50 text-cyan-700' : 'bg-slate-100 text-slate-600'
                       }`}>
-                        {c.is_adesao ? 'Adesao' : 'Recorrente'}
+                        {c.is_adesao ? 'Adesão' : 'Recorrente'}
                       </span>
                     </td>
                     <td className="tnum py-2.5 text-right font-semibold text-slate-800">{formatCurrency(c.valor_comissao)}</td>

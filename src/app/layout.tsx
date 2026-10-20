@@ -11,8 +11,8 @@ import { Providers } from '@/components/providers';
 import { SCRIPT_TEMA_INICIAL } from '@/lib/tema';
 
 export const metadata: Metadata = {
-  title: 'SCar - Gestao de Protecao Veicular',
-  description: 'Sistema de gestao para associacoes de protecao veicular.',
+  title: 'SCar - Gestão de Proteção Veicular',
+  description: 'Sistema de gestão para associações de proteção veicular.',
   // Instalavel na tela inicial (PWA) — ver src/app/manifest.ts.
   manifest: '/manifest.webmanifest',
   appleWebApp: { capable: true, statusBarStyle: 'default', title: 'Smart Car' },

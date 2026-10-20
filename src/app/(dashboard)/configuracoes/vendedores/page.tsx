@@ -18,7 +18,7 @@ import type { VendedorLista, VendedoresRow } from '@/lib/database.types';
 const DIAS_SEMANA = [
   { valor: 1, rotulo: 'Segunda-feira' }, { valor: 2, rotulo: 'Terca-feira' },
   { valor: 3, rotulo: 'Quarta-feira' }, { valor: 4, rotulo: 'Quinta-feira' },
-  { valor: 5, rotulo: 'Sexta-feira' }, { valor: 6, rotulo: 'Sabado' }, { valor: 7, rotulo: 'Domingo' },
+  { valor: 5, rotulo: 'Sexta-feira' }, { valor: 6, rotulo: 'Sábado' }, { valor: 7, rotulo: 'Domingo' },
 ];
 
 const pct = (v: number | null | undefined) =>
@@ -42,7 +42,7 @@ export default function VendedoresPage() {
     const url = `${window.location.origin}/v/${v.codigo}`;
     navigator.clipboard.writeText(url).then(
       () => toast.success(`Hotlink de ${v.nome} copiado: ${url}`),
-      () => toast.error('Nao consegui copiar. O link e: ' + url),
+      () => toast.error('Não consegui copiar. O link e: ' + url),
     );
   }
 
@@ -52,7 +52,7 @@ export default function VendedoresPage() {
         <div>
           <h1 className="text-lg font-semibold text-slate-900">Vendedores</h1>
           <p className="text-sm text-slate-500">
-            Cadastro completo do vendedor: contato, comissao, prazo de pagamento, dados bancarios e
+            Cadastro completo do vendedor: contato, comissão, prazo de pagamento, dados bancários e
             acesso ao portal.
           </p>
         </div>
@@ -72,7 +72,7 @@ export default function VendedoresPage() {
           <input
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar por nome, codigo ou e-mail"
+            placeholder="Buscar por nome, código ou e-mail"
             className="w-72 rounded-lg border border-slate-300 py-1.5 pl-8 pr-3 text-sm focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
           />
         </div>
@@ -87,12 +87,12 @@ export default function VendedoresPage() {
           <thead>
             <tr className="border-b border-slate-200 text-left text-[11px] uppercase tracking-wide text-slate-400">
               <th className="px-4 py-2.5 font-semibold">Nome</th>
-              <th className="px-4 py-2.5 font-semibold">Codigo</th>
+              <th className="px-4 py-2.5 font-semibold">Código</th>
               <th className="px-4 py-2.5 font-semibold">Franquia</th>
               <th className="px-4 py-2.5 text-right font-semibold">Entrada</th>
-              <th className="px-4 py-2.5 text-right font-semibold">Recorrencia</th>
+              <th className="px-4 py-2.5 text-right font-semibold">Recorrência</th>
               <th className="px-4 py-2.5 font-semibold">Status</th>
-              <th className="px-4 py-2.5 text-right font-semibold">Acoes</th>
+              <th className="px-4 py-2.5 text-right font-semibold">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -144,7 +144,7 @@ export default function VendedoresPage() {
                       titulo="Remover"
                       classe="text-rose-600 hover:bg-rose-50"
                       onClick={() => {
-                        if (confirm(`Remover ${v.nome}? As vendas ja feitas continuam no historico.`))
+                        if (confirm(`Remover ${v.nome}? As vendas já feitas continuam no histórico.`))
                           excluir.mutate(v.id, { onError: (e) => toast.error(e.message) });
                       }}
                     >
@@ -198,14 +198,14 @@ function ModalFicha({ vendedor, onClose, onEditar }: {
   vendedor: VendedorLista; onClose: () => void; onEditar: () => void;
 }) {
   const v = vendedor;
-  const dia = DIAS_SEMANA.find((d) => d.valor === v.dia_pagto_entrada)?.rotulo ?? 'nao definido';
+  const dia = DIAS_SEMANA.find((d) => d.valor === v.dia_pagto_entrada)?.rotulo ?? 'não definido';
   return (
-    <Modal open onClose={onClose} tamanho="lg" title={v.nome} subtitulo={`Codigo ${v.codigo} · ${v.regional_nome ?? 'Global'}`}>
+    <Modal open onClose={onClose} tamanho="lg" title={v.nome} subtitulo={`Código ${v.codigo} · ${v.regional_nome ?? 'Global'}`}>
       <div className="space-y-3">
         <div className="grid gap-3 sm:grid-cols-3">
-          <Indicador rotulo="Comissao entrada" valor={pct(v.taxa_comissao_adesao)} nota={`teto ${pct(v.teto_adesao)}`} />
-          <Indicador rotulo="Comissao recorrencia" valor={pct(v.taxa_comissao_recorrente)} nota={`teto ${pct(v.teto_recorrente)}`} />
-          <Indicador rotulo="Comissao pendente" valor={formatCurrency(v.comissao_pendente)} nota={`${v.vendas_total} venda(s)`} />
+          <Indicador rotulo="Comissão entrada" valor={pct(v.taxa_comissao_adesao)} nota={`teto ${pct(v.teto_adesao)}`} />
+          <Indicador rotulo="Comissão recorrência" valor={pct(v.taxa_comissao_recorrente)} nota={`teto ${pct(v.teto_recorrente)}`} />
+          <Indicador rotulo="Comissão pendente" valor={formatCurrency(v.comissao_pendente)} nota={`${v.vendas_total} venda(s)`} />
         </div>
 
         <Secao titulo="Contato">
@@ -216,19 +216,19 @@ function ModalFicha({ vendedor, onClose, onEditar }: {
 
         <Secao titulo="Prazo de pagamento" tom="ambar">
           <Linha rotulo="Entrada (semanal)" valor={dia} />
-          <Linha rotulo="Recorrencia (mensal)" valor={v.dia_pagto_recorrencia ? `dia ${v.dia_pagto_recorrencia}` : 'nao definido'} />
+          <Linha rotulo="Recorrência (mensal)" valor={v.dia_pagto_recorrencia ? `dia ${v.dia_pagto_recorrencia}` : 'não definido'} />
         </Secao>
 
-        <Secao titulo="Dados bancarios">
+        <Secao titulo="Dados bancários">
           <Linha rotulo="Banco" valor={v.banco} />
-          <Linha rotulo="Agencia / Conta" valor={[v.agencia, v.conta].filter(Boolean).join(' / ') || null} />
+          <Linha rotulo="Agência / Conta" valor={[v.agencia, v.conta].filter(Boolean).join(' / ') || null} />
           <Linha rotulo="Chave PIX" valor={v.chave_pix} />
         </Secao>
 
         <Secao titulo="Portal e onboarding" tom="azul">
-          <Linha rotulo="Acesso ao portal" valor={v.tem_portal ? 'Ativo' : 'Ainda nao criado'} />
-          <Linha rotulo="Boas-vindas" valor={v.boas_vindas_enviada_em ? `enviadas em ${formatDate(v.boas_vindas_enviada_em)}` : 'nao enviadas'} />
-          <Linha rotulo="Contrato" valor={v.contrato_url ? 'anexado' : 'nao anexado'} />
+          <Linha rotulo="Acesso ao portal" valor={v.tem_portal ? 'Ativo' : 'Ainda não criado'} />
+          <Linha rotulo="Boas-vindas" valor={v.boas_vindas_enviada_em ? `enviadas em ${formatDate(v.boas_vindas_enviada_em)}` : 'não enviadas'} />
+          <Linha rotulo="Contrato" valor={v.contrato_url ? 'anexado' : 'não anexado'} />
         </Secao>
 
         {v.observacoes && <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">{v.observacoes}</p>}
@@ -271,7 +271,7 @@ function ModalBoasVindas({ vendedor, onClose }: { vendedor: VendedorLista; onClo
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(email)) return toast.error('E-mail de destino invalido');
+    if (!/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(email)) return toast.error('E-mail de destino inválido');
     enviar.mutate(
       { vendedorId: vendedor.id, email, contrato },
       {
@@ -287,7 +287,7 @@ function ModalBoasVindas({ vendedor, onClose }: { vendedor: VendedorLista; onClo
         <div className="rounded-xl bg-slate-50 px-3 py-2.5 text-xs">
           <Linha rotulo="Para" valor={vendedor.nome} />
           <Linha rotulo="Unidade" valor={vendedor.regional_nome} />
-          <Linha rotulo="Codigo" valor={vendedor.codigo} />
+          <Linha rotulo="Código" valor={vendedor.codigo} />
         </div>
 
         <FormField label="E-mail de destino *">
@@ -307,8 +307,8 @@ function ModalBoasVindas({ vendedor, onClose }: { vendedor: VendedorLista; onClo
 
         <p className="rounded-lg bg-cyan-50 px-3 py-2 text-[11.5px] leading-relaxed text-cyan-900">
           <KeyRound className="mr-1 inline h-3.5 w-3.5" />
-          O e-mail leva o codigo do vendedor e o <b>hotlink de vendas</b>: toda cotacao aberta por
-          esse link ja entra vinculada a ele.
+          O e-mail leva o código do vendedor e o <b>hotlink de vendas</b>: toda cotação aberta por
+          esse link já entra vinculada a ele.
         </p>
 
         <div className="flex justify-end gap-2 border-t border-slate-200 pt-4">

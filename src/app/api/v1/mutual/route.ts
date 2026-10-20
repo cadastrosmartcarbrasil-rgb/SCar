@@ -42,7 +42,7 @@ interface Body {
 export async function POST(request: Request) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
 
   // Puxar dados do Mutual e da MATRIZ: a trava real esta no banco
   // (mutual_registrar_captura exige tem_acesso_global), esta aqui e a mensagem.
@@ -101,7 +101,7 @@ export async function POST(request: Request) {
       .slice(0, 12)
       .filter((c) => typeof c === 'string' && /^[\w/_-]+\/?$/.test(c));
     if (candidatas.length === 0) {
-      return NextResponse.json({ error: 'nenhum caminho valido para sondar' }, { status: 400 });
+      return NextResponse.json({ error: 'nenhum caminho válido para sondar' }, { status: 400 });
     }
 
     const sondagens: SondagemCaminho[] = [];
@@ -151,7 +151,7 @@ export async function POST(request: Request) {
   // --- capturar: puxa paginas e grava na area de captura -------------------
   const entidade = body.entidade;
   if (!entidade || !(entidade in ENTIDADES_MUTUAL)) {
-    return NextResponse.json({ error: 'entidade invalida' }, { status: 400 });
+    return NextResponse.json({ error: 'entidade inválida' }, { status: 400 });
   }
   const pagina0 = Math.max(body.pagina_inicial ?? 1, 1);
   const maxPaginas = Math.min(Math.max(body.paginas ?? 5, 1), 100);
@@ -380,14 +380,14 @@ async function capturarProdutos(
         .eq('sistema', 'MUTUAL').eq('entidade', 'CONTRACT_OBJECT').eq('tabela', 'veiculos')
         .order('id_externo')
         .range(de, de + LINHAS_POR_LEITURA - 1);
-      if (error) throw new Error(`lendo os veiculos carregados: ${error.message}`);
+      if (error) throw new Error(`lendo os veículos carregados: ${error.message}`);
       const lote = (data ?? []).map((r) => r.id_externo);
       objetos.push(...lote);
       if (lote.length < LINHAS_POR_LEITURA) break;
     }
     total = objetos.length;
     if (total === 0) {
-      throw new Error('Nenhum veiculo do Mutual carregado ainda — a captura de produtos pergunta pelos veiculos ja carregados');
+      throw new Error('Nenhum veículo do Mutual carregado ainda — a captura de produtos pergunta pelos veículos já carregados');
     }
 
     let i = Math.max(posicao0, 1) - 1;
@@ -422,7 +422,7 @@ async function capturarProdutos(
       registros += n ?? 0;
     }
     if (consultados > 0 && recusas.length === consultados) {
-      throw new Error(`O Mutual recusou todos os ${consultados} veiculos do bloco — `
+      throw new Error(`O Mutual recusou todos os ${consultados} veículos do bloco — `
         + `HTTP ${recusas[0].http ?? '-'}: ${recusas[0].detalhe}`);
     }
     const proxima = i < total ? i + 1 : null;

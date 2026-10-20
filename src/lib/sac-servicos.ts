@@ -38,19 +38,19 @@ export const SERVICOS_SAC: ServicoSac[] = [
     tipos: [{ value: 'SINISTRO', label: 'Evento' }],
   },
   {
-    id: 'assistencia', titulo: 'Assistencia 24h', descricao: 'Guincho, chaveiro, mecanico, pane seca...',
+    id: 'assistencia', titulo: 'Assistência 24h', descricao: 'Guincho, chaveiro, mecânico, pane seca...',
     icon: LifeBuoy, cor: 'bg-cyan-50 text-cyan-600', modo: 'assistencia',
-    tipos: [{ value: 'ASSISTENCIA_24H', label: 'Assistencia 24h' }],
+    tipos: [{ value: 'ASSISTENCIA_24H', label: 'Assistência 24h' }],
     subtipos: ['Guincho', 'Chaveiro', 'Mecanico', 'Pane seca', 'Troca de pneu', 'Transporte'],
   },
   {
     // Unifica os antigos "Cadastro" e "Upgrade": os dois levavam ao mesmo lugar.
     id: 'editar', titulo: 'Editar Veiculo/Item', descricao: 'Cadastro, plano, opcionais e cobertura',
     icon: Pencil, cor: 'bg-brand-50 text-brand-600', modo: 'editar',
-    tipos: [{ value: 'ALTERACAO_CADASTRAL', label: 'Alteracao cadastral' }],
+    tipos: [{ value: 'ALTERACAO_CADASTRAL', label: 'Alteração cadastral' }],
   },
   {
-    id: 'financeiro', titulo: 'Historico Financeiro', descricao: 'Boletos, vencimento, desconto e 2a via',
+    id: 'financeiro', titulo: 'Histórico Financeiro', descricao: 'Boletos, vencimento, desconto e 2a via',
     icon: Wallet, cor: 'bg-emerald-50 text-emerald-600', modo: 'financeiro',
     tipos: [{ value: 'FINANCEIRO', label: 'Financeiro' }],
   },
@@ -70,11 +70,11 @@ export const SERVICOS_SAC: ServicoSac[] = [
     tipos: [{ value: 'OUTROS', label: 'Termos' }],
   },
   {
-    id: 'protocolo', titulo: 'Abrir Protocolo', descricao: 'Duvidas, reclamacao, financeiro...',
+    id: 'protocolo', titulo: 'Abrir Protocolo', descricao: 'Dúvidas, reclamação, financeiro...',
     icon: Ticket, cor: 'bg-violet-50 text-violet-600', modo: 'chamado',
     tipos: [
-      { value: 'DUVIDAS', label: 'Duvidas' },
-      { value: 'RECLAMACAO', label: 'Reclamacao' },
+      { value: 'DUVIDAS', label: 'Dúvidas' },
+      { value: 'RECLAMACAO', label: 'Reclamação' },
       { value: 'FINANCEIRO', label: 'Financeiro' },
       { value: 'OUTROS', label: 'Outros' },
     ],
@@ -85,13 +85,13 @@ export const SERVICOS_SAC: ServicoSac[] = [
     tipos: [{ value: 'SEGUNDA_VIA_BOLETO', label: '2a via de Boleto' }],
   },
   {
-    id: 'vistoria', titulo: 'Vistoria / Acessorios', descricao: 'Solicitar vistoria ou incluir acessorios',
+    id: 'vistoria', titulo: 'Vistoria / Acessórios', descricao: 'Solicitar vistoria ou incluir acessórios',
     icon: ClipboardCheck, cor: 'bg-amber-50 text-amber-600', modo: 'chamado',
-    tipos: [{ value: 'VISTORIA_ACESSORIOS', label: 'Vistoria / Acessorios' }],
+    tipos: [{ value: 'VISTORIA_ACESSORIOS', label: 'Vistoria / Acessórios' }],
     subtipos: ['Vistoria', 'Inclusao de acessorio'],
   },
   {
-    id: 'cancelamento', titulo: 'Cancelamento', descricao: 'Solicitacao de cancelamento do item',
+    id: 'cancelamento', titulo: 'Cancelamento', descricao: 'Solicitação de cancelamento do item',
     icon: ClipboardCheck, cor: 'bg-slate-100 text-slate-600', modo: 'chamado',
     tipos: [{ value: 'CANCELAMENTO', label: 'Cancelamento' }],
   },
@@ -100,15 +100,15 @@ export const SERVICOS_SAC: ServicoSac[] = [
 export const STATUS_ATENDIMENTO_LABEL: Record<StatusAtendimento, { label: string; cor: string }> = {
   ABERTO: { label: 'Aberto', cor: 'bg-cyan-50 text-cyan-700' },
   EM_ANDAMENTO: { label: 'Em andamento', cor: 'bg-amber-50 text-amber-700' },
-  CONCLUIDO: { label: 'Concluido', cor: 'bg-emerald-50 text-emerald-700' },
+  CONCLUIDO: { label: 'Concluído', cor: 'bg-emerald-50 text-emerald-700' },
   CANCELADO: { label: 'Cancelado', cor: 'bg-slate-100 text-slate-600' },
 };
 
 export const STATUS_EVENTO_LABEL: Record<StatusEvento, { label: string; cor: string }> = {
   ABERTO: { label: 'Aberto', cor: 'bg-cyan-50 text-cyan-700' },
-  EM_ANALISE: { label: 'Em analise', cor: 'bg-amber-50 text-amber-700' },
-  COTACAO_PECAS: { label: 'Cotacao de pecas', cor: 'bg-amber-50 text-amber-700' },
+  EM_ANALISE: { label: 'Em análise', cor: 'bg-amber-50 text-amber-700' },
+  COTACAO_PECAS: { label: 'Cotação de peças', cor: 'bg-amber-50 text-amber-700' },
   REPARO: { label: 'Em reparo', cor: 'bg-brand-50 text-brand-700' },
-  CONCLUIDO: { label: 'Concluido', cor: 'bg-emerald-50 text-emerald-700' },
+  CONCLUIDO: { label: 'Concluído', cor: 'bg-emerald-50 text-emerald-700' },
   NEGADO: { label: 'Negado', cor: 'bg-rose-50 text-rose-700' },
 };

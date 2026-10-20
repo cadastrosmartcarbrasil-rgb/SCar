@@ -38,8 +38,8 @@ export default function AlertasPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="max-w-2xl text-sm text-slate-500">
-          Alertas reutilizaveis (ex.: falta de documentos, atualizar cadastro). Depois de cadastrados,
-          podem ser vinculados a qualquer veiculo e abrem automaticamente no SAC.
+          Alertas reutilizáveis (ex.: falta de documentos, atualizar cadastro). Depois de cadastrados,
+          podem ser vinculados a qualquer veículo e abrem automaticamente no SAC.
         </p>
         <Button onClick={novo}><Plus className="h-4 w-4" /> Novo Alerta</Button>
       </div>
@@ -50,9 +50,9 @@ export default function AlertasPage() {
             <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
               <th className="px-4 py-2">Alerta</th>
               <th className="px-4 py-2">Severidade</th>
-              <th className="px-4 py-2">Descricao</th>
+              <th className="px-4 py-2">Descrição</th>
               <th className="px-4 py-2">Ativo</th>
-              <th className="px-4 py-2 text-right">Acoes</th>
+              <th className="px-4 py-2 text-right">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -81,11 +81,11 @@ export default function AlertasPage() {
           <FormField label="Severidade">
             <Select value={ed?.severidade ?? 'MEDIA'} onChange={(e) => setEd((p) => ({ ...p, severidade: e.target.value as SeveridadeAlerta }))}>
               <option value="ALTA">Alta</option>
-              <option value="MEDIA">Media</option>
+              <option value="MEDIA">Média</option>
               <option value="BAIXA">Baixa</option>
             </Select>
           </FormField>
-          <FormField label="Descricao">
+          <FormField label="Descrição">
             <Textarea rows={2} value={ed?.descricao ?? ''} onChange={(e) => setEd((p) => ({ ...p, descricao: e.target.value }))} />
           </FormField>
           <label className="flex items-center gap-2 text-sm text-slate-600">

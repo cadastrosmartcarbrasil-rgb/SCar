@@ -19,9 +19,9 @@ interface Hit {
 export async function GET(request: Request) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   const { data: perfil } = await supabase.from('usuarios').select('papel').eq('id', user.id).maybeSingle();
-  if (!perfil) return NextResponse.json({ error: 'Sem permissao' }, { status: 403 });
+  if (!perfil) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
 
   const q = (new URL(request.url).searchParams.get('q') ?? '').trim();
   if (q.length < 2) return NextResponse.json({ resultados: [] });

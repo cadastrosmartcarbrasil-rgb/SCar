@@ -20,9 +20,9 @@ export interface PeriodoPainel {
 export type PresetPainel = 'sete_dias' | 'trinta_dias' | 'mes' | 'ano';
 
 export const PRESETS_PAINEL: { chave: PresetPainel; rotulo: string }[] = [
-  { chave: 'sete_dias', rotulo: 'Ultimos 7 dias' },
-  { chave: 'trinta_dias', rotulo: 'Ultimos 30 dias' },
-  { chave: 'mes', rotulo: 'Mes atual' },
+  { chave: 'sete_dias', rotulo: 'Últimos 7 dias' },
+  { chave: 'trinta_dias', rotulo: 'Últimos 30 dias' },
+  { chave: 'mes', rotulo: 'Mês atual' },
   { chave: 'ano', rotulo: 'Ano atual' },
 ];
 
@@ -172,9 +172,9 @@ export function riscoRegional(l: Pick<RegionaisPainelLinha,
 }
 
 export const ROTULO_RISCO: Record<RiscoRegional, string> = {
-  critico: 'Critico',
-  atencao: 'Atencao',
-  saudavel: 'Saudavel',
+  critico: 'Crítico',
+  atencao: 'Atenção',
+  saudavel: 'Saudável',
   sem_dados: 'Sem carteira',
 };
 
@@ -222,8 +222,8 @@ export function contaValida(codigo: string): boolean {
 export function validarIntervaloContas(de: string, ate: string): string | null {
   const d = de.trim();
   const a = ate.trim();
-  if (d && !contaValida(d)) return `Conta inicial invalida: use apenas numeros e pontos (ex.: 1.0.00).`;
-  if (a && !contaValida(a)) return `Conta final invalida: use apenas numeros e pontos (ex.: 3.9.99).`;
+  if (d && !contaValida(d)) return `Conta inicial inválida: use apenas números e pontos (ex.: 1.0.00).`;
+  if (a && !contaValida(a)) return `Conta final inválida: use apenas números e pontos (ex.: 3.9.99).`;
   if (d && a && contaOrdenavel(d) > contaOrdenavel(a)) {
     return `A conta inicial (${d}) e maior que a final (${a}).`;
   }
@@ -234,5 +234,5 @@ export function validarIntervaloContas(de: string, ate: string): string | null {
 export function rotuloIntervalo(de: string | null, ate: string | null): string {
   if (!de && !ate) return 'Todas as contas';
   if (de && ate) return `${de} a ${ate}`;
-  return de ? `de ${de}` : `ate ${ate}`;
+  return de ? `de ${de}` : `até ${ate}`;
 }

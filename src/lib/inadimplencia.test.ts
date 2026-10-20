@@ -61,8 +61,8 @@ describe('inadimplencia do veiculo (0072)', () => {
     expect(avisoDeTolerancia(tolerancia({ status: 'inadimplente', status_desde: emDias(12) })))
       .toBe('Inativa em 8 dias');
     expect(avisoDeTolerancia(tolerancia({ status: 'inadimplente', status_desde: emDias(19) })))
-      .toBe('Inativa amanha');
+      .toBe('Inativa amanhã');
     expect(avisoDeTolerancia(tolerancia({ status: 'inadimplente', status_desde: emDias(30) })))
-      .toBe('Tolerancia vencida — sera inativado');
+      .toBe('Tolerância vencida — será inativado');
   });
 });

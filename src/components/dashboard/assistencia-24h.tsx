@@ -92,7 +92,7 @@ function Tendencia({ fracao }: { fracao: number | null }) {
   if (fracao === null || fracao === 0) {
     return (
       <span className="inline-flex items-center gap-1 text-[11.5px] font-medium text-slate-400">
-        <Minus className="h-3.5 w-3.5" /> estavel
+        <Minus className="h-3.5 w-3.5" /> estável
       </span>
     );
   }
@@ -100,7 +100,7 @@ function Tendencia({ fracao }: { fracao: number | null }) {
   const Icon = subiu ? TrendingUp : TrendingDown;
   return (
     <span className={`inline-flex items-center gap-1 text-[11.5px] font-semibold ${subiu ? 'text-rose-600' : 'text-emerald-600'}`}>
-      <Icon className="h-3.5 w-3.5" /> {formatPercent(Math.abs(fracao))} vs mes anterior
+      <Icon className="h-3.5 w-3.5" /> {formatPercent(Math.abs(fracao))} vs mês anterior
     </span>
   );
 }
@@ -116,14 +116,14 @@ function FrotaSituacao({ regionalId }: { regionalId: string | null }) {
   return (
     <Card>
       <CardHeader className="flex-row flex-wrap items-center justify-between gap-x-3">
-        <CardTitle>Frota por situacao</CardTitle>
+        <CardTitle>Frota por situação</CardTitle>
         <span className="tnum text-xs text-slate-400">{inteiro.format(total)} veiculos</span>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <div className="h-9 w-full animate-pulse rounded-lg bg-slate-100" />
         ) : total === 0 ? (
-          <p className="text-sm text-slate-400">Nenhum veiculo na carteira.</p>
+          <p className="text-sm text-slate-400">Nenhum veículo na carteira.</p>
         ) : (
           <>
             <div className="flex h-9 w-full gap-[2px] overflow-hidden rounded-lg">
@@ -166,12 +166,12 @@ function GraficoServicos({ periodo, regionalId }: { periodo: Periodo; regionalId
   return (
     <Card className="min-w-0">
       <CardHeader className="flex-row flex-wrap items-center justify-between gap-x-3">
-        <CardTitle>Servico acionado</CardTitle>
+        <CardTitle>Serviço acionado</CardTitle>
         {fatias.length > 0 && (
           <button
             type="button"
             onClick={() => baixarCsv('assistencia-servicos.csv', [
-              ['Servico', 'Acionamentos', 'Participacao', 'Veiculos', 'Custo', 'Veiculos no limite'],
+              ['Serviço', 'Acionamentos', 'Participação', 'Veículos', 'Custo', 'Veículos no limite'],
               ...fatias.map((f) => [f.servico, f.acionamentos, f.fracao, f.veiculos, f.custo, f.veiculos_no_limite]),
             ])}
             className="inline-flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-slate-700"
@@ -186,8 +186,8 @@ function GraficoServicos({ periodo, regionalId }: { periodo: Periodo; regionalId
         ) : fatias.length === 0 ? (
           <Vazio
             icon={LifeBuoy}
-            titulo="Sem acionamentos no periodo"
-            descricao="As OS abertas em Assistencia 24h aparecem aqui, agrupadas pelo servico do catalogo."
+            titulo="Sem acionamentos no período"
+            descricao="As OS abertas em Assistência 24h aparecem aqui, agrupadas pelo serviço do catálogo."
           />
         ) : (
           <>
@@ -227,7 +227,7 @@ function GraficoServicos({ periodo, regionalId }: { periodo: Periodo; regionalId
               <p className="mt-2 flex items-start gap-1.5 text-[11.5px] leading-tight text-rose-600">
                 <ShieldAlert className="mt-px h-3.5 w-3.5 shrink-0" />
                 <span>
-                  Em vermelho, servico com veiculo no teto do limite contratado:{' '}
+                  Em vermelho, serviço com veículo no teto do limite contratado:{' '}
                   {noTeto.map((f) => `${f.servico} (${f.veiculos_no_limite})`).join(' · ')}.
                 </span>
               </p>
@@ -251,16 +251,16 @@ function GraficoPracas({ periodo, regionalId }: { periodo: Periodo; regionalId: 
     <Card className="min-w-0">
       <CardHeader className="flex-row flex-wrap items-center justify-between gap-x-3">
         <div>
-          <CardTitle>Onde acontece — top pracas</CardTitle>
+          <CardTitle>Onde acontece — top praças</CardTitle>
           <p className="mt-0.5 text-[11.5px] text-slate-400">
-            A barra e a TAXA sobre a frota local (acionamentos / veiculos da praca), nao o volume.
+            A barra e a TAXA sobre a frota local (acionamentos / veículos da praça), não o volume.
           </p>
         </div>
         {linhas.length > 0 && (
           <button
             type="button"
             onClick={() => baixarCsv('assistencia-pracas.csv', [
-              ['Praca', 'Acionamentos', 'Frota', 'Taxa', 'Custo', 'Custo por veiculo'],
+              ['Praça', 'Acionamentos', 'Frota', 'Taxa', 'Custo', 'Custo por veículo'],
               ...linhas.map((l) => [l.rotulo, l.acionamentos, l.veiculos, l.taxa, l.custo, l.custoPorVeiculo]),
             ])}
             className="inline-flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-slate-700"
@@ -275,8 +275,8 @@ function GraficoPracas({ periodo, regionalId }: { periodo: Periodo; regionalId: 
         ) : linhas.length === 0 ? (
           <Vazio
             icon={MapPin}
-            titulo="Sem incidencia no periodo"
-            descricao="A praca vem do local de resgate da OS; sem ele, o sistema usa o endereco do associado."
+            titulo="Sem incidência no período"
+            descricao="A praça vem do local de resgate da OS; sem ele, o sistema usa o endereço do associado."
           />
         ) : (
           <ul className="divide-y divide-slate-100">
@@ -301,7 +301,7 @@ function GraficoPracas({ periodo, regionalId }: { periodo: Periodo; regionalId: 
                   <span className="tnum w-[136px] shrink-0 text-right text-[11px] text-slate-400">
                     {Number(l.veiculos) > 0
                       ? `${formatPercent(l.taxa)} de ${inteiro.format(Number(l.veiculos))} veic.`
-                      : 'frota nao mapeada'}
+                      : 'frota não mapeada'}
                   </span>
                 </div>
               </li>
@@ -332,9 +332,9 @@ function SerieMensal({ regionalId }: { regionalId: string | null }) {
     <Card>
       <CardHeader className="flex-row flex-wrap items-center justify-between gap-x-3">
         <div>
-          <CardTitle>Custo da assistencia — 12 meses</CardTitle>
+          <CardTitle>Custo da assistência — 12 meses</CardTitle>
           <p className="mt-0.5 text-[11.5px] text-slate-400">
-            O valor da OS que virou titulo no Contas a Pagar. O volume aparece no tooltip.
+            O valor da OS que virou título no Contas a Pagar. O volume aparece no tooltip.
           </p>
         </div>
         <Tendencia fracao={comparativo.varCusto} />
@@ -360,7 +360,7 @@ function SerieMensal({ regionalId }: { regionalId: string | null }) {
                   cursor={{ fill: 'rgba(30,43,77,0.04)' }}
                   formatter={(v: number, _n: string, p: { payload?: { acionamentos?: number } }) => [
                     `${formatCurrency(v)} · ${inteiro.format(p.payload?.acionamentos ?? 0)} acionamentos`,
-                    'Custo do mes',
+                    'Custo do mês',
                   ]}
                 />
                 <Bar dataKey="custo" radius={[4, 4, 0, 0]} maxBarSize={30}>
@@ -387,14 +387,14 @@ function Reincidencia({ periodo, regionalId }: { periodo: Periodo; regionalId: s
     <Card className="min-w-0">
       <CardHeader className="flex-row flex-wrap items-center justify-between gap-x-3">
         <div>
-          <CardTitle>Reincidencia — quem mais aciona</CardTitle>
-          <p className="mt-0.5 text-[11.5px] text-slate-400">Veiculos ordenados por acionamentos no periodo.</p>
+          <CardTitle>Reincidência — quem mais aciona</CardTitle>
+          <p className="mt-0.5 text-[11.5px] text-slate-400">Veículos ordenados por acionamentos no período.</p>
         </div>
         {(data?.length ?? 0) > 0 && (
           <button
             type="button"
             onClick={() => baixarCsv('assistencia-reincidencia.csv', [
-              ['Placa', 'Veiculo', 'Associado', 'Acionamentos', 'Custo', 'Ultimo uso'],
+              ['Placa', 'Veiculo', 'Associado', 'Acionamentos', 'Custo', 'Último uso'],
               ...(data ?? []).map((v) => [v.placa, v.descricao ?? '', v.associado, v.acionamentos, v.custo, formatDate(v.ultimo_uso)]),
             ])}
             className="inline-flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-slate-700"
@@ -408,7 +408,7 @@ function Reincidencia({ periodo, regionalId }: { periodo: Periodo; regionalId: s
           <div className="mx-6 h-40 animate-pulse rounded-xl bg-slate-100" />
         ) : (data?.length ?? 0) === 0 ? (
           <div className="px-6">
-            <Vazio icon={Repeat} titulo="Nenhuma reincidencia" descricao="Nenhum veiculo acionou a assistencia no periodo." />
+            <Vazio icon={Repeat} titulo="Nenhuma reincidência" descricao="Nenhum veículo acionou a assistência no período." />
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -419,7 +419,7 @@ function Reincidencia({ periodo, regionalId }: { periodo: Periodo; regionalId: s
                   <th className="px-2 py-2">Associado</th>
                   <th className="px-2 py-2 text-right">Acion.</th>
                   <th className="px-2 py-2 text-right">Custo</th>
-                  <th className="px-5 py-2 text-right">Ultimo</th>
+                  <th className="px-5 py-2 text-right">Último</th>
                 </tr>
               </thead>
               <tbody>
@@ -489,29 +489,29 @@ export function AssistenciaPainel() {
         <Tile
           titulo="Acionamentos"
           valor={inteiro.format(Number(r?.acionamentos ?? 0))}
-          detalhe={`Hoje: ${r?.acionamentos_hoje ?? 0} · media diaria ${Number(r?.media_diaria ?? 0).toFixed(2)}`}
+          detalhe={`Hoje: ${r?.acionamentos_hoje ?? 0} · média diária ${Number(r?.media_diaria ?? 0).toFixed(2)}`}
           icon={LifeBuoy} tom="cyan" carregando={isLoading}
         />
         <Tile
-          titulo="Custo no periodo"
+          titulo="Custo no período"
           valor={formatCurrency(Number(r?.custo_total ?? 0))}
-          detalhe={`Media de ${formatCurrency(Number(r?.custo_medio ?? 0))} por acionamento`}
+          detalhe={`Média de ${formatCurrency(Number(r?.custo_medio ?? 0))} por acionamento`}
           icon={Wallet} tom="navy" carregando={isLoading}
         />
         <Tile
-          titulo="Custo por veiculo ativo"
+          titulo="Custo por veículo ativo"
           valor={formatCurrency(Number(r?.custo_por_veiculo ?? 0))}
           detalhe="Quanto a 24h pesa em cada mensalidade"
           icon={Car} tom="rose" carregando={isLoading}
         />
         <Tile
-          titulo="Indice de acionamento"
+          titulo="Índice de acionamento"
           valor={formatPercent(Number(r?.indice_acionamento ?? 0))}
-          detalhe={`${inteiro.format(Number(r?.veiculos_acionaram ?? 0))} veiculos acionaram de ${inteiro.format(Number(r?.veiculos_ativos ?? 0))} ativos`}
+          detalhe={`${inteiro.format(Number(r?.veiculos_acionaram ?? 0))} veículos acionaram de ${inteiro.format(Number(r?.veiculos_ativos ?? 0))} ativos`}
           icon={Gauge} tom="amber" carregando={isLoading}
         />
         <Tile
-          titulo="Tempo medio"
+          titulo="Tempo médio"
           valor={formatarHoras(Number(r?.tempo_medio_horas ?? 0))}
           detalhe={`${r?.acionamentos_abertos ?? 0} OS ainda em andamento`}
           icon={Timer} tom="green" carregando={isLoading}
@@ -519,7 +519,7 @@ export function AssistenciaPainel() {
         <Tile
           titulo="Reincidentes"
           valor={inteiro.format(Number(r?.reincidentes ?? 0))}
-          detalhe="Veiculos com 2+ acionamentos no periodo"
+          detalhe="Veículos com 2+ acionamentos no período"
           icon={Repeat} tom="rose" carregando={isLoading}
         />
       </div>
@@ -537,7 +537,7 @@ export function AssistenciaPainel() {
 
       <p className="text-right">
         <Link href="/assistencia" className="inline-flex items-center gap-1 text-xs font-medium text-cyan-700 hover:text-cyan-800">
-          Abrir a operacao da Assistencia 24h <ArrowRight className="h-3.5 w-3.5" />
+          Abrir a operação da Assistência 24h <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </p>
     </div>

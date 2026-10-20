@@ -70,9 +70,9 @@ export default function ProdutosPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-slate-500">
-          Produtos/beneficios que compoem a mensalidade. Itens obrigatorios entram na cota base;
-          opcionais sao adicionais. Cada produto diz a quais <strong>tipos de veiculo</strong> se aplica:
-          a cotacao, a ficha e o preco so levam o que atende o tipo (sem parabrisa para moto).
+          Produtos/beneficios que compõem a mensalidade. Itens obrigatórios entram na cota base;
+          opcionais são adicionais. Cada produto diz a quais <strong>tipos de veículo</strong> se aplica:
+          a cotação, a ficha e o preço só levam o que atende o tipo (sem parabrisa para moto).
         </p>
         <Button onClick={novo}>
           <Plus className="h-4 w-4" /> Novo Produto
@@ -85,11 +85,11 @@ export default function ProdutosPage() {
             <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
               <th className="px-4 py-2">Produto</th>
               <th className="px-4 py-2">Categoria</th>
-              <th className="px-4 py-2">Tipos de veiculo</th>
+              <th className="px-4 py-2">Tipos de veículo</th>
               <th className="px-4 py-2">Fornecedor</th>
-              <th className="px-4 py-2">Preco</th>
+              <th className="px-4 py-2">Preço</th>
               <th className="px-4 py-2">Tipo</th>
-              <th className="px-4 py-2 text-right">Acoes</th>
+              <th className="px-4 py-2 text-right">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -161,15 +161,15 @@ export default function ProdutosPage() {
               <Input value={ed?.fornecedor_nome ?? ''} onChange={(e) => setEd((p) => ({ ...p, fornecedor_nome: e.target.value }))} />
             </FormField>
           </div>
-          <FormField label="O que cobre (aparece na ficha do veiculo, no SAC)">
+          <FormField label="O que cobre (aparece na ficha do veículo, no SAC)">
             <Textarea
               rows={3}
               value={ed?.descricao_cobertura ?? ''}
               onChange={(e) => setEd((p) => ({ ...p, descricao_cobertura: e.target.value }))}
-              placeholder="Ex.: parabrisa, vidros laterais e traseiro; 1 troca a cada 12 meses; participacao de R$ 150."
+              placeholder="Ex.: parabrisa, vidros laterais e traseiro; 1 troca a cada 12 meses; participação de R$ 150."
             />
           </FormField>
-          <FormField label="Metodo de preco">
+          <FormField label="Método de preço">
             <Select value={ed?.metodo_preco ?? 'FIXO'} onChange={(e) => setEd((p) => ({ ...p, metodo_preco: e.target.value as MetodoPreco }))}>
               {METODOS.map((m) => (
                 <option key={m.v} value={m.v}>
@@ -190,11 +190,11 @@ export default function ProdutosPage() {
           )}
           {ed?.metodo_preco === 'FAIXA_FIPE' && (
             <p className="rounded bg-sky-50 p-2 text-xs text-sky-700">
-              Os valores por faixa FIPE ficam na matriz de precos (importada da planilha).
+              Os valores por faixa FIPE ficam na matriz de preços (importada da planilha).
             </p>
           )}
           <div>
-            <p className="mb-1 text-sm font-medium text-slate-600">Tipos de veiculo atendidos</p>
+            <p className="mb-1 text-sm font-medium text-slate-600">Tipos de veículo atendidos</p>
             <div className="grid grid-cols-2 gap-1 rounded-lg border border-slate-200 p-2 sm:grid-cols-3">
               {(tipos ?? []).map((t) => (
                 <label key={t.id} className="flex items-center gap-2 rounded px-2 py-1 text-sm text-slate-700 hover:bg-slate-50">
@@ -211,7 +211,7 @@ export default function ProdutosPage() {
             <p className="mt-1 text-xs text-slate-500">
               {tiposSel.size === 0
                 ? 'Nenhum marcado: o produto vale para TODOS os tipos.'
-                : 'So os tipos marcados recebem este produto — na cotacao, no plano e na ficha do veiculo.'}
+                : 'Só os tipos marcados recebem este produto — na cotação, no plano e na ficha do veículo.'}
             </p>
           </div>
           {ed?.categoria === 'RASTREADOR' && (
@@ -225,8 +225,8 @@ export default function ProdutosPage() {
               <span>
                 <span className="font-medium text-slate-700">Rastreador opcional</span>
                 <span className="block text-xs text-slate-500">
-                  So e oferecido e cobrado quando o veiculo esta ABAIXO do minimo do tipo. Acima, a regra
-                  do tipo ja cobra o rastreador e este some. Nao marque o produto do plano RASTREAMENTO.
+                  Só é oferecido e cobrado quando o veículo está ABAIXO do mínimo do tipo. Acima, a regra
+                  do tipo já cobra o rastreador e este some. Não marque o produto do plano RASTREAMENTO.
                 </span>
               </span>
             </label>
@@ -234,7 +234,7 @@ export default function ProdutosPage() {
           <div className="flex items-center gap-6 pt-1">
             <label className="flex items-center gap-2 text-sm text-slate-600">
               <input type="checkbox" checked={ed?.obrigatorio ?? false} onChange={(e) => setEd((p) => ({ ...p, obrigatorio: e.target.checked }))} className="h-4 w-4 rounded border-slate-300" />
-              Item base (obrigatorio)
+              Item base (obrigatório)
             </label>
             <label className="flex items-center gap-2 text-sm text-slate-600">
               <input type="checkbox" checked={ed?.status ?? true} onChange={(e) => setEd((p) => ({ ...p, status: e.target.checked }))} className="h-4 w-4 rounded border-slate-300" />

@@ -4,19 +4,19 @@ import type { StatusEvento, TipoEvento, StatusTitulo, StatusVeiculo } from '@/li
 // Colunas do Kanban de eventos, na ordem do pipeline.
 export const PIPELINE_SINISTRO: { status: StatusEvento; titulo: string; cor: string }[] = [
   { status: 'ABERTO', titulo: 'Aberto', cor: 'bg-sky-100 text-sky-800 border-sky-200' },
-  { status: 'EM_ANALISE', titulo: 'Em Analise', cor: 'bg-amber-100 text-amber-800 border-amber-200' },
-  { status: 'COTACAO_PECAS', titulo: 'Cotacao de Pecas', cor: 'bg-violet-100 text-violet-800 border-violet-200' },
+  { status: 'EM_ANALISE', titulo: 'Em Análise', cor: 'bg-amber-100 text-amber-800 border-amber-200' },
+  { status: 'COTACAO_PECAS', titulo: 'Cotação de Peças', cor: 'bg-violet-100 text-violet-800 border-violet-200' },
   { status: 'REPARO', titulo: 'Em Reparo', cor: 'bg-blue-100 text-blue-800 border-blue-200' },
-  { status: 'CONCLUIDO', titulo: 'Concluido', cor: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+  { status: 'CONCLUIDO', titulo: 'Concluído', cor: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
   { status: 'NEGADO', titulo: 'Negado', cor: 'bg-rose-100 text-rose-800 border-rose-200' },
 ];
 
 export const TIPO_EVENTO_LABEL: Record<TipoEvento, string> = {
   ROUBO: 'Roubo',
   FURTO: 'Furto',
-  COLISAO: 'Colisao',
+  COLISAO: 'Colisão',
   TERCEIROS: 'Danos a Terceiros',
-  GUINCHO: 'Guincho / Assistencia',
+  GUINCHO: 'Guincho / Assistência',
 };
 
 export const STATUS_TITULO_LABEL: Record<StatusTitulo, { label: string; cor: string }> = {
@@ -31,7 +31,7 @@ export const STATUS_VEICULO_LABEL: Record<StatusVeiculo, string> = {
   suspenso: 'Suspenso',
   baixado: 'Baixado',
   inativo: 'Inativo',
-  excluido: 'Excluido',
+  excluido: 'Excluído',
   vistoria_pendente: 'Vistoria Pendente',
   em_evento: 'Em Evento',
   inadimplente: 'Inadimplente',

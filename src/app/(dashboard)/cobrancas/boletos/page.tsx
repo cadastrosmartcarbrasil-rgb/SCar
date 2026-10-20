@@ -12,7 +12,7 @@ export default function CobrancaPage() {
   const [aba, setAba] = useState<Aba>('visao');
   const abas: { id: Aba; label: string; icon: React.ElementType }[] = [
     { id: 'visao', label: 'Resumo dos boletos', icon: LayoutDashboard },
-    { id: 'faturas', label: 'Faturas por Competencia', icon: Receipt },
+    { id: 'faturas', label: 'Faturas por Competência', icon: Receipt },
     { id: 'lote', label: 'Boletagem em Lote', icon: Repeat },
   ];
 
@@ -21,7 +21,7 @@ export default function CobrancaPage() {
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Boletos e Remessas</h1>
         <p className="text-sm text-slate-500">
-          Mensalidades, emissao de boletos e acompanhamento da inadimplencia.
+          Mensalidades, emissão de boletos e acompanhamento da inadimplência.
         </p>
       </div>
 

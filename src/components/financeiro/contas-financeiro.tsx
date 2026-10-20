@@ -24,12 +24,12 @@ import { usePode } from '@/hooks/use-permissoes';
 
 const CAMPOS_DATA = [
   { valor: 'data_vencimento', rotulo: 'Vencimento' },
-  { valor: 'competencia', rotulo: 'Competencia' },
-  { valor: 'data_emissao', rotulo: 'Emissao' },
+  { valor: 'competencia', rotulo: 'Competência' },
+  { valor: 'data_emissao', rotulo: 'Emissão' },
 ] as const;
 
 const STATUS_FILTRO: { valor: StatusLancamento | ''; rotulo: string }[] = [
-  { valor: '', rotulo: 'Todas as situacoes' },
+  { valor: '', rotulo: 'Todas as situações' },
   { valor: 'pendente', rotulo: 'Pendente' },
   { valor: 'atrasado', rotulo: 'Em atraso' },
   { valor: 'pago_parcial', rotulo: 'Pago parcial' },
@@ -106,8 +106,8 @@ export function ContasFinanceiro() {
 
   function exportar() {
     baixarCsv(`contas-${periodo.inicio}-a-${periodo.fim}.csv`, [
-      ['Tipo', 'Documento', 'Descricao', 'Favorecido/Pagador', 'Categoria', 'Centro de custo',
-       'Emissao', 'Vencimento', 'Competencia', 'Valor', 'Pago', 'Saldo', 'Situacao'],
+      ['Tipo', 'Documento', 'Descrição', 'Favorecido/Pagador', 'Categoria', 'Centro de custo',
+       'Emissão', 'Vencimento', 'Competência', 'Valor', 'Pago', 'Saldo', 'Situação'],
       ...lista.map((l) => [
         l.tipo === 'RECEITA' ? 'A Receber' : 'A Pagar',
         l.numero_documento ?? '',
@@ -127,12 +127,12 @@ export function ContasFinanceiro() {
       {/* Painel do periodo */}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Indicador
-          titulo="A receber no periodo" valor={resumo?.previsto_receber} icon={ArrowUpCircle} tom="receita"
+          titulo="A receber no período" valor={resumo?.previsto_receber} icon={ArrowUpCircle} tom="receita"
           carregando={carregandoResumo}
           detalhe={`Recebido ${formatCurrency(resumo?.recebido)} · ${formatCurrency(resumo?.aberto_receber)} em aberto na carteira`}
         />
         <Indicador
-          titulo="A pagar no periodo" valor={resumo?.previsto_pagar} icon={ArrowDownCircle} tom="despesa"
+          titulo="A pagar no período" valor={resumo?.previsto_pagar} icon={ArrowDownCircle} tom="despesa"
           carregando={carregandoResumo}
           detalhe={`Pago ${formatCurrency(resumo?.pago)} · ${formatCurrency(resumo?.aberto_pagar)} em aberto na carteira`}
         />
@@ -140,12 +140,12 @@ export function ContasFinanceiro() {
           titulo="Resultado de caixa" valor={resumo?.saldo_realizado} icon={Scale}
           tom={(resumo?.saldo_realizado ?? 0) >= 0 ? 'receita' : 'despesa'}
           carregando={carregandoResumo}
-          detalhe="Entradas menos saidas efetivamente liquidadas no periodo"
+          detalhe="Entradas menos saídas efetivamente liquidadas no período"
         />
         <Indicador
           titulo="Inadimplencia" valor={resumo?.vencido_receber} icon={AlertTriangle} tom="alerta"
           carregando={carregandoResumo}
-          detalhe={`${resumo?.titulos_vencidos ?? 0} titulo(s) vencido(s) · ${inadimplencia.toFixed(1)}% da carteira a receber · ${formatCurrency(resumo?.vence_em_7_dias)} vence em 7 dias`}
+          detalhe={`${resumo?.titulos_vencidos ?? 0} título(s) vencido(s) · ${inadimplencia.toFixed(1)}% da carteira a receber · ${formatCurrency(resumo?.vence_em_7_dias)} vence em 7 dias`}
         />
       </div>
 
@@ -165,7 +165,7 @@ export function ContasFinanceiro() {
           )}
           {pode.criar && (
             <Button onClick={() => setEditando({ tipo: 'DESPESA' })}>
-              <Plus className="h-4 w-4" /> Novo lancamento
+              <Plus className="h-4 w-4" /> Novo lançamento
             </Button>
           )}
         </div>
@@ -205,7 +205,7 @@ export function ContasFinanceiro() {
           <input
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar descricao, documento ou favorecido"
+            placeholder="Buscar descrição, documento ou favorecido"
             className="w-72 rounded-lg border border-slate-300 py-1.5 pl-8 pr-3 text-sm focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
           />
         </div>
@@ -216,14 +216,14 @@ export function ContasFinanceiro() {
         <table className="w-full min-w-[1000px] text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-left text-[11px] uppercase tracking-wide text-slate-400">
-              <th className="px-4 py-2.5 font-semibold">Titulo</th>
+              <th className="px-4 py-2.5 font-semibold">Título</th>
               <th className="px-4 py-2.5 font-semibold">Favorecido / Pagador</th>
-              <th className="px-4 py-2.5 font-semibold">Classificacao</th>
+              <th className="px-4 py-2.5 font-semibold">Classificação</th>
               <th className="px-4 py-2.5 font-semibold">Vencimento</th>
               <th className="px-4 py-2.5 text-right font-semibold">Valor</th>
               <th className="px-4 py-2.5 text-right font-semibold">Saldo</th>
-              <th className="px-4 py-2.5 font-semibold">Situacao</th>
-              <th className="px-4 py-2.5 text-right font-semibold">Acoes</th>
+              <th className="px-4 py-2.5 font-semibold">Situação</th>
+              <th className="px-4 py-2.5 text-right font-semibold">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -298,12 +298,12 @@ export function ContasFinanceiro() {
                       )}
                       {pode.cancelar && l.status !== 'cancelado' && Number(l.valor_pago ?? 0) === 0 && (
                         <IconeAcao
-                          titulo="Cancelar titulo"
+                          titulo="Cancelar título"
                           classe="text-rose-600 hover:bg-rose-50"
                           onClick={() => {
-                            if (!confirm(`Cancelar o titulo "${l.descricao}"? Ele deixa de contar no DRE e no fluxo de caixa.`)) return;
+                            if (!confirm(`Cancelar o título "${l.descricao}"? Ele deixa de contar no DRE e no fluxo de caixa.`)) return;
                             cancelar.mutate(l.id, {
-                              onSuccess: () => toast.success('Titulo cancelado'),
+                              onSuccess: () => toast.success('Título cancelado'),
                               onError: (err) => toast.error(err.message),
                             });
                           }}
@@ -322,16 +322,16 @@ export function ContasFinanceiro() {
                 <td colSpan={8}>
                   <Vazio
                     icon={busca ? Search : FileSpreadsheet}
-                    titulo={busca ? 'Nenhum titulo para essa busca' : 'Nenhum titulo neste periodo'}
+                    titulo={busca ? 'Nenhum título para essa busca' : 'Nenhum título neste período'}
                     descricao={
                       busca
-                        ? 'Revise o termo pesquisado ou limpe os filtros de situacao, categoria e centro de custo.'
-                        : 'Amplie o periodo nos atalhos acima ou registre a primeira conta a pagar/receber deste mes.'
+                        ? 'Revise o termo pesquisado ou limpe os filtros de situação, categoria e centro de custo.'
+                        : 'Amplie o período nos atalhos acima ou registre a primeira conta a pagar/receber deste mês.'
                     }
                     acao={
                       !busca && pode.criar && (
                         <Button onClick={() => setEditando({ tipo: 'DESPESA' })}>
-                          <Plus className="h-4 w-4" /> Novo lancamento
+                          <Plus className="h-4 w-4" /> Novo lançamento
                         </Button>
                       )
                     }
@@ -346,7 +346,7 @@ export function ContasFinanceiro() {
               <tr className="border-t-2 border-slate-200 bg-slate-50/70 text-xs">
                 <td colSpan={4} className="px-4 py-3 font-semibold text-slate-600">
                   <Wallet className="mr-1.5 inline h-3.5 w-3.5 text-slate-400" />
-                  {lista.length} titulo(s) em tela
+                  {lista.length} título(s) em tela
                 </td>
                 <td className="tnum px-4 py-3 text-right">
                   <span className="block text-emerald-700">+{formatCurrency(totais.receber)}</span>

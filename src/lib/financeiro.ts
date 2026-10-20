@@ -174,7 +174,7 @@ export interface GrupoDre {
 
 export const ROTULO_GRUPO: Record<TipoCategoriaDre, string> = {
   RECEITA: '(+) Receita Bruta',
-  CUSTO_VARIAVEL: '(-) Custos Variaveis',
+  CUSTO_VARIAVEL: '(-) Custos Variáveis',
   DESPESA_FIXA: '(-) Despesas Fixas / Operacionais',
 };
 

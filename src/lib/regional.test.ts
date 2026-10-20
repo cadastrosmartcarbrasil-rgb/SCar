@@ -51,8 +51,8 @@ describe('opcoesParaFiltrar', () => {
 describe('pendenciasDaUnidade', () => {
   it('lista so o que tem contagem, no singular e no plural', () => {
     expect(pendenciasDaUnidade({ usuarios: 1, veiculos: 12, leads: 0 })).toEqual([
-      '1 usuario',
-      '12 veiculos',
+      '1 usuário',
+      '12 veículos',
     ]);
   });
 
@@ -76,13 +76,13 @@ describe('pendenciasDaUnidade', () => {
 describe('avisoDeInativacao', () => {
   it('diz explicitamente que o historico NAO some', () => {
     const texto = avisoDeInativacao('Cuiaba', { associados: 300, veiculos: 412 });
-    expect(texto).toContain('NAO e apagado');
+    expect(texto).toContain('NÃO é apagado');
     expect(texto).toContain('300 associados');
-    expect(texto).toContain('412 veiculos');
+    expect(texto).toContain('412 veículos');
   });
 
   it('unidade vazia recebe aviso curto', () => {
-    expect(avisoDeInativacao('Nova', {})).toContain('Nao ha nenhum registro vinculado');
+    expect(avisoDeInativacao('Nova', {})).toContain('Não há nenhum registro vinculado');
   });
 });
 
@@ -143,12 +143,12 @@ describe('avisoDeSituacaoVendedor', () => {
   it('inativar diz o que PARA e garante que nada e apagado', () => {
     const t = avisoDeSituacaoVendedor('Amanda', true);
     expect(t).toContain('Inativar');
-    expect(t).toContain('NAO sao apagados');
+    expect(t).toContain('NÃO são apagados');
   });
   it('ativar fala do hotlink e do rodizio', () => {
     const t = avisoDeSituacaoVendedor('Amanda', false);
     expect(t).toContain('Ativar');
-    expect(t).toContain('rodizio');
+    expect(t).toContain('rodízio');
   });
 });
 
@@ -166,8 +166,8 @@ describe('composicaoDaCarteira', () => {
   });
 
   it('unidade sem carteira diz isso, nao "0 ativos"', () => {
-    expect(composicaoDaCarteira({ veiculos_carteira: 0 })).toContain('Nenhum veiculo');
-    expect(composicaoDaCarteira(null)).toContain('Nenhum veiculo');
+    expect(composicaoDaCarteira({ veiculos_carteira: 0 })).toContain('Nenhum veículo');
+    expect(composicaoDaCarteira(null)).toContain('Nenhum veículo');
   });
 });
 

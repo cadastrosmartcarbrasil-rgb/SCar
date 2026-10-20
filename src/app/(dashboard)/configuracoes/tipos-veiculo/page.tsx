@@ -16,7 +16,7 @@ export default function TiposVeiculoPage() {
   return (
     <div className="max-w-xl space-y-4">
       <p className="text-sm text-slate-500">
-        Categorias de veiculo que determinam a matriz de precos (ex.: Passeio, Moto, Pick-up/Van,
+        Categorias de veículo que determinam a matriz de preços (ex.: Passeio, Moto, Pick-up/Van,
         Diesel Leve).
       </p>
       <div className="flex gap-2">

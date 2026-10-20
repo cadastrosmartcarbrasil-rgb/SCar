@@ -16,9 +16,9 @@ const PAPEIS_APROVACAO = ['admin', 'gestor_regional'];
 export async function POST(request: Request) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   const { data: perfil } = await supabase.from('usuarios').select('papel').eq('id', user.id).maybeSingle();
-  if (!perfil) return NextResponse.json({ error: 'Sem permissao' }, { status: 403 });
+  if (!perfil) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
 
   const body = (await request.json().catch(() => ({}))) as {
     cotacao_id?: string;
@@ -29,11 +29,11 @@ export async function POST(request: Request) {
   };
 
   if (!body.cotacao_id || body.percentual == null) {
-    return NextResponse.json({ error: 'Informe a cotacao e o percentual' }, { status: 400 });
+    return NextResponse.json({ error: 'Informe a cotação e o percentual' }, { status: 400 });
   }
   if (!body.email || !body.senha || !body.justificativa?.trim()) {
     return NextResponse.json(
-      { error: 'Informe e-mail, senha do gestor e a justificativa da excecao' },
+      { error: 'Informe e-mail, senha do gestor e a justificativa da exceção' },
       { status: 400 },
     );
   }
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     password: body.senha,
   });
   if (loginErr || !login.user) {
-    return NextResponse.json({ error: 'Credenciais do gestor invalidas' }, { status: 401 });
+    return NextResponse.json({ error: 'Credenciais do gestor inválidas' }, { status: 401 });
   }
 
   const { data: gestor } = await gestorClient
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
   if (!gestor || !PAPEIS_APROVACAO.includes(gestor.papel)) {
     await gestorClient.auth.signOut();
     return NextResponse.json(
-      { error: 'Este usuario nao tem alcada para aprovar desconto (Gestor/Diretor)' },
+      { error: 'Este usuário não tem alçada para aprovar desconto (Gestor/Diretor)' },
       { status: 403 },
     );
   }

@@ -46,7 +46,7 @@ export function ExtratoConciliacao({ contaInicial }: { contaInicial?: string | n
       </FiltroPeriodo>
 
       <div className="flex gap-1 rounded-lg bg-slate-100 p-1 text-sm sm:w-fit">
-        {([['extrato', 'Extrato'], ['conciliacao', 'Conciliacao OFX']] as const).map(([v, r]) => (
+        {([['extrato', 'Extrato'], ['conciliacao', 'Conciliação OFX']] as const).map(([v, r]) => (
           <button key={v} onClick={() => setVisao(v)}
             className={`rounded-md px-3 py-1.5 font-medium ${visao === v ? 'bg-superficie text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
             {r}
@@ -57,7 +57,7 @@ export function ExtratoConciliacao({ contaInicial }: { contaInicial?: string | n
       {visao === 'extrato' && <ExtratoTabela conta={conta} periodo={periodo} />}
       {visao === 'conciliacao' && (conta
         ? <Conciliacao conta={conta} periodo={periodo} />
-        : <Card><Vazio icon={Link2} titulo="Escolha uma conta" descricao="A conciliacao do OFX e feita conta por conta: escolha a conta bancaria no filtro acima." /></Card>)}
+        : <Card><Vazio icon={Link2} titulo="Escolha uma conta" descricao="A conciliação do OFX é feita conta por conta: escolha a conta bancária no filtro acima." /></Card>)}
     </div>
   );
 }
@@ -88,7 +88,7 @@ function ExtratoTabela({ conta, periodo }: { conta: string | null; periodo: Peri
   const tabela = () => ({
     titulo: `Extrato — ${nomeConta}`,
     subtitulo: `${dataBR(periodo.inicio)} a ${dataBR(periodo.fim)} · saldo anterior ${Number(saldoIni ?? anterior ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}${filtrado ? ' · com filtros' : ''}`,
-    cabecalho: ['Data', ...(conta ? [] : ['Conta']), 'Descricao', 'Contraparte', 'Documento', 'Plano de contas', 'Centro de custo', 'Entrada', 'Saida', 'Saldo', 'Conferido'],
+    cabecalho: ['Data', ...(conta ? [] : ['Conta']), 'Descrição', 'Contraparte', 'Documento', 'Plano de contas', 'Centro de custo', 'Entrada', 'Saída', 'Saldo', 'Conferido'],
     linhas: linhas.map((l) => [
       dataBR(l.data), ...(conta ? [] : [l.conta]), l.descricao ?? '', l.contraparte ?? '', l.documento ?? '',
       l.categoria_codigo ? `${l.categoria_codigo} ${l.categoria}` : '', l.centro_custo ?? '',
@@ -103,11 +103,11 @@ function ExtratoTabela({ conta, periodo }: { conta: string | null; periodo: Peri
       <CardHeader className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-wrap items-end gap-3">
           <label className="block">
-            <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Conferencia</span>
+            <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Conferência</span>
             <select className={SELECT_CLS} value={conciliacao} onChange={(e) => setConciliacao(e.target.value as typeof conciliacao)}>
               <option value="">Todos</option>
               <option value="CONCILIADO">Conciliados</option>
-              <option value="NAO_CONCILIADO">Nao conciliados</option>
+              <option value="NAO_CONCILIADO">Não conciliados</option>
             </select>
           </label>
           <label className="block">
@@ -126,23 +126,23 @@ function ExtratoTabela({ conta, periodo }: { conta: string | null; periodo: Peri
           </label>
           {!conta && (
             <label className="flex items-center gap-1.5 pb-2 text-sm text-slate-600">
-              <input type="checkbox" checked={transf} onChange={(e) => setTransf(e.target.checked)} /> Mostrar transferencias internas
+              <input type="checkbox" checked={transf} onChange={(e) => setTransf(e.target.checked)} /> Mostrar transferências internas
             </label>
           )}
         </div>
         <BotoesExportar nome={`extrato-${periodo.inicio}-${periodo.fim}`} tabela={tabela} desabilitado={!linhas.length} />
       </CardHeader>
       <CardContent className="overflow-x-auto p-0">
-        {error && <p className="px-4 py-3 text-sm text-rose-700">Nao foi possivel ler o extrato: {mensagemErro(error)}</p>}
+        {error && <p className="px-4 py-3 text-sm text-rose-700">Não foi possível ler o extrato: {mensagemErro(error)}</p>}
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
             <tr>
               <th className="px-3 py-2">Data</th>
               {!conta && <th className="px-3 py-2">Conta</th>}
-              <th className="px-3 py-2">Descricao</th>
+              <th className="px-3 py-2">Descrição</th>
               <th className="px-3 py-2">Plano / centro</th>
               <th className="px-3 py-2 text-right">Entrada</th>
-              <th className="px-3 py-2 text-right">Saida</th>
+              <th className="px-3 py-2 text-right">Saída</th>
               <th className="px-3 py-2 text-right">Saldo</th>
               <th className="px-3 py-2" />
             </tr>
@@ -155,7 +155,7 @@ function ExtratoTabela({ conta, periodo }: { conta: string | null; periodo: Peri
             </tr>
             {isLoading && <tr><td colSpan={8} className="px-3 py-6 text-center text-slate-400">Carregando...</td></tr>}
             {!isLoading && !linhas.length && (
-              <tr><td colSpan={8} className="px-3 py-8 text-center text-sm text-slate-500">Nenhum movimento no periodo.</td></tr>
+              <tr><td colSpan={8} className="px-3 py-8 text-center text-sm text-slate-500">Nenhum movimento no período.</td></tr>
             )}
             {linhas.map((l) => (
               <tr key={`${l.origem}-${l.ref_id}-${l.conta_id}`}>
@@ -172,7 +172,7 @@ function ExtratoTabela({ conta, periodo }: { conta: string | null; periodo: Peri
                 <td className="px-3 py-2 text-right">{Number(l.entrada) ? <Dinheiro v={l.entrada} /> : ''}</td>
                 <td className="px-3 py-2 text-right">{Number(l.saida) ? <Dinheiro v={-Number(l.saida)} /> : ''}</td>
                 <td className="px-3 py-2 text-right">{l.saldo === null ? '' : <Dinheiro v={l.saldo} />}</td>
-                <td className="px-3 py-2 text-center" title={l.conciliado ? 'Conferido com o extrato do banco' : 'Ainda nao conferido com o extrato'}>
+                <td className="px-3 py-2 text-center" title={l.conciliado ? 'Conferido com o extrato do banco' : 'Ainda não conferido com o extrato'}>
                   {l.conciliado ? <CheckCircle2 className="mx-auto h-4 w-4 text-emerald-600" /> : <span className="text-xs text-slate-300">·</span>}
                 </td>
               </tr>
@@ -183,7 +183,7 @@ function ExtratoTabela({ conta, periodo }: { conta: string | null; periodo: Peri
               <td className="px-3 py-2 font-semibold" colSpan={conta ? 3 : 4}>Totais{filtrado ? ' (das linhas filtradas)' : ''}</td>
               <td className="px-3 py-2 text-right"><Dinheiro v={tEnt} forte /></td>
               <td className="px-3 py-2 text-right"><Dinheiro v={-tSai} forte /></td>
-              <td className="px-3 py-2 text-right" title="Saldo real no fim do periodo"><Dinheiro v={saldoFim ?? 0} forte /></td>
+              <td className="px-3 py-2 text-right" title="Saldo real no fim do período"><Dinheiro v={saldoFim ?? 0} forte /></td>
               <td />
             </tr>
           </tfoot>
@@ -198,7 +198,7 @@ function ExtratoTabela({ conta, periodo }: { conta: string | null; periodo: Peri
 
 const FILTROS: { v: string; r: string }[] = [
   { v: 'abertos', r: 'A conciliar' },
-  { v: 'SUGERIDO', r: 'Sugestoes' },
+  { v: 'SUGERIDO', r: 'Sugestões' },
   { v: 'CONCILIADO', r: 'Conciliados' },
   { v: 'IGNORADO', r: 'Ignorados' },
   { v: '', r: 'Todos' },
@@ -247,17 +247,17 @@ function Conciliacao({ conta, periodo }: { conta: string; periodo: Periodo }) {
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" disabled={reclassificar.isPending}
               onClick={() => reclassificar.mutate(conta, {
-                onSuccess: (r) => setAviso(`Regras reaplicadas: ${r.sugeridos} sugestao(oes) nova(s), ${r.ignorados} ignorado(s).`),
+                onSuccess: (r) => setAviso(`Regras reaplicadas: ${r.sugeridos} sugestão(oes) nova(s), ${r.ignorados} ignorado(s).`),
                 onError: (e) => alert(mensagemErro(e)),
               })}>
               <RefreshCw className="h-4 w-4" /> Reaplicar regras
             </Button>
             <Button disabled={!resumo.SUGERIDO || confirmar.isPending}
               onClick={() => {
-                if (!confirm(`Confirmar as ${resumo.SUGERIDO} sugestoes de conciliacao? Cada item do extrato fica ligado ao movimento sugerido; o saldo nao muda.`)) return;
+                if (!confirm(`Confirmar as ${resumo.SUGERIDO} sugestões de conciliação? Cada item do extrato fica ligado ao movimento sugerido; o saldo não muda.`)) return;
                 confirmar.mutate({ conta }, { onSuccess: (n) => setAviso(`${n} item(ns) conciliado(s).`), onError: (e) => alert(mensagemErro(e)) });
               }}>
-              <CheckCheck className="h-4 w-4" /> Confirmar sugestoes ({resumo.SUGERIDO})
+              <CheckCheck className="h-4 w-4" /> Confirmar sugestões ({resumo.SUGERIDO})
             </Button>
           </div>
         </CardHeader>
@@ -266,9 +266,9 @@ function Conciliacao({ conta, periodo }: { conta: string; periodo: Periodo }) {
             <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-3 py-2">Data</th>
-                <th className="px-3 py-2">Historico do banco</th>
+                <th className="px-3 py-2">Histórico do banco</th>
                 <th className="px-3 py-2 text-right">Valor</th>
-                <th className="px-3 py-2">Situacao</th>
+                <th className="px-3 py-2">Situação</th>
                 <th className="px-3 py-2" />
               </tr>
             </thead>
@@ -276,7 +276,7 @@ function Conciliacao({ conta, periodo }: { conta: string; periodo: Periodo }) {
               {isLoading && <tr><td colSpan={5} className="px-3 py-6 text-center text-slate-400">Carregando...</td></tr>}
               {!isLoading && !lista.length && (
                 <tr><td colSpan={5} className="px-3 py-8 text-center text-sm text-slate-500">
-                  {todos.length ? 'Nada nesta situacao.' : 'Nenhum extrato importado neste periodo. Envie o OFX acima.'}
+                  {todos.length ? 'Nada nesta situação.' : 'Nenhum extrato importado neste período. Envie o OFX acima.'}
                 </td></tr>
               )}
               {lista.map((i) => (
@@ -308,7 +308,7 @@ function Conciliacao({ conta, periodo }: { conta: string; periodo: Periodo }) {
                       {(i.situacao === 'CONCILIADO' || i.situacao === 'IGNORADO') && (
                         <button className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100" title="Desfazer (volta para a conciliar)"
                           onClick={() => {
-                            if (!confirm('Voltar este item para "a conciliar"? Se a conciliacao criou um lancamento, ele continua no financeiro.')) return;
+                            if (!confirm('Voltar este item para "a conciliar"? Se a conciliação criou um lançamento, ele continua no financeiro.')) return;
                             desfazer.mutate(i.id, { onError: (e) => alert(mensagemErro(e)) });
                           }}>
                           <Undo2 className="h-4 w-4" />
@@ -334,7 +334,7 @@ function Conciliacao({ conta, periodo }: { conta: string; periodo: Periodo }) {
                     <td className="px-3 py-2 tnum">{new Date(m.created_at).toLocaleString('pt-BR')}</td>
                     <td className="px-3 py-2">{m.arquivo_nome}</td>
                     <td className="px-3 py-2">{dataBR(m.data_inicio)} a {dataBR(m.data_fim)}</td>
-                    <td className="px-3 py-2">{m.itens} lidos · {m.novos} novos · {m.repetidos} ja importados · {m.sugeridos} sugestoes · {m.ignorados} ignorados</td>
+                    <td className="px-3 py-2">{m.itens} lidos · {m.novos} novos · {m.repetidos} já importados · {m.sugeridos} sugestões · {m.ignorados} ignorados</td>
                     <td className="px-3 py-2 text-right">{m.saldo_banco === null ? '' : <>saldo do banco <Dinheiro v={m.saldo_banco} /> em {dataBR(m.saldo_banco_em)}</>}</td>
                   </tr>
                 ))}
@@ -372,7 +372,7 @@ function ImportarOfx({ conta, onImportado }: { conta: string; onImportado: (msg:
     setErro('');
     const bytes = await f.arrayBuffer();
     const ex = interpretarOfx(decodificarOfx(bytes));
-    if (!ex.itens.length) { setErro(ex.avisos.join(' ') || 'Nenhum lancamento no arquivo.'); setArquivo(null); return; }
+    if (!ex.itens.length) { setErro(ex.avisos.join(' ') || 'Nenhum lançamento no arquivo.'); setArquivo(null); return; }
     setArquivo({ nome: f.name, hash: await hashArquivo(bytes), ex });
   };
 
@@ -387,9 +387,9 @@ function ImportarOfx({ conta, onImportado }: { conta: string; onImportado: (msg:
       <CardContent className="space-y-3 text-sm">
         {!arquivo && !erro && (
           <p className="text-slate-500">
-            Baixe o extrato no internet banking em formato OFX e envie aqui. Reenviar o mesmo arquivo (ou periodos que se
-            sobrepoem) nao duplica nada: cada lancamento do banco entra uma vez so. O extrato nao muda o saldo — ele confere
-            o que ja foi registrado.
+            Baixe o extrato no internet banking em formato OFX e envie aqui. Reenviar o mesmo arquivo (ou períodos que se
+            sobrepõem) não duplica nada: cada lançamento do banco entra uma vez só. O extrato não muda o saldo — ele confere
+            o que já foi registrado.
           </p>
         )}
         {erro && <p className="text-rose-700">{erro}</p>}
@@ -397,15 +397,15 @@ function ImportarOfx({ conta, onImportado }: { conta: string; onImportado: (msg:
           <>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div><p className="text-xs text-slate-500">Arquivo</p><p className="truncate font-medium">{arquivo.nome}</p></div>
-              <div><p className="text-xs text-slate-500">Periodo</p><p className="tnum">{dataBR(arquivo.ex.dataInicio)} a {dataBR(arquivo.ex.dataFim)}</p></div>
-              <div><p className="text-xs text-slate-500">{res.qtdCreditos} creditos / {res.qtdDebitos} debitos</p>
+              <div><p className="text-xs text-slate-500">Período</p><p className="tnum">{dataBR(arquivo.ex.dataInicio)} a {dataBR(arquivo.ex.dataFim)}</p></div>
+              <div><p className="text-xs text-slate-500">{res.qtdCreditos} créditos / {res.qtdDebitos} débitos</p>
                 <p><Dinheiro v={res.creditos} /> / <Dinheiro v={-res.debitos} /></p></div>
               <div><p className="text-xs text-slate-500">Saldo do banco</p>
                 <p>{arquivo.ex.saldo === null ? '—' : <><Dinheiro v={arquivo.ex.saldo} forte /> em {dataBR(arquivo.ex.saldoEm)}</>}</p></div>
             </div>
             {confere === false && (
               <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-rose-800">
-                A conta do arquivo ({arquivo.ex.conta}) nao parece ser a conta escolhida ({cad?.nome} {cad?.conta ?? ''}). Confira antes de importar.
+                A conta do arquivo ({arquivo.ex.conta}) não parece ser a conta escolhida ({cad?.nome} {cad?.conta ?? ''}). Confira antes de importar.
               </p>
             )}
             {arquivo.ex.avisos.map((a) => <p key={a} className="text-amber-700">{a}</p>)}
@@ -418,12 +418,12 @@ function ImportarOfx({ conta, onImportado }: { conta: string; onImportado: (msg:
                 onSuccess: (r) => {
                   setArquivo(null);
                   onImportado(r
-                    ? `Importado: ${r.novos} novo(s), ${r.repetidos} ja importado(s), ${r.sugeridos} com sugestao de conciliacao, ${r.ignorados} ignorado(s) pela regra de mensalidade.`
+                    ? `Importado: ${r.novos} novo(s), ${r.repetidos} já importado(s), ${r.sugeridos} com sugestão de conciliação, ${r.ignorados} ignorado(s) pela regra de mensalidade.`
                     : 'Importado.');
                 },
                 onError: (e) => setErro(mensagemErro(e)),
               })}>
-                <Upload className="h-4 w-4" /> {importar.isPending ? 'Importando...' : `Importar ${arquivo.ex.itens.length} lancamento(s)`}
+                <Upload className="h-4 w-4" /> {importar.isPending ? 'Importando...' : `Importar ${arquivo.ex.itens.length} lançamento(s)`}
               </Button>
             </div>
           </>
@@ -462,7 +462,7 @@ function ModalConciliar({ item, onClose }: { item: ExtratoItensRow; onClose: () 
     <Modal open onClose={onClose} tamanho="lg" title="Conciliar item do extrato"
       subtitulo={`${dataBR(item.data)} · ${item.historico ?? ''} · ${credito ? 'credito' : 'debito'} de ${Math.abs(item.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}>
       <div className="mb-4 flex flex-wrap gap-1 border-b border-slate-200">
-        {([['existente', 'Movimento ja registrado'], ['criar', 'Criar lancamento'], ['transferencia', 'Transferencia'], ['ignorar', 'Ignorar']] as const).map(([v, r]) => (
+        {([['existente', 'Movimento já registrado'], ['criar', 'Criar lançamento'], ['transferencia', 'Transferência'], ['ignorar', 'Ignorar']] as const).map(([v, r]) => (
           <button key={v} onClick={() => { setAba(v); setErro(''); }}
             className={`border-b-2 px-3 py-2 text-sm ${aba === v ? 'border-cyan-500 font-semibold text-brand-700' : 'border-transparent text-slate-500'}`}>{r}</button>
         ))}
@@ -470,23 +470,23 @@ function ModalConciliar({ item, onClose }: { item: ExtratoItensRow; onClose: () 
 
       {aba === 'existente' && (
         <div className="space-y-2">
-          <p className="text-xs text-slate-500">Baixas, lancamentos em aberto e transferencias desta conta com data proxima. O mesmo valor aparece primeiro.</p>
+          <p className="text-xs text-slate-500">Baixas, lançamentos em aberto e transferências desta conta com data próxima. O mesmo valor aparece primeiro.</p>
           {isLoading && <p className="text-sm text-slate-400">Procurando...</p>}
-          {!isLoading && !candidatos?.length && <p className="text-sm text-slate-500">Nenhum movimento parecido. Use &ldquo;Criar lancamento&rdquo; ou &ldquo;Transferencia&rdquo;.</p>}
+          {!isLoading && !candidatos?.length && <p className="text-sm text-slate-500">Nenhum movimento parecido. Use &ldquo;Criar lançamento&rdquo; ou &ldquo;Transferência&rdquo;.</p>}
           <div className="max-h-80 divide-y divide-slate-100 overflow-y-auto rounded-lg border border-slate-200">
             {(candidatos ?? []).map((c) => (
               <div key={`${c.tipo}-${c.ref_id}`} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
                 <div className="min-w-0">
                   <p className="truncate text-slate-800">{c.descricao}</p>
                   <p className="text-xs text-slate-500">
-                    {c.tipo === 'BAIXA' ? 'Ja baixado' : c.tipo === 'LANCAMENTO' ? 'Em aberto (sera baixado com este item)' : 'Transferencia'} ·
-                    {' '}{dataBR(c.data)}{c.contraparte ? ` · ${c.contraparte}` : ''}{c.dias ? ` · ${c.dias} dia(s) de diferenca` : ''}
+                    {c.tipo === 'BAIXA' ? 'Já baixado' : c.tipo === 'LANCAMENTO' ? 'Em aberto (será baixado com este item)' : 'Transferência'} ·
+                    {' '}{dataBR(c.data)}{c.contraparte ? ` · ${c.contraparte}` : ''}{c.dias ? ` · ${c.dias} dia(s) de diferença` : ''}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <span className={c.valor_igual ? '' : 'text-amber-700'}><Dinheiro v={c.valor} /></span>
                   <Button disabled={conciliar.isPending} onClick={() => {
-                    if (!c.valor_igual && c.tipo !== 'LANCAMENTO') { setErro('O valor e diferente do extrato: so lancamento em aberto pode ser baixado parcialmente.'); return; }
+                    if (!c.valor_igual && c.tipo !== 'LANCAMENTO') { setErro('O valor é diferente do extrato: só lançamento em aberto pode ser baixado parcialmente.'); return; }
                     conciliar.mutate({ item: item.id, tipo: c.tipo, ref: c.ref_id }, { onSuccess: ok, onError: falha });
                   }}>Usar</Button>
                 </div>
@@ -503,10 +503,10 @@ function ModalConciliar({ item, onClose }: { item: ExtratoItensRow; onClose: () 
           criar.mutate({ item: item.id, descricao, categoria, centro: centro || null, fornecedor: fornecedor || null }, { onSuccess: ok, onError: falha });
         }}>
           <p className="text-xs text-slate-500">
-            Para o que nao tem lancamento: tarifa, rendimento, pagamento sem titulo. Cria o {credito ? 'recebimento' : 'pagamento'} ja
+            Para o que não tem lançamento: tarifa, rendimento, pagamento sem título. Cria o {credito ? 'recebimento' : 'pagamento'} já
             quitado nesta conta, nesta data, e ele entra no DRE.
           </p>
-          <FormField label="Descricao"><Input value={descricao} onChange={(e) => setDescricao(e.target.value)} /></FormField>
+          <FormField label="Descrição"><Input value={descricao} onChange={(e) => setDescricao(e.target.value)} /></FormField>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <FormField label="Plano de contas">
               <Select value={categoria} onChange={(e) => setCategoria(e.target.value)}>
@@ -540,8 +540,8 @@ function ModalConciliar({ item, onClose }: { item: ExtratoItensRow; onClose: () 
           transf.mutate({ item: item.id, outraConta: outra, descricao }, { onSuccess: ok, onError: falha });
         }}>
           <p className="text-xs text-slate-500">
-            Dinheiro entre contas proprias. Registra a transferencia {credito ? 'vinda da' : 'para a'} conta escolhida e concilia este item;
-            no extrato da outra conta o lancamento correspondente aparece como sugestao.
+            Dinheiro entre contas próprias. Registra a transferência {credito ? 'vinda da' : 'para a'} conta escolhida e concilia este item;
+            no extrato da outra conta o lançamento correspondente aparece como sugestão.
           </p>
           <FormField label={credito ? 'Veio da conta' : 'Foi para a conta'}>
             <Select value={outra} onChange={(e) => setOutra(e.target.value)}>
@@ -549,8 +549,8 @@ function ModalConciliar({ item, onClose }: { item: ExtratoItensRow; onClose: () 
               {(contas ?? []).filter((c) => c.id !== item.conta_id && c.ativo).map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
             </Select>
           </FormField>
-          <FormField label="Descricao"><Input value={descricao} onChange={(e) => setDescricao(e.target.value)} /></FormField>
-          <div className="flex justify-end"><Button type="submit" disabled={transf.isPending}>Registrar transferencia</Button></div>
+          <FormField label="Descrição"><Input value={descricao} onChange={(e) => setDescricao(e.target.value)} /></FormField>
+          <div className="flex justify-end"><Button type="submit" disabled={transf.isPending}>Registrar transferência</Button></div>
         </form>
       )}
 
@@ -560,10 +560,10 @@ function ModalConciliar({ item, onClose }: { item: ExtratoItensRow; onClose: () 
           ignorar.mutate({ item: item.id, motivo }, { onSuccess: ok, onError: falha });
         }}>
           <p className="text-xs text-slate-500">
-            Ignorar nao lanca nada: use para o que ja esta registrado de outro jeito (por exemplo, o credito somado das
-            mensalidades que o banco ja baixou uma a uma).
+            Ignorar não lança nada: use para o que já está registrado de outro jeito (por exemplo, o crédito somado das
+            mensalidades que o banco já baixou uma a uma).
           </p>
-          <FormField label="Motivo"><Input value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Ex.: credito somado das mensalidades do dia" /></FormField>
+          <FormField label="Motivo"><Input value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Ex.: crédito somado das mensalidades do dia" /></FormField>
           <div className="flex justify-end"><Button type="submit" variant="secondary" disabled={ignorar.isPending || !motivo.trim()}>Ignorar</Button></div>
         </form>
       )}

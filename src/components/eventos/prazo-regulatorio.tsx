@@ -135,7 +135,7 @@ export function CartaoPrazoEvento({ eventoId, onVerDocumentos }: { eventoId: str
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Prazo regulatorio · Art. 22 (CNSP 491/2026)
+              Prazo regulatório · Art. 22 (CNSP 491/2026)
             </p>
             <p className="mt-0.5 text-sm font-medium text-slate-800">{textoDoPrazo(prazo)}</p>
           </div>
@@ -150,20 +150,20 @@ export function CartaoPrazoEvento({ eventoId, onVerDocumentos }: { eventoId: str
             <dd className="tnum text-slate-800">{formatDate(prazo.aviso_em)}</dd>
           </div>
           <div>
-            <dt className="text-xs text-slate-500">Documentacao</dt>
+            <dt className="text-xs text-slate-500">Documentação</dt>
             <dd className={cn('font-medium', docCompleta ? 'text-emerald-700' : 'text-amber-700')}>
               {docCompleta ? (
                 <>
                   Completa em {formatDate(prazo.documentacao_completa_em)}
                   <span className="block text-[11px] font-normal text-slate-500">
-                    {prazo.documentacao_origem === 'MANUAL' ? 'marcada a mao' : 'pela entrega do ultimo documento'}
+                    {prazo.documentacao_origem === 'MANUAL' ? 'marcada a mão' : 'pela entrega do último documento'}
                   </span>
                 </>
               ) : (
                 <>
                   Pendente
                   <span className="block text-[11px] font-normal text-slate-500">
-                    {prazo.docs_pendentes} de {prazo.docs_obrigatorios} obrigatorio(s) faltando
+                    {prazo.docs_pendentes} de {prazo.docs_obrigatorios} obrigatório(s) faltando
                   </span>
                 </>
               )}
@@ -172,7 +172,7 @@ export function CartaoPrazoEvento({ eventoId, onVerDocumentos }: { eventoId: str
           <div>
             <dt className="text-xs text-slate-500">Dias transcorridos</dt>
             <dd className="tnum text-slate-800">
-              {prazo.dias_transcorridos != null ? `${prazo.dias_transcorridos} de ${PRAZO_REGULATORIO_DIAS}` : '— (nao iniciado)'}
+              {prazo.dias_transcorridos != null ? `${prazo.dias_transcorridos} de ${PRAZO_REGULATORIO_DIAS}` : '— (não iniciado)'}
             </dd>
           </div>
           <div>
@@ -187,18 +187,18 @@ export function CartaoPrazoEvento({ eventoId, onVerDocumentos }: { eventoId: str
 
         {prazo.nivel === 'VENCIDO' && (
           <p className="rounded-md border border-rose-300 bg-rose-50 p-2 text-xs font-medium text-rose-800">
-            O prazo de 90 dias venceu: a associacao perdeu o direito de recusar a cobertura deste evento. Negar o evento agora
-            so pela diretoria, e fica registrado como recusa fora do prazo.
+            O prazo de 90 dias venceu: a associação perdeu o direito de recusar a cobertura deste evento. Negar o evento agora
+            só pela diretoria, e fica registrado como recusa fora do prazo.
           </p>
         )}
         {prazo.recusa_fora_do_prazo && (
           <p className="rounded-md border border-rose-300 bg-rose-50 p-2 text-xs font-medium text-rose-800">
-            Evento negado com o prazo regulatorio vencido.
+            Evento negado com o prazo regulatório vencido.
           </p>
         )}
         {prazo.docs_complementares > 0 && (
           <p className="text-xs text-amber-700">
-            {prazo.docs_complementares} documento(s) complementar(es) pedido(s) depois do inicio do prazo — o relogio NAO para.
+            {prazo.docs_complementares} documento(s) complementar(es) pedido(s) depois do início do prazo — o relógio NÃO para.
           </p>
         )}
 
@@ -209,12 +209,12 @@ export function CartaoPrazoEvento({ eventoId, onVerDocumentos }: { eventoId: str
               disabled={ciencia.isPending}
               onClick={() =>
                 ciencia.mutate(eventoId, {
-                  onSuccess: (n) => toast.success(`Ciencia registrada em ${n} alerta(s).`),
+                  onSuccess: (n) => toast.success(`Ciência registrada em ${n} alerta(s).`),
                   onError: (er) => toast.error((er as Error).message),
                 })
               }
             >
-              <BellRing className="h-4 w-4" /> Dar ciencia do alerta de {rotuloMarco(prazo.maior_marco_sem_ciencia ?? 0)}
+              <BellRing className="h-4 w-4" /> Dar ciência do alerta de {rotuloMarco(prazo.maior_marco_sem_ciencia ?? 0)}
             </Button>
           )}
           {onVerDocumentos && (
@@ -224,12 +224,12 @@ export function CartaoPrazoEvento({ eventoId, onVerDocumentos }: { eventoId: str
           )}
           {!docCompleta && podeTratar && !prazo.encerrado_em && (
             <Button variant="secondary" onClick={() => setMarcar(true)}>
-              <FileCheck2 className="h-4 w-4" /> Marcar documentacao completa
+              <FileCheck2 className="h-4 w-4" /> Marcar documentação completa
             </Button>
           )}
           {docCompleta && global && (
             <Button variant="ghost" onClick={() => setReabrir(true)}>
-              <RotateCcw className="h-4 w-4" /> Reabrir documentacao
+              <RotateCcw className="h-4 w-4" /> Reabrir documentação
             </Button>
           )}
         </div>
@@ -246,16 +246,16 @@ function ModalMarcarCompleta({ eventoId, aviso, open, onClose }: { eventoId: str
   const [data, setData] = useState(hoje);
   const [obs, setObs] = useState('');
   return (
-    <Modal open={open} onClose={onClose} title="Documentacao completa" subtitulo="A partir desta data correm os 90 dias.">
+    <Modal open={open} onClose={onClose} title="Documentação completa" subtitulo="A partir desta data correm os 90 dias.">
       <div className="space-y-3">
         <p className="text-sm text-slate-600">
-          Use quando a documentacao exigida foi entregue fora do checklist. Informe o dia em que a ULTIMA peca chegou —
-          e a data que a norma conta, nao a de hoje.
+          Use quando a documentação exigida foi entregue fora do checklist. Informe o dia em que a ÚLTIMA peça chegou —
+          e a data que a norma conta, não a de hoje.
         </p>
         <FormField label="Entregue completa em">
           <Input type="date" value={data} min={aviso} max={hoje} onChange={(e) => setData(e.target.value)} />
         </FormField>
-        <FormField label="Observacao (opcional)">
+        <FormField label="Observação (opcional)">
           <Textarea rows={2} value={obs} onChange={(e) => setObs(e.target.value)} />
         </FormField>
         <div className="flex justify-end gap-2">
@@ -267,7 +267,7 @@ function ModalMarcarCompleta({ eventoId, aviso, open, onClose }: { eventoId: str
                 { eventoId, data, observacao: obs },
                 {
                   onSuccess: () => {
-                    toast.success('Documentacao completa — o prazo de 90 dias comecou a correr.');
+                    toast.success('Documentação completa — o prazo de 90 dias começou a correr.');
                     onClose();
                   },
                   onError: (er) => toast.error((er as Error).message),
@@ -287,10 +287,10 @@ function ModalReabrir({ eventoId, open, onClose }: { eventoId: string; open: boo
   const reabrir = useReabrirDocumentacao();
   const [motivo, setMotivo] = useState('');
   return (
-    <Modal open={open} onClose={onClose} title="Reabrir documentacao" subtitulo="Desfaz o marco e para o relogio.">
+    <Modal open={open} onClose={onClose} title="Reabrir documentação" subtitulo="Desfaz o marco e para o relógio.">
       <div className="space-y-3">
         <p className="text-sm text-amber-800">
-          So reabra se o marco foi registrado por engano. Pedir documento complementar NAO exige reabrir — o pedido entra
+          Só reabra se o marco foi registrado por engano. Pedir documento complementar NÃO exige reabrir — o pedido entra
           no checklist e o prazo continua correndo. A reabertura fica na trilha com o seu nome.
         </p>
         <FormField label="Motivo">
@@ -306,7 +306,7 @@ function ModalReabrir({ eventoId, open, onClose }: { eventoId: string; open: boo
                 { eventoId, motivo },
                 {
                   onSuccess: () => {
-                    toast.success('Documentacao reaberta.');
+                    toast.success('Documentação reaberta.');
                     setMotivo('');
                     onClose();
                   },
@@ -333,20 +333,20 @@ const SELO_DOC: Record<string, string> = {
 };
 
 const ROTULO_TRILHA: Record<string, string> = {
-  LISTA_PADRAO: 'Lista padrao aplicada',
+  LISTA_PADRAO: 'Lista padrão aplicada',
   DOC_SOLICITADO: 'Documento solicitado',
   DOC_COMPLEMENTAR: 'Documento complementar solicitado',
   DOC_ENTREGUE: 'Documento entregue',
   DOC_DISPENSADO: 'Documento dispensado',
   DOC_PENDENTE: 'Documento voltou a pendente',
   DOC_REMOVIDO: 'Documento removido',
-  DOCUMENTACAO_COMPLETA: 'Documentacao completa — prazo iniciado',
-  DOCUMENTACAO_REABERTA: 'Documentacao reaberta',
+  DOCUMENTACAO_COMPLETA: 'Documentação completa — prazo iniciado',
+  DOCUMENTACAO_REABERTA: 'Documentação reaberta',
   AVISO_ALTERADO: 'Data do aviso alterada',
   ALERTA: 'Alerta de prazo',
-  ALERTA_CIENCIA: 'Ciencia do alerta',
-  REGULACAO_ENCERRADA: 'Regulacao encerrada',
-  REGULACAO_REABERTA: 'Regulacao reaberta',
+  ALERTA_CIENCIA: 'Ciência do alerta',
+  REGULACAO_ENCERRADA: 'Regulação encerrada',
+  REGULACAO_REABERTA: 'Regulação reaberta',
   RECUSA_FORA_DO_PRAZO: 'Recusa fora do prazo',
 };
 
@@ -371,7 +371,7 @@ export function DocumentosEvento({ eventoId }: { eventoId: string }) {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-slate-600">
-          Os 90 dias comecam quando o ultimo documento <b>obrigatorio</b> e entregue (ou dispensado). A data que conta e a
+          Os 90 dias começam quando o último documento <b>obrigatorio</b> e entregue (ou dispensado). A data que conta e a
           da entrega.
         </p>
         <Button
@@ -379,12 +379,12 @@ export function DocumentosEvento({ eventoId }: { eventoId: string }) {
           disabled={aplicar.isPending}
           onClick={() =>
             aplicar.mutate(eventoId, {
-              onSuccess: (n) => toast.success(n > 0 ? `${n} documento(s) da lista padrao incluido(s).` : 'A lista padrao ja esta aplicada.'),
+              onSuccess: (n) => toast.success(n > 0 ? `${n} documento(s) da lista padrão incluído(s).` : 'A lista padrão já está aplicada.'),
               onError: erro,
             })
           }
         >
-          <ListChecks className="h-4 w-4" /> Aplicar lista padrao
+          <ListChecks className="h-4 w-4" /> Aplicar lista padrão
         </Button>
       </div>
 
@@ -424,7 +424,7 @@ export function DocumentosEvento({ eventoId }: { eventoId: string }) {
                   )}
                   {podeTratar && (
                     <button
-                      title="Remover (so pendente)"
+                      title="Remover (só pendente)"
                       onClick={() => {
                         if (confirm(`Remover "${d.nome}" do checklist?`)) remover.mutate({ eventoId, id: d.id }, { onError: erro });
                       }}
@@ -440,7 +440,7 @@ export function DocumentosEvento({ eventoId }: { eventoId: string }) {
                   className="px-2 py-1 text-xs"
                   onClick={() => {
                     if (!confirm(completa
-                      ? 'O prazo ja comecou: voltar para pendente NAO para o relogio. Continuar?'
+                      ? 'O prazo já começou: voltar para pendente NÃO para o relógio. Continuar?'
                       : `Voltar "${d.nome}" para pendente?`)) return;
                     atualizar.mutate({ eventoId, id: d.id, situacao: 'PENDENTE' }, { onError: erro });
                   }}
@@ -453,8 +453,8 @@ export function DocumentosEvento({ eventoId }: { eventoId: string }) {
         ))}
         {!isLoading && (docs ?? []).length === 0 && (
           <li className="px-4 py-3 text-sm text-slate-400">
-            Nenhum documento no checklist. Aplique a lista padrao, inclua um documento ou marque a documentacao completa
-            no cartao do prazo.
+            Nenhum documento no checklist. Aplique a lista padrão, inclua um documento ou marque a documentação completa
+            no cartão do prazo.
           </li>
         )}
       </ul>
@@ -464,7 +464,7 @@ export function DocumentosEvento({ eventoId }: { eventoId: string }) {
           <Input value={novo} onChange={(e) => setNovo(e.target.value)} placeholder="Ex.: Laudo pericial" />
         </FormField>
         <label className="mb-2 flex items-center gap-1.5 text-sm text-slate-600">
-          <input type="checkbox" checked={novoObrig} onChange={(e) => setNovoObrig(e.target.checked)} /> Obrigatorio
+          <input type="checkbox" checked={novoObrig} onChange={(e) => setNovoObrig(e.target.checked)} /> Obrigatório
         </label>
         <Button
           disabled={!novo.trim() || adicionar.isPending}
@@ -474,7 +474,7 @@ export function DocumentosEvento({ eventoId }: { eventoId: string }) {
               {
                 onSuccess: () => {
                   setNovo('');
-                  toast.success(completa ? 'Pedido registrado como complementar — o prazo continua correndo.' : 'Documento incluido.');
+                  toast.success(completa ? 'Pedido registrado como complementar — o prazo continua correndo.' : 'Documento incluído.');
                 },
                 onError: erro,
               },
@@ -486,7 +486,7 @@ export function DocumentosEvento({ eventoId }: { eventoId: string }) {
       </div>
       {completa && (
         <p className="text-xs text-amber-700">
-          A documentacao ja esta completa: o que for pedido agora entra como complementar e NAO suspende os 90 dias.
+          A documentação já está completa: o que for pedido agora entra como complementar e NÃO suspende os 90 dias.
         </p>
       )}
 
@@ -533,7 +533,7 @@ function ModalEntrega({ eventoId, doc, onClose }: { eventoId: string; doc: Event
         </FormField>
         <FormField label="Arquivo nos anexos (opcional)">
           <Select value={anexo} onChange={(e) => setAnexo(e.target.value)}>
-            <option value="">— sem vinculo —</option>
+            <option value="">— sem vínculo —</option>
             {(anexos ?? []).map((a) => (
               <option key={a.id} value={a.id}>
                 {a.tipo_documento} · {a.nome_original ?? 'arquivo'} ({formatDate(a.created_at)})
@@ -575,7 +575,7 @@ function ModalDispensa({ eventoId, doc, onClose }: { eventoId: string; doc: Even
     <Modal open={!!doc} onClose={onClose} title="Dispensar documento" subtitulo={doc?.nome}>
       <div className="space-y-3">
         <p className="text-sm text-slate-600">
-          Dispensar conta como entregue para o prazo: se era o ultimo obrigatorio, os 90 dias comecam hoje.
+          Dispensar conta como entregue para o prazo: se era o último obrigatório, os 90 dias começam hoje.
         </p>
         <FormField label="Motivo">
           <Textarea rows={3} value={motivo} onChange={(e) => setMotivo(e.target.value)} />

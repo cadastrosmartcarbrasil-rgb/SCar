@@ -37,23 +37,23 @@ export async function POST(request: Request) {
   } else {
     const s = createClient();
     const { data: { user } } = await s.auth.getUser();
-    if (!user) return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 });
+    if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
     const { data: perfil } = await s.from('usuarios').select('papel, ativo').eq('id', user.id).maybeSingle();
     if (!perfil?.ativo || !['admin', 'financeiro'].includes(perfil.papel)) {
-      return NextResponse.json({ error: 'Sem permissao' }, { status: 403 });
+      return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
     }
     supabase = s;
   }
 
   const body = (await request.json().catch(() => ({}))) as { dia?: string };
   if (body.dia != null && !diaValido(body.dia)) {
-    return NextResponse.json({ error: 'dia invalido (use AAAA-MM-DD)' }, { status: 400 });
+    return NextResponse.json({ error: 'dia inválido (use AAAA-MM-DD)' }, { status: 400 });
   }
 
   const cfg = configSicrediDoAmbiente(process.env);
   if (!cfg) {
     return NextResponse.json(
-      { error: `Sicredi nao configurado no servidor. Faltam: ${variaveisSicrediFaltando(process.env).join(', ')}` },
+      { error: `Sicredi não configurado no servidor. Faltam: ${variaveisSicrediFaltando(process.env).join(', ')}` },
       { status: 400 },
     );
   }

@@ -26,12 +26,12 @@ export default function PortalVeiculosPage() {
     <div className="space-y-4">
       <header>
         <h1 className="text-[22px] font-bold tracking-tight text-brand-800">
-          Ola, {perfil?.nome?.split(' ')[0] ?? 'associado'}
+          Olá, {perfil?.nome?.split(' ')[0] ?? 'associado'}
         </h1>
         <p className="mt-0.5 text-[13px] text-slate-500">
           {perfil?.associado_desde
             ? `Associado desde ${formatDate(perfil.associado_desde)}.`
-            : 'Bem-vindo a sua area.'}
+            : 'Bem-vindo a sua área.'}
         </p>
       </header>
 
@@ -46,12 +46,12 @@ export default function PortalVeiculosPage() {
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-[14px] font-bold text-brand-800">
-                  {fin.em_dia ? 'Voce esta em dia' : `${fin.qtd_vencidos} boleto(s) em atraso`}
+                  {fin.em_dia ? 'Você está em dia' : `${fin.qtd_vencidos} boleto(s) em atraso`}
                 </p>
                 <p className="text-[12px] text-slate-500">
                   {fin.em_dia
                     ? fin.proximo_vencimento
-                      ? `Proximo vencimento em ${formatDate(fin.proximo_vencimento)} · ${formatCurrency(fin.proximo_valor ?? 0)}`
+                      ? `Próximo vencimento em ${formatDate(fin.proximo_vencimento)} · ${formatCurrency(fin.proximo_valor ?? 0)}`
                       : 'Sem boletos em aberto.'
                     : `${formatCurrency(fin.vencido)} vencidos · toque para ver e pagar`}
                 </p>
@@ -64,7 +64,7 @@ export default function PortalVeiculosPage() {
 
       <div>
         <h2 className="mb-2 flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-wide text-slate-500">
-          <Car className="h-3.5 w-3.5" /> Veiculos protegidos
+          <Car className="h-3.5 w-3.5" /> Veículos protegidos
         </h2>
 
         {isLoading ? (
@@ -76,7 +76,7 @@ export default function PortalVeiculosPage() {
             <CardContent className="p-6 text-center">
               <ShieldCheck className="mx-auto h-8 w-8 text-slate-300" />
               <p className="mt-2 text-[13px] text-slate-500">
-                Nenhum veiculo na sua protecao ainda.
+                Nenhum veículo na sua proteção ainda.
               </p>
             </CardContent>
           </Card>

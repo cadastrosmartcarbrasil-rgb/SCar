@@ -47,8 +47,8 @@ export function ChecklistEntrada({ itens, colunas = 2 }: {
         </div>
         {!completo && (
           <p className="mt-2 text-[11.5px] leading-relaxed text-slate-500">
-            O veiculo so entra na base com a ficha inteira. A Auditoria nao consegue autorizar antes
-            disso — a trava e no banco, nao so na tela.
+            O veículo só entra na base com a ficha inteira. A Auditoria não consegue autorizar antes
+            disso — a trava e no banco, não só na tela.
           </p>
         )}
       </div>

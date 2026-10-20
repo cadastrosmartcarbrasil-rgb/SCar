@@ -13,14 +13,14 @@ export function situacaoHistorico(e: { data_conclusao: string | null }): Situaca
 }
 
 export const ROTULO_SITUACAO_HISTORICO: Record<SituacaoHistorico, string> = {
-  CONCLUIDO: 'Concluido no Mutual',
+  CONCLUIDO: 'Concluído no Mutual',
   SEM_ENCERRAMENTO: 'Sem encerramento registrado',
 };
 
 /** "COLISÃO + PARABRISA"; lista vazia vira "Nao classificado". */
 export function rotuloTipos(tipos: string[] | null | undefined): string {
   const t = (tipos ?? []).map((x) => x.trim()).filter(Boolean);
-  return t.length ? t.join(' + ') : 'Nao classificado';
+  return t.length ? t.join(' + ') : 'Não classificado';
 }
 
 /** VITIMA/CAUSADOR/NÃO SE APLICA -> texto de leitura. */
@@ -121,20 +121,20 @@ export type SituacaoTransporte =
 
 export const ROTULO_TRANSPORTE: Record<SituacaoTransporte, string> = {
   LEVADO: 'levados ao Kanban',
-  JA_NO_KANBAN: 'ja estavam no Kanban',
-  SEM_VEICULO: 'sem veiculo na base',
-  SEM_DATA: 'sem data da ocorrencia',
+  JA_NO_KANBAN: 'já estavam no Kanban',
+  SEM_VEICULO: 'sem veículo na base',
+  SEM_DATA: 'sem data da ocorrência',
   FORA_DA_UNIDADE: 'de outra unidade',
-  NAO_ENCONTRADO: 'nao encontrados',
+  NAO_ENCONTRADO: 'não encontrados',
 };
 
 /** Pode ir ao Kanban? Ja levado, sem veiculo ou sem data nao vao. */
 export function podeLevarAoKanban(e: {
   evento_id?: string | null; veiculo_id: string | null; data_evento: string | null;
 }): { pode: boolean; motivo: string | null } {
-  if (e.evento_id) return { pode: false, motivo: 'Ja esta no Kanban' };
-  if (!e.veiculo_id) return { pode: false, motivo: 'Veiculo fora da base' };
-  if (!e.data_evento) return { pode: false, motivo: 'Sem data da ocorrencia' };
+  if (e.evento_id) return { pode: false, motivo: 'Já está no Kanban' };
+  if (!e.veiculo_id) return { pode: false, motivo: 'Veículo fora da base' };
+  if (!e.data_evento) return { pode: false, motivo: 'Sem data da ocorrência' };
   return { pode: true, motivo: null };
 }
 

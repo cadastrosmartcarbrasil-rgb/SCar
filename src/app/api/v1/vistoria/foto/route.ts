@@ -17,7 +17,7 @@ const BUCKET = 'vendas';
  */
 export async function POST(req: Request) {
   const form = await req.formData().catch(() => null);
-  if (!form) return NextResponse.json({ error: 'Envio invalido' }, { status: 400 });
+  if (!form) return NextResponse.json({ error: 'Envio inválido' }, { status: 400 });
 
   const token = String(form.get('token') ?? '').trim();
   const tipo = String(form.get('tipo') ?? '').trim();
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
   const s = sessoes?.[0];
   if (!s?.valida || !s.lead_id) {
     return NextResponse.json(
-      { error: s?.motivo === 'LINK_EXPIRADO' ? 'Este link expirou' : 'Link invalido' },
+      { error: s?.motivo === 'LINK_EXPIRADO' ? 'Este link expirou' : 'Link inválido' },
       { status: 403 },
     );
   }
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
   const { error: upErr } = await admin.storage
     .from(BUCKET)
     .upload(path, file, { cacheControl: '3600', upsert: false, contentType: file.type });
-  if (upErr) return NextResponse.json({ error: 'Nao consegui guardar a foto' }, { status: 502 });
+  if (upErr) return NextResponse.json({ error: 'Não consegui guardar a foto' }, { status: 502 });
 
   const { error: rpcErr } = await admin.rpc('registrar_foto_vistoria_publica', {
     p_token: token,

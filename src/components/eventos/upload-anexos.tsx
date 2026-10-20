@@ -11,11 +11,11 @@ import { formatDate } from '@/lib/utils';
 
 const TIPOS: { value: TipoDocumentoAnexo; label: string }[] = [
   { value: 'FOTO_AVARIA', label: 'Foto de Avaria' },
-  { value: 'BOLETIM_OCORRENCIA', label: 'Boletim de Ocorrencia' },
+  { value: 'BOLETIM_OCORRENCIA', label: 'Boletim de Ocorrência' },
   { value: 'CNH', label: 'CNH' },
   { value: 'CRLV', label: 'CRLV' },
   { value: 'NOTA_FISCAL', label: 'Nota Fiscal' },
-  { value: 'FOTO_VEICULO', label: 'Foto do Veiculo' },
+  { value: 'FOTO_VEICULO', label: 'Foto do Veículo' },
   { value: 'FOTO_LOCAL', label: 'Foto do Local' },
   { value: 'CROQUI', label: 'Croqui' },
   { value: 'OUTRO', label: 'Outro documento' },
@@ -54,8 +54,8 @@ export function UploadAnexos({ eventoId }: { eventoId: string }) {
     rejeitados.forEach((r) => {
       const grande = r.errors.some((e) => e.code === 'file-too-large');
       toast.error(grande
-        ? `${r.file.name} tem ${tamanhoLegivel(r.file.size)} — grande demais ate para reduzir.`
-        : `${r.file.name}: formato nao aceito (imagem, PDF ou XML).`);
+        ? `${r.file.name} tem ${tamanhoLegivel(r.file.size)} — grande demais até para reduzir.`
+        : `${r.file.name}: formato não aceito (imagem, PDF ou XML).`);
     });
   }, []);
 
@@ -78,7 +78,7 @@ export function UploadAnexos({ eventoId }: { eventoId: string }) {
       const url = await signedUrl.mutateAsync(path);
       window.open(url, '_blank');
     } catch (e) {
-      toast.error(`Nao foi possivel abrir: ${(e as Error).message}`);
+      toast.error(`Não foi possível abrir: ${(e as Error).message}`);
     }
   }
 
@@ -115,7 +115,7 @@ export function UploadAnexos({ eventoId }: { eventoId: string }) {
           {isDragActive ? 'Solte os arquivos aqui...' : 'Arraste arquivos ou clique para enviar'}
         </p>
         <p className="text-xs text-slate-400">
-          Imagens, PDF ou XML · a foto e reduzida automaticamente (ate {LADO_MAXIMO}px) antes de subir
+          Imagens, PDF ou XML · a foto é reduzida automaticamente (até {LADO_MAXIMO}px) antes de subir
         </p>
       </div>
 

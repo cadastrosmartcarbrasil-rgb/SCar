@@ -263,7 +263,7 @@ export function useSalvarModeloDocumento() {
         ? await supabase.from('evento_documentos_modelo').update(linha).eq('id', v.id)
         : await supabase.from('evento_documentos_modelo').insert(linha);
       if (error) {
-        if (error.code === '23505') throw new Error('Ja existe um documento com esse nome para esse tipo de evento.');
+        if (error.code === '23505') throw new Error('Já existe um documento com esse nome para esse tipo de evento.');
         throw error;
       }
     },

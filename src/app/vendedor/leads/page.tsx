@@ -30,7 +30,7 @@ export default function LeadsVendedorPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Meus leads</h1>
           <p className="mt-0.5 text-sm text-slate-500">
-            Tudo que chegou pelo seu link ou que voce cadastrou.
+            Tudo que chegou pelo seu link ou que você cadastrou.
           </p>
         </div>
         <Link href="/vendedor/leads/novo">

@@ -51,14 +51,14 @@ import { SePode } from '@/components/layout/se-pode';
 
 const NEGOCIACOES: { v: TipoNegociacao; l: string }[] = [
   { v: 'venda', l: 'Venda' },
-  { v: 'substituicao', l: 'Substituicao' },
-  { v: 'reativacao', l: 'Reativacao' },
+  { v: 'substituicao', l: 'Substituição' },
+  { v: 'reativacao', l: 'Reativação' },
   { v: 'troca_titularidade', l: 'Troca de Titularidade' },
-  { v: 'renovacao', l: 'Renovacao' },
+  { v: 'renovacao', l: 'Renovação' },
 ];
 const CAMBIOS: { v: TipoCambio; l: string }[] = [
   { v: 'manual', l: 'Manual' },
-  { v: 'automatico', l: 'Automatico' },
+  { v: 'automatico', l: 'Automático' },
   { v: 'automatizado', l: 'Automatizado' },
 ];
 const COMBUSTIVEIS: { v: Combustivel; l: string }[] = [
@@ -83,7 +83,7 @@ const STATUS: { v: StatusVeiculo; l: string; cor: string; manual: boolean }[] = 
   { v: 'inadimplente', l: 'Inadimplente', cor: 'bg-rose-50 text-rose-700', manual: false },
   { v: 'suspenso', l: 'Suspenso', cor: 'bg-amber-50 text-amber-700', manual: true },
   { v: 'inativo', l: 'Inativo', cor: 'bg-slate-100 text-slate-600', manual: true },
-  { v: 'excluido', l: 'Excluido', cor: 'bg-rose-50 text-rose-700', manual: true },
+  { v: 'excluido', l: 'Excluído', cor: 'bg-rose-50 text-rose-700', manual: true },
   { v: 'baixado', l: 'Baixado', cor: 'bg-slate-100 text-slate-500', manual: false },
 ];
 const statusMeta = (s: StatusVeiculo) =>
@@ -350,7 +350,7 @@ function VeiculosConteudo() {
 
   async function consultar() {
     const p = normalizarPlaca(form.placa ?? '');
-    if (!placaValida(p)) return toast.error('Placa invalida');
+    if (!placaValida(p)) return toast.error('Placa inválida');
     setConsultando(true);
     // Duas fontes, e elas NAO se sobrepoem:
     // 1) `/api/placa` — provedor de placa OPCIONAL (env `PLACA_API_URL`), que
@@ -369,7 +369,7 @@ function VeiculosConteudo() {
     const reg = fipe?.registro ?? null;
     const preencheu = (r && r.found) || !!v || !!reg;
     if (!preencheu) {
-      toast.message('Consulta indisponivel - preencha os dados manualmente.');
+      toast.message('Consulta indisponível - preencha os dados manualmente.');
       return;
     }
     // A ordem e a da fonte mais especifica para a mais generica, e o `f.campo`
@@ -398,7 +398,7 @@ function VeiculosConteudo() {
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.cliente_id) return toast.error('Selecione o associado');
-    if (!placaValida(form.placa ?? '')) return toast.error('Placa invalida');
+    if (!placaValida(form.placa ?? '')) return toast.error('Placa inválida');
     const erroRastreador = validarRastreador({
       rastreador_imei: form.rastreador_imei ?? null,
       rastreador_chip: form.rastreador_chip ?? null,
@@ -417,19 +417,19 @@ function VeiculosConteudo() {
       alertasIds: form.id ? undefined : [...alertas],
     }, {
       onSuccess: () => {
-        toast.success('Veiculo salvo');
+        toast.success('Veículo salvo');
         fecharModal();
       },
       onError: (err) => {
         const m = (err as Error).message;
-        if (m.includes('rastreador_imei')) return toast.error('IMEI ja cadastrado em outro veiculo');
+        if (m.includes('rastreador_imei')) return toast.error('IMEI já cadastrado em outro veículo');
         // Com o chassi vindo preenchido pela consulta da placa, a colisao no
         // unique deixou de ser hipotese: e o carro ja cadastrado com OUTRA
         // placa (transferencia, clonagem, cadastro duplicado). Dizer "chassi ja
         // cadastrado" leva a conferir; o texto cru do Postgres, nao.
-        if (m.includes('chassi')) return toast.error('Chassi ja cadastrado em outro veiculo');
-        if (m.includes('renavam')) return toast.error('Renavam ja cadastrado em outro veiculo');
-        toast.error(m.includes('placa') ? 'Placa ja cadastrada' : m);
+        if (m.includes('chassi')) return toast.error('Chassi já cadastrado em outro veículo');
+        if (m.includes('renavam')) return toast.error('Renavam já cadastrado em outro veículo');
+        toast.error(m.includes('placa') ? 'Placa já cadastrada' : m);
       },
     });
   }
@@ -440,12 +440,12 @@ function VeiculosConteudo() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Veiculos / Contratos</h1>
+          <h1 className="text-2xl font-semibold text-slate-900">Veículos / Contratos</h1>
           <p className="text-sm text-slate-500">Frota protegida, vinculada aos associados.</p>
         </div>
         <SePode chave="veiculos.criar">
         <Button onClick={novo}>
-          <Plus className="h-4 w-4" /> Novo Veiculo
+          <Plus className="h-4 w-4" /> Novo Veículo
         </Button>
         </SePode>
       </div>
@@ -474,9 +474,9 @@ function VeiculosConteudo() {
               <th className="px-4 py-2">Veiculo</th>
               <th className="px-4 py-2">Associado</th>
               <th className="px-4 py-2">FIPE</th>
-              <th className="px-4 py-2">Ativacao</th>
-              <th className="px-4 py-2">Situacao</th>
-              <th className="px-4 py-2 text-right">Acoes</th>
+              <th className="px-4 py-2">Ativação</th>
+              <th className="px-4 py-2">Situação</th>
+              <th className="px-4 py-2 text-right">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -494,7 +494,7 @@ function VeiculosConteudo() {
               return (
                 <tr key={v.id} className="border-b border-slate-50 last:border-0">
                   <td className="px-4 py-2 font-mono font-medium">
-                    <Link href={`/veiculos/${v.id}`} className="text-brand-600 hover:underline" title="Abrir a ficha do veiculo">
+                    <Link href={`/veiculos/${v.id}`} className="text-brand-600 hover:underline" title="Abrir a ficha do veículo">
                       {v.placa}
                     </Link>
                   </td>
@@ -521,9 +521,9 @@ function VeiculosConteudo() {
                     {v.cobranca_externa && (
                       <span
                         className="mt-0.5 block text-[11px] text-slate-500"
-                        title="A mensalidade deste veiculo e cobrada no sistema anterior. Ele mantem todos os beneficios."
+                        title="A mensalidade deste veículo é cobrada no sistema anterior. Ele mantém todos os benefícios."
                       >
-                        cobranca externa
+                        cobrança externa
                       </span>
                     )}
                   </td>
@@ -545,7 +545,7 @@ function VeiculosConteudo() {
                       <SePode chave="veiculos.excluir">
                       <button
                         onClick={() => {
-                          if (confirm(`Excluir o veiculo ${v.placa}?`))
+                          if (confirm(`Excluir o veículo ${v.placa}?`))
                             excluir.mutate(v.id, { onError: (e) => toast.error((e as Error).message) });
                         }}
                         className="rounded p-1.5 text-rose-500 hover:bg-rose-50"
@@ -561,7 +561,7 @@ function VeiculosConteudo() {
             {!isLoading && filtrados.length === 0 && (
               <tr>
                 <td colSpan={7} className="px-4 py-6 text-center text-slate-400">
-                  {busca ? 'Nenhum veiculo encontrado para a busca.' : 'Nenhum veiculo nesta situacao.'}
+                  {busca ? 'Nenhum veículo encontrado para a busca.' : 'Nenhum veículo nesta situação.'}
                 </td>
               </tr>
             )}
@@ -571,7 +571,7 @@ function VeiculosConteudo() {
           carregando={lista.isFetching && !lista.isLoading} />
       </div>
 
-      <Modal open={aberto} onClose={fecharModal} title={form.id ? `Editar ${form.placa}` : 'Novo Veiculo (Contrato)'} tamanho="xl">
+      <Modal open={aberto} onClose={fecharModal} title={form.id ? `Editar ${form.placa}` : 'Novo Veículo (Contrato)'} tamanho="xl">
         <datalist id="dl-marcas">
           {(marcas ?? []).map((m) => (
             <option key={m.id} value={m.nome} />
@@ -613,14 +613,14 @@ function VeiculosConteudo() {
             const a = primeiraAtivacao(form.data_ativacao);
             return (
               <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
-                <span className="text-[11px] uppercase text-slate-400">Primeira ativacao: </span>
+                <span className="text-[11px] uppercase text-slate-400">Primeira ativação: </span>
                 {a ? (
                   <>
                     <span className="tnum font-medium text-slate-800">{a.data}</span>
-                    {a.tempo && <span className="text-slate-500"> · ha {a.tempo}</span>}
+                    {a.tempo && <span className="text-slate-500"> · há {a.tempo}</span>}
                   </>
                 ) : (
-                  <span className="text-slate-500">ainda nao ativado</span>
+                  <span className="text-slate-500">ainda não ativado</span>
                 )}
               </p>
             );
@@ -686,7 +686,7 @@ function VeiculosConteudo() {
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <FormField label="Combustivel">
+            <FormField label="Combustível">
               <Select value={form.combustivel ?? ''} onChange={(e) => setF({ combustivel: (e.target.value || null) as Combustivel })}>
                 <option value="">--</option>
                 {COMBUSTIVEIS.map((c) => (
@@ -696,7 +696,7 @@ function VeiculosConteudo() {
                 ))}
               </Select>
             </FormField>
-            <FormField label="Cambio">
+            <FormField label="Câmbio">
               <Select value={form.tipo_cambio ?? ''} onChange={(e) => setF({ tipo_cambio: (e.target.value || null) as TipoCambio })}>
                 <option value="">--</option>
                 {CAMBIOS.map((c) => (
@@ -715,7 +715,7 @@ function VeiculosConteudo() {
             </FormField>
           </div>
 
-          <FormField label="Categoria de risco (tipo de veiculo p/ precificacao)">
+          <FormField label="Categoria de risco (tipo de veículo p/ precificação)">
             <Select value={form.tipo_veiculo_id ?? ''} onChange={(e) => setF({ tipo_veiculo_id: e.target.value || null })}>
               <option value="">-- Selecione --</option>
               {(tiposVeiculo ?? []).map((t) => (
@@ -742,7 +742,7 @@ function VeiculosConteudo() {
 
           {/* FIPE */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 rounded-lg border border-slate-200 p-3">
-            <FormField label="Codigo FIPE">
+            <FormField label="Código FIPE">
               <Input value={form.codigo_fipe ?? ''} onChange={(e) => setF({ codigo_fipe: e.target.value })} placeholder="002001-5" />
             </FormField>
             <FormField label="Valor FIPE (R$)">
@@ -753,14 +753,14 @@ function VeiculosConteudo() {
               />
             </FormField>
             <p className="text-xs text-slate-400 sm:col-span-2">
-              O valor FIPE e a base do calculo da mensalidade.
+              O valor FIPE e a base do cálculo da mensalidade.
             </p>
           </div>
 
           {/* Plano, opcionais e cobranca */}
           <div className="space-y-3 rounded-lg border border-slate-200 p-3">
-            <p className="text-sm font-semibold text-slate-700">Plano & Cobranca</p>
-            <FormField label="Plano de protecao">
+            <p className="text-sm font-semibold text-slate-700">Plano & Cobrança</p>
+            <FormField label="Plano de proteção">
               <Select value={form.plano_protecao_id ?? ''} onChange={(e) => trocarPlano(e.target.value || null)}>
                 <option value="">-- Sem plano --</option>
                 {(planos ?? []).filter((p) => p.ativo).map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
@@ -796,8 +796,8 @@ function VeiculosConteudo() {
               ) : (
                 <p className="text-xs text-slate-400">
                   {form.plano_protecao_id
-                    ? 'Este plano nao traz opcional amarrado (so os itens obrigatorios da base).'
-                    : 'Sem plano selecionado — tudo o que for marcado abaixo e cobrado a parte.'}
+                    ? 'Este plano não traz opcional amarrado (só os itens obrigatórios da base).'
+                    : 'Sem plano selecionado — tudo o que for marcado abaixo é cobrado a parte.'}
                 </p>
               )}
             </div>
@@ -828,7 +828,7 @@ function VeiculosConteudo() {
                     {p.nome}
                     {p.foraDoTipo && (
                       <span className="rounded bg-amber-100 px-1.5 py-px text-[10px] uppercase text-amber-800">
-                        nao atende este tipo — nao e cobrado
+                        não atende este tipo — não é cobrado
                       </span>
                     )}
                   </label>
@@ -856,7 +856,7 @@ function VeiculosConteudo() {
               <p className="flex flex-wrap items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
                 <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
                 O valor gravado ({formatCurrency(form.valor_mensalidade ?? 0)}) difere do calculado para este
-                plano ({formatCurrency(valorCotado ?? 0)}). A cobranca usa o gravado.
+                plano ({formatCurrency(valorCotado ?? 0)}). A cobrança usa o gravado.
                 <button
                   type="button"
                   onClick={() => valorCotado != null && setF({ valor_mensalidade: valorCotado })}
@@ -892,7 +892,7 @@ function VeiculosConteudo() {
                 <Input
                   value={form.rastreador_imei ?? ''}
                   onChange={(e) => setF({ rastreador_imei: normalizarDigitos(e.target.value).slice(0, 17) || null })}
-                  placeholder="15 digitos"
+                  placeholder="15 dígitos"
                   className="mt-0 font-mono"
                   inputMode="numeric"
                 />
@@ -901,7 +901,7 @@ function VeiculosConteudo() {
                 <Input
                   value={form.rastreador_chip ?? ''}
                   onChange={(e) => setF({ rastreador_chip: normalizarDigitos(e.target.value).slice(0, 22) || null })}
-                  placeholder="Linha (DDD + numero) ou ICCID"
+                  placeholder="Linha (DDD + número) ou ICCID"
                   className="mt-0 font-mono"
                   inputMode="numeric"
                 />
@@ -925,11 +925,11 @@ function VeiculosConteudo() {
             )}
             {!!form.rastreador_imei && form.rastreador_imei.length === 15 && !imeiLuhnValido(form.rastreador_imei) && (
               <p className="text-xs text-amber-600">
-                Atencao: o digito verificador deste IMEI nao confere — confirme com a rastreadora.
+                Atenção: o dígito verificador deste IMEI não confere — confirme com a rastreadora.
               </p>
             )}
             <p className="text-xs text-slate-400">
-              Preencha somente para veiculos com rastreador instalado. O IMEI e unico: nao pode estar em outro veiculo ativo.
+              Preencha somente para veículos com rastreador instalado. O IMEI é único: não pode estar em outro veículo ativo.
             </p>
           </div>
 
@@ -948,7 +948,7 @@ function VeiculosConteudo() {
                     {a.nome}
                   </label>
                 ))}
-                {(tiposAlerta ?? []).length === 0 && <span className="text-xs text-slate-400">Cadastre alertas em Configuracoes &gt; Alertas.</span>}
+                {(tiposAlerta ?? []).length === 0 && <span className="text-xs text-slate-400">Cadastre alertas em Configurações &gt; Alertas.</span>}
               </div>
               <p className="mt-1 text-xs text-slate-400">Alertas ativos abrem automaticamente no SAC ao localizar o associado.</p>
             </div>
@@ -982,7 +982,7 @@ function VeiculosConteudo() {
             <FormField label="Data do contrato">
               <Input type="date" value={form.data_contrato ?? ''} onChange={(e) => setF({ data_contrato: e.target.value })} />
             </FormField>
-            <FormField label="Tipo de negociacao">
+            <FormField label="Tipo de negociação">
               <Select value={form.tipo_negociacao ?? ''} onChange={(e) => setF({ tipo_negociacao: (e.target.value || null) as TipoNegociacao })}>
                 <option value="">--</option>
                 {NEGOCIACOES.map((n) => (
@@ -992,7 +992,7 @@ function VeiculosConteudo() {
                 ))}
               </Select>
             </FormField>
-            <FormField label="Situacao do contrato">
+            <FormField label="Situação do contrato">
               <Select value={form.status ?? 'ativo'} onChange={(e) => setF({ status: e.target.value as StatusVeiculo })}>
                 {STATUS.filter((s) => s.manual || s.v === form.status).map((s) => (
                   <option key={s.v} value={s.v}>
@@ -1008,7 +1008,7 @@ function VeiculosConteudo() {
               Cancelar
             </Button>
             <Button type="submit" disabled={salvar.isPending}>
-              {salvar.isPending ? 'Salvando...' : 'Salvar veiculo'}
+              {salvar.isPending ? 'Salvando...' : 'Salvar veículo'}
             </Button>
           </div>
         </form>

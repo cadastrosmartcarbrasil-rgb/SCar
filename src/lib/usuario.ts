@@ -25,15 +25,15 @@ import { validarCPF } from './documento';
  * do banco; o que nao existe mais e caminho para grava-lo.
  */
 export const PAPEIS_USUARIO = [
-  { valor: 'admin', rotulo: 'Administrador', nota: 'acesso global e gestao da equipe' },
+  { valor: 'admin', rotulo: 'Administrador', nota: 'acesso global e gestão da equipe' },
   { valor: 'gestor_regional', rotulo: 'Gestor Regional', nota: 'a unidade dele' },
   { valor: 'consultor_vendas', rotulo: 'Consultor de Vendas', nota: 'a carteira dele' },
   { valor: 'financeiro', rotulo: 'Financeiro', nota: 'acesso global ao dinheiro' },
   { valor: 'sinistro', rotulo: 'Eventos', nota: 'trata o evento da unidade' },
   { valor: 'auditoria', rotulo: 'Auditoria', nota: 'autoriza a entrada na base' },
-  { valor: 'assistencia_24h', rotulo: 'Assistencia 24h' },
-  { valor: 'supervisor', rotulo: 'Supervisor', nota: 'as unidades sob a responsabilidade dele (cobranca)' },
-  { valor: 'cobranca', rotulo: 'Cobranca', nota: 'painel e fila de cobranca — sem unidade, o Brasil' },
+  { valor: 'assistencia_24h', rotulo: 'Assistência 24h' },
+  { valor: 'supervisor', rotulo: 'Supervisor', nota: 'as unidades sob a responsabilidade dele (cobrança)' },
+  { valor: 'cobranca', rotulo: 'Cobrança', nota: 'painel e fila de cobrança — sem unidade, o Brasil' },
 ] as const;
 
 /**
@@ -134,7 +134,7 @@ export function tempoDeCasa(inicio: string | null | undefined, hoje = new Date()
 
   let meses = (hoje.getFullYear() - d.getFullYear()) * 12 + (hoje.getMonth() - d.getMonth());
   if (hoje.getDate() < d.getDate()) meses -= 1;
-  if (meses < 1) return 'menos de 1 mes';
+  if (meses < 1) return 'menos de 1 mês';
 
   const anos = Math.floor(meses / 12);
   const resto = meses % 12;
@@ -158,7 +158,7 @@ export function avisoDeDesativacao(u: {
     `Desativar "${u.nome}"?`,
     '',
     'O acesso e cortado na hora: ela deixa de entrar no sistema e de aparecer como',
-    'staff para a seguranca do banco. O historico do que ja fez continua intacto.',
+    'staff para a segurança do banco. O histórico do que já fez continua intacto.',
   ];
 
   const n = Number(u.responsavel_por ?? 0);

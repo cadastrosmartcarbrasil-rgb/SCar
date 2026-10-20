@@ -46,7 +46,7 @@ export function AnexosLancamento({ lancamentoId }: { lancamentoId: string }) {
         toast.error(
           grande
             ? `"${r.file.name}" passa de 10 MB.`
-            : `"${r.file.name}" nao e um tipo aceito (PDF, imagem, XML ou planilha).`,
+            : `"${r.file.name}" não e um tipo aceito (PDF, imagem, XML ou planilha).`,
         );
       });
       for (const file of aceitos) {
@@ -75,7 +75,7 @@ export function AnexosLancamento({ lancamentoId }: { lancamentoId: string }) {
       const url = await abrir.mutateAsync(anexo.url_storage);
       window.open(url, '_blank', 'noopener');
     } catch (err) {
-      toast.error(`Nao foi possivel abrir o arquivo: ${(err as Error).message}`);
+      toast.error(`Não foi possível abrir o arquivo: ${(err as Error).message}`);
     }
   }
 
@@ -99,7 +99,7 @@ export function AnexosLancamento({ lancamentoId }: { lancamentoId: string }) {
             <p className="text-xs font-medium text-slate-600">
               Arraste os arquivos aqui ou <span className="text-cyan-700 underline">selecione do computador</span>
             </p>
-            <p className="text-[11px] text-slate-400">Nota fiscal, boleto, contrato ou comprovante · PDF, imagem, XML ou planilha · ate 10 MB</p>
+            <p className="text-[11px] text-slate-400">Nota fiscal, boleto, contrato ou comprovante · PDF, imagem, XML ou planilha · até 10 MB</p>
           </>
         )}
       </div>
@@ -149,7 +149,7 @@ export function AnexosLancamento({ lancamentoId }: { lancamentoId: string }) {
 
       {!isLoading && (anexos ?? []).length === 0 && (
         <p className="flex items-center gap-1.5 text-[11px] text-slate-400">
-          <Paperclip className="h-3 w-3" /> Nenhum arquivo anexado a este titulo.
+          <Paperclip className="h-3 w-3" /> Nenhum arquivo anexado a este título.
         </p>
       )}
     </div>

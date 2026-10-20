@@ -342,16 +342,16 @@ export function montarPrevia(
 
     if (!regionalId) {
       return { ...l, regional_id: null, situacao: 'BLOQUEADO',
-        motivo: `A unidade "${l.regional_texto || '(vazio)'}" nao esta mapeada para nenhuma regional cadastrada.` };
+        motivo: `A unidade "${l.regional_texto || '(vazio)'}" não está mapeada para nenhuma regional cadastrada.` };
     }
     if (!chave) {
       return { ...l, regional_id: regionalId, situacao: 'BLOQUEADO',
-        motivo: 'Sem CPF/CNPJ e sem e-mail: nao ha como reconhecer esta pessoa numa reimportacao.' };
+        motivo: 'Sem CPF/CNPJ e sem e-mail: não há como reconhecer esta pessoa numa reimportação.' };
     }
     const irma = vistas.get(chave);
     if (irma) {
       return { ...l, regional_id: regionalId, situacao: 'BLOQUEADO',
-        motivo: `Repetido na propria planilha (mesma pessoa da linha ${irma}).` };
+        motivo: `Repetido na própria planilha (mesma pessoa da linha ${irma}).` };
     }
 
     const unidade = porId.get(regionalId);
@@ -359,11 +359,11 @@ export function montarPrevia(
     // `fn_vendedor_regional_ativa` (0067), que so recusa vendedor ativo.
     if (unidade && unidade.ativo === false && l.ativo_na_origem) {
       return { ...l, regional_id: regionalId, situacao: 'BLOQUEADO',
-        motivo: `A unidade "${unidade.nome}" esta INATIVA e nao recebe vendedor ativo.` };
+        motivo: `A unidade "${unidade.nome}" está INATIVA e não recebe vendedor ativo.` };
     }
     const teto = (valor: number | null, limite: number | null | undefined, qual: string) =>
       valor !== null && limite != null && valor > limite
-        ? `Comissao de ${qual} (${valor}%) acima do teto da franquia (${limite}%).`
+        ? `Comissão de ${qual} (${valor}%) acima do teto da franquia (${limite}%).`
         : null;
     const furou =
       teto(l.comissao_adesao, unidade?.teto_adesao, 'adesao') ??

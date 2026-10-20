@@ -50,9 +50,9 @@ describe('mensagemDeErro', () => {
 
   it('esconde erro tecnico do banco', () => {
     expect(mensagemDeErro('duplicate key value violates unique constraint "x"'))
-      .toBe('Nao consegui concluir agora. Tente de novo em instantes.');
+      .toBe('Não consegui concluir agora. Tente de novo em instantes.');
     expect(mensagemDeErro('permission denied for relation leads'))
-      .toBe('Nao consegui concluir agora. Tente de novo em instantes.');
+      .toBe('Não consegui concluir agora. Tente de novo em instantes.');
   });
 
   it('sem mensagem, texto generico', () => {
@@ -157,7 +157,7 @@ describe('numeroWhatsApp', () => {
 describe('mensagemDaProposta e linkWhatsApp', () => {
   it('chama a pessoa pelo primeiro nome', () => {
     expect(mensagemDaProposta('https://x/cotacao/abc', 'JOAO DA SILVA'))
-      .toBe('Ola, JOAO! Segue a sua proposta da Smart Car Brasil: https://x/cotacao/abc');
+      .toBe('Olá, JOAO! Segue a sua proposta da Smart Car Brasil: https://x/cotacao/abc');
   });
 
   it('sem nome, manda so a proposta', () => {
@@ -175,7 +175,7 @@ describe('mensagemDaVistoria', () => {
 
   it('diz o que fazer, quanto leva e ate quando vale', () => {
     const m = mensagemDaVistoria(url, 'MARIA SOUZA', '2026-09-19T12:00:00Z');
-    expect(m).toContain('Ola, MARIA!');
+    expect(m).toContain('Olá, MARIA!');
     expect(m).toContain(url);
     expect(m).toContain('3 minutos');
     expect(m).toContain('19/09/2026');

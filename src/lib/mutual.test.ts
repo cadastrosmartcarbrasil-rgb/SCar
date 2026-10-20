@@ -486,7 +486,7 @@ describe('equipes de vendas (0083)', () => {
 
   it('macrorregiao ausente vira um grupo proprio, nao some', () => {
     const grupos = porMacrorregiao([e('1', 'X', null, 5, null)]);
-    expect(grupos[0].macrorregiao).toBe('(sem macrorregiao)');
+    expect(grupos[0].macrorregiao).toBe('(sem macrorregião)');
   });
 
   it('VARIAS equipes numa regional so — a consolidacao que o usuario quer', () => {
@@ -622,7 +622,7 @@ describe('recusasPorMotivo', () => {
       linha({ problema: 'Chassi 9BW ja cadastrado em outro veiculo do SCar' }),
     ];
     expect(recusasPorMotivo(l)).toEqual([
-      { motivo: 'Ja cadastrado em outro veiculo', quantidade: 2 },
+      { motivo: 'Já cadastrado em outro veículo', quantidade: 2 },
     ]);
   });
 });
@@ -786,7 +786,7 @@ describe('mensagemDeFalhaDeLeitura — erro de leitura nunca vira estado vazio',
     expect(m).toContain('tempo limite');
     // A mensagem tem de dizer que NAO e falta de dado: foi essa confusao que
     // fez a tela mandar "Puxe Equipes de vendas" com 52 equipes capturadas.
-    expect(m).toContain('Nao e falta de dado');
+    expect(m).toContain('Não é falta de dado');
     expect(m).toContain('uma por vez');
   });
 
@@ -798,9 +798,9 @@ describe('mensagemDeFalhaDeLeitura — erro de leitura nunca vira estado vazio',
 
   it('separa falta de permissao de falta de migration', () => {
     expect(mensagemDeFalhaDeLeitura(new Error('Somente a equipe pode ler o diagnostico')))
-      .toContain('so para a equipe');
+      .toContain('só para a equipe');
     expect(mensagemDeFalhaDeLeitura(new Error('permission denied for function x')))
-      .toContain('Sem permissao');
+      .toContain('Sem permissão');
     expect(mensagemDeFalhaDeLeitura(
       new Error('Could not find the function public.mutual_x in the schema cache')))
       .toContain('falta rodar a migration');
@@ -808,8 +808,8 @@ describe('mensagemDeFalhaDeLeitura — erro de leitura nunca vira estado vazio',
 
   it('erro desconhecido passa o texto do banco, nunca uma frase inventada', () => {
     expect(mensagemDeFalhaDeLeitura(new Error('deu pau no 42P01'))).toBe('deu pau no 42P01');
-    expect(mensagemDeFalhaDeLeitura(null)).toContain('nao disse por que');
-    expect(mensagemDeFalhaDeLeitura(undefined)).toContain('nao disse por que');
+    expect(mensagemDeFalhaDeLeitura(null)).toContain('não disse por que');
+    expect(mensagemDeFalhaDeLeitura(undefined)).toContain('não disse por que');
   });
 });
 

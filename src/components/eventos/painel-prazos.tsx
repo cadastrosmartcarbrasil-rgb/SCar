@@ -60,8 +60,8 @@ export function PainelPrazos() {
   return (
     <div className="space-y-5">
       <p className="text-sm text-slate-600">
-        Art. 22 da Resolucao CNSP 491/2026: 90 dias corridos para regular e liquidar, contados do aviso junto com a
-        documentacao completa. Passou disso, a associacao perde o direito de recusa.
+        Art. 22 da Resolução CNSP 491/2026: 90 dias corridos para regular e liquidar, contados do aviso junto com a
+        documentação completa. Passou disso, a associação perde o direito de recusa.
       </p>
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
@@ -89,7 +89,7 @@ export function PainelPrazos() {
       {semCiencia.length > 0 && (
         <div className="rounded-xl border border-rose-200 bg-rose-50 p-3">
           <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-rose-800">
-            <BellRing className="h-4 w-4" /> {semCiencia.length} evento(s) com alerta sem ciencia
+            <BellRing className="h-4 w-4" /> {semCiencia.length} evento(s) com alerta sem ciência
           </p>
           <ul className="space-y-1.5">
             {semCiencia.slice(0, 12).map((p) => (
@@ -106,7 +106,7 @@ export function PainelPrazos() {
                   disabled={ciencia.isPending}
                   onClick={() => ciencia.mutate(p.evento_id, { onError: (er) => toast.error((er as Error).message) })}
                 >
-                  Dar ciencia
+                  Dar ciência
                 </Button>
               </li>
             ))}
@@ -147,7 +147,7 @@ export function PainelPrazos() {
           className={global ? '' : 'ml-auto'}
           onClick={() =>
             baixarCsv('prazos-regulatorios.csv', [
-              ['Protocolo', 'Placa', 'Associado', 'Unidade', 'Status', 'Aviso', 'Documentacao completa', 'Dias', 'Limite', 'Nivel'],
+              ['Protocolo', 'Placa', 'Associado', 'Unidade', 'Status', 'Aviso', 'Documentação completa', 'Dias', 'Limite', 'Nível'],
               ...linhas.map((p) => [
                 p.numero_protocolo ?? '', p.placa ?? '', p.cliente_nome ?? '', p.regional_nome ?? 'Matriz', p.status,
                 p.aviso_em, p.documentacao_completa_em ?? '', p.dias_transcorridos ?? '', p.limite_prazo ?? '',
@@ -168,7 +168,7 @@ export function PainelPrazos() {
               <th className="px-3 py-2">Associado / placa</th>
               <th className="px-3 py-2">Unidade</th>
               <th className="px-3 py-2">Aviso</th>
-              <th className="px-3 py-2">Documentacao</th>
+              <th className="px-3 py-2">Documentação</th>
               <th className="min-w-[180px] px-3 py-2">Prazo (90 dias)</th>
               <th className="px-3 py-2">Limite</th>
             </tr>
@@ -223,8 +223,8 @@ export function PainelPrazos() {
         </table>
       </div>
       <p className="text-[11px] text-slate-400">
-        Ordem: {ORDEM_NIVEL.slice(0, 7).map((n) => estiloDoNivel(n).rotulo).join(' › ')}. Os dias sao contados no dia de Sao
-        Paulo; os alertas sao gravados pela rotina diaria.
+        Ordem: {ORDEM_NIVEL.slice(0, 7).map((n) => estiloDoNivel(n).rotulo).join(' › ')}. Os dias são contados no dia de São
+        Paulo; os alertas são gravados pela rotina diária.
       </p>
     </div>
   );

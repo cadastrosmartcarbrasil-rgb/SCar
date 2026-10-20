@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
 
   const token = process.env.PLACAFIPE_TOKEN;
   const base = (process.env.PLACAFIPE_BASE || 'https://api.placafipe.com.br').replace(/\/+$/, '');
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const action = body?.action as Action;
   if (!action || !(action in ENDPOINT)) {
-    return NextResponse.json({ error: 'action invalida' }, { status: 400 });
+    return NextResponse.json({ error: 'action inválida' }, { status: 400 });
   }
   const { action: _omit, ...params } = body as Record<string, unknown>;
 

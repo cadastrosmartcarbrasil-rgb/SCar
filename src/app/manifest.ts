@@ -11,7 +11,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'Smart Car Brasil - Portal do Vendedor',
     short_name: 'Smart Car',
-    description: 'Leads, comissoes e link de vendas do vendedor Smart Car Brasil.',
+    description: 'Leads, comissões e link de vendas do vendedor Smart Car Brasil.',
     start_url: '/vendedor',
     display: 'standalone',
     orientation: 'portrait',

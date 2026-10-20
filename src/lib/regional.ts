@@ -62,12 +62,12 @@ export interface ContagemRegional {
 export function pendenciasDaUnidade(c: ContagemRegional | null | undefined): string[] {
   if (!c) return [];
   const partes: Array<[number, string, string]> = [
-    [Number(c.usuarios ?? 0), 'usuario', 'usuarios'],
+    [Number(c.usuarios ?? 0), 'usuário', 'usuários'],
     [Number(c.vendedores ?? 0), 'vendedor', 'vendedores'],
     [Number(c.associados ?? 0), 'associado', 'associados'],
-    [Number(c.veiculos ?? 0), 'veiculo', 'veiculos'],
+    [Number(c.veiculos ?? 0), 'veículo', 'veículos'],
     [Number(c.leads ?? 0), 'lead', 'leads'],
-    [Number(c.lancamentos ?? 0), 'lancamento financeiro', 'lancamentos financeiros'],
+    [Number(c.lancamentos ?? 0), 'lançamento financeiro', 'lançamentos financeiros'],
   ];
   return partes
     .filter(([n]) => n > 0)
@@ -89,12 +89,12 @@ export function avisoDeInativacao(
 ): string {
   const pend = pendenciasDaUnidade(c);
   if (pend.length === 0) {
-    return `Inativar "${nome}"? Ela sai das listas de escolha e dos hotlinks. Nao ha nenhum registro vinculado.`;
+    return `Inativar "${nome}"? Ela sai das listas de escolha e dos hotlinks. Não há nenhum registro vinculado.`;
   }
   return (
     `Inativar "${nome}"?\n\n` +
-    `Ela sai das listas de escolha, para de captar por hotlink e nao entra no rodizio.\n` +
-    `O que ja existe NAO e apagado nem some dos relatorios: ${pend.join(', ')}.`
+    `Ela sai das listas de escolha, para de captar por hotlink e não entra no rodízio.\n` +
+    `O que já existe NÃO é apagado nem some dos relatórios: ${pend.join(', ')}.`
   );
 }
 
@@ -164,10 +164,10 @@ export function hotlinkResolve(v: VendedorDaEquipe | null | undefined): boolean 
 export function avisoDeSituacaoVendedor(nome: string, ativoAgora: boolean): string {
   return ativoAgora
     ? `Inativar "${nome}"?\n\n` +
-      `O hotlink dele para de captar e ele sai do rodizio e das listas de escolha.\n` +
-      `Os leads, as vendas e as comissoes que ja existem NAO sao apagados.`
+      `O hotlink dele para de captar e ele sai do rodízio e das listas de escolha.\n` +
+      `Os leads, as vendas e as comissões que já existem NÃO são apagados.`
     : `Ativar "${nome}"?\n\n` +
-      `O hotlink volta a captar e ele volta a receber lead pelo rodizio da unidade.`;
+      `O hotlink volta a captar e ele volta a receber lead pelo rodízio da unidade.`;
 }
 
 // ---------------------------------------------------------------------------
@@ -188,7 +188,7 @@ export function composicaoDaCarteira(c: CarteiraDaUnidade | null | undefined): s
   const ativos = Number(c?.veiculos_ativos ?? 0);
   const inad = Number(c?.veiculos_inadimplentes ?? 0);
   const outros = Math.max(0, total - ativos - inad);
-  if (total === 0) return 'Nenhum veiculo na base desta unidade';
+  if (total === 0) return 'Nenhum veículo na base desta unidade';
   const partes = [`${ativos} ativo${ativos === 1 ? '' : 's'}`];
   if (outros > 0) partes.push(`${outros} em vistoria/evento`);
   if (inad > 0) partes.push(`${inad} inadimplente${inad === 1 ? '' : 's'}`);
@@ -207,6 +207,6 @@ export function avisoCobrancaExterna(c: CarteiraDaUnidade | null | undefined): s
   const total = Number(c?.veiculos_carteira ?? 0);
   const todos = total > 0 && ext >= total;
   return todos
-    ? `Toda a carteira desta unidade (${ext}) esta em cobranca externa: a mensalidade continua sendo emitida no sistema anterior e nenhum boleto sai por aqui.`
-    : `${ext} de ${total} veiculos estao em cobranca externa — a mensalidade deles e emitida no sistema anterior, nao por aqui.`;
+    ? `Toda a carteira desta unidade (${ext}) está em cobrança externa: a mensalidade continua sendo emitida no sistema anterior e nenhum boleto sai por aqui.`
+    : `${ext} de ${total} veículos estão em cobrança externa — a mensalidade deles e emitida no sistema anterior, não por aqui.`;
 }

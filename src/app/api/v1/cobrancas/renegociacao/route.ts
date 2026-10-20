@@ -34,7 +34,7 @@ async function resolverGateway(admin: Admin, regionalId: string | null) {
   const gateway = getPaymentGateway(integracao);
   // Boleto ficticio na mao do associado e pior que nenhum: sem banco real, para.
   if (gateway instanceof MockGateway && process.env.NODE_ENV === 'production') {
-    throw new Error('Nenhuma integracao bancaria ativa (Configuracoes -> Integracoes bancarias): o boleto nao seria real.');
+    throw new Error('Nenhuma integração bancária ativa (Configurações -> Integrações bancárias): o boleto não seria real.');
   }
   return { gateway, integracaoId: integracao?.id ?? null };
 }
@@ -74,9 +74,9 @@ async function baixarOriginais(admin: Admin, gateway: PaymentGateway, renegociac
 export async function POST(request: Request) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   const { data: perfil } = await supabase.from('usuarios').select('papel').eq('id', user.id).maybeSingle();
-  if (!perfil) return NextResponse.json({ error: 'Sem permissao' }, { status: 403 });
+  if (!perfil) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
 
   const body = (await request.json().catch(() => ({}))) as {
     acao?: 'criar' | 'baixar';
@@ -92,13 +92,13 @@ export async function POST(request: Request) {
 
   // ---- tentar de novo a baixa dos originais
   if (body.acao === 'baixar') {
-    if (!body.renegociacao_id) return NextResponse.json({ error: 'renegociacao_id obrigatorio' }, { status: 400 });
+    if (!body.renegociacao_id) return NextResponse.json({ error: 'renegociacao_id obrigatório' }, { status: 400 });
     const { data: r } = await admin.from('cobranca_renegociacoes')
       .select('id, cliente_id, regional_id, situacao').eq('id', body.renegociacao_id).maybeSingle();
-    if (!r) return NextResponse.json({ error: 'Renegociacao nao encontrada' }, { status: 404 });
+    if (!r) return NextResponse.json({ error: 'Renegociação não encontrada' }, { status: 404 });
     const { data: pode } = await supabase.rpc('cobranca_pode_cliente', { p_cliente_id: r.cliente_id });
-    if (!pode) return NextResponse.json({ error: 'Fora do seu escopo de cobranca' }, { status: 403 });
-    if (r.situacao !== 'EMITIDA') return NextResponse.json({ error: 'O boleto novo nao foi emitido' }, { status: 400 });
+    if (!pode) return NextResponse.json({ error: 'Fora do seu escopo de cobrança' }, { status: 403 });
+    if (r.situacao !== 'EMITIDA') return NextResponse.json({ error: 'O boleto novo não foi emitido' }, { status: 400 });
     try {
       const { gateway } = await resolverGateway(admin, r.regional_id);
       const erros = await baixarOriginais(admin, gateway, r.id);
@@ -109,12 +109,12 @@ export async function POST(request: Request) {
   }
 
   // ---- criar + emitir + baixar
-  if (!body.cliente_id) return NextResponse.json({ error: 'cliente_id obrigatorio' }, { status: 400 });
+  if (!body.cliente_id) return NextResponse.json({ error: 'cliente_id obrigatório' }, { status: 400 });
 
   const { data: cliente } = await admin.from('clientes')
     .select('id, nome_razao_social, cpf_cnpj, email, telefone, celular, endereco, regional_id')
     .eq('id', body.cliente_id).maybeSingle();
-  if (!cliente) return NextResponse.json({ error: 'Associado nao encontrado' }, { status: 404 });
+  if (!cliente) return NextResponse.json({ error: 'Associado não encontrado' }, { status: 404 });
 
   // Gateway ANTES de criar: configuracao errada para aqui, sem deixar nada pela metade.
   let gw: Awaited<ReturnType<typeof resolverGateway>>;
@@ -147,7 +147,7 @@ export async function POST(request: Request) {
         titulo_id: t.id,
         valor: Number(t.valor),
         vencimento: t.data_vencimento,
-        descricao: 'Mensalidade de protecao veicular (negociada)',
+        descricao: 'Mensalidade de proteção veicular (negociada)',
         pagador: {
           nome: cliente.nome_razao_social,
           cpf_cnpj: cliente.cpf_cnpj,
@@ -183,9 +183,9 @@ export async function POST(request: Request) {
         try { await gw.gateway.cancelar(r.nosso_numero); } catch { /* registrado como ERRO na renegociacao */ }
       }
     }
-    const motivo = emitidas.filter((r) => r.erro).map((r) => r.erro).join(' | ') || 'o banco nao devolveu a linha digitavel';
+    const motivo = emitidas.filter((r) => r.erro).map((r) => r.erro).join(' | ') || 'o banco não devolveu a linha digitável';
     return NextResponse.json({
-      error: `O banco recusou a emissao: ${motivo}. Nada foi alterado nos boletos originais.`,
+      error: `O banco recusou a emissão: ${motivo}. Nada foi alterado nos boletos originais.`,
       renegociacao_id: id,
     }, { status: 400 });
   }

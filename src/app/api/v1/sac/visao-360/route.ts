@@ -12,9 +12,9 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   const { data: perfil } = await supabase.from('usuarios').select('papel').eq('id', user.id).maybeSingle();
-  if (!perfil) return NextResponse.json({ error: 'Sem permissao' }, { status: 403 });
+  if (!perfil) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
 
   const url = new URL(request.url);
   let clienteId = url.searchParams.get('cliente_id');
@@ -32,12 +32,12 @@ export async function GET(request: Request) {
       .select('id').eq('cpf_cnpj', cpf.replace(/\D/g, '')).limit(1);
     clienteId = data?.[0]?.id ?? null;
   }
-  if (!clienteId) return NextResponse.json({ error: 'Associado nao encontrado' }, { status: 404 });
+  if (!clienteId) return NextResponse.json({ error: 'Associado não encontrado' }, { status: 404 });
 
   const { data: associado, error: erroAssociado } = await supabase
     .from('clientes').select('*').eq('id', clienteId).maybeSingle();
   if (erroAssociado) return NextResponse.json({ error: erroAssociado.message }, { status: 500 });
-  if (!associado) return NextResponse.json({ error: 'Associado nao encontrado' }, { status: 404 });
+  if (!associado) return NextResponse.json({ error: 'Associado não encontrado' }, { status: 404 });
 
   // Lista resumida: um RPC so, ja ORDENADO (ativos primeiro, desempate por data
   // de ativacao/modelo/placa) e com plano, alertas, eventos e assistencia

@@ -103,7 +103,7 @@ function Seta({ lado, ativo, onClick }: { lado: 'esq' | 'dir'; ativo: boolean; o
   return (
     <button
       type="button" onClick={onClick} disabled={!ativo}
-      aria-label={lado === 'esq' ? 'Foto anterior' : 'Proxima foto'}
+      aria-label={lado === 'esq' ? 'Foto anterior' : 'Próxima foto'}
       className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/10 text-white transition hover:bg-white/20 disabled:opacity-20"
     >
       <Icone className="h-5 w-5" />

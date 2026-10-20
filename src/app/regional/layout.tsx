@@ -56,10 +56,10 @@ export default async function RegionalLayout({ children }: { children: React.Rea
     return (
       <main className="grid min-h-screen place-items-center bg-fundo px-4">
         <div className="max-w-md rounded-2xl border border-amber-200 bg-superficie p-6 text-center">
-          <p className="text-sm font-semibold text-slate-800">Unidade nao vinculada</p>
+          <p className="text-sm font-semibold text-slate-800">Unidade não vinculada</p>
           <p className="mt-1 text-xs leading-relaxed text-slate-500">
-            Seu usuario e de gestor regional, mas nao esta vinculado a nenhuma franquia.
-            Peca a matriz para definir a unidade no seu cadastro.
+            Seu usuário e de gestor regional, mas não está vinculado a nenhuma franquia.
+            Peça a matriz para definir a unidade no seu cadastro.
           </p>
         </div>
       </main>

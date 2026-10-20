@@ -29,7 +29,7 @@ async function matrizDeXlsx(arquivo: File): Promise<string[][]> {
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(await arquivo.arrayBuffer());
   const ws = wb.worksheets[0];
-  if (!ws) throw new Error('A planilha nao tem nenhuma aba.');
+  if (!ws) throw new Error('A planilha não tem nenhuma aba.');
 
   const linhas: string[][] = [];
   ws.eachRow((row) => {
@@ -114,7 +114,7 @@ export function ImportarVendedores({ aberto, onClose }: { aberto: boolean; onClo
       });
       setDePara(inicial);
     } catch (e) {
-      toast.error(`Nao consegui ler a planilha: ${(e as Error).message}`);
+      toast.error(`Não consegui ler a planilha: ${(e as Error).message}`);
       limpar();
     } finally {
       setLendo(false);

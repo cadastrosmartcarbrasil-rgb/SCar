@@ -58,7 +58,7 @@ export default function EquipeRegionalPage() {
 
   function editar(vendedorId: string) {
     const v = porId.get(vendedorId);
-    if (!v) return toast.error('Nao consegui carregar o cadastro deste vendedor');
+    if (!v) return toast.error('Não consegui carregar o cadastro deste vendedor');
     setEditando({
       id: v.id, nome: v.nome, email: v.email, telefone: v.telefone, documento: v.documento,
       codigo: v.codigo, regional_id: v.regional_id, usuario_id: v.usuario_id,
@@ -93,7 +93,7 @@ export default function EquipeRegionalPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Minha Equipe</h1>
           <p className="mt-0.5 text-sm text-slate-500">
-            Desempenho por vendedor no periodo, com o hotlink de cada um.
+            Desempenho por vendedor no período, com o hotlink de cada um.
           </p>
         </div>
         <Button onClick={novo}>
@@ -123,7 +123,7 @@ export default function EquipeRegionalPage() {
           <b className="tnum text-slate-700">{resumo.ativos}</b> ativo(s)
           {resumo.inativos > 0 && (
             <>
-              {' '}· <b className="tnum text-amber-700">{resumo.inativos}</b> aguardando ativacao
+              {' '}· <b className="tnum text-amber-700">{resumo.inativos}</b> aguardando ativação
             </>
           )}
         </p>
@@ -149,8 +149,8 @@ export default function EquipeRegionalPage() {
                 resumo.cadastrados === 0
                   ? 'Cadastre a sua equipe para acompanhar o desempenho e distribuir os hotlinks de venda.'
                   : filtro === 'ativos'
-                    ? `Ha ${resumo.inativos} cadastrado(s) aguardando ativacao. Abra "Inativos" e ligue quem ja esta vendendo.`
-                    : 'Toda a equipe cadastrada esta ativa.'
+                    ? `Há ${resumo.inativos} cadastrado(s) aguardando ativação. Abra "Inativos" e ligue quem já está vendendo.`
+                    : 'Toda a equipe cadastrada está ativa.'
               }
               acao={
                 resumo.cadastrados === 0
@@ -167,10 +167,10 @@ export default function EquipeRegionalPage() {
                   <th className="py-2.5 font-semibold">Vendedor</th>
                   <th className="py-2.5 text-right font-semibold">Leads</th>
                   <th className="py-2.5 text-right font-semibold">Convertidos</th>
-                  <th className="py-2.5 text-right font-semibold">Conversao</th>
-                  <th className="py-2.5 text-right font-semibold">Comissao no periodo</th>
+                  <th className="py-2.5 text-right font-semibold">Conversão</th>
+                  <th className="py-2.5 text-right font-semibold">Comissão no período</th>
                   <th className="py-2.5 text-right font-semibold">A pagar hoje</th>
-                  <th className="py-2.5 text-right font-semibold">Acoes</th>
+                  <th className="py-2.5 text-right font-semibold">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -186,7 +186,7 @@ export default function EquipeRegionalPage() {
                         )}
                       </span>
                       <span className="block text-[11px] text-slate-400">
-                        <span className="font-mono">{v.codigo}</span> · entrada {pct(v.taxa_adesao)} · recorrencia {pct(v.taxa_recorrente)}
+                        <span className="font-mono">{v.codigo}</span> · entrada {pct(v.taxa_adesao)} · recorrência {pct(v.taxa_recorrente)}
                       </span>
                     </td>
                     <td className="tnum py-2.5 text-right text-slate-700">
@@ -239,7 +239,7 @@ export default function EquipeRegionalPage() {
                           title={
                             hotlinkResolve(v)
                               ? `Copiar hotlink de ${v.nome}`
-                              : 'O hotlink so funciona com o vendedor ativo'
+                              : 'O hotlink só funciona com o vendedor ativo'
                           }
                           className="inline-grid h-7 w-7 place-items-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
                         >
@@ -272,9 +272,9 @@ export default function EquipeRegionalPage() {
       </Card>
 
       <p className="text-[11px] leading-relaxed text-slate-400">
-        A unidade <b>cadastra</b>, <b>ativa</b> e <b>inativa</b> a propria equipe. Inativar nao apaga
-        nada — o vendedor sai do hotlink e do rodizio, e o que ele ja trouxe continua no historico.
-        <b> Excluir o cadastro e so a matriz</b> (Configuracoes &rarr; Vendedores).
+        A unidade <b>cadastra</b>, <b>ativa</b> e <b>inativa</b> a própria equipe. Inativar não apaga
+        nada — o vendedor sai do hotlink e do rodízio, e o que ele já trouxe continua no histórico.
+        <b> Excluir o cadastro é só a matriz</b> (Configurações &rarr; Vendedores).
       </p>
 
       {editando && (

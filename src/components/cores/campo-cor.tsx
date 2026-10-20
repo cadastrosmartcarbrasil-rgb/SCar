@@ -54,11 +54,11 @@ export function CampoCor({
         onChange={(e) => onChange(e.target.value || null)}
         className="min-w-0 flex-1"
       >
-        <option value="">Nao informada</option>
+        <option value="">Não informada</option>
         {opcoes.map((nome) => (
           <option key={nome} value={nome}>
             {nome}
-            {!catalogo.some((c) => c.nome === nome) ? ' (fora do catalogo)' : ''}
+            {!catalogo.some((c) => c.nome === nome) ? ' (fora do catálogo)' : ''}
           </option>
         ))}
       </Select>

@@ -117,7 +117,7 @@ export function LancamentoModal({
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.descricao?.trim()) return toast.error('Informe a descricao do lancamento');
+    if (!form.descricao?.trim()) return toast.error('Informe a descrição do lançamento');
     if (!form.valor_original || form.valor_original <= 0) return toast.error('Informe um valor maior que zero');
     if (!form.data_vencimento) return toast.error('Informe a data de vencimento');
     const semFavorecido = erroFavorecidoEvento(form);
@@ -128,7 +128,7 @@ export function LancamentoModal({
       {
         onSuccess: (ids) => {
           if (edicao) {
-            toast.success('Lancamento atualizado');
+            toast.success('Lançamento atualizado');
             onClose();
             return;
           }
@@ -139,7 +139,7 @@ export function LancamentoModal({
             onClose();
             return;
           }
-          toast.success('Lancamento criado — agora voce pode anexar documentos');
+          toast.success('Lançamento criado — agora você pode anexar documentos');
           setSalvoId(ids[0] ?? null);
           setRecemCriado(true);
         },
@@ -153,11 +153,11 @@ export function LancamentoModal({
       open={aberto}
       onClose={onClose}
       tamanho="xl"
-      title={edicao ? 'Editar lancamento' : receita ? 'Nova conta a receber' : 'Nova conta a pagar'}
-      subtitulo="Os campos marcados com * sao obrigatorios."
+      title={edicao ? 'Editar lançamento' : receita ? 'Nova conta a receber' : 'Nova conta a pagar'}
+      subtitulo="Os campos marcados com * são obrigatórios."
     >
       <form onSubmit={submit} className="space-y-6">
-        <Secao titulo="Identificacao">
+        <Secao titulo="Identificação">
           <div className="grid gap-3 sm:grid-cols-4">
             <FormField label="Natureza *">
               <Select
@@ -168,7 +168,7 @@ export function LancamentoModal({
                 <option value="RECEITA">Conta a Receber</option>
               </Select>
             </FormField>
-            <FormField label="Descricao *" className="sm:col-span-2">
+            <FormField label="Descrição *" className="sm:col-span-2">
               <Input
                 value={form.descricao ?? ''}
                 onChange={(e) => set({ descricao: e.target.value })}
@@ -188,24 +188,24 @@ export function LancamentoModal({
             {receita ? (
               <FormField label="Pagador (associado)">
                 <SeletorAssociado value={form.cliente_id} onChange={(id) => set({ cliente_id: id || null })}
-                  placeholder="Nao vinculado — digite para buscar" />
+                  placeholder="Não vinculado — digite para buscar" />
               </FormField>
             ) : (
               <FormField label={form.evento_id ? 'Fornecedor (favorecido)' : 'Favorecido (fornecedor)'}>
                 <Select value={form.fornecedor_id ?? ''} onChange={(e) => set({ fornecedor_id: e.target.value || null })}>
-                  <option value="">{form.evento_id ? '-- Sem fornecedor (paga o terceiro) --' : '-- Nao vinculado --'}</option>
+                  <option value="">{form.evento_id ? '-- Sem fornecedor (paga o terceiro) --' : '-- Não vinculado --'}</option>
                   {ordenarFornecedores(fornecedores ?? []).map((f) => (
                     <option key={f.id} value={f.id}>{rotuloFornecedor(f)}</option>
                   ))}
                 </Select>
               </FormField>
             )}
-            <FormField label="Regional (rateio e permissao de acesso)">
+            <FormField label="Regional (rateio e permissão de acesso)">
               <Select
                 value={form.regional_id ?? ''}
                 onChange={(e) => set({ regional_id: e.target.value || null })}
               >
-                <option value="">-- Matriz (visivel so p/ admin e financeiro) --</option>
+                <option value="">-- Matriz (visível só p/ admin e financeiro) --</option>
                 {opcoesParaEscolher(regionais, form.regional_id).map((r) => (
                   <option key={r.id} value={r.id}>{r.nome}</option>
                 ))}
@@ -239,11 +239,11 @@ export function LancamentoModal({
           )}
         </Secao>
 
-        <Secao titulo="Classificacao contabil">
+        <Secao titulo="Classificação contabil">
           <div className="grid gap-3 sm:grid-cols-2">
             <FormField label="Categoria do DRE">
               <Select value={form.categoria_dre_id ?? ''} onChange={(e) => set({ categoria_dre_id: e.target.value || null })}>
-                <option value="">-- Nao classificado --</option>
+                <option value="">-- Não classificado --</option>
                 {categoriasDoTipo.map((c) => (
                   <option key={c.id} value={c.id}>{c.codigo_estruturado} · {c.nome}</option>
                 ))}
@@ -261,7 +261,7 @@ export function LancamentoModal({
           {!form.categoria_dre_id && (
             <p className="flex items-start gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-[11.5px] leading-relaxed text-amber-800">
               <Info className="mt-px h-3.5 w-3.5 shrink-0" />
-              Sem categoria o valor aparece no DRE como &quot;nao classificado&quot;. Classifique para o relatorio ficha gerencial.
+              Sem categoria o valor aparece no DRE como &quot;não classificado&quot;. Classifique para o relatório ficha gerencial.
             </p>
           )}
         </Secao>
@@ -275,13 +275,13 @@ export function LancamentoModal({
                 autoFocus
               />
             </FormField>
-            <FormField label="Emissao">
+            <FormField label="Emissão">
               <Input type="date" className="tnum" value={form.data_emissao ?? hoje} onChange={(e) => set({ data_emissao: e.target.value })} />
             </FormField>
             <FormField label="1o vencimento *">
               <Input type="date" className="tnum" value={form.data_vencimento ?? hoje} onChange={(e) => set({ data_vencimento: e.target.value, competencia: form.competencia ?? e.target.value })} />
             </FormField>
-            <FormField label="Competencia">
+            <FormField label="Competência">
               <Input type="date" className="tnum" value={form.competencia ?? form.data_vencimento ?? hoje} onChange={(e) => set({ competencia: e.target.value })} />
             </FormField>
           </div>
@@ -295,8 +295,8 @@ export function LancamentoModal({
                 {FORMAS.map((f) => <option key={f} value={f}>{f}</option>)}
               </Select>
             </FormField>
-            <FormField label="Observacoes">
-              <Textarea rows={2} value={form.observacoes ?? ''} onChange={(e) => set({ observacoes: e.target.value })} placeholder="Detalhes internos, contrato, competencia especial..." />
+            <FormField label="Observações">
+              <Textarea rows={2} value={form.observacoes ?? ''} onChange={(e) => set({ observacoes: e.target.value })} placeholder="Detalhes internos, contrato, competência especial..." />
             </FormField>
           </div>
         </Secao>
@@ -307,8 +307,8 @@ export function LancamentoModal({
               {recemCriado && (
                 <p className="flex items-start gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-[11.5px] leading-relaxed text-emerald-800">
                   <CheckCircle2 className="mt-px h-3.5 w-3.5 shrink-0" />
-                  Lancamento gravado. Anexe os documentos e clique em Concluir — ou feche, os anexos
-                  podem ser adicionados depois pela edicao do titulo.
+                  Lançamento gravado. Anexe os documentos e clique em Concluir — ou feche, os anexos
+                  podem ser adicionados depois pela edição do título.
                 </p>
               )}
               <AnexosLancamento lancamentoId={salvoId} />
@@ -316,14 +316,14 @@ export function LancamentoModal({
           ) : (
             <p className="flex items-start gap-1.5 rounded-lg bg-slate-50 px-3 py-2.5 text-[11.5px] leading-relaxed text-slate-500">
               <Paperclip className="mt-px h-3.5 w-3.5 shrink-0" />
-              Disponivel depois de gravar o lancamento — o arquivo precisa de um titulo existente
-              para ficar vinculado, e assim um cadastro abandonado nao deixa arquivo solto no banco.
+              Disponível depois de gravar o lançamento — o arquivo precisa de um título existente
+              para ficar vinculado, e assim um cadastro abandonado não deixa arquivo solto no banco.
             </p>
           )}
         </Secao>
 
         {!edicao && !salvoId && (
-          <Secao titulo="Parcelamento / recorrencia">
+          <Secao titulo="Parcelamento / recorrência">
             <div className="grid gap-3 sm:grid-cols-4">
               <FormField label="Parcelas">
                 <Input
@@ -355,7 +355,7 @@ export function LancamentoModal({
             {previa.length > 1 && (
               <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
                 <p className="mb-2 flex items-center gap-1.5 text-[11.5px] font-semibold uppercase tracking-wide text-slate-500">
-                  <Layers className="h-3.5 w-3.5" /> Previa · {previa.length} titulos · total {formatCurrency(totalGerado)}
+                  <Layers className="h-3.5 w-3.5" /> Prévia · {previa.length} títulos · total {formatCurrency(totalGerado)}
                 </p>
                 <div className="max-h-36 overflow-y-auto">
                   <table className="w-full text-xs">
@@ -392,7 +392,7 @@ export function LancamentoModal({
               <>
                 <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>
                 <Button type="submit" disabled={salvar.isPending}>
-                  {salvar.isPending ? 'Salvando...' : edicao ? 'Salvar alteracoes' : 'Lancar'}
+                  {salvar.isPending ? 'Salvando...' : edicao ? 'Salvar alterações' : 'Lançar'}
                 </Button>
               </>
             )}

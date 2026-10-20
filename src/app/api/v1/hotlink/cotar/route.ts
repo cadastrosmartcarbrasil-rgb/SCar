@@ -20,15 +20,15 @@ export async function POST(req: Request) {
   const placaBruta = String(body?.placa ?? '').trim();
   const fipeInformada = Number(body?.valor_fipe ?? 0);
 
-  if (!token) return NextResponse.json({ error: 'Sessao expirada' }, { status: 400 });
-  if (!tipoVeiculoId) return NextResponse.json({ error: 'Escolha o tipo do veiculo' }, { status: 400 });
+  if (!token) return NextResponse.json({ error: 'Sessão expirada' }, { status: 400 });
+  if (!tipoVeiculoId) return NextResponse.json({ error: 'Escolha o tipo do veículo' }, { status: 400 });
 
   const admin = createAdminClient();
   const { data: sessoes } = await admin.rpc('lead_por_token_publico', { p_token: token });
   const lead = sessoes?.[0];
-  if (!lead) return NextResponse.json({ error: 'Sessao invalida' }, { status: 404 });
+  if (!lead) return NextResponse.json({ error: 'Sessão inválida' }, { status: 404 });
   if (!lead.em_negociacao) {
-    return NextResponse.json({ error: 'Este atendimento ja foi concluido' }, { status: 400 });
+    return NextResponse.json({ error: 'Este atendimento já foi concluído' }, { status: 400 });
   }
 
   // A identificacao pela placa ja rodou em /hotlink/veiculo e gravou o que
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
   const valorFipe = fipeInformada || Number(lead.valor_fipe ?? 0);
   if (!valorFipe || valorFipe <= 0) {
     return NextResponse.json(
-      { error: 'Nao consegui o valor do veiculo. Informe o valor de mercado para cotar.' },
+      { error: 'Não consegui o valor do veículo. Informe o valor de mercado para cotar.' },
       { status: 422 },
     );
   }
@@ -87,7 +87,7 @@ export async function POST(req: Request) {
   }
 
   if (cotados.length === 0) {
-    return NextResponse.json({ error: 'Nao ha planos disponiveis para este veiculo agora.' }, { status: 422 });
+    return NextResponse.json({ error: 'Não há planos disponíveis para este veículo agora.' }, { status: 422 });
   }
 
   return NextResponse.json({ ok: true, valor_fipe: valorFipe, planos: cotados });

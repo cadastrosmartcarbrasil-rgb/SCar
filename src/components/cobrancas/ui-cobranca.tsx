@@ -126,8 +126,8 @@ export function SemAcessoCobranca() {
   return (
     <Vazio
       icon={Search}
-      titulo="Sem acesso a cobranca"
-      descricao="Este painel e da matriz, da equipe de cobranca, dos supervisores e dos gestores regionais. Se voce deveria ver, peca ao administrador para revisar o seu papel em Configuracoes → Usuarios."
+      titulo="Sem acesso a cobrança"
+      descricao="Este painel e da matriz, da equipe de cobrança, dos supervisores e dos gestores regionais. Se você deveria ver, peça ao administrador para revisar o seu papel em Configurações → Usuários."
     />
   );
 }
@@ -154,8 +154,8 @@ export function ModalBoletos({ filtro, onClose }: { filtro: FiltroListaBoletos |
 
   const exportar = () => {
     baixarCsv(`cobranca-${(filtro?.titulo ?? 'boletos').toLowerCase().replace(/\W+/g, '-')}.csv`, [
-      ['Associado', 'CPF/CNPJ', 'Placa', 'Regional', 'Origem', 'Competencia', 'Vencimento', 'Ciclo',
-        'Valor', 'Valor pago', 'Pago em', 'Situacao', 'Dias em atraso', 'Serasa'],
+      ['Associado', 'CPF/CNPJ', 'Placa', 'Regional', 'Origem', 'Competência', 'Vencimento', 'Ciclo',
+        'Valor', 'Valor pago', 'Pago em', 'Situação', 'Dias em atraso', 'Serasa'],
       ...linhas.map((l) => [
         l.associado, l.cpf_cnpj, l.placa ?? '', l.regional, l.origem,
         l.competencia ? formatDate(l.competencia) : '', formatDate(l.vencimento), l.ciclo,
@@ -184,7 +184,7 @@ export function ModalBoletos({ filtro, onClose }: { filtro: FiltroListaBoletos |
       {q.isLoading ? (
         <div className="flex items-center gap-2 py-10 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin" /> carregando…</div>
       ) : !linhas.length ? (
-        <Vazio icon={Search} titulo="Nenhum boleto" descricao="Nada compoe este numero no filtro atual." />
+        <Vazio icon={Search} titulo="Nenhum boleto" descricao="Nada compõe este número no filtro atual." />
       ) : (
         <div className="max-h-[60vh] overflow-auto rounded-xl border border-slate-200">
           <table className="w-full text-[12.5px]">
@@ -195,7 +195,7 @@ export function ModalBoletos({ filtro, onClose }: { filtro: FiltroListaBoletos |
                 <th className="px-3 py-2">Regional</th>
                 <th className="px-3 py-2">Vencimento</th>
                 <th className="px-3 py-2 text-right">Valor</th>
-                <th className="px-3 py-2">Situacao</th>
+                <th className="px-3 py-2">Situação</th>
                 <th className="px-3 py-2 text-right">Atraso</th>
               </tr>
             </thead>
@@ -204,7 +204,7 @@ export function ModalBoletos({ filtro, onClose }: { filtro: FiltroListaBoletos |
                 <tr key={l.boleto_id} className="border-t border-slate-100">
                   <td className="px-3 py-1.5">
                     <p className="font-medium text-slate-800">{l.associado}</p>
-                    <p className="tnum text-[11px] text-slate-400">{l.cpf_cnpj} · {l.origem === 'MUTUAL' ? 'historico Mutual' : 'SCar'}</p>
+                    <p className="tnum text-[11px] text-slate-400">{l.cpf_cnpj} · {l.origem === 'MUTUAL' ? 'histórico Mutual' : 'SCar'}</p>
                   </td>
                   <td className="px-3 py-1.5 text-slate-600">{l.placa ?? '—'}</td>
                   <td className="px-3 py-1.5 text-slate-600">{l.regional}</td>

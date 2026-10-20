@@ -99,7 +99,7 @@ async function jget<T>(url: string): Promise<T> {
 }
 async function jpost<T>(url: string, body: unknown): Promise<T> {
   const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  if (!r.ok) throw new Error(((await r.json().catch(() => ({}))) as { error?: string }).error ?? 'Erro na operacao');
+  if (!r.ok) throw new Error(((await r.json().catch(() => ({}))) as { error?: string }).error ?? 'Erro na operação');
   return r.json() as Promise<T>;
 }
 

@@ -73,7 +73,7 @@ function BarraFiltros({
           <input type="date" value={periodo.inicio} onChange={(e) => onPeriodo({ ...periodo, inicio: e.target.value })} className={campo} />
         </label>
         <label className="block">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Ate</span>
+          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Até</span>
           <input type="date" value={periodo.fim} onChange={(e) => onPeriodo({ ...periodo, fim: e.target.value })} className={campo} />
         </label>
       </div>
@@ -112,12 +112,12 @@ function ModalParametros({ open, onClose }: { open: boolean; onClose: () => void
   const campo = 'tnum mt-1 block w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm';
 
   return (
-    <Modal open={open} onClose={onClose} title="Meta da inadimplencia e feriados" tamanho="lg">
+    <Modal open={open} onClose={onClose} title="Meta da inadimplência e feriados" tamanho="lg">
       <div className="space-y-5">
         <section>
           <p className="text-sm text-slate-600">
-            O semaforo usa a <b>inadimplencia financeira</b> (vencido sem pagamento ÷ o que ja venceu).
-            Ate a meta e verde; entre a meta e o limite, ambar; acima do limite, vermelho.
+            O semáforo usa a <b>inadimplência financeira</b> (vencido sem pagamento ÷ o que já venceu).
+            Até a meta e verde; entre a meta e o limite, âmbar; acima do limite, vermelho.
           </p>
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
             <label className="block text-sm">Meta (%)
@@ -134,18 +134,18 @@ function ModalParametros({ open, onClose }: { open: boolean; onClose: () => void
               </button>
             </div>
           </div>
-          {invalido && <p className="mt-1 text-xs text-rose-600">A meta tem de ficar entre 0 e o limite, e o limite ate 100%.</p>}
+          {invalido && <p className="mt-1 text-xs text-rose-600">A meta tem de ficar entre 0 e o limite, e o limite até 100%.</p>}
           {salvar.error && <p className="mt-1 text-xs text-rose-600">{(salvar.error as Error).message}</p>}
         </section>
 
         <section>
-          <h3 className="text-sm font-semibold text-slate-800">Feriados bancarios</h3>
+          <h3 className="text-sm font-semibold text-slate-800">Feriados bancários</h3>
           <p className="text-xs text-slate-500">
-            Boleto que vence em fim de semana ou feriado so conta como vencido depois do proximo dia util.
+            Boleto que vence em fim de semana ou feriado só conta como vencido depois do próximo dia útil.
           </p>
           <div className="mt-2 flex flex-wrap items-end gap-2">
             <input type="date" value={data} onChange={(e) => setData(e.target.value)} className="tnum rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm" />
-            <input placeholder="Descricao" value={desc} onChange={(e) => setDesc(e.target.value)} className="min-w-[200px] flex-1 rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm" />
+            <input placeholder="Descrição" value={desc} onChange={(e) => setDesc(e.target.value)} className="min-w-[200px] flex-1 rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm" />
             <button type="button" disabled={!data || !desc.trim() || salvarFeriado.isPending}
               onClick={() => salvarFeriado.mutate({ data, descricao: desc }, { onSuccess: () => { setData(''); setDesc(''); } })}
               className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 disabled:opacity-50">
@@ -219,7 +219,7 @@ function TabelaComparativos({ atual, refs, mesCheio }: {
         </tbody>
       </table>
       <p className="mt-2 text-[11px] text-slate-400">
-        A seta mostra a diferenca em <b>pontos percentuais</b> e, entre parenteses, a <b>variacao relativa</b>
+        A seta mostra a diferença em <b>pontos percentuais</b> e, entre parênteses, a <b>variação relativa</b>
         (6% → 8% = +2,0 p.p. e +33,3%). Verde e melhora, vermelho e piora.
       </p>
     </div>
@@ -301,15 +301,15 @@ export function PainelInadimplencia({ unidade }: { unidade?: { id: string; nome:
         podeConfigurar={!!escopo.data?.global && !unidade} onConfigurar={() => setConfig(true)}
         unidadeFixa={unidade?.nome} />
 
-      {!valido && <p className="text-sm text-rose-600">O inicio do periodo esta depois do fim.</p>}
+      {!valido && <p className="text-sm text-rose-600">O início do período está depois do fim.</p>}
 
       {defasado && (
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800">
           <Database className="h-4 w-4" />
-          O historico do Mutual e de <b>{formatDateTime(qCart.data?.ultima_captura_mutual)}</b> ({idade} dias).
+          O histórico do Mutual e de <b>{formatDateTime(qCart.data?.ultima_captura_mutual)}</b> ({idade} dias).
           Pagamentos feitos la depois disso ainda aparecem como em aberto.
           {unidade ? (
-            <span>A matriz atualiza esse historico.</span>
+            <span>A matriz atualiza esse histórico.</span>
           ) : (
             <Link href="/integracao/mutual" className="font-medium underline">Recapturar boletos e importar</Link>
           )}
@@ -322,7 +322,7 @@ export function PainelInadimplencia({ unidade }: { unidade?: { id: string; nome:
         <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Carteira — hoje</h2>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <TileCobranca titulo="Associados ativos" icon={Users} tom="navy" carregando={qCart.isLoading}
-            valor={inteiro.format(num(qCart.data?.clientes_ativos))} detalhe="com veiculo na base" />
+            valor={inteiro.format(num(qCart.data?.clientes_ativos))} detalhe="com veículo na base" />
           <TileCobranca titulo="Em dia" icon={UserCheck} tom="green" carregando={qCart.isLoading}
             valor={inteiro.format(Math.max(0, num(qCart.data?.clientes_ativos) - num(qCart.data?.clientes_inadimplentes)))}
             detalhe={pct(fracao(num(qCart.data?.clientes_ativos) - num(qCart.data?.clientes_inadimplentes), num(qCart.data?.clientes_ativos)))} />
@@ -332,7 +332,7 @@ export function PainelInadimplencia({ unidade }: { unidade?: { id: string; nome:
             onAbrir={() => setLista({ titulo: 'Todos os boletos vencidos em aberto', regionalId, situacoes: ['vencido'] })} />
           <TileCobranca titulo="Vencido em aberto" icon={Wallet} tom="amber" carregando={qCart.isLoading}
             valor={formatCurrency(num(qCart.data?.valor_vencido))}
-            detalhe={`${inteiro.format(num(qCart.data?.boletos_vencidos))} boletos, qualquer competencia`}
+            detalhe={`${inteiro.format(num(qCart.data?.boletos_vencidos))} boletos, qualquer competência`}
             onAbrir={() => setLista({ titulo: 'Todos os boletos vencidos em aberto', regionalId, situacoes: ['vencido'] })} />
         </div>
       </section>
@@ -340,25 +340,25 @@ export function PainelInadimplencia({ unidade }: { unidade?: { id: string; nome:
       {/* Financeiro do periodo */}
       <section>
         <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Financeiro do periodo — por vencimento
+          Financeiro do período — por vencimento
         </h2>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           <TileCobranca titulo="Emitido" icon={Banknote} tom="navy" carregando={carregando}
             valor={formatCurrency(num(atual?.valor_emitido))} detalhe={`${inteiro.format(num(atual?.boletos))} boletos`}
-            onAbrir={() => abrir('Boletos emitidos no periodo', {})} />
-          <TileCobranca titulo="Ja venceu" icon={CalendarClock} tom="slate" carregando={carregando}
+            onAbrir={() => abrir('Boletos emitidos no período', {})} />
+          <TileCobranca titulo="Já venceu" icon={CalendarClock} tom="slate" carregando={carregando}
             valor={formatCurrency(num(atual?.valor_venceram))} detalhe="base das taxas"
-            onAbrir={() => abrir('Boletos que ja venceram', { situacoes: ['vencido', 'pago_no_prazo', 'pago_em_atraso'] })} />
+            onAbrir={() => abrir('Boletos que já venceram', { situacoes: ['vencido', 'pago_no_prazo', 'pago_em_atraso'] })} />
           <TileCobranca titulo="Recebido" icon={BadgeCheck} tom="green" carregando={carregando}
             valor={formatCurrency(num(atual?.valor_pago_no_prazo) + num(atual?.valor_pago_em_atraso))}
             detalhe={<>no prazo {formatCurrency(num(atual?.valor_pago_no_prazo))}<br />em atraso {formatCurrency(num(atual?.valor_pago_em_atraso))}</>}
             onAbrir={() => abrir('Boletos pagos', { situacoes: ['pago_no_prazo', 'pago_em_atraso'] })} />
           <TileCobranca titulo="Inadimplente" icon={AlertTriangle} tom="rose" carregando={carregando}
             valor={formatCurrency(num(atual?.valor_aberto_vencido))}
-            detalhe={<>inadimplencia financeira <b>{pct(tAtual.inadFinanceira)}</b></>}
+            detalhe={<>inadimplência financeira <b>{pct(tAtual.inadFinanceira)}</b></>}
             rodape={<SeloSemaforo s={sem} />}
             onAbrir={() => abrir('Boletos vencidos sem pagamento', { situacoes: ['vencido'] })} />
-          <TileCobranca titulo="Previsao de recebimento" icon={CalendarDays} tom="cyan" carregando={carregando}
+          <TileCobranca titulo="Previsão de recebimento" icon={CalendarDays} tom="cyan" carregando={carregando}
             valor={formatCurrency(num(atual?.valor_a_vencer) + num(atual?.valor_vence_hoje))}
             detalhe={`a vencer, ${formatCurrency(num(atual?.valor_vence_hoje))} vencem hoje`}
             onAbrir={() => abrir('Boletos a vencer', { situacoes: ['a_vencer', 'vence_hoje'] })} />
@@ -367,36 +367,36 @@ export function PainelInadimplencia({ unidade }: { unidade?: { id: string; nome:
 
       {/* Recuperacao e qualidade */}
       <section>
-        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Recuperacao e qualidade do pagador</h2>
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Recuperação e qualidade do pagador</h2>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-          <TileCobranca titulo="Inadimplencia por clientes" icon={UserX} tom="rose" carregando={carregando}
+          <TileCobranca titulo="Inadimplência por clientes" icon={UserX} tom="rose" carregando={carregando}
             valor={pct(tAtual.inadClientes)}
             detalhe={`${inteiro.format(num(atual?.clientes_inadimplentes))} de ${inteiro.format(num(atual?.clientes_venceram))} com boleto vencido`}
             rodape={<Delta atual={tAtual.inadClientes} base={refs[0].taxas.inadClientes} chave="inadClientes" />} />
-          <TileCobranca titulo="Taxa de recuperacao" icon={RotateCcw} tom="green" carregando={carregando}
+          <TileCobranca titulo="Taxa de recuperação" icon={RotateCcw} tom="green" carregando={carregando}
             valor={pct(tAtual.recuperacao)} detalhe={`${formatCurrency(num(atual?.valor_pago_em_atraso))} pagos depois do vencimento`}
             rodape={<Delta atual={tAtual.recuperacao} base={refs[0].taxas.recuperacao} chave="recuperacao" />}
             onAbrir={() => abrir('Pagos em atraso (recuperados)', { situacoes: ['pago_em_atraso'] })} />
-          <TileCobranca titulo="Inadimplencia no 1º boleto" icon={Sparkles} tom="amber" carregando={carregando}
+          <TileCobranca titulo="Inadimplência no 1º boleto" icon={Sparkles} tom="amber" carregando={carregando}
             valor={pct(tAtual.inadInicial)}
-            detalhe={`${inteiro.format(num(atual?.primeiros_nao_pagos))} de ${inteiro.format(num(atual?.primeiros_venceram))} novos nao pagaram o 1º`}
+            detalhe={`${inteiro.format(num(atual?.primeiros_nao_pagos))} de ${inteiro.format(num(atual?.primeiros_venceram))} novos não pagaram o 1º`}
             rodape={<Delta atual={tAtual.inadInicial} base={refs[0].taxas.inadInicial} chave="inadInicial" />}
             onAbrir={() => abrir('1º boleto do associado', { somentePrimeiro: true })} />
           <TileCobranca titulo="Reincidentes" icon={Repeat2} tom="rose" carregando={carregando}
             valor={inteiro.format(num(atual?.reincidentes))}
-            detalhe={`dos ${inteiro.format(num(atual?.clientes_inadimplentes))} inadimplentes ja atrasaram nos 12 meses anteriores · ${inteiro.format(Math.max(0, num(atual?.clientes_inadimplentes) - num(atual?.reincidentes)))} novos`} />
+            detalhe={`dos ${inteiro.format(num(atual?.clientes_inadimplentes))} inadimplentes já atrasaram nos 12 meses anteriores · ${inteiro.format(Math.max(0, num(atual?.clientes_inadimplentes) - num(atual?.reincidentes)))} novos`} />
           <TileCobranca titulo="Regularizados" icon={UserCheck} tom="green" carregando={carregando}
-            valor={inteiro.format(num(atual?.regularizados))} detalhe="associados que pagaram atrasado no periodo"
-            onAbrir={() => setLista({ titulo: 'Pagamentos em atraso feitos no periodo', regionalId, situacoes: ['pago_em_atraso'], pagoInicio: periodo.inicio, pagoFim: periodo.fim })} />
+            valor={inteiro.format(num(atual?.regularizados))} detalhe="associados que pagaram atrasado no período"
+            onAbrir={() => setLista({ titulo: 'Pagamentos em atraso feitos no período', regionalId, situacoes: ['pago_em_atraso'], pagoInicio: periodo.inicio, pagoFim: periodo.fim })} />
         </div>
       </section>
 
       {/* Leitura automatica + comparativos */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
         <Card className="xl:col-span-2">
-          <CardHeader><CardTitle className="text-base">Leitura automatica</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">Leitura automática</CardTitle></CardHeader>
           <CardContent className="space-y-2">
-            {frases.length === 0 && <p className="text-sm text-slate-400">Sem boletos vencidos no periodo para comentar.</p>}
+            {frases.length === 0 && <p className="text-sm text-slate-400">Sem boletos vencidos no período para comentar.</p>}
             {frases.map((f, i) => (
               <p key={i} className={`rounded-lg border-l-4 px-3 py-2 text-sm ${
                 f.tom === 'positivo' ? 'border-emerald-500 bg-emerald-50/60 text-emerald-900'
@@ -407,7 +407,7 @@ export function PainelInadimplencia({ unidade }: { unidade?: { id: string; nome:
               </p>
             ))}
             <p className="pt-1 text-[11px] text-slate-400">
-              Cada frase sai dos numeros acima. Situacao de hoje: um periodo passado mostra o que dele continua em aberto agora.
+              Cada frase sai dos números acima. Situação de hoje: um período passado mostra o que dele continua em aberto agora.
             </p>
           </CardContent>
         </Card>
@@ -420,9 +420,9 @@ export function PainelInadimplencia({ unidade }: { unidade?: { id: string; nome:
       {/* Evolucao 12 meses */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Ultimos 12 meses — por mes de vencimento</CardTitle>
+          <CardTitle className="text-base">Últimos 12 meses — por mês de vencimento</CardTitle>
           <button type="button" onClick={() => baixarCsv('cobranca-12-meses.csv', [
-            ['Mes', 'Emitido', 'Ja venceu', 'Pago no prazo', 'Pago em atraso', 'Em aberto vencido', 'Inadimplencia %'],
+            ['Mês', 'Emitido', 'Já venceu', 'Pago no prazo', 'Pago em atraso', 'Em aberto vencido', 'Inadimplência %'],
             ...(qSerie.data ?? []).map((s) => [s.mes, num(s.valor_emitido), num(s.valor_venceram), num(s.valor_pago_no_prazo),
               num(s.valor_pago_em_atraso), num(s.valor_aberto_vencido),
               Math.round((fracao(num(s.valor_aberto_vencido), num(s.valor_venceram)) ?? 0) * 10000) / 100]),
@@ -455,7 +455,7 @@ export function PainelInadimplencia({ unidade }: { unidade?: { id: string; nome:
       {/* Regional x media nacional — so fora do portal da franquia */}
       {!unidade && (
       <Card>
-        <CardHeader><CardTitle className="text-base">Por regional — contra a media</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">Por regional — contra a média</CardTitle></CardHeader>
         <CardContent>
           <ErroLeitura q={qReg} />
           <div className="overflow-x-auto">
@@ -464,12 +464,12 @@ export function PainelInadimplencia({ unidade }: { unidade?: { id: string; nome:
                 <tr>
                   <th className="py-2 pr-3">Regional</th>
                   <th className="py-2 pr-3 text-right">Emitido</th>
-                  <th className="py-2 pr-3 text-right">Ja venceu</th>
+                  <th className="py-2 pr-3 text-right">Já venceu</th>
                   <th className="py-2 pr-3 text-right">Em aberto</th>
                   <th className="py-2 pr-3 text-right">Inadimplencia</th>
-                  <th className="py-2 pr-3 text-right">vs media</th>
+                  <th className="py-2 pr-3 text-right">vs média</th>
                   <th className="py-2 pr-3 text-right">Clientes inad.</th>
-                  <th className="py-2 pr-3">Semaforo</th>
+                  <th className="py-2 pr-3">Semáforo</th>
                 </tr>
               </thead>
               <tbody>
@@ -493,13 +493,13 @@ export function PainelInadimplencia({ unidade }: { unidade?: { id: string; nome:
                   );
                 })}
                 {!(qReg.data ?? []).length && !qReg.isLoading && (
-                  <tr><td colSpan={8} className="py-6 text-center text-sm text-slate-400">Sem boletos no periodo.</td></tr>
+                  <tr><td colSpan={8} className="py-6 text-center text-sm text-slate-400">Sem boletos no período.</td></tr>
                 )}
               </tbody>
             </table>
           </div>
           <p className="mt-2 text-[11px] text-slate-400">
-            Media = inadimplencia financeira de todas as regionais que voce enxerga ({pct(nacional)}).
+            Média = inadimplência financeira de todas as regionais que você enxerga ({pct(nacional)}).
             Clique numa regional para filtrar o painel.
           </p>
         </CardContent>

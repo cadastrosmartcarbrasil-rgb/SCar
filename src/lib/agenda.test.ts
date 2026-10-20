@@ -39,8 +39,8 @@ describe('diasParado', () => {
 describe('rotuloParado', () => {
   it('fala como gente', () => {
     expect(rotuloParado(0)).toBe('trabalhado hoje');
-    expect(rotuloParado(1)).toBe('parado ha 1 dia');
-    expect(rotuloParado(9)).toBe('parado ha 9 dias');
+    expect(rotuloParado(1)).toBe('parado há 1 dia');
+    expect(rotuloParado(9)).toBe('parado há 9 dias');
   });
 });
 
@@ -68,10 +68,10 @@ describe('situacaoAgenda', () => {
 
 describe('rotuloRetorno', () => {
   it('escreve o retorno do jeito que se fala', () => {
-    expect(rotuloRetorno(new Date(2026, 8, 2, 16, 30).toISOString(), agora)).toBe('hoje as 16:30');
-    expect(rotuloRetorno(new Date(2026, 8, 3, 9, 0).toISOString(), agora)).toBe('amanha as 09:00');
+    expect(rotuloRetorno(new Date(2026, 8, 2, 16, 30).toISOString(), agora)).toBe('hoje às 16:30');
+    expect(rotuloRetorno(new Date(2026, 8, 3, 9, 0).toISOString(), agora)).toBe('amanhã às 09:00');
     expect(rotuloRetorno(em(-1), agora)).toBe('atrasado desde ontem');
-    expect(rotuloRetorno(em(-4), agora)).toBe('atrasado ha 4 dias');
+    expect(rotuloRetorno(em(-4), agora)).toBe('atrasado há 4 dias');
     expect(rotuloRetorno(em(6), agora)).toBe('08/09');
     expect(rotuloRetorno(null, agora)).toBeNull();
   });

@@ -309,7 +309,7 @@ export function useAtualizarEvento() {
       const { data, error } = await supabase.from('eventos_sinistro').update(dados).eq('id', id).select('id');
       if (error) throw error;
       // RLS de update nao levanta erro: so nao alcanca a linha.
-      if (!data || data.length === 0) throw new Error('Seu perfil nao pode editar este evento.');
+      if (!data || data.length === 0) throw new Error('Seu perfil não pode editar este evento.');
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['eventos'] }),
   });

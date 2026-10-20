@@ -11,7 +11,7 @@ import type { CategoriasDreRow, TipoCategoriaDre } from '@/lib/database.types';
 
 const TIPOS: { value: TipoCategoriaDre; label: string; cor: string }[] = [
   { value: 'RECEITA', label: 'Receita', cor: 'bg-emerald-50 text-emerald-700' },
-  { value: 'CUSTO_VARIAVEL', label: 'Custo Variavel', cor: 'bg-amber-50 text-amber-700' },
+  { value: 'CUSTO_VARIAVEL', label: 'Custo Variável', cor: 'bg-amber-50 text-amber-700' },
   { value: 'DESPESA_FIXA', label: 'Despesa Fixa', cor: 'bg-rose-50 text-rose-700' },
 ];
 const tipoMeta = (t: TipoCategoriaDre) => TIPOS.find((x) => x.value === t)!;
@@ -31,7 +31,7 @@ export default function PlanoContasPage() {
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!ed?.codigo_estruturado || !ed?.nome) return toast.error('Preencha codigo e nome');
+    if (!ed?.codigo_estruturado || !ed?.nome) return toast.error('Preencha código e nome');
     salvar.mutate(ed, {
       onSuccess: () => {
         toast.success('Conta salva');
@@ -45,7 +45,7 @@ export default function PlanoContasPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-slate-500">
-          Estrutura de contas usada no DRE. Edite os codigos, nomes e classificacoes conforme sua
+          Estrutura de contas usada no DRE. Edite os códigos, nomes e classificações conforme sua
           contabilidade.
         </p>
         <Button onClick={novo}>
@@ -57,11 +57,11 @@ export default function PlanoContasPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
-              <th className="px-4 py-2">Codigo</th>
+              <th className="px-4 py-2">Código</th>
               <th className="px-4 py-2">Nome da conta</th>
-              <th className="px-4 py-2">Classificacao</th>
+              <th className="px-4 py-2">Classificação</th>
               <th className="px-4 py-2">Status</th>
-              <th className="px-4 py-2 text-right">Acoes</th>
+              <th className="px-4 py-2 text-right">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -101,7 +101,7 @@ export default function PlanoContasPage() {
                         onClick={() => {
                           if (confirm(`Excluir a conta "${c.nome}"?`))
                             excluir.mutate(c.id, {
-                              onSuccess: () => toast.success('Conta excluida'),
+                              onSuccess: () => toast.success('Conta excluída'),
                               onError: (e) => toast.error((e as Error).message),
                             });
                         }}
@@ -128,7 +128,7 @@ export default function PlanoContasPage() {
       <Modal open={aberto} onClose={() => setAberto(false)} title={ed?.id ? 'Editar Conta' : 'Nova Conta'}>
         <form onSubmit={submit} className="space-y-3">
           <div className="grid grid-cols-3 gap-3">
-            <FormField label="Codigo *">
+            <FormField label="Código *">
               <Input
                 value={ed?.codigo_estruturado ?? ''}
                 onChange={(e) => setEd((p) => ({ ...p, codigo_estruturado: e.target.value }))}
@@ -139,7 +139,7 @@ export default function PlanoContasPage() {
               <Input value={ed?.nome ?? ''} onChange={(e) => setEd((p) => ({ ...p, nome: e.target.value }))} />
             </FormField>
           </div>
-          <FormField label="Classificacao *">
+          <FormField label="Classificação *">
             <Select
               value={ed?.tipo ?? 'RECEITA'}
               onChange={(e) => setEd((p) => ({ ...p, tipo: e.target.value as TipoCategoriaDre }))}

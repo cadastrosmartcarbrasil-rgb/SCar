@@ -19,7 +19,7 @@ export async function registrarLiquidacoesSicredi(
   const resultados: ResultadoLiquidacao[] = [];
   for (const l of liquidacoes) {
     if (!l.nossoNumero) {
-      resultados.push({ nosso_numero: null, situacao: 'ERRO', valor_pago: l.valorPago, erro: 'pagamento sem nosso numero' });
+      resultados.push({ nosso_numero: null, situacao: 'ERRO', valor_pago: l.valorPago, erro: 'pagamento sem nosso número' });
       continue;
     }
     const { data, error } = await supabase.rpc('registrar_liquidacao_banco', {

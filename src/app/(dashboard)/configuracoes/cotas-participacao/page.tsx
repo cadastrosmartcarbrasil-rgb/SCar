@@ -19,9 +19,9 @@ export default function CotasParticipacaoPage() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-slate-500">
-        Cotas de participacao (cota de rateio no evento) como percentual da FIPE. O modelo do
-        veiculo herda a cota (padrao SGA: V5=5%, V10=10%...), e o veiculo pode sobrescrever. Alterar
-        um percentual aqui reflete em todos os veiculos que usam essa cota — sem precisar criar novos
+        Cotas de participação (cota de rateio no evento) como percentual da FIPE. O modelo do
+        veículo herda a cota (padrão SGA: V5=5%, V10=10%...), e o veículo pode sobrescrever. Alterar
+        um percentual aqui reflete em todos os veículos que usam essa cota — sem precisar criar novos
         planos.
       </p>
 
@@ -32,7 +32,7 @@ export default function CotasParticipacaoPage() {
 
         <div className="flex flex-wrap items-end gap-2 p-3">
           <div>
-            <label className="text-xs text-slate-500">Codigo</label>
+            <label className="text-xs text-slate-500">Código</label>
             <Input
               value={codigo}
               onChange={(e) => setCodigo(e.target.value)}
@@ -53,7 +53,7 @@ export default function CotasParticipacaoPage() {
           </div>
           <Button
             onClick={() => {
-              if (!codigo.trim() || pct === '') return toast.error('Informe codigo e percentual');
+              if (!codigo.trim() || pct === '') return toast.error('Informe código e percentual');
               salvar.mutate(
                 { codigo: codigo.trim(), percentual: Number(pct) / 100 },
                 {
@@ -74,9 +74,9 @@ export default function CotasParticipacaoPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-y border-slate-100 text-left text-[11px] uppercase text-slate-400">
-              <th className="px-4 py-1.5">Codigo</th>
+              <th className="px-4 py-1.5">Código</th>
               <th className="px-2 py-1.5">% da FIPE</th>
-              <th className="px-2 py-1.5">Descricao</th>
+              <th className="px-2 py-1.5">Descrição</th>
               <th className="px-2 py-1.5"></th>
             </tr>
           </thead>

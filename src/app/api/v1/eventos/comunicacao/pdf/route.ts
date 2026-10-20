@@ -15,7 +15,7 @@ const esc = (s: unknown) =>
 
 export async function GET(request: Request) {
   const id = new URL(request.url).searchParams.get('declaracao');
-  if (!id) return NextResponse.json({ error: 'Informe a declaracao' }, { status: 400 });
+  if (!id) return NextResponse.json({ error: 'Informe a declaração' }, { status: 400 });
 
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -40,23 +40,23 @@ export async function GET(request: Request) {
     : '';
 
   const corpo = `
-    <h2>Comunicacao de evento — ${esc(rotuloPapel(papel))}</h2>
-    <p>Protocolo <b>${esc(e?.numero_protocolo)}</b> · versao ${d.versao} ·
+    <h2>Comunicação de evento — ${esc(rotuloPapel(papel))}</h2>
+    <p>Protocolo <b>${esc(e?.numero_protocolo)}</b> · versão ${d.versao} ·
        ${d.origem === 'EQUIPE' ? 'registrada pela equipe' : 'enviada pelo envolvido'} em
        ${esc(new Date(d.created_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }))}</p>
     <p>Envolvido: <b>${esc(c?.nome ?? dados.identificacao?.nome ?? '')}</b></p>
     ${secoes}
     ${listaAnexos}
-    <h3>Declaracao</h3>
+    <h3>Declaração</h3>
     <p>${esc(d.texto_declaracao)}</p>
     <p><i>${esc(ehTerceiro(papel) ? TEXTOS.naoReconheceTerceiro : TEXTOS.naoReconhece)}</i></p>
     <p style="font-size:9pt;color:#555">IP: ${esc(d.ip ?? '—')} · Dispositivo: ${esc(d.user_agent ?? '—')}<br>
-       Codigo de conferencia (SHA-256): ${esc(d.hash_conteudo)}</p>`;
+       Código de conferência (SHA-256): ${esc(d.hash_conteudo)}</p>`;
 
   try {
     const logo = await logoComoDataUrl(await logoOficial());
-    const pdf = await gerarPdf(htmlDoPdf(corpo, 'Comunicacao de evento', logo,
-      `${e?.numero_protocolo ?? ''} · versao ${d.versao} · ${d.hash_conteudo.slice(0, 16)}`));
+    const pdf = await gerarPdf(htmlDoPdf(corpo, 'Comunicação de evento', logo,
+      `${e?.numero_protocolo ?? ''} · versão ${d.versao} · ${d.hash_conteudo.slice(0, 16)}`));
     return new NextResponse(new Uint8Array(pdf), {
       headers: {
         'Content-Type': 'application/pdf',
@@ -65,6 +65,6 @@ export async function GET(request: Request) {
     });
   } catch (err) {
     console.error('[comunicacao-pdf]', err);
-    return NextResponse.json({ error: 'Nao foi possivel gerar o PDF agora' }, { status: 500 });
+    return NextResponse.json({ error: 'Não foi possível gerar o PDF agora' }, { status: 500 });
   }
 }

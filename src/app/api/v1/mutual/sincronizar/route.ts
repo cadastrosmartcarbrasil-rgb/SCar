@@ -29,11 +29,11 @@ export const maxDuration = 3600;
 export async function POST(request: Request) {
   if (!segredoConfere(request.headers.get('x-cron-secret'), process.env.COBRANCA_CRON_SECRET)) {
     // 404 e nao 401: a rota nao se anuncia para quem nao tem o segredo.
-    return NextResponse.json({ error: 'Nao encontrado' }, { status: 404 });
+    return NextResponse.json({ error: 'Não encontrado' }, { status: 404 });
   }
   const token = process.env.MUTUAL_API_TOKEN;
   const base = (process.env.MUTUAL_API_BASE || 'https://smartcar-api.mutualignit.com.br').replace(/\/+$/, '');
-  if (!token) return NextResponse.json({ ok: false, error: 'MUTUAL_API_TOKEN nao configurado' }, { status: 400 });
+  if (!token) return NextResponse.json({ ok: false, error: 'MUTUAL_API_TOKEN não configurado' }, { status: 400 });
 
   const body = (await request.json().catch(() => ({}))) as { sem_captura?: boolean };
   const supabase = createAdminClient();
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
         etapa: `captura ${entidade}`,
         ok: r.ok && r.proxima_pagina === null,
         detalhe: r.ok
-          ? `${r.registros} registro(s) em ${r.paginas} pagina(s)${r.proxima_pagina ? ' — PAROU NO TETO' : ''}`
+          ? `${r.registros} registro(s) em ${r.paginas} página(s)${r.proxima_pagina ? ' — PAROU NO TETO' : ''}`
           : r.erro ?? 'falhou',
       });
     }
@@ -96,7 +96,7 @@ export async function POST(request: Request) {
         });
         if (error) throw new Error(error.message);
         const r = (data ?? [])[0];
-        if (!r) throw new Error('o banco nao devolveu o resultado da carga');
+        if (!r) throw new Error('o banco não devolveu o resultado da carga');
         return r;
       };
       const preparo = await chamar(true);
@@ -105,7 +105,7 @@ export async function POST(request: Request) {
       let restantes = total;
       let voltas = 0;
       while (restantes > 0) {
-        if (++voltas > total + 1) throw new Error('a fila da carga nao esvaziou');
+        if (++voltas > total + 1) throw new Error('a fila da carga não esvaziou');
         const b = await chamar(false);
         blocos.push(b);
         restantes = Number(b.restantes);
@@ -128,7 +128,7 @@ export async function POST(request: Request) {
       });
       passos.push({
         etapa: `carga ${nome}`, ok: true,
-        detalhe: `${soma.veiculos_criados} veiculo(s) novo(s), ${soma.veiculos_atualizados} atualizado(s), ${soma.recusados} recusado(s)`,
+        detalhe: `${soma.veiculos_criados} veículo(s) novo(s), ${soma.veiculos_atualizados} atualizado(s), ${soma.recusados} recusado(s)`,
       });
     } catch (e) {
       passos.push({ etapa: `carga ${nome}`, ok: false, detalhe: (e as Error).message });

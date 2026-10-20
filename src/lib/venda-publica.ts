@@ -44,9 +44,9 @@ export const podeAvancar = {
  */
 export function mensagemDeErro(bruto: unknown): string {
   const texto = typeof bruto === 'string' ? bruto.trim() : '';
-  if (!texto) return 'Nao consegui concluir agora. Tente de novo em instantes.';
+  if (!texto) return 'Não consegui concluir agora. Tente de novo em instantes.';
   const tecnico = /duplicate key|violates|null value|syntax|permission denied|relation |column /i;
-  if (tecnico.test(texto)) return 'Nao consegui concluir agora. Tente de novo em instantes.';
+  if (tecnico.test(texto)) return 'Não consegui concluir agora. Tente de novo em instantes.';
   return texto;
 }
 
@@ -131,7 +131,7 @@ export function numeroWhatsApp(celular?: string | null): string | null {
 
 export function mensagemDaProposta(url: string, nome?: string | null): string {
   const primeiro = (nome ?? '').trim().split(/\s+/)[0];
-  const ola = primeiro ? `Ola, ${primeiro}! ` : '';
+  const ola = primeiro ? `Olá, ${primeiro}! ` : '';
   return `${ola}Segue a sua proposta da Smart Car Brasil: ${url}`;
 }
 
@@ -144,12 +144,12 @@ export function mensagemDaVistoria(
   url: string, nome?: string | null, expiraEm?: string | Date | null,
 ): string {
   const primeiro = (nome ?? '').trim().split(/\s+/)[0];
-  const ola = primeiro ? `Ola, ${primeiro}! ` : '';
+  const ola = primeiro ? `Olá, ${primeiro}! ` : '';
   const d = expiraEm ? new Date(expiraEm) : null;
   const prazo = d && !Number.isNaN(d.getTime())
-    ? ` O link vale ate ${d.toLocaleDateString('pt-BR')}.`
+    ? ` O link vale até ${d.toLocaleDateString('pt-BR')}.`
     : '';
-  return `${ola}Para concluir a sua protecao, faltam as fotos do veiculo. `
+  return `${ola}Para concluir a sua proteção, faltam as fotos do veículo. `
     + `E pelo celular mesmo e leva uns 3 minutos: ${url}${prazo}`;
 }
 

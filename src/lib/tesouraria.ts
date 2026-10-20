@@ -99,21 +99,21 @@ export function primeiroDiaNegativo(proj: DiaProjetado[]): DiaProjetado | null {
 
 export const ROTULO_SITUACAO_EXTRATO: Record<string, string> = {
   PENDENTE: 'Pendente',
-  SUGERIDO: 'Sugestao',
+  SUGERIDO: 'Sugestão',
   CONCILIADO: 'Conciliado',
   IGNORADO: 'Ignorado',
 };
 
 export const ROTULO_ORIGEM: Record<string, string> = {
-  BAIXA: 'Lancamento',
-  TITULO: 'Mensalidade (titulo)',
-  TRANSFERENCIA: 'Transferencia',
+  BAIXA: 'Lançamento',
+  TITULO: 'Mensalidade (título)',
+  TRANSFERENCIA: 'Transferência',
 };
 
 export const MODOS_MENSALIDADE_OFX = [
-  { valor: 'POR_TEXTO', rotulo: 'Ignorar credito cujo historico tenha um dos textos', },
-  { valor: 'TODOS_CREDITOS', rotulo: 'Ignorar todo credito que nao casar com um recebimento ja registrado' },
-  { valor: 'NENHUM', rotulo: 'Nao ignorar nada (todo credito fica para conciliar)' },
+  { valor: 'POR_TEXTO', rotulo: 'Ignorar crédito cujo histórico tenha um dos textos', },
+  { valor: 'TODOS_CREDITOS', rotulo: 'Ignorar todo crédito que não casar com um recebimento já registrado' },
+  { valor: 'NENHUM', rotulo: 'Não ignorar nada (todo crédito fica para conciliar)' },
 ] as const;
 
 /** Textos digitados (um por linha ou separados por virgula) -> lista limpa e sem repetir. */

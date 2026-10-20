@@ -44,7 +44,7 @@ export function DivergenciasRastreadores() {
 
   function exportar() {
     const linhasCsv = [
-      ['Tipo', 'Severidade', 'IMEI', 'Placa', 'Associado', 'Unidade', 'Descricao'],
+      ['Tipo', 'Severidade', 'IMEI', 'Placa', 'Associado', 'Unidade', 'Descrição'],
       ...(linhas ?? []).map((l) => [
         rotuloDivergencia(l.tipo), l.severidade, l.imei ?? '', l.placa ?? '',
         l.associado ?? '', l.regional ?? '', l.descricao,
@@ -82,7 +82,7 @@ export function DivergenciasRastreadores() {
         <Button variant="secondary" onClick={exportar}><Download className="h-4 w-4" /> CSV</Button>
         <Button onClick={aplicarInadimplencia} disabled={sincronizar.isPending}>
           {sincronizar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-          Aplicar inadimplencia
+          Aplicar inadimplência
         </Button>
       </div>
 
@@ -90,7 +90,7 @@ export function DivergenciasRastreadores() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
-              <th className="px-4 py-2">Divergencia</th>
+              <th className="px-4 py-2">Divergência</th>
               <th className="px-4 py-2">Equipamento</th>
               <th className="px-4 py-2">Veiculo</th>
               <th className="px-4 py-2">O que aconteceu</th>
@@ -125,7 +125,7 @@ export function DivergenciasRastreadores() {
                   ) : l.veiculo_id ? (
                     <Link href={`/veiculos?editar=${l.veiculo_id}`}
                       className="inline-flex items-center gap-1 text-xs font-medium text-cyan-700 hover:underline">
-                      Abrir veiculo <ArrowRight className="h-3.5 w-3.5" />
+                      Abrir veículo <ArrowRight className="h-3.5 w-3.5" />
                     </Link>
                   ) : null}
                 </td>
@@ -135,7 +135,7 @@ export function DivergenciasRastreadores() {
               <tr>
                 <td colSpan={5} className="px-4 py-8 text-center text-sm text-slate-400">
                   <CircleAlert className="mx-auto mb-2 h-6 w-6 text-emerald-500" />
-                  Nenhuma divergencia entre o parque e o cadastro de veiculos.
+                  Nenhuma divergência entre o parque e o cadastro de veículos.
                 </td>
               </tr>
             )}
@@ -143,10 +143,10 @@ export function DivergenciasRastreadores() {
         </table>
       </div>
       <p className="text-xs text-slate-400">
-        As correcoes acontecem na ficha do equipamento ou do veiculo — nada e corrigido em massa.
-        A excecao e <strong>Aplicar inadimplencia</strong>, que so espelha o financeiro no status do
+        As correções acontecem na ficha do equipamento ou do veículo — nada é corrigido em massa.
+        A exceção e <strong>Aplicar inadimplência</strong>, que só espelha o financeiro no status do
         equipamento (3 - Inadimplente para quem passou de 35 dias de atraso; 2 - Ativo de volta para
-        quem pagou) e registra o motivo no historico de cada aparelho.
+        quem pagou) e registra o motivo no histórico de cada aparelho.
       </p>
     </div>
   );

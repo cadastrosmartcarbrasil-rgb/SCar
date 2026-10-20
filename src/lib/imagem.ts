@@ -97,7 +97,7 @@ export function validarArquivo(
     return `Arquivo de ${tamanhoLegivel(file.size)} — o limite e ${tamanhoLegivel(limite)}.`;
   }
   if (imagem && file.size > 40 * 1024 * 1024) {
-    return `Imagem de ${tamanhoLegivel(file.size)} — grande demais ate para reduzir.`;
+    return `Imagem de ${tamanhoLegivel(file.size)} — grande demais até para reduzir.`;
   }
   return null;
 }

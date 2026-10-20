@@ -96,13 +96,13 @@ export interface DadosCartao {
 
 /** Uma mensagem por vez, na ordem em que o formulario e preenchido. */
 export function validarCartao(d: DadosCartao, hoje = new Date()): string | null {
-  if (!numeroValido(d.numero)) return 'Confira o numero do cartao';
+  if (!numeroValido(d.numero)) return 'Confira o número do cartão';
   if (!d.nome?.trim() || !d.nome.trim().includes(' ')) {
-    return 'Informe o nome como esta impresso no cartao';
+    return 'Informe o nome como está impresso no cartão';
   }
   const v = interpretarValidade(d.validade);
   if (!v) return 'Informe a validade no formato MM/AA';
-  if (validadeExpirada(v.mes, v.ano, hoje)) return 'Este cartao esta vencido';
-  if (!cvvValido(d.cvv, d.numero)) return 'Confira o codigo de seguranca';
+  if (validadeExpirada(v.mes, v.ano, hoje)) return 'Este cartão está vencido';
+  if (!cvvValido(d.cvv, d.numero)) return 'Confira o código de segurança';
   return null;
 }

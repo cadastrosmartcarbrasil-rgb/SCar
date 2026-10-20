@@ -40,7 +40,7 @@ export default function LeadVendedorPage({ params }: { params: Promise<{ id: str
           <ArrowLeft className="h-4 w-4" /> Meus leads
         </Link>
         <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[12.5px] text-amber-900">
-          Este lead nao esta na sua carteira.
+          Este lead não está na sua carteira.
         </p>
       </div>
     );
@@ -85,7 +85,7 @@ export default function LeadVendedorPage({ params }: { params: Promise<{ id: str
       </div>
 
       <Card>
-        <CardHeader><CardTitle>Veiculo cotado</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Veículo cotado</CardTitle></CardHeader>
         <CardContent className="grid gap-3 text-[13px] sm:grid-cols-2">
           <Campo rotulo="Placa" valor={lead.placa} mono />
           <Campo rotulo="Marca / modelo" valor={[lead.marca, lead.modelo].filter(Boolean).join(' ')} />
@@ -101,7 +101,7 @@ export default function LeadVendedorPage({ params }: { params: Promise<{ id: str
           <p className="text-[13px] font-bold text-emerald-800">Cliente aceitou a proposta</p>
           <p className="mt-1 text-[12px] leading-relaxed text-emerald-900/80">
             {lead.aceite_nome} aceitou em {formatDate(lead.aceite_em)}. Agora e completar a ficha
-            e a vistoria — depois disso a franquia manda para a analise.
+            e a vistoria — depois disso a franquia manda para a análise.
           </p>
         </div>
       )}
@@ -115,7 +115,7 @@ export default function LeadVendedorPage({ params }: { params: Promise<{ id: str
               <Receipt className="h-4 w-4 text-slate-400" /> Proposta do cliente
             </CardTitle>
             <p className="text-xs text-slate-500">
-              Link pronto para enviar — o cliente abre, ve os valores e guarda.
+              Link pronto para enviar — o cliente abre, vê os valores e guarda.
             </p>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -148,11 +148,11 @@ export default function LeadVendedorPage({ params }: { params: Promise<{ id: str
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-1.5">
-            <Camera className="h-4 w-4 text-slate-400" /> Vistoria do veiculo
+            <Camera className="h-4 w-4 text-slate-400" /> Vistoria do veículo
           </CardTitle>
           <p className="text-xs text-slate-500">
-            Com a venda fechada, fotografe o veiculo seguindo a lista. Sem as fotos obrigatorias
-            o carro nao entra na base.
+            Com a venda fechada, fotografe o veículo seguindo a lista. Sem as fotos obrigatórias
+            o carro não entra na base.
           </p>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -174,10 +174,10 @@ export default function LeadVendedorPage({ params }: { params: Promise<{ id: str
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-1.5">
-            <FileText className="h-4 w-4 text-slate-400" /> CRLV do veiculo
+            <FileText className="h-4 w-4 text-slate-400" /> CRLV do veículo
           </CardTitle>
           <p className="text-xs text-slate-500">
-            Foto ou PDF do documento. {lead.crlv_url ? 'Ja enviado — envie de novo para substituir.' : ''}
+            Foto ou PDF do documento. {lead.crlv_url ? 'Já enviado — envie de novo para substituir.' : ''}
           </p>
         </CardHeader>
         <CardContent>

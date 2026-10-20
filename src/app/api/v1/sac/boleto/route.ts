@@ -9,12 +9,12 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: Request) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   const { data: perfil } = await supabase.from('usuarios').select('papel').eq('id', user.id).maybeSingle();
-  if (!perfil) return NextResponse.json({ error: 'Sem permissao' }, { status: 403 });
+  if (!perfil) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
 
   const body = (await request.json()) as { cliente_id?: string; competencia?: string };
-  if (!body.cliente_id) return NextResponse.json({ error: 'cliente_id obrigatorio' }, { status: 400 });
+  if (!body.cliente_id) return NextResponse.json({ error: 'cliente_id obrigatório' }, { status: 400 });
 
   // Competencia = 1o dia do mes (default: mes corrente).
   const ref = body.competencia ? new Date(body.competencia) : new Date();

@@ -65,7 +65,7 @@ export function PainelAcionamento({ placaInicial }: { placaInicial?: string | nu
     <div className="space-y-5">
       {/* Busca do veiculo pela placa */}
       <div className="rounded-2xl border border-slate-200 bg-superficie p-4">
-        <FormField label="Placa do veiculo">
+        <FormField label="Placa do veículo">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <Input
@@ -98,7 +98,7 @@ export function PainelAcionamento({ placaInicial }: { placaInicial?: string | nu
           </ul>
         )}
         {!isFetching && termo.length >= 3 && (achados?.length ?? 0) === 0 && (
-          <p className="mt-2 text-sm text-slate-400">Nenhum veiculo com essa placa.</p>
+          <p className="mt-2 text-sm text-slate-400">Nenhum veículo com essa placa.</p>
         )}
       </div>
 
@@ -139,7 +139,7 @@ export function PainelAcionamento({ placaInicial }: { placaInicial?: string | nu
 
           {/* Servicos com o limite em TEMPO REAL */}
           <div>
-            <p className="mb-2 text-sm font-semibold text-slate-700">Servico solicitado</p>
+            <p className="mb-2 text-sm font-semibold text-slate-700">Serviço solicitado</p>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {(servicos ?? []).map((s) => {
                 const e = elegibilidade?.find((x) => x.servico_id === s.id);
@@ -157,12 +157,12 @@ export function PainelAcionamento({ placaInicial }: { placaInicial?: string | nu
                       <span className="block text-sm font-semibold text-slate-800">{s.descricao}</span>
                       <span className="block text-xs text-slate-500">
                         {formatCurrency(Number(s.valor_padrao))}
-                        {s.cobra_km_excedente ? ` + ${formatCurrency(Number(s.valor_km_excedente))}/km apos ${s.km_franquia}km` : ''}
+                        {s.cobra_km_excedente ? ` + ${formatCurrency(Number(s.valor_km_excedente))}/km após ${s.km_franquia}km` : ''}
                       </span>
                       {e && (
                         <span className={`mt-1 inline-block rounded px-1.5 py-0.5 text-[11px] ${esgotado ? 'bg-rose-50 text-rose-700' : e.computa_limite ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
                           {rotuloLimite(e)}
-                          {e.ultimo_uso ? ` · ultimo ${formatDate(e.ultimo_uso)}` : ''}
+                          {e.ultimo_uso ? ` · último ${formatDate(e.ultimo_uso)}` : ''}
                         </span>
                       )}
                     </span>
@@ -177,7 +177,7 @@ export function PainelAcionamento({ placaInicial }: { placaInicial?: string | nu
             <div className="rounded-2xl border border-slate-200 bg-superficie">
               <div className="flex items-center gap-2 border-b border-slate-200 px-5 py-3">
                 <History className="h-4 w-4 text-brand-700" />
-                <h2 className="text-sm font-semibold text-slate-900">Acionamentos deste veiculo</h2>
+                <h2 className="text-sm font-semibold text-slate-900">Acionamentos deste veículo</h2>
               </div>
               <ul className="divide-y divide-slate-100">
                 {historico!.map((h) => (
@@ -286,7 +286,7 @@ function ModalAcionar({
               motivo: 'Rota calculada na abertura',
             });
           } catch {
-            toast.message('Acionamento aberto, mas a rota nao foi gravada — recalcule na OS.');
+            toast.message('Acionamento aberto, mas a rota não foi gravada — recalcule na OS.');
           }
         }
         if (agendamento) {
@@ -297,12 +297,12 @@ function ModalAcionar({
               motivo: 'Agendado na abertura',
             });
           } catch {
-            toast.message('Acionamento aberto, mas o agendamento nao foi gravado — ajuste em "Editar atendimento".');
+            toast.message('Acionamento aberto, mas o agendamento não foi gravado — ajuste em "Editar atendimento".');
           }
         }
         toast.success(
           r.liberado_por
-            ? `Acionamento ${r.acionamento.protocolo} aberto com liberacao de ${r.liberado_por}`
+            ? `Acionamento ${r.acionamento.protocolo} aberto com liberação de ${r.liberado_por}`
             : `Acionamento ${r.acionamento.protocolo} aberto`,
         );
         onAberto(r.acionamento.id);
@@ -324,7 +324,7 @@ function ModalAcionar({
             </ul>
             <p className="mt-2 text-xs text-rose-600">
               Para prosseguir, um gestor (admin, financeiro ou gestor regional) precisa autorizar
-              com as proprias credenciais.
+              com as próprias credenciais.
             </p>
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
               <FormField label="E-mail do gestor">
@@ -341,11 +341,11 @@ function ModalAcionar({
                   onChange={(e) => setLiberacao((l) => ({ ...(l ?? { email: '', justificativa: '' }), senha: e.target.value }))}
                 />
               </FormField>
-              <FormField label="Justificativa da liberacao" className="sm:col-span-2">
+              <FormField label="Justificativa da liberação" className="sm:col-span-2">
                 <Input
                   value={liberacao?.justificativa ?? ''}
                   onChange={(e) => setLiberacao((l) => ({ ...(l ?? { email: '', senha: '' }), justificativa: e.target.value }))}
-                  placeholder="Ex.: veiculo parado em rodovia, risco ao associado"
+                  placeholder="Ex.: veículo parado em rodovia, risco ao associado"
                 />
               </FormField>
             </div>
@@ -365,7 +365,7 @@ function ModalAcionar({
               onChange={(e) => setForm({ ...form, km_previsto: e.target.value })}
               placeholder="preenchido pela rota" />
           </FormField>
-          <FormField label="Observacoes">
+          <FormField label="Observações">
             <Input value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} />
           </FormField>
         </div>
@@ -489,7 +489,7 @@ export function OrdemServico({ acionamentoId, onVoltar }: { acionamentoId: strin
             <p className="tnum mt-1 text-xl font-semibold text-slate-900">{formatCurrency(Number(a.valor_total))}</p>
             {Number(a.valor_km_excedente) > 0 && (
               <p className="text-xs text-slate-400">
-                servico {formatCurrency(Number(a.valor_servico))} + km {formatCurrency(Number(a.valor_km_excedente))}
+                serviço {formatCurrency(Number(a.valor_servico))} + km {formatCurrency(Number(a.valor_km_excedente))}
               </p>
             )}
           </div>
@@ -537,7 +537,7 @@ export function OrdemServico({ acionamentoId, onVoltar }: { acionamentoId: strin
         {a.lancamento_id && (
           <p className="mt-2 rounded-lg bg-emerald-50 p-2 text-xs text-emerald-800">
             <FileText className="mr-1 inline h-3 w-3" />
-            Lancado em Contas a Pagar para {a.fornecedores?.razao_social}.
+            Lançado em Contas a Pagar para {a.fornecedores?.razao_social}.
           </p>
         )}
       </div>
@@ -548,7 +548,7 @@ export function OrdemServico({ acionamentoId, onVoltar }: { acionamentoId: strin
       {/* Cotacao */}
       {!finalizado && (
         <div className="rounded-2xl border border-slate-200 bg-superficie p-4">
-          <h3 className="text-sm font-semibold text-slate-700">Cotacao com prestadores</h3>
+          <h3 className="text-sm font-semibold text-slate-700">Cotação com prestadores</h3>
           <div className="mt-3 grid gap-3 md:grid-cols-5">
             <FormField label="Prestador" className="md:col-span-2">
               <Select
@@ -592,11 +592,11 @@ export function OrdemServico({ acionamentoId, onVoltar }: { acionamentoId: strin
                     valor_km: cot.valor_km,
                     prazo_min: cot.prazo ? Number(cot.prazo) : null,
                   },
-                  { onSuccess: () => toast.success('Cotacao registrada'), onError: (e) => toast.error(e.message) },
+                  { onSuccess: () => toast.success('Cotação registrada'), onError: (e) => toast.error(e.message) },
                 );
               }}
             >
-              Registrar cotacao
+              Registrar cotação
             </Button>
           </div>
 
@@ -670,7 +670,7 @@ export function OrdemServico({ acionamentoId, onVoltar }: { acionamentoId: strin
                     concluir.mutate(
                       { acionamento_id: a.id, km_percorrido: kmReal ? Number(kmReal) : null },
                       {
-                        onSuccess: () => toast.success('OS concluida e lancada em Contas a Pagar'),
+                        onSuccess: () => toast.success('OS concluída e lançada em Contas a Pagar'),
                         onError: (e) => toast.error(e.message),
                       },
                     )
@@ -789,7 +789,7 @@ function CardTrajeto({ acionamento, servico, editavel }: {
             <p className="font-medium text-slate-700">{enderecoLinha(destino) || '—'}</p>
           </div>
           <div>
-            <p className="text-[11px] uppercase tracking-wide text-slate-400">Distancia autorizada</p>
+            <p className="text-[11px] uppercase tracking-wide text-slate-400">Distância autorizada</p>
             <p className="tnum text-lg font-semibold text-slate-900">
               {rotuloRota(km, acionamento.duracao_minutos)}
             </p>
@@ -845,7 +845,7 @@ function ModalEditarTrajeto({ acionamento, servico, onClose }: {
 
   function salvar(e: React.FormEvent) {
     e.preventDefault();
-    if (!motivo.trim()) return toast.error('Informe o motivo da alteracao do trajeto (fica na auditoria)');
+    if (!motivo.trim()) return toast.error('Informe o motivo da alteração do trajeto (fica na auditoria)');
     definir.mutate(
       {
         acionamento_id: acionamento.id,
@@ -874,10 +874,10 @@ function ModalEditarTrajeto({ acionamento, servico, onClose }: {
           onChange={(v) => { setOrigem(v.origem); setDestino(v.destino); setRota(v.rota); }}
         />
         <p className="rounded-lg bg-slate-50 p-3 text-xs text-slate-600">
-          Ao salvar, o KM excedente e o valor da OS sao recalculados pela distancia da rota e o
-          titulo em Contas a Pagar e sincronizado (se ja houver baixa, o valor pago nao e alterado).
+          Ao salvar, o KM excedente e o valor da OS são recalculados pela distância da rota e o
+          título em Contas a Pagar e sincronizado (se já houver baixa, o valor pago não é alterado).
         </p>
-        <FormField label="Motivo da alteracao *">
+        <FormField label="Motivo da alteração *">
           <Input value={motivo} onChange={(e) => setMotivo(e.target.value)}
             placeholder="Ex.: associado pediu para levar a outra oficina" />
         </FormField>
@@ -924,7 +924,7 @@ function ModalEditarOS({
 
   function salvar(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.motivo.trim()) return toast.error('Descreva o motivo da alteracao (fica na auditoria)');
+    if (!form.motivo.trim()) return toast.error('Descreva o motivo da alteração (fica na auditoria)');
     atualizar.mutate(
       {
         acionamento_id: acionamento.id,
@@ -949,7 +949,7 @@ function ModalEditarOS({
     <Modal open onClose={onClose} title={`Valores da ${acionamento.codigo_os ?? acionamento.protocolo}`}>
       <form onSubmit={salvar} className="space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
-          <FormField label="Valor do servico">
+          <FormField label="Valor do serviço">
             <MoneyInput value={form.valor_servico} onChange={(v) => setForm({ ...form, valor_servico: v })} />
           </FormField>
           {servico?.cobra_km_excedente && (
@@ -970,7 +970,7 @@ function ModalEditarOS({
           <FormField label="Prazo (min)">
             <Input type="number" min={0} value={form.prazo} onChange={(e) => setForm({ ...form, prazo: e.target.value })} />
           </FormField>
-          <FormField label="Motivo da alteracao (auditoria)" className="sm:col-span-2">
+          <FormField label="Motivo da alteração (auditoria)" className="sm:col-span-2">
             <Input value={form.motivo} onChange={(e) => setForm({ ...form, motivo: e.target.value })}
               placeholder="Ex.: trajeto maior que o previsto" />
           </FormField>
@@ -979,16 +979,16 @@ function ModalEditarOS({
         <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
           Novo total: <strong className="tnum">{formatCurrency(previa.total)}</strong>
           {previa.valorKmExcedente > 0 && (
-            <span className="text-xs text-slate-400"> (servico {formatCurrency(previa.valorServico)} + km {formatCurrency(previa.valorKmExcedente)})</span>
+            <span className="text-xs text-slate-400"> (serviço {formatCurrency(previa.valorServico)} + km {formatCurrency(previa.valorKmExcedente)})</span>
           )}
           <span className="mt-1 block text-xs text-slate-500">
-            O titulo no Contas a Pagar e recalculado automaticamente, desde que ainda nao tenha baixa.
+            O título no Contas a Pagar e recalculado automaticamente, desde que ainda não tenha baixa.
           </span>
         </p>
 
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>
-          <Button type="submit" disabled={atualizar.isPending}>Salvar alteracoes</Button>
+          <Button type="submit" disabled={atualizar.isPending}>Salvar alterações</Button>
         </div>
       </form>
     </Modal>
@@ -1036,8 +1036,8 @@ function ModalTrocarPrestador({ acionamento, onClose }: { acionamento: Acionamen
     <Modal open onClose={onClose} title="Trocar prestador da OS">
       <form onSubmit={confirmar} className="space-y-3">
         <p className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
-          O lancamento do prestador atual ({acionamento.fornecedores?.razao_social ?? '-'}) sera
-          cancelado no Contas a Pagar (se ainda nao tiver baixa) e um novo sera gerado para o
+          O lançamento do prestador atual ({acionamento.fornecedores?.razao_social ?? '-'}) será
+          cancelado no Contas a Pagar (se ainda não tiver baixa) e um novo será gerado para o
           substituto. O voucher precisa ser reenviado.
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -1068,7 +1068,7 @@ function ModalTrocarPrestador({ acionamento, onClose }: { acionamento: Acionamen
           <FormField label="Prazo (min)">
             <Input type="number" min={0} value={form.prazo} onChange={(e) => setForm({ ...form, prazo: e.target.value })} />
           </FormField>
-          <FormField label="Justificativa (obrigatoria)" className="sm:col-span-2">
+          <FormField label="Justificativa (obrigatória)" className="sm:col-span-2">
             <Input value={form.motivo} onChange={(e) => setForm({ ...form, motivo: e.target.value })}
               placeholder="Ex.: guincho desistiu / demora acima do combinado" />
           </FormField>
@@ -1108,7 +1108,7 @@ function CampoAgendamento({ agendar, valor, onAgendar, onValor }: {
           <Input type="datetime-local" value={valor} onChange={(e) => onValor(e.target.value)} className="w-56" />
         )}
       </div>
-      {agendar && <p className="mt-1 text-[11px] text-slate-500">Horario de Brasilia. Sai no voucher do prestador.</p>}
+      {agendar && <p className="mt-1 text-[11px] text-slate-500">Horário de Brasília. Sai no voucher do prestador.</p>}
     </div>
   );
 }
@@ -1129,7 +1129,7 @@ function ModalEditarAtendimento({ acionamento, onClose }: { acionamento: Acionam
 
   function salvar(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.motivo.trim()) return toast.error('Informe o motivo da alteracao (fica na auditoria)');
+    if (!form.motivo.trim()) return toast.error('Informe o motivo da alteração (fica na auditoria)');
     const agendamento = agendar ? doCampoDataHora(quando) : null;
     if (agendar && !agendamento) return toast.error('Informe a data e a hora do agendamento');
     atualizar.mutate(
@@ -1166,24 +1166,24 @@ function ModalEditarAtendimento({ acionamento, onClose }: { acionamento: Acionam
           <FormField label="Telefone de contato">
             <Input value={form.telefone} onChange={(e) => setForm({ ...form, telefone: e.target.value })} />
           </FormField>
-          <FormField label="Observacoes" className="sm:col-span-2">
+          <FormField label="Observações" className="sm:col-span-2">
             <Input value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} />
           </FormField>
         </div>
         <CampoAgendamento agendar={agendar} valor={quando} onAgendar={setAgendar} onValor={setQuando} />
         <p className="text-xs text-slate-500">
           Para mudar o local do resgate ou o destino, use <b>Mudar local / destino</b> — la a rota e o KM
-          excedente sao recalculados.
+          excedente são recalculados.
         </p>
-        <FormField label="Motivo da alteracao *">
+        <FormField label="Motivo da alteração *">
           <Input value={form.motivo} onChange={(e) => setForm({ ...form, motivo: e.target.value })}
-            placeholder="Ex.: associado pediu para remarcar para amanha" />
+            placeholder="Ex.: associado pediu para remarcar para amanhã" />
         </FormField>
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>Voltar</Button>
           <Button type="submit" disabled={atualizar.isPending}>
             {atualizar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarClock className="h-4 w-4" />}
-            Salvar alteracoes
+            Salvar alterações
           </Button>
         </div>
       </form>
@@ -1204,18 +1204,18 @@ function ModalCancelar({
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (!motivo.trim()) return toast.error('A justificativa e obrigatoria');
+          if (!motivo.trim()) return toast.error('A justificativa e obrigatória');
           onConfirmar(motivo);
         }}
         className="space-y-3"
       >
         <p className="text-sm text-slate-600">
-          O atendimento sai da fila e nao consome o limite do servico. Se ja houver prestador,
-          avise-o; o lancamento no Contas a Pagar e cancelado se ainda nao tiver baixa.
+          O atendimento sai da fila e não consome o limite do serviço. Se já houver prestador,
+          avise-o; o lançamento no Contas a Pagar e cancelado se ainda não tiver baixa.
         </p>
-        <FormField label="Justificativa (obrigatoria)">
+        <FormField label="Justificativa (obrigatória)">
           <Input value={motivo} onChange={(e) => setMotivo(e.target.value)}
-            placeholder="Ex.: associado desistiu / resolveu com terceiro / prestador nao compareceu" />
+            placeholder="Ex.: associado desistiu / resolveu com terceiro / prestador não compareceu" />
         </FormField>
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>Voltar</Button>
@@ -1231,7 +1231,7 @@ function ModalCancelar({
 // ---------------------------------------------------------------------------
 const CAMPO_LABEL: Record<string, string> = {
   prestador: 'Prestador',
-  valor_servico: 'Valor do servico',
+  valor_servico: 'Valor do serviço',
   km_excedente: 'KM excedente',
   valor_km_excedente: 'Valor do KM excedente',
   valor_total: 'Valor total',
@@ -1240,7 +1240,7 @@ const CAMPO_LABEL: Record<string, string> = {
   agendado_para: 'Agendamento',
   solicitante_nome: 'Solicitante',
   solicitante_telefone: 'Telefone do solicitante',
-  observacoes: 'Observacoes',
+  observacoes: 'Observações',
   km_percorrido: 'KM percorrido',
   prazo_estimado_min: 'Prazo (min)',
   status: 'Status',
@@ -1255,7 +1255,7 @@ function TrilhaEdicoes({ acionamentoId }: { acionamentoId: string }) {
     <div className="rounded-2xl border border-slate-200 bg-superficie">
       <div className="flex items-center gap-2 border-b border-slate-200 px-5 py-3">
         <ClipboardList className="h-4 w-4 text-brand-700" />
-        <h3 className="text-sm font-semibold text-slate-900">Historico de alteracoes</h3>
+        <h3 className="text-sm font-semibold text-slate-900">Histórico de alterações</h3>
       </div>
       <ul className="divide-y divide-slate-100">
         {edicoes.map((e) => (
@@ -1288,7 +1288,7 @@ function OpcoesPrestador({ opcoes }: { opcoes: OpcaoPrestador[] }) {
   return (
     <>
       {vinc.length > 0 && (
-        <optgroup label="Atendem este servico (valor acordado)">
+        <optgroup label="Atendem este serviço (valor acordado)">
           {vinc.map((p) => <option key={p.fornecedor_id} value={p.fornecedor_id}>{p.rotulo}</option>)}
         </optgroup>
       )}

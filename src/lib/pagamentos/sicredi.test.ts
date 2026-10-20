@@ -85,7 +85,7 @@ describe('configuracao pelo ambiente', () => {
   });
   it('fabrica: recusa cadastro e servidor em ambientes diferentes', () => {
     expect(getPaymentGateway({ provedor: 'SICREDI', ambiente: 'sandbox' }, ENV)).toBeInstanceOf(SicrediGateway);
-    expect(() => getPaymentGateway({ provedor: 'SICREDI', ambiente: 'producao' }, ENV)).toThrow(/servidor esta em sandbox/);
+    expect(() => getPaymentGateway({ provedor: 'SICREDI', ambiente: 'producao' }, ENV)).toThrow(/servidor está em sandbox/);
     expect(() =>
       getPaymentGateway({ provedor: 'SICREDI', ambiente: 'sandbox' }, { ...ENV, SICREDI_AMBIENTE: 'producao' }),
     ).toThrow(/cadastrada como sandbox/);

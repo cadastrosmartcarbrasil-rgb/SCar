@@ -50,8 +50,8 @@ export function FipeConsulta({
   if (naoConfigurado) {
     return (
       <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-        Consulta FIPE nao configurada. Defina <code>PLACAFIPE_TOKEN</code> no servidor para habilitar
-        o preenchimento automatico. Por enquanto, informe os dados manualmente.
+        Consulta FIPE não configurada. Defina <code>PLACAFIPE_TOKEN</code> no servidor para habilitar
+        o preenchimento automático. Por enquanto, informe os dados manualmente.
       </div>
     );
   }
@@ -106,7 +106,7 @@ export function FipeConsulta({
               {valor.data.valor.referencia && <span className="text-xs">Ref.: {valor.data.valor.referencia}</span>}
             </div>
           ) : valor.isError ? (
-            <span className="text-rose-500">Nao foi possivel obter o valor.</span>
+            <span className="text-rose-500">Não foi possível obter o valor.</span>
           ) : null}
         </div>
       )}

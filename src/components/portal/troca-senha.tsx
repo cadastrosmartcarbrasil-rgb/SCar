@@ -36,7 +36,7 @@ export function TrocaSenhaObrigatoria({ nome, logoUrl }: {
         body: JSON.stringify({ senha, confirmacao }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error ?? 'Nao consegui trocar a senha');
+      if (!res.ok) throw new Error(json?.error ?? 'Não consegui trocar a senha');
       toast.success('Senha alterada. Bem-vindo!');
       window.location.href = '/portal';
     } catch (err) {
@@ -61,7 +61,7 @@ export function TrocaSenhaObrigatoria({ nome, logoUrl }: {
           </span>
           <h1 className="mt-3 text-xl font-bold text-brand-800">Crie a sua senha</h1>
           <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
-            Ola, {nome.split(' ')[0]}. Voce entrou com o seu CPF como senha — e ele nao protege a
+            Olá, {nome.split(' ')[0]}. Você entrou com o seu CPF como senha — e ele não protege a
             sua conta. Escolha uma senha sua antes de continuar.
           </p>
 
@@ -77,8 +77,8 @@ export function TrocaSenhaObrigatoria({ nome, logoUrl }: {
               />
               <span className={`mt-1 block text-[11px] ${curta || soNumeros ? 'text-amber-700' : 'text-slate-400'}`}>
                 {soNumeros
-                  ? 'Use letras tambem — so numeros e facil de adivinhar.'
-                  : 'Pelo menos 8 caracteres, com letras e numeros.'}
+                  ? 'Use letras também — só números e fácil de adivinhar.'
+                  : 'Pelo menos 8 caracteres, com letras e números.'}
               </span>
             </label>
 
@@ -92,7 +92,7 @@ export function TrocaSenhaObrigatoria({ nome, logoUrl }: {
                 className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-[14px] outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
               />
               {naoConfere && (
-                <span className="mt-1 block text-[11px] text-rose-600">As senhas nao conferem.</span>
+                <span className="mt-1 block text-[11px] text-rose-600">As senhas não conferem.</span>
               )}
             </label>
 

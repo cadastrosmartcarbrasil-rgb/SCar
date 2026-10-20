@@ -114,7 +114,7 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
     setBuscandoCep(true);
     const r = await buscarCep(cep);
     setBuscandoCep(false);
-    if (!r) return toast.error('CEP nao encontrado');
+    if (!r) return toast.error('CEP não encontrado');
     setEnd({ cep, logradouro: r.logradouro, bairro: r.bairro, cidade: r.cidade, uf: r.estado });
   }
 
@@ -133,7 +133,7 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
       celular: cli.telefone ?? form.celular,
       endereco: (Object.keys(end).length ? end : endereco) as LeadsRow['endereco'],
     });
-    toast.success(`Associado ja cadastrado: ${cli.nome_razao_social} — ficha reaproveitada.`);
+    toast.success(`Associado já cadastrado: ${cli.nome_razao_social} — ficha reaproveitada.`);
   }
 
   /**
@@ -153,9 +153,9 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
     if (!placaValida(p)) return toast.error('Informe a placa completa antes de consultar');
     setConferencia(null);
     const r = await fipePorPlaca.mutateAsync(p).catch(() => null);
-    if (!r?.configured) return toast.error('Consulta de placa nao configurada no servidor');
+    if (!r?.configured) return toast.error('Consulta de placa não configurada no servidor');
     if (!r.registro) {
-      return toast.message('A consulta nao devolveu os dados do documento para esta placa.');
+      return toast.message('A consulta não devolveu os dados do documento para esta placa.');
     }
     const conf = conferirRegistroDaPlaca(form, r.registro);
     const preenchidos = Object.keys(conf.preencher).length;
@@ -188,7 +188,7 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
 
   async function abrir(path: string) {
     try { window.open(await urlAssinada.mutateAsync(path), '_blank', 'noopener'); }
-    catch { toast.error('Nao consegui abrir o arquivo'); }
+    catch { toast.error('Não consegui abrir o arquivo'); }
   }
 
   function gravar() {
@@ -271,7 +271,7 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
               className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium text-amber-700 underline"
             >
               <CircleAlert className="h-3 w-3" />
-              Ha pendencia em &quot;{ABAS_FECHAMENTO.find((a) => a.id === faltamAgora)?.titulo}&quot;
+              Há pendência em &quot;{ABAS_FECHAMENTO.find((a) => a.id === faltamAgora)?.titulo}&quot;
             </button>
           )}
         </div>
@@ -285,14 +285,14 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
 
         {/* ---------------------------------------------------- Associado */}
         {aba === 'associado' && (
-        <Secao icone={UserRound} titulo="Associado" descricao="Confira o CPF/CNPJ primeiro: se ja for associado, a ficha vem preenchida.">
+        <Secao icone={UserRound} titulo="Associado" descricao="Confira o CPF/CNPJ primeiro: se já for associado, a ficha vem preenchida.">
           <div className="grid gap-3 sm:grid-cols-3">
             <FormField label="CPF / CNPJ *" className="sm:col-span-2">
               <div className="flex gap-2">
                 <Input
                   value={formatarDocumento(form.cpf_cnpj ?? '', (form.cpf_cnpj ?? '').length > 11 ? 'PJ' : 'PF')}
                   onChange={(e) => set({ cpf_cnpj: e.target.value.replace(/\D/g, '') })}
-                  placeholder="Somente numeros"
+                  placeholder="Somente números"
                 />
                 <Button type="button" variant="secondary" onClick={conferirAssociado} disabled={buscarAssociado.isPending}>
                   {buscarAssociado.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
@@ -303,23 +303,23 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
             <FormField label="Tipo">
               <Select value={form.tipo_pessoa ?? ''} onChange={(e) => set({ tipo_pessoa: (e.target.value || null) as LeadsRow['tipo_pessoa'] })}>
                 <option value="">-- Auto --</option>
-                <option value="PF">Pessoa Fisica</option>
-                <option value="PJ">Pessoa Juridica</option>
+                <option value="PF">Pessoa Física</option>
+                <option value="PJ">Pessoa Jurídica</option>
               </Select>
             </FormField>
           </div>
 
           {form.cliente_existente_id && (
             <p className="rounded-lg bg-cyan-50 px-3 py-1.5 text-[11.5px] text-cyan-800">
-              Associado ja existe na base — a ficha sera atualizada, nao duplicada.
+              Associado já existe na base — a ficha será atualizada, não duplicada.
             </p>
           )}
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <FormField label="Nome completo / Razao social *">
+            <FormField label="Nome completo / Razão social *">
               <Input value={form.nome ?? ''} onChange={(e) => set({ nome: e.target.value })} />
             </FormField>
-            <FormField label={form.tipo_pessoa === 'PJ' ? 'Inscricao estadual *' : 'RG *'}>
+            <FormField label={form.tipo_pessoa === 'PJ' ? 'Inscrição estadual *' : 'RG *'}>
               <Input value={form.rg_ie ?? ''} onChange={(e) => set({ rg_ie: e.target.value })} />
             </FormField>
           </div>
@@ -330,7 +330,7 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
             <FormField label="E-mail *">
               <Input type="email" value={form.email ?? ''} onChange={(e) => set({ email: e.target.value })} />
             </FormField>
-            <FormField label={form.tipo_pessoa === 'PJ' ? 'Data de fundacao *' : 'Data de nascimento *'}>
+            <FormField label={form.tipo_pessoa === 'PJ' ? 'Data de fundação *' : 'Data de nascimento *'}>
               <Input type="date" className="tnum" value={form.data_nascimento ?? ''} onChange={(e) => set({ data_nascimento: e.target.value })} />
             </FormField>
           </div>
@@ -345,7 +345,7 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
             <FormField label="Logradouro *" className="sm:col-span-2">
               <Input value={endereco.logradouro ?? ''} onChange={(e) => setEnd({ logradouro: e.target.value })} />
             </FormField>
-            <FormField label="Numero *">
+            <FormField label="Número *">
               <Input value={endereco.numero ?? ''} onChange={(e) => setEnd({ numero: e.target.value })} />
             </FormField>
           </div>
@@ -369,7 +369,7 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
 
         {/* ---------------------------------------------------- Veiculo */}
         {aba === 'veiculo' && (
-        <Secao icone={Car} titulo="Veiculo" descricao="Chassi, Renavam e cor sao obrigatorios para o veiculo entrar na base.">
+        <Secao icone={Car} titulo="Veiculo" descricao="Chassi, Renavam e cor são obrigatórios para o veículo entrar na base.">
           <div className="grid gap-3 sm:grid-cols-4">
             <FormField label="Placa *">
               <div className="flex gap-1.5">
@@ -447,7 +447,7 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
           <div className="grid gap-3 sm:grid-cols-4">
             <FormField label="Marca *"><Input value={form.marca ?? ''} onChange={(e) => set({ marca: e.target.value })} /></FormField>
             <FormField label="Modelo *"><Input value={form.modelo ?? ''} onChange={(e) => set({ modelo: e.target.value })} /></FormField>
-            <FormField label="Ano fabricacao *">
+            <FormField label="Ano fabricação *">
               <Input type="number" className="tnum" value={form.ano_fabricacao ?? ''} onChange={(e) => set({ ano_fabricacao: e.target.value ? Number(e.target.value) : null })} />
             </FormField>
             <FormField label="Ano modelo *">
@@ -472,7 +472,7 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
 
         {/* ---------------------------------------------------- Documentos e fotos */}
         {aba === 'vistoria' && (
-        <Secao icone={Camera} titulo="Documentos e vistoria" descricao="CRLV do veiculo e as fotos obrigatorias da vistoria.">
+        <Secao icone={Camera} titulo="Documentos e vistoria" descricao="CRLV do veículo e as fotos obrigatórias da vistoria.">
           <LeitorCrlv onLido={aplicarCrlv} valorAtual={form.crlv_qrcode} />
 
           <div className="flex flex-wrap items-center gap-2">
@@ -488,7 +488,7 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
                 }}
               />
               {uploadCrlv.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImgIcon className="h-4 w-4" />}
-              Anexar copia do CRLV
+              Anexar cópia do CRLV
             </label>
             {form.crlv_url && (
               <button type="button" onClick={() => abrir(form.crlv_url!)} className="text-xs font-medium text-cyan-700 underline">
@@ -506,7 +506,7 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
 
         {/* ---------------------------------------------------- Adesao */}
         {aba === 'adesao' && (
-        <Secao icone={HandCoins} titulo="Adesao e vendedor" descricao="Como a taxa de adesao foi recebida define se ela entra no nosso financeiro.">
+        <Secao icone={HandCoins} titulo="Adesão e vendedor" descricao="Como a taxa de adesão foi recebida define se ela entra no nosso financeiro.">
           <div className="grid gap-3 sm:grid-cols-3">
             <FormField label="Vendedor *">
               <Select value={form.vendedor_id ?? ''} onChange={(e) => set({ vendedor_id: e.target.value || null })}>
@@ -516,7 +516,7 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
                 ))}
               </Select>
             </FormField>
-            <FormField label="Valor da adesao *">
+            <FormField label="Valor da adesão *">
               <MoneyInput value={form.adesao_valor ?? null} onChange={(v) => set({ adesao_valor: v })} />
             </FormField>
             <FormField label="Forma de recebimento *">
@@ -536,9 +536,9 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
               <p className="font-semibold">{rateio.resumo}</p>
               {rateio.entraNoCaixa && (
                 <p className="tnum mt-1">
-                  Receita da associacao {formatCurrency(rateio.valor)} · repasse ao vendedor{' '}
+                  Receita da associação {formatCurrency(rateio.valor)} · repasse ao vendedor{' '}
                   {formatCurrency(rateio.vendedor)} · fica {formatCurrency(rateio.associacao)}
-                  {vendedorSel && <> (comissao de {(Number(vendedorSel.taxa_comissao_adesao) * 100).toFixed(0)}%)</>}
+                  {vendedorSel && <> (comissão de {(Number(vendedorSel.taxa_comissao_adesao) * 100).toFixed(0)}%)</>}
                 </p>
               )}
             </div>

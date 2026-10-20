@@ -33,10 +33,10 @@ export default function PainelVendedorPage() {
     <div className="space-y-5">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-          Ola, {p?.nome?.split(' ')[0] ?? 'vendedor'}
+          Olá, {p?.nome?.split(' ')[0] ?? 'vendedor'}
         </h1>
         <p className="mt-0.5 text-sm text-slate-500">
-          Seus leads, suas vendas e sua comissao — {p?.regional_nome ?? 'Smart Car Brasil'}.
+          Seus leads, suas vendas e sua comissão — {p?.regional_nome ?? 'Smart Car Brasil'}.
         </p>
       </header>
 
@@ -48,10 +48,10 @@ export default function PainelVendedorPage() {
               <Link2 className="h-3.5 w-3.5" /> Meu link de vendas
             </p>
             <p className="mt-1 truncate font-mono text-[13px] text-brand-700">
-              {p?.codigo ? `/v/${p.codigo}` : 'codigo ainda nao gerado'}
+              {p?.codigo ? `/v/${p.codigo}` : 'código ainda não gerado'}
             </p>
             <p className="mt-0.5 text-[11px] text-slate-400">
-              Quem preencher por este link vira um lead ja vinculado a voce.
+              Quem preencher por este link vira um lead já vinculado a você.
             </p>
           </div>
           <div className="sm:w-72"><BotoesHotlink codigo={p?.codigo ?? null} /></div>
@@ -62,35 +62,35 @@ export default function PainelVendedorPage() {
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Indicador
-          titulo="Leads no periodo" valor={p?.leads_periodo} icon={Zap} tom="destaque"
+          titulo="Leads no período" valor={p?.leads_periodo} icon={Zap} tom="destaque"
           formato="numero" carregando={isLoading}
           detalhe={`${p?.leads_hotlink ?? 0} pelo meu link · ${p?.leads_abertos ?? 0} em aberto`}
         />
         <Indicador
-          titulo="Taxa de conversao" valor={p?.taxa_conversao} icon={Target}
+          titulo="Taxa de conversão" valor={p?.taxa_conversao} icon={Target}
           formato="percentual"
           tom={(p?.leads_periodo ?? 0) === 0 ? 'neutro'
             : (p?.taxa_conversao ?? 0) >= 20 ? 'receita' : 'alerta'}
           carregando={isLoading}
-          detalhe={`${p?.leads_convertidos ?? 0} viraram veiculo na base`}
+          detalhe={`${p?.leads_convertidos ?? 0} viraram veículo na base`}
         />
         <Indicador
-          titulo="Comissao a receber" valor={p?.comissao_pendente} icon={HandCoins} tom="alerta"
+          titulo="Comissão a receber" valor={p?.comissao_pendente} icon={HandCoins} tom="alerta"
           carregando={isLoading}
-          detalhe={`Ja recebido no periodo: ${formatCurrency(p?.comissao_paga)}`}
+          detalhe={`Já recebido no período: ${formatCurrency(p?.comissao_paga)}`}
         />
         <Indicador
           titulo="Minha carteira" valor={p?.veiculos_ativos} icon={Car} tom="neutro"
           formato="numero" carregando={isLoading}
-          detalhe="Veiculos ativos vendidos por mim"
+          detalhe="Veículos ativos vendidos por mim"
         />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
         <Card>
           <CardHeader>
-            <CardTitle>Ultimos leads</CardTitle>
-            <p className="text-xs text-slate-500">O que chegou por ultimo na sua carteira.</p>
+            <CardTitle>Últimos leads</CardTitle>
+            <p className="text-xs text-slate-500">O que chegou por último na sua carteira.</p>
           </CardHeader>
           <CardContent>
             {ultimos.length === 0 ? (
@@ -141,28 +141,28 @@ export default function PainelVendedorPage() {
           </CardHeader>
           <CardContent className="space-y-3 text-[12.5px] text-slate-600">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Adesao</p>
-              <p className="mt-0.5">{percent(p?.taxa_adesao)} da adesao</p>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Adesão</p>
+              <p className="mt-0.5">{percent(p?.taxa_adesao)} da adesão</p>
               {p?.dia_entrada && (
                 <p className="text-[11px] text-slate-400">
                   Pago toda {rotuloDiaSemana(p.dia_entrada)}
-                  {proximoSemanal && ` · proximo em ${formatDate(proximoSemanal.toISOString())}`}
+                  {proximoSemanal && ` · próximo em ${formatDate(proximoSemanal.toISOString())}`}
                 </p>
               )}
             </div>
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Recorrencia</p>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Recorrência</p>
               <p className="mt-0.5">{percent(p?.taxa_recorrente)} da mensalidade</p>
               {p?.dia_recorrencia && (
                 <p className="text-[11px] text-slate-400">
                   Pago todo dia {p.dia_recorrencia}
-                  {proximoMensal && ` · proximo em ${formatDate(proximoMensal.toISOString())}`}
+                  {proximoMensal && ` · próximo em ${formatDate(proximoMensal.toISOString())}`}
                 </p>
               )}
             </div>
             <p className="rounded-lg bg-slate-50 px-3 py-2 text-[11px] leading-relaxed text-slate-500">
-              A adesao recebida por voce na hora fica integralmente com voce e nao entra neste
-              extrato. O que aparece aqui e o que passa pelo financeiro da empresa.
+              A adesão recebida por você na hora fica integralmente com você e não entra neste
+              extrato. O que aparece aqui é o que passa pelo financeiro da empresa.
             </p>
           </CardContent>
         </Card>

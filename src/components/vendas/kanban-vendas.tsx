@@ -150,7 +150,7 @@ export function KanbanVendas({ busca, consultorId }: { busca?: string; consultor
                               }`}>
                                 <Percent className="h-2.5 w-2.5" />
                                 {Number(l.desconto_percentual).toFixed(2).replace('.', ',')}%
-                                {l.desconto_aprovado ? ' (excecao)' : ''}
+                                {l.desconto_aprovado ? ' (exceção)' : ''}
                               </span>
                             )}
                             {l.status !== colunaDoLead(l.status) && (
@@ -172,7 +172,7 @@ export function KanbanVendas({ busca, consultorId }: { busca?: string; consultor
                             {!travado && (
                               <span
                                 title={esfriando
-                                  ? `Sem contato ha ${l.dias_parado} dias — a unidade devolve ao pool com ${l.limite_sem_contato}`
+                                  ? `Sem contato há ${l.dias_parado} dias — a unidade devolve ao pool com ${l.limite_sem_contato}`
                                   : undefined}
                                 className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] ${
                                   esfriando ? 'bg-rose-50 font-medium text-rose-700' : 'text-slate-400'

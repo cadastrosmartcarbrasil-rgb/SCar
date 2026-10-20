@@ -174,19 +174,19 @@ export const ROTULO_STATUS_VEICULO: Record<string, string> = {
 export const ORDEM_STATUS_EVENTO = ['ABERTO', 'EM_ANALISE', 'COTACAO_PECAS', 'REPARO', 'CONCLUIDO', 'NEGADO'] as const;
 export const ROTULO_STATUS_EVENTO: Record<string, string> = {
   ABERTO: 'Aberto',
-  EM_ANALISE: 'Em analise',
-  COTACAO_PECAS: 'Cotacao de pecas',
+  EM_ANALISE: 'Em análise',
+  COTACAO_PECAS: 'Cotação de peças',
   REPARO: 'Em reparo',
-  CONCLUIDO: 'Concluido',
+  CONCLUIDO: 'Concluído',
   NEGADO: 'Negado',
 };
 
 /** A esteira do CRM na ordem do trabalho (0028), sem os desfechos. */
 export const ETAPAS_FUNIL = [
   { status: 'NOVO', rotulo: 'Novo lead' },
-  { status: 'ORCAMENTO_GERADO', rotulo: 'Cotacao criada' },
+  { status: 'ORCAMENTO_GERADO', rotulo: 'Cotação criada' },
   { status: 'PROPOSTA_ENVIADA', rotulo: 'Proposta enviada' },
-  { status: 'EM_NEGOCIACAO', rotulo: 'Em negociacao' },
+  { status: 'EM_NEGOCIACAO', rotulo: 'Em negociação' },
   { status: 'APROVADO', rotulo: 'Aprovado' },
   { status: 'EM_AUDITORIA', rotulo: 'Em auditoria' },
 ] as const;

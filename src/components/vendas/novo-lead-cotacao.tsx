@@ -145,7 +145,7 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
     if (r?.registro) setRegistro(r.registro);
     if (!v) {
       setMostrarCascata(true);
-      toast.message('Placa nao encontrada na FIPE — busque pelo modelo abaixo.');
+      toast.message('Placa não encontrada na FIPE — busque pelo modelo abaixo.');
       return;
     }
     if (v.marca) setMarca(v.marca);
@@ -171,11 +171,11 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
   }
 
   async function gerar() {
-    if (!valorFipe) return toast.error('Informe o valor FIPE do veiculo');
-    if (!tipoVeiculoId) return toast.error('Selecione o tipo de veiculo');
+    if (!valorFipe) return toast.error('Informe o valor FIPE do veículo');
+    if (!tipoVeiculoId) return toast.error('Selecione o tipo de veículo');
     if (!escolhido) return toast.error('Escolha o plano da proposta');
     if (!nome.trim()) return toast.error('Informe o nome do lead');
-    if (celular.replace(/\D/g, '').length < 10) return toast.error('Informe um celular valido');
+    if (celular.replace(/\D/g, '').length < 10) return toast.error('Informe um celular válido');
     // CPF e opcional na captura; digitado errado, nao.
     if (docPreenchido && !docValido) return toast.error('CPF/CNPJ invalido');
     try {
@@ -209,7 +209,7 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
         produtosIds: avulsosParaCotacao(selecionados, idsDoPlano),
         modoEnvio,
       });
-      toast.success('Cotacao gerada');
+      toast.success('Cotação gerada');
       aoConcluir(lead.id);
     } catch (e) {
       toast.error((e as Error).message);
@@ -225,7 +225,7 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
       <Link href={voltarPara.href} className="inline-flex items-center gap-1 text-sm text-slate-500">
         <ArrowLeft className="h-4 w-4" /> {voltarPara.rotulo}
       </Link>
-      <h1 className="text-xl font-semibold text-slate-900">Nova cotacao</h1>
+      <h1 className="text-xl font-semibold text-slate-900">Nova cotação</h1>
 
       {/* Aviso de duplicidade — informa, nunca bloqueia */}
       {aviso && (
@@ -239,18 +239,18 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
                 href={aviso.linkDoLead}
                 className="mt-1 inline-flex items-center gap-1 text-[11.5px] font-semibold underline"
               >
-                Abrir o atendimento que ja existe <ExternalLink className="h-3 w-3" />
+                Abrir o atendimento que já existe <ExternalLink className="h-3 w-3" />
               </Link>
             )}
             <p className="mt-1 text-[11px] opacity-70">
-              Isto e um aviso: voce pode seguir com a cotacao normalmente.
+              Isto é um aviso: você pode seguir com a cotação normalmente.
             </p>
           </div>
         </div>
       )}
 
       {/* 1. Veiculo — a conversa comeca na placa */}
-      <Secao icon={Car} titulo="1. Veiculo">
+      <Secao icon={Car} titulo="1. Veículo">
         <Campo label="Placa">
           <div className="relative">
             <Input
@@ -272,7 +272,7 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
 
         {!mostrarCascata && (
           <button type="button" onClick={() => setMostrarCascata(true)} className="text-xs font-medium text-brand-600">
-            Nao tem a placa? Buscar por Tipo &gt; Marca &gt; Modelo &gt; Ano
+            Não tem a placa? Buscar por Tipo &gt; Marca &gt; Modelo &gt; Ano
           </button>
         )}
         {mostrarCascata && (
@@ -312,15 +312,15 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
           </Campo>
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <Campo label="Tipo de veiculo *">
+          <Campo label="Tipo de veículo *">
             <Select value={tipoVeiculoId} onChange={(e) => setTipoVeiculoId(e.target.value)}>
               <option value="">-- Selecione --</option>
               {(tipos ?? []).map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
             </Select>
           </Campo>
-          <Campo label="Cota de participacao">
+          <Campo label="Cota de participação">
             <Select value={cotaId} onChange={(e) => setCotaId(e.target.value)}>
-              <option value="">Padrao da faixa</option>
+              <option value="">Padrão da faixa</option>
               {(cotas ?? []).map((c) => (
                 <option key={c.id} value={c.id}>{c.codigo} — {(c.percentual * 100).toFixed(0)}%</option>
               ))}
@@ -330,10 +330,10 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
       </Secao>
 
       {/* 2. Planos lado a lado */}
-      <Secao icon={Calculator} titulo="2. Planos para este veiculo">
+      <Secao icon={Calculator} titulo="2. Planos para este veículo">
         {!valorFipe || !tipoVeiculoId ? (
           <p className="rounded-xl border border-dashed border-slate-200 px-3 py-6 text-center text-xs text-slate-400">
-            Informe o valor FIPE e o tipo do veiculo para ver os planos.
+            Informe o valor FIPE e o tipo do veículo para ver os planos.
           </p>
         ) : comparativo.isLoading ? (
           <p className="flex items-center justify-center gap-2 py-6 text-xs text-slate-400">
@@ -341,7 +341,7 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
           </p>
         ) : planos.length === 0 ? (
           <p className="rounded-xl border border-dashed border-rose-200 px-3 py-6 text-center text-xs text-rose-500">
-            Nenhum plano disponivel para este veiculo.
+            Nenhum plano disponível para este veículo.
           </p>
         ) : (
           <div className={`space-y-2 transition ${comparativo.isFetching ? 'opacity-60' : ''}`}>
@@ -371,7 +371,7 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
                       )}
                     </div>
                     <div className="shrink-0 text-right">
-                      <p className="text-[9.5px] font-semibold uppercase tracking-wide text-slate-400">por mes</p>
+                      <p className="text-[9.5px] font-semibold uppercase tracking-wide text-slate-400">por mês</p>
                       <p className="tnum text-[19px] font-bold leading-tight text-brand-700">
                         {formatCurrency(p.mensalidade)}
                       </p>
@@ -389,8 +389,8 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
                         </ul>
                       )}
                       <p className="mt-2 text-[11px] text-slate-500">
-                        {p.adesao > 0 && <>Adesao unica de <b>{formatCurrency(p.adesao)}</b>. </>}
-                        {p.participacao > 0 && <>Participacao no evento: <b>{formatCurrency(p.participacao)}</b>.</>}
+                        {p.adesao > 0 && <>Adesão única de <b>{formatCurrency(p.adesao)}</b>. </>}
+                        {p.participacao > 0 && <>Participação no evento: <b>{formatCurrency(p.participacao)}</b>.</>}
                       </p>
                     </>
                   )}
@@ -464,7 +464,7 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
                 className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium ${
                   modoEnvio === m ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-slate-200 text-slate-500'
                 }`}>
-                {m === 'DETALHADA' ? 'Detalhada (item a item)' : 'Consolidada (so o total)'}
+                {m === 'DETALHADA' ? 'Detalhada (item a item)' : 'Consolidada (só o total)'}
               </button>
             ))}
           </div>
@@ -477,12 +477,12 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
           {escolhido && (
             <p className="text-center text-[11.5px] text-slate-500">
               {escolhido.nome} · <b className="tnum text-brand-700">{formatCurrency(escolhido.mensalidade)}/mes</b>
-              {escolhido.adesao > 0 && <> · adesao {formatCurrency(escolhido.adesao)}</>}
+              {escolhido.adesao > 0 && <> · adesão {formatCurrency(escolhido.adesao)}</>}
             </p>
           )}
           <Button onClick={gerar} disabled={salvando || !escolhido} className="w-full">
             {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Gerar cotacao e link
+            Gerar cotação e link
           </Button>
         </div>
       </div>

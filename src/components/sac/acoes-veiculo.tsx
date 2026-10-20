@@ -38,7 +38,7 @@ export function ModalHistoricoFinanceiro({
   onClose: () => void;
 }) {
   return (
-    <Modal open onClose={onClose} title={`Historico financeiro${placa ? ` — ${placa}` : ''}`} tamanho="lg">
+    <Modal open onClose={onClose} title={`Histórico financeiro${placa ? ` — ${placa}` : ''}`} tamanho="lg">
       <HistoricoFinanceiroLista clienteId={clienteId} veiculoId={veiculoId} />
     </Modal>
   );
@@ -71,10 +71,10 @@ export function HistoricoFinanceiroLista({
 
   return (
     <>
-      {error && <p className="text-sm text-rose-600">Nao foi possivel carregar o financeiro: {(error as Error).message}</p>}
+      {error && <p className="text-sm text-rose-600">Não foi possível carregar o financeiro: {(error as Error).message}</p>}
       {isLoading && <p className="text-sm text-slate-400">Carregando...</p>}
       {!isLoading && (titulos ?? []).length === 0 && (
-        <p className="text-sm text-slate-400">Nenhum boleto encontrado — nem no SCar, nem no historico do Mutual.</p>
+        <p className="text-sm text-slate-400">Nenhum boleto encontrado — nem no SCar, nem no histórico do Mutual.</p>
       )}
       <BoletosNegociados clienteId={clienteId} />
       {negociaveis.length > 0 && (
@@ -99,7 +99,7 @@ export function HistoricoFinanceiroLista({
       )}
       {(titulos ?? []).some((t) => t.origem === 'MUTUAL') && (
         <p className="mb-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
-          Os boletos <b>Mutual</b> foram emitidos pelo sistema anterior. A 2a via vencida e a negociacao geram um
+          Os boletos <b>Mutual</b> foram emitidos pelo sistema anterior. A 2a via vencida e a negociação geram um
           boleto NOVO do SCar no Sicredi, e o original recebe baixa no banco.
         </p>
       )}
@@ -111,7 +111,7 @@ export function HistoricoFinanceiroLista({
               <div className="flex items-start gap-2">
                 {!motivoNaoNegociavel(t) && (
                   <input type="checkbox" className="mt-1 h-4 w-4" checked={marcados.has(t.id)} onChange={() => alternar(t.id)}
-                    aria-label="Selecionar para 2a via / negociacao" />
+                    aria-label="Selecionar para 2a via / negociação" />
                 )}
                 <div>
                 <p className="text-sm font-semibold text-slate-800">
@@ -140,7 +140,7 @@ export function HistoricoFinanceiroLista({
               </div>
               <span className="flex items-center gap-1">
                 {t.origem === 'MUTUAL' && (
-                  <span className="rounded bg-brand-50 px-2 py-0.5 text-xs text-brand-600" title="Boleto emitido pelo Mutual (mesmo beneficiario Sicredi)">
+                  <span className="rounded bg-brand-50 px-2 py-0.5 text-xs text-brand-600" title="Boleto emitido pelo Mutual (mesmo beneficiário Sicredi)">
                     Mutual
                   </span>
                 )}
@@ -175,10 +175,10 @@ export function HistoricoFinanceiroLista({
               )}
               {t.linha_digitavel && (
                 <button
-                  onClick={() => { navigator.clipboard?.writeText(t.linha_digitavel ?? ''); toast.success('Linha digitavel copiada'); }}
+                  onClick={() => { navigator.clipboard?.writeText(t.linha_digitavel ?? ''); toast.success('Linha digitável copiada'); }}
                   className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-xs text-slate-600"
                 >
-                  <Copy className="h-3.5 w-3.5" /> Linha digitavel
+                  <Copy className="h-3.5 w-3.5" /> Linha digitável
                 </button>
               )}
               {t.pix_copia_cola && (
@@ -192,7 +192,7 @@ export function HistoricoFinanceiroLista({
               {t.origem === 'MUTUAL' && t.url_pagamento && t.status !== 'pago' && t.status !== 'cancelado' && (
                 <a href={t.url_pagamento} target="_blank" rel="noreferrer"
                   className="inline-flex items-center gap-1 rounded-lg bg-cyan-50 px-2 py-1 text-xs text-cyan-700">
-                  <QrCode className="h-3.5 w-3.5" /> Pagina de pagamento (Mutual)
+                  <QrCode className="h-3.5 w-3.5" /> Página de pagamento (Mutual)
                 </a>
               )}
               {!motivoNaoNegociavel(t) && (
@@ -265,10 +265,10 @@ function ModalEditarBoleto({ titulo, onClose }: { titulo: TituloCliente; onClose
           <FormField label="Desconto">
             <MoneyInput value={form.desconto} onChange={(v) => setForm({ ...form, desconto: v })} />
           </FormField>
-          <FormField label="Acrescimo (juros/multa)">
+          <FormField label="Acréscimo (juros/multa)">
             <MoneyInput value={form.acrescimo} onChange={(v) => setForm({ ...form, acrescimo: v })} />
           </FormField>
-          <FormField label="Observacao" className="sm:col-span-2">
+          <FormField label="Observação" className="sm:col-span-2">
             <Input value={form.observacao} onChange={(e) => setForm({ ...form, observacao: e.target.value })}
               placeholder="Ex.: negociado no atendimento" />
           </FormField>
@@ -277,8 +277,8 @@ function ModalEditarBoleto({ titulo, onClose }: { titulo: TituloCliente; onClose
         <p className={`rounded-lg p-3 text-sm ${erro ? 'bg-rose-50 text-rose-700' : 'bg-slate-50 text-slate-600'}`}>
           {erro ?? <>Novo valor do boleto: <strong className="tnum">{formatCurrency(final)}</strong></>}
           <span className="mt-1 block text-xs text-slate-500">
-            O valor e sempre recalculado a partir do original — ajustes nao se acumulam. Este boleto ainda nao
-            foi ao banco: ele sai com estes valores. Boleto ja registrado se muda por &ldquo;Negociar&rdquo;.
+            O valor é sempre recalculado a partir do original — ajustes não se acumulam. Este boleto ainda não
+            foi ao banco: ele sai com estes valores. Boleto já registrado se muda por &ldquo;Negociar&rdquo;.
           </span>
         </p>
 
@@ -319,7 +319,7 @@ export function ModalWhatsApp({
         </FormField>
         {!link && (
           <p className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
-            O associado nao tem celular valido no cadastro — atualize a ficha para disparar pelo WhatsApp.
+            O associado não tem celular válido no cadastro — atualize a ficha para disparar pelo WhatsApp.
           </p>
         )}
         <div className="flex justify-end gap-2">
@@ -371,7 +371,7 @@ export function ModalEmail({
         </FormField>
         {!link && (
           <p className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
-            O associado nao tem e-mail valido no cadastro — atualize a ficha para enviar.
+            O associado não tem e-mail válido no cadastro — atualize a ficha para enviar.
           </p>
         )}
         <div className="flex justify-end gap-2">

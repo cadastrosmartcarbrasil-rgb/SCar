@@ -19,13 +19,13 @@ export function getPaymentGateway(config?: GatewayConfig | null, env: Record<str
   if (config?.provedor === 'SICREDI') {
     const cfg = configSicrediDoAmbiente(env);
     if (!cfg) {
-      throw new GatewayNaoImplementadoError('SICREDI', `faltam variaveis: ${variaveisSicrediFaltando(env).join(', ')}`);
+      throw new GatewayNaoImplementadoError('SICREDI', `faltam variáveis: ${variaveisSicrediFaltando(env).join(', ')}`);
     }
     // O cadastro diz um ambiente e o servidor esta em outro: emitir assim e
     // achar que testou (boleto real) ou achar que cobrou (boleto de mentira).
     if (config.ambiente && config.ambiente !== cfg.ambiente) {
       throw new Error(
-        `Integracao Sicredi cadastrada como ${config.ambiente}, mas o servidor esta em ${cfg.ambiente} ` +
+        `Integração Sicredi cadastrada como ${config.ambiente}, mas o servidor está em ${cfg.ambiente} ` +
           `(SICREDI_AMBIENTE). Acerte um dos dois antes de emitir.`,
       );
     }
@@ -45,7 +45,7 @@ export function getPaymentGateway(config?: GatewayConfig | null, env: Record<str
     case 'GERENCIANET':
     case 'OUTRO':
     default:
-      throw new GatewayNaoImplementadoError(config.provedor, 'adaptador nao registrado');
+      throw new GatewayNaoImplementadoError(config.provedor, 'adaptador não registrado');
   }
 }
 

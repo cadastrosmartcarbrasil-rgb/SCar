@@ -13,8 +13,8 @@ export default function EventosPage({ searchParams }: { searchParams: { aba?: st
   const prazos = searchParams?.aba === 'prazos';
   const abas = [
     { href: '/eventos', label: 'Pipeline', icon: KanbanSquare, ativo: !historico && !prazos },
-    { href: '/eventos?aba=prazos', label: 'Prazo regulatorio (90 dias)', icon: Timer, ativo: prazos },
-    { href: '/eventos?aba=historico', label: 'Historico (Mutual)', icon: History, ativo: historico },
+    { href: '/eventos?aba=prazos', label: 'Prazo regulatório (90 dias)', icon: Timer, ativo: prazos },
+    { href: '/eventos?aba=historico', label: 'Histórico (Mutual)', icon: History, ativo: historico },
   ];
   return (
     <div className="space-y-6">
@@ -23,9 +23,9 @@ export default function EventosPage({ searchParams }: { searchParams: { aba?: st
           <h1 className="text-2xl font-semibold text-slate-900">Eventos</h1>
           <p className="text-sm text-slate-500">
             {historico
-              ? 'Eventos do sistema anterior dos associados ja carregados — so consulta.'
+              ? 'Eventos do sistema anterior dos associados já carregados — só consulta.'
               : prazos
-              ? 'Prazo de regulacao e liquidacao de 90 dias (Art. 22, CNSP 491/2026) dos eventos em aberto.'
+              ? 'Prazo de regulação e liquidação de 90 dias (Art. 22, CNSP 491/2026) dos eventos em aberto.'
               : 'Arraste os protocolos entre as colunas para atualizar o status do pipeline.'}
           </p>
         </div>

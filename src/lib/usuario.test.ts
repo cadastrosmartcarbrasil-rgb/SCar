@@ -85,7 +85,7 @@ describe('tempoDeCasa', () => {
 
   it('nao conta o mes que ainda nao fechou', () => {
     // Entrou dia 20; em 09/09 o mes corrente ainda nao completou.
-    expect(tempoDeCasa('2026-08-20', hoje)).toBe('menos de 1 mes');
+    expect(tempoDeCasa('2026-08-20', hoje)).toBe('menos de 1 mês');
   });
 
   it('sem data, data futura ou data invalida devolve null', () => {
@@ -99,7 +99,7 @@ describe('avisoDeDesativacao', () => {
   it('diz que o acesso cai e que o historico fica', () => {
     const t = avisoDeDesativacao({ nome: 'JOAO' });
     expect(t).toContain('O acesso e cortado na hora');
-    expect(t).toContain('historico do que ja fez continua intacto');
+    expect(t).toContain('histórico do que já fez continua intacto');
   });
 
   it('avisa quando a pessoa responde por unidade', () => {

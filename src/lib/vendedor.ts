@@ -28,11 +28,11 @@ export function etapaDoVendedor(status: string): EtapaVendedor {
 
 export const SELO_STATUS_LEAD: Record<string, { rotulo: string; classe: string }> = {
   NOVO:             { rotulo: 'Novo',        classe: 'bg-slate-50 text-slate-600 ring-slate-200' },
-  ORCAMENTO_GERADO: { rotulo: 'Cotacao',     classe: 'bg-sky-50 text-sky-700 ring-sky-200' },
+  ORCAMENTO_GERADO: { rotulo: 'Cotação',     classe: 'bg-sky-50 text-sky-700 ring-sky-200' },
   PROPOSTA_ENVIADA: { rotulo: 'Proposta',    classe: 'bg-indigo-50 text-indigo-700 ring-indigo-200' },
-  EM_NEGOCIACAO:    { rotulo: 'Negociacao',  classe: 'bg-cyan-50 text-cyan-700 ring-cyan-200' },
-  APROVADO:         { rotulo: 'Em analise',  classe: 'bg-amber-50 text-amber-800 ring-amber-200' },
-  EM_AUDITORIA:     { rotulo: 'Em analise',  classe: 'bg-amber-50 text-amber-800 ring-amber-200' },
+  EM_NEGOCIACAO:    { rotulo: 'Negociação',  classe: 'bg-cyan-50 text-cyan-700 ring-cyan-200' },
+  APROVADO:         { rotulo: 'Em análise',  classe: 'bg-amber-50 text-amber-800 ring-amber-200' },
+  EM_AUDITORIA:     { rotulo: 'Em análise',  classe: 'bg-amber-50 text-amber-800 ring-amber-200' },
   ATIVO:            { rotulo: 'Venda feita', classe: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
   PERDIDO:          { rotulo: 'Perdido',     classe: 'bg-rose-50 text-rose-700 ring-rose-200' },
 };
@@ -46,7 +46,7 @@ export function rotuloStatusLead(status: string): string {
 export const FILTROS_LEAD: { chave: string; rotulo: string; status: string[] }[] = [
   { chave: '',          rotulo: 'Todos',       status: [] },
   { chave: 'andamento', rotulo: 'Em andamento', status: ['NOVO', 'ORCAMENTO_GERADO', 'PROPOSTA_ENVIADA', 'EM_NEGOCIACAO'] },
-  { chave: 'analise',   rotulo: 'Em analise',   status: ['APROVADO', 'EM_AUDITORIA'] },
+  { chave: 'analise',   rotulo: 'Em análise',   status: ['APROVADO', 'EM_AUDITORIA'] },
   { chave: 'venda',     rotulo: 'Vendas',       status: ['ATIVO'] },
   { chave: 'perdido',   rotulo: 'Perdidos',     status: ['PERDIDO'] },
 ];

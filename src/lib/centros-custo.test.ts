@@ -13,7 +13,7 @@ describe('centros de custo', () => {
     expect(validarCentroCusto({ id: 'b', nome: 'Comercial', codigo: 'COM' }, base)).toBeNull();
   });
   it('codigo repetido e recusado', () => {
-    expect(validarCentroCusto({ nome: 'Novo', codigo: 'com' }, base)).toMatch(/codigo/);
+    expect(validarCentroCusto({ nome: 'Novo', codigo: 'com' }, base)).toMatch(/código/);
   });
   it('ASSIST24 nao muda de codigo nem e reaproveitado', () => {
     expect(validarCentroCusto({ id: 'a', nome: 'Assistencia', codigo: 'X' }, base)).toMatch(/ASSIST24/);

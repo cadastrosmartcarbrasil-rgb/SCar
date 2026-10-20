@@ -45,7 +45,7 @@ export default function LeadDetailPage() {
   const [colhendoAceite, setColhendoAceite] = useState<CotacoesRow | null>(null);
 
   if (isLoading) return <p className="py-10 text-center text-sm text-slate-400">Carregando...</p>;
-  if (!lead) return <p className="py-10 text-center text-sm text-slate-400">Lead nao encontrado.</p>;
+  if (!lead) return <p className="py-10 text-center text-sm text-slate-400">Lead não encontrado.</p>;
 
   // Um caminho so, igual ao do Kanban: os dois chamam `mover_lead_status`.
   const acoes = acoesDoLead(lead.status);
@@ -63,7 +63,7 @@ export default function LeadDetailPage() {
 
   function autorizarEntrada() {
     autorizar.mutate({ leadId: lead!.id, cpfCnpj: cpf || lead!.cpf_cnpj || null }, {
-      onSuccess: () => toast.success('Entrada autorizada - veiculo cadastrado na base'),
+      onSuccess: () => toast.success('Entrada autorizada - veículo cadastrado na base'),
       onError: (e) => toast.error(e.message),
     });
   }
@@ -128,9 +128,9 @@ export default function LeadDetailPage() {
               ? <TriangleAlert className="h-4 w-4" />
               : <CheckCircle2 className="h-4 w-4" />}
             {aceite.divergente
-              ? 'O aceite e de OUTRA cotacao'
+              ? 'O aceite e de OUTRA cotação'
               : aceite.semVinculo
-                ? 'Aceite registrado — confira a qual cotacao ele se refere'
+                ? 'Aceite registrado — confira a qual cotação ele se refere'
                 : 'Proposta aceita pelo cliente'}
           </p>
 
@@ -141,7 +141,7 @@ export default function LeadDetailPage() {
             {/* O QUE foi aceito — sem isto o banner afirma "aceita" sobre um
                 valor que ninguem consentiu (o caso do lead recapturado). */}
             {aceite.aceita && <> <b>{formatCurrency(valorDaCotacao(aceite.aceita))}/mes</b></>}
-            {lead.aceite_por === 'VENDEDOR' ? ', com aceite colhido pelo vendedor' : ', pelo proprio celular'}.
+            {lead.aceite_por === 'VENDEDOR' ? ', com aceite colhido pelo vendedor' : ', pelo próprio celular'}.
             {lead.aceite_ip && <span className="opacity-60"> IP {lead.aceite_ip}.</span>}
           </p>
 
@@ -149,17 +149,17 @@ export default function LeadDetailPage() {
             <p className="mt-2 rounded-lg bg-amber-100/70 px-3 py-2 text-[12px] leading-relaxed text-amber-900">
               Depois do aceite {aceite.posteriores.length === 1 ? 'entrou' : 'entraram'}{' '}
               <b>{aceite.posteriores.length}</b>{' '}
-              {aceite.posteriores.length === 1 ? 'cotacao nova' : 'cotacoes novas'}
+              {aceite.posteriores.length === 1 ? 'cotação nova' : 'cotações novas'}
               {aceite.posteriores[0] && <> (a mais recente, <b>{formatCurrency(valorDaCotacao(aceite.posteriores[0]))}/mes</b>, de {formatDate(aceite.posteriores[0].created_at)})</>}
-              {' '}— e o cliente <b>nao aceitou</b> {aceite.posteriores.length === 1 ? 'ela' : 'nenhuma delas'}.
-              Mandar assim para a Auditoria e entregar uma prova de consentimento de outro preco.
-              Colha um aceite novo ou volte a cotacao aceita antes de seguir.
+              {' '}— e o cliente <b>não aceitou</b> {aceite.posteriores.length === 1 ? 'ela' : 'nenhuma delas'}.
+              Mandar assim para a Auditoria e entregar uma prova de consentimento de outro preço.
+              Colha um aceite novo ou volte a cotação aceita antes de seguir.
             </p>
           )}
 
           {aceite.semVinculo && (
             <p className="mt-2 rounded-lg bg-amber-100/70 px-3 py-2 text-[12px] leading-relaxed text-amber-900">
-              O registro do aceite nao aponta para nenhuma cotacao desta lista. Confirme com o
+              O registro do aceite não aponta para nenhuma cotação desta lista. Confirme com o
               cliente o valor combinado antes de mandar para a Auditoria.
             </p>
           )}
@@ -199,19 +199,19 @@ export default function LeadDetailPage() {
             <ShieldCheck className="h-4 w-4" /> Aguardando Auditoria
           </p>
           <p className="mt-1 text-xs text-amber-700">
-            O veiculo e o associado NAO entram na base ate a Auditoria conferir os dados e autorizar.
+            O veículo e o associado NÃO entram na base até a Auditoria conferir os dados e autorizar.
           </p>
           {podeAuditar ? (
             <div className="mt-3 space-y-2">
               {faltando.length > 0 && (
                 <p className="rounded-lg bg-superficie/70 px-3 py-2 text-[11.5px] leading-relaxed text-amber-900">
-                  <b>Faltam {faltando.length} item(ns)</b> para o veiculo poder entrar na base:{' '}
+                  <b>Faltam {faltando.length} item(ns)</b> para o veículo poder entrar na base:{' '}
                   {faltando.slice(0, 6).join(', ')}
                   {faltando.length > 6 && ` e mais ${faltando.length - 6}`}.
                 </p>
               )}
               <label className="text-xs text-amber-800">CPF/CNPJ do titular (confirme antes de autorizar)</label>
-              <Input value={cpf} onChange={(e) => setCpf(e.target.value)} placeholder={lead.cpf_cnpj ?? 'Somente numeros'} className="mt-0" />
+              <Input value={cpf} onChange={(e) => setCpf(e.target.value)} placeholder={lead.cpf_cnpj ?? 'Somente números'} className="mt-0" />
               <Button
                 onClick={autorizarEntrada}
                 disabled={autorizar.isPending || faltando.length > 0}
@@ -231,7 +231,7 @@ export default function LeadDetailPage() {
       {lead.status === 'ATIVO' && (
         <div className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
           <CheckCircle2 className="h-4 w-4" /> Ativo na base.
-          {lead.veiculo_id && <Link href="/veiculos" className="ml-auto font-medium underline">Ver veiculo</Link>}
+          {lead.veiculo_id && <Link href="/veiculos" className="ml-auto font-medium underline">Ver veículo</Link>}
         </div>
       )}
 
@@ -252,9 +252,9 @@ export default function LeadDetailPage() {
 
       {/* Cotacoes */}
       <div className="rounded-2xl border border-slate-200 bg-superficie p-4">
-        <p className="mb-2 text-xs font-medium uppercase text-slate-400">Cotacoes</p>
+        <p className="mb-2 text-xs font-medium uppercase text-slate-400">Cotações</p>
         {(cotacoes ?? []).length === 0 ? (
-          <p className="text-sm text-slate-400">Nenhuma cotacao gerada.</p>
+          <p className="text-sm text-slate-400">Nenhuma cotação gerada.</p>
         ) : (
           <ul className="space-y-2">
             {(cotacoes ?? []).map((c) => {
@@ -276,9 +276,9 @@ export default function LeadDetailPage() {
                     <p className="mt-0.5 inline-flex items-center gap-1 text-xs text-emerald-700">
                       <Percent className="h-3 w-3" />
                       Desconto de {Number(c.desconto_percentual).toFixed(2).replace('.', ',')}%
-                      {c.desconto_aprovado_por ? ' (excecao aprovada)' : ''}
+                      {c.desconto_aprovado_por ? ' (exceção aprovada)' : ''}
                       {c.adesao_com_desconto != null && Number(c.taxa_adesao) > 0
-                        ? ` · adesao ${formatCurrency(Number(c.adesao_com_desconto))}`
+                        ? ` · adesão ${formatCurrency(Number(c.adesao_com_desconto))}`
                         : ''}
                     </p>
                   )}
@@ -327,7 +327,7 @@ export default function LeadDetailPage() {
             })}
           </ul>
         )}
-        <Link href="/vendas/novo" className="mt-3 inline-block text-xs font-medium text-brand-600">+ Nova cotacao (novo lead)</Link>
+        <Link href="/vendas/novo" className="mt-3 inline-block text-xs font-medium text-brand-600">+ Nova cotação (novo lead)</Link>
       </div>
 
       {editando && (

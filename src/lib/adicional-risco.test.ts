@@ -85,16 +85,16 @@ describe('resumoDaGrade', () => {
 
 describe('avisoDeReajuste — o cadastro NAO retroage', () => {
   it('avisa quantos veiculos ficam com o adicional da entrada', () => {
-    expect(avisoDeReajuste(linha({ valor: 5, veiculos: 40 }), 12)).toContain('40 veiculo(s)');
+    expect(avisoDeReajuste(linha({ valor: 5, veiculos: 40 }), 12)).toContain('40 veículo(s)');
     expect(avisoDeReajuste(linha({ valor: 5, veiculos: 40 }), 12)).toContain('venda nova');
   });
 
   it('sem carteira, fala so do futuro', () => {
-    expect(avisoDeReajuste(linha({ valor: 5, veiculos: 0 }), 12)).toContain('proximas vendas');
+    expect(avisoDeReajuste(linha({ valor: 5, veiculos: 0 }), 12)).toContain('próximas vendas');
   });
 
   it('retirar o adicional devolve a unidade ao preco da matriz', () => {
-    expect(avisoDeReajuste(linha({ valor: 5, veiculos: 0 }), null)).toContain('preco da matriz');
+    expect(avisoDeReajuste(linha({ valor: 5, veiculos: 0 }), null)).toContain('preço da matriz');
   });
 
   it('valor igual nao gera aviso', () => {
@@ -107,7 +107,7 @@ describe('textoDaDivergencia', () => {
     const t = textoDaDivergencia('Sao Paulo', 'Natal');
     expect(t).toContain('Sao Paulo');
     expect(t).toContain('Natal');
-    expect(t).toContain('preco segue o do associado');
+    expect(t).toContain('preço segue o do associado');
   });
 
   it('mesma unidade dos dois lados nao e divergencia', () => {

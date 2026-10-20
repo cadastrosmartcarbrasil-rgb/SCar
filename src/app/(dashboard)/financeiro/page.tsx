@@ -17,13 +17,13 @@ type Aba = 'contas' | 'saldos' | 'extrato' | 'diario' | 'fluxo' | 'dre' | 'relat
 
 // matriz: so admin/financeiro. operador: tambem quem opera uma conta (0126).
 const ABAS: { id: Aba; label: string; descricao: string; icon: React.ElementType; matriz?: boolean; operador?: boolean }[] = [
-  { id: 'contas', label: 'Contas a Pagar / Receber', descricao: 'Carteira, baixas e inadimplencia', icon: Wallet },
-  { id: 'saldos', label: 'Contas e Saldos', descricao: 'Saldo de cada conta, saldo total e conferencia com o DRE', icon: Landmark, matriz: true, operador: true },
-  { id: 'extrato', label: 'Extrato e Conciliacao', descricao: 'Extrato por conta e conciliacao do OFX do banco', icon: ScrollText, matriz: true, operador: true },
-  { id: 'diario', label: 'Fluxo Diario', descricao: 'Realizado x a realizar dia a dia e a carga de pagamentos', icon: CalendarDays, matriz: true },
-  { id: 'fluxo', label: 'Fluxo Mensal', descricao: 'Previsto x realizado por mes e aging', icon: Waves },
+  { id: 'contas', label: 'Contas a Pagar / Receber', descricao: 'Carteira, baixas e inadimplência', icon: Wallet },
+  { id: 'saldos', label: 'Contas e Saldos', descricao: 'Saldo de cada conta, saldo total e conferência com o DRE', icon: Landmark, matriz: true, operador: true },
+  { id: 'extrato', label: 'Extrato e Conciliação', descricao: 'Extrato por conta e conciliação do OFX do banco', icon: ScrollText, matriz: true, operador: true },
+  { id: 'diario', label: 'Fluxo Diário', descricao: 'Realizado x a realizar dia a dia e a carga de pagamentos', icon: CalendarDays, matriz: true },
+  { id: 'fluxo', label: 'Fluxo Mensal', descricao: 'Previsto x realizado por mês e aging', icon: Waves },
   { id: 'dre', label: 'DRE', descricao: 'Resultado por regime e centro de custo', icon: BarChart3 },
-  { id: 'relatorios', label: 'Relatorios', descricao: 'Extrato, fluxo e plano de contas x centro de custo, com exportacao', icon: FileBarChart, matriz: true },
+  { id: 'relatorios', label: 'Relatórios', descricao: 'Extrato, fluxo e plano de contas x centro de custo, com exportação', icon: FileBarChart, matriz: true },
 ];
 
 export default function FinanceiroPage() {
@@ -45,7 +45,7 @@ export default function FinanceiroPage() {
         <p className="mt-0.5 text-sm text-slate-500">{atual.descricao}.</p>
       </header>
 
-      <nav className="flex flex-wrap gap-1 border-b border-slate-200" aria-label="Secoes do financeiro">
+      <nav className="flex flex-wrap gap-1 border-b border-slate-200" aria-label="Seções do financeiro">
         {abas.map((a) => (
           <button
             key={a.id}

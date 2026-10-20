@@ -79,10 +79,10 @@ export function CargaMutual() {
     <div className="space-y-5">
       <p className="text-xs leading-relaxed text-slate-500">
         A carga e <strong>por unidade</strong> e <strong>re-executavel</strong>: rodar de novo
-        atualiza pelo vinculo em vez de duplicar. Todo veiculo entra com{' '}
-        <strong>cobranca externa</strong>, entao ele aparece no SAC, no portal e na 24h e{' '}
-        <strong>nenhuma fatura e gerada aqui</strong> — a mensalidade continua saindo do Mutual
-        ate o cutover daquela unidade.
+        atualiza pelo vínculo em vez de duplicar. Todo veículo entra com{' '}
+        <strong>cobrança externa</strong>, então ele aparece no SAC, no portal e na 24h e{' '}
+        <strong>nenhuma fatura é gerada aqui</strong> — a mensalidade continua saindo do Mutual
+        até o cutover daquela unidade.
       </p>
 
       {/* ------------------------------------------------ a UNIDADE vem PRIMEIRO (0094)
@@ -104,7 +104,7 @@ export function CargaMutual() {
         </label>
         <label className="flex items-center gap-2 pb-1.5 text-xs text-slate-600">
           <input type="checkbox" checked={inativos} onChange={(e) => setInativos(e.target.checked)} />
-          Incluir o acervo historico (inativos e suspensos)
+          Incluir o acervo histórico (inativos e suspensos)
         </label>
       </div>
 
@@ -112,20 +112,20 @@ export function CargaMutual() {
       {/* ------------------------------------------------ o de-para por CATEGORIA (0087) */}
       <div className="rounded-xl border border-slate-200/80 p-4">
         <h3 className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
-          <Car className="h-4 w-4 text-cyan-600" aria-hidden /> Categoria do veiculo — o de-para
+          <Car className="h-4 w-4 text-cyan-600" aria-hidden /> Categoria do veículo — o de-para
         </h3>
         <p className="mb-3 text-xs leading-relaxed text-slate-500">
-          A <strong>categoria</strong> do Mutual decide o tipo com mais precisao que o tipo
-          (&quot;V6 / pickups/vans&quot; × &quot;V5 / automovel comum&quot;). Escolher o mesmo
-          tipo em varias categorias <strong>e o agrupamento</strong>, como nas equipes de vendas.
+          A <strong>categoria</strong> do Mutual decide o tipo com mais precisão que o tipo
+          (&quot;V6 / pickups/vans&quot; × &quot;V5 / automóvel comum&quot;). Escolher o mesmo
+          tipo em várias categorias <strong>e o agrupamento</strong>, como nas equipes de vendas.
           Cada linha e o <strong>par categoria + tipo</strong>: a categoria PASSEIO do Mutual junta
           carros e motos, e as duas metades se decidem separadas. Categoria sem de-para entra pelo
-          tipo (a reserva, mais abaixo); so fica sem tipo quem nao tem nenhum dos dois.
+          tipo (a reserva, mais abaixo); só fica sem tipo quem não tem nenhum dos dois.
         </p>
         <p className="mb-3 text-xs leading-relaxed text-slate-500">
           O selo <span className="tnum">V5</span>/<span className="tnum">V6</span>… e a{' '}
-          <strong>cota de participacao</strong> que o nome da categoria carrega. Ele so aparece
-          aqui para informar: a carga <strong>nao grava a cota</strong> — e decisao a parte.
+          <strong>cota de participação</strong> que o nome da categoria carrega. Ele só aparece
+          aqui para informar: a carga <strong>não grava a cota</strong> — e decisão a parte.
         </p>
         <ErroLeitura q={categorias} />
         {!categorias.data && categorias.isLoading && (
@@ -139,7 +139,7 @@ export function CargaMutual() {
             {semTipo.length > 0 && (
               <span className="text-amber-700">
                 {' '}· {semTipo.length} entrariam SEM tipo
-                ({semTipo.reduce((acc, c) => acc + c.faturaveis, 0)} faturaveis)
+                ({semTipo.reduce((acc, c) => acc + c.faturaveis, 0)} faturáveis)
               </span>
             )}
           </p>
@@ -148,7 +148,7 @@ export function CargaMutual() {
           {gruposCategoria.map((g) => (
             <div key={g.tipo}>
               <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                {g.tipo} <span className="tnum font-normal">· {g.faturaveis} faturaveis</span>
+                {g.tipo} <span className="tnum font-normal">· {g.faturaveis} faturáveis</span>
               </p>
               <div className="space-y-1.5">
                 {g.itens.map((c) => {
@@ -163,11 +163,11 @@ export function CargaMutual() {
                           </span>
                         )}
                         {!c.capturada && (
-                          <span className="ml-1 text-xs text-amber-700">· nao capturada</span>
+                          <span className="ml-1 text-xs text-amber-700">· não capturada</span>
                         )}
                       </span>
                       <span className="tnum text-xs text-slate-500">
-                        {c.faturaveis} faturaveis · {c.veiculos} no total
+                        {c.faturaveis} faturáveis · {c.veiculos} no total
                       </span>
                       <select
                         className="rounded border border-slate-200 px-2 py-1 text-xs"
@@ -202,19 +202,19 @@ export function CargaMutual() {
       {/* ------------------------------------------------ o de-para do TIPO — a reserva */}
       <div className="rounded-xl border border-slate-200/80 p-4">
         <h3 className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
-          <Car className="h-4 w-4 text-cyan-600" aria-hidden /> Tipo de veiculo — a reserva
+          <Car className="h-4 w-4 text-cyan-600" aria-hidden /> Tipo de veículo — a reserva
         </h3>
         <p className="mb-3 text-xs leading-relaxed text-slate-500">
-          O Mutual tem <strong>tres</strong> tipos (CARRO, MOTO, CAMINHAO) e o SCar tem{' '}
-          <strong>sete</strong>. Este de-para so vale para a categoria que ficou{' '}
+          O Mutual tem <strong>três</strong> tipos (CARRO, MOTO, CAMINHÃO) e o SCar tem{' '}
+          <strong>sete</strong>. Este de-para só vale para a categoria que ficou{' '}
           <strong>sem</strong> de-para acima — a categoria sempre vence. Sem nenhum dos dois o
-          veiculo entra igual, so sem tipo, e isso <strong>nao afeta a cobranca</strong> enquanto a
-          cobranca externa esta ligada.
+          veículo entra igual, só sem tipo, e isso <strong>não afeta a cobrança</strong> enquanto a
+          cobrança externa está ligada.
         </p>
         {pendentes.length > 0 && (
           <p className="mb-2 text-xs text-amber-700">
             {pendentes.length} tipo(s) com carteira ainda sem de-para —{' '}
-            {pendentes.reduce((s, t) => s + t.faturaveis, 0)} veiculos faturaveis.
+            {pendentes.reduce((s, t) => s + t.faturaveis, 0)} veículos faturáveis.
           </p>
         )}
         <ErroLeitura q={tiposExternos} />
@@ -224,11 +224,11 @@ export function CargaMutual() {
               <span className="min-w-[9rem] text-slate-800">
                 {t.nome ?? `(id ${t.id_externo})`}
                 {!t.capturado && (
-                  <span className="ml-1 text-xs text-amber-700">· nao capturado</span>
+                  <span className="ml-1 text-xs text-amber-700">· não capturado</span>
                 )}
               </span>
               <span className="tnum text-xs text-slate-500">
-                {t.faturaveis} faturaveis · {t.veiculos} no total
+                {t.faturaveis} faturáveis · {t.veiculos} no total
               </span>
               <select
                 className="rounded border border-slate-200 px-2 py-1 text-xs"
@@ -257,16 +257,16 @@ export function CargaMutual() {
           <ShieldCheck className="h-4 w-4 text-cyan-600" aria-hidden /> Plano / cobertura — o de-para
         </h3>
         <p className="mb-3 text-xs leading-relaxed text-slate-500">
-          O plano <strong>nao decide o boleto</strong>: a carga carimba o valor que o Mutual cobra
+          O plano <strong>não decide o boleto</strong>: a carga carimba o valor que o Mutual cobra
           hoje e <code className="tnum">valor_mensalidade_veiculo</code> prefere esse valor. O que
-          ele decide e a <strong>cobertura que a ficha do SAC mostra</strong> — sem de-para, o
-          atendente nao ve a que o associado tem direito. Por isso ele importa{' '}
-          <strong>antes de outubro virar atendimento real</strong>, nao antes de carregar.
+          ele decide é a <strong>cobertura que a ficha do SAC mostra</strong> — sem de-para, o
+          atendente não vê a que o associado tem direito. Por isso ele importa{' '}
+          <strong>antes de outubro virar atendimento real</strong>, não antes de carregar.
         </p>
         <p className="mb-3 text-xs leading-relaxed text-slate-500">
-          A mensalidade e a FIPE abaixo sao <strong>perfil, nao identificacao</strong>: foi medido
-          que a FIPE varia de 6x a 14x dentro do mesmo id, logo o id e combo comercial e nao faixa
-          de preco. Faixa muito larga e sinal de plano genérico.
+          A mensalidade e a FIPE abaixo são <strong>perfil, não identificação</strong>: foi medido
+          que a FIPE varia de 6x a 14x dentro do mesmo id, logo o id e combo comercial e não faixa
+          de preço. Faixa muito larga e sinal de plano genérico.
         </p>
         <ErroLeitura q={planosExternos} />
         {!planosExternos.data && planosExternos.isLoading && (
@@ -282,19 +282,19 @@ export function CargaMutual() {
             <p className="mb-2 text-xs text-slate-600">
               {listaPlanos.length} id(s) na carteira
               {unidade ? ` de ${nomeUnidade}` : ' (base inteira)'} ·{' '}
-              <strong>{idsAte90} deles cobrem 90%</strong> dos veiculos faturaveis — e onde parar.
+              <strong>{idsAte90} deles cobrem 90%</strong> dos veículos faturáveis — e onde parar.
               {planosFalta.length > 0 && (
                 <>
                   {' '}Faltam <strong>{planosFalta.length}</strong> com carteira
-                  {' '}({planosFalta.reduce((acc, p) => acc + p.faturaveis, 0)} faturaveis).
+                  {' '}({planosFalta.reduce((acc, p) => acc + p.faturaveis, 0)} faturáveis).
                 </>
               )}
             </p>
             {!listaPlanos.some((p) => p.nome) && (
               <p className="mb-2 text-xs text-amber-700">
                 Nenhum plano tem nome ainda. Puxe <strong>Planos</strong> e{' '}
-                <strong>Produtos dos veiculos</strong> em Puxar dados — os planos antigos so
-                ganham nome pelos produtos. O de-para funciona do mesmo jeito; capturar so
+                <strong>Produtos dos veículos</strong> em Puxar dados — os planos antigos só
+                ganham nome pelos produtos. O de-para funciona do mesmo jeito; capturar só
                 preenche o nome.
               </p>
             )}
@@ -312,7 +312,7 @@ export function CargaMutual() {
                       )}
                     </span>
                     <span className="tnum text-xs text-slate-500">
-                      {p.faturaveis} faturaveis · {p.veiculos} no total
+                      {p.faturaveis} faturáveis · {p.veiculos} no total
                       {p.cobertura_acumulada !== null && ` · acumulado ${p.cobertura_acumulada}%`}
                     </span>
                     <span className="tnum text-xs text-slate-400">
@@ -320,13 +320,13 @@ export function CargaMutual() {
                       {p.tipos && ` · tipo ${p.tipos}`}
                       {p.tipos === '2' && (
                         <span className="ml-1 text-amber-700">
-                          · moto: quem decide e o PRODUTO, nao este plano — deixe sem de-para e
+                          · moto: quem decide é o PRODUTO, não este plano — deixe sem de-para e
                           use o quadro das motos abaixo
                         </span>
                       )}
                       {amplitude !== null && amplitude >= 6 && (
                         <span className="ml-1 text-amber-700">
-                          · FIPE {amplitude.toFixed(0)}x (generico)
+                          · FIPE {amplitude.toFixed(0)}x (genérico)
                         </span>
                       )}
                     </span>
@@ -352,8 +352,8 @@ export function CargaMutual() {
             </div>
             {(planos.data ?? []).length === 0 && (
               <p className="mt-2 text-xs text-amber-700">
-                Nenhum plano de protecao cadastrado aqui — cadastre em{' '}
-                <strong>Configuracoes → Planos</strong> antes de escolher o destino.
+                Nenhum plano de proteção cadastrado aqui — cadastre em{' '}
+                <strong>Configurações → Planos</strong> antes de escolher o destino.
               </p>
             )}
           </>
@@ -366,7 +366,7 @@ export function CargaMutual() {
       {!unidade && (
         <p className="text-sm text-slate-500">
           Escolha a unidade. A carga nunca roda sem ela: aqui{' '}
-          <code className="tnum">regional_id</code> nulo significa <strong>matriz</strong>, nao
+          <code className="tnum">regional_id</code> nulo significa <strong>matriz</strong>, não
           &quot;todas&quot;.
         </p>
       )}
@@ -375,8 +375,8 @@ export function CargaMutual() {
         <>
           <div className="grid gap-3 sm:grid-cols-4">
             <Indicador rotulo="Associados" valor={resumo.associados} nota="um por pessoa" />
-            <Indicador rotulo="Veiculos a criar" valor={resumo.criar} />
-            <Indicador rotulo="A atualizar" valor={resumo.atualizar} nota="ja carregados antes" />
+            <Indicador rotulo="Veículos a criar" valor={resumo.criar} />
+            <Indicador rotulo="A atualizar" valor={resumo.atualizar} nota="já carregados antes" />
             <Indicador
               rotulo="Recusadas"
               valor={resumo.recusadas}
@@ -391,8 +391,8 @@ export function CargaMutual() {
                 <AlertTriangle className="h-4 w-4" aria-hidden /> A fila de trabalho
               </h3>
               <p className="mb-3 text-xs leading-relaxed text-amber-800">
-                Cada motivo e uma tarefa diferente, de gente diferente. A maior primeiro resolve a
-                maior parte do lote com a menor decisao — corrija no Mutual, recapture e rode de
+                Cada motivo é uma tarefa diferente, de gente diferente. A maior primeiro resolve a
+                maior parte do lote com a menor decisão — corrija no Mutual, recapture e rode de
                 novo: a carga e re-executavel.
               </p>
               <ul className="space-y-1 text-sm">
@@ -408,10 +408,10 @@ export function CargaMutual() {
 
           <div className="rounded-xl border border-slate-200/80 p-4">
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
-              O que falta para o CUTOVER — nao para a carga
+              O que falta para o CUTOVER — não para a carga
             </h3>
             <p className="mb-3 text-xs leading-relaxed text-slate-500">
-              Estes veiculos <strong>entram normalmente</strong>: com a cobranca externa ligada
+              Estes veículos <strong>entram normalmente</strong>: com a cobrança externa ligada
               nada disso e usado. Mas no dia em que a unidade passar a faturar aqui,{' '}
               <strong>mensalidade nula cai no cotador</strong> e, sem plano, isso da R$ 0,00 — o
               associado nunca receberia boleto. Por isso a fila e pre-requisito do cutover.
@@ -422,15 +422,15 @@ export function CargaMutual() {
               <Indicador rotulo="Sem plano" valor={fila.semPlano} alerta={fila.semPlano > 0} />
               <Indicador rotulo="Sem tipo" valor={fila.semTipo} />
               <Indicador
-                rotulo="Ativacao estimada"
+                rotulo="Ativação estimada"
                 valor={fila.ativacaoEstimada}
                 nota="do created_at"
               />
             </div>
             <p className={`mt-3 text-xs ${liberado ? 'text-emerald-700' : 'text-amber-700'}`}>
               {liberado
-                ? 'Cutover liberado: todo veiculo que entra tem valor e dia de vencimento.'
-                : 'Cutover BLOQUEADO enquanto houver veiculo sem valor ou sem dia de vencimento.'}
+                ? 'Cutover liberado: todo veículo que entra tem valor e dia de vencimento.'
+                : 'Cutover BLOQUEADO enquanto houver veículo sem valor ou sem dia de vencimento.'}
             </p>
           </div>
 
@@ -438,7 +438,7 @@ export function CargaMutual() {
           {(previa.data ?? []).length > 0 && (
             <details className="rounded-xl border border-slate-200/80 p-4">
               <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-slate-600">
-                Previa completa do banco ({(previa.data ?? []).length} indicadores)
+                Prévia completa do banco ({(previa.data ?? []).length} indicadores)
               </summary>
               <table className="mt-3 w-full text-sm">
                 <tbody>
@@ -497,9 +497,9 @@ export function CargaMutual() {
             <Button
               onClick={() => {
                 if (!window.confirm(
-                  `Carregar ${resumo.criar} veiculo(s) novo(s) e ${resumo.associados} associado(s) `
+                  `Carregar ${resumo.criar} veículo(s) novo(s) e ${resumo.associados} associado(s) `
                   + `em "${nomeUnidade}".\n\n`
-                  + 'Eles entram ATIVOS e com COBRANCA EXTERNA: nenhuma fatura e gerada aqui.\n'
+                  + 'Eles entram ATIVOS e com COBRANÇA EXTERNA: nenhuma fatura é gerada aqui.\n'
                   + `${resumo.recusadas} linha(s) ficam de fora, com o motivo na tela.\n\n`
                   + 'Confirmar?',
                 )) return;
@@ -507,14 +507,14 @@ export function CargaMutual() {
                   { regionalId: unidade, incluirInativos: inativos, confirmar: true },
                   {
                     onSuccess: (r) => toast.success(
-                      `${r.veiculos_criados} veiculo(s) criado(s), ${r.veiculos_atualizados} `
+                      `${r.veiculos_criados} veículo(s) criado(s), ${r.veiculos_atualizados} `
                       + `atualizado(s), ${r.clientes_criados} associado(s) novo(s). ${r.mensagem}`,
                     ),
                     // O que ja foi gravado fica (cada bloco e uma transacao); clicar de
                     // novo prepara a fila outra vez e o ja carregado vira ATUALIZAR.
                     onError: (e) => toast.error(
                       `${(e as Error).message} — os blocos anteriores ficaram gravados; `
-                      + 'clicar de novo refaz a fila, e o que ja entrou so e atualizado.',
+                      + 'clicar de novo refaz a fila, e o que já entrou só e atualizado.',
                     ),
                   },
                 );
@@ -536,8 +536,8 @@ export function CargaMutual() {
               onClick={() => {
                 desfazer.mutate({ regionalId: unidade, confirmar: false }, {
                   onSuccess: (r) => toast.info(
-                    `${r.veiculos_removidos} veiculo(s) sairiam; ${r.preservados} ficariam `
-                    + '(ja tem trabalho do SCar em cima).',
+                    `${r.veiculos_removidos} veículo(s) sairiam; ${r.preservados} ficariam `
+                    + '(já tem trabalho do SCar em cima).',
                   ),
                   onError: (e) => toast.error((e as Error).message),
                 });
@@ -554,8 +554,8 @@ export function CargaMutual() {
               onClick={() => {
                 if (!window.confirm(
                   `DESFAZER a carga de "${nomeUnidade}".\n\n`
-                  + 'Os veiculos que ja tem protocolo, evento, acionamento, rastreador, '
-                  + 'vistoria ou titulo sao PRESERVADOS.\n\nConfirmar?',
+                  + 'Os veículos que já tem protocolo, evento, acionamento, rastreador, '
+                  + 'vistoria ou título são PRESERVADOS.\n\nConfirmar?',
                 )) return;
                 desfazer.mutate({ regionalId: unidade, confirmar: true }, {
                   onSuccess: (r) => toast.success(r.mensagem),
@@ -585,11 +585,11 @@ function Indicador({ rotulo, valor, nota, alerta }: {
 }
 
 const ROTULO_TERCEIROS: Record<string, string> = {
-  COM_TERCEIROS: 'tem protecao a terceiros no Mutual',
-  SEM_TERCEIROS: 'nao tem protecao a terceiros',
-  JA_CERTO: 'ja estao no plano certo',
-  MANTIDO: 'tem outro plano escolhido aqui — nao sao tocados',
-  SEM_DADOS: 'sem produtos capturados — puxe "Produtos dos veiculos" e rode de novo',
+  COM_TERCEIROS: 'tem proteção a terceiros no Mutual',
+  SEM_TERCEIROS: 'não tem proteção a terceiros',
+  JA_CERTO: 'já estão no plano certo',
+  MANTIDO: 'tem outro plano escolhido aqui — não são tocados',
+  SEM_DADOS: 'sem produtos capturados — puxe "Produtos dos veículos" e rode de novo',
 };
 
 /**
@@ -632,7 +632,7 @@ function MotosPorProdutos({ unidade, nomeUnidade }: { unidade: string; nomeUnida
         if (confirmar) {
           const n = r.filter((x) => x.acao === 'COM_TERCEIROS' || x.acao === 'SEM_TERCEIROS')
             .reduce((acc, x) => acc + Number(x.quantidade), 0);
-          toast.success(`${n} moto(s) de ${nomeUnidade} reclassificada(s). O boleto nao muda.`);
+          toast.success(`${n} moto(s) de ${nomeUnidade} reclassificada(s). O boleto não muda.`);
         }
       },
       onError: (e) => toast.error((e as Error).message),
@@ -648,15 +648,15 @@ function MotosPorProdutos({ unidade, nomeUnidade }: { unidade: string; nomeUnida
       </h3>
       <p className="mb-3 text-xs leading-relaxed text-slate-500">
         Nos planos de moto do Mutual (&quot;Plano Moto MT&quot;, &quot;Plano Moto SP/SP&quot;,
-        &quot;Plano Moto SP/ Riberão Preto&quot;…) a <strong>protecao a terceiros e opcional
-        dentro do mesmo plano</strong>: o nome do plano nao diz se a moto e Ouro ou Essencial.
+        &quot;Plano Moto SP/ Riberão Preto&quot;…) a <strong>proteção a terceiros é opcional
+        dentro do mesmo plano</strong>: o nome do plano não diz se a moto e Ouro ou Essencial.
         Quem diz e o <strong>produto contratado</strong>. Por isso esses planos ficam{' '}
-        <strong>sem de-para</strong> acima, e a classificacao e feita aqui, depois de carregar a
-        unidade e puxar <strong>Produtos dos veiculos</strong>. O boleto nao muda.
+        <strong>sem de-para</strong> acima, e a classificação é feita aqui, depois de carregar a
+        unidade e puxar <strong>Produtos dos veículos</strong>. O boleto não muda.
       </p>
       <div className="grid gap-3 sm:grid-cols-3">
         <label className="text-xs text-slate-600">
-          <span className="mb-1 block font-medium">Tipo de veiculo</span>
+          <span className="mb-1 block font-medium">Tipo de veículo</span>
           <select className="w-full rounded border border-slate-200 px-2 py-1.5 text-sm"
             value={tipoEf} onChange={(e) => { setTipo(e.target.value); setSimulado(null); }}>
             <option value="">— escolha —</option>
@@ -681,8 +681,8 @@ function MotosPorProdutos({ unidade, nomeUnidade }: { unidade: string; nomeUnida
         </label>
       </div>
       <div className="mt-3 text-xs text-slate-600">
-        <span className="font-medium">Reclassificar tambem quem ja esta em:</span>{' '}
-        <span className="text-slate-500">(quem esta sem plano e sempre classificado; outro plano escolhido aqui e mantido)</span>
+        <span className="font-medium">Reclassificar também quem já está em:</span>{' '}
+        <span className="text-slate-500">(quem está sem plano é sempre classificado; outro plano escolhido aqui é mantido)</span>
         <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
           {listaPlanos.map((p) => (
             <label key={p.id} className="flex items-center gap-1.5">
@@ -705,7 +705,7 @@ function MotosPorProdutos({ unidade, nomeUnidade }: { unidade: string; nomeUnida
       {simulado && (
         <div className="mt-3 rounded-lg bg-fundo p-3 text-sm">
           <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-600">
-            Simulacao em {nomeUnidade} — nada foi gravado
+            Simulação em {nomeUnidade} — nada foi gravado
           </p>
           {simulado.length === 0 && (
             <p className="text-xs text-slate-500">
@@ -742,7 +742,7 @@ function MotosPorProdutos({ unidade, nomeUnidade }: { unidade: string; nomeUnida
             if (!window.confirm(
               `Gravar o plano das motos de "${nomeUnidade}" pelos produtos?\n\n`
               + `COM terceiros → ${nomePlano(comEf)}\nSEM terceiros → ${nomePlano(semEf)}\n\n`
-              + 'O boleto nao muda. Confirmar?',
+              + 'O boleto não muda. Confirmar?',
             )) return;
             rodar(true);
           }}
@@ -771,19 +771,19 @@ function VendedoresDosVeiculos({ unidade, nomeUnidade }: { unidade: string; nome
   return (
     <div className="rounded-xl border border-slate-200/80 p-4">
       <h3 className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
-        <UserCheck className="h-4 w-4 text-cyan-600" aria-hidden /> Vendedor dos veiculos
+        <UserCheck className="h-4 w-4 text-cyan-600" aria-hidden /> Vendedor dos veículos
       </h3>
       <p className="mb-3 text-xs leading-relaxed text-slate-500">
         O vendedor vem do <strong>consultor do contrato</strong> no Mutual, pelo CPF do cadastro de
-        vendedores. Quem ja tem vendedor <strong>nao e trocado</strong>. Veiculo vindo do Mutual{' '}
-        <strong>nunca gera comissao de adesao</strong> aqui — a adesao foi paga la.
+        vendedores. Quem já tem vendedor <strong>não é trocado</strong>. Veículo vindo do Mutual{' '}
+        <strong>nunca gera comissão de adesão</strong> aqui — a adesão foi paga la.
       </p>
 
       <ErroLeitura q={resumo} />
       {resumo.isLoading && <p className="text-xs text-slate-500">Lendo...</p>}
 
       {!resumo.isLoading && !resumo.isError && t.total === 0 && (
-        <p className="text-xs text-slate-500">Nenhum veiculo carregado nesta unidade ainda.</p>
+        <p className="text-xs text-slate-500">Nenhum veículo carregado nesta unidade ainda.</p>
       )}
 
       {t.total > 0 && (
@@ -791,7 +791,7 @@ function VendedoresDosVeiculos({ unidade, nomeUnidade }: { unidade: string; nome
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {[
               ['A ligar', t.ligar],
-              ['Ja ligados', t.jaLigados],
+              ['Já ligados', t.jaLigados],
               ['Outro vendedor (mantido)', t.mantidos],
               ['Sem vendedor', t.semVendedor],
             ].map(([rotulo, valor]) => (
@@ -825,8 +825,8 @@ function VendedoresDosVeiculos({ unidade, nomeUnidade }: { unidade: string; nome
                 ))}
               </ul>
               <p className="mt-2 text-xs text-slate-500">
-                Para quem nao esta no cadastro: cadastre o vendedor (com o CPF) em{' '}
-                <strong>Configuracoes → Vendedores</strong>, na mesma unidade, e clique em Ligar.
+                Para quem não está no cadastro: cadastre o vendedor (com o CPF) em{' '}
+                <strong>Configurações → Vendedores</strong>, na mesma unidade, e clique em Ligar.
               </p>
             </div>
           )}
@@ -836,8 +836,8 @@ function VendedoresDosVeiculos({ unidade, nomeUnidade }: { unidade: string; nome
               disabled={t.ligar === 0 || vincular.isPending}
               onClick={() => {
                 if (!window.confirm(
-                  `Ligar ${t.ligar} veiculo(s) de "${nomeUnidade}" ao vendedor do consultor?\n\n`
-                  + 'Quem ja tem vendedor nao e trocado. Confirmar?',
+                  `Ligar ${t.ligar} veículo(s) de "${nomeUnidade}" ao vendedor do consultor?\n\n`
+                  + 'Quem já tem vendedor não é trocado. Confirmar?',
                 )) return;
                 vincular.mutate(
                   { regionalId: unidade, confirmar: true },

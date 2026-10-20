@@ -77,10 +77,10 @@ export function KanbanBoard() {
           className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800 hover:bg-rose-100"
         >
           <AlertOctagon className="h-4 w-4" />
-          <span className="font-semibold">Prazo regulatorio (90 dias):</span>
+          <span className="font-semibold">Prazo regulatório (90 dias):</span>
           {vencidos > 0 && <span className="font-semibold">{vencidos} vencido(s)</span>}
-          {criticos > 0 && <span>{criticos} critico(s) (85+ dias)</span>}
-          {urgentes > 0 && <span>{urgentes} em urgencia (75+ dias)</span>}
+          {criticos > 0 && <span>{criticos} crítico(s) (85+ dias)</span>}
+          {urgentes > 0 && <span>{urgentes} em urgência (75+ dias)</span>}
           <span className="ml-auto text-xs underline">ver painel</span>
         </Link>
       )}
@@ -197,7 +197,7 @@ export function KanbanBoard() {
                       <p className="truncate text-xs text-slate-500">{evento.clientes?.nome_razao_social}</p>
                       {comunicacoes?.get(evento.id) && (
                         <p className="mt-1 text-[11px] text-slate-500">
-                          Comunicacoes {comunicacoes.get(evento.id)!.respondidas}/{comunicacoes.get(evento.id)!.total}
+                          Comunicações {comunicacoes.get(evento.id)!.respondidas}/{comunicacoes.get(evento.id)!.total}
                         </p>
                       )}
                       {prazoPorId.get(evento.id) && (
@@ -206,7 +206,7 @@ export function KanbanBoard() {
                         </div>
                       )}
                       <p className="mt-2 flex justify-between gap-2 text-[11px] text-slate-400">
-                        <span>Ocorrencia: {formatDate(evento.data_ocorrencia)}</span>
+                        <span>Ocorrência: {formatDate(evento.data_ocorrencia)}</span>
                         {!tituloFiltro && <span className="truncate">{evento.regionais?.nome ?? 'Matriz'}</span>}
                       </p>
                     </Link>

@@ -66,7 +66,7 @@ export function ModalMemo({
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.titulo.trim()) return toast.error('Informe o titulo');
+    if (!form.titulo.trim()) return toast.error('Informe o título');
     if (!form.mensagem.trim()) return toast.error('Escreva a mensagem');
 
     // No portal da franquia o destino manda: ou a equipe da unidade, ou a
@@ -79,7 +79,7 @@ export function ModalMemo({
       : form;
 
     if (franquia && destino === 'EQUIPE' && !payload.regional_id) {
-      return toast.error('Sua unidade nao foi identificada — recarregue o portal.');
+      return toast.error('Sua unidade não foi identificada — recarregue o portal.');
     }
 
     salvar.mutate(payload, {
@@ -93,7 +93,7 @@ export function ModalMemo({
       title={form.id ? 'Editar comunicado' : 'Novo comunicado'}
       subtitulo="Aparece na Central do Atendente de quem for endereçado.">
       <form onSubmit={submit} className="space-y-3">
-        <FormField label="Titulo *">
+        <FormField label="Título *">
           <Input value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })}
             placeholder="Ex.: Falta de material na unidade" />
         </FormField>
@@ -114,7 +114,7 @@ export function ModalMemo({
               {PRIORIDADES.map((p) => <option key={p.valor} value={p.valor}>{p.rotulo}</option>)}
             </Select>
           </FormField>
-          <FormField label="Vale ate (opcional)">
+          <FormField label="Vale até (opcional)">
             <Input type="date" value={form.expira_em ?? ''}
               onChange={(e) => setForm({ ...form, expira_em: e.target.value || null })} />
           </FormField>
@@ -138,7 +138,7 @@ export function ModalMemo({
                   destino === 'DIRETORIA' ? 'border-cyan-400 bg-cyan-50/40' : 'border-slate-200 hover:border-slate-300'}`}>
                 <Building2 className="mt-0.5 h-4 w-4 text-brand-600" />
                 <span>
-                  <span className="block text-sm font-semibold text-slate-800">Diretoria / administracao</span>
+                  <span className="block text-sm font-semibold text-slate-800">Diretoria / administração</span>
                   <span className="block text-[11px] text-slate-500">A matriz (admin e financeiro)</span>
                 </span>
               </button>
@@ -146,7 +146,7 @@ export function ModalMemo({
             {destino === 'EQUIPE' && (
               <div className="mt-3">
                 <p className="mb-1 text-xs font-medium text-slate-500">
-                  Papeis da equipe (nenhum marcado = todos)
+                  Papéis da equipe (nenhum marcado = todos)
                 </p>
                 <div className="grid grid-cols-2 gap-1 sm:grid-cols-3">
                   {PAPEIS_MEMO.filter((p) => !PAPEIS_DIRETORIA.includes(p.valor)).map((p) => (
@@ -171,7 +171,7 @@ export function ModalMemo({
               </Select>
             </FormField>
             <div className="rounded-lg border border-slate-200 p-3">
-              <p className="mb-2 text-sm font-medium text-slate-600">Papeis destinatarios</p>
+              <p className="mb-2 text-sm font-medium text-slate-600">Papéis destinatários</p>
               <div className="grid grid-cols-2 gap-1 sm:grid-cols-3">
                 {PAPEIS_MEMO.map((p) => (
                   <label key={p.valor} className="flex items-center gap-2 text-sm text-slate-700">
@@ -182,7 +182,7 @@ export function ModalMemo({
                   </label>
                 ))}
               </div>
-              <p className="mt-1 text-xs text-slate-400">Nenhum marcado = todos os papeis recebem.</p>
+              <p className="mt-1 text-xs text-slate-400">Nenhum marcado = todos os papéis recebem.</p>
             </div>
           </>
         )}
@@ -191,7 +191,7 @@ export function ModalMemo({
           <input type="checkbox" checked={form.exige_leitura}
             onChange={(e) => setForm({ ...form, exige_leitura: e.target.checked })}
             className="h-4 w-4 rounded border-slate-300" />
-          Exigir ciencia de leitura (fica em destaque ate a pessoa marcar como lido)
+          Exigir ciência de leitura (fica em destaque até a pessoa marcar como lido)
         </label>
         <label className="flex items-center gap-2 text-sm text-slate-700">
           <input type="checkbox" checked={form.publicado}

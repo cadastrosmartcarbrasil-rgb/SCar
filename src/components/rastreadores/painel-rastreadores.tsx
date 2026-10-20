@@ -48,12 +48,12 @@ export function PainelRastreadores() {
   function salvarNovo(e: React.FormEvent) {
     e.preventDefault();
     if (!novo) return;
-    if (!imeiFormatoValido(novo.imei)) return toast.error('IMEI deve ter de 14 a 17 digitos');
-    if (novo.iccid && !chipFormatoValido(novo.iccid)) return toast.error('ICCID invalido');
+    if (!imeiFormatoValido(novo.imei)) return toast.error('IMEI deve ter de 14 a 17 dígitos');
+    if (novo.iccid && !chipFormatoValido(novo.iccid)) return toast.error('ICCID inválido');
     salvar.mutate(novo, {
       onSuccess: () => { toast.success('Equipamento cadastrado'); setNovo(null); },
       onError: (err) => toast.error(
-        err.message.includes('rastreadores_imei_key') ? 'Este IMEI ja esta cadastrado' : err.message,
+        err.message.includes('rastreadores_imei_key') ? 'Este IMEI já está cadastrado' : err.message,
       ),
     });
   }
@@ -83,7 +83,7 @@ export function PainelRastreadores() {
         <Link href="/rastreadores/divergencias"
           className="rounded-xl border border-rose-200 bg-superficie p-3 transition hover:border-rose-300">
           <p className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-slate-400">
-            <CircleAlert className="h-4 w-4 text-rose-500" /> Divergencias
+            <CircleAlert className="h-4 w-4 text-rose-500" /> Divergências
           </p>
           <p className="mt-1 flex items-center gap-1 text-sm font-semibold text-rose-700">
             Painel do dia <ArrowRight className="h-3.5 w-3.5" />
@@ -110,7 +110,7 @@ export function PainelRastreadores() {
         <div className="relative min-w-[220px] flex-1">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
           <input value={busca} onChange={(e) => setBusca(e.target.value)}
-            placeholder="IMEI, linha, serie, placa ou associado"
+            placeholder="IMEI, linha, série, placa ou associado"
             className="w-full rounded-md border border-slate-300 py-2 pl-9 pr-3 text-sm" />
         </div>
         <Select value={f.regionalId ?? ''} onChange={(e) => aplicar({ regionalId: e.target.value || undefined })} className="mt-0 w-auto">
@@ -136,10 +136,10 @@ export function PainelRastreadores() {
             <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
               <th className="px-4 py-2">IMEI</th>
               <th className="px-4 py-2">Status</th>
-              <th className="px-4 py-2">Veiculo / Associado</th>
+              <th className="px-4 py-2">Veículo / Associado</th>
               <th className="px-4 py-2">Unidade</th>
               <th className="px-4 py-2">Plataforma</th>
-              <th className="px-4 py-2">Parado ha</th>
+              <th className="px-4 py-2">Parado há</th>
             </tr>
           </thead>
           <tbody>
@@ -191,14 +191,14 @@ export function PainelRastreadores() {
           </Button>
           <Button variant="secondary" disabled={(f.offset ?? 0) + PAGINA >= total}
             onClick={() => setF((a) => ({ ...a, offset: (a.offset ?? 0) + PAGINA }))}>
-            Proxima
+            Próxima
           </Button>
         </div>
       </div>
 
       {/* Cadastro manual — a unica porta de entrada de dados nesta fase */}
       <Modal open={!!novo} onClose={() => setNovo(null)} title="Novo equipamento" tamanho="lg"
-             subtitulo="O equipamento entra no estoque; a instalacao acontece na ficha dele.">
+             subtitulo="O equipamento entra no estoque; a instalação acontece na ficha dele.">
         <form onSubmit={salvarNovo} className="space-y-3">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <FormField label="IMEI *">
@@ -215,7 +215,7 @@ export function PainelRastreadores() {
             </FormField>
           </div>
           {!!novo?.imei && novo.imei.length === 15 && !imeiLuhnValido(novo.imei) && (
-            <p className="text-xs text-amber-600">O digito verificador deste IMEI nao confere — confirme com a rastreadora.</p>
+            <p className="text-xs text-amber-600">O dígito verificador deste IMEI não confere — confirme com a rastreadora.</p>
           )}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <FormField label="Plataforma (rastreadora)">
@@ -239,20 +239,20 @@ export function PainelRastreadores() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <FormField label="Modelo"><Input value={novo?.modelo ?? ''} onChange={(e) => setNovo((n) => ({ ...n, modelo: e.target.value }))} /></FormField>
             <FormField label="Fabricante"><Input value={novo?.fabricante ?? ''} onChange={(e) => setNovo((n) => ({ ...n, fabricante: e.target.value }))} /></FormField>
-            <FormField label="Nº de serie"><Input value={novo?.numero_serie ?? ''} onChange={(e) => setNovo((n) => ({ ...n, numero_serie: e.target.value }))} /></FormField>
+            <FormField label="Nº de série"><Input value={novo?.numero_serie ?? ''} onChange={(e) => setNovo((n) => ({ ...n, numero_serie: e.target.value }))} /></FormField>
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <FormField label="Data de aquisicao">
+            <FormField label="Data de aquisição">
               <Input type="date" value={novo?.data_aquisicao ?? ''} onChange={(e) => setNovo((n) => ({ ...n, data_aquisicao: e.target.value || null }))} />
             </FormField>
-            <FormField label="Valor de aquisicao">
+            <FormField label="Valor de aquisição">
               <MoneyInput value={novo?.valor_aquisicao ?? null} onChange={(v) => setNovo((n) => ({ ...n, valor_aquisicao: v }))} />
             </FormField>
             <FormField label="Nota fiscal">
               <Input value={novo?.nota_fiscal ?? ''} onChange={(e) => setNovo((n) => ({ ...n, nota_fiscal: e.target.value }))} />
             </FormField>
           </div>
-          <FormField label="Observacoes">
+          <FormField label="Observações">
             <Textarea rows={2} value={novo?.observacoes ?? ''} onChange={(e) => setNovo((n) => ({ ...n, observacoes: e.target.value }))} />
           </FormField>
           <div className="flex justify-end gap-2 border-t border-slate-100 pt-3">

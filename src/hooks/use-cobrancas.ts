@@ -219,7 +219,7 @@ export function useGerarLotePeriodo() {
         body: JSON.stringify(input),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? 'Falha ao gerar as cobrancas');
+      if (!res.ok) throw new Error(json.error ?? 'Falha ao gerar as cobranças');
       return json as GeracaoLoteResultado;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['cobrancas'] }),

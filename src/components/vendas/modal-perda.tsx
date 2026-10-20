@@ -44,7 +44,7 @@ export function ModalPerda({ lead, onClose, onPerdido }: {
     <Modal open onClose={onClose} title="Marcar lead como perdido">
       <form onSubmit={confirmar} className="space-y-3">
         <p className="text-sm text-slate-600">
-          {lead.nome} — o motivo fica no historico do lead e alimenta o relatorio de perdas.
+          {lead.nome} — o motivo fica no histórico do lead e alimenta o relatório de perdas.
         </p>
         <div className="flex flex-wrap gap-1.5">
           {MOTIVOS.map((m) => (

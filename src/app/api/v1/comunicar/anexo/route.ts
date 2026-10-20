@@ -16,7 +16,7 @@ const LIMITE = 10 * 1024 * 1024;
  */
 export async function POST(req: Request) {
   const form = await req.formData().catch(() => null);
-  if (!form) return NextResponse.json({ error: 'Envio invalido' }, { status: 400 });
+  if (!form) return NextResponse.json({ error: 'Envio inválido' }, { status: 400 });
   const token = String(form.get('token') ?? '').trim();
   const pose = String(form.get('pose') ?? '').trim();
   const file = form.get('file');
@@ -38,17 +38,17 @@ export async function POST(req: Request) {
 
   const admin = createAdminClient();
   const { data: com } = await admin.rpc('comunicacao_publica_por_token', { p_token: token });
-  if (!com?.id) return NextResponse.json({ error: 'Link invalido' }, { status: 403 });
+  if (!com?.id) return NextResponse.json({ error: 'Link inválido' }, { status: 403 });
 
   const poses = [...POSES_POR_PAPEL[com.papel as PapelComunicacao] ?? [], POSE_CROQUI];
   const def = poses.find((p) => p.codigo === pose);
-  if (!def) return NextResponse.json({ error: 'Foto nao esperada para este envolvido' }, { status: 400 });
+  if (!def) return NextResponse.json({ error: 'Foto não esperada para este envolvido' }, { status: 400 });
 
   const ext = pdf ? 'pdf' : file.type === 'image/png' ? 'png' : 'jpg';
   const path = `${com.evento_id}/comunicacao/${com.id}/${Date.now()}-${Math.round(Math.random() * 1e6)}.${ext}`;
   const { error: upErr } = await admin.storage.from(BUCKET)
     .upload(path, file, { cacheControl: '3600', upsert: false, contentType: file.type || undefined });
-  if (upErr) return NextResponse.json({ error: 'Nao consegui guardar o arquivo' }, { status: 502 });
+  if (upErr) return NextResponse.json({ error: 'Não consegui guardar o arquivo' }, { status: 502 });
 
   const { data: id, error } = await admin.rpc('registrar_anexo_comunicacao', {
     p_token: token, p_pose: def.codigo, p_tipo: def.tipo, p_url: path, p_tamanho: file.size, p_arquivo: file.name,

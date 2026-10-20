@@ -49,9 +49,9 @@ export function SaldosContas({ onAbrirExtrato, matriz = true }: { onAbrirExtrato
   const pendentes = (saldos ?? []).reduce((a, s) => a + s.itens_pendentes, 0);
 
   const tabela = () => ({
-    titulo: 'Saldos das contas bancarias',
+    titulo: 'Saldos das contas bancárias',
     subtitulo: `Saldo no fim do dia ${dataBR(dataSaldo)}`,
-    cabecalho: ['Conta', 'Banco', 'Saldo inicial', 'Saldo inicial em', 'Entradas', 'Saidas', 'Saldo', 'Saldo no ultimo extrato', 'Extrato em', 'Diferenca'],
+    cabecalho: ['Conta', 'Banco', 'Saldo inicial', 'Saldo inicial em', 'Entradas', 'Saídas', 'Saldo', 'Saldo no último extrato', 'Extrato em', 'Diferença'],
     linhas: (saldos ?? []).map((s) => [
       s.nome, s.banco ?? '', Number(s.saldo_inicial), dataBR(s.saldo_inicial_em), Number(s.entradas), Number(s.saidas),
       Number(s.saldo), s.extrato_saldo === null ? '' : Number(s.extrato_saldo), dataBR(s.extrato_saldo_em),
@@ -72,7 +72,7 @@ export function SaldosContas({ onAbrirExtrato, matriz = true }: { onAbrirExtrato
         <div className="flex flex-wrap gap-2">
           <BotoesExportar nome={`saldos-${dataSaldo}`} tabela={tabela} desabilitado={!saldos?.length} />
           <Button variant="secondary" onClick={() => setTransferir(true)}>
-            <ArrowLeftRight className="h-4 w-4" /> Transferencia entre contas
+            <ArrowLeftRight className="h-4 w-4" /> Transferência entre contas
           </Button>
         </div>
       </div>
@@ -81,19 +81,19 @@ export function SaldosContas({ onAbrirExtrato, matriz = true }: { onAbrirExtrato
         <Indicador titulo="Saldo total resumido" valor={total} icon={Landmark} tom={total < 0 ? 'despesa' : 'destaque'}
           detalhe={`Soma das ${(saldos ?? []).length} contas no fim de ${dataBR(dataSaldo)}`} carregando={isLoading} />
         <Indicador titulo="Itens do extrato a conciliar" valor={pendentes} formato="numero" icon={TriangleAlert}
-          tom={pendentes ? 'alerta' : 'neutro'} detalhe="Pendentes + sugestoes nos OFX importados" carregando={isLoading} />
+          tom={pendentes ? 'alerta' : 'neutro'} detalhe="Pendentes + sugestões nos OFX importados" carregando={isLoading} />
         <Indicador titulo="Contas divergentes do banco" valor={divergentes.length} formato="numero" icon={Banknote}
           tom={divergentes.length ? 'despesa' : 'receita'}
-          detalhe={divergentes.length ? 'O saldo do ultimo OFX nao bate com o sistema' : 'Todas batem com o ultimo OFX (ou nao ha OFX)'}
+          detalhe={divergentes.length ? 'O saldo do último OFX não bate com o sistema' : 'Todas batem com o último OFX (ou não há OFX)'}
           carregando={isLoading} />
       </div>
 
-      {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">Nao foi possivel ler os saldos: {mensagemErro(error)}</p>}
+      {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">Não foi possível ler os saldos: {mensagemErro(error)}</p>}
 
       {semInicial.length > 0 && (
         <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          {semInicial.map((s) => s.nome).join(', ')} {semInicial.length > 1 ? 'tem' : 'tem'} movimento e ainda nao tem saldo inicial —
-          o saldo mostrado e so a soma dos movimentos registrados. Use <b>Configurar</b> e informe o saldo do banco na data de inicio.
+          {semInicial.map((s) => s.nome).join(', ')} {semInicial.length > 1 ? 'tem' : 'tem'} movimento e ainda não tem saldo inicial —
+          o saldo mostrado é só a soma dos movimentos registrados. Use <b>Configurar</b> e informe o saldo do banco na data de início.
         </p>
       )}
 
@@ -106,10 +106,10 @@ export function SaldosContas({ onAbrirExtrato, matriz = true }: { onAbrirExtrato
                 <th className="px-4 py-2">Conta</th>
                 <th className="px-4 py-2 text-right">Saldo inicial</th>
                 <th className="px-4 py-2 text-right">Entradas</th>
-                <th className="px-4 py-2 text-right">Saidas</th>
+                <th className="px-4 py-2 text-right">Saídas</th>
                 <th className="px-4 py-2 text-right">Saldo</th>
-                <th className="px-4 py-2 text-right">Ultimo extrato (banco)</th>
-                <th className="px-4 py-2">Conciliacao</th>
+                <th className="px-4 py-2 text-right">Último extrato (banco)</th>
+                <th className="px-4 py-2">Conciliação</th>
                 <th className="px-4 py-2" />
               </tr>
             </thead>
@@ -163,7 +163,7 @@ function LinhaConta({ s, onConfigurar, onExtrato }: { s: SaldoContaRow; onConfig
           <>
             <Dinheiro v={s.extrato_saldo} />
             <p className={`text-[11px] ${diverge ? 'font-semibold text-rose-700' : 'text-emerald-700'}`}>
-              {diverge ? `diferenca ${Number(s.extrato_diferenca).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'bate'} · {dataBR(s.extrato_saldo_em)}
+              {diverge ? `diferença ${Number(s.extrato_diferenca).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'bate'} · {dataBR(s.extrato_saldo_em)}
             </p>
           </>
         )}
@@ -172,7 +172,7 @@ function LinhaConta({ s, onConfigurar, onExtrato }: { s: SaldoContaRow; onConfig
         {s.itens_pendentes > 0
           ? <span className="rounded bg-amber-100 px-1.5 py-0.5 font-medium text-amber-800">{s.itens_pendentes} do extrato a conciliar</span>
           : <span className="text-slate-400">{s.ultima_importacao ? 'em dia' : '—'}</span>}
-        {s.nao_conciliados > 0 && <p className="mt-0.5 text-slate-500">{s.nao_conciliados} movimento(s) sem conferencia</p>}
+        {s.nao_conciliados > 0 && <p className="mt-0.5 text-slate-500">{s.nao_conciliados} movimento(s) sem conferência</p>}
       </td>
       <td className="px-4 py-2.5 text-right">
         <div className="flex justify-end gap-1">
@@ -191,32 +191,32 @@ function LinhaConta({ s, onConfigurar, onExtrato }: { s: SaldoContaRow; onConfig
 function ConferenciaDre({ conf, inicio, fim }: { conf: NonNullable<ReturnType<typeof useConferenciaCaixaDre>['data']>; inicio: string; fim: string }) {
   const bate = Math.abs(Number(conf.diferenca)) < 0.01;
   const explicacoes = [
-    { v: Number(conf.antes_do_saldo_inicial), t: 'movimentos anteriores ao saldo inicial de alguma conta (estao no DRE, nao no saldo)' },
-    { v: Number(conf.baixas_sem_conta), t: 'baixas sem conta bancaria (estao no DRE, nao no saldo)' },
-    { v: Number(conf.titulos_fora_do_extrato), t: 'mensalidades (titulos) pagas sem conta definida na integracao bancaria' },
-    { v: Number(conf.movimentos_avulsos), t: 'movimentacoes de caixa avulsas (DRE) sem conta' },
+    { v: Number(conf.antes_do_saldo_inicial), t: 'movimentos anteriores ao saldo inicial de alguma conta (estão no DRE, não no saldo)' },
+    { v: Number(conf.baixas_sem_conta), t: 'baixas sem conta bancária (estão no DRE, não no saldo)' },
+    { v: Number(conf.titulos_fora_do_extrato), t: 'mensalidades (títulos) pagas sem conta definida na integração bancária' },
+    { v: Number(conf.movimentos_avulsos), t: 'movimentações de caixa avulsas (DRE) sem conta' },
   ].filter((e) => Math.abs(e.v) >= 0.01);
   return (
     <Card>
-      <CardHeader><CardTitle>Conferencia: saldo das contas x DRE de caixa ({dataBR(inicio)} a {dataBR(fim)})</CardTitle></CardHeader>
+      <CardHeader><CardTitle>Conferência: saldo das contas x DRE de caixa ({dataBR(inicio)} a {dataBR(fim)})</CardTitle></CardHeader>
       <CardContent className="space-y-3">
         <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-5">
-          <Item rotulo="Saldo no inicio" v={conf.saldo_inicial} />
+          <Item rotulo="Saldo no início" v={conf.saldo_inicial} />
           <Item rotulo="Saldo no fim" v={conf.saldo_final} />
-          <Item rotulo="Variacao do saldo" v={conf.variacao_saldo} sinal />
+          <Item rotulo="Variação do saldo" v={conf.variacao_saldo} sinal />
           <Item rotulo="Resultado do DRE (caixa)" v={conf.resultado_dre_caixa} sinal />
-          <Item rotulo="Diferenca" v={conf.diferenca} sinal />
+          <Item rotulo="Diferença" v={conf.diferenca} sinal />
         </div>
         {bate ? (
-          <p className="flex items-center gap-1.5 text-sm text-emerald-700"><CheckCircle2 className="h-4 w-4" /> A variacao do saldo consolidado bate com o resultado de caixa do DRE.</p>
+          <p className="flex items-center gap-1.5 text-sm text-emerald-700"><CheckCircle2 className="h-4 w-4" /> A variação do saldo consolidado bate com o resultado de caixa do DRE.</p>
         ) : (
           <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-            <p className="font-medium">A diferenca se explica por:</p>
+            <p className="font-medium">A diferença se explica por:</p>
             {explicacoes.length ? (
               <ul className="mt-1 list-disc pl-5">{explicacoes.map((e) => (
                 <li key={e.t}><Dinheiro v={e.v} /> — {e.t}</li>
               ))}</ul>
-            ) : <p>nenhum motivo conhecido — confira lancamentos sem plano de contas ou com data fora do periodo.</p>}
+            ) : <p>nenhum motivo conhecido — confira lançamentos sem plano de contas ou com data fora do período.</p>}
           </div>
         )}
       </CardContent>
@@ -241,7 +241,7 @@ function ListaTransferencias({ inicio, fim }: { inicio: string; fim: string }) {
   if (!data?.length) return null;
   return (
     <Card>
-      <CardHeader><CardTitle>Transferencias do mes</CardTitle></CardHeader>
+      <CardHeader><CardTitle>Transferências do mês</CardTitle></CardHeader>
       <CardContent className="overflow-x-auto p-0">
         <table className="w-full text-sm">
           <tbody className="divide-y divide-slate-100">
@@ -253,9 +253,9 @@ function ListaTransferencias({ inicio, fim }: { inicio: string; fim: string }) {
                 <td className="px-4 py-2 text-right"><Dinheiro v={t.valor} /></td>
                 <td className="px-4 py-2 text-right">
                   {t.status === 'ATIVA' && (
-                    <button className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100" title="Cancelar transferencia"
+                    <button className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100" title="Cancelar transferência"
                       onClick={() => {
-                        const motivo = prompt('Motivo do cancelamento da transferencia:');
+                        const motivo = prompt('Motivo do cancelamento da transferência:');
                         if (motivo) cancelar.mutate({ id: t.id, motivo }, { onError: (e) => alert(mensagemErro(e)) });
                       }}>
                       <Undo2 className="h-4 w-4" />
@@ -283,7 +283,7 @@ function ModalConfigurarConta({ conta, onClose }: { conta: ContasBancariasRow; o
   const [textos, setTextos] = useState((conta.ofx_textos_mensalidade ?? []).join('\n'));
   const [erro, setErro] = useState('');
   return (
-    <Modal open onClose={onClose} title={`Configurar ${conta.nome}`} subtitulo="Saldo inicial, importacao do OFX e quem opera a conta" tamanho="lg">
+    <Modal open onClose={onClose} title={`Configurar ${conta.nome}`} subtitulo="Saldo inicial, importação do OFX e quem opera a conta" tamanho="lg">
       <form className="space-y-4" onSubmit={(e) => {
         e.preventDefault();
         setErro('');
@@ -309,24 +309,24 @@ function ModalConfigurarConta({ conta, onClose }: { conta: ContasBancariasRow; o
         </div>
         <p className="text-xs text-slate-500">
           O saldo da conta passa a ser este valor mais os movimentos registrados <b>depois</b> desse dia. Movimentos
-          ate esse dia nao entram no saldo (ja estao dentro dele). Use o saldo do extrato do banco do dia anterior
-          ao primeiro movimento registrado nesta conta (no Sicredi, os recebimentos automaticos comecam em 13/10/2026,
-          entao o saldo de {dataBR(diaAnteriorIso('2026-10-13'))}).
+          até esse dia não entram no saldo (já estão dentro dele). Use o saldo do extrato do banco do dia anterior
+          ao primeiro movimento registrado nesta conta (no Sicredi, os recebimentos automáticos começam em 13/10/2026,
+          então o saldo de {dataBR(diaAnteriorIso('2026-10-13'))}).
         </p>
-        <FormField label="Creditos de mensalidade no OFX">
+        <FormField label="Créditos de mensalidade no OFX">
           <Select value={modo} onChange={(e) => setModo(e.target.value as ModoMensalidadeOfx)}>
             {MODOS_MENSALIDADE_OFX.map((m) => <option key={m.valor} value={m.valor}>{m.rotulo}</option>)}
           </Select>
         </FormField>
         {modo === 'POR_TEXTO' && (
-          <FormField label="Textos do historico que indicam mensalidade (um por linha)">
+          <FormField label="Textos do histórico que indicam mensalidade (um por linha)">
             <Textarea rows={4} value={textos} onChange={(e) => setTextos(e.target.value)} />
           </FormField>
         )}
         <p className="text-xs text-slate-500">
-          Antes da regra, todo credito do OFX e comparado com os recebimentos que o banco ja baixou sozinho (webhook):
-          o que casar vira <b>sugestao de conciliacao</b>, nunca um lancamento novo. A regra so decide o credito que
-          sobra — por exemplo, a liquidacao de boletos que o banco credita somada no dia.
+          Antes da regra, todo crédito do OFX e comparado com os recebimentos que o banco já baixou sozinho (webhook):
+          o que casar vira <b>sugestão de conciliação</b>, nunca um lançamento novo. A regra só decide o crédito que
+          sobra — por exemplo, a liquidação de boletos que o banco credita somada no dia.
         </p>
         <div className="rounded-lg border border-slate-200 p-3">
           <p className="text-sm font-medium text-slate-900">Quem opera esta conta (além da matriz)</p>
@@ -357,7 +357,7 @@ function ModalTransferencia({ onClose }: { onClose: () => void }) {
   const [erro, setErro] = useState('');
   const ativas = (contas ?? []).filter((c) => c.ativo);
   return (
-    <Modal open onClose={onClose} title="Transferencia entre contas" subtitulo="Muda o saldo de cada conta; nao entra no DRE nem no saldo total">
+    <Modal open onClose={onClose} title="Transferência entre contas" subtitulo="Muda o saldo de cada conta; não entra no DRE nem no saldo total">
       <form className="space-y-3" onSubmit={(e) => {
         e.preventDefault();
         setErro('');
@@ -380,7 +380,7 @@ function ModalTransferencia({ onClose }: { onClose: () => void }) {
           <FormField label="Valor"><MoneyInput value={valor} onChange={setValor} /></FormField>
           <FormField label="Data"><Input type="date" value={data} onChange={(e) => setData(e.target.value)} /></FormField>
         </div>
-        <FormField label="Descricao (opcional)"><Input value={descricao} onChange={(e) => setDescricao(e.target.value)} /></FormField>
+        <FormField label="Descrição (opcional)"><Input value={descricao} onChange={(e) => setDescricao(e.target.value)} /></FormField>
         {erro && <p className="text-sm text-rose-700">{erro}</p>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>

@@ -46,13 +46,13 @@ type Entrada = Item | Grupo;
 const ehGrupo = (e: Entrada): e is Grupo => 'itens' in e;
 
 export const OPERACAO: Item[] = [
-  { href: '/dashboard', label: 'Visao Geral', icon: LayoutDashboard },
+  { href: '/dashboard', label: 'Visão Geral', icon: LayoutDashboard },
   { href: '/sac', label: 'SAC / Atendimento', icon: Headset },
   { href: '/protocolos', label: 'Protocolos', icon: Ticket },
-  { href: '/assistencia', label: 'Assistencia 24h', icon: LifeBuoy },
+  { href: '/assistencia', label: 'Assistência 24h', icon: LifeBuoy },
   { href: '/vendas', label: 'Vendas / CRM', icon: Target },
   { href: '/associados', label: 'Associados', icon: Users },
-  { href: '/veiculos', label: 'Veiculos', icon: Car },
+  { href: '/veiculos', label: 'Veículos', icon: Car },
   { href: '/rastreadores', label: 'Rastreadores', icon: Satellite },
   { href: '/eventos', label: 'Eventos', icon: AlertTriangle },
 ];
@@ -60,16 +60,16 @@ export const GESTAO: Entrada[] = [
   // COBRANCA virou grupo (0097): o painel de inadimplencia, o calendario dos 6
   // ciclos e a emissao (faturas, lote e remessas) sao tres trabalhos diferentes.
   {
-    label: 'Cobranca',
+    label: 'Cobrança',
     icon: Receipt,
     itens: [
-      { href: '/cobrancas/painel', label: 'Painel de Inadimplencia', icon: Gauge },
-      { href: '/cobrancas/fila', label: 'Fila de Cobranca', icon: PhoneCall },
-      { href: '/cobrancas/calendario', label: 'Calendario de Vencimentos', icon: CalendarDays },
+      { href: '/cobrancas/painel', label: 'Painel de Inadimplência', icon: Gauge },
+      { href: '/cobrancas/fila', label: 'Fila de Cobrança', icon: PhoneCall },
+      { href: '/cobrancas/calendario', label: 'Calendário de Vencimentos', icon: CalendarDays },
       { href: '/cobrancas/boletos', label: 'Boletos e Remessas', icon: Receipt },
     ],
   },
-  { href: '/precificacao', label: 'Precificacao', icon: Calculator },
+  { href: '/precificacao', label: 'Precificação', icon: Calculator },
   { href: '/fornecedores', label: 'Fornecedores', icon: Store },
   { href: '/financeiro', label: 'Financeiro / DRE', icon: DollarSign },
 ];
@@ -237,13 +237,13 @@ export function Sidebar({ papel, logoUrl, permissoes = null }: {
   // Integracao com o Mutual: consulta e importacao sao da MATRIZ (o banco tambem
   // exige tem_acesso_global em mutual_registrar_captura).
   const integracao = ['admin', 'financeiro'].includes(papel ?? '')
-    ? [{ href: '/integracao/mutual', label: 'Integracao Mutual', icon: Database }]
+    ? [{ href: '/integracao/mutual', label: 'Integração Mutual', icon: Database }]
     : [];
   // Termos (0123): quem recebeu "gerenciar modelos" como extra ve o atalho
   // direto para a aba Termos das Configuracoes.
   const gereTermos = papel !== 'admin' && (permissoes ?? []).some((p) => p.startsWith('termos_modelos.'));
   const gestao = papel === 'admin'
-    ? [...GESTAO, ...integracao, { href: '/configuracoes', label: 'Configuracoes', icon: Settings }]
+    ? [...GESTAO, ...integracao, { href: '/configuracoes', label: 'Configurações', icon: Settings }]
     : gereTermos
       ? [...GESTAO, ...integracao, { href: '/configuracoes/termos', label: 'Termos', icon: Settings }]
       : [...GESTAO, ...integracao];

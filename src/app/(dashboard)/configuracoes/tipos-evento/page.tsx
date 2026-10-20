@@ -16,7 +16,7 @@ export default function TiposEventoPage() {
   return (
     <div className="max-w-xl space-y-4">
       <p className="text-sm text-slate-500">
-        Cadastre os tipos de evento usados na abertura de protocolos: colisao, roubo,
+        Cadastre os tipos de evento usados na abertura de protocolos: colisão, roubo,
         furto, danos a terceiros, etc.
       </p>
 
@@ -24,7 +24,7 @@ export default function TiposEventoPage() {
         <Input
           value={novo}
           onChange={(e) => setNovo(e.target.value)}
-          placeholder="Ex.: Colisao"
+          placeholder="Ex.: Colisão"
           className="mt-0"
         />
         <Button

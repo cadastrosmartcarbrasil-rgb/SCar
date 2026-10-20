@@ -460,5 +460,5 @@ export function useSalvarOperadoresConta() {
 /** Mensagem do erro do banco (o supabase-js devolve {message}, nao Error). */
 export function mensagemErro(e: unknown): string {
   if (e && typeof e === 'object' && 'message' in e) return String((e as { message: unknown }).message);
-  return 'Nao foi possivel concluir. Tente de novo.';
+  return 'Não foi possível concluir. Tente de novo.';
 }

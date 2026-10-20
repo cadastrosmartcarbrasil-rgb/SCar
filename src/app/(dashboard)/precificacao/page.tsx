@@ -20,13 +20,13 @@ export default function PrecificacaoPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Precificacao</h1>
-        <p className="text-sm text-slate-500">Simule mensalidades, edite a matriz de precos (FIPE x tipo de veiculo) ou suba tudo por planilha.</p>
+        <h1 className="text-2xl font-semibold text-slate-900">Precificação</h1>
+        <p className="text-sm text-slate-500">Simule mensalidades, edite a matriz de preços (FIPE x tipo de veículo) ou suba tudo por planilha.</p>
       </div>
       <div className="flex flex-wrap gap-1 border-b border-slate-200">
         {([
           ['simulador', 'Simulador', Calculator],
-          ['tabela', 'Tabela de Precos', Table2],
+          ['tabela', 'Tabela de Preços', Table2],
           ['importar', 'Importar Planilha', Upload],
         ] as const).map(([id, label, Icon]) => (
           <button key={id} onClick={() => setAba(id)}
@@ -80,7 +80,7 @@ function Simulador() {
   }
 
   function calcular() {
-    if (!tipoVeiculoId) return toast.error('Selecione o tipo de veiculo');
+    if (!tipoVeiculoId) return toast.error('Selecione o tipo de veículo');
     if (fipe === '' || Number(fipe) <= 0) return toast.error('Informe o valor FIPE');
     simular.mutate(
       {
@@ -103,12 +103,12 @@ function Simulador() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Calculator className="h-4 w-4" /> Parametros
+              <Calculator className="h-4 w-4" /> Parâmetros
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
-              <FormField label="Tipo de veiculo">
+              <FormField label="Tipo de veículo">
                 <Select value={tipoVeiculoId} onChange={(e) => setTipoVeiculoId(e.target.value)}>
                   <option value="">-- Selecione --</option>
                   {(tipos ?? []).map((t) => (
@@ -146,9 +146,9 @@ function Simulador() {
                   ))}
                 </Select>
               </FormField>
-              <FormField label="Cota de participacao (opcional)">
+              <FormField label="Cota de participação (opcional)">
                 <Select value={cotaId} onChange={(e) => setCotaId(e.target.value)}>
-                  <option value="">Padrao da faixa (tabela)</option>
+                  <option value="">Padrão da faixa (tabela)</option>
                   {(cotas ?? []).map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.codigo} — {(c.percentual * 100).toFixed(0)}% da FIPE
@@ -159,7 +159,7 @@ function Simulador() {
             </div>
 
             <div>
-              <p className="mb-1 text-sm font-medium text-slate-600">Itens base (obrigatorios)</p>
+              <p className="mb-1 text-sm font-medium text-slate-600">Itens base (obrigatórios)</p>
               <div className="flex flex-wrap gap-1.5">
                 {obrigatorios.map((p) => (
                   <span key={p.id} className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
@@ -202,7 +202,7 @@ function Simulador() {
           </CardHeader>
           <CardContent>
             {!resultado ? (
-              <p className="text-sm text-slate-400">Preencha os parametros e clique em calcular.</p>
+              <p className="text-sm text-slate-400">Preencha os parâmetros e clique em calcular.</p>
             ) : (
               <div className="space-y-4">
                 {resultado.calculo.plano_nome && (
@@ -242,7 +242,7 @@ function Simulador() {
 
                 <div className="space-y-1 rounded-lg bg-slate-50 p-3 text-sm">
                   <Linha label="Subtotal Taxa Administrativa" valor={resultado.calculo.subtotal_taxa_admin} />
-                  <Linha label="Subtotal Beneficios (parceiros)" valor={resultado.calculo.subtotal_beneficios_parceiros} />
+                  <Linha label="Subtotal Benefícios (parceiros)" valor={resultado.calculo.subtotal_beneficios_parceiros} />
                   {(resultado.calculo.adicional_regional ?? 0) > 0 && (
                     <>
                       <div className="my-1 border-t border-slate-200" />
@@ -267,17 +267,17 @@ function Simulador() {
                 </div>
 
                 <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
-                  Taxa de adesao (cobranca unica):{' '}
+                  Taxa de adesão (cobrança única):{' '}
                   <strong>{formatCurrency(resultado.adesao)}</strong>
                   {(resultado.calculo.adicional_regional ?? 0) > 0 && (
                     <span className="block text-xs opacity-80">
-                      O adicional de risco nao incide sobre a adesao.
+                      O adicional de risco não incide sobre a adesão.
                     </span>
                   )}
                 </div>
 
                 <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                  Participacao (franquia) em caso de evento:{' '}
+                  Participação (franquia) em caso de evento:{' '}
                   <strong>{formatCurrency(resultado.participacao)}</strong>
                 </div>
               </div>

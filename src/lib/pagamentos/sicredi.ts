@@ -469,7 +469,7 @@ export class SicrediGateway extends BasePaymentGateway {
     if (!res.ok) throw new Error(mensagemErroSicredi(res.status, corpo));
     const o = (corpo ?? {}) as Record<string, unknown>;
     const access = typeof o.access_token === 'string' ? o.access_token : null;
-    if (!access) throw new Error('Sicredi: resposta de autenticacao sem access_token');
+    if (!access) throw new Error('Sicredi: resposta de autenticação sem access_token');
     const expiresIn = Number(o.expires_in) > 0 ? Number(o.expires_in) : 300;
     return {
       accessToken: access,

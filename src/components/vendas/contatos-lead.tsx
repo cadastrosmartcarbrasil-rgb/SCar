@@ -29,7 +29,7 @@ const ICONE_TIPO: Record<TipoInteracaoLead, React.ElementType> = {
 
 const ATALHOS_RETORNO: { dias: number; rotulo: string }[] = [
   { dias: 0, rotulo: 'Hoje' },
-  { dias: 1, rotulo: 'Amanha' },
+  { dias: 1, rotulo: 'Amanhã' },
   { dias: 2, rotulo: 'Em 2 dias' },
   { dias: 7, rotulo: 'Semana que vem' },
 ];
@@ -128,7 +128,7 @@ export function ContatosLead({ lead, historico }: { lead: LeadsRow; historico: L
       }`}>
         <AlarmClock className="h-3.5 w-3.5 shrink-0" />
         {situacao === 'SEM_AGENDA' ? (
-          <span>Sem retorno marcado — combine um abaixo para o lead nao esfriar.</span>
+          <span>Sem retorno marcado — combine um abaixo para o lead não esfriar.</span>
         ) : (
           <>
             <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${SELO_AGENDA[situacao].cor}`}>
@@ -175,14 +175,14 @@ export function ContatosLead({ lead, historico }: { lead: LeadsRow; historico: L
           <FormField label="O que aconteceu">
             <Input
               value={observacao} onChange={(e) => setObservacao(e.target.value)}
-              placeholder="Ex.: achou caro, vai comparar com a concorrencia"
+              placeholder="Ex.: achou caro, vai comparar com a concorrência"
             />
           </FormField>
         </div>
 
         <div className="rounded-xl border border-slate-200 p-3">
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-            Proximo retorno {resultado === 'AGENDOU' && <span className="text-rose-500">*</span>}
+            Próximo retorno {resultado === 'AGENDOU' && <span className="text-rose-500">*</span>}
           </p>
           <div className="flex flex-wrap gap-1.5">
             {ATALHOS_RETORNO.map((a) => (

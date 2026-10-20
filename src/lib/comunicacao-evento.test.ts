@@ -61,7 +61,7 @@ describe('mensagens', () => {
     const link = linkComunicacao('https://appsmartcar.com.br/', 'abc');
     expect(link).toBe('https://appsmartcar.com.br/comunicar/abc');
     const m = mensagemComunicacao({ papel: 'terceiro_condutor', nome: 'Fulano Silva', protocolo: 'EVT-1', link });
-    expect(m).toContain('Ola, Fulano!');
+    expect(m).toContain('Olá, Fulano!');
     expect(m).not.toMatch(/associad/i);
   });
   it('nenhum texto ao envolvido usa vocabulario proibido', () => {
@@ -91,7 +91,7 @@ describe('linhasDaDeclaracao', () => {
   it('so mostra o que foi preenchido', () => {
     const l = linhasDaDeclaracao('testemunha', { identificacao: { nome: 'Ana' }, evento: { relato: 'vi' } });
     expect(l).toEqual([
-      { secao: 'Identificacao', itens: [['Nome', 'Ana']] },
+      { secao: 'Identificação', itens: [['Nome', 'Ana']] },
       { secao: 'O evento', itens: [['Relato', 'vi']] },
     ]);
   });

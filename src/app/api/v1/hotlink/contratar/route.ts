@@ -19,7 +19,7 @@ export async function POST(req: Request) {
   const documento = String(body?.documento ?? '').replace(/\D/g, '');
   const por = String(body?.por ?? 'CLIENTE').toUpperCase();
 
-  if (!token) return NextResponse.json({ error: 'Sessao expirada' }, { status: 400 });
+  if (!token) return NextResponse.json({ error: 'Sessão expirada' }, { status: 400 });
   if (!planoId) return NextResponse.json({ error: 'Escolha o plano' }, { status: 400 });
   if (!nome || !nome.includes(' ')) {
     return NextResponse.json({ error: 'Informe o nome completo' }, { status: 400 });
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
   const admin = createAdminClient();
   const { data: sessoes } = await admin.rpc('lead_por_token_publico', { p_token: token });
   const sessao = sessoes?.[0];
-  if (!sessao) return NextResponse.json({ error: 'Sessao invalida' }, { status: 404 });
+  if (!sessao) return NextResponse.json({ error: 'Sessão inválida' }, { status: 404 });
 
   const { data: lead } = await admin
     .from('leads')
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
     .maybeSingle();
 
   if (!lead?.tipo_veiculo_id || !lead.valor_fipe) {
-    return NextResponse.json({ error: 'Refaca a cotacao antes de contratar' }, { status: 400 });
+    return NextResponse.json({ error: 'Refaça a cotação antes de contratar' }, { status: 400 });
   }
 
   // 1) Snapshot da cotacao escolhida (mesmo formato do CRM).

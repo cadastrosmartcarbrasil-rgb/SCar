@@ -28,7 +28,7 @@ function Conteudo() {
   const abas: { id: Aba; label: string; icon: React.ElementType }[] = [
     { id: 'painel', label: 'Painel de Acionamento', icon: LifeBuoy },
     { id: 'acionamentos', label: 'Acionamentos', icon: ListChecks },
-    { id: 'servicos', label: 'Servicos 24h', icon: Settings2 },
+    { id: 'servicos', label: 'Serviços 24h', icon: Settings2 },
     { id: 'prestadores', label: 'Prestadores', icon: Truck },
   ];
 
@@ -36,9 +36,9 @@ function Conteudo() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Assistencia 24 Horas</h1>
+          <h1 className="text-2xl font-semibold text-slate-900">Assistência 24 Horas</h1>
           <p className="text-sm text-slate-500">
-            Central de acionamento: valida o veiculo, cota o prestador, gera a OS e lanca o
+            Central de acionamento: valida o veículo, cota o prestador, gera a OS e lança o
             pagamento em Contas a Pagar.
           </p>
         </div>

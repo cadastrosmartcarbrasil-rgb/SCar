@@ -37,7 +37,7 @@ export function UnidadesSupervisor({ usuarioId, papel }: { usuarioId: string; pa
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success('Unidades de atuacao salvas.');
+      toast.success('Unidades de atuação salvas.');
       qc.invalidateQueries({ queryKey: ['supervisor', 'regionais', usuarioId] });
       qc.invalidateQueries({ queryKey: ['config', 'usuarios', 'painel'] });
     },
@@ -49,13 +49,13 @@ export function UnidadesSupervisor({ usuarioId, papel }: { usuarioId: string; pa
 
   return (
     <div className="rounded-xl border border-cyan-200 bg-cyan-50/40 p-3">
-      <p className="text-[11.5px] font-semibold uppercase tracking-wide text-slate-500">{supervisor ? 'Unidades do supervisor' : eventos ? 'Unidades de atuacao (eventos)' : 'Unidades de atuacao'}</p>
+      <p className="text-[11.5px] font-semibold uppercase tracking-wide text-slate-500">{supervisor ? 'Unidades do supervisor' : eventos ? 'Unidades de atuação (eventos)' : 'Unidades de atuação'}</p>
       <p className="mb-2 mt-0.5 text-[11.5px] leading-relaxed text-slate-500">
         {supervisor
-          ? 'O supervisor enxerga o cadastro e a cobranca dessas unidades (painel, calendario e comparativos).'
+          ? 'O supervisor enxerga o cadastro e a cobrança dessas unidades (painel, calendário e comparativos).'
           : eventos
-            ? 'A pessoa ve os associados, veiculos e eventos dessas unidades (SAC, fichas, eventos) e trata os eventos delas.'
-            : 'Alem da unidade do cadastro, a pessoa ve os associados, veiculos e eventos dessas unidades, conforme o perfil. Marque todas para quem atende a base inteira.'}
+            ? 'A pessoa vê os associados, veículos e eventos dessas unidades (SAC, fichas, eventos) e trata os eventos delas.'
+            : 'Além da unidade do cadastro, a pessoa vê os associados, veículos e eventos dessas unidades, conforme o perfil. Marque todas para quem atende a base inteira.'}
       </p>
       <div className="grid grid-cols-2 gap-1 sm:grid-cols-3">
         <label className="col-span-2 flex items-center gap-2 text-sm font-medium text-slate-700 sm:col-span-3">

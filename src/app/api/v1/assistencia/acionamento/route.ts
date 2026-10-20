@@ -29,13 +29,13 @@ const PAPEIS_LIBERACAO = ['admin', 'financeiro', 'gestor_regional'];
 export async function POST(request: Request) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   const { data: perfil } = await supabase.from('usuarios').select('papel').eq('id', user.id).maybeSingle();
-  if (!perfil) return NextResponse.json({ error: 'Sem permissao' }, { status: 403 });
+  if (!perfil) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
 
   const body = (await request.json().catch(() => ({}))) as Body;
   if (!body.veiculo_id || !body.servico_id) {
-    return NextResponse.json({ error: 'Informe o veiculo e o servico' }, { status: 400 });
+    return NextResponse.json({ error: 'Informe o veículo e o serviço' }, { status: 400 });
   }
 
   const args = {
@@ -81,7 +81,7 @@ export async function POST(request: Request) {
     password: senha,
   });
   if (loginErr || !login.user) {
-    return NextResponse.json({ error: 'Credenciais do gestor invalidas' }, { status: 401 });
+    return NextResponse.json({ error: 'Credenciais do gestor inválidas' }, { status: 401 });
   }
 
   const { data: gestor } = await gestorClient
@@ -92,7 +92,7 @@ export async function POST(request: Request) {
 
   if (!gestor || !PAPEIS_LIBERACAO.includes(gestor.papel)) {
     await gestorClient.auth.signOut();
-    return NextResponse.json({ error: 'Este usuario nao tem alcada para liberar o acionamento' }, { status: 403 });
+    return NextResponse.json({ error: 'Este usuário não tem alçada para liberar o acionamento' }, { status: 403 });
   }
 
   const { data, error } = await gestorClient.rpc('abrir_acionamento', {

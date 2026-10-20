@@ -40,10 +40,10 @@ export const dynamic = 'force-dynamic';
 async function autorizado() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   const { data: perfil } = await supabase.from('usuarios').select('papel, ativo').eq('id', user.id).maybeSingle();
   if (!perfil?.ativo || !['admin', 'financeiro'].includes(perfil.papel)) {
-    return NextResponse.json({ error: 'Sem permissao' }, { status: 403 });
+    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
   }
   return null;
 }
@@ -99,7 +99,7 @@ export async function POST(request: Request) {
   const cfg = configSicrediDoAmbiente(process.env);
   if (!cfg) {
     return NextResponse.json(
-      { error: `Sicredi nao configurado. Faltam: ${variaveisSicrediFaltando(process.env).join(', ')}` },
+      { error: `Sicredi não configurado. Faltam: ${variaveisSicrediFaltando(process.env).join(', ')}` },
       { status: 400 },
     );
   }
@@ -110,11 +110,11 @@ export async function POST(request: Request) {
     switch (body.action) {
       case 'autenticar': {
         await gw.token();
-        return NextResponse.json({ ok: true, ambiente: cfg.ambiente, mensagem: 'Autenticacao aceita pelo Sicredi' });
+        return NextResponse.json({ ok: true, ambiente: cfg.ambiente, mensagem: 'Autenticação aceita pelo Sicredi' });
       }
       case 'boleto_teste': {
         if (cfg.ambiente !== 'sandbox') {
-          return NextResponse.json({ error: 'Boleto de teste so no sandbox' }, { status: 400 });
+          return NextResponse.json({ error: 'Boleto de teste só no sandbox' }, { status: 400 });
         }
         const venc = new Date(Date.now() + 10 * 86_400_000).toISOString().slice(0, 10);
         // Pagador ficticio da propria colecao do Sicredi (sandbox).
@@ -122,7 +122,7 @@ export async function POST(request: Request) {
           titulo_id: crypto.randomUUID(),
           valor: body.valor && body.valor > 0 ? body.valor : 10.01,
           vencimento: venc,
-          descricao: 'Teste de integracao SCar',
+          descricao: 'Teste de integração SCar',
           pagador: {
             nome: 'TESTE FAKE',
             cpf_cnpj: '35169335695',
@@ -138,12 +138,12 @@ export async function POST(request: Request) {
       }
       case 'liquidados': {
         const dia = body.dia ?? new Date().toISOString().slice(0, 10);
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) return NextResponse.json({ error: 'dia invalido' }, { status: 400 });
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) return NextResponse.json({ error: 'dia inválido' }, { status: 400 });
         return NextResponse.json({ ok: true, dia, liquidados: await gw.liquidadosDoDia(dia) });
       }
       case 'francesinha': {
         const dia = body.dia ?? new Date().toISOString().slice(0, 10);
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) return NextResponse.json({ error: 'dia invalido' }, { status: 400 });
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) return NextResponse.json({ error: 'dia inválido' }, { status: 400 });
         const pagina = Number.isInteger(body.pagina) && (body.pagina ?? 0) >= 0 ? (body.pagina as number) : 0;
         return NextResponse.json({ ok: true, dia, pagina, movimentacoes: await gw.movimentacoes(dia, 'AMBOS', pagina) });
       }
@@ -167,7 +167,7 @@ export async function POST(request: Request) {
         const segredo = process.env[ENV_SICREDI.webhookSecret];
         if (!segredoWebhookOk()) {
           return NextResponse.json(
-            { error: 'Falta SICREDI_WEBHOOK_SECRET no servidor (minimo 32 caracteres)' },
+            { error: 'Falta SICREDI_WEBHOOK_SECRET no servidor (mínimo 32 caracteres)' },
             { status: 400 },
           );
         }
@@ -179,7 +179,7 @@ export async function POST(request: Request) {
           existente = contratoWebhookExistente(await gw.consultarContratosWebhook());
         } catch (e) {
           return NextResponse.json(
-            { error: `Nao foi possivel consultar o contrato atual no Sicredi (${(e as Error).message}). Nada foi alterado.` },
+            { error: `Não foi possível consultar o contrato atual no Sicredi (${(e as Error).message}). Nada foi alterado.` },
             { status: 502 },
           );
         }
@@ -189,7 +189,7 @@ export async function POST(request: Request) {
           return NextResponse.json(
             {
               error:
-                `O beneficiario ja tem webhook apontando para ${destino}. Registrar aqui SUBSTITUI esse destino ` +
+                `O beneficiário já tem webhook apontando para ${destino}. Registrar aqui SUBSTITUI esse destino ` +
                 'e o outro sistema deixa de receber os avisos de pagamento. Nada foi alterado.',
               contrato_de_terceiro: true,
               destino,
@@ -211,7 +211,7 @@ export async function POST(request: Request) {
         });
       }
       default:
-        return NextResponse.json({ error: 'action invalida' }, { status: 400 });
+        return NextResponse.json({ error: 'action inválida' }, { status: 400 });
     }
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 502 });

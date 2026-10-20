@@ -11,7 +11,7 @@ export function SoTermos({ children }: { children: React.ReactNode }) {
   if (pathname.startsWith('/configuracoes/termos')) return <>{children}</>;
   return (
     <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800">
-      Acesso restrito. Seu perfil abre apenas a aba Termos das Configuracoes.
+      Acesso restrito. Seu perfil abre apenas a aba Termos das Configurações.
     </div>
   );
 }

@@ -30,16 +30,16 @@ export interface DefinicaoMovimento {
 export const MOVIMENTOS_REGIONAIS: DefinicaoMovimento[] = [
   {
     chave: 'COMISSAO_RECEBER',
-    rotulo: 'Comissao a receber da matriz',
+    rotulo: 'Comissão a receber da matriz',
     tipo: 'RECEITA',
     categoria: '1.3.01',
     categoriaNome: 'Comissao de Franquia (repasse da matriz)',
-    ajuda: 'O que a matriz deve a sua unidade pela carteira do periodo.',
+    ajuda: 'O que a matriz deve a sua unidade pela carteira do período.',
     pedeVendedor: false,
   },
   {
     chave: 'COMISSAO_PAGAR',
-    rotulo: 'Comissao a pagar ao vendedor',
+    rotulo: 'Comissão a pagar ao vendedor',
     tipo: 'DESPESA',
     categoria: '3.2.01',
     categoriaNome: 'Comissoes de Vendas',
@@ -68,9 +68,9 @@ export type FormaPagamento = (typeof FORMAS_PAGAMENTO)[number];
 
 export const ROTULO_FORMA: Record<FormaPagamento, string> = {
   PIX: 'PIX',
-  TRANSFERENCIA: 'Transferencia',
+  TRANSFERENCIA: 'Transferência',
   BOLETO: 'Boleto',
-  CARTAO: 'Cartao',
+  CARTAO: 'Cartão',
   DINHEIRO: 'Dinheiro',
 };
 
@@ -111,8 +111,8 @@ export function validarLancamentoRegional(v: {
   vendedorId?: string | null;
 }): string | null {
   const mov = movimentoRegional(v.tipo ?? '');
-  if (!mov) return 'Escolha o tipo do lancamento';
-  if (!v.descricao?.trim()) return 'Descreva o lancamento';
+  if (!mov) return 'Escolha o tipo do lançamento';
+  if (!v.descricao?.trim()) return 'Descreva o lançamento';
   if (!v.valor || v.valor <= 0) return 'Informe um valor maior que zero';
   if (!v.vencimento) return 'Informe o vencimento';
   if (mov.pedeVendedor && !v.vendedorId) return 'Escolha o vendedor que vai receber o repasse';

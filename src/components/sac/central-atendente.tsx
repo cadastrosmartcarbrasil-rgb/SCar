@@ -64,7 +64,7 @@ function MeusProtocolos({ usuarioId }: { usuarioId?: string | null }) {
         {isLoading && <p className="px-4 py-6 text-center text-sm text-slate-400">Carregando...</p>}
         {!isLoading && protocolos.length === 0 && (
           <p className="px-4 py-6 text-center text-sm text-slate-400">
-            Nenhum protocolo direcionado a voce. Bom sinal.
+            Nenhum protocolo direcionado a você. Bom sinal.
           </p>
         )}
         {protocolos.map((p) => (
@@ -157,11 +157,11 @@ function MuralDaGestao() {
     <section className="rounded-2xl border border-slate-200 bg-superficie">
       <header className="flex items-center justify-between gap-2 border-b border-slate-100 px-4 py-3">
         <p className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-          <Megaphone className="h-4 w-4 text-cyan-600" /> Mural da gestao
+          <Megaphone className="h-4 w-4 text-cyan-600" /> Mural da gestão
         </p>
         {pendentes > 0 && (
           <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
-            <BellRing className="h-3 w-3" /> {pendentes} aguardando ciencia
+            <BellRing className="h-3 w-3" /> {pendentes} aguardando ciência
           </span>
         )}
       </header>
@@ -190,7 +190,7 @@ function MuralDaGestao() {
                     )}
                     {m.meu && (
                       <span className="rounded bg-cyan-50 px-1.5 py-0.5 text-[10px] font-medium text-cyan-700">
-                        voce publicou
+                        você publicou
                       </span>
                     )}
                     {(m.regional || m.papeis?.length) && (
@@ -212,7 +212,7 @@ function MuralDaGestao() {
                     {/* no proprio comunicado, o que interessa e para QUEM ele foi */}
                     {m.meu ? `Para ${destinoDoMemo(m.regional, m.papeis)}` : m.autor}
                     {' · '}{formatDate(m.publicado_em)}
-                    {m.lido_em ? ' · ciencia dada' : ''}
+                    {m.lido_em ? ' · ciência dada' : ''}
                   </span>
                 </span>
                 {expandido ? <ChevronUp className="h-4 w-4 shrink-0 text-slate-400" />
@@ -225,13 +225,13 @@ function MuralDaGestao() {
                     {m.mensagem}
                   </p>
                   {m.expira_em && (
-                    <p className="mt-1 text-[11px] text-slate-400">Vale ate {formatDate(m.expira_em)}.</p>
+                    <p className="mt-1 text-[11px] text-slate-400">Vale até {formatDate(m.expira_em)}.</p>
                   )}
                   {/* Responder por aqui: sem isso a devolutiva sai do sistema e
                       vai para o WhatsApp, onde ninguem mais acha. */}
                   <div className="mt-3 border-t border-slate-100 pt-3">
                     <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                      {m.meu ? 'Respostas que voce recebeu' : 'Sua conversa sobre este comunicado'}
+                      {m.meu ? 'Respostas que você recebeu' : 'Sua conversa sobre este comunicado'}
                     </p>
                     <ConversaMemo memoId={m.id} modo={m.meu ? 'autor' : 'minha'} compacta />
                   </div>
@@ -242,7 +242,7 @@ function MuralDaGestao() {
                 <div className="px-4 pb-3">
                   <button
                     onClick={() => marcar.mutate(m.id, {
-                      onSuccess: () => toast.success('Ciencia registrada'),
+                      onSuccess: () => toast.success('Ciência registrada'),
                       onError: (e) => toast.error(e.message),
                     })}
                     disabled={marcar.isPending}
@@ -251,7 +251,7 @@ function MuralDaGestao() {
                     {marcar.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                     Marcar como lido
                   </button>
-                  <span className="ml-2 text-[11px] text-slate-500">Leitura obrigatoria.</span>
+                  <span className="ml-2 text-[11px] text-slate-500">Leitura obrigatória.</span>
                 </div>
               )}
             </article>

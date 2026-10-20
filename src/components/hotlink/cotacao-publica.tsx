@@ -193,13 +193,13 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
           <h2 className="mt-3 text-xl font-semibold text-brand-800">Proposta aceita!</h2>
           <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
             Recebemos o seu aceite. {contratado.vistoria
-              ? <>Falta so <b>fotografar o seu carro</b> — leva uns 3 minutos, aqui mesmo.</>
-              : <>{vendedor ?? 'Seu consultor'} vai confirmar os ultimos detalhes e combinar a <b>vistoria do veiculo</b>.</>}
+              ? <>Falta só <b>fotografar o seu carro</b> — leva uns 3 minutos, aqui mesmo.</>
+              : <>{vendedor ?? 'Seu consultor'} vai confirmar os últimos detalhes e combinar a <b>vistoria do veículo</b>.</>}
           </p>
           <div className="mx-auto mt-5 max-w-xs rounded-xl bg-brand-50 px-4 py-3 text-left">
             <Linha rotulo="Mensalidade" valor={dinheiro(contratado.mensalidade)} destaque />
             {contratado.adesao > 0 && (
-              <Linha rotulo="Adesao (unica)" valor={dinheiro(contratado.adesao)} />
+              <Linha rotulo="Adesão (única)" valor={dinheiro(contratado.adesao)} />
             )}
           </div>
 
@@ -230,7 +230,7 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
               sozinho. O que existe e o vendedor reemitir pela ficha. */}
           {contratado.vistoria && (
             <p className="mt-3 text-[11.5px] leading-relaxed text-slate-400">
-              O link das fotos vale por 7 dias. Se sair agora, peca ao seu consultor que
+              O link das fotos vale por 7 dias. Se sair agora, peça ao seu consultor que
               reenvie.
             </p>
           )}
@@ -246,16 +246,16 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
         <div className="px-6 py-10 text-center">
           <BadgeCheck className="mx-auto h-14 w-14 text-emerald-500" />
           <h2 className="mt-3 text-xl font-semibold text-brand-800">
-            Voce ja tem uma proposta aceita
+            Você já tem uma proposta aceita
           </h2>
           <p className="mt-1.5 text-[13px] leading-relaxed text-slate-500">
-            Encontramos um atendimento seu com a proposta <b>ja aceita</b>. Nao precisa cotar de
-            novo — {vendedor ?? 'seu consultor'} esta com ele e vai dar sequencia.
+            Encontramos um atendimento seu com a proposta <b>já aceita</b>. Não precisa cotar de
+            novo — {vendedor ?? 'seu consultor'} está com ele e vai dar sequência.
           </p>
           <p className="mt-4 text-[12px] leading-relaxed text-slate-400">
-            Se voce quer mudar o plano ou cotar <b>outro veiculo</b>, fale com{' '}
-            {vendedor ?? 'seu consultor'}: a alteracao e feita no atendimento que ja existe, para a
-            sua proposta nao ficar com dois valores diferentes.
+            Se você quer mudar o plano ou cotar <b>outro veículo</b>, fale com{' '}
+            {vendedor ?? 'seu consultor'}: a alteração é feita no atendimento que já existe, para a
+            sua proposta não ficar com dois valores diferentes.
           </p>
         </div>
       </Cartao>
@@ -299,8 +299,8 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
       {/* -------------------------------------------------------- veiculo */}
       {etapa === 'veiculo' && (
         <form onSubmit={cotar} className="space-y-3 px-6 py-6">
-          <Titulo icone={Car} texto="Seu veiculo"
-            ajuda="Digite a placa: buscamos o veiculo e o valor na tabela FIPE na hora." />
+          <Titulo icone={Car} texto="Seu veículo"
+            ajuda="Digite a placa: buscamos o veículo e o valor na tabela FIPE na hora." />
 
           {/* A PLACA e o campo principal — e dela que sai tudo. */}
           <label className="block">
@@ -329,14 +329,14 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
           {veiculo && (
             <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
               <p className="flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-wide text-emerald-700">
-                <BadgeCheck className="h-3.5 w-3.5" /> Veiculo identificado
+                <BadgeCheck className="h-3.5 w-3.5" /> Veículo identificado
               </p>
               <p className="mt-1 text-[15px] font-bold text-brand-800">
                 {[veiculo.marca, veiculo.modelo].filter(Boolean).join(' ') || 'Veiculo'}
                 {veiculo.ano ? <span className="font-normal text-slate-500"> · {veiculo.ano}</span> : null}
               </p>
               <p className="text-[12px] text-slate-600">
-                Valor de referencia (FIPE): <b className="tnum">{dinheiro(veiculo.valor_fipe)}</b>
+                Valor de referência (FIPE): <b className="tnum">{dinheiro(veiculo.valor_fipe)}</b>
               </p>
             </div>
           )}
@@ -345,11 +345,11 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
           {buscou && !veiculo && (
             <>
               <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[12px] leading-relaxed text-amber-900">
-                Nao localizamos esta placa na tabela FIPE. Informe o valor de mercado do veiculo
+                Não localizamos esta placa na tabela FIPE. Informe o valor de mercado do veículo
                 que a gente cota do mesmo jeito.
               </p>
               <Campo
-                rotulo="Valor de mercado do veiculo" valor={valorInformado}
+                rotulo="Valor de mercado do veículo" valor={valorInformado}
                 inputMode="decimal" prefixo="R$" onChange={setValorInformado}
               />
             </>
@@ -358,7 +358,7 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
           {/* O tipo vem dos dados da placa; fica visivel para o visitante conferir. */}
           {(veiculo || buscou) && (
             <div>
-              <Rotulo>Tipo do veiculo {veiculo && <span className="font-normal normal-case text-slate-400">(identificado — ajuste se precisar)</span>}</Rotulo>
+              <Rotulo>Tipo do veículo {veiculo && <span className="font-normal normal-case text-slate-400">(identificado — ajuste se precisar)</span>}</Rotulo>
               <div className="mt-1.5 grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {tipos.map((t) => (
                   <button
@@ -390,8 +390,8 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
       {/* -------------------------------------------------------- planos */}
       {etapa === 'planos' && (
         <div className="px-6 py-6">
-          <Titulo icone={ShieldCheck} texto="Escolha sua protecao"
-            ajuda={veiculo ? `${[veiculo.marca, veiculo.modelo].filter(Boolean).join(' ') || 'Seu veiculo'} · valor de referencia ${dinheiro(veiculo.valor_fipe)}` : undefined} />
+          <Titulo icone={ShieldCheck} texto="Escolha sua proteção"
+            ajuda={veiculo ? `${[veiculo.marca, veiculo.modelo].filter(Boolean).join(' ') || 'Seu veículo'} · valor de referência ${dinheiro(veiculo.valor_fipe)}` : undefined} />
 
           <div className="mt-4 space-y-3">
             {planos.map((p) => {
@@ -412,7 +412,7 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
                       )}
                     </div>
                     <div className="shrink-0 text-right">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">por mes</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">por mês</p>
                       <p className="tnum text-[20px] font-bold leading-tight text-brand-700">
                         {dinheiro(p.mensalidade)}
                       </p>
@@ -430,8 +430,8 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
                   )}
                   {ativo && (p.adesao > 0 || p.participacao > 0) && (
                     <p className="mt-2 text-[11px] text-slate-500">
-                      {p.adesao > 0 && <>Adesao unica de <b>{dinheiro(p.adesao)}</b>. </>}
-                      {p.participacao > 0 && <>Participacao no evento: <b>{dinheiro(p.participacao)}</b>.</>}
+                      {p.adesao > 0 && <>Adesão única de <b>{dinheiro(p.adesao)}</b>. </>}
+                      {p.participacao > 0 && <>Participação no evento: <b>{dinheiro(p.participacao)}</b>.</>}
                     </p>
                   )}
                 </button>
@@ -451,13 +451,13 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
       {/* -------------------------------------------------------- aceite */}
       {etapa === 'aceite' && planoEscolhido && (
         <form onSubmit={contratar} className="space-y-3 px-6 py-6">
-          <Titulo icone={Lock} texto="Confirmacao"
-            ajuda="Seus dados sao usados apenas para a analise da adesao." />
+          <Titulo icone={Lock} texto="Confirmação"
+            ajuda="Seus dados são usados apenas para a análise da adesão." />
 
           <div className="rounded-xl bg-brand-50 px-4 py-3">
             <Linha rotulo={planoEscolhido.nome} valor={`${dinheiro(planoEscolhido.mensalidade)} /mes`} destaque />
             {planoEscolhido.adesao > 0 && (
-              <Linha rotulo="Adesao (unica)" valor={dinheiro(planoEscolhido.adesao)} />
+              <Linha rotulo="Adesão (única)" valor={dinheiro(planoEscolhido.adesao)} />
             )}
             {veiculo && (
               <Linha rotulo="Veiculo" valor={[veiculo.marca, veiculo.modelo].filter(Boolean).join(' ') || (contato.placa || '—')} />
@@ -470,7 +470,7 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
             onChange={(v) => setAceite({ ...aceite, documento: formatarDocumento(v.replace(/\D/g, ''), v.replace(/\D/g, '').length > 11 ? 'PJ' : 'PF') })} />
 
           <div>
-            <Rotulo>Quem esta confirmando</Rotulo>
+            <Rotulo>Quem está confirmando</Rotulo>
             <div className="mt-1.5 grid grid-cols-2 gap-2">
               {[
                 { v: 'CLIENTE', r: 'Eu mesmo' },
@@ -496,9 +496,9 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
               className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300"
             />
             <span className="text-[11.5px] leading-relaxed text-slate-600">
-              Declaro que as informacoes acima sao verdadeiras e aceito contratar o
-              <b> {planoEscolhido.nome}</b> nas condicoes apresentadas. Entendo que a adesao passa por
-              <b> analise e vistoria do veiculo</b>, e que as mensalidades comecam apos a aprovacao.
+              Declaro que as informações acima são verdadeiras e aceito contratar o
+              <b> {planoEscolhido.nome}</b> nas condições apresentadas. Entendo que a adesão passa por
+              <b> análise e vistoria do veículo</b>, e que as mensalidades começam após a aprovação.
             </span>
           </label>
 
@@ -530,7 +530,7 @@ function Cartao({ children }: { children: React.ReactNode }) {
 
 function Passos({ atual }: { atual: string }) {
   const nomes: Record<string, string> = {
-    contato: 'Contato', veiculo: 'Veiculo', planos: 'Planos', aceite: 'Confirmacao',
+    contato: 'Contato', veiculo: 'Veiculo', planos: 'Planos', aceite: 'Confirmação',
   };
   const i = ORDEM_ETAPAS.indexOf(atual as (typeof ORDEM_ETAPAS)[number]);
   return (

@@ -17,9 +17,9 @@ const ITENS = [
   { href: '/regional', label: 'Painel', icon: LayoutDashboard },
   { href: '/regional/equipe', label: 'Minha Equipe', icon: Users },
   { href: '/regional/leads', label: 'Leads', icon: Zap },
-  { href: '/regional/comissoes', label: 'Comissoes', icon: BarChart3 },
+  { href: '/regional/comissoes', label: 'Comissões', icon: BarChart3 },
   { href: '/regional/cobranca', label: 'Inadimplencia', icon: AlertTriangle },
-  { href: '/regional/fila', label: 'Fila de Cobranca', icon: ListChecks },
+  { href: '/regional/fila', label: 'Fila de Cobrança', icon: ListChecks },
   { href: '/regional/financeiro', label: 'Financeiro', icon: Wallet },
   { href: '/regional/comunicados', label: 'Comunicados', icon: Megaphone },
 ];

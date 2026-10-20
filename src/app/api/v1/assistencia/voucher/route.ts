@@ -21,12 +21,12 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: Request) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   const { data: perfil } = await supabase.from('usuarios').select('papel').eq('id', user.id).maybeSingle();
-  if (!perfil) return NextResponse.json({ error: 'Sem permissao' }, { status: 403 });
+  if (!perfil) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
 
   const body = (await request.json().catch(() => ({}))) as { acionamento_id?: string; enviar_email?: boolean };
-  if (!body.acionamento_id) return NextResponse.json({ error: 'acionamento_id obrigatorio' }, { status: 400 });
+  if (!body.acionamento_id) return NextResponse.json({ error: 'acionamento_id obrigatório' }, { status: 400 });
 
   const { data: a, error } = await supabase
     .from('acionamentos_assistencia')
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     .eq('id', body.acionamento_id)
     .maybeSingle();
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  if (!a) return NextResponse.json({ error: 'Acionamento nao encontrado' }, { status: 404 });
+  if (!a) return NextResponse.json({ error: 'Acionamento não encontrado' }, { status: 404 });
 
   type Rel = typeof a & {
     servicos_assistencia?: { descricao: string } | null;
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
   const dados: DadosVoucher = {
     codigo_os: rel.codigo_os,
     protocolo: rel.protocolo ?? '',
-    servico: rel.servicos_assistencia?.descricao ?? 'Assistencia 24h',
+    servico: rel.servicos_assistencia?.descricao ?? 'Assistência 24h',
     empresa: empresa?.nome_fantasia ?? null,
     prestador: rel.fornecedores?.razao_social ?? '',
     associado: rel.clientes?.nome_razao_social ?? '',
@@ -105,7 +105,7 @@ export async function POST(request: Request) {
         body: JSON.stringify({
           from: remetenteEmail(),
           to: [destinatario],
-          subject: `Ordem de Servico ${dados.codigo_os} — ${dados.servico} (${dados.veiculo.placa})`,
+          subject: `Ordem de Serviço ${dados.codigo_os} — ${dados.servico} (${dados.veiculo.placa})`,
           html: montarVoucherHtml(dados),
         }),
       });

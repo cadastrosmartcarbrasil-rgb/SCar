@@ -96,7 +96,7 @@ describe('avaliarBloqueio — trava financeira/cadastral + limite', () => {
 
   it('veiculo inexistente bloqueia sem alcada', () => {
     const r = avaliarBloqueio(null);
-    expect(r).toEqual({ bloqueado: true, motivos: ['Veiculo nao localizado'], exigeLiberacao: false });
+    expect(r).toEqual({ bloqueado: true, motivos: ['Veículo não localizado'], exigeLiberacao: false });
   });
 });
 
@@ -198,10 +198,10 @@ describe('rota e navegacao no voucher (0031)', () => {
   it('o comunicado leva rota, navegacao e o aviso de trajeto autorizado', () => {
     const txt = montarVoucherTexto(base);
     expect(txt).toContain('Rota autorizada: 72,4 km · 1h35');
-    expect(txt).toContain('Navegar ate o resgate: https://waze.com/ul?ll=');
+    expect(txt).toContain('Navegar até o resgate: https://waze.com/ul?ll=');
     expect(txt).toContain('Rota completa (Google Maps): https://www.google.com/maps/dir/');
     expect(txt).toContain('estritamente as cadastradas nesta OS');
-    expect(txt).toContain('trecho nao autorizado nao e pago');
+    expect(txt).toContain('trecho não autorizado não é pago');
   });
 
   it('sem coordenada nem endereco, o voucher nao inventa link', () => {

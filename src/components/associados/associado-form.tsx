@@ -16,7 +16,7 @@ const SITUACOES: { value: StatusCliente; label: string }[] = [
   { value: 'ativo', label: 'Ativo' },
   { value: 'inativo', label: 'Inativo' },
   { value: 'suspenso', label: 'Suspenso' },
-  { value: 'excluido', label: 'Excluido' },
+  { value: 'excluido', label: 'Excluído' },
 ];
 
 export type FormAssociado = Omit<Partial<ClientesRow>, 'endereco'> & { endereco: EnderecoAssociado };
@@ -51,7 +51,7 @@ export function AssociadoForm({
     setBuscandoCep(true);
     const res = await buscarCep(end.cep ?? '');
     setBuscandoCep(false);
-    if (!res) return toast.error('CEP nao encontrado');
+    if (!res) return toast.error('CEP não encontrado');
     setEnd({
       logradouro: res.logradouro || end.logradouro,
       bairro: res.bairro || end.bairro,
@@ -64,7 +64,7 @@ export function AssociadoForm({
     e.preventDefault();
     if (!form.nome_razao_social) return toast.error('Informe o nome/razao social');
     if (!validarDocumento(form.cpf_cnpj ?? '', tipo)) {
-      return toast.error(tipo === 'PF' ? 'CPF invalido' : 'CNPJ invalido');
+      return toast.error(tipo === 'PF' ? 'CPF inválido' : 'CNPJ inválido');
     }
     salvar.mutate(form, {
       onSuccess: () => {
@@ -73,7 +73,7 @@ export function AssociadoForm({
       },
       onError: (err) => {
         const msg = (err as Error).message;
-        toast.error(msg.includes('cpf_cnpj') ? 'CPF/CNPJ ja cadastrado' : msg);
+        toast.error(msg.includes('cpf_cnpj') ? 'CPF/CNPJ já cadastrado' : msg);
       },
     });
   }
@@ -81,7 +81,7 @@ export function AssociadoForm({
   return (
     <form onSubmit={submit} className="space-y-4">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <FormField label="Situacao">
+        <FormField label="Situação">
           <Select value={form.status ?? 'ativo'} onChange={(e) => setForm({ ...form, status: e.target.value as StatusCliente })}>
             {SITUACOES.map((s) => (
               <option key={s.value} value={s.value}>
@@ -92,13 +92,13 @@ export function AssociadoForm({
         </FormField>
         <FormField label="Tipo de pessoa">
           <Select value={tipo} onChange={(e) => setForm({ ...form, tipo_pessoa: e.target.value as TipoPessoa })}>
-            <option value="PF">Pessoa Fisica (PF)</option>
-            <option value="PJ">Pessoa Juridica (PJ)</option>
+            <option value="PF">Pessoa Física (PF)</option>
+            <option value="PJ">Pessoa Jurídica (PJ)</option>
           </Select>
         </FormField>
       </div>
 
-      <FormField label={tipo === 'PF' ? 'Nome completo *' : 'Razao social *'}>
+      <FormField label={tipo === 'PF' ? 'Nome completo *' : 'Razão social *'}>
         <Input value={form.nome_razao_social ?? ''} onChange={(e) => setForm({ ...form, nome_razao_social: e.target.value })} />
       </FormField>
 
@@ -138,13 +138,13 @@ export function AssociadoForm({
               <Input value={form.rg_ie ?? ''} onChange={(e) => setForm({ ...form, rg_ie: e.target.value })} />
             </FormField>
           </div>
-          <FormField label="Nome da mae">
+          <FormField label="Nome da mãe">
             <Input value={form.nome_mae ?? ''} onChange={(e) => setForm({ ...form, nome_mae: e.target.value })} />
           </FormField>
         </>
       )}
       {tipo === 'PJ' && (
-        <FormField label="Inscricao Estadual">
+        <FormField label="Inscrição Estadual">
           <Input value={form.rg_ie ?? ''} onChange={(e) => setForm({ ...form, rg_ie: e.target.value })} />
         </FormField>
       )}
@@ -179,7 +179,7 @@ export function AssociadoForm({
 
       <div className="rounded-lg border border-slate-200 p-3">
         <p className="mb-2 flex items-center gap-1.5 text-sm font-medium text-slate-600">
-          <MapPin className="h-4 w-4" /> Endereco
+          <MapPin className="h-4 w-4" /> Endereço
         </p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <FormField label="CEP">
@@ -190,7 +190,7 @@ export function AssociadoForm({
           </FormField>
         </div>
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <FormField label="Numero">
+          <FormField label="Número">
             <Input value={end.numero ?? ''} onChange={(e) => setEnd({ numero: e.target.value })} />
           </FormField>
           <FormField label="Complemento" className="col-span-2 sm:col-span-3">
@@ -212,7 +212,7 @@ export function AssociadoForm({
 
       {!form.id && (
         <p className="text-xs text-slate-400">
-          A <strong>matricula</strong> sera gerada automaticamente ao salvar.
+          A <strong>matricula</strong> será gerada automaticamente ao salvar.
         </p>
       )}
 

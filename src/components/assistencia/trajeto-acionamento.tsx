@@ -88,7 +88,7 @@ export function TrajetoAcionamento({
   async function localizar(qual: 'origem' | 'destino') {
     const e = qual === 'origem' ? origem : destino;
     const linha = enderecoLinha(e);
-    if (linha.length < 6) return toast.error('Preencha o endereco antes de localizar no mapa');
+    if (linha.length < 6) return toast.error('Preencha o endereço antes de localizar no mapa');
     setBuscando(qual);
     try {
       const r = await geocodificar.mutateAsync(linha);
@@ -125,7 +125,7 @@ export function TrajetoAcionamento({
 
   const bloco = (qual: 'origem' | 'destino') => {
     const e = qual === 'origem' ? origem : destino;
-    const titulo = qual === 'origem' ? 'Endereco de Origem (local do resgate)' : 'Endereco de Destino';
+    const titulo = qual === 'origem' ? 'Endereço de Origem (local do resgate)' : 'Endereço de Destino';
     const localizado = !!coordenadaDe(e);
     return (
       <div className="rounded-xl border border-slate-200">
@@ -142,11 +142,11 @@ export function TrajetoAcionamento({
               onBlur={(ev) => preencherPorCep(qual, ev.target.value)}
               placeholder="00000-000" />
           </FormField>
-          <FormField label="Endereco" className="sm:col-span-3">
+          <FormField label="Endereço" className="sm:col-span-3">
             <Input value={e.logradouro ?? ''} onChange={(ev) => set(qual, { logradouro: ev.target.value })}
               placeholder="Rua / avenida" />
           </FormField>
-          <FormField label="Numero">
+          <FormField label="Número">
             <Input value={e.numero ?? ''} onChange={(ev) => set(qual, { numero: ev.target.value })} />
           </FormField>
           <FormField label="Bairro" className="sm:col-span-2">
@@ -158,7 +158,7 @@ export function TrajetoAcionamento({
           <FormField label="UF">
             <Input maxLength={2} value={e.uf ?? ''} onChange={(ev) => set(qual, { uf: ev.target.value.toUpperCase() })} />
           </FormField>
-          <FormField label="Referencia" className="sm:col-span-4">
+          <FormField label="Referência" className="sm:col-span-4">
             <Input value={e.referencia ?? ''} onChange={(ev) => set(qual, { referencia: ev.target.value })}
               placeholder="Ex.: em frente ao posto" />
           </FormField>
@@ -192,7 +192,7 @@ export function TrajetoAcionamento({
 
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-superficie px-3 py-2">
             <div>
-              <p className="text-[11px] uppercase tracking-wide text-slate-400">Distancia da rota</p>
+              <p className="text-[11px] uppercase tracking-wide text-slate-400">Distância da rota</p>
               <p className="tnum text-lg font-semibold text-slate-800">
                 {rota ? rotuloRota(rota.distancia_km, rota.duracao_min) : '—'}
               </p>
@@ -205,7 +205,7 @@ export function TrajetoAcionamento({
 
           {simulacao && (
             <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-              <p className="font-semibold">Simulacao do KM excedente</p>
+              <p className="font-semibold">Simulação do KM excedente</p>
               <p className="tnum">
                 {rota!.distancia_km} km de rota − {servico!.km_franquia} km de franquia ={' '}
                 <b>{simulacao.km} km</b> × {formatCurrency(simulacao.unit)} ={' '}
@@ -214,7 +214,7 @@ export function TrajetoAcionamento({
             </div>
           )}
           {servico && !servico.cobra_km_excedente && (
-            <p className="text-xs text-slate-400">Este servico nao cobra KM excedente.</p>
+            <p className="text-xs text-slate-400">Este serviço não cobra KM excedente.</p>
           )}
 
           {(links.googleRota || links.wazeOrigem) && (
@@ -228,7 +228,7 @@ export function TrajetoAcionamento({
               {links.wazeOrigem && (
                 <a href={links.wazeOrigem} target="_blank" rel="noreferrer"
                   className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">
-                  <Navigation className="h-3.5 w-3.5" /> Navegar ate o resgate (Waze)
+                  <Navigation className="h-3.5 w-3.5" /> Navegar até o resgate (Waze)
                 </a>
               )}
             </div>

@@ -181,6 +181,6 @@ describe('perfil personalizado (0130)', () => {
   it('diferenca entre papel e perfil usa as bases', () => {
     const conc = { [ID]: { 'veiculos.excluir': false } };
     const { perde } = diferencaEntrePapeis('financeiro', ID, conc, bases);
-    expect(perde).toContain('Veiculos: Excluir');
+    expect(perde).toContain('Veículos: Excluir');
   });
 });

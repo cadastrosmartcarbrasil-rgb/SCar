@@ -109,7 +109,7 @@ export function useSalvarApelido() {
         .insert({ cor_id: v.cor_id, apelido });
       // O unique e no APELIDO: ele ja pertence a outra cor.
       if (error?.code === '23505') {
-        throw new Error(`"${apelido}" ja esta apontando para outra cor.`);
+        throw new Error(`"${apelido}" já está apontando para outra cor.`);
       }
       if (error) throw error;
     },

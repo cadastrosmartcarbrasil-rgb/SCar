@@ -189,13 +189,13 @@ describe('montarPrevia', () => {
     const p = montarPrevia([base({ regional_texto: 'Regional Sudeste' })], DE_PARA, []);
     expect(p.bloqueados).toBe(1);
     expect(p.linhas[0].regional_id).toBeNull();
-    expect(p.linhas[0].motivo).toContain('nao esta mapeada');
+    expect(p.linhas[0].motivo).toContain('não está mapeada');
   });
 
   it('sem CPF e sem e-mail BLOQUEIA — reimportar duplicaria a pessoa', () => {
     const p = montarPrevia([base({ documento: null, email: null })], DE_PARA, []);
     expect(p.bloqueados).toBe(1);
-    expect(p.linhas[0].motivo).toContain('nao ha como reconhecer');
+    expect(p.linhas[0].motivo).toContain('não há como reconhecer');
   });
 
   it('repetido DENTRO da planilha bloqueia a segunda e aponta a linha irma', () => {

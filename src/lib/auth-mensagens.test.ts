@@ -11,11 +11,11 @@ describe('mensagemDeLogin', () => {
   it('separa o que a pessoa resolve sozinha do que precisa do administrador', () => {
     expect(mensagemDeLogin('Email not confirmed')).toMatch(/administrador/);
     expect(mensagemDeLogin('Too many requests')).toMatch(/Espere um minuto/);
-    expect(mensagemDeLogin('Failed to fetch')).toMatch(/Sem conexao/);
+    expect(mensagemDeLogin('Failed to fetch')).toMatch(/Sem conexão/);
   });
   it('nunca devolve texto vazio nem repassa o ingles cru', () => {
-    expect(mensagemDeLogin(null)).toBe('Nao foi possivel entrar. Tente de novo.');
-    expect(mensagemDeLogin('Some brand new gotrue error')).toBe('Nao foi possivel entrar. Tente de novo.');
+    expect(mensagemDeLogin(null)).toBe('Não foi possível entrar. Tente de novo.');
+    expect(mensagemDeLogin('Some brand new gotrue error')).toBe('Não foi possível entrar. Tente de novo.');
   });
 });
 

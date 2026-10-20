@@ -34,7 +34,7 @@ export function SeloExtras({ extras }: { extras?: ExtraUsuario[] }) {
   const n = (extras ?? []).filter((e) => extraVigente(e.expira_em, hoje)).length;
   if (!n) return null;
   return (
-    <span title="Permissoes concedidas a esta pessoa alem do papel"
+    <span title="Permissões concedidas a esta pessoa além do papel"
       className="ml-1 rounded bg-cyan-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-cyan-800">
       +{n} extra{n > 1 ? 's' : ''}
     </span>
@@ -85,17 +85,17 @@ export function ModalPermissoesExtras({ usuario, onClose }: { usuario: UsuarioLi
 
   function gravar() {
     if (!usuario) return;
-    if (entram.length > 0 && !motivo.trim()) return toast.error('Informe o motivo da permissao extra.');
-    if (validade && validade < hoje) return toast.error('A validade ja passou.');
+    if (entram.length > 0 && !motivo.trim()) return toast.error('Informe o motivo da permissão extra.');
+    if (validade && validade < hoje) return toast.error('A validade já passou.');
     const linhas = [
       ...entram.map((k) => `+ ${rotuloDaChave(k)}${marcados[k] ? ` (ate ${dataBR(marcados[k])})` : ''}`),
       ...saem.map((k) => `- ${rotuloDaChave(k)}`),
     ];
-    if (!confirm(`Salvar as permissoes extras de ${usuario.nome}?\n\n${linhas.join('\n') || 'Ajuste de validade'}\n\nVale na hora, so para esta pessoa.`)) return;
+    if (!confirm(`Salvar as permissões extras de ${usuario.nome}?\n\n${linhas.join('\n') || 'Ajuste de validade'}\n\nVale na hora, só para esta pessoa.`)) return;
     salvar.mutate(
       { usuarioId: usuario.id, extras: Object.entries(marcados).map(([chave, expira_em]) => ({ chave, expira_em })), motivo },
       {
-        onSuccess: (n) => { toast.success(`${n} alteracao(oes) nas permissoes de ${usuario.nome}`); onClose(); },
+        onSuccess: (n) => { toast.success(`${n} alteração(oes) nas permissões de ${usuario.nome}`); onClose(); },
         onError: (e) => toast.error(e.message),
       },
     );
@@ -104,14 +104,14 @@ export function ModalPermissoesExtras({ usuario, onClose }: { usuario: UsuarioLi
   const Celula = ({ k, aplica }: { k: string; aplica: boolean }) => {
     if (!aplica) return <span className="text-slate-200" aria-hidden>·</span>;
     if (doPapel(k)) {
-      return <span title="Ja vem do papel"><Check className="mx-auto h-4 w-4 text-emerald-600" aria-label="Pelo papel" /></span>;
+      return <span title="Já vem do papel"><Check className="mx-auto h-4 w-4 text-emerald-600" aria-label="Pelo papel" /></span>;
     }
-    if (!chavePermiteExtra(k) || ehAdmin) return <Lock className="mx-auto h-3 w-3 text-slate-300" aria-label="Nao ajustavel" />;
+    if (!chavePermiteExtra(k) || ehAdmin) return <Lock className="mx-auto h-3 w-3 text-slate-300" aria-label="Não ajustável" />;
     const on = k in marcados;
     const venc = on && marcados[k] && !extraVigente(marcados[k], hoje);
     return (
       <button type="button" onClick={() => alternar(k)} aria-pressed={on}
-        title={on ? `Extra${marcados[k] ? ` ate ${dataBR(marcados[k])}` : ''} — clique para retirar` : 'Conceder como extra'}
+        title={on ? `Extra${marcados[k] ? ` até ${dataBR(marcados[k])}` : ''} — clique para retirar` : 'Conceder como extra'}
         className={cn('inline-flex h-6 w-6 items-center justify-center rounded border transition',
           on ? (venc ? 'border-amber-500 bg-amber-400 text-white' : 'border-cyan-600 bg-cyan-600 text-white')
             : 'border-slate-300 bg-superficie hover:border-cyan-500')}>
@@ -122,22 +122,22 @@ export function ModalPermissoesExtras({ usuario, onClose }: { usuario: UsuarioLi
 
   return (
     <Modal open={!!usuario} onClose={onClose} tamanho="xl"
-      title={`Permissoes extras — ${usuario.nome}`}
+      title={`Permissões extras — ${usuario.nome}`}
       subtitulo={`Perfil ${rotuloDoPerfil(usuario)}. O que vem do papel aparece com ✓; marque o que esta pessoa recebe A MAIS.`}>
       {ehAdmin ? (
-        <p className="text-sm text-slate-600">O administrador ja tem todas as permissoes.</p>
+        <p className="text-sm text-slate-600">O administrador já tem todas as permissões.</p>
       ) : isLoading ? (
         <p className="py-6 text-center text-sm text-slate-400">Carregando...</p>
       ) : (
         <div className="space-y-3">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <FormField label="Motivo (obrigatorio ao conceder)" className="sm:col-span-2">
-              <Input value={motivo} caixa="original" placeholder="Ex.: cobre o gestor nas ferias"
+            <FormField label="Motivo (obrigatório ao conceder)" className="sm:col-span-2">
+              <Input value={motivo} caixa="original" placeholder="Ex.: cobre o gestor nas férias"
                 onChange={(e) => setMotivo(e.target.value)} />
             </FormField>
-            <FormField label="Valido ate (opcional)">
+            <FormField label="Válido até (opcional)">
               <Input type="date" value={validade} min={hoje} onChange={(e) => setValidade(e.target.value)} />
-              <p className="mt-1 text-[11px] text-slate-500">Vale para o que voce marcar agora. Vencido, deixa de valer sozinho.</p>
+              <p className="mt-1 text-[11px] text-slate-500">Vale para o que você marcar agora. Vencido, deixa de valer sozinho.</p>
             </FormField>
           </div>
 
@@ -145,7 +145,7 @@ export function ModalPermissoesExtras({ usuario, onClose }: { usuario: UsuarioLi
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                  <th className="sticky left-0 bg-slate-50 px-3 py-2 text-left">Modulo</th>
+                  <th className="sticky left-0 bg-slate-50 px-3 py-2 text-left">Módulo</th>
                   {ACOES.map((a) => <th key={a} className="px-2 py-2 text-center">{ROTULO_ACAO[a]}</th>)}
                 </tr>
               </thead>
@@ -167,7 +167,7 @@ export function ModalPermissoesExtras({ usuario, onClose }: { usuario: UsuarioLi
           </div>
 
           <div>
-            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Alcadas especiais</p>
+            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Alçadas especiais</p>
             <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3">
               {ALCADAS.map((al) => (
                 <div key={al.chave} className="flex items-start gap-2 text-xs text-slate-600">
@@ -186,7 +186,7 @@ export function ModalPermissoesExtras({ usuario, onClose }: { usuario: UsuarioLi
                   <li key={e.chave} className="text-[12px] text-slate-600">
                     <b className="font-medium text-slate-700">{rotuloDaChave(e.chave)}</b>
                     {e.expira_em
-                      ? <> · ate {dataBR(e.expira_em)}{!extraVigente(e.expira_em, hoje) && <span className="text-amber-700"> (vencido)</span>}</>
+                      ? <> · até {dataBR(e.expira_em)}{!extraVigente(e.expira_em, hoje) && <span className="text-amber-700"> (vencido)</span>}</>
                       : ' · sem prazo'}
                     {e.motivo && <span className="text-slate-400"> · {e.motivo}</span>}
                   </li>
@@ -196,9 +196,9 @@ export function ModalPermissoesExtras({ usuario, onClose }: { usuario: UsuarioLi
           )}
 
           <p className="text-xs leading-relaxed text-slate-400">
-            O extra <b className="text-slate-500">so soma</b>: para tirar algo de alguem, troque o papel. Ele vale
-            para esta pessoa e obedece a mesma conferencia do banco que o perfil (inclusive Excluir). Modulos com
-            cadeado sao estrutura do sistema. Toda concessao fica registrada (quem, quando, motivo).
+            O extra <b className="text-slate-500">só soma</b>: para tirar algo de alguém, troque o papel. Ele vale
+            para esta pessoa e obedece a mesma conferência do banco que o perfil (inclusive Excluir). Módulos com
+            cadeado são estrutura do sistema. Toda concessão fica registrada (quem, quando, motivo).
           </p>
 
           <div className="flex justify-end gap-2 border-t border-slate-100 pt-3">
@@ -252,7 +252,7 @@ export function ModalCopiarPerfil({ destino, usuarios, regionalNome, onClose }: 
       resumo.ganha.length ? `Ganha ${resumo.ganha.length} permissao(oes)` : null,
       resumo.perde.length ? `Perde ${resumo.perde.length} permissao(oes)` : null,
     ].filter(Boolean);
-    if (!confirm(`Copiar o perfil de ${origem.nome} para ${destino.nome}?\n\n${linhas.join('\n')}\n\nOs extras atuais de ${destino.nome} sao substituidos. Vale na hora.`)) return;
+    if (!confirm(`Copiar o perfil de ${origem.nome} para ${destino.nome}?\n\n${linhas.join('\n')}\n\nOs extras atuais de ${destino.nome} são substituídos. Vale na hora.`)) return;
     copiar.mutate({ origemId: origem.id, destinoId: destino.id, copiarUnidade, motivo }, {
       onSuccess: (r) => {
         if (r?.aviso) toast.warning(r.aviso);
@@ -266,11 +266,11 @@ export function ModalCopiarPerfil({ destino, usuarios, regionalNome, onClose }: 
   return (
     <Modal open={!!destino} onClose={onClose} tamanho="lg"
       title={`Copiar perfil para ${destino.nome}`}
-      subtitulo="O destino passa a ter o mesmo acesso da origem: papel, permissoes extras, unidades de supervisor e, se marcado, a unidade.">
+      subtitulo="O destino passa a ter o mesmo acesso da origem: papel, permissões extras, unidades de supervisor e, se marcado, a unidade.">
       <div className="space-y-3">
         <FormField label="Copiar o perfil de *">
           <Select value={origemId} onChange={(e) => setOrigemId(e.target.value)}>
-            <option value="">-- escolha o usuario --</option>
+            <option value="">-- escolha o usuário --</option>
             {opcoes.map((u) => (
               <option key={u.id} value={u.id}>
                 {u.nome} · {rotuloDoPerfil(u)}{u.regional_nome ? ` · ${u.regional_nome}` : ''}{!u.ativo ? ' (inativo)' : ''}
@@ -282,7 +282,7 @@ export function ModalCopiarPerfil({ destino, usuarios, regionalNome, onClose }: 
           <input type="checkbox" checked={copiarUnidade} onChange={(e) => setCopiarUnidade(e.target.checked)}
             className="mt-0.5 h-4 w-4 rounded border-slate-300" />
           <span>
-            Copiar tambem a unidade
+            Copiar também a unidade
             <span className="block text-[11px] text-slate-500">
               Desmarcado, {destino.nome} continua em {regionalNome(destino.regional_id)}.
             </span>
@@ -303,12 +303,12 @@ export function ModalCopiarPerfil({ destino, usuarios, regionalNome, onClose }: 
               {' · '}<b className="text-slate-700">Unidade:</b> {regionalNome(unidadeFinal)}
               {' · '}<b className="text-slate-700">Extras copiados:</b> {resumo.extrasCopiados}
             </p>
-            {origem.papel === 'supervisor' && <p>As unidades de supervisor de {origem.nome} tambem sao copiadas.</p>}
+            {origem.papel === 'supervisor' && <p>As unidades de supervisor de {origem.nome} também são copiadas.</p>}
             {origem.papel === 'admin' && (
-              <p className="font-medium text-amber-700">Atencao: {destino.nome} vira ADMINISTRADOR, com acesso total.</p>
+              <p className="font-medium text-amber-700">Atenção: {destino.nome} vira ADMINISTRADOR, com acesso total.</p>
             )}
             {origem.papel === 'gestor_regional' && !unidadeFinal && (
-              <p className="text-amber-700">O gestor regional so funciona com uma unidade: marque &quot;copiar a unidade&quot; ou ajuste depois.</p>
+              <p className="text-amber-700">O gestor regional só funciona com uma unidade: marque &quot;copiar a unidade&quot; ou ajuste depois.</p>
             )}
             {resumo.ganha.length > 0 && (
               <p><b className="text-emerald-700">Ganha ({resumo.ganha.length}):</b> {resumo.ganha.join(' · ')}</p>
@@ -316,7 +316,7 @@ export function ModalCopiarPerfil({ destino, usuarios, regionalNome, onClose }: 
             {resumo.perde.length > 0 && (
               <p><b className="text-red-700">Perde ({resumo.perde.length}):</b> {resumo.perde.join(' · ')}</p>
             )}
-            {resumo.ganha.length === 0 && resumo.perde.length === 0 && <p>O acesso efetivo nao muda.</p>}
+            {resumo.ganha.length === 0 && resumo.perde.length === 0 && <p>O acesso efetivo não muda.</p>}
           </div>
         )}
 

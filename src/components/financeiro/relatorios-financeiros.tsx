@@ -17,9 +17,9 @@ type Tipo = 'extrato' | 'fluxo' | 'demonstrativo';
 type Status = '' | 'PAGO' | 'PENDENTE' | 'ATRASADO' | 'CONCILIADO';
 
 const TIPOS: { v: Tipo; r: string; d: string }[] = [
-  { v: 'extrato', r: 'Extrato bancario', d: 'Movimentos realizados, com saldo, da conta ou consolidado' },
+  { v: 'extrato', r: 'Extrato bancário', d: 'Movimentos realizados, com saldo, da conta ou consolidado' },
   { v: 'fluxo', r: 'Fluxo de caixa', d: 'Realizado x a realizar, dia a dia, com o saldo projetado' },
-  { v: 'demonstrativo', r: 'Plano de contas x centro de custo', d: 'Realizado, a realizar e vencido por classificacao' },
+  { v: 'demonstrativo', r: 'Plano de contas x centro de custo', d: 'Realizado, a realizar e vencido por classificação' },
 ];
 
 /**
@@ -125,9 +125,9 @@ function RelExtrato({ periodo, conta, centro, categoria, status, filtros }: {
   const ent = somarMoeda(...l.map((x) => Number(x.entrada)));
   const sai = somarMoeda(...l.map((x) => Number(x.saida)));
   const tabela = (): TabelaExportavel => ({
-    titulo: 'Extrato bancario',
+    titulo: 'Extrato bancário',
     subtitulo: `${dataBR(periodo.inicio)} a ${dataBR(periodo.fim)} · ${filtros} · saldo anterior ${Number(ini ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-    cabecalho: ['Data', 'Conta', 'Descricao', 'Contraparte', 'Documento', 'Plano de contas', 'Centro de custo', 'Entrada', 'Saida', 'Saldo', 'Conciliado'],
+    cabecalho: ['Data', 'Conta', 'Descrição', 'Contraparte', 'Documento', 'Plano de contas', 'Centro de custo', 'Entrada', 'Saída', 'Saldo', 'Conciliado'],
     linhas: l.map((x) => [dataBR(x.data), x.conta, x.descricao ?? '', x.contraparte ?? '', x.documento ?? '',
       x.categoria_codigo ? `${x.categoria_codigo} ${x.categoria}` : '', x.centro_custo ?? '',
       Number(x.entrada) || '', Number(x.saida) || '', x.saldo === null ? '' : Number(x.saldo), x.conciliado ? 'sim' : 'nao']),
@@ -136,17 +136,17 @@ function RelExtrato({ periodo, conta, centro, categoria, status, filtros }: {
   });
   return (
     <Card>
-      <Cabecalho titulo="Extrato bancario" filtros={filtros} periodo={periodo} nome={`extrato-${periodo.inicio}-${periodo.fim}`} tabela={tabela} vazio={!l.length} />
+      <Cabecalho titulo="Extrato bancário" filtros={filtros} periodo={periodo} nome={`extrato-${periodo.inicio}-${periodo.fim}`} tabela={tabela} vazio={!l.length} />
       <CardContent className="space-y-3">
         {error && <p className="text-sm text-rose-700">{mensagemErro(error)}</p>}
         <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
           <Resumo r="Saldo anterior" v={ini ?? 0} />
           <Resumo r="Entradas" v={ent} />
-          <Resumo r="Saidas" v={-sai} />
+          <Resumo r="Saídas" v={-sai} />
           <Resumo r="Saldo no fim" v={fim ?? 0} />
         </div>
         <Tabela carregando={isLoading} vazio={!l.length}
-          cab={['Data', 'Conta', 'Descricao', 'Plano', 'Centro', 'Entrada', 'Saida', 'Saldo']}
+          cab={['Data', 'Conta', 'Descrição', 'Plano', 'Centro', 'Entrada', 'Saída', 'Saldo']}
           linhas={l.map((x) => [dataBR(x.data), x.conta, x.descricao ?? '', x.categoria_codigo ?? '', x.centro_custo ?? '',
             Number(x.entrada) ? <Dinheiro v={x.entrada} /> : '', Number(x.saida) ? <Dinheiro v={-Number(x.saida)} /> : '',
             x.saldo === null ? '' : <Dinheiro v={x.saldo} />])} numericas={[5, 6, 7]} />
@@ -163,8 +163,8 @@ function RelFluxo({ periodo, conta, filtros }: { periodo: Periodo; conta: string
   const t = totaisFluxo(data ?? []);
   const tabela = (): TabelaExportavel => ({
     titulo: 'Fluxo de caixa — realizado x a realizar',
-    subtitulo: `${dataBR(periodo.inicio)} a ${dataBR(periodo.fim)} · ${filtros} · realizado ate ${dataBR(hoje)}`,
-    cabecalho: ['Dia', 'Situacao', 'Recebido', 'Pago', 'A receber', 'Boletos previstos', 'A pagar', 'Vencido a pagar', 'Saldo'],
+    subtitulo: `${dataBR(periodo.inicio)} a ${dataBR(periodo.fim)} · ${filtros} · realizado até ${dataBR(hoje)}`,
+    cabecalho: ['Dia', 'Situação', 'Recebido', 'Pago', 'A receber', 'Boletos previstos', 'A pagar', 'Vencido a pagar', 'Saldo'],
     linhas: proj.map((d) => [dataBR(d.dia), d.situacao === 'passado' ? 'Realizado' : d.situacao === 'hoje' ? 'Hoje' : 'A realizar',
       d.realizado_entrada, d.realizado_saida, d.previsto_entrada, d.previsto_boletos, d.previsto_saida, d.vencido_saida, d.saldo]),
     rodape: ['Totais', '', t.realizadoEntrada, t.realizadoSaida, t.previstoEntrada, t.previstoBoletos, t.previstoSaida, t.vencidoSaida, proj.at(-1)?.saldo ?? ''],
@@ -183,7 +183,7 @@ function RelFluxo({ periodo, conta, filtros }: { periodo: Periodo; conta: string
           <Resumo r="Saldo projetado no fim" v={proj.at(-1)?.saldo ?? ini ?? 0} />
         </div>
         <Tabela carregando={isLoading} vazio={!proj.length}
-          cab={['Dia', 'Situacao', 'Recebido', 'Pago', 'A receber', 'A pagar', 'Saldo']}
+          cab={['Dia', 'Situação', 'Recebido', 'Pago', 'A receber', 'A pagar', 'Saldo']}
           linhas={proj.map((d) => [dataBR(d.dia), d.situacao === 'passado' ? 'Realizado' : d.situacao === 'hoje' ? 'Hoje' : 'A realizar',
             <Dinheiro key="a" v={d.realizado_entrada} />, <Dinheiro key="b" v={-d.realizado_saida} />,
             <Dinheiro key="c" v={d.previsto_entrada + d.previsto_boletos} />, <Dinheiro key="d" v={-(d.previsto_saida + d.vencido_saida)} />,
@@ -206,7 +206,7 @@ function RelDemonstrativo({ periodo, conta, centro, categoria, status, filtros }
   const tabela = (): TabelaExportavel => ({
     titulo: 'Demonstrativo por plano de contas e centro de custo',
     subtitulo: `${dataBR(periodo.inicio)} a ${dataBR(periodo.fim)} · ${filtros} · valores com sinal (receita +, despesa -)`,
-    cabecalho: ['Codigo', 'Plano de contas', 'Grupo', 'Centro de custo', 'Realizado', 'A realizar', 'Vencido', 'Lancamentos'],
+    cabecalho: ['Código', 'Plano de contas', 'Grupo', 'Centro de custo', 'Realizado', 'A realizar', 'Vencido', 'Lançamentos'],
     linhas: l.map((x) => [x.codigo, x.categoria, x.grupo, x.centro_custo, Number(x.realizado), Number(x.a_realizar), Number(x.vencido), x.quantidade]),
     rodape: ['', 'Total', '', '', tr, ta, tv, l.reduce((a, x) => a + x.quantidade, 0)],
     colunasMoeda: [4, 5, 6],
@@ -216,7 +216,7 @@ function RelDemonstrativo({ periodo, conta, centro, categoria, status, filtros }
       <Cabecalho titulo="Plano de contas x centro de custo" filtros={filtros} periodo={periodo} nome={`demonstrativo-${periodo.inicio}-${periodo.fim}`} tabela={tabela} vazio={!l.length} />
       <CardContent className="space-y-3">
         {error && <p className="text-sm text-rose-700">{mensagemErro(error)}</p>}
-        {conta && <p className="text-xs text-slate-500">Com conta escolhida, so o realizado: o que esta a realizar ainda nao tem conta.</p>}
+        {conta && <p className="text-xs text-slate-500">Com conta escolhida, só o realizado: o que está a realizar ainda não tem conta.</p>}
         <div className="grid grid-cols-3 gap-3 text-sm">
           <Resumo r="Realizado" v={tr} sinal />
           <Resumo r="A realizar" v={ta} sinal />
@@ -245,7 +245,7 @@ function Tabela({ cab, linhas, numericas, carregando, vazio }: {
   cab: string[]; linhas: React.ReactNode[][]; numericas: number[]; carregando: boolean; vazio: boolean;
 }) {
   if (carregando) return <p className="py-6 text-center text-sm text-slate-400">Carregando...</p>;
-  if (vazio) return <Vazio icon={FileBarChart} titulo="Nada no periodo" descricao="Ajuste o periodo ou os filtros." />;
+  if (vazio) return <Vazio icon={FileBarChart} titulo="Nada no período" descricao="Ajuste o período ou os filtros." />;
   const n = new Set(numericas);
   return (
     <div className="max-h-[560px] overflow-auto rounded-lg border border-slate-200">

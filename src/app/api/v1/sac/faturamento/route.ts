@@ -9,13 +9,13 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: Request) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   const { data: perfil } = await supabase.from('usuarios').select('papel').eq('id', user.id).maybeSingle();
-  if (!perfil) return NextResponse.json({ error: 'Sem permissao' }, { status: 403 });
+  if (!perfil) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
 
   const body = (await request.json()) as { veiculo_id?: string; tipo?: TipoFaturamento };
   if (!body.veiculo_id || (body.tipo !== 'AGRUPADO_ASSOCIADO' && body.tipo !== 'INDIVIDUAL_VEICULO')) {
-    return NextResponse.json({ error: 'Parametros invalidos' }, { status: 400 });
+    return NextResponse.json({ error: 'Parâmetros inválidos' }, { status: 400 });
   }
 
   const { data, error } = await supabase.rpc('definir_faturamento_veiculo', {

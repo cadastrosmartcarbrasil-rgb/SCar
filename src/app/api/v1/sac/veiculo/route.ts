@@ -9,17 +9,17 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   const { data: perfil } = await supabase.from('usuarios').select('papel').eq('id', user.id).maybeSingle();
-  if (!perfil) return NextResponse.json({ error: 'Sem permissao' }, { status: 403 });
+  if (!perfil) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
 
   const veiculoId = new URL(request.url).searchParams.get('veiculo_id');
-  if (!veiculoId) return NextResponse.json({ error: 'veiculo_id obrigatorio' }, { status: 400 });
+  if (!veiculoId) return NextResponse.json({ error: 'veiculo_id obrigatório' }, { status: 400 });
 
   const { data: veiculo, error: erroVeiculo } = await supabase
     .from('veiculos').select('*').eq('id', veiculoId).maybeSingle();
   if (erroVeiculo) return NextResponse.json({ error: erroVeiculo.message }, { status: 500 });
-  if (!veiculo) return NextResponse.json({ error: 'Veiculo nao encontrado' }, { status: 404 });
+  if (!veiculo) return NextResponse.json({ error: 'Veículo não encontrado' }, { status: 404 });
 
   const { data: plano } = veiculo.plano_protecao_id
     ? await supabase.from('planos_protecao').select('nome').eq('id', veiculo.plano_protecao_id).maybeSingle()

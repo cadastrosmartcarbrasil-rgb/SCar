@@ -279,7 +279,7 @@ export function useCreateUsuario() {
         body: JSON.stringify(u),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? 'Falha ao criar usuario');
+      if (!res.ok) throw new Error(json.error ?? 'Falha ao criar usuário');
       return json;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['config', 'usuarios'] }),
@@ -344,7 +344,7 @@ export function useUpdateUsuario() {
         body: JSON.stringify(edicao),
       });
       const json = (await r.json().catch(() => ({}))) as { error?: string; senha_redefinida?: boolean };
-      if (!r.ok) throw new Error(json.error ?? 'Nao foi possivel salvar o usuario.');
+      if (!r.ok) throw new Error(json.error ?? 'Não foi possível salvar o usuário.');
       return { senha_redefinida: !!json.senha_redefinida };
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['config', 'usuarios'] }),

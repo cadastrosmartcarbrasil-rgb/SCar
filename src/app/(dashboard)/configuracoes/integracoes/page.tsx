@@ -41,7 +41,7 @@ export default function IntegracoesPage() {
     if (!ed?.nome) return toast.error('Informe um nome');
     salvar.mutate(ed, {
       onSuccess: () => {
-        toast.success('Integracao salva');
+        toast.success('Integração salva');
         setAberto(false);
       },
       onError: (err) => toast.error((err as Error).message),
@@ -54,10 +54,10 @@ export default function IntegracoesPage() {
       <div className="flex items-center justify-between">
         <p className="text-sm text-slate-500">
           Cadastre as APIs de banco/gateway (Asaas, PJBank, Cora...) usadas para gerar boletos. As
-          chaves ficam protegidas e sao usadas apenas no servidor.
+          chaves ficam protegidas e são usadas apenas no servidor.
         </p>
         <Button onClick={novo}>
-          <Plus className="h-4 w-4" /> Nova Integracao
+          <Plus className="h-4 w-4" /> Nova Integração
         </Button>
       </div>
 
@@ -71,7 +71,7 @@ export default function IntegracoesPage() {
               <th className="px-4 py-2">Chave (API)</th>
               <th className="px-4 py-2">Regional</th>
               <th className="px-4 py-2">Status</th>
-              <th className="px-4 py-2 text-right">Acoes</th>
+              <th className="px-4 py-2 text-right">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -124,9 +124,9 @@ export default function IntegracoesPage() {
                     </button>
                     <button
                       onClick={() => {
-                        if (confirm(`Excluir a integracao "${i.nome}"?`))
+                        if (confirm(`Excluir a integração "${i.nome}"?`))
                           excluir.mutate(i.id, {
-                            onSuccess: () => toast.success('Integracao excluida'),
+                            onSuccess: () => toast.success('Integração excluída'),
                             onError: (e) => toast.error((e as Error).message),
                           });
                       }}
@@ -141,7 +141,7 @@ export default function IntegracoesPage() {
             {!isLoading && (integracoes ?? []).length === 0 && (
               <tr>
                 <td colSpan={7} className="px-4 py-6 text-center text-slate-400">
-                  Nenhuma integracao cadastrada.
+                  Nenhuma integração cadastrada.
                 </td>
               </tr>
             )}
@@ -152,7 +152,7 @@ export default function IntegracoesPage() {
       <Modal
         open={aberto}
         onClose={() => setAberto(false)}
-        title={ed?.id ? 'Editar Integracao' : 'Nova Integracao Bancaria'} tamanho="lg">
+        title={ed?.id ? 'Editar Integração' : 'Nova Integração Bancária'} tamanho="lg">
         <form onSubmit={submit} className="space-y-3">
           <FormField label="Nome / apelido *">
             <Input value={ed?.nome ?? ''} onChange={(e) => setEd((p) => ({ ...p, nome: e.target.value }))} />
@@ -176,16 +176,16 @@ export default function IntegracoesPage() {
                 onChange={(e) => setEd((p) => ({ ...p, ambiente: e.target.value as AmbienteIntegracao }))}
               >
                 <option value="sandbox">Sandbox (teste)</option>
-                <option value="producao">Producao</option>
+                <option value="producao">Produção</option>
               </Select>
             </FormField>
           </div>
           {credencialNoServidor(ed?.provedor) ? (
             <p className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs text-sky-800">
-              As credenciais do Sicredi ficam nas variaveis <span className="font-mono">SICREDI_*</span> do
-              servidor, nao aqui. O <strong>ambiente</strong> escolhido acima tem de ser o mesmo de{' '}
-              <span className="font-mono">SICREDI_AMBIENTE</span> — se divergirem, a emissao e recusada.
-              Confira no painel do Sicredi, no topo desta pagina.
+              As credenciais do Sicredi ficam nas variáveis <span className="font-mono">SICREDI_*</span> do
+              servidor, não aqui. O <strong>ambiente</strong> escolhido acima tem de ser o mesmo de{' '}
+              <span className="font-mono">SICREDI_AMBIENTE</span> — se divergirem, a emissão é recusada.
+              Confira no painel do Sicredi, no topo desta página.
             </p>
           ) : (
             <>
@@ -241,7 +241,7 @@ export default function IntegracoesPage() {
                 onChange={(e) => setEd((p) => ({ ...p, is_padrao: e.target.checked }))}
                 className="h-4 w-4 rounded border-slate-300"
               />
-              Gateway padrao para emissao
+              Gateway padrão para emissão
             </label>
             <label className="flex items-center gap-2 text-sm text-slate-600">
               <input

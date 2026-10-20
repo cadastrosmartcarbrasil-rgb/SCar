@@ -124,7 +124,7 @@ export function useCalcularMensalidadeVeiculo() {
   const supabase = createClient();
   return useMutation<number, Error, { fipe: number; tipoVeiculoId: string | null; planoId: string | null; opcionaisIds: string[] }>({
     mutationFn: async ({ fipe, tipoVeiculoId, planoId, opcionaisIds }) => {
-      if (!tipoVeiculoId) throw new Error('Selecione a categoria de risco (tipo de veiculo)');
+      if (!tipoVeiculoId) throw new Error('Selecione a categoria de risco (tipo de veículo)');
       const { data, error } = await supabase.rpc('cotar_plano', {
         p_fipe: fipe, p_tipo_veiculo_id: tipoVeiculoId, p_plano_id: planoId ?? null, p_avulsos_ids: opcionaisIds,
       });

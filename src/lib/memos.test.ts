@@ -50,7 +50,7 @@ describe('ordem do mural', () => {
 
 describe('acompanhamento da gestao', () => {
   it('mostra quantos deram ciencia', () => {
-    expect(resumoLeitura(3, 12)).toBe('3 de 12 deram ciencia (25%)');
+    expect(resumoLeitura(3, 12)).toBe('3 de 12 deram ciência (25%)');
   });
   it('sem destinatario calculado, mostra so o numero', () => {
     expect(resumoLeitura(2, 0)).toBe('2 leitura(s)');
@@ -77,7 +77,7 @@ describe('destinoDoMemo', () => {
   });
 
   it('reconhece o destino "diretoria" que a franquia usa', () => {
-    expect(destinoDoMemo(null, ['admin', 'financeiro'])).toBe('Diretoria / administracao');
+    expect(destinoDoMemo(null, ['admin', 'financeiro'])).toBe('Diretoria / administração');
     // com unidade nao e mais o destino da diretoria, e um recorte da unidade
     expect(destinoDoMemo('Natal', ['admin', 'financeiro']))
       .toBe('Natal · Administrador, Financeiro');

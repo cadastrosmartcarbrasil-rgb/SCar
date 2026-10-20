@@ -74,8 +74,8 @@ export function validarNegociacao(args: {
   for (const [i, p] of args.parcelas.entries()) {
     if (!p.vencimento) return `Parcela ${i + 1}: informe o vencimento.`;
     if (!(p.valor > 0)) return `Parcela ${i + 1}: valor tem de ser positivo.`;
-    if (p.vencimento < args.hoje) return `Parcela ${i + 1}: o vencimento nao pode ficar no passado.`;
-    if (p.vencimento > max) return `Parcela ${i + 1}: o vencimento tem de ser em ate 1 ano.`;
+    if (p.vencimento < args.hoje) return `Parcela ${i + 1}: o vencimento não pode ficar no passado.`;
+    if (p.vencimento > max) return `Parcela ${i + 1}: o vencimento tem de ser em até 1 ano.`;
     if (ant && p.vencimento <= ant) return `Parcela ${i + 1}: vencimentos em ordem crescente.`;
     ant = p.vencimento;
   }
@@ -93,7 +93,7 @@ export function mensagemDoBoleto(args: {
   const nome = primeiro ? primeiro.charAt(0) + primeiro.slice(1).toLowerCase() : '';
   const varios = args.boletos.length > 1;
   const linhas = [
-    `Ola${nome ? `, ${nome}` : ''}! Segue ${varios ? 'os boletos do seu acordo' : 'o seu boleto'} da Smart Car Brasil.`,
+    `Olá${nome ? `, ${nome}` : ''}! Segue ${varios ? 'os boletos do seu acordo' : 'o seu boleto'} da Smart Car Brasil.`,
     '',
   ];
   for (const b of args.boletos) {
@@ -137,5 +137,5 @@ export const ROTULO_BAIXA: Record<OrigemBaixa['baixa_status'], string> = {
   PENDENTE: 'baixa pendente',
   BAIXADO: 'baixado no banco',
   ERRO: 'baixa recusada',
-  SEM_REGISTRO: 'cancelado (nao estava no banco)',
+  SEM_REGISTRO: 'cancelado (não estava no banco)',
 };

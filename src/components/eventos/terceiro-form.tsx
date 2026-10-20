@@ -66,7 +66,7 @@ export function TerceiroForm({
     setBuscandoCep(true);
     const r = await buscarCep(end.cep ?? '');
     setBuscandoCep(false);
-    if (!r) return toast.error('CEP nao encontrado');
+    if (!r) return toast.error('CEP não encontrado');
     setEnd({ logradouro: r.logradouro || end.logradouro, bairro: r.bairro || end.bairro, cidade: r.cidade || end.cidade, estado: r.estado || end.estado });
   }
 
@@ -104,7 +104,7 @@ export function TerceiroForm({
                 <option value="CAUSADOR">Causador</option>
               </Select>
             </FormField>
-            <FormField label="Situacao da tratativa">
+            <FormField label="Situação da tratativa">
               <Select value={t.status ?? 'EM_ANALISE'} onChange={(e) => set({ status: e.target.value as StatusTerceiro })}>
                 {Object.entries(STATUS_TERCEIRO).map(([k, v]) => (
                   <option key={k} value={k}>{v.label}</option>
@@ -123,11 +123,11 @@ export function TerceiroForm({
           <div className="grid gap-3 sm:grid-cols-4">
             <FormField label="Pessoa">
               <Select value={t.tipo_pessoa ?? 'PF'} onChange={(e) => set({ tipo_pessoa: e.target.value as TipoPessoa })}>
-                <option value="PF">Fisica</option>
-                <option value="PJ">Juridica</option>
+                <option value="PF">Física</option>
+                <option value="PJ">Jurídica</option>
               </Select>
             </FormField>
-            <FormField label="Nome / Razao social *" className="sm:col-span-3">
+            <FormField label="Nome / Razão social *" className="sm:col-span-3">
               <Input value={t.nome ?? ''} onChange={(e) => set({ nome: e.target.value })} />
             </FormField>
           </div>
@@ -164,7 +164,7 @@ export function TerceiroForm({
             <FormField label="Logradouro" className="sm:col-span-2">
               <Input value={end.logradouro ?? ''} onChange={(e) => setEnd({ logradouro: e.target.value })} />
             </FormField>
-            <FormField label="Numero">
+            <FormField label="Número">
               <Input value={end.numero ?? ''} onChange={(e) => setEnd({ numero: e.target.value })} />
             </FormField>
           </div>
@@ -186,11 +186,11 @@ export function TerceiroForm({
         <CardContent className="space-y-4 pt-5">
           <div className="flex items-center justify-between">
             <h2 className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
-              <Car className="h-4 w-4" /> Veiculo e condutor
+              <Car className="h-4 w-4" /> Veículo e condutor
             </h2>
             <label className="flex items-center gap-2 text-xs text-slate-600">
               <input type="checkbox" checked={t.possui_veiculo !== false} onChange={(e) => set({ possui_veiculo: e.target.checked })} />
-              Terceiro envolvido com veiculo
+              Terceiro envolvido com veículo
             </label>
           </div>
           {t.possui_veiculo !== false && (
@@ -221,7 +221,7 @@ export function TerceiroForm({
               checked={t.condutor_e_proprietario !== false}
               onChange={(e) => set({ condutor_e_proprietario: e.target.checked })}
             />
-            O condutor e o proprio terceiro
+            O condutor e o próprio terceiro
           </label>
           <div className="grid gap-3 sm:grid-cols-4">
             {t.condutor_e_proprietario === false && (
@@ -254,10 +254,10 @@ export function TerceiroForm({
           </div>
           {t.possui_seguro && (
             <div className="grid gap-3 sm:grid-cols-2">
-              <FormField label="Seguradora / associacao *">
+              <FormField label="Seguradora / associação *">
                 <Input value={t.seguradora ?? ''} onChange={(e) => set({ seguradora: e.target.value })} />
               </FormField>
-              <FormField label="Apolice / sinistro">
+              <FormField label="Apólice / sinistro">
                 <Input value={t.numero_apolice ?? ''} onChange={(e) => set({ numero_apolice: e.target.value })} />
               </FormField>
             </div>
@@ -271,14 +271,14 @@ export function TerceiroForm({
             <Wrench className="h-4 w-4" /> Danos
           </h2>
           <div className="grid gap-3 sm:grid-cols-4">
-            <FormField label="Descricao dos danos" className="sm:col-span-3">
+            <FormField label="Descrição dos danos" className="sm:col-span-3">
               <Textarea rows={3} value={t.descricao_danos ?? ''} onChange={(e) => set({ descricao_danos: e.target.value })} />
             </FormField>
             <FormField label="Estimativa (R$)">
               <MoneyInput value={t.valor_estimado_danos ?? null} onChange={(v) => set({ valor_estimado_danos: v })} />
             </FormField>
           </div>
-          <FormField label="Observacoes internas">
+          <FormField label="Observações internas">
             <Textarea rows={2} value={t.observacoes ?? ''} onChange={(e) => set({ observacoes: e.target.value })} />
           </FormField>
         </CardContent>
@@ -293,7 +293,7 @@ export function TerceiroForm({
           </Button>
         )}
         <Button type="submit" disabled={salvar.isPending || somenteLeitura}>
-          {salvar.isPending ? 'Salvando...' : t.id ? 'Salvar alteracoes' : 'Cadastrar terceiro'}
+          {salvar.isPending ? 'Salvando...' : t.id ? 'Salvar alterações' : 'Cadastrar terceiro'}
         </Button>
       </div>
     </form>

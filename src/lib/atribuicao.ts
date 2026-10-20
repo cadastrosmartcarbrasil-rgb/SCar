@@ -17,32 +17,32 @@ export const ROTULO_CAPTURA: Record<TipoCaptura, { rotulo: string; classe: strin
   NOVO: {
     rotulo: 'Novo contato',
     classe: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-    ajuda: 'Ninguem da casa conhece esta pessoa.',
+    ajuda: 'Ninguém da casa conhece esta pessoa.',
   },
   DUPLICADO: {
-    rotulo: 'Ja em atendimento',
+    rotulo: 'Já em atendimento',
     classe: 'bg-amber-50 text-amber-800 ring-amber-200',
-    ajuda: 'Ja existe lead aberto e protegido — segue com quem captou primeiro.',
+    ajuda: 'Já existe lead aberto e protegido — segue com quem captou primeiro.',
   },
   REATIVACAO: {
-    rotulo: 'Reativacao',
+    rotulo: 'Reativação',
     classe: 'bg-sky-50 text-sky-700 ring-sky-200',
-    ajuda: 'Havia um lead antigo sem protecao: quem trouxe agora assume.',
+    ajuda: 'Havia um lead antigo sem proteção: quem trouxe agora assume.',
   },
   CARTEIRA: {
-    rotulo: 'Ja e associado',
+    rotulo: 'Já é associado',
     classe: 'bg-violet-50 text-violet-700 ring-violet-200',
-    ajuda: 'Nao e venda nova: o caso vai para o atendimento.',
+    ajuda: 'Não é venda nova: o caso vai para o atendimento.',
   },
 };
 
 export const MOTIVOS_ATRIBUICAO: Record<string, string> = {
   HOTLINK: 'Captado pelo hotlink',
   HOTLINK_REATIVACAO: 'Retomado pelo hotlink',
-  HOTLINK_CARTEIRA: 'Hotlink — ja era associado',
+  HOTLINK_CARTEIRA: 'Hotlink — já era associado',
   RECAPTURA_PROTEGIDA: 'Voltou pelo link (lead protegido)',
-  RODIZIO: 'Distribuido por rodizio',
-  MANUAL: 'Distribuido pelo gestor',
+  RODIZIO: 'Distribuído por rodízio',
+  MANUAL: 'Distribuído pelo gestor',
   DEVOLVIDO_SEM_CONTATO: 'Devolvido ao pool por inatividade',
   CONTATO: 'Contato registrado',
 };
@@ -123,11 +123,11 @@ export function deveVoltarAoPool(
 export function mensagemAoVisitante(tipo: TipoCaptura, vendedor?: string | null): string {
   switch (tipo) {
     case 'CARTEIRA':
-      return 'Voce ja e nosso associado — vamos falar com voce pelo atendimento.';
+      return 'Você já é nosso associado — vamos falar com você pelo atendimento.';
     case 'DUPLICADO':
-      return `Ja temos o seu contato — ${vendedor ?? 'nossa equipe'} vai falar com voce.`;
+      return `Já temos o seu contato — ${vendedor ?? 'nossa equipe'} vai falar com você.`;
     default:
-      return 'Recebemos o seu contato! Em breve falamos com voce.';
+      return 'Recebemos o seu contato! Em breve falamos com você.';
   }
 }
 
@@ -156,10 +156,10 @@ export function avisoDeCaptura(bruto: AvisoCaptura | null | undefined): AvisoDeC
   const r = ROTULO_CAPTURA[bruto.tipo];
   const titulos: Record<Exclude<TipoCaptura, 'NOVO'>, string> = {
     DUPLICADO: bruto.vendedor_nome
-      ? `Esta pessoa ja esta em atendimento com ${bruto.vendedor_nome}`
-      : 'Esta pessoa ja tem atendimento aberto',
-    REATIVACAO: 'Ja houve um atendimento com esta pessoa',
-    CARTEIRA: 'Esta pessoa ja e associada da casa',
+      ? `Esta pessoa já está em atendimento com ${bruto.vendedor_nome}`
+      : 'Esta pessoa já tem atendimento aberto',
+    REATIVACAO: 'Já houve um atendimento com esta pessoa',
+    CARTEIRA: 'Esta pessoa já e associada da casa',
   };
   return {
     tipo: bruto.tipo,

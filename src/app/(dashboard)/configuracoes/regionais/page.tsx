@@ -70,7 +70,7 @@ export default function RegionaisPage() {
 
   function editar(id: string) {
     const r = porId.get(id);
-    if (!r) return toast.error('Unidade nao encontrada — recarregue a pagina');
+    if (!r) return toast.error('Unidade não encontrada — recarregue a página');
     setEditando(r);
     setAberto(true);
   }
@@ -97,7 +97,7 @@ export default function RegionaisPage() {
     setBuscandoCep(true);
     const r = await buscarCep(cep);
     setBuscandoCep(false);
-    if (!r) return toast.error('CEP nao encontrado');
+    if (!r) return toast.error('CEP não encontrado');
     setEndereco({
       logradouro: r.logradouro,
       bairro: r.bairro,
@@ -111,11 +111,11 @@ export default function RegionaisPage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="max-w-3xl text-sm text-slate-500">
-            Cadastre as unidades (franquias). Cada uma tem seus dados isolados por seguranca
-            (RLS): usuarios, associados, veiculos e financeiro ficam restritos a propria unidade.
+            Cadastre as unidades (franquias). Cada uma tem seus dados isolados por segurança
+            (RLS): usuários, associados, veículos e financeiro ficam restritos a própria unidade.
           </p>
           <p className="mt-1 text-xs text-slate-400">
-            <b className="text-slate-500">{ativas}</b> em operacao
+            <b className="text-slate-500">{ativas}</b> em operação
             {inativas > 0 && <> · <b className="text-slate-500">{inativas}</b> inativa(s)</>}
           </p>
         </div>
@@ -141,11 +141,11 @@ export default function RegionaisPage() {
             <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
               <th className="px-4 py-2">Unidade</th>
               <th className="px-4 py-2">Contato</th>
-              <th className="px-4 py-2">Responsavel</th>
+              <th className="px-4 py-2">Responsável</th>
               <th className="px-4 py-2 text-right">Equipe</th>
               <th className="px-4 py-2 text-right">Carteira</th>
               <th className="px-4 py-2">Desc. max.</th>
-              <th className="px-4 py-2 text-right">Acoes</th>
+              <th className="px-4 py-2 text-right">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -175,7 +175,7 @@ export default function RegionaisPage() {
                       )}
                     </span>
                     <span className="mt-0.5 block text-xs text-slate-400">
-                      {r.cidade ? `${r.cidade}/${r.uf ?? ''}` : 'Sem endereco'}
+                      {r.cidade ? `${r.cidade}/${r.uf ?? ''}` : 'Sem endereço'}
                       {r.cnpj && <> · {r.cnpj}</>}
                     </span>
                   </td>
@@ -241,13 +241,13 @@ export default function RegionaisPage() {
                         disabled={!r.pode_excluir}
                         title={
                           r.pode_excluir
-                            ? 'Excluir unidade (nao tem nenhum registro vinculado)'
-                            : `Nao da para excluir: ${pendencias.join(', ')}. Migre os registros ou inative a unidade.`
+                            ? 'Excluir unidade (não tem nenhum registro vinculado)'
+                            : `Não da para excluir: ${pendencias.join(', ')}. Migre os registros ou inative a unidade.`
                         }
                         onClick={() => {
                           if (!confirm(`Excluir definitivamente a unidade "${r.nome}"?`)) return;
                           excluir.mutate(r.id, {
-                            onSuccess: () => toast.success('Regional excluida'),
+                            onSuccess: () => toast.success('Regional excluída'),
                             onError: (e) => toast.error((e as Error).message),
                           });
                         }}
@@ -273,9 +273,9 @@ export default function RegionaisPage() {
 
       <p className="text-xs leading-relaxed text-slate-400">
         <b className="text-slate-500">Inativar</b> tira a unidade das listas de escolha, dos
-        hotlinks e do rodizio — mas o que ela ja produziu continua inteiro nos relatorios e no
-        DRE. <b className="text-slate-500">Excluir</b> so e liberado para unidade sem nenhum
-        registro: apagar uma unidade com carteira jogaria os associados, veiculos e lancamentos
+        hotlinks e do rodízio — mas o que ela já produziu continua inteiro nos relatórios e no
+        DRE. <b className="text-slate-500">Excluir</b> só é liberado para unidade sem nenhum
+        registro: apagar uma unidade com carteira jogaria os associados, veículos e lançamentos
         dela no escopo da matriz.
       </p>
 
@@ -294,12 +294,12 @@ export default function RegionaisPage() {
                 placeholder="Ex.: Franquia Cuiaba"
               />
             </FormField>
-            <FormField label="Situacao">
+            <FormField label="Situação">
               <Select
                 value={editando?.ativo === false ? 'INATIVA' : 'ATIVA'}
                 onChange={(e) => setEditando((p) => ({ ...p, ativo: e.target.value === 'ATIVA' }))}
               >
-                <option value="ATIVA">Ativa — em operacao</option>
+                <option value="ATIVA">Ativa — em operação</option>
                 <option value="INATIVA">Inativa — encerrada</option>
               </Select>
             </FormField>
@@ -332,7 +332,7 @@ export default function RegionaisPage() {
           {/* Endereco completo, com busca por CEP (mesmo padrao do fornecedor). */}
           <div className="rounded-xl border border-slate-200 p-3">
             <p className="mb-2 text-[11.5px] font-semibold uppercase tracking-wide text-slate-500">
-              Endereco
+              Endereço
             </p>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <FormField label="CEP">
@@ -348,7 +348,7 @@ export default function RegionaisPage() {
                     type="button"
                     onClick={buscarEnderecoPorCep}
                     disabled={buscandoCep || soDigitos(endereco.cep ?? '').length !== 8}
-                    title="Buscar endereco pelo CEP"
+                    title="Buscar endereço pelo CEP"
                     className="mt-1 shrink-0 rounded-md border border-slate-300 px-2 text-slate-500 hover:bg-slate-100 disabled:opacity-40"
                   >
                     <Search className="h-4 w-4" />
@@ -363,7 +363,7 @@ export default function RegionaisPage() {
               </FormField>
             </div>
             <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <FormField label="Numero">
+              <FormField label="Número">
                 <Input value={endereco.numero ?? ''} onChange={(e) => setEndereco({ numero: e.target.value })} />
               </FormField>
               <FormField label="Complemento">
@@ -393,20 +393,20 @@ export default function RegionaisPage() {
 
           <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
             <p className="text-[11.5px] font-semibold uppercase tracking-wide text-slate-500">
-              Comissao da franquia
+              Comissão da franquia
             </p>
             <p className="mb-2 mt-0.5 text-[11.5px] leading-relaxed text-slate-500">
-              Quanto esta regional recebe da associacao. E o <b>teto</b> do que ela pode ceder aos
+              Quanto esta regional recebe da associação. E o <b>teto</b> do que ela pode ceder aos
               seus vendedores — nenhum vendedor pode ter percentual maior que este.
             </p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <FormField label="Adesao">
+              <FormField label="Adesão">
                 <PercentInput
                   value={editando?.taxa_comissao_adesao == null ? null : Number(editando.taxa_comissao_adesao) * 100}
                   onChange={(v) => setEditando((p) => ({ ...p, taxa_comissao_adesao: (v ?? 0) / 100 }))}
                 />
               </FormField>
-              <FormField label="Recorrencia">
+              <FormField label="Recorrência">
                 <PercentInput
                   value={editando?.taxa_comissao_recorrente == null ? null : Number(editando.taxa_comissao_recorrente) * 100}
                   onChange={(v) => setEditando((p) => ({ ...p, taxa_comissao_recorrente: (v ?? 0) / 100 }))}
@@ -415,39 +415,39 @@ export default function RegionaisPage() {
             </div>
           </div>
 
-          <FormField label="Desconto maximo de venda">
+          <FormField label="Desconto máximo de venda">
             <PercentInput
               value={editando?.percentual_maximo_desconto_venda ?? null}
               onChange={(v) => setEditando((p) => ({ ...p, percentual_maximo_desconto_venda: v ?? 0 }))}
             />
             <p className="mt-1 text-xs text-slate-500">
-              Limite que o vendedor desta franquia pode conceder sozinho na cotacao (mensalidade e
-              adesao). Acima disso, a cotacao trava e exige aprovacao de Gestor/Diretor.
+              Limite que o vendedor desta franquia pode conceder sozinho na cotação (mensalidade e
+              adesão). Acima disso, a cotação trava e exige aprovação de Gestor/Diretor.
             </p>
           </FormField>
-          <FormField label="Observacao da politica de desconto">
+          <FormField label="Observação da política de desconto">
             <Input
               value={editando?.desconto_observacao ?? ''}
               onChange={(e) => setEditando((p) => ({ ...p, desconto_observacao: e.target.value }))}
-              placeholder="Ex.: ate 10% em campanhas de fim de ano"
+              placeholder="Ex.: até 10% em campanhas de fim de ano"
             />
           </FormField>
 
           {/* Regras de atribuicao do lead (0041) — sao da franquia, nao do codigo. */}
           <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
             <h4 className="mb-2.5 text-[11.5px] font-bold uppercase tracking-wide text-slate-600">
-              Atribuicao de leads
+              Atribuição de leads
             </h4>
             <div className="grid gap-3 sm:grid-cols-2">
-              <FormField label="Protecao do lead (dias)">
+              <FormField label="Proteção do lead (dias)">
                 <Input
                   type="number" min={0} max={365} className="tnum"
                   value={editando?.dias_protecao_lead ?? 30}
                   onChange={(e) => setEditando((p) => ({ ...p, dias_protecao_lead: Number(e.target.value || 0) }))}
                 />
                 <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
-                  Enquanto durar, o lead e de quem captou primeiro: um clique em outro hotlink nao
-                  troca o dono, so registra a nova passagem. <b>0 desliga</b> (o ultimo clique leva).
+                  Enquanto durar, o lead e de quem captou primeiro: um clique em outro hotlink não
+                  troca o dono, só registra a nova passagem. <b>0 desliga</b> (o último clique leva).
                 </p>
               </FormField>
               <FormField label="Devolver ao pool sem contato (dias)">
@@ -457,7 +457,7 @@ export default function RegionaisPage() {
                   onChange={(e) => setEditando((p) => ({ ...p, dias_sem_contato_lead: Number(e.target.value || 0) }))}
                 />
                 <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
-                  Lead sem interacao volta para a unidade redistribuir. <b>0 = nunca volta.</b>
+                  Lead sem interação volta para a unidade redistribuir. <b>0 = nunca volta.</b>
                 </p>
               </FormField>
             </div>
@@ -467,17 +467,17 @@ export default function RegionaisPage() {
                 onChange={(e) => setEditando((p) => ({ ...p, distribuicao_lead: e.target.value }))}
               >
                 <option value="MANUAL">Manual — o gestor distribui</option>
-                <option value="RODIZIO">Rodizio — vai para o proximo da fila</option>
+                <option value="RODIZIO">Rodízio — vai para o próximo da fila</option>
               </Select>
               <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
                 Vale para o lead que entra sem vendedor (devolvido ao pool ou cadastrado pela
-                unidade). O lead do hotlink do vendedor sempre fica com ele. No rodizio entra quem
-                esta ha mais tempo sem receber lead.
+                unidade). O lead do hotlink do vendedor sempre fica com ele. No rodízio entra quem
+                está há mais tempo sem receber lead.
               </p>
             </FormField>
           </div>
 
-          <FormField label="Responsavel pela unidade">
+          <FormField label="Responsável pela unidade">
             <Select
               value={editando?.responsavel_id ?? ''}
               onChange={(e) => setEditando((p) => ({ ...p, responsavel_id: e.target.value || null }))}
@@ -490,9 +490,9 @@ export default function RegionaisPage() {
               ))}
             </Select>
             <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
-              Quem responde pela franquia. O <b>link de vendas e do vendedor</b>, nao da unidade —
-              cadastre o responsavel tambem como vendedor em Configuracoes &rarr; Vendedores para
-              ele ter o hotlink proprio.
+              Quem responde pela franquia. O <b>link de vendas e do vendedor</b>, não da unidade —
+              cadastre o responsável também como vendedor em Configurações &rarr; Vendedores para
+              ele ter o hotlink próprio.
             </p>
           </FormField>
 

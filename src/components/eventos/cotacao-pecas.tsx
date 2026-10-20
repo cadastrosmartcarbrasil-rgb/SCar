@@ -103,7 +103,7 @@ export function CotacaoPecas({
           onClick={() => criarCotacao.mutate()}
           className="flex items-center gap-1 rounded-md bg-acao px-3 py-1.5 text-sm text-white hover:bg-acao-escura"
         >
-          <Plus className="h-4 w-4" /> Nova cotacao
+          <Plus className="h-4 w-4" /> Nova cotação
         </button>
       </div>
 
@@ -111,7 +111,7 @@ export function CotacaoPecas({
         <CotacaoCard key={c.id} cotacao={c} onAddItem={addItem} onDelItem={delItem} onStatus={mudarStatus} />
       ))}
       {(cotacoes ?? []).length === 0 && (
-        <p className="text-sm text-slate-400">Nenhuma cotacao lancada.</p>
+        <p className="text-sm text-slate-400">Nenhuma cotação lançada.</p>
       )}
     </div>
   );
@@ -186,7 +186,7 @@ function CotacaoCard({
         <input
           value={desc}
           onChange={(e) => setDesc(e.target.value)}
-          placeholder="Peca"
+          placeholder="Peça"
           className="flex-1 rounded border border-slate-300 px-2 py-1 text-xs"
         />
         <input

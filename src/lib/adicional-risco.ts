@@ -87,12 +87,12 @@ export function avisoDeReajuste(linha: AdicionalRegional, novoValor: number | nu
   if (antes === depois) return null;
   if (linha.veiculos === 0) {
     return depois === 0
-      ? `${linha.regional_nome} volta ao preco da matriz.`
-      : `Vale para as proximas vendas de ${linha.regional_nome}.`;
+      ? `${linha.regional_nome} volta ao preço da matriz.`
+      : `Vale para as próximas vendas de ${linha.regional_nome}.`;
   }
   return (
-    `${linha.veiculos} veiculo(s) ja na base de ${linha.regional_nome} continuam com o ` +
-    `adicional da entrada — a mudanca so vale para venda nova.`
+    `${linha.veiculos} veículo(s) já na base de ${linha.regional_nome} continuam com o ` +
+    `adicional da entrada — a mudança só vale para venda nova.`
   );
 }
 
@@ -108,6 +108,6 @@ export function textoDaDivergencia(
   if (!precoNome || !leadNome || precoNome === leadNome) return null;
   return (
     `O associado e de ${precoNome} e a venda e de ${leadNome}. ` +
-    `O preco segue o do associado (${precoNome}).`
+    `O preço segue o do associado (${precoNome}).`
   );
 }

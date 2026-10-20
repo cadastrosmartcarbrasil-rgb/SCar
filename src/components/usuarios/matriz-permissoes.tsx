@@ -56,12 +56,12 @@ function CartaoPerfil({ papel, concessoes, podeEditar, usuarios, perfil, bases, 
   function apagar() {
     if (!perfil) return;
     if ((usuarios ?? 0) > 0) {
-      toast.error(`O perfil tem ${usuarios} usuario(s) ativo(s): troque o perfil deles antes de excluir.`);
+      toast.error(`O perfil tem ${usuarios} usuário(s) ativo(s): troque o perfil deles antes de excluir.`);
       return;
     }
     if (!confirm(`Excluir o perfil ${perfil.nome}? A grade dele e apagada junto.`)) return;
     excluir.mutate(perfil.id, {
-      onSuccess: () => { toast.success('Perfil excluido'); onExcluido?.(); },
+      onSuccess: () => { toast.success('Perfil excluído'); onExcluido?.(); },
       onError: (e) => toast.error(e.message),
     });
   }
@@ -74,11 +74,11 @@ function CartaoPerfil({ papel, concessoes, podeEditar, usuarios, perfil, bases, 
     const resumo = celulas.slice(0, 12).map((c) =>
       `${c.concedida ? '+' : '-'} ${rotuloDaChave(c.modulo === 'alcada' ? c.acao : `${c.modulo}.${c.acao}`)}`);
     if (!confirm(
-      `Salvar ${celulas.length} alteracao(oes) no perfil ${nome}?\n\n${resumo.join('\n')}`
-      + `${celulas.length > 12 ? '\n...' : ''}\n\nAfeta ${usuarios ?? 0} usuario(s) ativo(s) e vale na hora.`,
+      `Salvar ${celulas.length} alteração(oes) no perfil ${nome}?\n\n${resumo.join('\n')}`
+      + `${celulas.length > 12 ? '\n...' : ''}\n\nAfeta ${usuarios ?? 0} usuário(s) ativo(s) e vale na hora.`,
     )) return;
     salvar.mutate({ papel, celulas }, {
-      onSuccess: (n) => { toast.success(`${n} permissao(oes) alterada(s) em ${nome}`); setRascunho(null); },
+      onSuccess: (n) => { toast.success(`${n} permissão(oes) alterada(s) em ${nome}`); setRascunho(null); },
       onError: (e) => toast.error(e.message),
     });
   }
@@ -94,11 +94,11 @@ function CartaoPerfil({ papel, concessoes, podeEditar, usuarios, perfil, bases, 
               {ehAdmin ? 'sistema' : perfil ? 'personalizado' : 'perfil'}
             </span>
             {usuarios !== undefined && (
-              <span className="text-[11px] text-slate-400">{usuarios} usuario(s) ativo(s)</span>
+              <span className="text-[11px] text-slate-400">{usuarios} usuário(s) ativo(s)</span>
             )}
           </div>
           <p className="mt-0.5 text-xs uppercase text-slate-500">
-            {ehAdmin ? 'Administrador — acesso total, nao ajustavel'
+            {ehAdmin ? 'Administrador — acesso total, não ajustável'
               : perfil ? `Alcance de ${rotuloPapel(base)}${perfil.descricao ? ` · ${perfil.descricao}` : ''}`
               : (meta && 'nota' in meta ? meta.nota : '')}
           </p>
@@ -123,7 +123,7 @@ function CartaoPerfil({ papel, concessoes, podeEditar, usuarios, perfil, bases, 
                   </Button>
                 </>
               )}
-              <Button onClick={() => setRascunho({})}><Pencil className="h-4 w-4" /> Editar permissoes</Button>
+              <Button onClick={() => setRascunho({})}><Pencil className="h-4 w-4" /> Editar permissões</Button>
             </div>
           )
         )}
@@ -133,7 +133,7 @@ function CartaoPerfil({ papel, concessoes, podeEditar, usuarios, perfil, bases, 
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-              <th className="sticky left-0 bg-slate-50 px-3 py-2 text-left">Modulo</th>
+              <th className="sticky left-0 bg-slate-50 px-3 py-2 text-left">Módulo</th>
               {ACOES.map((a) => <th key={a} className="px-2 py-2 text-center">{ROTULO_ACAO[a]}</th>)}
             </tr>
           </thead>
@@ -164,7 +164,7 @@ function CartaoPerfil({ papel, concessoes, podeEditar, usuarios, perfil, bases, 
       </div>
 
       <div className="mt-3 border-t border-slate-100 pt-3">
-        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Alcadas especiais</p>
+        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Alçadas especiais</p>
         <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3">
           {ALCADAS.map((al) => (
             <div key={al.chave} className="flex items-start gap-2 text-xs text-slate-600">
@@ -225,7 +225,7 @@ export function MatrizPermissoes({ contagem, editavel = false }: {
       </div>
 
       {isLoading ? (
-        <p className="py-6 text-center text-sm text-slate-400">Carregando permissoes...</p>
+        <p className="py-6 text-center text-sm text-slate-400">Carregando permissões...</p>
       ) : (
         <CartaoPerfil key={papel} papel={papel} concessoes={concessoes} bases={bases}
           perfil={perfilAtual} podeEditar={editavel} usuarios={contagem?.[papel]}
@@ -235,10 +235,10 @@ export function MatrizPermissoes({ contagem, editavel = false }: {
 
       <p className="text-xs leading-relaxed text-slate-400">
         <b className="text-slate-500">Como vale:</b> o <b>Ver</b> controla o menu e a abertura da tela; as demais
-        acoes controlam os botoes, e <b>Excluir</b>, a 24h, o tratamento do evento, a Auditoria, a tabela de
-        precos, fornecedores e comunicados tambem sao conferidos pelo banco. Celula com <b>·</b> nao se aplica ao
-        modulo. Modulos com cadeado sao estrutura do sistema (so admin/financeiro). O alcance continua sendo a
-        unidade do cadastro do usuario. <b>Perfil personalizado</b> tem grade propria e o alcance do papel de base.
+        ações controlam os botões, e <b>Excluir</b>, a 24h, o tratamento do evento, a Auditoria, a tabela de
+        preços, fornecedores e comunicados também são conferidos pelo banco. Célula com <b>·</b> não se aplica ao
+        módulo. Módulos com cadeado são estrutura do sistema (só admin/financeiro). O alcance continua sendo a
+        unidade do cadastro do usuário. <b>Perfil personalizado</b> tem grade própria e o alcance do papel de base.
       </p>
 
       {modal && (
@@ -273,13 +273,13 @@ function ModalPerfil({ perfil, perfis, onClose, onCriado }: {
 
   return (
     <Modal open onClose={onClose} title={perfil ? `Renomear ${perfil.nome}` : 'Novo perfil'} tamanho="lg"
-      subtitulo={perfil ? undefined : 'O perfil nasce com a grade de outro e voce ajusta modulo por modulo.'}>
+      subtitulo={perfil ? undefined : 'O perfil nasce com a grade de outro e você ajusta módulo por módulo.'}>
       <form onSubmit={gravar} className="space-y-3">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <FormField label="Nome do perfil *">
             <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: ATENDENTE SAC" />
           </FormField>
-          <FormField label="Descricao">
+          <FormField label="Descrição">
             <Input value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Para que serve" />
           </FormField>
         </div>
@@ -290,9 +290,9 @@ function ModalPerfil({ perfil, perfis, onClose, onCriado }: {
                 {bases.map((p) => <option key={p.valor} value={p.valor}>{p.rotulo}</option>)}
               </Select>
             </FormField>
-            <FormField label="Comecar com a grade de">
+            <FormField label="Começar com a grade de">
               <Select value={copiarDe} onChange={(e) => setCopiarDe(e.target.value)}>
-                <option value="">O proprio papel de base</option>
+                <option value="">O próprio papel de base</option>
                 {bases.map((p) => <option key={p.valor} value={p.valor}>{p.rotulo}</option>)}
                 {perfis.map((p) => <option key={p.id} value={p.id}>{p.nome} (personalizado)</option>)}
               </Select>
@@ -301,10 +301,10 @@ function ModalPerfil({ perfil, perfis, onClose, onCriado }: {
         )}
         {!perfil && (
           <p className="rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-[12px] leading-relaxed text-slate-600">
-            O <b>alcance</b> diz o que a pessoa enxerga: <b>Financeiro</b> ve a empresa inteira; <b>Gestor regional</b>,
-            <b> Consultor</b>, <b>Auditoria</b>, <b>24h</b> e <b>Eventos</b> veem a unidade do cadastro (Eventos tambem as
-            unidades de atuacao); <b>Supervisor</b> ve as unidades marcadas; <b>Cobranca</b>, a cobranca do Brasil ou da
-            unidade. O que ela pode FAZER e a grade, que voce ajusta depois. O alcance nao muda depois que houver usuarios no perfil.
+            O <b>alcance</b> diz o que a pessoa enxerga: <b>Financeiro</b> vê a empresa inteira; <b>Gestor regional</b>,
+            <b> Consultor</b>, <b>Auditoria</b>, <b>24h</b> e <b>Eventos</b> veem a unidade do cadastro (Eventos também as
+            unidades de atuação); <b>Supervisor</b> vê as unidades marcadas; <b>Cobrança</b>, a cobrança do Brasil ou da
+            unidade. O que ela pode FAZER e a grade, que você ajusta depois. O alcance não muda depois que houver usuários no perfil.
           </p>
         )}
         <div className="flex justify-end gap-2 border-t border-slate-100 pt-3">

@@ -667,7 +667,7 @@ export function useGerarLinkVistoria() {
       });
       if (error) throw error;
       const l = data?.[0];
-      if (!l) throw new Error('Nao consegui gerar o link da vistoria');
+      if (!l) throw new Error('Não consegui gerar o link da vistoria');
       return l;
     },
   });
@@ -818,7 +818,7 @@ export function useCotacaoComparativa(entrada: {
 
       // A cobertura base entra como primeira opcao: ha venda que fecha sem combo.
       const opcoes: { id: string | null; nome: string; descricao: string | null; nivel: number | null }[] = [
-        { id: null, nome: 'Cobertura base', descricao: 'Somente os itens obrigatorios', nivel: -1 },
+        { id: null, nome: 'Cobertura base', descricao: 'Somente os itens obrigatórios', nivel: -1 },
         ...(planos ?? []).map((p) => ({
           id: p.id, nome: p.nome, descricao: p.descricao_comercial, nivel: p.nivel,
         })),

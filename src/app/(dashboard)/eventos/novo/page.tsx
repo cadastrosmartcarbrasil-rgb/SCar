@@ -54,16 +54,16 @@ export default function NovoEventoPage() {
   });
 
   async function onBuscarPlaca() {
-    if (!placaValida(placa)) return toast.error('Placa invalida');
+    if (!placaValida(placa)) return toast.error('Placa inválida');
     const v = await buscar.mutateAsync(placa);
     if (!v) {
-      toast.error('Veiculo nao encontrado. Cadastre o veiculo antes de abrir o evento.');
+      toast.error('Veículo não encontrado. Cadastre o veículo antes de abrir o evento.');
       setVeiculo(null);
       return;
     }
     setVeiculo(v);
     setForm((f) => ({ ...f, valor_fipe_atualizado: v.valor_fipe ?? '' }));
-    toast.success('Veiculo localizado');
+    toast.success('Veículo localizado');
   }
 
   // Prefill vindo do SAC: /eventos/novo?placa=ABC1D23 -> busca automatica.
@@ -88,7 +88,7 @@ export default function NovoEventoPage() {
     setBuscandoCep(true);
     const res = await buscarCep(local.cep ?? '');
     setBuscandoCep(false);
-    if (!res) return toast.error('CEP nao encontrado');
+    if (!res) return toast.error('CEP não encontrado');
     setLocal((l) => ({
       ...l,
       logradouro: res.logradouro || l.logradouro,
@@ -100,7 +100,7 @@ export default function NovoEventoPage() {
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!veiculo) return toast.error('Busque o veiculo pela placa primeiro');
+    if (!veiculo) return toast.error('Busque o veículo pela placa primeiro');
     if (!form.data_ocorrencia) return toast.error('Informe a data do evento');
     if (!form.tipo_evento_id) return toast.error('Selecione o tipo de evento');
 
@@ -147,7 +147,7 @@ export default function NovoEventoPage() {
       {/* 1. Placa */}
       <Card>
         <CardContent className="pt-5">
-          <FormField label="Placa do veiculo *">
+          <FormField label="Placa do veículo *">
             <div className="flex gap-2">
               <Input
                 value={placa}
@@ -195,12 +195,12 @@ export default function NovoEventoPage() {
                 <FormField label="Data do evento *">
                   <Input type="date" value={form.data_ocorrencia} onChange={(e) => setF({ data_ocorrencia: e.target.value })} />
                 </FormField>
-                <FormField label="Data da comunicacao">
+                <FormField label="Data da comunicação">
                   <Input type="date" value={form.data_comunicacao} onChange={(e) => setF({ data_comunicacao: e.target.value })} />
                 </FormField>
               </div>
               <div className="grid grid-cols-3 gap-3">
-                <FormField label="Ha terceiros envolvidos?">
+                <FormField label="Há terceiros envolvidos?">
                   <Select
                     value={form.possui_terceiros ? 'S' : 'N'}
                     onChange={(e) => setF({ possui_terceiros: e.target.value === 'S' })}
@@ -227,7 +227,7 @@ export default function NovoEventoPage() {
                   </Select>
                 </FormField>
               </div>
-              <FormField label="Descricao / relato">
+              <FormField label="Descrição / relato">
                 <Textarea rows={3} value={form.descricao} onChange={(e) => setF({ descricao: e.target.value })} />
               </FormField>
             </CardContent>
@@ -248,7 +248,7 @@ export default function NovoEventoPage() {
                 </FormField>
               </div>
               <div className="grid grid-cols-4 gap-3">
-                <FormField label="Numero">
+                <FormField label="Número">
                   <Input value={local.numero ?? ''} onChange={(e) => setL({ numero: e.target.value })} />
                 </FormField>
                 <FormField label="Complemento" className="col-span-3">
@@ -273,16 +273,16 @@ export default function NovoEventoPage() {
           <Card>
             <CardContent className="space-y-4 pt-5">
               <h2 className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
-                <FileText className="h-4 w-4" /> Boletim de Ocorrencia (B.O.)
+                <FileText className="h-4 w-4" /> Boletim de Ocorrência (B.O.)
               </h2>
               <div className="grid grid-cols-3 gap-3">
-                <FormField label="Numero do B.O.">
+                <FormField label="Número do B.O.">
                   <Input value={form.bo_numero} onChange={(e) => setF({ bo_numero: e.target.value })} />
                 </FormField>
                 <FormField label="Data do B.O.">
                   <Input type="date" value={form.bo_data} onChange={(e) => setF({ bo_data: e.target.value })} />
                 </FormField>
-                <FormField label="Unidade responsavel">
+                <FormField label="Unidade responsável">
                   <Input value={form.bo_unidade} onChange={(e) => setF({ bo_unidade: e.target.value })} placeholder="Ex.: 1o DP" />
                 </FormField>
               </div>
@@ -305,7 +305,7 @@ export default function NovoEventoPage() {
                     onChange={(e) => setF({ valor_fipe_atualizado: e.target.value === '' ? '' : Number(e.target.value) })}
                   />
                 </FormField>
-                <FormField label="Participacao / Franquia (R$)">
+                <FormField label="Participação / Franquia (R$)">
                   <Input
                     type="number"
                     step="0.01"
@@ -315,20 +315,20 @@ export default function NovoEventoPage() {
                 </FormField>
               </div>
               <p className="text-xs text-slate-400">
-                A tabela FIPE sera interligada por API. Valor de referencia do contrato:{' '}
-                {veiculo.valor_fipe ? formatCurrency(veiculo.valor_fipe) : 'nao informado'}.
+                A tabela FIPE será interligada por API. Valor de referência do contrato:{' '}
+                {veiculo.valor_fipe ? formatCurrency(veiculo.valor_fipe) : 'não informado'}.
               </p>
             </CardContent>
           </Card>
 
           <p className="text-xs text-slate-400">
-            Apos abrir o evento, use o painel do protocolo para anexar fotos e documentos, cotacoes de
-            reparo (proprio/terceiro) e lancamentos financeiros.
+            Após abrir o evento, use o painel do protocolo para anexar fotos e documentos, cotações de
+            reparo (proprio/terceiro) e lançamentos financeiros.
           </p>
 
           {form.possui_terceiros && (
             <p className="rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs text-cyan-800">
-              Ao abrir o evento, o cadastro do terceiro abre em seguida, ja vinculado a este evento e ao associado.
+              Ao abrir o evento, o cadastro do terceiro abre em seguida, já vinculado a este evento e ao associado.
             </p>
           )}
 

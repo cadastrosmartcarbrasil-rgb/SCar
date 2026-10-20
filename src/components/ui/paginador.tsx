@@ -17,12 +17,12 @@ export function Paginador({ pagina, total, onPagina, carregando }: {
       </span>
       <div className="flex items-center gap-1">
         <button type="button" disabled={atual === 0} onClick={() => onPagina(atual - 1)}
-          className="rounded p-1.5 hover:bg-slate-100 disabled:opacity-30" aria-label="Pagina anterior">
+          className="rounded p-1.5 hover:bg-slate-100 disabled:opacity-30" aria-label="Página anterior">
           <ChevronLeft className="h-4 w-4" />
         </button>
         <span className="tnum px-1">{n(atual + 1)} / {n(paginas)}</span>
         <button type="button" disabled={atual >= paginas - 1} onClick={() => onPagina(atual + 1)}
-          className="rounded p-1.5 hover:bg-slate-100 disabled:opacity-30" aria-label="Proxima pagina">
+          className="rounded p-1.5 hover:bg-slate-100 disabled:opacity-30" aria-label="Próxima página">
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>

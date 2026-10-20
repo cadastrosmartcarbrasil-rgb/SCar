@@ -55,7 +55,7 @@ export function AlertasVeiculo({ veiculoId, titulo = 'Alertas / pendencias' }: {
     e.preventDefault();
     if (!resolvendo) return;
     resolver.mutate({ alerta_id: resolvendo.id, veiculo_id: veiculoId, observacao: observacao.trim() || null }, {
-      onSuccess: () => { toast.success('Pendencia resolvida'); setResolvendo(null); setObservacao(''); },
+      onSuccess: () => { toast.success('Pendência resolvida'); setResolvendo(null); setObservacao(''); },
       onError: (e2) => toast.error(e2.message),
     });
   }
@@ -83,7 +83,7 @@ export function AlertasVeiculo({ veiculoId, titulo = 'Alertas / pendencias' }: {
       {isLoading ? (
         <p className="py-2 text-xs text-slate-400"><Loader2 className="inline h-3.5 w-3.5 animate-spin" /> Carregando alertas...</p>
       ) : ativos.length === 0 ? (
-        <p className="py-1 text-xs text-slate-400">Nenhuma pendencia ativa neste veiculo.</p>
+        <p className="py-1 text-xs text-slate-400">Nenhuma pendência ativa neste veículo.</p>
       ) : (
         <ul className="space-y-2">
           {ativos.map((a) => (
@@ -93,7 +93,7 @@ export function AlertasVeiculo({ veiculoId, titulo = 'Alertas / pendencias' }: {
                   <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${COR_SEVERIDADE[a.severidade]}`}>{a.severidade}</span>
                   {a.nome}
                   {!a.tipo_ativo && (
-                    <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600" title="Tipo desativado no catalogo de alertas">
+                    <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600" title="Tipo desativado no catálogo de alertas">
                       tipo desativado
                     </span>
                   )}
@@ -128,7 +128,7 @@ export function AlertasVeiculo({ veiculoId, titulo = 'Alertas / pendencias' }: {
       </p>
 
       {novo && (
-        <Modal open onClose={() => setNovo(false)} title="Adicionar alerta ao veiculo">
+        <Modal open onClose={() => setNovo(false)} title="Adicionar alerta ao veículo">
           <form onSubmit={adicionar} className="space-y-3">
             <FormField label="Tipo de alerta">
               <Select value={tipoId} onChange={(e) => setTipoId(e.target.value)}>
@@ -136,8 +136,8 @@ export function AlertasVeiculo({ veiculoId, titulo = 'Alertas / pendencias' }: {
                 {(tipos ?? []).map((t) => <option key={t.id} value={t.id}>{t.nome} ({t.severidade})</option>)}
               </Select>
             </FormField>
-            <FormField label="Observacao (opcional)">
-              <Input value={mensagem} onChange={(e) => setMensagem(e.target.value)} placeholder="Detalhe a pendencia" />
+            <FormField label="Observação (opcional)">
+              <Input value={mensagem} onChange={(e) => setMensagem(e.target.value)} placeholder="Detalhe a pendência" />
             </FormField>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="secondary" onClick={() => setNovo(false)}>Cancelar</Button>
@@ -153,7 +153,7 @@ export function AlertasVeiculo({ veiculoId, titulo = 'Alertas / pendencias' }: {
         <Modal open onClose={() => setResolvendo(null)} title={`Resolver: ${resolvendo.nome}`}>
           <form onSubmit={confirmarResolucao} className="space-y-3">
             <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
-              A pendencia sai do card do SAC e fica registrada no historico do veiculo com o seu nome.
+              A pendência sai do card do SAC e fica registrada no histórico do veículo com o seu nome.
             </p>
             <FormField label="Como foi resolvido (opcional)">
               <Textarea rows={3} value={observacao} onChange={(e) => setObservacao(e.target.value)} placeholder="Ex.: CRLV recebido e anexado ao cadastro" />

@@ -38,7 +38,7 @@ export default async function CotacaoPublicaPage({ params }: { params: { token: 
   ]);
   const detalhada = cot.modo_envio !== 'CONSOLIDADA';
   const itens = Array.isArray(cot.itens) ? cot.itens : [];
-  const nomeEmpresa = empresa?.nome_fantasia || empresa?.razao_social || 'Protecao Veicular';
+  const nomeEmpresa = empresa?.nome_fantasia || empresa?.razao_social || 'Proteção Veicular';
 
   return (
     <main className="mx-auto min-h-screen max-w-md bg-slate-50 px-4 py-6 text-slate-800">
@@ -53,8 +53,8 @@ export default async function CotacaoPublicaPage({ params }: { params: { token: 
         </div>
 
         <div className="px-5 py-5">
-          <p className="text-xs uppercase tracking-wide text-slate-400">Proposta de protecao veicular</p>
-          <h1 className="mt-1 text-lg font-semibold text-slate-900">Ola, {lead?.nome ?? 'Cliente'}!</h1>
+          <p className="text-xs uppercase tracking-wide text-slate-400">Proposta de proteção veicular</p>
+          <h1 className="mt-1 text-lg font-semibold text-slate-900">Olá, {lead?.nome ?? 'Cliente'}!</h1>
 
           {/* Veiculo */}
           <div className="mt-4 rounded-xl bg-slate-50 p-4 text-sm">
@@ -71,7 +71,7 @@ export default async function CotacaoPublicaPage({ params }: { params: { token: 
           {/* Itens (modo detalhado) */}
           {detalhada && itens.length > 0 && (
             <div className="mt-5">
-              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">O que esta incluso</p>
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">O que está incluso</p>
               <ul className="divide-y divide-slate-100">
                 {itens.map((i, idx) => (
                   <li key={idx} className="flex items-center justify-between py-2 text-sm">
@@ -90,20 +90,20 @@ export default async function CotacaoPublicaPage({ params }: { params: { token: 
           <div className="mt-5 rounded-xl bg-brand-50 p-4 text-center">
             <p className="text-xs uppercase tracking-wide text-brand-600">Mensalidade</p>
             <p className="text-3xl font-bold text-brand-700">{formatCurrency(cot.total_mensalidade)}</p>
-            <p className="mt-1 text-xs text-slate-500">por mes</p>
+            <p className="mt-1 text-xs text-slate-500">por mês</p>
           </div>
 
           {/* Taxa de adesao (cobranca unica) */}
           {cot.taxa_adesao > 0 && (
             <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-center text-xs text-emerald-800">
-              Taxa de adesao (cobranca unica): <b>{formatCurrency(cot.taxa_adesao)}</b>
+              Taxa de adesão (cobrança única): <b>{formatCurrency(cot.taxa_adesao)}</b>
             </p>
           )}
 
           {/* Participacao */}
           {cot.participacao > 0 && (
             <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-              Participacao (cota de rateio) em caso de evento: <b>{formatCurrency(cot.participacao)}</b>
+              Participação (cota de rateio) em caso de evento: <b>{formatCurrency(cot.participacao)}</b>
             </p>
           )}
 
@@ -120,7 +120,7 @@ export default async function CotacaoPublicaPage({ params }: { params: { token: 
           </div>
 
           <p className="mt-4 text-center text-[10px] text-slate-400">
-            Valores sujeitos a analise e aprovacao. {nomeEmpresa}.
+            Valores sujeitos a análise e aprovação. {nomeEmpresa}.
           </p>
         </div>
       </div>

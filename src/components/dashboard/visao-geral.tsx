@@ -98,12 +98,12 @@ function Tile({
 /** Seta de tendencia; `subirEBom` diz para que lado e boa noticia. */
 function Tendencia({ fracao, subirEBom, rotulo }: { fracao: number | null; subirEBom: boolean; rotulo?: string }) {
   if (fracao === null) {
-    return <span className="text-[11px] text-slate-400">sem base de comparacao</span>;
+    return <span className="text-[11px] text-slate-400">sem base de comparação</span>;
   }
   if (fracao === 0) {
     return (
       <span className="inline-flex items-center gap-0.5 text-[11.5px] font-medium text-slate-400">
-        <Minus className="h-3.5 w-3.5" /> estavel
+        <Minus className="h-3.5 w-3.5" /> estável
       </span>
     );
   }
@@ -211,7 +211,7 @@ function BarrasRanking({ fatias, cor, altura }: { fatias: Fatia[]; cor: string; 
           <YAxis type="category" dataKey="nome" width={130} tick={EIXO} axisLine={false} tickLine={false} />
           <Tooltip
             contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(30,43,77,0.05)' }}
-            formatter={(v: number, _n, p) => [`${inteiro.format(v)} (${formatPercent((p?.payload as Fatia)?.pct)})`, 'Veiculos']}
+            formatter={(v: number, _n, p) => [`${inteiro.format(v)} (${formatPercent((p?.payload as Fatia)?.pct)})`, 'Veículos']}
           />
           <Bar dataKey="valor" fill={cor} radius={[0, 4, 4, 0]} maxBarSize={18} isAnimationActive={false}>
             <LabelList
@@ -239,36 +239,36 @@ function Cabecalho({ d, carregando }: { d: PainelVisaoGeral | null | undefined; 
   return (
     <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
       <Tile
-        titulo="Veiculos na base" icon={Car} tom="cyan" carregando={carregando} href="/veiculos"
+        titulo="Veículos na base" icon={Car} tom="cyan" carregando={carregando} href="/veiculos"
         valor={inteiro.format(n(k?.veiculos_base))}
-        tendencia={<Tendencia fracao={varBase} subirEBom rotulo="no mes" />}
+        tendencia={<Tendencia fracao={varBase} subirEBom rotulo="no mês" />}
         detalhe={`${inteiro.format(n(k?.vistoria_pendente))} com vistoria pendente`}
       />
       <Tile
         titulo="Associados" icon={Users} tom="navy" carregando={carregando} href="/associados"
         valor={inteiro.format(n(k?.associados_base))}
-        detalhe={`${(n(k?.veiculos_base) / Math.max(1, n(k?.associados_base))).toFixed(2).replace('.', ',')} veiculos por associado`}
+        detalhe={`${(n(k?.veiculos_base) / Math.max(1, n(k?.associados_base))).toFixed(2).replace('.', ',')} veículos por associado`}
       />
       <Tile
         titulo="Carteira mensal" icon={Wallet} tom="green" carregando={carregando}
         valor={formatCurrency(n(k?.carteira_mensal))}
         detalhe={
           <>
-            Ticket medio {formatCurrency(n(k?.ticket_medio))}
+            Ticket médio {formatCurrency(n(k?.ticket_medio))}
             {n(k?.sem_valor) > 0 && <span className="text-amber-600"> · {inteiro.format(n(k?.sem_valor))} sem valor</span>}
           </>
         }
       />
       <Tile
-        titulo="Adesoes no mes" icon={UserPlus} tom="cyan" carregando={carregando}
+        titulo="Adesões no mês" icon={UserPlus} tom="cyan" carregando={carregando}
         valor={inteiro.format(n(k?.adesoes_mes))}
         tendencia={<Tendencia fracao={variacaoRelativa(projecao, n(k?.adesoes_mes_anterior))} subirEBom rotulo="projetado" />}
-        detalhe={`Ritmo atual fecha em ~${inteiro.format(projecao)} · mes anterior ${inteiro.format(n(k?.adesoes_mes_anterior))}`}
+        detalhe={`Ritmo atual fecha em ~${inteiro.format(projecao)} · mês anterior ${inteiro.format(n(k?.adesoes_mes_anterior))}`}
       />
       <Tile
-        titulo="Saidas no mes" icon={UserMinus} tom="rose" carregando={carregando}
+        titulo="Saídas no mês" icon={UserMinus} tom="rose" carregando={carregando}
         valor={inteiro.format(n(k?.saidas_mes))}
-        detalhe={`Churn ${churn === null ? '—' : formatPercent(churn)} · mes anterior ${inteiro.format(n(k?.saidas_mes_anterior))}`}
+        detalhe={`Churn ${churn === null ? '—' : formatPercent(churn)} · mês anterior ${inteiro.format(n(k?.saidas_mes_anterior))}`}
       />
       <Tile
         titulo="Protocolos em aberto" icon={Ticket} tom="violet" href="/protocolos"
@@ -294,10 +294,10 @@ function FaixaCobrancaExterna({ d }: { d: PainelVisaoGeral }) {
     <div className="flex items-start gap-3 rounded-2xl border border-cyan-200 bg-cyan-50/60 px-4 py-3 text-sm text-slate-700">
       <Info className="mt-0.5 h-4 w-4 shrink-0 text-cyan-600" />
       <p>
-        <b className="tnum">{inteiro.format(ext)}</b> de {inteiro.format(base)} veiculos ({formatPercent(ext / Math.max(1, base))})
-        ainda sao <b>cobrados pelo sistema anterior</b> — {formatCurrency(n(d.kpis.carteira_externa))}/mes da carteira. Eles estao
+        <b className="tnum">{inteiro.format(ext)}</b> de {inteiro.format(base)} veículos ({formatPercent(ext / Math.max(1, base))})
+        ainda são <b>cobrados pelo sistema anterior</b> — {formatCurrency(n(d.kpis.carteira_externa))}/mes da carteira. Eles estão
         na base, no SAC e na 24h, mas o boleto ainda sai de la — as <i>Mensalidades</i> abaixo juntam o que foi emitido aqui e o
-        historico de boletos importado do Mutual.
+        histórico de boletos importado do Mutual.
       </p>
     </div>
   );
@@ -316,10 +316,10 @@ function Distribuicao({ d, escuro, global }: { d: PainelVisaoGeral; escuro: bool
   const porUf = useMemo(() => fatiasComOutros(d.por_uf, (u) => u.uf, (u) => u.veiculos, 8), [d.por_uf]);
 
   return (
-    <Secao titulo="Distribuicao nacional da carteira" icon={MapIcon} acao={global ? <LinkSecao href="/regionais" texto="Dashboard das regionais" /> : undefined}>
+    <Secao titulo="Distribuição nacional da carteira" icon={MapIcon} acao={global ? <LinkSecao href="/regionais" texto="Dashboard das regionais" /> : undefined}>
       <div className="grid gap-4 lg:grid-cols-[1.35fr_1fr]">
         <Card>
-          <CardHeader><CardTitle>Veiculos por unidade</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Veículos por unidade</CardTitle></CardHeader>
           <CardContent>
             <Rosca
               fatias={porUnidade} cores={cores} unidade="veiculos"
@@ -354,7 +354,7 @@ function Evolucao({
 
   return (
     <Secao
-      titulo={`Evolucao da carteira — ultimos ${meses} meses`} icon={TrendingUp}
+      titulo={`Evolução da carteira — últimos ${meses} meses`} icon={TrendingUp}
       acao={
         <div className="flex rounded-lg border border-slate-200 p-0.5 text-xs">
           {[6, 12].map((m) => (
@@ -371,9 +371,9 @@ function Evolucao({
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Novas adesoes x saidas por mes</CardTitle>
+            <CardTitle>Novas adesões x saídas por mês</CardTitle>
             <p className="text-xs text-slate-500">
-              {inteiro.format(entrou)} entraram e {inteiro.format(saiu)} sairam no periodo — liquido{' '}
+              {inteiro.format(entrou)} entraram e {inteiro.format(saiu)} saíram no período — líquido{' '}
               <b className={entrou - saiu >= 0 ? 'text-emerald-600' : 'text-rose-600'}>
                 {entrou - saiu >= 0 ? '+' : ''}{inteiro.format(entrou - saiu)}
               </b>
@@ -388,10 +388,10 @@ function Evolucao({
                   <YAxis tick={EIXO} axisLine={false} tickLine={false} allowDecimals={false} width={36} />
                   <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(30,43,77,0.05)' }} />
                   <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
-                  <Bar dataKey="adesoes" name="Adesoes" fill={corA} radius={[4, 4, 0, 0]} maxBarSize={26} isAnimationActive={false}>
+                  <Bar dataKey="adesoes" name="Adesões" fill={corA} radius={[4, 4, 0, 0]} maxBarSize={26} isAnimationActive={false}>
                     <LabelList dataKey="adesoes" position="top" fontSize={10} fill="currentColor" />
                   </Bar>
-                  <Bar dataKey="saidas" name="Saidas" fill={corB} radius={[4, 4, 0, 0]} maxBarSize={26} isAnimationActive={false} />
+                  <Bar dataKey="saidas" name="Saídas" fill={corB} radius={[4, 4, 0, 0]} maxBarSize={26} isAnimationActive={false} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -399,7 +399,7 @@ function Evolucao({
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Veiculos na base (fim de cada mes)</CardTitle>
+            <CardTitle>Veículos na base (fim de cada mês)</CardTitle>
             <p className="text-xs text-slate-500">
               De {inteiro.format(n(primeiro?.base_fim))} para {inteiro.format(n(ultimo?.base_fim))}
               {' '}<Tendencia fracao={variacaoRelativa(n(ultimo?.base_fim), n(primeiro?.base_fim))} subirEBom />
@@ -418,7 +418,7 @@ function Evolucao({
                   <CartesianGrid strokeDasharray="3 3" stroke="currentColor" strokeOpacity={0.15} vertical={false} />
                   <XAxis dataKey="rotulo" tick={EIXO} axisLine={false} tickLine={false} />
                   <YAxis tick={EIXO} axisLine={false} tickLine={false} width={44} domain={['dataMin - 50', 'auto']} allowDecimals={false} />
-                  <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: number) => [inteiro.format(v), 'Veiculos na base']} />
+                  <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: number) => [inteiro.format(v), 'Veículos na base']} />
                   <Area type="monotone" dataKey="base_fim" stroke={corA} strokeWidth={2} fill="url(#vg-base)" dot={{ r: 3 }} isAnimationActive={false} />
                 </AreaChart>
               </ResponsiveContainer>
@@ -428,9 +428,9 @@ function Evolucao({
       </div>
       <p className="flex items-start gap-1.5 text-[11.5px] text-slate-400">
         <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-        A carteira migrada traz a data de ativacao original. Os encerrados antes da migracao nao foram trazidos,
-        entao as saidas desse periodo aparecem zeradas; vendas feitas no sistema anterior depois da ultima captura
-        so entram na proxima carga.
+        A carteira migrada traz a data de ativação original. Os encerrados antes da migração não foram trazidos,
+        então as saídas desse período aparecem zeradas; vendas feitas no sistema anterior depois da última captura
+        só entram na próxima carga.
       </p>
     </Secao>
   );
@@ -446,10 +446,10 @@ function Composicao({ d, escuro }: { d: PainelVisaoGeral; escuro: boolean }) {
   };
 
   return (
-    <Secao titulo="Composicao da frota" icon={Layers}>
+    <Secao titulo="Composição da frota" icon={Layers}>
       <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
         <Card>
-          <CardHeader><CardTitle>Por tipo de veiculo</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Por tipo de veículo</CardTitle></CardHeader>
           <CardContent><Rosca fatias={porTipo} cores={coresTipo} unidade="veiculos" /></CardContent>
         </Card>
         <Card>
@@ -462,7 +462,7 @@ function Composicao({ d, escuro }: { d: PainelVisaoGeral; escuro: boolean }) {
       {total > 0 && (
         <Card>
           <CardContent className="py-4">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Situacao dos veiculos na base</p>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Situação dos veículos na base</p>
             <div className="flex h-3 w-full overflow-hidden rounded-full bg-slate-100">
               {d.por_status.map((s) => (
                 <div
@@ -510,15 +510,15 @@ function EventosBloco({ d, escuro }: { d: PainelVisaoGeral; escuro: boolean }) {
   const frequencia = n(d.kpis.veiculos_base) ? doze / n(d.kpis.veiculos_base) : null;
 
   return (
-    <Secao titulo="Eventos e Assistencia 24h" icon={ShieldAlert} acao={<LinkSecao href="/eventos" texto="Abrir eventos" />}>
+    <Secao titulo="Eventos e Assistência 24h" icon={ShieldAlert} acao={<LinkSecao href="/eventos" texto="Abrir eventos" />}>
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
         <Tile titulo="Eventos em aberto (SCar)" icon={AlertTriangle} tom="amber" href="/eventos" valor={inteiro.format(n(e.abertos))}
           detalhe={etapas.filter((x) => !['CONCLUIDO', 'NEGADO'].includes(x.status)).map((x) => `${x.rotulo} ${x.n}`).join(' · ') || 'Nenhum em andamento'} />
-        <Tile titulo="Eventos no mes" icon={ShieldAlert} tom="rose" valor={inteiro.format(mes)}
+        <Tile titulo="Eventos no mês" icon={ShieldAlert} tom="rose" valor={inteiro.format(mes)}
           detalhe={temHistorico ? `${inteiro.format(n(e.novos_mes))} no SCar · ${inteiro.format(n(h?.mes))} no Mutual` : `${inteiro.format(n(e.total))} registrados no total`} />
         <Tile titulo="Eventos em 12 meses" icon={ShieldAlert} tom="rose" href="/eventos?aba=historico" valor={inteiro.format(doze)}
-          detalhe={frequencia === null ? undefined : `${formatPercent(frequencia)} da frota na base · SCar + historico`} />
-        <Tile titulo="Acionamentos 24h no mes" icon={LifeBuoy} tom="cyan" valor={inteiro.format(n(d.assistencia.mes))}
+          detalhe={frequencia === null ? undefined : `${formatPercent(frequencia)} da frota na base · SCar + histórico`} />
+        <Tile titulo="Acionamentos 24h no mês" icon={LifeBuoy} tom="cyan" valor={inteiro.format(n(d.assistencia.mes))}
           detalhe={`${inteiro.format(n(d.assistencia.em_aberto))} OS em andamento · custo ${formatCurrency(n(d.assistencia.custo_mes))}`} />
         <Tile titulo="Rastreadores instalados" icon={Radar} tom="navy" href="/rastreadores" valor={inteiro.format(n(d.rastreadores.instalados))}
           detalhe={
@@ -531,7 +531,7 @@ function EventosBloco({ d, escuro }: { d: PainelVisaoGeral; escuro: boolean }) {
       </div>
       <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
         <Card>
-          <CardHeader><CardTitle>Eventos e acionamentos 24h por mes</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Eventos e acionamentos 24h por mês</CardTitle></CardHeader>
           <CardContent>
             <div className="h-60 w-full text-slate-500">
               <ResponsiveContainer width="100%" height="100%">
@@ -542,7 +542,7 @@ function EventosBloco({ d, escuro }: { d: PainelVisaoGeral; escuro: boolean }) {
                   <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(30,43,77,0.05)' }} />
                   <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
                   {temHistorico && (
-                    <Bar dataKey="historico" name="Eventos (historico Mutual)" stackId="ev" fill={escuro ? COR_B.escuro : COR_B.claro} maxBarSize={22} isAnimationActive={false} />
+                    <Bar dataKey="historico" name="Eventos (histórico Mutual)" stackId="ev" fill={escuro ? COR_B.escuro : COR_B.claro} maxBarSize={22} isAnimationActive={false} />
                   )}
                   <Bar dataKey="eventos" name="Eventos (SCar)" stackId="ev" fill={escuro ? COR_C.escuro : COR_C.claro} radius={[4, 4, 0, 0]} maxBarSize={22} isAnimationActive={false} />
                   <Bar dataKey="acionamentos" name="Acionamentos 24h" fill={escuro ? COR_A.escuro : COR_A.claro} radius={[4, 4, 0, 0]} maxBarSize={22} isAnimationActive={false} />
@@ -552,12 +552,12 @@ function EventosBloco({ d, escuro }: { d: PainelVisaoGeral; escuro: boolean }) {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle>Eventos por tipo — ultimos 12 meses</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Eventos por tipo — últimos 12 meses</CardTitle></CardHeader>
           <CardContent>
             {porTipo.length ? (
               <BarrasRanking fatias={porTipo} cor={escuro ? COR_B.escuro : COR_B.claro} />
             ) : (
-              <SemDados texto="Nenhum evento nos ultimos 12 meses." />
+              <SemDados texto="Nenhum evento nos últimos 12 meses." />
             )}
           </CardContent>
         </Card>
@@ -565,10 +565,10 @@ function EventosBloco({ d, escuro }: { d: PainelVisaoGeral; escuro: boolean }) {
       <p className="flex items-start gap-1.5 text-[11.5px] text-slate-400">
         <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
         {temHistorico
-          ? <>Os eventos somam o SCar e o <b>historico do Mutual</b> ({inteiro.format(n(h?.total))} eventos dos associados carregados).
-              O historico e so consulta: nao conta como evento em aberto. Acionamentos 24h sao so os do SCar.</>
-          : <>Eventos e acionamentos contam o que foi registrado no SCar — o historico do Mutual ainda nao foi importado
-              (Integracao Mutual → Historico de eventos).</>}
+          ? <>Os eventos somam o SCar e o <b>histórico do Mutual</b> ({inteiro.format(n(h?.total))} eventos dos associados carregados).
+              O histórico é só consulta: não conta como evento em aberto. Acionamentos 24h são só os do SCar.</>
+          : <>Eventos e acionamentos contam o que foi registrado no SCar — o histórico do Mutual ainda não foi importado
+              (Integração Mutual → Histórico de eventos).</>}
       </p>
     </Secao>
   );
@@ -600,8 +600,8 @@ function ComercialFinanceiro({
           <CardContent className="space-y-4 py-4">
             <div className="grid grid-cols-3 gap-3 text-center">
               <div><p className="tnum text-xl font-bold text-slate-900">{inteiro.format(n(d.vendas.em_aberto))}</p><p className="text-[11px] text-slate-500">leads em aberto</p></div>
-              <div><p className="tnum text-xl font-bold text-slate-900">{inteiro.format(n(d.vendas.novos_mes))}</p><p className="text-[11px] text-slate-500">novos no mes</p></div>
-              <div><p className="tnum text-xl font-bold text-emerald-600">{inteiro.format(n(d.vendas.convertidos_mes))}</p><p className="text-[11px] text-slate-500">convertidos no mes</p></div>
+              <div><p className="tnum text-xl font-bold text-slate-900">{inteiro.format(n(d.vendas.novos_mes))}</p><p className="text-[11px] text-slate-500">novos no mês</p></div>
+              <div><p className="tnum text-xl font-bold text-emerald-600">{inteiro.format(n(d.vendas.convertidos_mes))}</p><p className="text-[11px] text-slate-500">convertidos no mês</p></div>
             </div>
             <ul className="space-y-1.5">
               {funil.map((e) => (
@@ -618,31 +618,31 @@ function ComercialFinanceiro({
         </Card>
       </Secao>
 
-      <Secao titulo="Financeiro — mensalidades" icon={Banknote} acao={<LinkSecao href="/cobrancas" texto="Abrir cobranca" />}>
+      <Secao titulo="Financeiro — mensalidades" icon={Banknote} acao={<LinkSecao href="/cobrancas" texto="Abrir cobrança" />}>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <Tile titulo="Emitido no mes" icon={Wallet} tom="cyan" carregando={cob.isLoading}
+          <Tile titulo="Emitido no mês" icon={Wallet} tom="cyan" carregando={cob.isLoading}
             valor={formatCurrency(n(atual?.valor_emitido))}
             detalhe={`${formatCurrency(aVencer)} ainda a vencer`} />
-          <Tile titulo="Recebido no mes" icon={Banknote} tom="green" carregando={cob.isLoading}
+          <Tile titulo="Recebido no mês" icon={Banknote} tom="green" carregando={cob.isLoading}
             valor={formatCurrency(atual ? recebidoDoMes(atual) : 0)}
             detalhe={`Em aberto vencido: ${formatCurrency(n(atual?.valor_aberto_vencido))}`} />
-          <Tile titulo={`Inadimplencia (${Math.max(1, fechados.length)} meses)`} icon={AlertTriangle} tom="rose" href="/cobrancas" carregando={cob.isLoading}
+          <Tile titulo={`Inadimplência (${Math.max(1, fechados.length)} meses)`} icon={AlertTriangle} tom="rose" href="/cobrancas" carregando={cob.isLoading}
             valor={inadPeriodo === null ? '—' : formatPercent(inadPeriodo)}
-            detalhe={`Valor vencido e nao pago · ${inteiro.format(n(d.kpis.inadimplentes))} veiculos inadimplentes`} />
+            detalhe={`Valor vencido e não pago · ${inteiro.format(n(d.kpis.inadimplentes))} veículos inadimplentes`} />
           <Tile titulo="A pagar em 7 dias" icon={Banknote} tom="amber" href="/financeiro" valor={formatCurrency(n(d.pagar.proximos_7))}
             detalhe={n(d.pagar.vencido) > 0
-              ? <span className="text-rose-600">{formatCurrency(n(d.pagar.vencido))} ja vencidos</span>
+              ? <span className="text-rose-600">{formatCurrency(n(d.pagar.vencido))} já vencidos</span>
               : `${formatCurrency(n(d.pagar.em_aberto))} em aberto no total`} />
         </div>
         <Card>
           <CardHeader>
             <CardTitle>Mensalidades: emitido x recebido</CardTitle>
-            <p className="text-xs text-slate-500">Boletos emitidos no SCar + historico importado do Mutual, pelo mes de vencimento.</p>
+            <p className="text-xs text-slate-500">Boletos emitidos no SCar + histórico importado do Mutual, pelo mês de vencimento.</p>
           </CardHeader>
           <CardContent>
             {cob.error ? (
               <p className="py-8 text-center text-sm text-rose-600">
-                Nao foi possivel ler a cobranca: {(cob.error as { message?: string }).message ?? 'erro'}
+                Não foi possível ler a cobrança: {(cob.error as { message?: string }).message ?? 'erro'}
               </p>
             ) : serie.some((m) => m.emitido > 0) ? (
               <>
@@ -671,7 +671,7 @@ function ComercialFinanceiro({
                 </div>
               </>
             ) : (
-              <SemDados texto={cob.isLoading ? 'Carregando...' : 'Nenhuma mensalidade no periodo.'} />
+              <SemDados texto={cob.isLoading ? 'Carregando...' : 'Nenhuma mensalidade no período.'} />
             )}
           </CardContent>
         </Card>
@@ -722,8 +722,8 @@ export function VisaoGeral() {
 
       {error ? (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-          Nao foi possivel carregar o painel: {(error as { message?: string }).message ?? 'erro desconhecido'}.
-          Tente atualizar a pagina.
+          Não foi possível carregar o painel: {(error as { message?: string }).message ?? 'erro desconhecido'}.
+          Tente atualizar a página.
         </div>
       ) : null}
 
@@ -750,7 +750,7 @@ export function VisaoGeral() {
       {!isLoading && !error && !d && (
         <div className="flex flex-col items-center gap-2 py-16 text-center text-sm text-slate-500">
           <PieIcon className="h-8 w-8 text-slate-300" />
-          Seu acesso nao inclui os indicadores da operacao.
+          Seu acesso não inclui os indicadores da operação.
         </div>
       )}
     </div>

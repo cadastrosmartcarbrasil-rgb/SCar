@@ -101,7 +101,7 @@ describe('OFX', () => {
   it('arquivo que nao e OFX avisa em vez de falhar', () => {
     const ex = interpretarOfx('data;valor\n01/10;10');
     expect(ex.itens).toEqual([]);
-    expect(ex.avisos[0]).toContain('nao parece um OFX');
+    expect(ex.avisos[0]).toContain('não parece um OFX');
   });
 
   it('valores e datas', () => {

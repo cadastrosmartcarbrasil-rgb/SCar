@@ -131,8 +131,8 @@ export function periodoPreset(chave: string, hoje = new Date()): Periodo {
 }
 
 const PRESETS = [
-  { chave: 'mes', rotulo: 'Mes atual' },
-  { chave: 'mes_anterior', rotulo: 'Mes anterior' },
+  { chave: 'mes', rotulo: 'Mês atual' },
+  { chave: 'mes_anterior', rotulo: 'Mês anterior' },
   { chave: 'trimestre', rotulo: 'Trimestre' },
   { chave: 'semestre', rotulo: 'Semestre' },
   { chave: 'ano', rotulo: 'Ano' },
@@ -178,7 +178,7 @@ export function FiltroPeriodo({
           />
         </label>
         <label className="block">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Ate</span>
+          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Até</span>
           <input
             type="date"
             value={periodo.fim}

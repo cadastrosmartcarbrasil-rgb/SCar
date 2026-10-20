@@ -63,7 +63,7 @@ export default function AssociadosPage() {
         <input
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
-          placeholder="Buscar por nome, CPF/CNPJ ou matricula"
+          placeholder="Buscar por nome, CPF/CNPJ ou matrícula"
           className="w-full rounded-md border border-slate-300 py-2 pl-9 pr-3 text-sm"
         />
       </div>
@@ -72,12 +72,12 @@ export default function AssociadosPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
-              <th className="px-4 py-2">Matricula</th>
-              <th className="px-4 py-2">Nome / Razao Social</th>
+              <th className="px-4 py-2">Matrícula</th>
+              <th className="px-4 py-2">Nome / Razão Social</th>
               <th className="px-4 py-2">CPF / CNPJ</th>
               <th className="px-4 py-2">Contato</th>
               <th className="px-4 py-2">Regional</th>
-              <th className="px-4 py-2">Situacao</th>
+              <th className="px-4 py-2">Situação</th>
               <th className="px-4 py-2"></th>
             </tr>
           </thead>
@@ -117,7 +117,7 @@ export default function AssociadosPage() {
                         e.stopPropagation();
                         if (confirm(`Excluir o associado "${a.nome_razao_social}"?`))
                           excluir.mutate(a.id, {
-                            onSuccess: () => toast.success('Associado excluido'),
+                            onSuccess: () => toast.success('Associado excluído'),
                             onError: (er) => toast.error((er as Error).message),
                           });
                       }}

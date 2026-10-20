@@ -21,7 +21,7 @@ export interface TabelaExportavel {
 export async function baixarExcel(nomeArquivo: string, t: TabelaExportavel) {
   const ExcelJS = (await import('exceljs')).default;
   const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet(t.titulo.slice(0, 31) || 'Relatorio');
+  const ws = wb.addWorksheet(t.titulo.slice(0, 31) || 'Relatório');
   ws.addRow([t.titulo]).font = { bold: true, size: 13 };
   if (t.subtitulo) ws.addRow([t.subtitulo]).font = { italic: true, color: { argb: 'FF555555' } };
   ws.addRow([]);
@@ -77,7 +77,7 @@ ${t.rodape ? `<tfoot>${linha(t.rodape, 'td')}</tfoot>` : ''}</table>
 <script>window.onload=function(){window.print()}</script></body></html>`;
   const w = window.open('', '_blank');
   if (!w) {
-    alert('O navegador bloqueou a janela de impressao. Libere pop-ups para este site.');
+    alert('O navegador bloqueou a janela de impressão. Libere pop-ups para este site.');
     return;
   }
   w.document.open();

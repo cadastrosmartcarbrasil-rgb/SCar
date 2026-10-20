@@ -667,7 +667,7 @@ export function useExecutarCarga() {
     const { data, error } = await supabase.rpc('mutual_executar_carga', args);
     if (error) throw error;
     const r = (data ?? [])[0];
-    if (!r) throw new Error('O banco nao devolveu o resultado da carga');
+    if (!r) throw new Error('O banco não devolveu o resultado da carga');
     return r;
   };
 
@@ -693,7 +693,7 @@ export function useExecutarCarga() {
         // linhas so aconteceria com a fila andando para tras.
         let voltas = 0;
         while (restantes > 0) {
-          if (++voltas > total + 1) throw new Error('A fila da carga nao esvaziou — pare e confira');
+          if (++voltas > total + 1) throw new Error('A fila da carga não esvaziou — pare e confira');
           setProgresso({ fase: 'gravando', feitos: total - restantes, total });
           const b = await chamar({
             p_regional_id: regionalId, p_incluir_inativos: incluirInativos, p_confirmar: true,
@@ -798,7 +798,7 @@ export function useVincularVendedores() {
       });
       if (error) throw error;
       const r = (data ?? [])[0];
-      if (!r) throw new Error('O banco nao devolveu o resultado');
+      if (!r) throw new Error('O banco não devolveu o resultado');
       return r;
     },
     onSuccess: (_d, v) => {

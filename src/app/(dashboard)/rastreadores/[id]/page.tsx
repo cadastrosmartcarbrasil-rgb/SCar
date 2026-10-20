@@ -34,7 +34,7 @@ export default function FichaRastreadorPage() {
   const [acao, setAcao] = useState<Acao>(null);
 
   if (isLoading) return <p className="text-sm text-slate-400">Carregando...</p>;
-  if (!r) return <p className="text-sm text-slate-400">Equipamento nao encontrado.</p>;
+  if (!r) return <p className="text-sm text-slate-400">Equipamento não encontrado.</p>;
 
   const meta = statusMeta(r.status);
   const alerta = alertaDePrazo(r.status, r.status_desde);
@@ -53,7 +53,7 @@ export default function FichaRastreadorPage() {
           </h1>
           <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-500">
             <span className={`rounded px-2 py-0.5 text-xs font-medium ${meta.cor}`}>{rotuloStatus(r.status)}</span>
-            <span>ha {r.dias_no_status} dia(s)</span>
+            <span>há {r.dias_no_status} dia(s)</span>
             {r.plataforma && <span>· {r.plataforma}</span>}
             {r.regional && <span>· {r.regional}</span>}
           </p>
@@ -63,14 +63,14 @@ export default function FichaRastreadorPage() {
         {r.pode_editar && (
           <div className="flex flex-wrap gap-2">
             {r.status === 'DISPONIVEL' && (
-              <Button onClick={() => setAcao('instalar')}><Car className="h-4 w-4" /> Instalar em veiculo</Button>
+              <Button onClick={() => setAcao('instalar')}><Car className="h-4 w-4" /> Instalar em veículo</Button>
             )}
             {r.status === 'ATIVO' && (
               <Button variant="secondary" onClick={() => setAcao('desinstalar')}>Desinstalar</Button>
             )}
             {r.manutencao_aberta_id
-              ? <Button variant="secondary" onClick={() => setAcao('concluir')}><Wrench className="h-4 w-4" /> Concluir manutencao</Button>
-              : <Button variant="secondary" onClick={() => setAcao('manutencao')}><Wrench className="h-4 w-4" /> Manutencao</Button>}
+              ? <Button variant="secondary" onClick={() => setAcao('concluir')}><Wrench className="h-4 w-4" /> Concluir manutenção</Button>
+              : <Button variant="secondary" onClick={() => setAcao('manutencao')}><Wrench className="h-4 w-4" /> Manutenção</Button>}
             {r.status === 'COBRAR_RASTREADOR' && (
               <Button onClick={() => setAcao('cobrar')}><Receipt className="h-4 w-4" /> Cobrar equipamento</Button>
             )}
@@ -90,8 +90,8 @@ export default function FichaRastreadorPage() {
             <Dado rotulo="Operadora" valor={r.operadora} />
             <Dado rotulo="Modelo" valor={r.modelo} />
             <Dado rotulo="Fabricante" valor={r.fabricante} />
-            <Dado rotulo="Nº de serie" valor={r.numero_serie} />
-            <Dado rotulo="Aquisicao" valor={r.data_aquisicao ? formatDate(r.data_aquisicao) : null} />
+            <Dado rotulo="Nº de série" valor={r.numero_serie} />
+            <Dado rotulo="Aquisição" valor={r.data_aquisicao ? formatDate(r.data_aquisicao) : null} />
             <Dado rotulo="Valor" valor={r.valor_aquisicao != null ? formatCurrency(r.valor_aquisicao) : null} />
             <Dado rotulo="Nota fiscal" valor={r.nota_fiscal} />
           </div>
@@ -106,7 +106,7 @@ export default function FichaRastreadorPage() {
 
         {/* Veiculo vinculado */}
         <section className="rounded-lg border border-slate-200 bg-superficie p-4">
-          <h2 className="mb-3 text-sm font-semibold text-slate-700">Instalacao</h2>
+          <h2 className="mb-3 text-sm font-semibold text-slate-700">Instalação</h2>
           {r.veiculo_id ? (
             <div className="space-y-2 text-sm">
               <p className="font-mono text-lg font-semibold text-slate-900">{r.placa}</p>
@@ -119,12 +119,12 @@ export default function FichaRastreadorPage() {
                 {r.instalador && <p>Instalador: {r.instalador}</p>}
               </div>
               <Link href={`/veiculos?editar=${r.veiculo_id}`} className="inline-flex items-center gap-1 text-sm text-cyan-700 hover:underline">
-                Abrir a ficha do veiculo <ExternalLink className="h-3.5 w-3.5" />
+                Abrir a ficha do veículo <ExternalLink className="h-3.5 w-3.5" />
               </Link>
             </div>
           ) : (
             <p className="text-sm text-slate-400">
-              Equipamento sem veiculo. {r.status === 'DISPONIVEL' ? 'Pronto para instalar.' : ''}
+              Equipamento sem veículo. {r.status === 'DISPONIVEL' ? 'Pronto para instalar.' : ''}
             </p>
           )}
         </section>
@@ -133,7 +133,7 @@ export default function FichaRastreadorPage() {
       {/* Historico */}
       <section className="rounded-lg border border-slate-200 bg-superficie p-4">
         <h2 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-slate-700">
-          <History className="h-4 w-4 text-slate-400" /> Historico do equipamento
+          <History className="h-4 w-4 text-slate-400" /> Histórico do equipamento
         </h2>
         <ol className="space-y-2">
           {(historico ?? []).map((e) => (
@@ -153,7 +153,7 @@ export default function FichaRastreadorPage() {
               </p>
             </li>
           ))}
-          {(historico ?? []).length === 0 && <li className="text-sm text-slate-400">Sem movimentacao registrada.</li>}
+          {(historico ?? []).length === 0 && <li className="text-sm text-slate-400">Sem movimentação registrada.</li>}
         </ol>
       </section>
 
@@ -175,8 +175,8 @@ function rotuloEvento(tipo: string) {
   return ({
     CADASTRO: 'Cadastrado', STATUS: 'Status alterado', INSTALACAO: 'Instalado',
     DESINSTALACAO: 'Desinstalado', TRANSFERENCIA_FILIAL: 'Transferido de unidade',
-    TROCA_PLATAFORMA: 'Troca de plataforma', MANUTENCAO: 'Manutencao',
-    IMPORTACAO: 'Importado', OBSERVACAO: 'Observacao',
+    TROCA_PLATAFORMA: 'Troca de plataforma', MANUTENCAO: 'Manutenção',
+    IMPORTACAO: 'Importado', OBSERVACAO: 'Observação',
   } as Record<string, string>)[tipo] ?? tipo;
 }
 
@@ -220,7 +220,7 @@ function ModalAcao({ acao, ficha, onClose }: {
   function enviar(e: React.FormEvent) {
     e.preventDefault();
     if (acao === 'instalar') {
-      if (!veiculoId) return toast.error('Selecione o veiculo');
+      if (!veiculoId) return toast.error('Selecione o veículo');
       return instalar.mutate(
         { p_rastreador_id: ficha.id, p_veiculo_id: veiculoId, p_local: local || null, p_instalador: instalador || null },
         { onSuccess: () => feito('Equipamento instalado'), onError: erro },
@@ -229,7 +229,7 @@ function ModalAcao({ acao, ficha, onClose }: {
     if (acao === 'desinstalar') {
       return desinstalar.mutate(
         { p_rastreador_id: ficha.id, p_status_novo: status || 'DISPONIVEL', p_motivo: motivo || null },
-        { onSuccess: () => feito('Equipamento retirado do veiculo'), onError: erro },
+        { onSuccess: () => feito('Equipamento retirado do veículo'), onError: erro },
       );
     }
     if (acao === 'status') {
@@ -251,31 +251,31 @@ function ModalAcao({ acao, ficha, onClose }: {
       if (!defeito.trim()) return toast.error('Descreva o defeito');
       return abrirManut.mutate(
         { p_rastreador_id: ficha.id, p_defeito: defeito },
-        { onSuccess: () => feito('Manutencao aberta'), onError: erro },
+        { onSuccess: () => feito('Manutenção aberta'), onError: erro },
       );
     }
     if (acao === 'cobrar') {
       if (!valorCobranca || valorCobranca <= 0) return toast.error('Informe o valor a cobrar');
       return cobrar.mutate(
         { p_rastreador_id: ficha.id, p_valor: valorCobranca, p_vencimento: vencimento || null },
-        { onSuccess: () => feito('Titulo do equipamento gerado'), onError: erro },
+        { onSuccess: () => feito('Título do equipamento gerado'), onError: erro },
       );
     }
     if (acao === 'concluir') {
-      if (!ficha.manutencao_aberta_id) return toast.error('Nao ha manutencao aberta');
+      if (!ficha.manutencao_aberta_id) return toast.error('Não há manutenção aberta');
       if (!solucao.trim()) return toast.error('Descreva o que foi feito');
       return concluirManut.mutate(
         { p_manutencao_id: ficha.manutencao_aberta_id, p_solucao: solucao, p_custo: custo, p_sem_reparo: semReparo },
-        { onSuccess: () => feito('Manutencao concluida'), onError: erro },
+        { onSuccess: () => feito('Manutenção concluída'), onError: erro },
       );
     }
   }
 
   const titulos: Record<Exclude<Acao, null>, string> = {
-    instalar: 'Instalar em veiculo', desinstalar: 'Desinstalar equipamento',
+    instalar: 'Instalar em veículo', desinstalar: 'Desinstalar equipamento',
     status: 'Mudar status', transferir: 'Transferir de unidade',
-    manutencao: 'Abrir manutencao', concluir: 'Concluir manutencao',
-    cobrar: 'Cobrar o equipamento nao devolvido',
+    manutencao: 'Abrir manutenção', concluir: 'Concluir manutenção',
+    cobrar: 'Cobrar o equipamento não devolvido',
   };
 
   return (
@@ -283,7 +283,7 @@ function ModalAcao({ acao, ficha, onClose }: {
       <form onSubmit={enviar} className="space-y-3">
         {acao === 'instalar' && (
           <>
-            <FormField label="Veiculo *">
+            <FormField label="Veículo *">
               <input value={buscaVeiculo} onChange={(e) => setBuscaVeiculo(e.target.value)}
                 placeholder="Digite a placa (ou marca/modelo) para buscar"
                 className="mb-2 w-full rounded-md border border-slate-300 bg-superficie px-3 py-2 text-sm" />
@@ -297,7 +297,7 @@ function ModalAcao({ acao, ficha, onClose }: {
               </Select>
             </FormField>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <FormField label="Local no veiculo">
+              <FormField label="Local no veículo">
                 <Input value={local} onChange={(e) => setLocal(e.target.value)} placeholder="Ex.: sob o painel" />
               </FormField>
               <FormField label="Instalador">
@@ -305,7 +305,7 @@ function ModalAcao({ acao, ficha, onClose }: {
               </FormField>
             </div>
             <p className="text-xs text-slate-400">
-              Ao instalar, a ficha do veiculo passa a mostrar este IMEI, o chip e a rastreadora.
+              Ao instalar, a ficha do veículo passa a mostrar este IMEI, o chip e a rastreadora.
             </p>
           </>
         )}
@@ -314,8 +314,8 @@ function ModalAcao({ acao, ficha, onClose }: {
           <>
             <FormField label="Para onde vai o equipamento">
               <Select value={status} onChange={(e) => setStatus(e.target.value as StatusRastreador)}>
-                <option value="DISPONIVEL">1 - Disponivel (volta ao estoque)</option>
-                <option value="MANUTENCAO">9 - Manutencao</option>
+                <option value="DISPONIVEL">1 - Disponível (volta ao estoque)</option>
+                <option value="MANUTENCAO">9 - Manutenção</option>
                 <option value="BAIXADO">11 - Baixado</option>
               </Select>
             </FormField>
@@ -337,7 +337,7 @@ function ModalAcao({ acao, ficha, onClose }: {
               <Textarea rows={2} value={motivo} onChange={(e) => setMotivo(e.target.value)} />
             </FormField>
             <p className="text-xs text-slate-400">
-              A lista mostra so as transicoes que o banco aceita a partir de {rotuloStatus(ficha.status)}.
+              A lista mostra só as transições que o banco aceita a partir de {rotuloStatus(ficha.status)}.
             </p>
           </>
         )}
@@ -369,8 +369,8 @@ function ModalAcao({ acao, ficha, onClose }: {
               </FormField>
             </div>
             <p className="text-xs text-slate-500">
-              Gera um titulo a receber no nome do associado que ficou com o aparelho e move o
-              equipamento para <strong>7 - Boleto gerado</strong>. O titulo aparece no financeiro do
+              Gera um título a receber no nome do associado que ficou com o aparelho e move o
+              equipamento para <strong>7 - Boleto gerado</strong>. O título aparece no financeiro do
               associado e na 2a via do SAC.
             </p>
           </>
@@ -379,7 +379,7 @@ function ModalAcao({ acao, ficha, onClose }: {
         {acao === 'manutencao' && (
           <FormField label="Defeito *">
             <Textarea rows={3} value={defeito} onChange={(e) => setDefeito(e.target.value)}
-              placeholder="Ex.: nao comunica ha 15 dias" />
+              placeholder="Ex.: não comunica há 15 dias" />
           </FormField>
         )}
 
