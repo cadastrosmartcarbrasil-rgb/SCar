@@ -4297,6 +4297,10 @@ export type Database = {
         Args: { p_baixa_id: string; p_motivo: string };
         Returns: { lancamento_id: string; status: string; valor_saldo: number; extrato_reaberto: boolean };
       };
+      equipe_ativa: {
+        Args: Record<string, never>;
+        Returns: { id: string; nome: string; papel: string; regional_id: string | null }[];
+      };
       excluir_lancamento: {
         Args: { p_lancamento_id: string; p_motivo: string };
         Returns: { lancamento_id: string; arquivos: string[] };

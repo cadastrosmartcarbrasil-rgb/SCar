@@ -176,19 +176,16 @@ export function useEncerrarProtocolo() {
   });
 }
 
-// Atendentes disponiveis para receber a transferencia.
+// Atendentes disponiveis para receber a transferencia. Pela RPC equipe_ativa
+// (0133): a tabela `usuarios` so mostra a propria linha a quem nao e da matriz.
 export function useAtendentes() {
   const supabase = createClient();
   return useQuery<Pick<UsuariosRow, 'id' | 'nome' | 'papel'>[]>({
     queryKey: ['protocolos', 'atendentes'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('usuarios')
-        .select('id, nome, papel')
-        .eq('ativo', true)
-        .order('nome');
+      const { data, error } = await supabase.rpc('equipe_ativa', {});
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []).map((u) => ({ id: u.id, nome: u.nome, papel: u.papel as UsuariosRow['papel'] }));
     },
   });
 }

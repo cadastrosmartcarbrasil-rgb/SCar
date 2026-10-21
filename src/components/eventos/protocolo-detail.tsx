@@ -12,7 +12,7 @@ import { EventoFinanceiro } from './evento-financeiro';
 import { AvisoTerceiroPendente, TerceirosEvento } from './terceiros-evento';
 import { useTerceirosEvento } from '@/hooks/use-terceiros';
 import { useEvento, useHistoricoProtocolo } from '@/hooks/use-eventos';
-import { useUsuarios } from '@/hooks/use-config';
+import { useEquipeAtiva } from '@/hooks/use-config';
 import { TramitacaoEvento } from './tramitacao-evento';
 import { CartaoPrazoEvento, DocumentosEvento } from './prazo-regulatorio';
 import { useDocumentosEvento } from '@/hooks/use-prazo-eventos';
@@ -37,7 +37,7 @@ interface LocalEvento {
 export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
   const { data: evento, isLoading } = useEvento(eventoId);
   const { data: historico } = useHistoricoProtocolo(eventoId);
-  const { data: usuarios } = useUsuarios();
+  const { data: usuarios } = useEquipeAtiva();
   const { data: terceiros } = useTerceirosEvento(eventoId);
   const { data: documentos } = useDocumentosEvento(eventoId);
   const { data: comunicacoes } = useComunicacoesEvento(eventoId);

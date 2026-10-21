@@ -9,7 +9,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FormField, Select, Textarea } from '@/components/ui/field';
-import { useUsuarios, usePerfilAtual } from '@/hooks/use-config';
+import { useEquipeAtiva, usePerfilAtual } from '@/hooks/use-config';
 import {
   useTransferirProtocolo, useProtocoloDoEvento, usePareceresProtocolo,
   useSolicitarParecer, useResponderParecer,
@@ -39,7 +39,7 @@ export function TramitacaoEvento({
   eventoId: string;
   operadorAtualId?: string | null;
 }) {
-  const { data: usuarios } = useUsuarios();
+  const { data: equipeAtiva } = useEquipeAtiva();
   const { data: perfil } = usePerfilAtual();
   const { data: atendimentoId } = useProtocoloDoEvento(eventoId);
   const { data: pareceres, isLoading: carregandoPareceres } = usePareceresProtocolo(atendimentoId ?? null);
@@ -55,10 +55,7 @@ export function TramitacaoEvento({
   const [pergunta, setPergunta] = useState('');
   const [escolhidos, setEscolhidos] = useState<string[]>([]);
 
-  const equipe = useMemo(
-    () => (usuarios ?? []).filter((u) => u.ativo),
-    [usuarios],
-  );
+  const equipe = useMemo(() => equipeAtiva ?? [], [equipeAtiva]);
   // Mudar o STATUS do evento e do time de sinistro (0077). Transferir e opinar
   // continuam de todo staff da unidade — juridico e vistoria opinam no sinistro
   // sem serem o time dele. Oferecer o seletor a quem o banco vai recusar seria

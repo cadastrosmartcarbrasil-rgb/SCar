@@ -252,6 +252,25 @@ export function useUsuarios() {
   });
 }
 
+/**
+ * A equipe ATIVA para escolher destinatario (transferir protocolo, tramitar
+ * evento, pedir parecer). Vem de `equipe_ativa()` (0133): a tabela `usuarios`
+ * so mostra a propria linha a quem nao e admin/financeiro/gestor.
+ */
+export interface MembroEquipe { id: string; nome: string; papel: string; regional_id: string | null }
+export function useEquipeAtiva() {
+  const supabase = createClient();
+  return useQuery<MembroEquipe[]>({
+    queryKey: ['config', 'equipe-ativa'],
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('equipe_ativa', {});
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
 export interface NovoUsuario {
   nome: string;
   email: string;
