@@ -20,6 +20,7 @@ import { useVeiculoFicha } from '@/hooks/use-vida-cadastro';
 import { primeiraAtivacao, statusVeiculoResumo } from '@/lib/sac';
 import { formatarDocumento } from '@/lib/documento';
 import { formatCurrency } from '@/lib/utils';
+import { identificacaoVeiculo } from '@/lib/placa';
 
 type Aba = 'dados' | 'financeiro' | 'eventos' | 'protocolos' | 'assistencia' | 'termos';
 
@@ -60,7 +61,7 @@ export default function FichaVeiculo({ params }: { params: { id: string } }) {
         </div>
         <div className="min-w-0 flex-1">
           <h1 className="text-xl font-semibold text-slate-900">
-            <span className="font-mono">{v.placa}</span>{' '}
+            <span className="font-mono">{identificacaoVeiculo(v.placa, v.chassi)}</span>{' '}
             <span className="font-normal text-slate-600">
               {[v.marca, v.modelo].filter(Boolean).join(' ')}
               {v.ano_modelo ? ` ${v.ano_fabricacao ?? ''}/${v.ano_modelo}` : ''}

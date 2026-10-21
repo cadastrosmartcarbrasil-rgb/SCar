@@ -605,13 +605,13 @@ describe('recusasPorMotivo', () => {
   // texto cru daria uma familia por linha — fila que ninguem trabalha.
   it('agrupa por FAMILIA e ordena por volume', () => {
     const l = [
-      linha({ problema: 'SEM PLACA (0 km ou placa fora do padrao)... Chassi: AAA' }),
-      linha({ problema: 'SEM PLACA (0 km ou placa fora do padrao)... Chassi: BBB' }),
+      linha({ problema: 'SEM PLACA E SEM CHASSI: nao ha como identificar o veiculo. A' }),
+      linha({ problema: 'SEM PLACA E SEM CHASSI: nao ha como identificar o veiculo. B' }),
       linha({ problema: 'CPF/CNPJ invalido (11111111111) — o banco recusa' }),
       linha(),
     ];
     expect(recusasPorMotivo(l)).toEqual([
-      { motivo: 'Sem placa (0 km)', quantidade: 2 },
+      { motivo: 'Sem placa e sem chassi', quantidade: 2 },
       { motivo: 'CPF/CNPJ invalido', quantidade: 1 },
     ]);
   });

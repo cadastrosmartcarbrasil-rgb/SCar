@@ -11,12 +11,14 @@ import { seguroParaFiltro } from './crm';
 export const TAMANHO_PAGINA_CADASTRO = 50;
 
 /** Situacao do veiculo na lista. "Na base" e o padrao: e o que a operacao procura. */
-export type SituacaoLista = 'base' | 'fora' | 'todos';
+export type SituacaoLista = 'base' | 'fora' | 'todos' | 'placa_pendente';
 
 export const SITUACOES_LISTA: { valor: SituacaoLista; rotulo: string }[] = [
   { valor: 'base', rotulo: 'Na base' },
   { valor: 'fora', rotulo: 'Fora da base (inativos e baixados)' },
   { valor: 'todos', rotulo: 'Todos' },
+  // 0136: o 0 km que ainda nao emplacou — a fila de quem cobra a placa.
+  { valor: 'placa_pendente', rotulo: 'Placa pendente (0 km)' },
 ];
 
 /** Status de cada recorte. `excluido` nunca aparece na lista. */
@@ -42,6 +44,9 @@ export function filtroBuscaVeiculos(bruto: string, clienteIds: string[] = []): s
   if (t.length >= 2) {
     const placa = t.toUpperCase().replace(/[^A-Z0-9]/g, '');
     if (placa.length >= 2) partes.push(`placa.ilike.*${placa}*`);
+    // 0136: o 0 km (placa pendente) so e achado pelo CHASSI — normalmente pelo
+    // final dele, que e o que se le no documento e no veiculo.
+    if (placa.length >= 4) partes.push(`chassi.ilike.*${placa}*`);
     partes.push(`marca.ilike.*${t}*`, `modelo.ilike.*${t}*`);
   }
   const digitos = (bruto ?? '').replace(/\D/g, '');

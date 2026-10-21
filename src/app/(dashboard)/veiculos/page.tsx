@@ -28,7 +28,7 @@ import {
 } from '@/hooks/use-veiculo-ficha';
 import { AlertasVeiculo } from '@/components/veiculos/alertas-veiculo';
 import { CampoCor } from '@/components/cores/campo-cor';
-import { consultarPlaca, normalizarPlaca, placaValida } from '@/lib/placa';
+import { consultarPlaca, identificacaoVeiculo, normalizarPlaca, placaPendente, placaValida, validarIdentidadeVeiculo } from '@/lib/placa';
 import { FipeConsulta } from '@/components/fipe/fipe-consulta';
 import { useFipePorPlaca } from '@/hooks/use-fipe';
 import { formatCurrency } from '@/lib/utils';
@@ -398,7 +398,8 @@ function VeiculosConteudo() {
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.cliente_id) return toast.error('Selecione o associado');
-    if (!placaValida(form.placa ?? '')) return toast.error('Placa inválida');
+    const erroIdentidade = validarIdentidadeVeiculo(form);
+    if (erroIdentidade) return toast.error(erroIdentidade);
     const erroRastreador = validarRastreador({
       rastreador_imei: form.rastreador_imei ?? null,
       rastreador_chip: form.rastreador_chip ?? null,
@@ -427,6 +428,9 @@ function VeiculosConteudo() {
         // unique deixou de ser hipotese: e o carro ja cadastrado com OUTRA
         // placa (transferencia, clonagem, cadastro duplicado). Dizer "chassi ja
         // cadastrado" leva a conferir; o texto cru do Postgres, nao.
+        if (m.includes('chk_veiculo_identidade')) {
+          return toast.error('Sem placa, marque "Veículo 0 km" e informe o chassi');
+        }
         if (m.includes('chassi')) return toast.error('Chassi já cadastrado em outro veículo');
         if (m.includes('renavam')) return toast.error('Renavam já cadastrado em outro veículo');
         toast.error(m.includes('placa') ? 'Placa já cadastrada' : m);
@@ -495,8 +499,13 @@ function VeiculosConteudo() {
                 <tr key={v.id} className="border-b border-slate-50 last:border-0">
                   <td className="px-4 py-2 font-mono font-medium">
                     <Link href={`/veiculos/${v.id}`} className="text-brand-600 hover:underline" title="Abrir a ficha do veículo">
-                      {v.placa}
+                      {identificacaoVeiculo(v.placa, v.chassi)}
                     </Link>
+                    {placaPendente(v.placa) && (
+                      <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 font-sans text-[10px] font-semibold uppercase text-amber-800">
+                        placa pendente
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-2 text-slate-600">
                     <span className="inline-flex items-center gap-2">
@@ -545,7 +554,7 @@ function VeiculosConteudo() {
                       <SePode chave="veiculos.excluir">
                       <button
                         onClick={() => {
-                          if (confirm(`Excluir o veículo ${v.placa}?`))
+                          if (confirm(`Excluir o veículo ${identificacaoVeiculo(v.placa, v.chassi)}?`))
                             excluir.mutate(v.id, { onError: (e) => toast.error((e as Error).message) });
                         }}
                         className="rounded p-1.5 text-rose-500 hover:bg-rose-50"
@@ -571,7 +580,7 @@ function VeiculosConteudo() {
           carregando={lista.isFetching && !lista.isLoading} />
       </div>
 
-      <Modal open={aberto} onClose={fecharModal} title={form.id ? `Editar ${form.placa}` : 'Novo Veículo (Contrato)'} tamanho="xl">
+      <Modal open={aberto} onClose={fecharModal} title={form.id ? `Editar ${identificacaoVeiculo(form.placa, form.chassi)}` : 'Novo Veículo (Contrato)'} tamanho="xl">
         <datalist id="dl-marcas">
           {(marcas ?? []).map((m) => (
             <option key={m.id} value={m.nome} />
@@ -590,19 +599,27 @@ function VeiculosConteudo() {
           </FormField>
 
           {/* Placa + consulta */}
-          <FormField label="Placa *">
+          <FormField label={form.zero_km ? 'Placa (pendente — preencher quando emplacar)' : 'Placa *'}>
             <div className="flex gap-2">
               <Input
                 value={form.placa ?? ''}
-                onChange={(e) => setF({ placa: normalizarPlaca(e.target.value) })}
-                placeholder="ABC1D23"
+                onChange={(e) => setF({ placa: normalizarPlaca(e.target.value) || null })}
+                placeholder={form.zero_km ? 'sem placa ainda' : 'ABC1D23'}
                 className="mt-0 font-mono uppercase"
               />
-              <Button type="button" variant="secondary" onClick={consultar} disabled={consultando} className="shrink-0">
+              <Button type="button" variant="secondary" onClick={consultar}
+                disabled={consultando || !placaValida(form.placa ?? '')} className="shrink-0">
                 {consultando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                 Consultar
               </Button>
             </div>
+            {/* 0136: o 0 km entra sem placa, identificado pelo CHASSI. A regra
+                e do banco (chk_veiculo_identidade); aqui so se diz antes. */}
+            <label className="mt-2 flex items-center gap-2 text-sm text-slate-600">
+              <input type="checkbox" checked={!!form.zero_km}
+                onChange={(e) => setF({ zero_km: e.target.checked })} />
+              Veículo 0 km (placa pendente) — sem placa, o chassi completo é obrigatório
+            </label>
           </FormField>
 
           {/* A "Primeira ativacao" do Mutual (0084) — o inicio do veiculo na base.
@@ -642,7 +659,7 @@ function VeiculosConteudo() {
             <FormField label="Renavam">
               <Input value={form.renavam ?? ''} onChange={(e) => setF({ renavam: e.target.value })} />
             </FormField>
-            <FormField label="Chassi">
+            <FormField label={form.zero_km && placaPendente(form.placa) ? 'Chassi *' : 'Chassi'}>
               <Input value={form.chassi ?? ''} onChange={(e) => setF({ chassi: e.target.value })} />
             </FormField>
             <FormField label="No do motor">

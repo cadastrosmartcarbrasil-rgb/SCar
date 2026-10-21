@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { usePortalFinanceiro, usePortalPerfil, usePortalVeiculos } from '@/hooks/use-portal';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { STATUS_VEICULO_LABEL } from '@/types/domain';
+import { identificacaoVeiculo } from '@/lib/placa';
 
 const COR_STATUS: Record<string, string> = {
   ativo: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
@@ -87,7 +88,7 @@ export default function PortalVeiculosPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="font-mono text-[17px] font-bold uppercase tracking-wider text-brand-800">
-                      {v.placa}
+                      {identificacaoVeiculo(v.placa)}
                     </p>
                     <p className="text-[13px] text-slate-600">
                       {[v.marca, v.modelo].filter(Boolean).join(' ') || 'Veiculo'}

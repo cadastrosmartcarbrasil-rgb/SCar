@@ -37,6 +37,7 @@ import { usePode } from '@/hooks/use-permissoes';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 import { opcoesPrestadorDoServico, type OpcaoPrestador } from '@/lib/fornecedores';
 import type { Json, MotivoNegativaAcionamento, ServicosAssistenciaRow } from '@/lib/database.types';
+import { identificacaoVeiculo } from '@/lib/placa';
 
 export function PainelAcionamento({ placaInicial }: { placaInicial?: string | null }) {
   const [termo, setTermo] = useState(placaInicial ?? '');
@@ -120,7 +121,7 @@ export function PainelAcionamento({ placaInicial }: { placaInicial?: string | nu
                   ) : (
                     <ShieldAlert className="h-5 w-5 text-rose-600" />
                   )}
-                  {veiculo.placa} — {[veiculo.marca, veiculo.modelo].filter(Boolean).join(' ')}
+                  {identificacaoVeiculo(veiculo.placa)} — {[veiculo.marca, veiculo.modelo].filter(Boolean).join(' ')}
                 </p>
                 <p className="mt-0.5 text-sm text-slate-600">
                   {veiculo.associado}

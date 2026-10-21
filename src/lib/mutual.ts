@@ -797,7 +797,8 @@ export function recusasPorMotivo(
  * texto cru daria uma "familia" por linha.
  */
 export function familiaDaRecusa(problema: string): string {
-  if (problema.startsWith('SEM PLACA')) return 'Sem placa (0 km)';
+  // 0136: o sem placa COM chassi entra como 0 km; recusa so sem os dois.
+  if (problema.startsWith('SEM PLACA')) return 'Sem placa e sem chassi';
   if (problema.startsWith('CPF/CNPJ invalido')) return 'CPF/CNPJ invalido';
   if (problema.startsWith('Associado sem CPF')) return 'Associado sem CPF/CNPJ';
   if (problema.startsWith('Associado sem nome')) return 'Associado sem nome';

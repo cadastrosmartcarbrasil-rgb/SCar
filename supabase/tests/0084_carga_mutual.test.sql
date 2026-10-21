@@ -93,11 +93,12 @@ begin
       'vehicle_data', jsonb_build_object('vehicle_plate','CCC3C33'),
       'person_data', jsonb_build_object('person_id','P3',
         'person_cpf_cnpj','111.111.111-11','person_name','CPF QUEBRADO')),
-    -- 104 — 0 km (sem placa, com chassi): RECUSA nomeando o chassi
+    -- 104 — sem placa E sem chassi: RECUSA. (Ate a 0136 o 0 km COM chassi
+    --       tambem era recusado; desde ela ele entra — ver a suite 0136.)
     jsonb_build_object('id','104','contract_id','9001','contract_status','ATIVO',
       'status','ATIVO','final_total_value','130.00',
       'first_activation_date','2023-01-01T12:00:00Z',
-      'vehicle_data', jsonb_build_object('vehicle_chassi','9BWZZZ377VT000104'),
+      'vehicle_data', jsonb_build_object('vehicle_model','SEM IDENTIDADE'),
       'person_data', jsonb_build_object('person_id','P4',
         'person_cpf_cnpj','111.444.777-35','person_name','ZERO KM')),
     -- 105 — INATIVO na matriz: fora do escopo por padrao
@@ -166,12 +167,12 @@ begin
     'objeto da unidade vizinha nao pode aparecer na carga da matriz';
 
   select count(*) into n from mutual_carga_linhas(r_mat, false, true);
-  assert n = 2, format('2 recusas esperadas (CPF invalido e 0 km); veio %s', n);
+  assert n = 2, format('2 recusas esperadas (CPF invalido e sem placa nem chassi); veio %s', n);
 
   select problema into v_txt from mutual_carga_linhas(r_mat, false, true)
    where id_objeto = '104';
-  assert v_txt like 'SEM PLACA%' and v_txt like '%9BWZZZ377VT000104%',
-    format('a recusa do 0 km tem de NOMEAR o chassi para a operacao cobrar a placa; veio %L', v_txt);
+  assert v_txt like 'SEM PLACA E SEM CHASSI%',
+    format('sem placa e sem chassi nao ha identidade: recusa com motivo; veio %L', v_txt);
 
   select problema into v_txt from mutual_carga_linhas(r_mat, false, true)
    where id_objeto = '103';

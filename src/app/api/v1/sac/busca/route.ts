@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { identificacaoVeiculo } from '@/lib/placa';
 
 // GET /api/v1/sac/busca?q=...  — busca global por Nome, CPF/CNPJ ou Placa.
 // Base compartilhada por SAC, Assistencia 24h e Chatbot.
@@ -32,11 +33,16 @@ export async function GET(request: Request) {
 
   // Por placa — uma linha POR VEICULO (a mesma pessoa pode ter varios), com o
   // veiculo_id para o atendimento abrir direto naquele item.
+  // 0136: tambem pelo CHASSI (4+ caracteres) — e o unico jeito de achar o
+  // 0 km, que ainda nao tem placa.
   if (placa.length >= 3) {
+    const filtro = placa.length >= 4
+      ? `placa.ilike.*${placa}*,chassi.ilike.*${placa}*`
+      : `placa.ilike.*${placa}*`;
     const { data: veic, error } = await supabase
       .from('veiculos')
-      .select('id, placa, status, clientes(id, nome_razao_social, cpf_cnpj)')
-      .ilike('placa', `%${placa}%`)
+      .select('id, placa, chassi, status, clientes(id, nome_razao_social, cpf_cnpj)')
+      .or(filtro)
       .neq('status', 'excluido')
       .order('placa')
       .limit(10);
@@ -44,14 +50,15 @@ export async function GET(request: Request) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     for (const v of veic ?? []) {
       const linha = v as unknown as {
-        id: string; placa: string;
+        id: string; placa: string | null; chassi: string | null;
         clientes: { id: string; nome_razao_social: string; cpf_cnpj: string } | null;
       };
       const c = linha.clientes;
       if (!c) continue;
       encontrados.set(`v:${linha.id}`, {
         cliente_id: c.id, nome: c.nome_razao_social, cpf_cnpj: c.cpf_cnpj,
-        via: `Placa ${linha.placa}`, veiculo_id: linha.id, placa: linha.placa,
+        via: linha.placa ? `Placa ${linha.placa}` : identificacaoVeiculo(null, linha.chassi),
+        veiculo_id: linha.id, placa: linha.placa,
       });
     }
   }

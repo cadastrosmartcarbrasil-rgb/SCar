@@ -287,7 +287,10 @@ export type VeiculosRow = Timestamps & {
   cobranca_externa_desde: string | null;
   id: string;
   cliente_id: string;
-  placa: string;
+  /** 0136 — NULL so no 0 km (placa pendente): `zero_km` E chassi (chk_veiculo_identidade). */
+  placa: string | null;
+  /** 0136 — veiculo 0 km / placa pendente. Fica true como historico quando a placa chega. */
+  zero_km: boolean;
   chassi: string | null;
   renavam: string | null;
   numero_motor: string | null;
@@ -820,7 +823,7 @@ export type ResumoProtocolos = {
 // ordenada (ativos primeiro) e com os contadores resolvidos no banco.
 export type VeiculoDoCliente = {
   id: string;
-  placa: string;
+  placa: string | null;
   marca: string | null;
   modelo: string | null;
   ano_modelo: number | null;
@@ -1997,7 +2000,7 @@ export type AssistPainelMes = { competencia: string; acionamentos: number; custo
 
 export type AssistPainelVeiculo = {
   veiculo_id: string;
-  placa: string;
+  placa: string | null;
   descricao: string | null;
   associado: string;
   acionamentos: number;
@@ -2292,7 +2295,7 @@ export type ElegibilidadeAssistencia = {
 // Trava do veiculo (RPC situacao_assistencia_veiculo)
 export type SituacaoAssistencia = {
   veiculo_id: string;
-  placa: string;
+  placa: string | null;
   cliente_id: string;
   associado: string;
   status_veiculo: StatusVeiculo;
@@ -3069,7 +3072,7 @@ export type PortalPerfil = {
 
 export type PortalVeiculo = {
   id: string;
-  placa: string;
+  placa: string | null;
   marca: string | null;
   modelo: string | null;
   ano_modelo: number | null;

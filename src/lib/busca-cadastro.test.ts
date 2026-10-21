@@ -5,6 +5,10 @@ describe('busca no banco de veiculos e associados', () => {
   it('placa com separador vira so alfanumerico, em caixa alta', () => {
     expect(filtroBuscaVeiculos('abc-1d23')).toContain('placa.ilike.*ABC1D23*');
   });
+  it('0 km: o chassi (ou o final dele) tambem acha o veiculo (0136)', () => {
+    expect(filtroBuscaVeiculos('028234')).toContain('chassi.ilike.*028234*');
+    expect(filtroBuscaVeiculos('ab')).not.toContain('chassi');
+  });
   it('termo curto sem associado nao filtra', () => {
     expect(filtroBuscaVeiculos('a')).toBeNull();
   });

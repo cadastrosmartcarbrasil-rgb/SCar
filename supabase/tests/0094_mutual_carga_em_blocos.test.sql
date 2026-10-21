@@ -69,10 +69,11 @@ begin
       'final_total_value','190','first_activation_date','2021-05-01T12:00:00Z',
       'vehicle_data', jsonb_build_object('vehicle_plate','AAA1A05','vehicle_type','1'),
       'person_data', jsonb_build_object('person_id','Q5','person_cpf_cnpj','192.837.465-46')),
-    -- 206: sem placa -> RECUSA (nao entra na fila)
+    -- 206: sem placa E sem chassi -> RECUSA (nao entra na fila). Desde a 0136
+    --      o sem placa COM chassi entra como 0 km — este nao tem identidade.
     jsonb_build_object('id','206','contract_id','C50','contract_status','ATIVO','status','ATIVO',
       'final_total_value','100','first_activation_date','2021-06-01T12:00:00Z',
-      'vehicle_data', jsonb_build_object('vehicle_chassi','9BWZZZ377VT000206'),
+      'vehicle_data', jsonb_build_object('vehicle_model','SEM IDENTIDADE'),
       'person_data', jsonb_build_object('person_id','Q5','person_cpf_cnpj','192.837.465-46')),
     -- 207: a equipe vem so no OBJETO (o contrato nao tem) -> B
     jsonb_build_object('id','207','created_at','2020-05-01T12:00:00Z','contract_id','CSE','sales_team_id','51','contract_status','ATIVO','status','ATIVO',

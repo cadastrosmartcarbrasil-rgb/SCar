@@ -70,6 +70,7 @@ export function useVeiculosPagina(busca: string, situacao: SituacaoLista, pagina
         .neq('status', 'excluido');
       const status = statusDaSituacao(situacao);
       if (status) q = q.in('status', status as VeiculosRow['status'][]);
+      if (situacao === 'placa_pendente') q = q.is('placa', null);
       if (filtro) q = q.or(filtro);
       const { data, error, count } = await q
         .order('data_ativacao', { ascending: false, nullsFirst: false })

@@ -1029,9 +1029,9 @@ export default function IntegracaoMutualPage() {
           </p>
           <p className="mb-3 text-xs leading-relaxed text-slate-500">
             <strong>Veículo 0 km fica de fora desta lista.</strong> Ele não tem placa porque ainda
-            não foi emplacado — corrigir no Mutual não resolve. Quem resolve e a operação: o SAC
-            exige a placa no atendimento, ou um aviso a cobra depois da adesão. Ele é identificado
-            pelo <strong>chassi</strong> enquanto isso.
+            não foi emplacado — corrigir no Mutual não resolve. Desde a 0136 ele <strong>entra
+            na carga</strong> como <em>placa pendente</em>, identificado pelo <strong>chassi</strong>;
+            a fila de quem cobra a placa é <em>Veículos → Placa pendente (0 km)</em>.
           </p>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

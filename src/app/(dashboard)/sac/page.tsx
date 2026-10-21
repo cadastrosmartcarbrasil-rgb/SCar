@@ -39,6 +39,7 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import type {
   ClientesRow, OpcionalVeiculo, PrioridadeAtendimento, TipoAtendimento, TipoFaturamento,
 } from '@/lib/database.types';
+import { identificacaoVeiculo } from '@/lib/placa';
 
 type Aba = 'veiculos' | 'eventos' | 'protocolos';
 
@@ -307,7 +308,7 @@ function ListaVeiculos({ v360, onSelect }: { v360: Visao360; onSelect: (id: stri
               const st = statusVeiculoResumo(v.status, v.inadimplente);
               return (
                 <tr key={v.id} onClick={() => onSelect(v.id)} className="cursor-pointer border-b border-slate-50 transition last:border-0 hover:bg-cyan-50/40">
-                  <td className="px-4 py-2.5"><span className="rounded-md bg-slate-100 px-2 py-0.5 font-mono font-semibold text-slate-700">{v.placa}</span></td>
+                  <td className="px-4 py-2.5"><span className="rounded-md bg-slate-100 px-2 py-0.5 font-mono font-semibold text-slate-700">{identificacaoVeiculo(v.placa)}</span></td>
                   <td className="px-4 py-2.5 text-slate-700">
                     <span>{[v.marca, v.modelo].filter(Boolean).join(' ') || '—'}</span>
                     {v.eventos_qtd > 0 && (
@@ -464,7 +465,7 @@ function AtendimentoVeiculo({ clienteId, associado, veiculoId, podeTrocar, onTro
                     </li>
                   ))}
                 </ul>
-                <Link href={`/assistencia?placa=${encodeURIComponent(veiculo.placa)}`}
+                <Link href={veiculo.placa ? `/assistencia?placa=${encodeURIComponent(veiculo.placa)}` : '/assistencia'}
                   className="mt-2 inline-block text-xs font-medium text-cyan-700 hover:underline">
                   Abrir painel da Assistência 24h
                 </Link>
@@ -516,7 +517,7 @@ function VeiculoDetalheCard({ clienteId, veiculo }: { clienteId: string; veiculo
       <CardContent className="pt-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="rounded-md bg-acao px-2.5 py-1 font-mono text-sm font-bold text-white">{veiculo.placa}</span>
+            <span className="rounded-md bg-acao px-2.5 py-1 font-mono text-sm font-bold text-white">{identificacaoVeiculo(veiculo.placa, veiculo.chassi)}</span>
             <span className="text-base font-semibold text-slate-800">{[veiculo.marca, veiculo.modelo].filter(Boolean).join(' ')}</span>
             <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${veiculo.status === 'ativo' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>{veiculo.status}</span>
           </div>
@@ -685,7 +686,7 @@ function ServicoModal({ servico, veiculo, clienteId, onClose }: {
         <div className="rounded-lg bg-slate-50 p-3 text-sm">
           <p className="text-[11px] font-semibold uppercase text-slate-400">Veículo do atendimento</p>
           <p className="mt-0.5 font-medium text-slate-700">
-            <span className="font-mono">{veiculo.placa}</span> · {[veiculo.marca, veiculo.modelo].filter(Boolean).join(' ')} {veiculo.ano_modelo ?? ''}
+            <span className="font-mono">{identificacaoVeiculo(veiculo.placa, veiculo.chassi)}</span> · {[veiculo.marca, veiculo.modelo].filter(Boolean).join(' ')} {veiculo.ano_modelo ?? ''}
           </p>
           <p className="text-xs text-slate-400">Chassi: {veiculo.chassi || '—'}</p>
         </div>

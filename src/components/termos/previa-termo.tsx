@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/field';
 import { useBuscaVeiculos } from '@/hooks/use-veiculos';
 import { abrirPdfPrevia, usePreviaTermo, type PedidoPrevia } from '@/hooks/use-termos';
 import { rotuloCampo } from '@/lib/termos';
+import { identificacaoVeiculo } from '@/lib/placa';
 
 /** Lista dos campos que sairiam em branco (antes de emitir ou publicar). */
 export function AvisoCamposVazios({ vazios }: { vazios: string[] }) {
@@ -68,8 +69,8 @@ export function PreviaTermoModal({ aberto, onFechar, pedido, geral }: {
                 {veiculos.data!.map((v) => (
                   <button key={v.id} type="button"
                     className="block w-full px-3 py-1.5 text-left text-sm hover:bg-slate-100"
-                    onClick={() => { setAlvo({ cliente_id: v.cliente_id, veiculo_id: v.id, placa: v.placa }); setBusca(v.placa); }}>
-                    <span className="placa font-semibold">{v.placa}</span> · {v.marca} {v.modelo}
+                    onClick={() => { setAlvo({ cliente_id: v.cliente_id, veiculo_id: v.id, placa: v.placa ?? '' }); setBusca(v.placa ?? v.chassi ?? ''); }}>
+                    <span className="placa font-semibold">{identificacaoVeiculo(v.placa, v.chassi)}</span> · {v.marca} {v.modelo}
                     <span className="text-slate-500"> — {v.clientes?.nome_razao_social}</span>
                   </button>
                 ))}
