@@ -31,7 +31,7 @@ import {
   avaliarBloqueio, rotuloLimite, calcularKmExcedente, calcularTotalOS,
   STATUS_ACIONAMENTO_LABEL, paraCampoDataHora, doCampoDataHora, rotuloAgendamento,
   MOTIVOS_NEGATIVA, rotuloMotivoNegativa, validarNegativa, motivoNegativaSugerido, rotuloNegados,
-  acionamentoFinalizado, podeNegarAcionamento, podeExcluirAcionamento,
+  acionamentoFinalizado, acionamentoEditavel, podeNegarAcionamento, podeExcluirAcionamento,
 } from '@/lib/assistencia';
 import { usePode } from '@/hooks/use-permissoes';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
@@ -480,6 +480,8 @@ export function OrdemServico({ acionamentoId, onVoltar }: { acionamentoId: strin
   if (!a) return <p className="text-sm text-slate-400">Carregando acionamento...</p>;
 
   const finalizado = acionamentoFinalizado(a.status);
+  // Editar vale tambem para a OS CONCLUIDA (o banco aceita; titulo pago nao muda).
+  const editavel = acionamentoEditavel(a.status);
   // Base do KM excedente: o KM informado > a rota calculada > o previsto.
   const kmBase = Number(kmReal || a.distancia_km_calculada || a.km_previsto || 0);
   const kmExc = servico ? calcularKmExcedente(kmBase, Number(servico.km_franquia)) : 0;
@@ -546,7 +548,7 @@ export function OrdemServico({ acionamentoId, onVoltar }: { acionamentoId: strin
         {/* 0109: o atendimento muda a qualquer momento — o associado desiste, muda
             de lugar, remarca. As acoes ficam no topo, em QUALQUER fase (antes so
             apareciam depois de gerada a OS). */}
-        {!finalizado && (
+        {editavel && (
           <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
             <Button variant="secondary" onClick={() => setEditandoAtendimento(true)}>
               <CalendarClock className="h-4 w-4" /> Editar atendimento
@@ -572,11 +574,18 @@ export function OrdemServico({ acionamentoId, onVoltar }: { acionamentoId: strin
             <Button variant="ghost" className="text-rose-600" onClick={() => setCancelando(true)}>
               <Ban className="h-4 w-4" /> Cancelar atendimento
             </Button>
+            {a.status === 'CONCLUIDO' && (
+              <p className="w-full text-xs text-slate-500">
+                OS concluída: mudar valores ou prestador ajusta o título no Contas a Pagar enquanto ele
+                não tiver pagamento. Com pagamento, o título não muda e a diferença fica registrada no
+                histórico de alterações.
+              </p>
+            )}
           </div>
         )}
-        {/* 0134: exclusao (erro de preenchimento) — permissao propria, nunca OS concluida. */}
+        {/* 0134/0135: exclusao (erro de preenchimento) — permissao propria; o banco recusa OS paga. */}
         {podeExcluir && podeExcluirAcionamento(a) && (
-          <div className={`flex justify-end ${finalizado ? 'mt-3 border-t border-slate-100 pt-3' : 'mt-2'}`}>
+          <div className={`flex justify-end ${editavel ? 'mt-2' : 'mt-3 border-t border-slate-100 pt-3'}`}>
             <Button variant="ghost" className="text-xs text-rose-600" onClick={() => setExcluindo(true)}>
               <Trash2 className="h-3.5 w-3.5" /> Excluir acionamento
             </Button>
@@ -616,7 +625,7 @@ export function OrdemServico({ acionamentoId, onVoltar }: { acionamentoId: strin
       </div>
 
       {/* Trajeto: mapa da rota, distancia e navegacao do prestador */}
-      <CardTrajeto acionamento={a} servico={servico} editavel={!finalizado} />
+      <CardTrajeto acionamento={a} servico={servico} editavel={editavel} />
 
       {/* Cotacao */}
       {!finalizado && (
@@ -840,6 +849,7 @@ export function OrdemServico({ acionamentoId, onVoltar }: { acionamentoId: strin
       {excluindo && (
         <ModalExcluirAcionamento
           protocolo={a.codigo_os ?? a.protocolo}
+          concluida={a.status === 'CONCLUIDO'}
           temTitulo={!!a.lancamento_id}
           voucherEnviado={!!a.voucher_enviado_em}
           carregando={excluir.isPending}
@@ -1420,9 +1430,10 @@ function ModalNegarPedido({
 // 0134: exclusao do acionamento lancado por engano (fica a trilha)
 // ---------------------------------------------------------------------------
 function ModalExcluirAcionamento({
-  protocolo, temTitulo, voucherEnviado, carregando, onClose, onConfirmar,
+  protocolo, concluida, temTitulo, voucherEnviado, carregando, onClose, onConfirmar,
 }: {
   protocolo: string | null;
+  concluida: boolean;
   temTitulo: boolean;
   voucherEnviado: boolean;
   carregando?: boolean;
@@ -1449,9 +1460,16 @@ function ModalExcluirAcionamento({
           Se o associado realmente pediu e não foi atendido, não exclua: use <strong>Negar</strong> ou
           <strong> Cancelar</strong> — eles contam no histórico do veículo.
         </p>
+        {concluida && (
+          <p className="rounded-lg bg-amber-50 p-2 text-xs text-amber-800">
+            Esta OS está <strong>concluída</strong>. Exclua só se o serviço não aconteceu (lançamento
+            errado ou duplicado); se aconteceu e algo está errado, corrija pelos botões de edição.
+          </p>
+        )}
         {temTitulo && (
           <p className="rounded-lg bg-amber-50 p-2 text-xs text-amber-800">
-            O título desta OS no Contas a Pagar (ainda sem pagamento) será excluído junto.
+            O título desta OS no Contas a Pagar sai junto. Se ele já tiver pagamento, a exclusão é
+            recusada: estorne o pagamento no Financeiro antes.
           </p>
         )}
         {voucherEnviado && (

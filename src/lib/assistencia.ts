@@ -105,9 +105,17 @@ export function podeNegarAcionamento(a: { status: StatusAcionamento; codigo_os?:
   return (a.status === 'ABERTO' || a.status === 'EM_COTACAO') && !a.codigo_os;
 }
 
-/** Excluir (0134): nunca OS concluida — o servico foi prestado e o custo e real. */
-export function podeExcluirAcionamento(a: { status: StatusAcionamento }): boolean {
-  return a.status !== 'CONCLUIDO';
+/** Ainda se edita (dados, valores, prestador, cancelar)? So CANCELADO e NEGADO sao
+ *  definitivos: a OS CONCLUIDA continua editavel no banco (o titulo pago nao muda e a
+ *  divergencia fica registrada, 0027) — e a equipe conclui a OS logo depois de abrir. */
+export function acionamentoEditavel(status: StatusAcionamento): boolean {
+  return status !== 'CANCELADO' && status !== 'NEGADO';
+}
+
+/** Excluir (0134/0135): qualquer status. Quem recusa e o BANCO, pelo dinheiro: titulo
+ *  da OS com pagamento registrado nao sai (estorne antes). */
+export function podeExcluirAcionamento(_a: { status: StatusAcionamento }): boolean {
+  return true;
 }
 
 // ---------------------------------------------------------------------------

@@ -129,14 +129,7 @@ begin
   select * into e from elegibilidade_assistencia(v1) where servico_id = s_reboque;
   assert e.usados = 0, 'excluir devolve a cota';
 
-  -- concluida: recusa
-  select * into a from abrir_acionamento(v1, s_reboque, 'Assistido', '11999998888');
-  select * into a from confirmar_prestador_assistencia(a.id, f1, 230, 0, null, 30);
-  select * into a from concluir_acionamento(a.id, 10);
-  ok := false;
-  begin perform excluir_acionamento(a.id, 'Tentativa em concluida');
-  exception when others then ok := true; end;
-  assert ok, 'OS concluida nao se exclui';
+  -- OS concluida: ver a suite 0135 (a regra passou a ser o pagamento, nao o status)
 
   assert exists (select 1 from pg_policies where tablename = 'acionamentos_assistencia'
                   and policyname = 'acion_sem_delete_direto' and permissive = 'RESTRICTIVE'),

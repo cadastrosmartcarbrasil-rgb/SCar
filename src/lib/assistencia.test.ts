@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   motivoNegativaSugerido, validarNegativa, podeNegarAcionamento, podeExcluirAcionamento,
-  acionamentoFinalizado, rotuloNegados, rotuloMotivoNegativa, STATUS_ACIONAMENTO_LABEL,
+  acionamentoFinalizado, acionamentoEditavel, rotuloNegados, rotuloMotivoNegativa, STATUS_ACIONAMENTO_LABEL,
   paraCampoDataHora, doCampoDataHora, rotuloAgendamento,
   calcularKmExcedente,
   calcularTotalOS,
@@ -399,7 +399,10 @@ describe('pedido negado e exclusao (0134)', () => {
     expect(podeNegarAcionamento({ status: 'ABERTO' })).toBe(true);
     expect(podeNegarAcionamento({ status: 'EM_COTACAO' })).toBe(true);
     expect(podeNegarAcionamento({ status: 'AUTORIZADO', codigo_os: 'OS-1' })).toBe(false);
-    expect(podeExcluirAcionamento({ status: 'CONCLUIDO' })).toBe(false);
+    expect(podeExcluirAcionamento({ status: 'CONCLUIDO' })).toBe(true);
+    expect(acionamentoEditavel('CONCLUIDO')).toBe(true);
+    expect(acionamentoEditavel('CANCELADO')).toBe(false);
+    expect(acionamentoEditavel('NEGADO')).toBe(false);
     expect(podeExcluirAcionamento({ status: 'NEGADO' })).toBe(true);
     expect(acionamentoFinalizado('NEGADO')).toBe(true);
     expect(STATUS_ACIONAMENTO_LABEL.NEGADO.label).toBe('Negado');
