@@ -5578,6 +5578,10 @@ no fim — o runner procura por "PASSARAM") e rode `npm run schema`.
   para a rede.
 
 ## Gotchas já resolvidos (não repetir)
+- **Sem `error.tsx` toda falha de tela vira "Application error: a client-side exception has occurred"**,
+  sem pista nenhuma. Desde 21/10/2026 há tela de erro (`<TelaErro>`, `src/components/ui/tela-erro.tsx`) em
+  `(dashboard)`, `regional`, `vendedor`, `portal/(associado)` e `global-error.tsx`: mostra a mensagem, a tela e
+  a hora, com *Copiar detalhes* e *Tentar de novo*. Portal/área nova ganha o seu `error.tsx`.
 - **RLS com função POR LINHA trava a tela quando a tabela cresce.** `pode_regional(regional_id)` é SQL
   security definer — o planejador não a abre, então cada linha roda `auth_papel()`, `is_staff()` e
   `auth_regional_id()` (quatro selects em `usuarios`). Com 6.808 veículos, cada página de 1.000 do
