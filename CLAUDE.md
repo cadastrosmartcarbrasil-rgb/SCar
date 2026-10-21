@@ -1281,8 +1281,19 @@ Prioridade: **segurança (RLS)** e **sempre validado** antes de commitar.
   `brand` = **NAVY** (`brand-600 #1E2B4D`, a barra do site; acao primaria/estrutura) e `cyan` =
   **CIANO** da marca (`cyan-500 #22A7E4`/`cyan-600 #139AD6`; energia/acento — o "CAR" e o rodape).
   Sidebar = cabine escura (navy + pinstripe `.cockpit-stripe`, wordmark SMART**CAR**BRASIL, item
-  ativo com glow ciano). Numeros de painel usam `.tnum` (tabular). Ground `--background #eef2f8`,
-  cards brancos `rounded-2xl`. Botao primario navy; foco/realce em ciano. Status colors a parte.
+  ativo com glow ciano). Numeros de painel usam `.tnum` (tabular). Botao primario navy; foco/realce
+  em ciano. Status colors a parte.
+- **CABINE CLARA (21/10/2026) — o visual claro atual.** Tudo em `globals.css` (`:root`) e
+  `tailwind.config.ts`; o tema escuro (`.dark`) não foi tocado. Ground `--fundo #D5DDEA`
+  (azul-acinzentado, antes #F2F5FA), card `--superficie #F8FAFD` (um tom MAIS CLARO que o fundo, antes
+  branco), `--superficie-alta #EAEFF7` (cabeçalho de tabela, mais escuro que o card), borda do card
+  `slate-200 #BCC7D9`, borda de campo `slate-300 #A3B1C8`. Texto: `slate-800 #0F1B33` (corpo),
+  `slate-500 #38455C` (secundário, 7.07 no fundo), `slate-400 #525E70` (apoio, 4.81 no fundo — o piso).
+  **Peso:** corpo 500 (`font-normal` = 500, `font-medium` = 600 no config). **Tamanho:** `text-sm` 15px,
+  `text-xs` 13px (apague o bloco `fontSize` do config para voltar a 14/12). Número grande de painel
+  (`.tnum.text-xl` / `.text-2xl`) em Montserrat 800. `rounded-2xl` = 12px. `cyan-600` = `#0678A0`.
+  **Ao criar tela nova:** use `bg-superficie` no card e `border-slate-200`; NÃO use `bg-white` (só
+  placa/logo) nem `text-slate-300` como texto. Valores medidos: contraste ≥ 4.5 em todo texto.
 - **A escala `slate` é NOSSA, não a do Tailwind.** As faixas **400..700** foram escurecidas para
   metade da luminância original, com 15% de navy misturado — o cinza-claro padrão é fraco demais
   para uma marca navy e `text-slate-400` dava **2.56** de contraste no card branco, reprovado no

@@ -35,22 +35,31 @@
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
 
-  --fundo: 242 245 250; /* #F2F5FA ground frio, neutro o bastante para a tabela respirar */
-  --superficie: 255 255 255; /* card */
-  --superficie-alta: 248 250 252; /* card elevado / cabecalho de tabela */
+  /* CABINE CLARA (21/10/2026). Antes o ground era #F2F5FA com card branco:
+     cartao e fundo quase nao se distinguiam e a tela parecia lavada. Agora o
+     fundo e um azul-acinzentado de verdade e o card fica UM tom mais claro que
+     ele, com borda firme — a luz fica no conteudo, nao na pagina inteira. */
+  --fundo: 213 221 234; /* #D5DDEA ground azul-acinzentado */
+  --superficie: 248 250 253; /* #F8FAFD card */
+  --superficie-alta: 234 239 247; /* #EAEFF7 card elevado / cabecalho de tabela (mais escuro que o card) */
 
-  /* Escala de texto e apoio. 400..700 tem METADE da luminancia do slate do
-     Tailwind, com 15% de navy — o cinza padrao reprovava no WCAG AA. */
-  --slate-50: 248 250 252;
-  --slate-100: 241 245 249;
-  --slate-200: 226 232 240;
-  --slate-300: 203 213 225;
-  --slate-400: 95 108 125; /* #5F6C7D  contraste 5.35 no card */
-  --slate-500: 65 77 97; /* #414D61              8.54 */
-  --slate-600: 47 57 75; /* #2F394B             11.62 */
-  --slate-700: 34 45 63; /* #222D3F             13.86 */
-  --slate-800: 30 41 59;
-  --slate-900: 15 23 42;
+  /* Escala de texto e apoio. Contrastes medidos no ground / no card:
+       400  #525E70   4.81 / 6.29   (texto de apoio, placeholder)
+       500  #38455C   7.07 / 9.24   (texto secundario)
+       600  #29344A   9.12 / 11.92
+       700  #1C273C  10.93 / 14.30
+       800  #0F1B33  12.54 / 16.40  (texto do corpo)
+     50..300 sao fundo sutil e borda: a borda (200) e a do card, fina mas firme. */
+  --slate-50: 241 245 250; /* #F1F5FA */
+  --slate-100: 232 237 245; /* #E8EDF5 hover */
+  --slate-200: 188 199 217; /* #BCC7D9 borda do card e divisor */
+  --slate-300: 163 177 200; /* #A3B1C8 borda de campo */
+  --slate-400: 82 94 112;
+  --slate-500: 56 69 92;
+  --slate-600: 41 52 74;
+  --slate-700: 28 39 60;
+  --slate-800: 15 27 51;
+  --slate-900: 8 15 31;
 
   /* Marca: navy. No claro o pe da escala e claro (chip) e a cabeca e escura (texto). */
   --brand-50: 233 238 247;
@@ -115,6 +124,10 @@ body {
   color: rgb(var(--slate-800));
   -webkit-font-smoothing: antialiased;
   font-family: var(--font-texto);
+  /* Barlow Medium no texto corrido: o 400 fica fino demais sobre o ground
+     azulado. Quem quer o peso normal escreve `font-normal` (que vale 500
+     no tailwind.config) ou um peso explicito. */
+  font-weight: 500;
 }
 
 /* Titulos em Montserrat (peso da marca); texto corrido em Barlow; placa,
@@ -278,6 +291,14 @@ textarea:focus-visible {
 .tnum {
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
+}
+/* Cabine clara: o numero GRANDE do painel (KPI, indicador) vai em Montserrat 800
+   para ser lido de longe. So os de 20/24px: numero de tabela e de linha segue
+   no peso do texto. Dois seletores de classe vencem `font-semibold`/`font-bold`. */
+.tnum.text-xl,
+.tnum.text-2xl {
+  font-family: var(--font-titulo);
+  font-weight: 800;
 }
 
 /* Cabine (sidebar): azul marinho da marca, liso, com a diagonal do rodape do

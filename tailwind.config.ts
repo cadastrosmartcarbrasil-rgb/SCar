@@ -16,6 +16,22 @@ const config: Config = {
         display: ['var(--font-titulo)', 'system-ui', 'sans-serif'],
         mono: ['var(--font-mono)', 'ui-monospace', 'monospace'],
       },
+      // CABINE CLARA: texto mais firme e legivel, sem mexer em nenhuma tela.
+      //  - corpo e rotulos de campo 15px (text-sm); dado auxiliar 13px (text-xs)
+      //  - peso: normal=500 (Barlow Medium), medium=600 (rotulos). semibold/bold ficam.
+      //  - cartoes menos "bolha": rounded-2xl = 12px (igual ao rounded-xl)
+      // Para voltar ao tamanho antigo, apague o bloco fontSize abaixo.
+      fontSize: {
+        xs: ['0.8125rem', { lineHeight: '1.15rem' }],
+        sm: ['0.9375rem', { lineHeight: '1.4rem' }],
+      },
+      fontWeight: {
+        normal: '500',
+        medium: '600',
+      },
+      borderRadius: {
+        '2xl': '0.75rem',
+      },
       colors: {
         // Marca Smart Car Brasil.
         // brand = NAVY (estrutura + acao primaria, como a barra do site).
@@ -39,7 +55,7 @@ const config: Config = {
           300: '#5FC8EC',
           400: '#2FBAE7',
           500: '#0BACE2',
-          600: '#0785B0',
+          600: '#0678A0', // era #0785B0 (4.02 no card); agora 4.78 como texto
           700: '#066B8F',
           800: '#085776',
           900: '#0A455E',
@@ -51,10 +67,12 @@ const config: Config = {
         // escurece a leitura e puxa o cinza para o tom da marca de uma vez em
         // TODAS as telas — sem tocar em 800/900 (titulos) nem em 50..300, que
         // sao fundo, borda e o texto claro da cabine escura.
-        //   400  #94A3B8 -> #5F6C7D   contraste  2.56 -> 5.35
-        //   500  #64748B -> #414D61              4.76 -> 8.54
-        //   600  #475569 -> #2F394B              7.58 -> 11.62
-        //   700  #334155 -> #222D3F             10.35 -> 13.86
+        // Valores atuais (Cabine clara, 21/10/2026) em globals.css, com o contraste
+        // medido no ground #D5DDEA e no card #F8FAFD:
+        //   400  #525E70   4.81 / 6.29
+        //   500  #38455C   7.07 / 9.24
+        //   600  #29344A   9.12 / 11.92
+        //   700  #1C273C  10.93 / 14.30
         slate: {
           50: 'rgb(var(--slate-50) / <alpha-value>)',
           100: 'rgb(var(--slate-100) / <alpha-value>)',
