@@ -16,6 +16,7 @@ import type {
   HistoricoAssistencia,
   FornecedoresRow,
   StatusAcionamento,
+  MotivoNegativaAcionamento,
   EdicaoAcionamento,
   AssistPainelResumo,
   AssistPainelServico,
@@ -429,6 +430,79 @@ export function useCancelarAcionamento() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['assistencia'] }),
+  });
+}
+
+// 0134: pedido NEGADO — registrado direto (veiculo bloqueado, servico sem
+// cobertura...) ou negando um acionamento ainda sem OS.
+export function useRegistrarNegado() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<
+    AcionamentosAssistenciaRow,
+    Error,
+    {
+      veiculo_id: string; servico_id: string; motivo: MotivoNegativaAcionamento; observacao?: string | null;
+      solicitante?: string | null; telefone?: string | null;
+    }
+  >({
+    mutationFn: async (n) => {
+      const { data, error } = await supabase.rpc('registrar_acionamento_negado', {
+        p_veiculo_id: n.veiculo_id,
+        p_servico_id: n.servico_id,
+        p_motivo: n.motivo,
+        p_observacao: n.observacao ?? null,
+        p_solicitante: n.solicitante ?? null,
+        p_telefone: n.telefone ?? null,
+      });
+      if (error) throw error;
+      return data as AcionamentosAssistenciaRow;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['assistencia'] }),
+  });
+}
+
+export function useNegarAcionamento() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<void, Error, { acionamento_id: string; motivo: MotivoNegativaAcionamento; observacao?: string | null }>({
+    mutationFn: async (n) => {
+      const { error } = await supabase.rpc('negar_acionamento', {
+        p_acionamento_id: n.acionamento_id,
+        p_motivo: n.motivo,
+        p_observacao: n.observacao ?? null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['assistencia'] }),
+  });
+}
+
+// 0134: exclusao com trilha (acionamento_exclusoes). A RPC devolve os arquivos;
+// SQL nao apaga storage, entao saem daqui (falha no storage nao desfaz a exclusao).
+export function useExcluirAcionamento() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<{ protocolo: string | null; lancamento_excluido: boolean }, Error, { acionamento_id: string; motivo: string }>({
+    mutationFn: async (c) => {
+      const { data, error } = await supabase.rpc('excluir_acionamento', {
+        p_acionamento_id: c.acionamento_id,
+        p_motivo: c.motivo,
+      });
+      if (error) throw error;
+      const r = data as {
+        protocolo: string | null; arquivos: string[] | null; arquivos_financeiro: string[] | null;
+        lancamento_excluido: boolean;
+      };
+      if (r.arquivos?.length) await supabase.storage.from(BUCKET_ASSISTENCIA).remove(r.arquivos);
+      if (r.arquivos_financeiro?.length) await supabase.storage.from('financeiro').remove(r.arquivos_financeiro);
+      return { protocolo: r.protocolo, lancamento_excluido: r.lancamento_excluido };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['assistencia'] });
+      qc.invalidateQueries({ queryKey: ['lancamentos'] });
+      qc.invalidateQueries({ queryKey: ['financeiro'] });
+    },
   });
 }
 

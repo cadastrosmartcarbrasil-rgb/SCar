@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
+  motivoNegativaSugerido, validarNegativa, podeNegarAcionamento, podeExcluirAcionamento,
+  acionamentoFinalizado, rotuloNegados, rotuloMotivoNegativa, STATUS_ACIONAMENTO_LABEL,
   paraCampoDataHora, doCampoDataHora, rotuloAgendamento,
   calcularKmExcedente,
   calcularTotalOS,
@@ -34,7 +36,8 @@ const situacao = (over: Partial<SituacaoAssistencia> = {}): SituacaoAssistencia 
 
 const eleg = (over: Partial<ElegibilidadeAssistencia> = {}): ElegibilidadeAssistencia => ({
   servico_id: 's1', descricao: 'Reboque Passeio', computa_limite: true, limite_quantidade: 2,
-  janela_meses: 12, usados: 0, restantes: 2, elegivel: true, ultimo_uso: null, ...over,
+  janela_meses: 12, usados: 0, restantes: 2, elegivel: true, ultimo_uso: null,
+  negados: 0, ultima_negativa: null, ...over,
 });
 
 describe('KM excedente e total da OS', () => {
@@ -367,5 +370,45 @@ describe('agendamento do atendimento (0109)', () => {
       agendado_para: '2026-10-20T17:30:00Z',
     });
     expect(t).toContain('Atendimento agendado para 20/10/2026 as 14:30');
+  });
+});
+
+describe('pedido negado e exclusao (0134)', () => {
+  it('sugere o motivo pelo bloqueio', () => {
+    expect(motivoNegativaSugerido(['Limite do opcional atingido: 2 de 2 uso(s) em 12 meses'])).toBe('LIMITE_ATINGIDO');
+    expect(motivoNegativaSugerido(['1 titulo(s) em atraso — 150,00'])).toBe('INADIMPLENCIA');
+    expect(motivoNegativaSugerido(['Associado marcado como inadimplente'])).toBe('INADIMPLENCIA');
+    expect(motivoNegativaSugerido(['Veiculo com status suspenso (necessario ATIVO)'])).toBe('VEICULO_INATIVO');
+    expect(motivoNegativaSugerido(['2 alerta(s) cadastral(is) ativo(s)'])).toBe('PENDENCIA_CADASTRAL');
+    expect(motivoNegativaSugerido([])).toBeNull();
+  });
+
+  it('limite vence os demais motivos (e o que a gestao quer contar)', () => {
+    expect(motivoNegativaSugerido(['1 titulo(s) em atraso', 'Limite do opcional atingido'])).toBe('LIMITE_ATINGIDO');
+  });
+
+  it('valida como o banco: OUTRO exige descricao', () => {
+    expect(validarNegativa(null)).toBeTruthy();
+    expect(validarNegativa('XPTO')).toBeTruthy();
+    expect(validarNegativa('OUTRO', '  ')).toBeTruthy();
+    expect(validarNegativa('OUTRO', 'Associado sem documento')).toBeNull();
+    expect(validarNegativa('LIMITE_ATINGIDO')).toBeNull();
+  });
+
+  it('negar so antes da OS; excluir nunca a concluida', () => {
+    expect(podeNegarAcionamento({ status: 'ABERTO' })).toBe(true);
+    expect(podeNegarAcionamento({ status: 'EM_COTACAO' })).toBe(true);
+    expect(podeNegarAcionamento({ status: 'AUTORIZADO', codigo_os: 'OS-1' })).toBe(false);
+    expect(podeExcluirAcionamento({ status: 'CONCLUIDO' })).toBe(false);
+    expect(podeExcluirAcionamento({ status: 'NEGADO' })).toBe(true);
+    expect(acionamentoFinalizado('NEGADO')).toBe(true);
+    expect(STATUS_ACIONAMENTO_LABEL.NEGADO.label).toBe('Negado');
+  });
+
+  it('rotulo de reincidencia', () => {
+    expect(rotuloNegados({ negados: 0, janela_meses: 12 })).toBeNull();
+    expect(rotuloNegados({ negados: 1, janela_meses: 12 })).toBe('1 negado em 12 meses');
+    expect(rotuloNegados({ negados: 3, janela_meses: 6 })).toBe('3 negados em 6 meses');
+    expect(rotuloMotivoNegativa('FORA_DA_AREA')).toBe('Fora da área de atendimento');
   });
 });

@@ -7,6 +7,7 @@ import type {
   AssistPainelPraca,
   AssistPainelServico,
   ElegibilidadeAssistencia,
+  MotivoNegativaAcionamento,
   SituacaoAssistencia,
   StatusAcionamento,
   StatusVeiculo,
@@ -91,7 +92,65 @@ export const STATUS_ACIONAMENTO_LABEL: Record<StatusAcionamento, { label: string
   EM_ATENDIMENTO: { label: 'Em atendimento', cor: 'bg-sky-50 text-sky-700' },
   CONCLUIDO: { label: 'Concluído', cor: 'bg-emerald-50 text-emerald-700' },
   CANCELADO: { label: 'Cancelado', cor: 'bg-slate-100 text-slate-600' },
+  NEGADO: { label: 'Negado', cor: 'bg-rose-50 text-rose-700' },
 };
+
+/** Status em que nada mais se faz no acionamento. */
+export function acionamentoFinalizado(status: StatusAcionamento): boolean {
+  return status === 'CONCLUIDO' || status === 'CANCELADO' || status === 'NEGADO';
+}
+
+/** Negar so antes da OS (sem prestador confirmado); depois disso e cancelamento. */
+export function podeNegarAcionamento(a: { status: StatusAcionamento; codigo_os?: string | null }): boolean {
+  return (a.status === 'ABERTO' || a.status === 'EM_COTACAO') && !a.codigo_os;
+}
+
+/** Excluir (0134): nunca OS concluida — o servico foi prestado e o custo e real. */
+export function podeExcluirAcionamento(a: { status: StatusAcionamento }): boolean {
+  return a.status !== 'CONCLUIDO';
+}
+
+// ---------------------------------------------------------------------------
+// Pedido NEGADO (0134) — o mesmo vocabulario do CHECK em acionamentos_assistencia
+// ---------------------------------------------------------------------------
+export const MOTIVOS_NEGATIVA: { value: MotivoNegativaAcionamento; label: string }[] = [
+  { value: 'LIMITE_ATINGIDO', label: 'Limite de acionamentos atingido' },
+  { value: 'INADIMPLENCIA', label: 'Associado inadimplente' },
+  { value: 'VEICULO_INATIVO', label: 'Veículo fora da base / sem cobertura ativa' },
+  { value: 'PENDENCIA_CADASTRAL', label: 'Pendência cadastral' },
+  { value: 'SEM_COBERTURA', label: 'Serviço não coberto pelo plano' },
+  { value: 'FORA_DA_AREA', label: 'Fora da área de atendimento' },
+  { value: 'OUTRO', label: 'Outro motivo' },
+];
+
+export function rotuloMotivoNegativa(m: string | null | undefined): string {
+  return MOTIVOS_NEGATIVA.find((x) => x.value === m)?.label ?? (m || '—');
+}
+
+/** Motivo OUTRO exige descricao (mesma regra de acionamento_validar_negativa). */
+export function validarNegativa(motivo: string | null | undefined, observacao?: string | null): string | null {
+  if (!motivo || !MOTIVOS_NEGATIVA.some((x) => x.value === motivo)) return 'Escolha o motivo da negativa';
+  if (motivo === 'OUTRO' && (observacao ?? '').trim().length < 5) return 'Descreva o motivo da negativa';
+  return null;
+}
+
+/** Sugere o motivo a partir do que travou o acionamento (o atendente confirma). */
+export function motivoNegativaSugerido(motivosBloqueio: string[]): MotivoNegativaAcionamento | null {
+  const t = motivosBloqueio.join(' | ').toLowerCase();
+  if (!t) return null;
+  if (t.includes('limite')) return 'LIMITE_ATINGIDO';
+  if (t.includes('atraso') || t.includes('inadimplente')) return 'INADIMPLENCIA';
+  if (t.includes('status')) return 'VEICULO_INATIVO';
+  if (t.includes('alerta')) return 'PENDENCIA_CADASTRAL';
+  return 'OUTRO';
+}
+
+/** Aviso de reincidencia no cartao do servico: "2 negados em 12 meses". */
+export function rotuloNegados(e: Pick<ElegibilidadeAssistencia, 'negados' | 'janela_meses'>): string | null {
+  const n = Number(e.negados ?? 0);
+  if (n <= 0) return null;
+  return `${n} negado${n > 1 ? 's' : ''} em ${e.janela_meses} meses`;
+}
 
 // ---------------------------------------------------------------------------
 // Comunicado/voucher enviado ao prestador (e-mail e WhatsApp)

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Search } from 'lucide-react';
 import { FormField, Input, Select } from '@/components/ui/field';
 import { useAcionamentos } from '@/hooks/use-assistencia';
-import { STATUS_ACIONAMENTO_LABEL, rotuloAgendamento } from '@/lib/assistencia';
+import { STATUS_ACIONAMENTO_LABEL, rotuloAgendamento, rotuloMotivoNegativa } from '@/lib/assistencia';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { StatusAcionamento } from '@/lib/database.types';
 import { OrdemServico } from './painel-acionamento';
@@ -89,6 +89,9 @@ export function AcionamentosLista() {
                   </span>
                   {a.liberado_por && (
                     <span className="ml-1 rounded bg-amber-50 px-1.5 py-0.5 text-[11px] text-amber-700">liberado</span>
+                  )}
+                  {a.status === 'NEGADO' && a.negado_motivo && (
+                    <span className="block text-[11px] text-rose-700">{rotuloMotivoNegativa(a.negado_motivo)}</span>
                   )}
                 </td>
               </tr>

@@ -92,7 +92,12 @@ export type TipoInteracaoLead = 'LIGACAO' | 'WHATSAPP' | 'EMAIL' | 'VISITA' | 'O
 export type ResultadoInteracaoLead = 'FALOU' | 'NAO_ATENDEU' | 'AGENDOU' | 'SEM_INTERESSE';
 // 0026 :: Assistencia 24h
 export type StatusAcionamento =
-  | 'ABERTO' | 'EM_COTACAO' | 'AUTORIZADO' | 'EM_ATENDIMENTO' | 'CONCLUIDO' | 'CANCELADO';
+  | 'ABERTO' | 'EM_COTACAO' | 'AUTORIZADO' | 'EM_ATENDIMENTO' | 'CONCLUIDO' | 'CANCELADO' | 'NEGADO';
+
+/** 0134: por que o pedido de assistencia foi negado. */
+export type MotivoNegativaAcionamento =
+  | 'LIMITE_ATINGIDO' | 'INADIMPLENCIA' | 'VEICULO_INATIVO' | 'PENDENCIA_CADASTRAL'
+  | 'SEM_COBERTURA' | 'FORA_DA_AREA' | 'OUTRO';
 
 // ---- Helper para linhas com timestamps ------------------------------------
 type Timestamps = {
@@ -1890,6 +1895,11 @@ export type AcionamentosAssistenciaRow = Timestamps & {
   aberto_por: string | null;
   concluido_em: string | null;
   cancelado_motivo: string | null;
+  /** 0134: pedido negado (status NEGADO). */
+  negado_motivo: MotivoNegativaAcionamento | null;
+  negado_observacao: string | null;
+  negado_por: string | null;
+  negado_em: string | null;
   /** 0109: data/hora combinada com o associado; nulo = imediato. */
   agendado_para: string | null;
   regional_id: string | null;
@@ -2274,6 +2284,9 @@ export type ElegibilidadeAssistencia = {
   restantes: number | null;
   elegivel: boolean;
   ultimo_uso: string | null;
+  /** 0134: pedidos NEGADOS deste servico na mesma janela (nao consomem o limite). */
+  negados: number;
+  ultima_negativa: string | null;
 };
 
 // Trava do veiculo (RPC situacao_assistencia_veiculo)
@@ -2382,6 +2395,8 @@ export type HistoricoAssistencia = {
   computa_limite: boolean;
   criado_em: string;
   concluido_em: string | null;
+  negado_motivo: MotivoNegativaAcionamento | null;
+  negado_observacao: string | null;
 };
 
 export type CentrosCustoRow = {
@@ -4589,6 +4604,24 @@ export type Database = {
       cancelar_acionamento: {
         Args: { p_acionamento_id: string; p_motivo: string };
         Returns: AcionamentosAssistenciaRow;
+      };
+      registrar_acionamento_negado: {
+        Args: {
+          p_veiculo_id: string; p_servico_id: string; p_motivo: string; p_observacao?: string | null;
+          p_solicitante?: string | null; p_telefone?: string | null; p_origem?: Json;
+        };
+        Returns: AcionamentosAssistenciaRow;
+      };
+      negar_acionamento: {
+        Args: { p_acionamento_id: string; p_motivo: string; p_observacao?: string | null };
+        Returns: AcionamentosAssistenciaRow;
+      };
+      excluir_acionamento: {
+        Args: { p_acionamento_id: string; p_motivo: string };
+        Returns: {
+          acionamento_id: string; protocolo: string | null; arquivos: string[];
+          arquivos_financeiro: string[]; lancamento_excluido: boolean;
+        };
       };
       marcar_voucher_enviado: {
         Args: { p_acionamento_id: string };

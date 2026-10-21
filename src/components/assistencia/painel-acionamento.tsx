@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import {
   Search, ShieldCheck, ShieldAlert, LifeBuoy, Loader2, Lock, Send, CheckCircle2, Ban,
   Copy, MessageCircle, FileText, Truck, History, Pencil, Repeat, ClipboardList,
-  Route, MapPin, Navigation, ExternalLink, CalendarClock,
+  Route, MapPin, Navigation, ExternalLink, CalendarClock, XCircle, Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
@@ -16,6 +16,7 @@ import {
   useRegistrarCotacao, useConfirmarPrestador, useConcluirAcionamento, useCancelarAcionamento,
   useEnviarVoucher, useAcionamento, useHistoricoAssistenciaVeiculo,
   useAtualizarAcionamento, useTrocarPrestador, useEdicoesAcionamento, useDefinirTrajeto,
+  useRegistrarNegado, useNegarAcionamento, useExcluirAcionamento,
   type VeiculoAssistencia, type AbrirAcionamentoInput, type AcionamentoComRel,
 } from '@/hooks/use-assistencia';
 import { MapaRota } from '@/components/mapa/mapa-rota';
@@ -29,10 +30,13 @@ import {
 import {
   avaliarBloqueio, rotuloLimite, calcularKmExcedente, calcularTotalOS,
   STATUS_ACIONAMENTO_LABEL, paraCampoDataHora, doCampoDataHora, rotuloAgendamento,
+  MOTIVOS_NEGATIVA, rotuloMotivoNegativa, validarNegativa, motivoNegativaSugerido, rotuloNegados,
+  acionamentoFinalizado, podeNegarAcionamento, podeExcluirAcionamento,
 } from '@/lib/assistencia';
+import { usePode } from '@/hooks/use-permissoes';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 import { opcoesPrestadorDoServico, type OpcaoPrestador } from '@/lib/fornecedores';
-import type { Json, ServicosAssistenciaRow } from '@/lib/database.types';
+import type { Json, MotivoNegativaAcionamento, ServicosAssistenciaRow } from '@/lib/database.types';
 
 export function PainelAcionamento({ placaInicial }: { placaInicial?: string | null }) {
   const [termo, setTermo] = useState(placaInicial ?? '');
@@ -51,6 +55,8 @@ export function PainelAcionamento({ placaInicial }: { placaInicial?: string | nu
   }, [achados, placaInicial, veiculo]);
 
   const [servicoAcionar, setServicoAcionar] = useState<ServicosAssistenciaRow | null>(null);
+  // 0134: registrar o pedido NEGADO (servico pode vir escolhido do modal de acionar).
+  const [negar, setNegar] = useState<{ servicoId: string | null } | null>(null);
 
   if (acionamentoId) {
     return (
@@ -135,6 +141,15 @@ export function PainelAcionamento({ placaInicial }: { placaInicial?: string | nu
                 Total em atraso: {formatCurrency(Number(situacao.valor_em_atraso))}
               </p>
             )}
+            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-200/70 pt-3">
+              <Button variant="secondary" onClick={() => setNegar({ servicoId: null })}>
+                <XCircle className="h-4 w-4 text-rose-600" /> Registrar pedido negado
+              </Button>
+              <span className="text-xs text-slate-500">
+                O associado pediu e não vai ser atendido (limite, débito, sem cobertura...)? Registre —
+                fica no histórico do veículo e não consome o limite.
+              </span>
+            </div>
           </div>
 
           {/* Servicos com o limite em TEMPO REAL */}
@@ -165,6 +180,11 @@ export function PainelAcionamento({ placaInicial }: { placaInicial?: string | nu
                           {e.ultimo_uso ? ` · último ${formatDate(e.ultimo_uso)}` : ''}
                         </span>
                       )}
+                      {e && rotuloNegados(e) && (
+                        <span className="ml-1 mt-1 inline-block rounded bg-rose-50 px-1.5 py-0.5 text-[11px] text-rose-700">
+                          {rotuloNegados(e)}
+                        </span>
+                      )}
                     </span>
                   </button>
                 );
@@ -185,7 +205,12 @@ export function PainelAcionamento({ placaInicial }: { placaInicial?: string | nu
                     <span className="flex items-center gap-2">
                       <span className="font-mono text-xs text-slate-400">{h.codigo_os ?? h.protocolo}</span>
                       <span className="text-slate-700">{h.servico}</span>
-                      {h.computa_limite && <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[11px] text-amber-700">conta no limite</span>}
+                      {h.computa_limite && h.status !== 'NEGADO' && <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[11px] text-amber-700">conta no limite</span>}
+                      {h.status === 'NEGADO' && (
+                        <span className="text-xs text-rose-700">
+                          {rotuloMotivoNegativa(h.negado_motivo)}{h.negado_observacao ? ` — ${h.negado_observacao}` : ''}
+                        </span>
+                      )}
                     </span>
                     <span className="flex items-center gap-3">
                       <span className="text-xs text-slate-400">{formatDate(h.criado_em)}</span>
@@ -212,6 +237,17 @@ export function PainelAcionamento({ placaInicial }: { placaInicial?: string | nu
           bloqueio={avaliarBloqueio(situacao, elegibilidade?.find((e) => e.servico_id === servicoAcionar.id))}
           onClose={() => setServicoAcionar(null)}
           onAberto={(id) => { setServicoAcionar(null); setAcionamentoId(id); }}
+          onNegar={() => { const id = servicoAcionar.id; setServicoAcionar(null); setNegar({ servicoId: id }); }}
+        />
+      )}
+
+      {negar && veiculo && (
+        <ModalNegarPedido
+          veiculo={veiculo}
+          servicos={servicos ?? []}
+          servicoInicial={negar.servicoId}
+          motivosBloqueio={(m) => avaliarBloqueio(situacao, elegibilidade?.find((e) => e.servico_id === m)).motivos}
+          onClose={() => setNegar(null)}
         />
       )}
     </div>
@@ -222,13 +258,14 @@ export function PainelAcionamento({ placaInicial }: { placaInicial?: string | nu
 // Modal de abertura (com liberacao de superior quando bloqueado)
 // ---------------------------------------------------------------------------
 function ModalAcionar({
-  veiculo, servico, bloqueio, onClose, onAberto,
+  veiculo, servico, bloqueio, onClose, onAberto, onNegar,
 }: {
   veiculo: VeiculoAssistencia;
   servico: ServicosAssistenciaRow;
   bloqueio: ReturnType<typeof avaliarBloqueio>;
   onClose: () => void;
   onAberto: (id: string) => void;
+  onNegar: () => void;
 }) {
   const abrir = useAbrirAcionamento();
   const definirTrajeto = useDefinirTrajeto();
@@ -326,6 +363,12 @@ function ModalAcionar({
               Para prosseguir, um gestor (admin, financeiro ou gestor regional) precisa autorizar
               com as próprias credenciais.
             </p>
+            <div className="mt-2 flex flex-wrap items-center gap-2 rounded-md bg-superficie/70 p-2">
+              <span className="text-xs text-slate-600">Não vai liberar?</span>
+              <Button type="button" variant="secondary" onClick={onNegar}>
+                <XCircle className="h-4 w-4 text-rose-600" /> Registrar como negado
+              </Button>
+            </div>
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
               <FormField label="E-mail do gestor">
                 <Input
@@ -414,6 +457,11 @@ export function OrdemServico({ acionamentoId, onVoltar }: { acionamentoId: strin
   const concluir = useConcluirAcionamento();
   const cancelar = useCancelarAcionamento();
   const voucher = useEnviarVoucher();
+  const negarAcion = useNegarAcionamento();
+  const excluir = useExcluirAcionamento();
+  const podeExcluir = usePode('assistencia.excluir');
+  const [negando, setNegando] = useState(false);
+  const [excluindo, setExcluindo] = useState(false);
 
   const [cot, setCot] = useState({ fornecedor_id: '', valor: 0 as number | null, valor_km: 0 as number | null, prazo: '' });
   const [kmReal, setKmReal] = useState('');
@@ -431,7 +479,7 @@ export function OrdemServico({ acionamentoId, onVoltar }: { acionamentoId: strin
 
   if (!a) return <p className="text-sm text-slate-400">Carregando acionamento...</p>;
 
-  const finalizado = a.status === 'CONCLUIDO' || a.status === 'CANCELADO';
+  const finalizado = acionamentoFinalizado(a.status);
   // Base do KM excedente: o KM informado > a rota calculada > o previsto.
   const kmBase = Number(kmReal || a.distancia_km_calculada || a.km_previsto || 0);
   const kmExc = servico ? calcularKmExcedente(kmBase, Number(servico.km_franquia)) : 0;
@@ -516,9 +564,34 @@ export function OrdemServico({ acionamentoId, onVoltar }: { acionamentoId: strin
                 <Repeat className="h-4 w-4" /> Trocar prestador
               </Button>
             )}
+            {podeNegarAcionamento(a) && (
+              <Button variant="ghost" className="text-rose-600" onClick={() => setNegando(true)}>
+                <XCircle className="h-4 w-4" /> Negar atendimento
+              </Button>
+            )}
             <Button variant="ghost" className="text-rose-600" onClick={() => setCancelando(true)}>
               <Ban className="h-4 w-4" /> Cancelar atendimento
             </Button>
+          </div>
+        )}
+        {/* 0134: exclusao (erro de preenchimento) — permissao propria, nunca OS concluida. */}
+        {podeExcluir && podeExcluirAcionamento(a) && (
+          <div className={`flex justify-end ${finalizado ? 'mt-3 border-t border-slate-100 pt-3' : 'mt-2'}`}>
+            <Button variant="ghost" className="text-xs text-rose-600" onClick={() => setExcluindo(true)}>
+              <Trash2 className="h-3.5 w-3.5" /> Excluir acionamento
+            </Button>
+          </div>
+        )}
+        {a.status === 'NEGADO' && (
+          <div className="mt-2 rounded-lg border border-rose-200 bg-rose-50 p-2 text-xs text-rose-800">
+            <p className="font-semibold">
+              <XCircle className="mr-1 inline h-3 w-3" /> Negado: {rotuloMotivoNegativa(a.negado_motivo)}
+              {a.negado_em ? ` · ${formatDateTime(a.negado_em)}` : ''}
+            </p>
+            {a.negado_observacao && <p className="mt-0.5">{a.negado_observacao}</p>}
+            {a.bloqueio_motivos?.length > 0 && (
+              <p className="mt-0.5 text-rose-700">Situação no momento: {a.bloqueio_motivos.join('; ')}</p>
+            )}
           </div>
         )}
         {a.status === 'CANCELADO' && a.cancelado_motivo && (
@@ -743,6 +816,49 @@ export function OrdemServico({ acionamentoId, onVoltar }: { acionamentoId: strin
             )
           }
           carregando={cancelar.isPending}
+        />
+      )}
+      {negando && (
+        <Modal open onClose={() => setNegando(false)} title={`Negar atendimento — ${a.protocolo ?? ''}`}>
+          <CamposNegativa
+            sugerido={motivoNegativaSugerido(a.bloqueio_motivos ?? [])}
+            carregando={negarAcion.isPending}
+            rotuloBotao="Negar atendimento"
+            onCancelar={() => setNegando(false)}
+            onConfirmar={(motivo, observacao) =>
+              negarAcion.mutate(
+                { acionamento_id: a.id, motivo, observacao },
+                {
+                  onSuccess: () => { toast.success('Atendimento registrado como NEGADO'); setNegando(false); },
+                  onError: (e) => toast.error(e.message),
+                },
+              )
+            }
+          />
+        </Modal>
+      )}
+      {excluindo && (
+        <ModalExcluirAcionamento
+          protocolo={a.codigo_os ?? a.protocolo}
+          temTitulo={!!a.lancamento_id}
+          voucherEnviado={!!a.voucher_enviado_em}
+          carregando={excluir.isPending}
+          onClose={() => setExcluindo(false)}
+          onConfirmar={(motivo) =>
+            excluir.mutate(
+              { acionamento_id: a.id, motivo },
+              {
+                onSuccess: (r) => {
+                  toast.success(
+                    `Acionamento ${r.protocolo ?? ''} excluído${r.lancamento_excluido ? ' (o título em aberto no Contas a Pagar saiu junto)' : ''}`,
+                  );
+                  setExcluindo(false);
+                  onVoltar?.();
+                },
+                onError: (e) => toast.error(e.message),
+              },
+            )
+          }
         />
       )}
     </div>
@@ -1184,6 +1300,174 @@ function ModalEditarAtendimento({ acionamento, onClose }: { acionamento: Acionam
           <Button type="submit" disabled={atualizar.isPending}>
             {atualizar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarClock className="h-4 w-4" />}
             Salvar alterações
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 0134: pedido NEGADO — motivo (vocabulario do banco) + observacao
+// ---------------------------------------------------------------------------
+function CamposNegativa({
+  sugerido, carregando, rotuloBotao, onCancelar, onConfirmar, children,
+}: {
+  sugerido: MotivoNegativaAcionamento | null;
+  carregando?: boolean;
+  rotuloBotao: string;
+  onCancelar: () => void;
+  onConfirmar: (motivo: MotivoNegativaAcionamento, observacao: string | null) => void;
+  children?: React.ReactNode;
+}) {
+  const [motivo, setMotivo] = useState<MotivoNegativaAcionamento | ''>(sugerido ?? '');
+  const [obs, setObs] = useState('');
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        const erro = validarNegativa(motivo, obs);
+        if (erro) return toast.error(erro);
+        onConfirmar(motivo as MotivoNegativaAcionamento, obs.trim() || null);
+      }}
+      className="space-y-3"
+    >
+      {children}
+      <p className="text-sm text-slate-600">
+        O pedido fica registrado como <strong>NEGADO</strong> no histórico do veículo — é o que permite
+        acompanhar quantas vezes o mesmo veículo pediu. Não consome o limite do serviço e não gera custo.
+      </p>
+      <FormField label="Motivo da negativa">
+        <Select value={motivo} onChange={(e) => setMotivo(e.target.value as MotivoNegativaAcionamento | '')}>
+          <option value="">Selecione...</option>
+          {MOTIVOS_NEGATIVA.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+        </Select>
+      </FormField>
+      <FormField label={motivo === 'OUTRO' ? 'Descreva o motivo (obrigatório)' : 'Observação (opcional)'}>
+        <Input value={obs} onChange={(e) => setObs(e.target.value)}
+          placeholder="Ex.: 3º pedido de reboque no ano; orientado a contratar particular" />
+      </FormField>
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="secondary" onClick={onCancelar}>Voltar</Button>
+        <Button type="submit" variant="danger" disabled={carregando}>
+          {carregando ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
+          {rotuloBotao}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+function ModalNegarPedido({
+  veiculo, servicos, servicoInicial, motivosBloqueio, onClose,
+}: {
+  veiculo: VeiculoAssistencia;
+  servicos: ServicosAssistenciaRow[];
+  servicoInicial: string | null;
+  motivosBloqueio: (servicoId: string) => string[];
+  onClose: () => void;
+}) {
+  const registrar = useRegistrarNegado();
+  const [servicoId, setServicoId] = useState(servicoInicial ?? '');
+  const [solicitante, setSolicitante] = useState(veiculo.associado);
+  const [telefone, setTelefone] = useState(veiculo.telefone ?? '');
+  const bloqueios = servicoId ? motivosBloqueio(servicoId) : [];
+  return (
+    <Modal open onClose={onClose} title={`Registrar pedido negado — ${veiculo.placa}`} tamanho="lg">
+      <CamposNegativa
+        // remonta ao trocar o servico, para a sugestao acompanhar o bloqueio dele
+        key={servicoId}
+        sugerido={motivoNegativaSugerido(bloqueios)}
+        carregando={registrar.isPending}
+        rotuloBotao="Registrar negativa"
+        onCancelar={onClose}
+        onConfirmar={(motivo, observacao) => {
+          if (!servicoId) return toast.error('Escolha o serviço que foi pedido');
+          registrar.mutate(
+            { veiculo_id: veiculo.id, servico_id: servicoId, motivo, observacao, solicitante, telefone },
+            {
+              onSuccess: (a) => { toast.success(`Pedido ${a.protocolo} registrado como NEGADO`); onClose(); },
+              onError: (e) => toast.error(e.message),
+            },
+          );
+        }}
+      >
+        <div className="grid gap-3 sm:grid-cols-3">
+          <FormField label="Serviço pedido">
+            <Select value={servicoId} onChange={(e) => setServicoId(e.target.value)}>
+              <option value="">Selecione...</option>
+              {servicos.map((s) => <option key={s.id} value={s.id}>{s.descricao}</option>)}
+            </Select>
+          </FormField>
+          <FormField label="Solicitante">
+            <Input value={solicitante} onChange={(e) => setSolicitante(e.target.value)} />
+          </FormField>
+          <FormField label="Telefone">
+            <Input value={telefone} onChange={(e) => setTelefone(e.target.value)} />
+          </FormField>
+        </div>
+        {bloqueios.length > 0 && (
+          <ul className="list-disc space-y-0.5 rounded-lg bg-rose-50 p-2 pl-6 text-xs text-rose-700">
+            {bloqueios.map((m) => <li key={m}>{m}</li>)}
+          </ul>
+        )}
+      </CamposNegativa>
+    </Modal>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 0134: exclusao do acionamento lancado por engano (fica a trilha)
+// ---------------------------------------------------------------------------
+function ModalExcluirAcionamento({
+  protocolo, temTitulo, voucherEnviado, carregando, onClose, onConfirmar,
+}: {
+  protocolo: string | null;
+  temTitulo: boolean;
+  voucherEnviado: boolean;
+  carregando?: boolean;
+  onClose: () => void;
+  onConfirmar: (motivo: string) => void;
+}) {
+  const [motivo, setMotivo] = useState('');
+  return (
+    <Modal open onClose={onClose} title={`Excluir acionamento ${protocolo ?? ''}`}>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (motivo.trim().length < 5) return toast.error('Informe o motivo da exclusão');
+          onConfirmar(motivo.trim());
+        }}
+        className="space-y-3"
+      >
+        <p className="text-sm text-slate-600">
+          Use para o acionamento <strong>lançado por engano</strong> (veículo errado, serviço errado,
+          duplicado). Ele sai das listas e do limite do veículo; a foto completa (OS, cotações, histórico,
+          anexos) fica guardada na trilha de exclusões com o seu nome e o motivo.
+        </p>
+        <p className="text-xs text-slate-500">
+          Se o associado realmente pediu e não foi atendido, não exclua: use <strong>Negar</strong> ou
+          <strong> Cancelar</strong> — eles contam no histórico do veículo.
+        </p>
+        {temTitulo && (
+          <p className="rounded-lg bg-amber-50 p-2 text-xs text-amber-800">
+            O título desta OS no Contas a Pagar (ainda sem pagamento) será excluído junto.
+          </p>
+        )}
+        {voucherEnviado && (
+          <p className="rounded-lg bg-amber-50 p-2 text-xs text-amber-800">
+            O voucher já foi enviado ao prestador — avise-o de que a OS foi desfeita.
+          </p>
+        )}
+        <FormField label="Motivo da exclusão (obrigatório)">
+          <Input value={motivo} onChange={(e) => setMotivo(e.target.value)}
+            placeholder="Ex.: aberto na placa errada / acionamento em duplicidade" />
+        </FormField>
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={onClose}>Voltar</Button>
+          <Button type="submit" variant="danger" disabled={carregando}>
+            {carregando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+            Excluir definitivamente
           </Button>
         </div>
       </form>
