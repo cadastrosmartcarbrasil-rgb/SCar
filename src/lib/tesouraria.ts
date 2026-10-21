@@ -129,9 +129,14 @@ export function textosDeMensalidade(entrada: string): string[] {
   return out;
 }
 
-/** Dia anterior (AAAA-MM-DD). */
-export function diaAnteriorIso(dia: string): string {
+/**
+ * Dia anterior (AAAA-MM-DD). Data vazia ou incompleta (o campo "De" sendo
+ * digitado) devolve '' em vez de quebrar a tela com "Invalid time value".
+ */
+export function diaAnteriorIso(dia: string | null | undefined): string {
+  if (!dia || !/^\d{4}-\d{2}-\d{2}$/.test(dia)) return '';
   const d = new Date(`${dia}T12:00:00Z`);
+  if (Number.isNaN(d.getTime())) return '';
   d.setUTCDate(d.getUTCDate() - 1);
   return d.toISOString().slice(0, 10);
 }

@@ -51,6 +51,10 @@ describe('utilitarios', () => {
   });
   it('dia anterior e resumo', () => {
     expect(diaAnteriorIso('2026-11-01')).toBe('2026-10-31');
+    // campo de data vazio ou digitado pela metade nao derruba a tela
+    expect(diaAnteriorIso('')).toBe('');
+    expect(diaAnteriorIso('0002-1')).toBe('');
+    expect(diaAnteriorIso('2026-13-45')).toBe('');
     expect(resumoConciliacao([{ situacao: 'PENDENTE', valor: 1 }, { situacao: 'CONCILIADO', valor: 2 }]))
       .toMatchObject({ PENDENTE: 1, CONCILIADO: 1, total: 2 });
   });
