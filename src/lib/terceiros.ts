@@ -122,3 +122,36 @@ export function resumoFinanceiroEvento(lancs: LancResumo[]): ResumoFinanceiroEve
     custoLiquido: somarMoeda(aPagar, -aReceber),
   };
 }
+
+/**
+ * O titulo que nasce de uma cotacao APROVADA (0132): conta a pagar do evento,
+ * com o fornecedor da cotacao, o valor dela, o terceiro (reparo de terceiro)
+ * e as pecas na observacao. A tela abre o lancamento ja preenchido para
+ * conferencia — nada e gravado sem o "Lancar".
+ */
+export function lancamentoDaCotacao(
+  c: {
+    fornecedor_id: string | null; fornecedor_nome: string; valor_total: number;
+    evento_terceiro_id: string | null;
+    itens_cotacao?: { descricao_peca: string; quantidade: number; valor_unitario: number }[];
+  },
+  ctx: { eventoId: string; regionalId: string | null; protocolo: string | null; categoriaId: string | null; hoje: string },
+) {
+  const itens = (c.itens_cotacao ?? [])
+    .map((i) => `${Number(i.quantidade)}x ${i.descricao_peca}`)
+    .join('; ');
+  return {
+    tipo: 'DESPESA' as const,
+    evento_id: ctx.eventoId,
+    evento_terceiro_id: c.evento_terceiro_id,
+    fornecedor_id: c.fornecedor_id,
+    regional_id: ctx.regionalId,
+    categoria_dre_id: ctx.categoriaId,
+    valor_original: Number(c.valor_total),
+    descricao: `REPARO ${ctx.protocolo ?? 'EVENTO'} - ${c.fornecedor_nome}`.toUpperCase(),
+    observacoes: itens ? `Cotação aprovada: ${itens}` : null,
+    data_emissao: ctx.hoje,
+    data_vencimento: ctx.hoje,
+    competencia: ctx.hoje,
+  };
+}

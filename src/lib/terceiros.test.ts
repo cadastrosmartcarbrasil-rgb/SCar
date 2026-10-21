@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  erroFavorecidoEvento, resumoFinanceiroEvento, rotuloVinculo, terceiroPendente,
+  erroFavorecidoEvento, lancamentoDaCotacao, resumoFinanceiroEvento, rotuloVinculo, terceiroPendente,
   tipoFavorecido, validarTerceiro,
 } from './terceiros';
 
@@ -72,5 +72,30 @@ describe('resumoFinanceiroEvento', () => {
     expect(r.saldoPagar).toBe(0.2);
     expect(r.aReceber).toBe(0.05);
     expect(r.custoLiquido).toBe(0.25);
+  });
+});
+
+describe('lancamentoDaCotacao (0132)', () => {
+  const ctx = { eventoId: 'ev', regionalId: 'rg', protocolo: 'EVT-1', categoriaId: 'cat', hoje: '2026-10-21' };
+
+  it('leva fornecedor, valor, terceiro e as pecas', () => {
+    const l = lancamentoDaCotacao({
+      fornecedor_id: 'f1', fornecedor_nome: 'Oficina Ze', valor_total: 1500.5, evento_terceiro_id: 't1',
+      itens_cotacao: [{ descricao_peca: 'Para-choque', quantidade: 1, valor_unitario: 900 },
+        { descricao_peca: 'Farol', quantidade: 2, valor_unitario: 300.25 }],
+    }, ctx);
+    expect(l).toMatchObject({
+      tipo: 'DESPESA', evento_id: 'ev', evento_terceiro_id: 't1', fornecedor_id: 'f1',
+      regional_id: 'rg', categoria_dre_id: 'cat', valor_original: 1500.5,
+      descricao: 'REPARO EVT-1 - OFICINA ZE', data_vencimento: '2026-10-21',
+    });
+    expect(l.observacoes).toBe('Cotação aprovada: 1x Para-choque; 2x Farol');
+  });
+
+  it('sem fornecedor cadastrado o favorecido fica a escolher', () => {
+    const l = lancamentoDaCotacao({ fornecedor_id: null, fornecedor_nome: 'x', valor_total: 10, evento_terceiro_id: null }, ctx);
+    expect(l.fornecedor_id).toBeNull();
+    expect(erroFavorecidoEvento(l)).not.toBeNull();
+    expect(l.observacoes).toBeNull();
   });
 });

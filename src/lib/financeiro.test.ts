@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  acoesDoTitulo, mensagemErroFinanceiro, tituloDoBanco,
   addMeses, calcularIndicadores, diasAtraso, diasParaVencer, estruturarDre, faixaAging,
   gerarParcelas, periodoAnterior, saldoTitulo, situacaoTitulo, variacaoPercentual,
   type LinhaDre,
@@ -134,5 +135,41 @@ describe('periodoAnterior', () => {
   });
   it('periodo livre compara com janela de mesmo tamanho', () => {
     expect(periodoAnterior('2026-08-10', '2026-08-19')).toEqual({ inicio: '2026-07-31', fim: '2026-08-09' });
+  });
+});
+
+describe('acoesDoTitulo (0132)', () => {
+  const tudo = { baixar: true, editar: true, cancelar: true, excluir: true, estornar: true };
+  const nada = { baixar: false, editar: false, cancelar: false, excluir: false, estornar: false };
+
+  it('titulo em aberto sem pagamento: baixa, cancela e exclui; nada a estornar', () => {
+    const a = acoesDoTitulo({ status: 'pendente', valor_pago: 0 }, tudo);
+    expect(a).toMatchObject({ baixar: true, cancelar: true, excluir: true, pagamentos: false, estornar: false });
+  });
+
+  it('pago parcial: baixa e estorna, mas nao exclui nem cancela', () => {
+    const a = acoesDoTitulo({ status: 'pago_parcial', valor_pago: 10 }, tudo);
+    expect(a).toMatchObject({ baixar: true, estornar: true, pagamentos: true, excluir: false, cancelar: false });
+  });
+
+  it('quitado: so o historico e o estorno', () => {
+    const a = acoesDoTitulo({ status: 'quitado', valor_pago: 100 }, tudo);
+    expect(a).toMatchObject({ baixar: false, estornar: true, excluir: false });
+  });
+
+  it('pagamento do banco nao se estorna nem exclui', () => {
+    const l = { status: 'quitado', valor_pago: 120, numero_documento: 'SICREDI-600804668' };
+    expect(tituloDoBanco(l)).toBe(true);
+    expect(acoesDoTitulo(l, tudo)).toMatchObject({ estornar: false, excluir: false, pagamentos: true });
+  });
+
+  it('sem permissao nao oferece nada alem do historico', () => {
+    const a = acoesDoTitulo({ status: 'quitado', valor_pago: 1 }, nada);
+    expect(a).toEqual({ baixar: false, pagamentos: true, estornar: false, editar: false, cancelar: false, excluir: false });
+  });
+
+  it('mensagens do banco', () => {
+    expect(mensagemErroFinanceiro('Baixa excede o saldo devedor. Devido: 1')).toMatch(/excede o saldo/);
+    expect(mensagemErroFinanceiro('ERROR: Informe o motivo')).toBe('Informe o motivo');
   });
 });

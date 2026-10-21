@@ -179,7 +179,7 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
                     <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
                       <Wrench className="h-4 w-4" /> Reparo do veículo (próprio)
                     </h3>
-                    <CotacaoPecas eventoId={eventoId} tipoReparo="PROPRIO" />
+                    <CotacaoPecas eventoId={eventoId} tipoReparo="PROPRIO" regionalId={evento.regional_id} protocolo={evento.numero_protocolo} />
                   </div>
                   <div className="border-t border-slate-200 pt-5">
                     <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
@@ -188,7 +188,7 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
                     <p className="mb-2 text-xs text-slate-500">
                       Visão geral. Para orçar o reparo de um terceiro específico, abra o terceiro na aba Terceiros.
                     </p>
-                    <CotacaoPecas eventoId={eventoId} tipoReparo="TERCEIRO" />
+                    <CotacaoPecas eventoId={eventoId} tipoReparo="TERCEIRO" regionalId={evento.regional_id} protocolo={evento.numero_protocolo} />
                   </div>
                 </div>
               )}

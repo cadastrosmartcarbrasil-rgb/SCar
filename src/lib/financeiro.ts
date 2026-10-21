@@ -289,3 +289,48 @@ export function periodoAnterior(inicio: string, fim: string): { inicio: string; 
   const novoInicio = new Date(novoFim.getFullYear(), novoFim.getMonth(), novoFim.getDate() - (dias - 1));
   return { inicio: iso(novoInicio), fim: iso(novoFim) };
 }
+
+// ---------------------------------------------------------------------------
+// Acoes do titulo (0132): estorno de pagamento e exclusao.
+// ---------------------------------------------------------------------------
+
+/** Minimo de caracteres do motivo (estorno, exclusao) — o banco usa o mesmo. */
+export const MOTIVO_MINIMO = 5;
+
+/** Titulo gerado pelo pagamento no banco (0117/0118): nao se estorna nem exclui. */
+export function tituloDoBanco(l: { numero_documento?: string | null }): boolean {
+  return (l.numero_documento ?? '').startsWith('SICREDI-');
+}
+
+export interface PermissoesTitulo {
+  baixar: boolean; editar: boolean; cancelar: boolean; excluir: boolean; estornar: boolean;
+}
+
+/**
+ * Quais acoes a linha oferece. Espelha as recusas do banco para a tela nao
+ * mostrar botao que o banco recusa: excluir e cancelar so SEM pagamento;
+ * pagamento registrado se ve (e se estorna) pelo historico de pagamentos.
+ */
+export function acoesDoTitulo(
+  l: { status: string; valor_pago?: number | null; numero_documento?: string | null },
+  pode: PermissoesTitulo,
+) {
+  const pago = Number(l.valor_pago ?? 0) > 0;
+  const aberto = l.status !== 'quitado' && l.status !== 'cancelado';
+  const banco = tituloDoBanco(l);
+  return {
+    baixar: pode.baixar && aberto,
+    pagamentos: pago,
+    estornar: pode.estornar && pago && !banco,
+    editar: pode.editar && l.status !== 'cancelado',
+    cancelar: pode.cancelar && l.status !== 'cancelado' && !pago,
+    excluir: pode.excluir && !pago && !banco,
+  };
+}
+
+/** Mensagem do banco sem o prefixo tecnico do PostgREST. */
+export function mensagemErroFinanceiro(msg: string): string {
+  if (/excede/i.test(msg)) return 'O valor informado excede o saldo devedor.';
+  if (/permission denied|row-level security/i.test(msg)) return 'Sem permissão para esta ação.';
+  return msg.replace(/^ERROR:\s*/i, '').trim();
+}

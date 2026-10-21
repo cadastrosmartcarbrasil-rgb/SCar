@@ -17,7 +17,7 @@ import type {
 } from '@/lib/database.types';
 
 export interface LancamentoComRel extends LancamentosFinanceirosRow {
-  fornecedores?: { razao_social: string } | null;
+  fornecedores?: { razao_social: string; nome_fantasia?: string | null } | null;
   clientes?: { nome_razao_social: string } | null;
   categorias_dre?: { codigo_estruturado: string; nome: string } | null;
   centros_custo?: { nome: string } | null;
@@ -32,6 +32,8 @@ export interface FiltroLancamentos {
   fim?: string;
   categoriaId?: string;
   centroCustoId?: string;
+  /** Favorecido (0132): so os titulos deste fornecedor. */
+  fornecedorId?: string;
   /** Filtra pelo campo de data escolhido na tela. */
   campoData?: 'data_vencimento' | 'data_emissao' | 'competencia';
 }
@@ -43,18 +45,24 @@ export function useLancamentos(filtro?: FiltroLancamentos) {
     queryKey: [
       'lancamentos', filtro?.tipo ?? 'all', filtro?.status ?? 'all',
       filtro?.inicio ?? '-', filtro?.fim ?? '-', campo,
-      filtro?.categoriaId ?? '-', filtro?.centroCustoId ?? '-',
+      filtro?.categoriaId ?? '-', filtro?.centroCustoId ?? '-', filtro?.fornecedorId ?? '-',
     ],
     queryFn: async () => {
       let q = supabase
         .from('lancamentos_financeiros')
         .select(
-          '*, fornecedores(razao_social), clientes(nome_razao_social), ' +
+          '*, fornecedores(razao_social, nome_fantasia), clientes(nome_razao_social), ' +
             'categorias_dre(codigo_estruturado, nome), centros_custo(nome), evento_terceiros(codigo, nome)',
         )
         .order('data_vencimento', { ascending: true });
+      if (filtro?.fornecedorId) q = q.eq('fornecedor_id', filtro.fornecedorId);
       if (filtro?.tipo) q = q.eq('tipo', filtro.tipo);
-      if (filtro?.status) q = q.eq('status', filtro.status);
+      // "Em atraso" e o vencido em aberto pela DATA, nao so o que a rotina ja
+      // marcou como atrasado (pendente vencido ontem tambem e atraso).
+      if (filtro?.status === 'atrasado') {
+        q = q.in('status', ['pendente', 'atrasado', 'pago_parcial'])
+          .lt('data_vencimento', new Date().toISOString().slice(0, 10));
+      } else if (filtro?.status) q = q.eq('status', filtro.status);
       if (filtro?.inicio) q = q.gte(campo, filtro.inicio);
       if (filtro?.fim) q = q.lte(campo, filtro.fim);
       if (filtro?.categoriaId) q = q.eq('categoria_dre_id', filtro.categoriaId);
@@ -204,6 +212,57 @@ export function useCancelarLancamento() {
       qc.invalidateQueries({ queryKey: ['dre'] });
       qc.invalidateQueries({ queryKey: ['tesouraria'] });
     },
+  });
+}
+
+function invalidarFinanceiro(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: ['lancamentos'] });
+  qc.invalidateQueries({ queryKey: ['baixas'] });
+  qc.invalidateQueries({ queryKey: ['financeiro'] });
+  qc.invalidateQueries({ queryKey: ['dre'] });
+  qc.invalidateQueries({ queryKey: ['tesouraria'] });
+  qc.invalidateQueries({ queryKey: ['eventos'] });
+}
+
+/**
+ * Estorna um pagamento ja registrado (0132): a baixa sai, saldo e situacao
+ * voltam, e a trilha guarda quem, quando e por que. O banco confere a
+ * permissao (Financeiro > Estornar) e recusa o pagamento vindo do banco.
+ */
+export function useEstornarBaixa() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<
+    { lancamento_id: string; status: string; valor_saldo: number; extrato_reaberto: boolean },
+    Error, { baixaId: string; motivo: string }
+  >({
+    mutationFn: async ({ baixaId, motivo }) => {
+      const { data, error } = await supabase.rpc('estornar_baixa', { p_baixa_id: baixaId, p_motivo: motivo });
+      if (error) throw error;
+      return data as never;
+    },
+    onSuccess: () => invalidarFinanceiro(qc),
+  });
+}
+
+/**
+ * Exclui um titulo SEM pagamento (0132). O banco confere a permissao
+ * (Financeiro > Excluir), recusa o da OS da 24h e o do banco, e devolve os
+ * arquivos anexados — que saem do storage aqui (SQL nao apaga arquivo).
+ */
+export function useExcluirLancamento() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<void, Error, { lancamentoId: string; motivo: string }>({
+    mutationFn: async ({ lancamentoId, motivo }) => {
+      const { data, error } = await supabase.rpc('excluir_lancamento', {
+        p_lancamento_id: lancamentoId, p_motivo: motivo,
+      });
+      if (error) throw error;
+      const arquivos = (data as { arquivos?: string[] } | null)?.arquivos ?? [];
+      if (arquivos.length > 0) await supabase.storage.from(BUCKET_FINANCEIRO).remove(arquivos);
+    },
+    onSuccess: () => invalidarFinanceiro(qc),
   });
 }
 

@@ -1,17 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import { HandCoins, Pencil, Plus, Receipt } from 'lucide-react';
+import { HandCoins, History, Pencil, Plus, Receipt, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LancamentoModal } from '@/components/financeiro/lancamento-modal';
 import { BaixaModal } from '@/components/financeiro/baixa-modal';
+import { ExcluirLancamentoModal, PagamentosModal } from '@/components/financeiro/acoes-titulo';
 import { Selo } from '@/components/financeiro/ui-financeiro';
 import { usePerfilAtual, usePlanoContas } from '@/hooks/use-config';
 import { usePode } from '@/hooks/use-permissoes';
 import { useLancamentosEvento, useMovimentacoesLegadasEvento, useTerceirosEvento } from '@/hooks/use-terceiros';
 import type { LancamentoComRel } from '@/hooks/use-financeiro';
 import { resumoFinanceiroEvento, tipoFavorecido } from '@/lib/terceiros';
-import { situacaoTitulo } from '@/lib/financeiro';
+import { situacaoTitulo, tituloDoBanco } from '@/lib/financeiro';
+import { rotuloFornecedor } from '@/lib/fornecedores';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { LancamentosFinanceirosRow } from '@/lib/database.types';
 
@@ -38,6 +40,9 @@ export function EventoFinanceiro({
   const { data: legado } = useMovimentacoesLegadasEvento(terceiroId ? '' : eventoId);
   const [editando, setEditando] = useState<Partial<LancamentosFinanceirosRow> | null>(null);
   const [baixando, setBaixando] = useState<LancamentoComRel | null>(null);
+  const [pagamentos, setPagamentos] = useState<LancamentoComRel | null>(null);
+  const [excluindo, setExcluindo] = useState<LancamentoComRel | null>(null);
+  const podeExcluir = usePode('financeiro.excluir');
   const { data: categorias } = usePlanoContas();
   const { data: perfil } = usePerfilAtual();
   // Gastar no evento e TRATAR o evento (0077): o botao so aparece para o time.
@@ -124,9 +129,19 @@ export function EventoFinanceiro({
                           <HandCoins className="h-4 w-4" />
                         </button>
                       )}
+                      {Number(l.valor_pago ?? 0) > 0 && (
+                        <button title="Pagamentos registrados / estornar" onClick={() => setPagamentos(l)} className="p-1 text-slate-400 hover:text-slate-700">
+                          <History className="h-4 w-4" />
+                        </button>
+                      )}
                       {l.status !== 'cancelado' && (
                         <button title="Editar" onClick={() => setEditando(l)} className="p-1 text-slate-400 hover:text-brand-600">
                           <Pencil className="h-4 w-4" />
+                        </button>
+                      )}
+                      {podeExcluir && Number(l.valor_pago ?? 0) === 0 && !tituloDoBanco(l) && (
+                        <button title="Excluir lançamento" onClick={() => setExcluindo(l)} className="p-1 text-slate-400 hover:text-rose-600">
+                          <Trash2 className="h-4 w-4" />
                         </button>
                       )}
                     </td>
@@ -170,6 +185,8 @@ export function EventoFinanceiro({
         />
       )}
       {baixando && <BaixaModal lancamento={baixando} onClose={() => setBaixando(null)} />}
+      {pagamentos && <PagamentosModal lancamento={pagamentos} onClose={() => setPagamentos(null)} />}
+      {excluindo && <ExcluirLancamentoModal lancamento={excluindo} onClose={() => setExcluindo(null)} />}
     </div>
   );
 }
@@ -180,7 +197,7 @@ function Favorecido({ l }: { l: LancamentoComRel }) {
   if (tipo === 'FORNECEDOR') {
     return (
       <>
-        {l.fornecedores?.razao_social}
+        {l.fornecedores ? rotuloFornecedor(l.fornecedores) : null}
         {l.evento_terceiros && <span className="block text-[11px] text-slate-400">ref. terceiro {l.evento_terceiros.codigo}</span>}
       </>
     );

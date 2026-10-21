@@ -6,8 +6,7 @@ import { CalendarDays, CheckCircle2, Info, Layers, Paperclip, ShieldAlert } from
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { FormField, Input, MoneyInput, Select, Textarea } from '@/components/ui/field';
-import { useFornecedores } from '@/hooks/use-fornecedores';
-import { ordenarFornecedores, rotuloFornecedor } from '@/lib/fornecedores';
+import { SeletorFornecedor } from '@/components/fornecedores/seletor-fornecedor';
 import { SeletorAssociado } from '@/components/associados/seletor-associado';
 import { usePlanoContas, useRegionais } from '@/hooks/use-config';
 import { opcoesParaEscolher } from '@/lib/regional';
@@ -62,12 +61,14 @@ export function LancamentoModal({
   onClose,
   inicial,
   evento,
+  onSalvo,
 }: {
   aberto: boolean;
   onClose: () => void;
   inicial?: Form | null;
   evento?: ContextoEvento;
-  /** No portal da franquia o titulo nasce na unidade e o campo fica travado. */
+  /** Chamado com os ids gravados (ex.: a cotacao do evento guarda o titulo, 0132). */
+  onSalvo?: (ids: string[]) => void;
 }) {
   const hoje = new Date().toISOString().slice(0, 10);
   const edicao = !!inicial?.id;
@@ -86,7 +87,6 @@ export function LancamentoModal({
   const [periodicidade, setPeriodicidade] = useState<Periodicidade>('MENSAL');
   const [repetirValor, setRepetirValor] = useState(false);
 
-  const { data: fornecedores } = useFornecedores();
   const { data: categorias } = usePlanoContas();
   const { data: centros } = useCentrosCusto();
   const { data: regionais } = useRegionais();
@@ -127,6 +127,7 @@ export function LancamentoModal({
       { ...form, parcelas: previa.length > 1 ? previa : undefined },
       {
         onSuccess: (ids) => {
+          onSalvo?.(ids);
           if (edicao) {
             toast.success('Lançamento atualizado');
             onClose();
@@ -192,12 +193,11 @@ export function LancamentoModal({
               </FormField>
             ) : (
               <FormField label={form.evento_id ? 'Fornecedor (favorecido)' : 'Favorecido (fornecedor)'}>
-                <Select value={form.fornecedor_id ?? ''} onChange={(e) => set({ fornecedor_id: e.target.value || null })}>
-                  <option value="">{form.evento_id ? '-- Sem fornecedor (paga o terceiro) --' : '-- Não vinculado --'}</option>
-                  {ordenarFornecedores(fornecedores ?? []).map((f) => (
-                    <option key={f.id} value={f.id}>{rotuloFornecedor(f)}</option>
-                  ))}
-                </Select>
+                <SeletorFornecedor
+                  value={form.fornecedor_id}
+                  onChange={(id) => set({ fornecedor_id: id || null })}
+                  placeholder={form.evento_id ? 'Digite para buscar — vazio paga o terceiro' : 'Digite nome, fantasia ou CNPJ'}
+                />
               </FormField>
             )}
             <FormField label="Regional (rateio e permissão de acesso)">

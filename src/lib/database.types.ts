@@ -2799,6 +2799,9 @@ export type CotacoesPecasRow = Timestamps & {
   status: StatusCotacao;
   tipo_reparo: TipoReparo;
   evento_terceiro_id: string | null;
+  /** 0132 — fornecedor cadastrado e o titulo gerado ao lancar a cotacao aprovada. */
+  fornecedor_id: string | null;
+  lancamento_id: string | null;
 };
 
 export type ItensCotacaoRow = {
@@ -3706,7 +3709,7 @@ export type Database = {
       evento_prazo_alertas: TableDef<EventoPrazoAlertasRow, [Rel<'evento_id', 'eventos_sinistro'>]>;
       historico_protocolo: TableDef<HistoricoProtocoloRow>;
       anexos_evento: TableDef<AnexosEventoRow>;
-      cotacoes_pecas: TableDef<CotacoesPecasRow, [Rel<'evento_terceiro_id', 'evento_terceiros'>]>;
+      cotacoes_pecas: TableDef<CotacoesPecasRow, [Rel<'evento_terceiro_id', 'evento_terceiros'>, Rel<'fornecedor_id', 'fornecedores'>, Rel<'lancamento_id', 'lancamentos_financeiros'>]>;
       evento_terceiros: TableDef<
         EventoTerceirosRow,
         [Rel<'evento_id', 'eventos_sinistro'>, Rel<'cliente_id', 'clientes'>, Rel<'regional_id', 'regionais'>]
@@ -4290,6 +4293,14 @@ export type Database = {
       };
       transferencia_extrato_item: { Args: { p_item: string; p_outra_conta: string; p_descricao?: string | null }; Returns: string };
       minhas_contas_bancarias: { Args: Record<string, never>; Returns: string[] };
+      estornar_baixa: {
+        Args: { p_baixa_id: string; p_motivo: string };
+        Returns: { lancamento_id: string; status: string; valor_saldo: number; extrato_reaberto: boolean };
+      };
+      excluir_lancamento: {
+        Args: { p_lancamento_id: string; p_motivo: string };
+        Returns: { lancamento_id: string; arquivos: string[] };
+      };
       salvar_operadores_conta: { Args: { p_conta: string; p_usuarios: string[] }; Returns: number };
       cancelar_transferencia_bancaria: { Args: { p_id: string; p_motivo: string }; Returns: undefined };
       ignorar_extrato_item: { Args: { p_item: string; p_motivo: string }; Returns: undefined };

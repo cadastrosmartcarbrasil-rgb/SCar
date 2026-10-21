@@ -90,7 +90,10 @@ export default function TerceiroPage({ params }: { params: { id: string; terceir
       {aba === 'reparo' && (
         <Card>
           <CardContent className="pt-5">
-            <CotacaoPecas eventoId={params.id} tipoReparo="TERCEIRO" terceiroId={t.id} />
+            <CotacaoPecas
+              eventoId={params.id} tipoReparo="TERCEIRO" terceiroId={t.id}
+              regionalId={t.regional_id} protocolo={t.eventos_sinistro?.numero_protocolo ?? null}
+            />
           </CardContent>
         </Card>
       )}

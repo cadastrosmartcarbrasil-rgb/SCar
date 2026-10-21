@@ -134,7 +134,7 @@ export function useLancamentosEvento(eventoId: string, terceiroId?: string) {
       let q = supabase
         .from('lancamentos_financeiros')
         .select(
-          '*, fornecedores(razao_social), clientes(nome_razao_social), ' +
+          '*, fornecedores(razao_social, nome_fantasia), clientes(nome_razao_social), ' +
             'categorias_dre(codigo_estruturado, nome), centros_custo(nome), evento_terceiros(codigo, nome)',
         )
         .eq('evento_id', eventoId)

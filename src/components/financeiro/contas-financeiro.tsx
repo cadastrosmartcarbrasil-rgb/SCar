@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
   AlertTriangle, ArrowDownCircle, ArrowUpCircle, Ban, Download, FileSpreadsheet,
-  HandCoins, Pencil, Plus, Scale, Search, Wallet,
+  HandCoins, History, Pencil, Plus, Scale, Search, Trash2, Wallet,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/field';
@@ -13,7 +13,10 @@ import {
   type FiltroLancamentos, type LancamentoComRel,
 } from '@/hooks/use-financeiro';
 import { usePlanoContas } from '@/hooks/use-config';
-import { diasAtraso, saldoTitulo, situacaoTitulo } from '@/lib/financeiro';
+import { acoesDoTitulo, diasAtraso, saldoTitulo, situacaoTitulo } from '@/lib/financeiro';
+import { rotuloFornecedor } from '@/lib/fornecedores';
+import { SeletorFornecedor } from '@/components/fornecedores/seletor-fornecedor';
+import { ExcluirLancamentoModal, PagamentosModal } from './acoes-titulo';
 import { somarMoeda } from '@/lib/money';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { StatusLancamento, TipoMovimentacao } from '@/lib/database.types';
@@ -47,6 +50,7 @@ export function ContasFinanceiro() {
   const pode = {
     criar: usePode('financeiro.criar'), editar: usePode('financeiro.editar'),
     baixar: usePode('financeiro.baixar'), cancelar: usePode('financeiro.cancelar'),
+    excluir: usePode('financeiro.excluir'), estornar: usePode('financeiro.estornar'),
     exportar: usePode('financeiro.exportar'),
   };
   const [periodo, setPeriodo] = useState<Periodo>(() => periodoPreset('mes'));
@@ -55,10 +59,13 @@ export function ContasFinanceiro() {
   const [campoData, setCampoData] = useState<FiltroLancamentos['campoData']>('data_vencimento');
   const [categoriaId, setCategoriaId] = useState('');
   const [centroCustoId, setCentroCustoId] = useState('');
+  const [fornecedorId, setFornecedorId] = useState('');
   const [busca, setBusca] = useState('');
 
   const [editando, setEditando] = useState<Partial<LancamentoComRel> | null>(null);
   const [baixando, setBaixando] = useState<LancamentoComRel | null>(null);
+  const [pagamentos, setPagamentos] = useState<LancamentoComRel | null>(null);
+  const [excluindo, setExcluindo] = useState<LancamentoComRel | null>(null);
 
   const filtro: FiltroLancamentos = {
     tipo: tipo || undefined,
@@ -68,6 +75,7 @@ export function ContasFinanceiro() {
     campoData,
     categoriaId: categoriaId || undefined,
     centroCustoId: centroCustoId || undefined,
+    fornecedorId: fornecedorId || undefined,
   };
 
   const { data: lancamentos, isLoading } = useLancamentos(filtro);
@@ -80,7 +88,7 @@ export function ContasFinanceiro() {
     const termo = busca.trim().toLowerCase();
     if (!termo) return lancamentos ?? [];
     return (lancamentos ?? []).filter((l) =>
-      [l.descricao, l.numero_documento, l.fornecedores?.razao_social, l.evento_terceiros?.nome, l.clientes?.nome_razao_social, l.centros_custo?.nome]
+      [l.descricao, l.numero_documento, l.fornecedores?.razao_social, l.fornecedores?.nome_fantasia, l.evento_terceiros?.nome, l.clientes?.nome_razao_social, l.centros_custo?.nome]
         .filter(Boolean)
         .some((campo) => String(campo).toLowerCase().includes(termo)),
     );
@@ -200,6 +208,14 @@ export function ContasFinanceiro() {
           <option value="">Todos os centros de custo</option>
           {(centros ?? []).map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
         </Select>
+        <div className="w-72">
+          <SeletorFornecedor
+            value={fornecedorId}
+            onChange={(id) => { setFornecedorId(id); if (id) setTipo('DESPESA'); }}
+            placeholder="Filtrar por fornecedor"
+            permiteCadastrar={false}
+          />
+        </div>
         <div className="relative ml-auto">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
@@ -238,7 +254,7 @@ export function ContasFinanceiro() {
               const situacao = situacaoTitulo(l);
               const saldo = saldoTitulo(l);
               const atraso = diasAtraso(l.data_vencimento);
-              const aberto = l.status !== 'quitado' && l.status !== 'cancelado';
+              const acoes = acoesDoTitulo(l, pode);
               return (
                 <tr key={l.id} className="border-b border-slate-50 transition last:border-0 hover:bg-slate-50/60">
                   <td className="px-4 py-2.5">
@@ -282,7 +298,7 @@ export function ContasFinanceiro() {
                   </td>
                   <td className="px-4 py-2.5">
                     <div className="flex items-center justify-end gap-1">
-                      {aberto && pode.baixar && (
+                      {acoes.baixar && (
                         <IconeAcao
                           titulo={`Registrar baixa (saldo ${formatCurrency(saldo)})`}
                           onClick={() => setBaixando(l)}
@@ -291,15 +307,24 @@ export function ContasFinanceiro() {
                           <HandCoins className="h-3.5 w-3.5" />
                         </IconeAcao>
                       )}
-                      {pode.editar && (
+                      {acoes.pagamentos && (
+                        <IconeAcao
+                          titulo={acoes.estornar ? 'Pagamentos registrados / estornar' : 'Pagamentos registrados'}
+                          onClick={() => setPagamentos(l)}
+                          classe="text-slate-600 hover:bg-slate-100"
+                        >
+                          <History className="h-3.5 w-3.5" />
+                        </IconeAcao>
+                      )}
+                      {acoes.editar && (
                         <IconeAcao titulo="Editar" onClick={() => setEditando(l)} classe="text-slate-600 hover:bg-slate-100">
                           <Pencil className="h-3.5 w-3.5" />
                         </IconeAcao>
                       )}
-                      {pode.cancelar && l.status !== 'cancelado' && Number(l.valor_pago ?? 0) === 0 && (
+                      {acoes.cancelar && (
                         <IconeAcao
-                          titulo="Cancelar título"
-                          classe="text-rose-600 hover:bg-rose-50"
+                          titulo="Cancelar título (fica na lista como cancelado)"
+                          classe="text-amber-700 hover:bg-amber-50"
                           onClick={() => {
                             if (!confirm(`Cancelar o título "${l.descricao}"? Ele deixa de contar no DRE e no fluxo de caixa.`)) return;
                             cancelar.mutate(l.id, {
@@ -309,6 +334,11 @@ export function ContasFinanceiro() {
                           }}
                         >
                           <Ban className="h-3.5 w-3.5" />
+                        </IconeAcao>
+                      )}
+                      {acoes.excluir && (
+                        <IconeAcao titulo="Excluir lançamento" onClick={() => setExcluindo(l)} classe="text-rose-600 hover:bg-rose-50">
+                          <Trash2 className="h-3.5 w-3.5" />
                         </IconeAcao>
                       )}
                     </div>
@@ -325,7 +355,7 @@ export function ContasFinanceiro() {
                     titulo={busca ? 'Nenhum título para essa busca' : 'Nenhum título neste período'}
                     descricao={
                       busca
-                        ? 'Revise o termo pesquisado ou limpe os filtros de situação, categoria e centro de custo.'
+                        ? 'Revise o termo pesquisado ou limpe os filtros de situação, categoria, centro de custo e fornecedor.'
                         : 'Amplie o período nos atalhos acima ou registre a primeira conta a pagar/receber deste mês.'
                     }
                     acao={
@@ -370,13 +400,15 @@ export function ContasFinanceiro() {
         />
       )}
       {baixando && <BaixaModal lancamento={baixando} onClose={() => setBaixando(null)} />}
+      {pagamentos && <PagamentosModal lancamento={pagamentos} onClose={() => setPagamentos(null)} />}
+      {excluindo && <ExcluirLancamentoModal lancamento={excluindo} onClose={() => setExcluindo(null)} />}
     </div>
   );
 }
 
 /** Favorecido/pagador: fornecedor, terceiro do evento (indenizacao) ou associado. */
 function favorecidoTexto(l: LancamentoComRel): string {
-  if (l.fornecedores?.razao_social) return l.fornecedores.razao_social;
+  if (l.fornecedores?.razao_social) return rotuloFornecedor(l.fornecedores);
   if (l.evento_terceiros) return `${l.evento_terceiros.nome} (terceiro ${l.evento_terceiros.codigo})`;
   return l.clientes?.nome_razao_social ?? '';
 }

@@ -56,6 +56,8 @@ export function BaixaModal({ lancamento, onClose }: { lancamento: LancamentoComR
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.valor_pago || form.valor_pago <= 0) return toast.error('Informe o valor pago');
+    // Sem a conta o pagamento nao entra no saldo nem na conciliacao (tesouraria, 0119).
+    if (!form.conta_bancaria_id) return toast.error(receita ? 'Informe a conta que recebeu' : 'Informe a conta que pagou');
     add.mutate(
       { ...form, lancamento_id: lancamento.id, valor_liquido: liquido },
       {
@@ -113,7 +115,7 @@ export function BaixaModal({ lancamento, onClose }: { lancamento: LancamentoComR
         )}
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <FormField label={receita ? 'Conta que recebeu' : 'Conta que pagou'}>
+          <FormField label={receita ? 'Conta que recebeu *' : 'Conta que pagou *'}>
             <Select value={form.conta_bancaria_id ?? ''} onChange={(e) => setForm({ ...form, conta_bancaria_id: e.target.value || null })}>
               <option value="">-- Selecione a conta --</option>
               {(contas ?? []).map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
