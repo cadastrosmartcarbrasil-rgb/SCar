@@ -2157,7 +2157,14 @@ export type CobrancaCarteira = {
   valor_vencido: number;
   ultima_captura_mutual: string | null;
   ultima_importacao: string | null;
+  /** 0139: associados que passaram do prazo de inativacao da regua (fora das contas acima). */
+  clientes_a_inativar: number;
+  valor_a_inativar: number;
 };
+/** 0139: os tres prazos da regua de cobranca. */
+export type ReguaCobranca = { dias_bloqueio: number; dias_revistoria: number; dias_inativacao: number };
+/** 0139: veiculos que sairam da base no periodo (o acervo que ja entrou inativo nao conta). */
+export type CobrancaInativados = { veiculos: number; clientes: number; pela_regua: number };
 export type CobrancaCalendarioLinha = {
   ciclo: number;
   data_ciclo: string;
@@ -2775,6 +2782,8 @@ export type EmpresaRow = Timestamps & {
   dias_tolerancia_inadimplencia: number;
   /** 0137: dias de atraso a partir dos quais a 2a via exige revistoria. */
   dias_revistoria_boleto: number;
+  /** 0139: dias de atraso a partir dos quais a 24h e os beneficios ficam bloqueados. */
+  dias_bloqueio_inadimplencia: number;
   // Recorte do plano de contas que alimenta o painel das regionais (0078).
   painel_conta_de: string | null;
   painel_conta_ate: string | null;
@@ -4518,6 +4527,8 @@ export type Database = {
           p_busca?: string | null;
           p_limite?: number;
           p_offset?: number;
+          /** 0139: 'prioridade' (padrao) | 'atraso_asc' | 'atraso_desc'. */
+          p_ordem?: string;
         };
         Returns: CobrancaFilaLinha[];
       };
@@ -4586,6 +4597,19 @@ export type Database = {
       revistorias_a_solicitar: { Args: { p_limite?: number }; Returns: RevistoriaASolicitar[] };
       rotina_revistorias_cobranca: { Args: Record<string, never>; Returns: { canceladas: number; expiradas: number }[] };
       dias_revistoria_boleto: { Args: Record<string, never>; Returns: number };
+      regua_cobranca: { Args: Record<string, never>; Returns: ReguaCobranca[] };
+      rotina_regua_cobranca: {
+        Args: Record<string, never>;
+        Returns: { para_inadimplente: number; para_ativo: number; inativados: number }[];
+      };
+      vencidos_veiculo: {
+        Args: { p_veiculo_id: string; p_min_dias?: number };
+        Returns: { boletos: number; valor: number; dias: number }[];
+      };
+      cobranca_inativados: {
+        Args: { p_inicio: string; p_fim: string; p_regional_id?: string | null };
+        Returns: CobrancaInativados[];
+      };
       cobranca_pode_cliente: { Args: { p_cliente_id: string }; Returns: boolean };
       cobranca_parametros: { Args: Record<string, never>; Returns: CobrancaParametros[] };
       salvar_parametros_cobranca: { Args: { p_meta: number; p_limite: number }; Returns: undefined };

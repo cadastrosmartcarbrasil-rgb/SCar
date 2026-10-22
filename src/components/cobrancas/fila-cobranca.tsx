@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import {
-  AlertTriangle, BadgeCheck, CalendarClock, Clock, Download, Handshake, Loader2, PhoneOff, Search, Timer,
+  AlertTriangle, ArrowDown, ArrowUp, ArrowUpDown, BadgeCheck, CalendarClock, Clock, Download, Handshake, Loader2,
+  PhoneOff, Search, Timer, UserX,
 } from 'lucide-react';
 import { Vazio, baixarCsv } from '@/components/financeiro/ui-financeiro';
 import { ErroLeitura } from '@/components/integracao/erro-leitura';
@@ -16,6 +17,7 @@ import {
   CANAIS, FAIXAS, ORDEM_SITUACOES, RESULTADOS, SITUACOES_FILA, somarDias, taxaCumprimento,
   type Canal, type Faixa, type Resultado, type SituacaoFila,
 } from '@/lib/cobranca-fila';
+import { ROTULO_ORDEM, proximaOrdem, type OrdemFila } from '@/lib/regua-cobranca';
 import { formatCurrency, formatDate, formatPercent } from '@/lib/utils';
 import type { CobrancaFilaLinha } from '@/lib/database.types';
 
@@ -26,6 +28,7 @@ const ICONE: Record<SituacaoFila, React.ElementType> = {
   sem_contato: PhoneOff,
   aguardando: Clock,
   promessa_em_dia: Handshake,
+  a_inativar: UserX,
 };
 const TOM: Record<SituacaoFila, 'rose' | 'amber' | 'cyan' | 'navy' | 'slate' | 'green'> = {
   promessa_quebrada: 'rose',
@@ -34,6 +37,7 @@ const TOM: Record<SituacaoFila, 'rose' | 'amber' | 'cyan' | 'navy' | 'slate' | '
   sem_contato: 'navy',
   aguardando: 'slate',
   promessa_em_dia: 'green',
+  a_inativar: 'slate',
 };
 const SELO: Record<SituacaoFila, string> = {
   promessa_quebrada: 'bg-rose-50 text-rose-700',
@@ -42,6 +46,7 @@ const SELO: Record<SituacaoFila, string> = {
   sem_contato: 'bg-brand-50 text-brand-600',
   aguardando: 'bg-slate-100 text-slate-600',
   promessa_em_dia: 'bg-emerald-50 text-emerald-700',
+  a_inativar: 'bg-slate-200 text-slate-700',
 };
 
 const hoje = () => new Date().toLocaleDateString('sv-SE');
@@ -65,15 +70,17 @@ export function FilaCobranca({ unidade }: { unidade?: { id: string; nome: string
   const [digitado, setDigitado] = useState('');
   const [busca, setBusca] = useState('');
   const [pagina, setPagina] = useState(0);
+  // 0139: padrao = prioridade e, dentro dela, o MENOR atraso (maior chance de recuperar).
+  const [ordem, setOrdem] = useState<OrdemFila>('prioridade');
   const [aberta, setAberta] = useState<CobrancaFilaLinha | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setBusca(digitado), 350);
     return () => clearTimeout(t);
   }, [digitado]);
-  useEffect(() => setPagina(0), [regionalId, situacao, faixa, busca]);
+  useEffect(() => setPagina(0), [regionalId, situacao, faixa, busca, ordem]);
 
-  const fila = useCobrancaFila({ regionalId, situacao, faixa, busca, pagina });
+  const fila = useCobrancaFila({ regionalId, situacao, faixa, busca, pagina, ordem });
   const resumo = useCobrancaFilaResumo(regionalId);
   const fim = hoje();
   const inicio = somarDias(fim, -29);
@@ -112,7 +119,7 @@ export function FilaCobranca({ unidade }: { unidade?: { id: string; nome: string
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-7">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-8">
         {ORDEM_SITUACOES.map((s) => {
           const r = porSituacao.get(s);
           return (
@@ -124,6 +131,11 @@ export function FilaCobranca({ unidade }: { unidade?: { id: string; nome: string
               onAbrir={() => setSituacao(situacao === s ? null : s)} />
           );
         })}
+        <TileCobranca titulo="A inativar" icon={UserX} tom="slate" carregando={resumo.isLoading}
+          valor={(porSituacao.get('a_inativar')?.clientes ?? 0).toLocaleString('pt-BR')}
+          detalhe={`${formatCurrency(porSituacao.get('a_inativar')?.valor ?? 0)} · fora da fila`}
+          rotuloAcao={situacao === 'a_inativar' ? 'voltar à fila ✕' : 'ver →'}
+          onAbrir={() => setSituacao(situacao === 'a_inativar' ? null : 'a_inativar')} />
         <TileCobranca titulo="Promessas cumpridas" icon={BadgeCheck} tom="green" carregando={promessas.isLoading}
           valor={taxa === null ? '—' : formatPercent(taxa)}
           detalhe={p ? `${p.cumpridas} de ${Number(p.cumpridas) + Number(p.quebradas)} vencidas · 30 dias` : 'últimos 30 dias'}
@@ -148,6 +160,7 @@ export function FilaCobranca({ unidade }: { unidade?: { id: string; nome: string
             className="mt-1 block w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm">
             <option value="">Todas</option>
             {ORDEM_SITUACOES.map((s) => <option key={s} value={s}>{SITUACOES_FILA[s].rotulo}</option>)}
+            <option value="a_inativar">{SITUACOES_FILA.a_inativar.rotulo} (fora da fila)</option>
           </select>
         </label>
         <label className="block min-w-[170px]">
@@ -182,7 +195,7 @@ export function FilaCobranca({ unidade }: { unidade?: { id: string; nome: string
             <b className="tnum text-slate-900">{formatCurrency(totalValor)}</b> vencidos
             {fila.isFetching && <Loader2 className="ml-2 inline h-3.5 w-3.5 animate-spin text-slate-400" />}
           </span>
-          <span className="text-xs text-slate-500">ordem: prioridade → maior atraso → maior valor</span>
+          <span className="text-xs text-slate-500">ordem: {ROTULO_ORDEM[ordem]}</span>
         </div>
         {fila.isLoading ? (
           <div className="flex items-center gap-2 px-4 py-10 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin" /> carregando…</div>
@@ -196,7 +209,16 @@ export function FilaCobranca({ unidade }: { unidade?: { id: string; nome: string
                   <th className="px-4 py-2">Associado</th>
                   <th className="px-3 py-2">Situação</th>
                   <th className="px-3 py-2 text-right">Vencido</th>
-                  <th className="px-3 py-2 text-right">Atraso</th>
+                  <th className="px-3 py-2 text-right">
+                    <button type="button" onClick={() => setOrdem(proximaOrdem(ordem))}
+                      title="Clique para ordenar pelo atraso"
+                      className="inline-flex items-center gap-1 uppercase tracking-wide hover:text-slate-800">
+                      Atraso
+                      {ordem === 'atraso_asc' ? <ArrowUp className="h-3 w-3" />
+                        : ordem === 'atraso_desc' ? <ArrowDown className="h-3 w-3" />
+                        : <ArrowUpDown className="h-3 w-3 opacity-50" />}
+                    </button>
+                  </th>
                   <th className="px-3 py-2">Último contato</th>
                   <th className="px-3 py-2">Retorno / promessa</th>
                 </tr>
@@ -254,6 +276,13 @@ export function FilaCobranca({ unidade }: { unidade?: { id: string; nome: string
         )}
       </div>
 
+      {situacao === 'a_inativar' && (
+        <p className="text-xs text-slate-500">
+          “A inativar” passou do prazo de inativação da régua (Configurações → Empresa) e sai da fila e
+          das métricas. Veículo cobrado pelo SCar é inativado pela rotina diária; o migrado do Mutual
+          continua ativo até o corte da cobrança e só deixa de ser trabalhado aqui.
+        </p>
+      )}
       <p className="text-xs text-slate-500">
         O pagamento feito no Mutual só aparece aqui depois da recaptura de INVOICE e da importação do
         histórico (Painel de Inadimplência). Até lá, uma promessa paga lá pode aparecer como não cumprida.

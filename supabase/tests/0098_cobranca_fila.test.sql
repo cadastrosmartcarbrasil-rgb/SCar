@@ -23,6 +23,9 @@ begin
     (u_con,'Consultor','con98@t.com','consultor_vendas', r1);
   perform set_config('request.jwt.claim.sub', u_adm::text, false);
   select id into tv from tipos_veiculo where nome ilike 'passeio%' limit 1;
+  -- 0139: os atrasos daqui (20 a 40 dias) passariam do prazo de inativacao
+  -- padrao (20) e sairiam da fila como "a inativar". Esta suite testa a fila.
+  insert into empresa (razao_social, dias_tolerancia_inadimplencia) values ('SMART CAR 98', 120);
 
   insert into clientes (tipo_pessoa, nome_razao_social, cpf_cnpj, regional_id, celular)
     values ('PF','JOÃO DEVEDOR','52998224725', r1, '65999990001') returning id into c1;

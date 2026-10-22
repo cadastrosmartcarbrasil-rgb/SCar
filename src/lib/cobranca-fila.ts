@@ -41,11 +41,14 @@ export const SITUACOES_FILA = {
   sem_contato: { rotulo: 'Sem contato', prioridade: 4 },
   aguardando: { rotulo: 'Aguardando retorno', prioridade: 5 },
   promessa_em_dia: { rotulo: 'Promessa em dia', prioridade: 6 },
+  // 0139: passou do prazo de inativacao da regua — fora da lista de trabalho.
+  a_inativar: { rotulo: 'A inativar', prioridade: 9 },
 } as const;
 export type SituacaoFila = keyof typeof SITUACOES_FILA;
-export const ORDEM_SITUACOES = (Object.keys(SITUACOES_FILA) as SituacaoFila[]).sort(
-  (a, b) => SITUACOES_FILA[a].prioridade - SITUACOES_FILA[b].prioridade,
-);
+/** As situacoes da LISTA DE TRABALHO (os tiles). "A inativar" tem bloco proprio. */
+export const ORDEM_SITUACOES = (Object.keys(SITUACOES_FILA) as SituacaoFila[])
+  .filter((s) => s !== 'a_inativar')
+  .sort((a, b) => SITUACOES_FILA[a].prioridade - SITUACOES_FILA[b].prioridade);
 
 export const FAIXAS = {
   D01_05: '1 a 5 dias',
@@ -124,7 +127,7 @@ export function statusAcordo(cancelado: boolean, parcelas: SituacaoParcela[]): S
   return 'EM_ANDAMENTO';
 }
 
-/** Espelho do CASE de `cobranca_fila_base` (0098). */
+/** Espelho do CASE de `cobranca_fila_base` (0098; "a inativar" desde a 0139). */
 export function situacaoFila(l: {
   hoje: string;
   vencidoDesde: string;
@@ -132,7 +135,11 @@ export function situacaoFila(l: {
   retornoEm: string | null;
   acordoStatus: StatusAcordo | null;
   quebraEm: string | null;
+  /** 0139: atraso do associado e o prazo de inativacao da regua. */
+  diasAtraso?: number;
+  diasInativacao?: number;
 }): SituacaoFila {
+  if (l.diasAtraso != null && l.diasInativacao != null && l.diasAtraso >= l.diasInativacao) return 'a_inativar';
   const contato = l.contatoEm ? diaNum(l.contatoEm) : null;
   if (l.acordoStatus === 'QUEBRADO' && (contato == null || (l.quebraEm != null && contato < diaNum(l.quebraEm)))) {
     return 'promessa_quebrada';

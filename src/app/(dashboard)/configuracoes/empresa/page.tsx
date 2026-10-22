@@ -15,6 +15,7 @@ import {
 import { buscarCep } from '@/lib/cep';
 import { validarCNPJ, formatarCNPJ, formatarCEP, formatarTelefone, soDigitos } from '@/lib/documento';
 import { formatDate } from '@/lib/utils';
+import { REGUA_PADRAO, etapasDaRegua, validarRegua } from '@/lib/regua-cobranca';
 import type { EmpresaRow, MandatosRow, DiretoriaRow } from '@/lib/database.types';
 
 interface EnderecoEmpresa {
@@ -40,6 +41,13 @@ export default function EmpresaPage() {
   const end = form.endereco ?? {};
   const setEnd = (p: Partial<EnderecoEmpresa>) => setForm((f) => ({ ...f, endereco: { ...f.endereco, ...p } }));
   const setF = (p: Partial<FormEmpresa>) => setForm((f) => ({ ...f, ...p }));
+  // Os tres prazos da regua (0139), lidos juntos: a ordem entre eles e regra.
+  const reguaDoForm = {
+    bloqueio: Number(form.dias_bloqueio_inadimplencia ?? REGUA_PADRAO.bloqueio),
+    revistoria: Number(form.dias_revistoria_boleto ?? REGUA_PADRAO.revistoria),
+    inativacao: Number(form.dias_tolerancia_inadimplencia ?? REGUA_PADRAO.inativacao),
+  };
+  const erroRegua = validarRegua(reguaDoForm);
 
   async function onCepBlur() {
     if (soDigitos(end.cep ?? '').length !== 8) return;
@@ -52,6 +60,7 @@ export default function EmpresaPage() {
     e.preventDefault();
     if (!form.razao_social) return toast.error('Informe a razão social');
     if (form.cnpj && !validarCNPJ(form.cnpj)) return toast.error('CNPJ inválido');
+    if (erroRegua) return toast.error(`Régua de cobrança: ${erroRegua}`);
     salvar.mutate(form, {
       onSuccess: (emp) => {
         toast.success('Empresa salva');
@@ -186,45 +195,48 @@ export default function EmpresaPage() {
             </CardContent>
           </Card>
 
-          {/* Politica de cobranca */}
+          {/* Regua de cobranca (0139) */}
           <Card>
             <CardContent className="space-y-4 pt-5">
-              <h2 className="text-sm font-semibold text-slate-700">Política de cobrança</h2>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <FormField label="Tolerância da inadimplência (dias)">
-                  <Input
-                    type="number"
-                    min={0}
-                    max={365}
-                    value={form.dias_tolerancia_inadimplencia ?? 20}
-                    onChange={(e) => setF({ dias_tolerancia_inadimplencia: Number(e.target.value) })}
-                  />
-                </FormField>
-                <p className="text-xs text-slate-500 sm:col-span-2 sm:self-center">
-                  Mensalidade em atraso põe o veículo em <strong>Inadimplente</strong>, que já
-                  bloqueia todos os benefícios (assistência 24h, evento, carro reserva). Passados
-                  estes dias sem regularizar, ele vira <strong>Inativo</strong> e a cobrança
-                  encerra. Durante a tolerância a mensalidade <strong>continua sendo gerada</strong> —
-                  o contrato ainda existe. Use <strong>0</strong> para inativar sem tolerância.
+              <div>
+                <h2 className="text-sm font-semibold text-slate-700">Régua de cobrança</h2>
+                <p className="mt-1 text-xs text-slate-500">
+                  Dias de atraso contados do vencimento do boleto mais antigo em aberto (do SCar ou do Mutual).
                 </p>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <FormField label="Revistoria para a 2ª via (dias de atraso)">
-                  <Input
-                    type="number"
-                    min={0}
-                    max={90}
-                    value={form.dias_revistoria_boleto ?? 5}
-                    onChange={(e) => setF({ dias_revistoria_boleto: Number(e.target.value) })}
-                  />
+                <FormField label="Bloqueio parcial a partir de (dias)">
+                  <Input type="number" min={1} max={90}
+                    value={form.dias_bloqueio_inadimplencia ?? REGUA_PADRAO.bloqueio}
+                    onChange={(e) => setF({ dias_bloqueio_inadimplencia: Number(e.target.value) })} />
                 </FormField>
-                <p className="text-xs text-slate-500 sm:col-span-2 sm:self-center">
-                  Boleto vencido há <strong>mais</strong> que estes dias só vira 2ª via (ou negociação) depois de
-                  uma <strong>revistoria</strong> do veículo — foto da frente, da traseira e um vídeo de até 30 segundos
-                  dando a volta no carro — aprovada pela equipe em Cobrança → Revistorias. Conta do vencimento
-                  efetivo (próximo dia útil).
-                </p>
+                <FormField label="2ª via sem revistoria até (dias)">
+                  <Input type="number" min={0} max={90}
+                    value={form.dias_revistoria_boleto ?? REGUA_PADRAO.revistoria}
+                    onChange={(e) => setF({ dias_revistoria_boleto: Number(e.target.value) })} />
+                </FormField>
+                <FormField label="Inativação definitiva com (dias)">
+                  <Input type="number" min={0} max={365}
+                    value={form.dias_tolerancia_inadimplencia ?? REGUA_PADRAO.inativacao}
+                    onChange={(e) => setF({ dias_tolerancia_inadimplencia: Number(e.target.value) })} />
+                </FormField>
               </div>
+              {erroRegua ? (
+                <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{erroRegua}</p>
+              ) : (
+                <ol className="space-y-2">
+                  {etapasDaRegua(reguaDoForm).map((e) => (
+                    <li key={e.titulo} className="flex gap-3 rounded-lg border border-slate-200 px-3 py-2">
+                      <span className="tnum w-16 shrink-0 text-sm font-semibold text-slate-700">{e.dia}º dia</span>
+                      <span className="text-sm text-slate-600"><b className="text-slate-700">{e.titulo}.</b> {e.texto}</span>
+                    </li>
+                  ))}
+                </ol>
+              )}
+              <p className="text-xs text-slate-500">
+                Enquanto o Mutual emite os boletos, a régua não muda o status dos veículos migrados: quem passa do
+                prazo de inativação só sai da fila de cobrança. O bloqueio da 24h vale para todos.
+              </p>
             </CardContent>
           </Card>
 

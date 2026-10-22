@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import type {
   CobrancaBoletoLinha, CobrancaCalendarioLinha, CobrancaCarteira, CobrancaEscopo,
   CobrancaHistoricoResumo, CobrancaImportacaoBloco, CobrancaIndicadores, CobrancaParametros,
-  CobrancaPorRegional, CobrancaSerieMes,
+  CobrancaInativados, CobrancaPorRegional, CobrancaSerieMes,
 } from '@/lib/database.types';
 
 /**
@@ -60,6 +60,25 @@ export function useCobrancaCarteira(regionalId: string | null) {
     queryKey: [...RAIZ, 'carteira', regionalId ?? 'todas'],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('cobranca_carteira', { p_regional_id: regionalId });
+      if (error) throw error;
+      return data?.[0] ?? null;
+    },
+  });
+}
+
+/**
+ * Inativados no periodo (0139): veiculos que SAIRAM da base no periodo, com
+ * quantos foram pela regua. O acervo que ja entrou inativo nao conta.
+ */
+export function useCobrancaInativados(inicio: string, fim: string, regionalId: string | null) {
+  const supabase = createClient();
+  return useQuery<CobrancaInativados | null>({
+    queryKey: [...RAIZ, 'inativados', inicio, fim, regionalId ?? 'todas'],
+    enabled: !!inicio && !!fim && inicio <= fim,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('cobranca_inativados', {
+        p_inicio: inicio, p_fim: fim, p_regional_id: regionalId,
+      });
       if (error) throw error;
       return data?.[0] ?? null;
     },

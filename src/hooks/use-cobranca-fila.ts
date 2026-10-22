@@ -7,6 +7,7 @@ import type {
   CobrancaFilaResumo, CobrancaPromessasResumo, Json,
 } from '@/lib/database.types';
 import type { ParcelaRascunho, TipoAcordo } from '@/lib/cobranca-fila';
+import type { OrdemFila } from '@/lib/regua-cobranca';
 
 /**
  * Cobranca, Fase 2 (0098): a fila, a ficha do associado e o registro de
@@ -22,6 +23,7 @@ export interface FiltroFila {
   faixa: string | null;
   busca: string;
   pagina: number;
+  ordem?: OrdemFila;
 }
 
 export function useCobrancaFila(f: FiltroFila) {
@@ -37,6 +39,7 @@ export function useCobrancaFila(f: FiltroFila) {
         p_busca: f.busca.trim() || null,
         p_limite: POR_PAGINA_FILA,
         p_offset: f.pagina * POR_PAGINA_FILA,
+        p_ordem: f.ordem ?? 'prioridade',
       });
       if (error) throw error;
       return data ?? [];

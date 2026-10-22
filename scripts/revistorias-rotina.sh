@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Rotina diaria da REVISTORIA do boleto vencido (0137) — chamado pelo crontab do VPS:
+# Rotina diaria da COBRANCA: a REGUA (0139: inadimplente / inativo / volta a
+# ativo) e a REVISTORIA do boleto vencido (0137) — chamado pelo crontab do VPS:
 #   crontab -e  ->  15 6 * * * /opt/scar/scripts/revistorias-rotina.sh
 # Usa o mesmo COBRANCA_CRON_SECRET da baixa (lido do .env SEM `source`).
 # Log em /var/log/scar-revistorias.log.

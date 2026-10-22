@@ -8,7 +8,7 @@ import {
 import {
   Users, UserCheck, UserX, Wallet, CalendarClock, Banknote, AlertTriangle, RotateCcw,
   Sparkles, Settings, TrendingUp, TrendingDown, Minus, Download, Database, Trash2, Plus,
-  Repeat2, BadgeCheck, CalendarDays,
+  Repeat2, BadgeCheck, CalendarDays, UserMinus, Ban,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Modal } from '@/components/ui/modal';
@@ -18,7 +18,7 @@ import {
   COR, FiltroUnidadeCobranca, ModalBoletos, SemAcessoCobranca, SeloSemaforo, TileCobranca,
 } from '@/components/cobrancas/ui-cobranca';
 import {
-  useCobrancaCarteira, useCobrancaEscopo, useCobrancaIndicadores, useCobrancaParametros,
+  useCobrancaCarteira, useCobrancaEscopo, useCobrancaInativados, useCobrancaIndicadores, useCobrancaParametros,
   useCobrancaPorRegional, useCobrancaSerie, useFeriadoCobranca, useSalvarParametrosCobranca,
   type FiltroListaBoletos,
 } from '@/hooks/use-cobranca-painel';
@@ -251,6 +251,7 @@ export function PainelInadimplencia({ unidade }: { unidade?: { id: string; nome:
   const qPar = useCobrancaParametros();
   const qReg = useCobrancaPorRegional(periodo.inicio, periodo.fim, !unidade);
   const qSerie = useCobrancaSerie(regionalId, 12);
+  const qInat = useCobrancaInativados(periodo.inicio, periodo.fim, regionalId);
 
   const mesCheio = ehMesCheio(periodo);
   const porRecorte = useMemo(() => {
@@ -320,7 +321,7 @@ export function PainelInadimplencia({ unidade }: { unidade?: { id: string; nome:
       {/* Carteira (hoje) */}
       <section>
         <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Carteira — hoje</h2>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           <TileCobranca titulo="Associados ativos" icon={Users} tom="navy" carregando={qCart.isLoading}
             valor={inteiro.format(num(qCart.data?.clientes_ativos))} detalhe="com veículo na base" />
           <TileCobranca titulo="Em dia" icon={UserCheck} tom="green" carregando={qCart.isLoading}
@@ -334,6 +335,9 @@ export function PainelInadimplencia({ unidade }: { unidade?: { id: string; nome:
             valor={formatCurrency(num(qCart.data?.valor_vencido))}
             detalhe={`${inteiro.format(num(qCart.data?.boletos_vencidos))} boletos, qualquer competência`}
             onAbrir={() => setLista({ titulo: 'Todos os boletos vencidos em aberto', regionalId, situacoes: ['vencido'] })} />
+          <TileCobranca titulo="A inativar" icon={Ban} tom="slate" carregando={qCart.isLoading}
+            valor={inteiro.format(num(qCart.data?.clientes_a_inativar))}
+            detalhe={`${formatCurrency(num(qCart.data?.valor_a_inativar))} · passaram do prazo da régua, fora das métricas acima`} />
         </div>
       </section>
 
@@ -368,7 +372,7 @@ export function PainelInadimplencia({ unidade }: { unidade?: { id: string; nome:
       {/* Recuperacao e qualidade */}
       <section>
         <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Recuperação e qualidade do pagador</h2>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
           <TileCobranca titulo="Inadimplência por clientes" icon={UserX} tom="rose" carregando={carregando}
             valor={pct(tAtual.inadClientes)}
             detalhe={`${inteiro.format(num(atual?.clientes_inadimplentes))} de ${inteiro.format(num(atual?.clientes_venceram))} com boleto vencido`}
@@ -388,6 +392,9 @@ export function PainelInadimplencia({ unidade }: { unidade?: { id: string; nome:
           <TileCobranca titulo="Regularizados" icon={UserCheck} tom="green" carregando={carregando}
             valor={inteiro.format(num(atual?.regularizados))} detalhe="associados que pagaram atrasado no período"
             onAbrir={() => setLista({ titulo: 'Pagamentos em atraso feitos no período', regionalId, situacoes: ['pago_em_atraso'], pagoInicio: periodo.inicio, pagoFim: periodo.fim })} />
+          <TileCobranca titulo="Inativados no período" icon={UserMinus} tom="slate" carregando={qInat.isLoading}
+            valor={inteiro.format(num(qInat.data?.veiculos))}
+            detalhe={`veículos de ${inteiro.format(num(qInat.data?.clientes))} associados · ${inteiro.format(num(qInat.data?.pela_regua))} pela régua de cobrança`} />
         </div>
       </section>
 

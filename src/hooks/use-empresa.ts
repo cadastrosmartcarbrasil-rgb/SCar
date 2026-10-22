@@ -50,6 +50,8 @@ export function useSaveEmpresa() {
         dias_tolerancia_inadimplencia: e.dias_tolerancia_inadimplencia ?? 20,
         // Revistoria do boleto vencido (0137): zero tambem e escolha (exige ja no 1o dia).
         dias_revistoria_boleto: e.dias_revistoria_boleto ?? 5,
+        // Bloqueio dos beneficios (0139): a partir de quantos dias de vencido.
+        dias_bloqueio_inadimplencia: e.dias_bloqueio_inadimplencia ?? 1,
       };
       const q = e.id
         ? supabase.from('empresa').update(payload).eq('id', e.id).select('*').single()
