@@ -3,6 +3,7 @@ import {
   calcularElegibilidade,
   montarFaturas,
   resumoFinanceiro,
+  boletoMutualComoTitulo,
   veiculoInadimplente,
   statusVeiculoResumo,
   ordemStatusVeiculo,
@@ -192,5 +193,29 @@ describe('primeiraAtivacao', () => {
   it('sem data nao inventa nada', () => {
     expect(primeiraAtivacao(null, hoje)).toBeNull();
     expect(primeiraAtivacao('', hoje)).toBeNull();
+  });
+});
+
+describe('boletoMutualComoTitulo (selo de adimplencia com o Mutual)', () => {
+  const HOJE = new Date('2026-10-22T12:00:00Z');
+  it('converte o status da RPC e o valor', () => {
+    expect(boletoMutualComoTitulo({ veiculo_id: 'v', status: 'aberto', data_vencimento: '2026-11-23', valor: '144' }))
+      .toEqual({ veiculo_id: 'v', status: 'pendente', data_vencimento: '2026-11-23', valor: 144 });
+    expect(boletoMutualComoTitulo({ veiculo_id: null, status: 'vencido', data_vencimento: '2026-10-20', valor: 144 }).status).toBe('vencido');
+    expect(boletoMutualComoTitulo({ veiculo_id: null, status: 'pago', data_vencimento: '2026-09-21', valor: 144 }).status).toBe('pago');
+    expect(boletoMutualComoTitulo({ veiculo_id: null, status: 'cancelado', data_vencimento: '2026-09-21', valor: 144 }).status).toBe('cancelado');
+  });
+  it('associado sem titulo no SCar e com boleto do Mutual vencido NAO e adimplente (caso JARDEL)', () => {
+    const mutual = [
+      { veiculo_id: 'v', status: 'aberto', data_vencimento: '2026-11-23', valor: 144 },
+      { veiculo_id: 'v', status: 'vencido', data_vencimento: '2026-10-21', valor: 144 },
+      { veiculo_id: 'v', status: 'vencido', data_vencimento: '2026-10-20', valor: 144 },
+      { veiculo_id: 'v', status: 'pago', data_vencimento: '2026-09-21', valor: 144 },
+    ].map(boletoMutualComoTitulo);
+    const r = resumoFinanceiro(mutual, HOJE);
+    expect(r.adimplente).toBe(false);
+    expect(r.vencidos).toBe(2);
+    expect(r.valorEmAberto).toBe(432);
+    expect(veiculoInadimplente({ id: 'v', tipo_faturamento: 'INDIVIDUAL_VEICULO' }, mutual, HOJE)).toBe(true);
   });
 });

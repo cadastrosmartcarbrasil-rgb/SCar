@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { resumoFinanceiro, veiculoInadimplente, type TituloResumo, type TituloVeiculo } from '@/lib/sac';
+import {
+  boletoMutualComoTitulo, resumoFinanceiro, veiculoInadimplente, type TituloResumo, type TituloVeiculo,
+} from '@/lib/sac';
 import { unirEventosCliente, type EventoScarLeitura } from '@/lib/eventos-historico';
 
 // GET /api/v1/sac/visao-360?cliente_id=|placa=|cpf=
@@ -55,6 +57,14 @@ export async function GET(request: Request) {
   // Titulo que nao carrega mostraria o associado como adimplente por engano.
   if (erroTitulos) return NextResponse.json({ error: erroTitulos.message }, { status: 500 });
 
+  // Boletos do Mutual (0099): a carteira migrada nao tem titulo no SCar, entao
+  // o selo de adimplencia lido so de `titulos_financeiros` dizia "Adimplente"
+  // com boleto vencido no historico. As duas fontes, como o Historico Financeiro.
+  const { data: boletosMutual, error: erroBoletos } = await supabase
+    .rpc('boletos_mutual_do_cliente', { p_cliente_id: clienteId, p_limite: 300 });
+  if (erroBoletos) return NextResponse.json({ error: erroBoletos.message }, { status: 500 });
+  const doMutual = (boletosMutual ?? []).map(boletoMutualComoTitulo);
+
   // Eventos (sinistros) do associado (uma query) -> aba Eventos + marcador no veiculo.
   const { data: eventos, error: erroEventos } = await supabase
     .from('eventos_sinistro')
@@ -81,9 +91,12 @@ export async function GET(request: Request) {
     : { data: [], error: null };
   if (erroAlertas) return NextResponse.json({ error: erroAlertas.message }, { status: 500 });
 
-  const titulosVeic: TituloVeiculo[] = (titulos ?? []).map((t) => ({
-    veiculo_id: t.veiculo_id, status: t.status, data_vencimento: t.data_vencimento,
-  }));
+  const titulosVeic: TituloVeiculo[] = [
+    ...(titulos ?? []).map((t) => ({
+      veiculo_id: t.veiculo_id, status: t.status, data_vencimento: t.data_vencimento,
+    })),
+    ...doMutual,
+  ];
   // A ordem vem do RPC (ativos primeiro); aqui so entra a inadimplencia, que e
   // calculada a partir dos titulos ja carregados (regra unica em src/lib/sac.ts).
   const veiculosOut = (veiculos ?? []).map((v) => ({
@@ -117,9 +130,10 @@ export async function GET(request: Request) {
     eventosMutual ?? [],
   );
 
-  const resumo = resumoFinanceiro(
-    (titulos ?? []).map<TituloResumo>((t) => ({ status: t.status, data_vencimento: t.data_vencimento, valor: Number(t.valor) })),
-  );
+  const resumo = resumoFinanceiro([
+    ...(titulos ?? []).map<TituloResumo>((t) => ({ status: t.status, data_vencimento: t.data_vencimento, valor: Number(t.valor) })),
+    ...doMutual,
+  ]);
 
   return NextResponse.json({ associado, veiculos: veiculosOut, financeiro: { resumo }, eventos: eventosOut, alertas: alertasOut });
 }

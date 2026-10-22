@@ -4144,6 +4144,15 @@ coberturas ABERTAS, sem clique para expandir.
 - **Grupo:** pela categoria (CASCO, RCF, VIDROS, RASTREADOR; ADMIN não é cobertura); BENEFICIO pelo nome. Regras puras
   em `src/lib/coberturas.ts` (testadas). Produto novo de BENEFICIO com nome fora do padrão cai em "Outros benefícios".
 
+## SAC — selo de adimplência com as duas fontes (22/10/2026, sem migration)
+- **O defeito (caso JARDEL SILVA DO NASCIMENTO):** o selo "Adimplente" do cabeçalho do SAC e o "Inadimplente" da lista
+  de veículos liam SÓ `titulos_financeiros`; a carteira migrada não tem título no SCar, então quem tinha boleto do Mutual
+  vencido aparecia ADIMPLENTE enquanto o Histórico Financeiro (que já lia as duas fontes, 0099) mostrava o atraso.
+  Medido em 22/10: **871 associados** com boleto do Mutual vencido estavam nessa situação.
+- **Correção:** `/api/v1/sac/visao-360` soma `boletos_mutual_do_cliente` (respeita o corte da cobrança) ao resumo e à
+  inadimplência por veículo, convertidos por `boletoMutualComoTitulo` (`src/lib/sac.ts`, testada). **Tela nova que diz
+  se o associado está em dia: leia as DUAS fontes** — mesma regra do histórico.
+
 ## SAC — coberturas e opcionais (15/10/2026, sem migration)
 - **A ficha do veículo no SAC mostra só duas listas:** *Coberturas do plano* (o que o `cotar_plano`
   dá: base + combo) e *Opcionais contratados* (`veiculo_produtos`) — a Taxa Administrativa (categoria

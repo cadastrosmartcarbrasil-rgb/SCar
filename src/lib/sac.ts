@@ -104,6 +104,25 @@ export function montarFaturas(
 // ---------------------------------------------------------------------------
 // Status financeiro (resumo de adimplencia a partir de titulos)
 // ---------------------------------------------------------------------------
+
+/**
+ * O boleto do Mutual (`boletos_mutual_do_cliente`, 0099) no formato do titulo,
+ * para o selo de adimplencia ler as DUAS fontes — como o historico financeiro.
+ * Sem isso o associado migrado (0 titulos no SCar) aparecia "Adimplente" com
+ * boleto vencido no Mutual. A RPC devolve aberto/vencido/pago/cancelado;
+ * "aberto" vira "pendente" e o vencimento decide o atraso, como no titulo.
+ */
+export function boletoMutualComoTitulo(m: {
+  veiculo_id: string | null; status: string; data_vencimento: string; valor: number | string;
+}): TituloResumo & TituloVeiculo {
+  const status: TituloResumo['status'] =
+    m.status === 'pago' ? 'pago'
+      : m.status === 'cancelado' ? 'cancelado'
+        : m.status === 'vencido' ? 'vencido'
+          : 'pendente';
+  return { veiculo_id: m.veiculo_id, status, data_vencimento: m.data_vencimento, valor: Number(m.valor) };
+}
+
 export interface TituloResumo {
   status: 'pendente' | 'pago' | 'cancelado' | 'vencido';
   data_vencimento: string;
