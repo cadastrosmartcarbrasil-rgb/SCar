@@ -26,6 +26,7 @@ import { linkWhatsAppAssociado } from '@/lib/protocolos';
 import { addDias } from '@/lib/financeiro';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { BoletoRenegociacao, RenegociacaoCliente, TituloCliente } from '@/lib/database.types';
+import { RevistoriaNecessaria, useBloqueioRevistoria } from '@/components/revistoria/revistoria-necessaria';
 
 function hojeSP(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
@@ -61,6 +62,11 @@ export function ModalNegociarBoletos({
   const acordos = useCobrancaAcordosCliente(clienteId);
   const renegs = useRenegociacoes(clienteId);
   const original = totalOriginais(selecionados.map((s) => ({ valor: Number(s.valor) })));
+  const contato = useContatoAssociado(clienteId);
+  // 0137: vencido acima de N dias so sai com revistoria aprovada (o banco recusa de qualquer jeito).
+  const revistoria = useBloqueioRevistoria(
+    clienteId, selecionados.map((s) => ({ origem: s.origem === 'MUTUAL' ? 'MUTUAL' : 'SCAR', id: s.id })),
+  );
   const algumVencido = selecionados.some((s) => s.status === 'vencido');
 
   // Acordo em andamento ainda sem boletos: as parcelas vem dele.
@@ -97,6 +103,7 @@ export function ModalNegociarBoletos({
 
   function emitir() {
     if (erro) return toast.error(erro);
+    if (revistoria.bloqueia) return toast.error('Falta a revistoria do veículo (veja o quadro acima do botão).');
     criar.mutate(
       {
         cliente_id: clienteId,
@@ -199,9 +206,18 @@ export function ModalNegociarBoletos({
           {erro && <p className="mt-1 text-xs font-medium text-rose-700">{erro}</p>}
         </div>
 
+        <RevistoriaNecessaria
+          linhas={revistoria.q.data ?? []}
+          nome={contato.data?.nome_razao_social}
+          celular={contato.data?.celular ?? contato.data?.telefone}
+        />
+        {revistoria.q.error && (
+          <p className="text-xs text-rose-700">Não consegui conferir a revistoria: {(revistoria.q.error as Error).message}</p>
+        )}
+
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose}>Cancelar</Button>
-          <Button onClick={emitir} disabled={criar.isPending || !!erro}>
+          <Button onClick={emitir} disabled={criar.isPending || !!erro || revistoria.bloqueia || revistoria.carregando}>
             {criar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Repeat2 className="h-4 w-4" />}
             Emitir e substituir
           </Button>

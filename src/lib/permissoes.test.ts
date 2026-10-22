@@ -12,9 +12,9 @@ describe('grade modulo x acao (0111)', () => {
     for (const m of MODULOS) for (const a of m.acoes) expect(ACOES).toContain(a);
   });
 
-  it('85 celulas editaveis (as mesmas de permissao_celula_valida) + 3 alcadas', () => {
+  it('89 celulas editaveis (as mesmas de permissao_celula_valida) + 3 alcadas', () => {
     const editaveis = MODULOS.filter((m) => !m.fixo).flatMap((m) => m.acoes);
-    expect(editaveis.length).toBe(85);
+    expect(editaveis.length).toBe(89);
     expect(ALCADAS.length).toBe(3);
   });
 
@@ -67,6 +67,7 @@ describe('grade modulo x acao (0111)', () => {
 
   it('rota -> modulo', () => {
     expect(moduloDaRota('/cobrancas/painel')?.chave).toBe('cobranca');
+    expect(moduloDaRota('/cobrancas/revistorias')?.chave).toBe('revistoria');
     expect(moduloDaRota('/veiculos/abc')?.chave).toBe('veiculos');
     expect(moduloDaRota('/vendedor')).toBeUndefined();
   });

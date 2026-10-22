@@ -878,6 +878,117 @@ export type TituloCliente = {
   em_serasa?: boolean;
 };
 
+// ---------------------------------------------------------------------------
+// REVISTORIA DO BOLETO VENCIDO (0137)
+// ---------------------------------------------------------------------------
+export type SituacaoRevistoria =
+  | 'AGUARDANDO' | 'EM_ANALISE' | 'APROVADA' | 'DISPENSADA' | 'UTILIZADA' | 'CANCELADA' | 'EXPIRADA';
+
+export type RevistoriaExigida = {
+  veiculo_id: string;
+  placa: string | null;
+  chassi: string | null;
+  modelo: string | null;
+  dias_atraso: number;
+  vencimento: string;
+  revistoria_id: string | null;
+  situacao: SituacaoRevistoria | null;
+  token: string | null;
+  token_expira_em: string | null;
+  motivo_reprovacao: string | null;
+  liberada: boolean;
+};
+
+export type RevistoriaSolicitada = {
+  revistoria_id: string;
+  token: string;
+  expira_em: string;
+  situacao: SituacaoRevistoria;
+  reaproveitada: boolean;
+};
+
+export type RevistoriaPublica = {
+  valida: boolean;
+  motivo: 'OK' | 'LINK_INVALIDO' | 'LINK_EXPIRADO' | 'EM_ANALISE' | 'APROVADA' | 'ENCERRADA';
+  revistoria_id: string | null;
+  situacao: SituacaoRevistoria | null;
+  nome: string | null;
+  placa: string | null;
+  chassi: string | null;
+  marca: string | null;
+  modelo: string | null;
+  expira_em: string | null;
+  motivo_reprovacao: string | null;
+  reprovacoes: number;
+};
+
+export type RevistoriaItemPublico = {
+  codigo: string;
+  nome: string;
+  instrucao: string | null;
+  midia: 'FOTO' | 'VIDEO';
+  obrigatorio: boolean;
+  ordem: number;
+  enviado: boolean;
+  enviado_em: string | null;
+  duracao_segundos: number | null;
+};
+
+export type RevistoriaLinha = {
+  id: string;
+  situacao: SituacaoRevistoria;
+  origem: 'MANUAL' | 'ROTINA';
+  cliente_id: string;
+  associado: string;
+  cpf_cnpj: string | null;
+  celular: string | null;
+  veiculo_id: string;
+  placa: string | null;
+  chassi: string | null;
+  modelo: string | null;
+  regional: string | null;
+  dias_atraso: number | null;
+  vencimento_referencia: string | null;
+  created_at: string;
+  enviado_em: string | null;
+  analisado_em: string | null;
+  analisado_por_nome: string | null;
+  reprovacoes: number;
+  motivo_reprovacao: string | null;
+  token: string;
+  token_expira_em: string;
+  dispensa_justificativa: string | null;
+  renegociacao_id: string | null;
+};
+
+export type RevistoriaMidia = {
+  grupo: 'ATUAL' | 'ANTERIOR';
+  anexo_id: string;
+  codigo: string;
+  nome: string;
+  midia: 'FOTO' | 'VIDEO';
+  url: string;
+  enviado_em: string;
+  tamanho_bytes: number | null;
+  duracao_segundos: number | null;
+  rodada_atual: boolean;
+};
+
+export type RevistoriaASolicitar = {
+  cliente_id: string;
+  associado: string;
+  cpf_cnpj: string | null;
+  celular: string | null;
+  veiculo_id: string;
+  placa: string | null;
+  chassi: string | null;
+  modelo: string | null;
+  regional: string | null;
+  dias_atraso: number;
+  vencimento: string;
+  valor_vencido: number;
+};
+
 // Boleto do Mutual no historico do SAC (RPC boletos_mutual_do_cliente, 0099)
 export type BoletoMutualCliente = {
   id: string;
@@ -2662,6 +2773,8 @@ export type EmpresaRow = Timestamps & {
   endereco: Json;
   logo_url: string | null;
   dias_tolerancia_inadimplencia: number;
+  /** 0137: dias de atraso a partir dos quais a 2a via exige revistoria. */
+  dias_revistoria_boleto: number;
   // Recorte do plano de contas que alimenta o painel das regionais (0078).
   painel_conta_de: string | null;
   painel_conta_ate: string | null;
@@ -4449,6 +4562,30 @@ export type Database = {
       };
       registrar_baixa_original: { Args: { p_origem_id: string; p_status: string; p_erro?: string | null }; Returns: string };
       renegociacoes_do_cliente: { Args: { p_cliente_id: string }; Returns: RenegociacaoCliente[] };
+      revistoria_exigida: { Args: { p_cliente_id: string; p_origens?: Json | null }; Returns: RevistoriaExigida[] };
+      solicitar_revistoria_cobranca: { Args: { p_veiculo_id: string; p_origem?: string }; Returns: RevistoriaSolicitada[] };
+      revistoria_por_token: { Args: { p_token: string }; Returns: RevistoriaPublica[] };
+      revistoria_itens_publica: { Args: { p_token: string }; Returns: RevistoriaItemPublico[] };
+      registrar_midia_revistoria_publica: {
+        Args: { p_token: string; p_tipo: string; p_url: string; p_tamanho?: number | null;
+          p_arquivo?: string | null; p_duracao?: number | null };
+        Returns: string;
+      };
+      concluir_revistoria_publica: { Args: { p_token: string }; Returns: string };
+      revistorias_cobranca_listar: {
+        Args: { p_situacao?: string | null; p_busca?: string | null; p_limite?: number };
+        Returns: RevistoriaLinha[];
+      };
+      revistoria_cobranca_midias: { Args: { p_revistoria_id: string }; Returns: RevistoriaMidia[] };
+      analisar_revistoria_cobranca: {
+        Args: { p_revistoria_id: string; p_aprovar: boolean; p_motivo?: string | null };
+        Returns: string;
+      };
+      dispensar_revistoria_cobranca: { Args: { p_veiculo_id: string; p_justificativa: string }; Returns: string };
+      cancelar_revistoria_cobranca: { Args: { p_revistoria_id: string; p_motivo: string }; Returns: string };
+      revistorias_a_solicitar: { Args: { p_limite?: number }; Returns: RevistoriaASolicitar[] };
+      rotina_revistorias_cobranca: { Args: Record<string, never>; Returns: { canceladas: number; expiradas: number }[] };
+      dias_revistoria_boleto: { Args: Record<string, never>; Returns: number };
       cobranca_pode_cliente: { Args: { p_cliente_id: string }; Returns: boolean };
       cobranca_parametros: { Args: Record<string, never>; Returns: CobrancaParametros[] };
       salvar_parametros_cobranca: { Args: { p_meta: number; p_limite: number }; Returns: undefined };

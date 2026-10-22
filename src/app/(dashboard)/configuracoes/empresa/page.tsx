@@ -208,6 +208,23 @@ export default function EmpresaPage() {
                   o contrato ainda existe. Use <strong>0</strong> para inativar sem tolerância.
                 </p>
               </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <FormField label="Revistoria para a 2ª via (dias de atraso)">
+                  <Input
+                    type="number"
+                    min={0}
+                    max={90}
+                    value={form.dias_revistoria_boleto ?? 5}
+                    onChange={(e) => setF({ dias_revistoria_boleto: Number(e.target.value) })}
+                  />
+                </FormField>
+                <p className="text-xs text-slate-500 sm:col-span-2 sm:self-center">
+                  Boleto vencido há <strong>mais</strong> que estes dias só vira 2ª via (ou negociação) depois de
+                  uma <strong>revistoria</strong> do veículo — foto da frente, da traseira e um vídeo de até 30 segundos
+                  dando a volta no carro — aprovada pela equipe em Cobrança → Revistorias. Conta do vencimento
+                  efetivo (próximo dia útil).
+                </p>
+              </div>
             </CardContent>
           </Card>
 

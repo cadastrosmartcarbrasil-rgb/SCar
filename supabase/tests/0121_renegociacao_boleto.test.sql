@@ -13,6 +13,8 @@ declare
   rn uuid; rn2 uuid; ra uuid; ac uuid; tnovo uuid; o record; n bigint; ok boolean;
   v_hoje date := (now() at time zone 'America/Sao_Paulo')::date;
 begin
+  -- A trava da revistoria (0137) tem suite propria; aqui o assunto e a 0121.
+  execute 'alter table cobranca_renegociacao_origens disable trigger trg_reneg_origem_revistoria';
   insert into auth.users (id, email) values (u_adm,'adm121@t.com'), (u_cob,'cob121@t.com'), (u_out,'out121@t.com');
   insert into regionais (nome) values ('U121 A') returning id into r1;
   insert into regionais (nome) values ('U121 B') returning id into r2;

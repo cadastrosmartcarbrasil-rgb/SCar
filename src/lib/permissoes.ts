@@ -64,6 +64,10 @@ export const MODULOS: Modulo[] = [
     rotas: ['/eventos'] },
   { chave: 'cobranca', rotulo: 'Cobrança', acoes: ['ver', 'criar', 'editar', 'exportar', 'baixar', 'cancelar'],
     notas: { criar: 'gerar faturas e remessas', editar: 'ajustar boleto' }, rotas: ['/cobrancas'] },
+  { chave: 'revistoria', rotulo: 'Revistoria do boleto vencido', acoes: ['ver', 'criar', 'fechar', 'cancelar'],
+    notas: { criar: 'pedir e reenviar o link ao associado', fechar: 'aprovar ou reprovar',
+      cancelar: 'liberar a 2a via SEM revistoria (com justificativa)' },
+    rotas: ['/cobrancas/revistorias'] },
   { chave: 'precificacao', rotulo: 'Precificação', acoes: ['ver', 'editar', 'exportar'],
     notas: { editar: 'alterar a tabela de preços' }, rotas: ['/precificacao'] },
   { chave: 'fornecedores', rotulo: 'Fornecedores', acoes: ['ver', 'criar', 'editar', 'excluir', 'exportar'],
@@ -134,6 +138,9 @@ const PADRAO: Record<string, readonly string[]> = {
   'cobranca.ver': TODOS, 'cobranca.exportar': TODOS, 'cobranca.criar': ['financeiro'],
   'cobranca.editar': ['financeiro', 'gestor_regional', 'supervisor', 'cobranca'],
   'cobranca.baixar': ['financeiro'], 'cobranca.cancelar': ['financeiro'],
+  'revistoria.ver': TODOS, 'revistoria.criar': TODOS,
+  'revistoria.fechar': ['financeiro', 'gestor_regional', 'supervisor', 'cobranca'],
+  'revistoria.cancelar': ['financeiro', 'gestor_regional'],
   'precificacao.ver': TODOS, 'precificacao.exportar': TODOS, 'precificacao.editar': ['financeiro'],
   'fornecedores.ver': TODOS, 'fornecedores.exportar': TODOS,
   'fornecedores.criar': ['financeiro', 'gestor_regional', 'assistencia_24h'],
@@ -305,7 +312,15 @@ export function mudancasDoPerfil(
 
 /** Modulo de uma rota da matriz (para o menu e a guarda de pagina). */
 export function moduloDaRota(pathname: string): Modulo | undefined {
-  return MODULOS.find((m) => m.rotas.some((r) => pathname === r || pathname.startsWith(r + '/')));
+  // A rota MAIS especifica vence: /cobrancas/revistorias e da revistoria, nao da cobranca.
+  let melhor: Modulo | undefined;
+  let tam = -1;
+  for (const m of MODULOS) {
+    for (const r of m.rotas) {
+      if ((pathname === r || pathname.startsWith(r + '/')) && r.length > tam) { melhor = m; tam = r.length; }
+    }
+  }
+  return melhor;
 }
 
 // ---------------------------------------------------------------------------

@@ -29,6 +29,7 @@ import {
   DoorOpen,
   Gauge,
   PhoneCall,
+  ScanEye,
   CalendarDays,
   PanelLeftClose,
   PanelLeftOpen,
@@ -65,6 +66,7 @@ export const GESTAO: Entrada[] = [
     itens: [
       { href: '/cobrancas/painel', label: 'Painel de Inadimplência', icon: Gauge },
       { href: '/cobrancas/fila', label: 'Fila de Cobrança', icon: PhoneCall },
+      { href: '/cobrancas/revistorias', label: 'Revistorias', icon: ScanEye },
       { href: '/cobrancas/calendario', label: 'Calendário de Vencimentos', icon: CalendarDays },
       { href: '/cobrancas/boletos', label: 'Boletos e Remessas', icon: Receipt },
     ],

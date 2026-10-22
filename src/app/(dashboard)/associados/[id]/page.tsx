@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -41,6 +41,13 @@ export default function AssociadoPanel({ params }: { params: { id: string } }) {
   const { data: associado, isLoading } = useAssociado(id);
   const [aba, setAba] = useState<Aba>('dados');
   const verTermos = usePode('termos.ver');
+  // `?aba=financeiro` abre direto na aba (atalho da fila de revistorias).
+  useEffect(() => {
+    const pedida = new URLSearchParams(window.location.search).get('aba');
+    if (pedida && ['dados', 'veiculos', 'financeiro', 'eventos', 'protocolos', 'assistencia', 'termos', 'comunicacoes'].includes(pedida)) {
+      setAba(pedida as Aba);
+    }
+  }, []);
 
   if (isLoading) return <p className="text-sm text-slate-500">Carregando painel...</p>;
   if (!associado) return <p className="text-sm text-slate-500">Associado não encontrado.</p>;

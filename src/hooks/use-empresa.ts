@@ -48,6 +48,8 @@ export function useSaveEmpresa() {
         // Tolerancia da inadimplencia (0072). Nunca `|| 20`: zero e uma escolha
         // valida (inativa na primeira passagem) e viraria 20 em silencio.
         dias_tolerancia_inadimplencia: e.dias_tolerancia_inadimplencia ?? 20,
+        // Revistoria do boleto vencido (0137): zero tambem e escolha (exige ja no 1o dia).
+        dias_revistoria_boleto: e.dias_revistoria_boleto ?? 5,
       };
       const q = e.id
         ? supabase.from('empresa').update(payload).eq('id', e.id).select('*').single()
