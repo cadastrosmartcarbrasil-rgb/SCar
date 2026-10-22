@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { SituacaoHistorico } from '@/lib/eventos-historico';
 import type {
-  ClientesRow, VeiculosRow, FaturasRow, OpcionalVeiculo, TipoFaturamento,
+  ClientesRow, VeiculosRow, OpcionalVeiculo, TipoFaturamento,
   AtendimentosRow, TipoAtendimento, CanalAtendimento, Json, StatusVeiculo, StatusEvento,
 } from '@/lib/database.types';
 import type { StatusFinanceiro } from '@/lib/sac';
@@ -148,14 +148,6 @@ export function useToggleFaturamento() {
       qc.invalidateQueries({ queryKey: ['sac', '360', v.cliente_id] });
       qc.invalidateQueries({ queryKey: ['sac', 'veiculo', v.veiculo_id] });
     },
-  });
-}
-
-export function useGerarBoleto() {
-  const qc = useQueryClient();
-  return useMutation<{ competencia: string; faturas: FaturasRow[] }, Error, { cliente_id: string }>({
-    mutationFn: (v) => jpost('/api/v1/sac/boleto', { cliente_id: v.cliente_id }),
-    onSuccess: (_d, v) => qc.invalidateQueries({ queryKey: ['sac', '360', v.cliente_id] }),
   });
 }
 

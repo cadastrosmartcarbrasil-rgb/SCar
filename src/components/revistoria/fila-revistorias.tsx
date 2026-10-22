@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import {
-  CheckCircle2, Copy, ExternalLink, Loader2, MessageCircle, Search, ShieldCheck, Video, XCircle,
+  CheckCircle2, Copy, ExternalLink, Loader2, MessageCircle, Receipt, Search, ShieldCheck, Video, XCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
@@ -25,6 +25,7 @@ import { linkWhatsAppAssociado } from '@/lib/protocolos';
 import { identificacaoVeiculo } from '@/lib/placa';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { RevistoriaLinha, RevistoriaMidia } from '@/lib/database.types';
+import { ModalBoletoAposRevistoria } from '@/components/revistoria/boleto-apos-revistoria';
 
 type Aba = 'EM_ANALISE' | 'AGUARDANDO' | 'A_PEDIR' | 'LIBERADAS' | 'TODAS';
 
@@ -131,6 +132,7 @@ function LinhaFila({ r, onAbrir }: { r: RevistoriaLinha; onAbrir: () => void }) 
   const rot = ROTULO_SITUACAO_REVISTORIA[r.situacao];
   const cancelar = useCancelarRevistoria();
   const podeCancelar = usePode('revistoria.criar');
+  const [boleto, setBoleto] = useState(false);
   const viva = ['AGUARDANDO', 'EM_ANALISE', 'APROVADA', 'DISPENSADA'].includes(r.situacao);
   const quando = r.situacao === 'EM_ANALISE' ? `enviada ${dataHora(r.enviado_em)}`
     : r.situacao === 'AGUARDANDO' ? `link até ${formatDate(r.token_expira_em)}`
@@ -157,11 +159,13 @@ function LinhaFila({ r, onAbrir }: { r: RevistoriaLinha; onAbrir: () => void }) 
         <div className="flex flex-wrap justify-end gap-1.5">
           {r.situacao === 'EM_ANALISE' && <Button className="px-2.5 py-1.5 text-xs" onClick={onAbrir}>Analisar</Button>}
           {r.situacao === 'AGUARDANDO' && <BotoesLink r={r} />}
-          {(r.situacao === 'APROVADA' || r.situacao === 'DISPENSADA') && (
-            <Link href={`/associados/${r.cliente_id}?aba=financeiro`}
-              className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-emerald-700">
-              Emitir a 2ª via
-            </Link>
+          {(r.situacao === 'APROVADA' || r.situacao === 'DISPENSADA') && !r.renegociacao_id && (
+            <Button className="bg-emerald-600 px-2.5 py-1.5 text-xs hover:bg-emerald-700" onClick={() => setBoleto(true)}>
+              <Receipt className="h-3.5 w-3.5" /> Gerar a 2ª via
+            </Button>
+          )}
+          {boleto && (
+            <ModalBoletoAposRevistoria clienteId={r.cliente_id} veiculoId={r.veiculo_id} onClose={() => setBoleto(false)} />
           )}
           {!viva && r.situacao !== 'CANCELADA' && (
             <Button variant="secondary" className="px-2.5 py-1.5 text-xs" onClick={onAbrir}>Ver</Button>
@@ -301,14 +305,45 @@ function ModalAnalise({ r, onClose }: { r: RevistoriaLinha; onClose: () => void 
   const anteriores = (midias.data ?? []).filter((m) => m.grupo === 'ANTERIOR');
   const rot = ROTULO_SITUACAO_REVISTORIA[r.situacao];
 
+  // Aprovou -> pergunta na hora se gera o boleto (pedido do usuario, 22/10/2026).
+  const [aposAprovar, setAposAprovar] = useState<'perguntar' | 'boleto' | null>(null);
+
   function decidir(aprovar: boolean) {
     analisar.mutate({ id: r.id, aprovar, motivo: aprovar ? (obs || null) : motivo }, {
       onSuccess: (res) => {
-        toast.success(res === 'APROVADA' ? 'Aprovada. Agora emita a 2ª via na ficha financeira.' : 'Reprovada: o link reabriu com o motivo.');
+        if (res === 'APROVADA') {
+          toast.success('Revistoria aprovada.');
+          setAposAprovar('perguntar');
+          return;
+        }
+        toast.success('Reprovada: o link reabriu com o motivo.');
         onClose();
       },
       onError: (e) => toast.error(e.message),
     });
+  }
+
+  if (aposAprovar === 'boleto') {
+    return <ModalBoletoAposRevistoria clienteId={r.cliente_id} veiculoId={r.veiculo_id} onClose={onClose} />;
+  }
+  if (aposAprovar === 'perguntar') {
+    return (
+      <Modal open onClose={onClose} title="Revistoria aprovada">
+        <div className="space-y-4 text-sm text-slate-600">
+          <p className="flex items-start gap-2">
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+            <span>
+              <b>{r.associado}</b> · <span className="font-mono">{identificacaoVeiculo(r.placa, r.chassi)}</span> está liberado.
+              Gerar a 2ª via agora? O boleto sai no Sicredi e você já envia ao associado.
+            </span>
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={onClose}>Depois</Button>
+            <Button onClick={() => setAposAprovar('boleto')}><Receipt className="h-4 w-4" /> Sim, gerar a 2ª via</Button>
+          </div>
+        </div>
+      </Modal>
+    );
   }
 
   return (

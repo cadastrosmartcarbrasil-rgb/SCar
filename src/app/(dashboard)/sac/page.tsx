@@ -14,7 +14,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Modal } from '@/components/ui/modal';
 import { Input, Select, Textarea, FormField } from '@/components/ui/field';
 import {
-  useSacBusca, useVisao360, useVeiculoDetalhe, useToggleFaturamento, useGerarBoleto,
+  useSacBusca, useVisao360, useVeiculoDetalhe, useToggleFaturamento,
   useAbrirAtendimento, useAtendimentosVeiculo, type BuscaHit, type Visao360, type VeiculoDetalhe,
 } from '@/hooks/use-sac';
 import { SERVICOS_SAC, STATUS_ATENDIMENTO_LABEL, type ServicoSac } from '@/lib/sac-servicos';
@@ -35,6 +35,8 @@ import { usePode } from '@/hooks/use-permissoes';
 import { TabelaEventos } from '@/components/cadastro/vida-cadastro';
 import { STATUS_ACIONAMENTO_LABEL } from '@/lib/assistencia';
 import { statusVeiculoResumo, primeiraAtivacao } from '@/lib/sac';
+import { textoAtraso } from '@/lib/revistoria';
+import { PainelRevistoriaSac } from '@/components/revistoria/painel-revistoria-sac';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type {
   ClientesRow, OpcionalVeiculo, PrioridadeAtendimento, TipoAtendimento, TipoFaturamento,
@@ -115,6 +117,13 @@ export default function SacPage() {
       {v360 && (
         <div className="space-y-5">
           <AssociadoHeader v360={v360} />
+          {/* 0137: vencido acima do limite -> a 2a via pede revistoria; o SAC ja pergunta. */}
+          <PainelRevistoriaSac
+            clienteId={v360.associado.id}
+            nome={v360.associado.nome_razao_social}
+            celular={v360.associado.celular ?? v360.associado.telefone}
+            diasAtraso={v360.financeiro.resumo.diasAtraso}
+          />
           <AlertasBanner alertas={v360.alertas} />
 
           {/* Abas: Veiculos | Eventos do associado */}
@@ -214,7 +223,12 @@ function AssociadoHeader({ v360 }: { v360: Visao360 }) {
         <div className="flex flex-wrap items-center gap-2">
           {r.adimplente
             ? <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700"><CheckCircle2 className="h-3.5 w-3.5" /> Adimplente</span>
-            : <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700"><XCircle className="h-3.5 w-3.5" /> {r.vencidos} vencido(s) · {formatCurrency(r.valorEmAberto)}</span>}
+            : (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700"
+                title="O valor em aberto soma também o que ainda vai vencer">
+                <XCircle className="h-3.5 w-3.5" /> {textoAtraso(r.diasAtraso)} · {r.vencidos} vencido(s) · {formatCurrency(r.valorEmAberto)} em aberto
+              </span>
+            )}
           <Button type="button" variant="secondary" onClick={() => setAbrindo(true)}>
             <Ticket className="h-4 w-4" /> Abrir protocolo
           </Button>
@@ -354,7 +368,6 @@ function AtendimentoVeiculo({ clienteId, associado, veiculoId, podeTrocar, onTro
   const [email, setEmail] = useState(false);
   const [termos, setTermos] = useState(false);
   const verTermos = usePode('termos.ver');
-  const gerarBoleto = useGerarBoleto();
   const { data: atendimentos } = useAtendimentosVeiculo(veiculoId);
   // Historico da Assistencia 24h na propria ficha do veiculo.
   const { data: acionamentos24h } = useHistoricoAssistenciaVeiculo(veiculoId);
@@ -379,13 +392,6 @@ function AtendimentoVeiculo({ clienteId, associado, veiculoId, podeTrocar, onTro
     if (s.modo === 'whatsapp') { setWhats(true); return; }
     if (s.modo === 'email') { setEmail(true); return; }
     if (s.modo === 'termos') { setTermos(true); return; }
-    if (s.modo === 'boleto') {
-      gerarBoleto.mutate({ cliente_id: clienteId }, {
-        onSuccess: (d) => toast.success(`Faturas da competência ${d.competencia} prontas (${d.faturas.length})`),
-        onError: (e) => toast.error(e.message),
-      });
-      return;
-    }
     setServico(s);
   }
 
@@ -407,10 +413,10 @@ function AtendimentoVeiculo({ clienteId, associado, veiculoId, podeTrocar, onTro
             <p className="mb-2 text-sm font-semibold text-slate-700">O que você precisa para este veículo?</p>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {SERVICOS_SAC.filter((s) => s.modo !== 'termos' || verTermos).map((s) => (
-                <button key={s.id} onClick={() => acionar(s)} disabled={s.modo === 'boleto' && gerarBoleto.isPending}
+                <button key={s.id} onClick={() => acionar(s)}
                   className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-superficie p-4 text-left shadow-sm transition hover:border-cyan-400 hover:shadow-md disabled:opacity-60">
                   <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${s.cor}`}>
-                    {s.modo === 'boleto' && gerarBoleto.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <s.icon className="h-5 w-5" />}
+                    <s.icon className="h-5 w-5" />
                   </span>
                   <span>
                     <span className="block text-sm font-semibold text-slate-800">{s.titulo}</span>

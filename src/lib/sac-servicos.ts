@@ -1,22 +1,23 @@
 // Estrutura modular das opcoes de atendimento ligadas ao VEICULO selecionado.
 // Fonte unica reutilizada pelo SAC interno e pelo Portal do Associado.
 import {
-  AlertTriangle, LifeBuoy, CreditCard, ClipboardCheck, Pencil, Wallet,
+  AlertTriangle, LifeBuoy, ClipboardCheck, Pencil, Wallet,
   MessageCircle, Mail, Ticket, FileSignature,
   type LucideIcon,
 } from 'lucide-react';
 import type { TipoAtendimento, StatusAtendimento, StatusEvento } from '@/lib/database.types';
 
 // 'chamado'   abre um protocolo de atendimento (modal);
-// 'boleto'    aciona o motor de faturas (2a via);
 // 'evento'    redireciona para a abertura de EVENTO (sinistro);
 // 'assistencia' leva ao painel da Assistencia 24h com o veiculo selecionado;
 // 'editar'    abre o cadastro do veiculo (unifica os antigos Cadastro/Upgrade);
-// 'financeiro' abre o historico de boletos (com edicao do que esta em aberto);
+// 'financeiro' abre o historico de boletos: PDF, 2a via, negociacao e envio.
+//             (O antigo card "2a via de Boleto" saiu em 22/10/2026: duplicava este
+//             e ainda GERAVA faturas da competencia pelo motor antigo.)
 // 'whatsapp' / 'email' sao disparos rapidos ao associado;
 // 'termos'   emite e consulta os termos do veiculo (0123).
 export type ModoServico =
-  | 'chamado' | 'boleto' | 'evento' | 'assistencia'
+  | 'chamado' | 'evento' | 'assistencia'
   | 'editar' | 'financeiro' | 'whatsapp' | 'email' | 'termos';
 
 export interface ServicoSac {
@@ -50,7 +51,7 @@ export const SERVICOS_SAC: ServicoSac[] = [
     tipos: [{ value: 'ALTERACAO_CADASTRAL', label: 'Alteração cadastral' }],
   },
   {
-    id: 'financeiro', titulo: 'Histórico Financeiro', descricao: 'Boletos, vencimento, desconto e 2a via',
+    id: 'financeiro', titulo: 'Boletos e 2ª via', descricao: 'Histórico, PDF, 2ª via, negociação e envio',
     icon: Wallet, cor: 'bg-emerald-50 text-emerald-600', modo: 'financeiro',
     tipos: [{ value: 'FINANCEIRO', label: 'Financeiro' }],
   },
@@ -78,11 +79,6 @@ export const SERVICOS_SAC: ServicoSac[] = [
       { value: 'FINANCEIRO', label: 'Financeiro' },
       { value: 'OUTROS', label: 'Outros' },
     ],
-  },
-  {
-    id: 'boleto', titulo: '2a via de Boleto', descricao: 'Boleto ou comprovante de pagamento',
-    icon: CreditCard, cor: 'bg-emerald-50 text-emerald-600', modo: 'boleto',
-    tipos: [{ value: 'SEGUNDA_VIA_BOLETO', label: '2a via de Boleto' }],
   },
   {
     id: 'vistoria', titulo: 'Vistoria / Acessórios', descricao: 'Solicitar vistoria ou incluir acessórios',

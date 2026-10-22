@@ -41,6 +41,23 @@ export function useRevistorias(situacao: string | null, busca: string) {
   });
 }
 
+/** Quantas o associado ja enviou e esperam a analise — o numero vermelho do menu. */
+export function useRevistoriasEmAnaliseContagem() {
+  const supabase = createClient();
+  return useQuery<number>({
+    queryKey: ['revistoria', 'lista', 'EM_ANALISE', 'contagem'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('revistorias_cobranca_listar', {
+        p_situacao: 'EM_ANALISE', p_busca: null, p_limite: 300,
+      });
+      if (error) throw error;
+      return (data ?? []).length;
+    },
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+}
+
 export function useRevistoriasASolicitar(ativo: boolean) {
   const supabase = createClient();
   return useQuery<RevistoriaASolicitar[]>({

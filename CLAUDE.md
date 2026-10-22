@@ -3471,6 +3471,16 @@ manda o link sozinho. Decisões do usuário: a equipe pode **liberar sem revisto
   mesmo veículo; reprovar exige motivo (rápidos + texto). No modal da 2ª via/negociação (`negociacao-boletos.tsx`), o
   painel `<RevistoriaNecessaria>` diz qual veículo precisa, gera o link, manda no WhatsApp, renova e libera com
   justificativa — o botão de emitir fica travado até liberar.
+- **NO SAC (22/10/2026, pedido do usuário):** o cabeçalho do associado mostra "Inadimplente há N dias · X vencido(s) ·
+  R$ em aberto" (`resumoFinanceiro().diasAtraso`, do vencido MAIS ANTIGO; `textoAtraso`). Com boleto acima do limite, o
+  `<PainelRevistoriaSac>` (`src/components/revistoria/painel-revistoria-sac.tsx`) aparece logo abaixo e já pergunta
+  *"Sim, gerar o link da revistoria"* → WhatsApp/copiar; enviada, *"analisar agora"*; liberada, **"Gerar a 2ª via
+  agora"** (`<ModalBoletoAposRevistoria>`: os vencidos negociáveis do veículo + os sem veículo, `boletosParaSegundaVia`,
+  e o MESMO `ModalNegociarBoletos`). **Aprovar na fila também pergunta na hora** "Gerar a 2ª via agora?". **Menu:**
+  número vermelho em *Cobrança → Revistorias* com as EM_ANÁLISE (sobe para o grupo quando ele está fechado;
+  `useRevistoriasEmAnaliseContagem`, 60 s). **O card "2a via de Boleto" do SAC SAIU:** duplicava o Histórico
+  Financeiro e ainda GERAVA as faturas da competência pelo motor antigo (`/api/v1/sac/boleto`); o card de histórico
+  virou **"Boletos e 2ª via"**.
 - **Rotina diária:** `POST /api/v1/cobrancas/revistorias/rotina` (`x-cron-secret` = `COBRANCA_CRON_SECRET`, ou sessão
   admin/financeiro) → `rotina_revistorias_cobranca()`: cancela o pedido de quem não tem mais nada vencido acima do limite
   e expira aprovada/liberada não usada em 10 dias; devolve também quantos estão "a pedir". VPS:

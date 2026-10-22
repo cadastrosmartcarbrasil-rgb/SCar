@@ -39,8 +39,10 @@ import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import type { PapelUsuario } from '@/lib/database.types';
 import { moduloDaRota } from '@/lib/permissoes';
+import { useRevistoriasEmAnaliseContagem } from '@/hooks/use-revistoria';
 
-export type Item = { href: string; label: string; icon: React.ElementType };
+/** `contador`: numero vermelho ao lado do item (o que espera alguem agir). */
+export type Item = { href: string; label: string; icon: React.ElementType; contador?: 'revistorias' };
 /** Item com sub-itens (Regionais e Cobranca). */
 type Grupo = { label: string; icon: React.ElementType; itens: Item[] };
 type Entrada = Item | Grupo;
@@ -66,7 +68,7 @@ export const GESTAO: Entrada[] = [
     itens: [
       { href: '/cobrancas/painel', label: 'Painel de Inadimplência', icon: Gauge },
       { href: '/cobrancas/fila', label: 'Fila de Cobrança', icon: PhoneCall },
-      { href: '/cobrancas/revistorias', label: 'Revistorias', icon: ScanEye },
+      { href: '/cobrancas/revistorias', label: 'Revistorias', icon: ScanEye, contador: 'revistorias' },
       { href: '/cobrancas/calendario', label: 'Calendário de Vencimentos', icon: CalendarDays },
       { href: '/cobrancas/boletos', label: 'Boletos e Remessas', icon: Receipt },
     ],
@@ -133,9 +135,29 @@ function NavLink({ item, pathname, onNav, sub, compacto }: {
           : 'font-medium text-white/80 hover:bg-white/10 hover:text-white',
       )}
     >
-      <item.icon className={cn('shrink-0', sub && !compacto ? 'h-4 w-4' : 'h-[18px] w-[18px]')} />
-      {!compacto && item.label}
+      <span className="relative shrink-0">
+        <item.icon className={cn(sub && !compacto ? 'h-4 w-4' : 'h-[18px] w-[18px]')} />
+        {compacto && item.contador && <ContadorMenu tipo={item.contador} ponto />}
+      </span>
+      {!compacto && <span className="flex-1">{item.label}</span>}
+      {!compacto && item.contador && <ContadorMenu tipo={item.contador} />}
     </Link>
+  );
+}
+
+/** O numero vermelho do menu. Vive num componente proprio: so consulta quem VE o item. */
+function ContadorMenu({ tipo, ponto }: { tipo: NonNullable<Item['contador']>; ponto?: boolean }) {
+  const q = useRevistoriasEmAnaliseContagem();
+  const n = tipo === 'revistorias' ? q.data ?? 0 : 0;
+  if (n <= 0) return null;
+  const titulo = `${n} revistoria(s) esperando análise`;
+  if (ponto) {
+    return <span title={titulo} className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-navy" />;
+  }
+  return (
+    <span title={titulo} className="tnum min-w-[1.25rem] rounded-full bg-rose-600 px-1.5 text-center text-[11px] font-bold leading-5 text-white">
+      {n > 99 ? '99+' : n}
+    </span>
   );
 }
 
@@ -172,6 +194,8 @@ function NavGrupo({ grupo, pathname, onNav, compacto }: {
       >
         <grupo.icon className="h-[18px] w-[18px] shrink-0" />
         <span className="flex-1 text-left">{grupo.label}</span>
+        {/* Grupo fechado: o numero sobe para o grupo, senao ninguem ve. */}
+        {!mostrar && grupo.itens.filter((i) => i.contador).map((i) => <ContadorMenu key={i.href} tipo={i.contador!} />)}
         <ChevronDown className={cn('h-4 w-4 shrink-0 transition-transform', mostrar && 'rotate-180')} />
       </button>
       {mostrar && (

@@ -117,3 +117,23 @@ export function formatarSegundos(s: number): string {
   const t = Math.max(0, Math.round(s));
   return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
 }
+
+/**
+ * Os boletos que a 2a via leva depois da revistoria liberada: os VENCIDOS e
+ * negociaveis daquele veiculo, mais os do associado sem veiculo (agrupado/
+ * Mutual sem placa). A trava do banco confere de novo: boleto sem veiculo
+ * exige a revistoria de TODOS os veiculos do associado na base.
+ */
+export function boletosParaSegundaVia<T extends {
+  veiculo_id: string | null; status: string; origem?: 'SCAR' | 'MUTUAL'; linha_digitavel: string | null;
+}>(boletos: T[], veiculoId: string, negociavel: (b: T) => boolean): T[] {
+  return boletos.filter((b) => b.status === 'vencido'
+    && (b.veiculo_id === veiculoId || b.veiculo_id === null)
+    && negociavel(b));
+}
+
+/** "Inadimplente ha 1 dia" / "ha N dias" — o que o SAC mostra no cabecalho. */
+export function textoAtraso(dias: number): string {
+  if (dias <= 0) return 'Em dia';
+  return `Inadimplente há ${dias} dia${dias === 1 ? '' : 's'}`;
+}

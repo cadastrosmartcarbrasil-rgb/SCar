@@ -137,6 +137,8 @@ describe('resumoFinanceiro', () => {
     expect(r.vencidos).toBe(1);
     expect(r.valorEmAberto).toBe(400);
     expect(r.adimplente).toBe(false);
+    expect(r.diasAtraso).toBe(36); // 10/07 -> 15/08
+    expect(resumoFinanceiro([{ status: 'pago', data_vencimento: '2026-07-10', valor: 1 }], HOJE).diasAtraso).toBe(0);
   });
 });
 
@@ -216,6 +218,7 @@ describe('boletoMutualComoTitulo (selo de adimplencia com o Mutual)', () => {
     expect(r.adimplente).toBe(false);
     expect(r.vencidos).toBe(2);
     expect(r.valorEmAberto).toBe(432);
+    expect(r.diasAtraso).toBe(2); // o mais antigo vencido: 20/10, hoje 22/10
     expect(veiculoInadimplente({ id: 'v', tipo_faturamento: 'INDIVIDUAL_VEICULO' }, mutual, HOJE)).toBe(true);
   });
 });

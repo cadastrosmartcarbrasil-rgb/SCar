@@ -134,6 +134,8 @@ export interface StatusFinanceiro {
   vencidos: number;
   valorEmAberto: number;
   adimplente: boolean;
+  /** Dias desde o vencimento MAIS ANTIGO em aberto (0 = em dia). */
+  diasAtraso: number;
 }
 
 // Inadimplencia por veiculo: titulo vencido ligado ao veiculo, ou titulo
@@ -232,6 +234,7 @@ export function primeiraAtivacao(
 
 export function resumoFinanceiro(titulos: TituloResumo[], hoje: Date = new Date()): StatusFinanceiro {
   let abertos = 0, pagos = 0, vencidos = 0, valorEmAberto = 0;
+  let maisAntigo: string | null = null;
   const hojeStr = hoje.toISOString().slice(0, 10);
   for (const t of titulos) {
     if (t.status === 'pago' || t.status === 'cancelado') {
@@ -240,7 +243,13 @@ export function resumoFinanceiro(titulos: TituloResumo[], hoje: Date = new Date(
     }
     abertos += 1;
     valorEmAberto += t.valor;
-    if (t.status === 'vencido' || t.data_vencimento < hojeStr) vencidos += 1;
+    if (t.status === 'vencido' || t.data_vencimento < hojeStr) {
+      vencidos += 1;
+      if (!maisAntigo || t.data_vencimento < maisAntigo) maisAntigo = t.data_vencimento;
+    }
   }
-  return { abertos, pagos, vencidos, valorEmAberto, adimplente: vencidos === 0 };
+  const diasAtraso = maisAntigo
+    ? Math.max(0, Math.round((Date.parse(hojeStr) - Date.parse(maisAntigo.slice(0, 10))) / 86_400_000))
+    : 0;
+  return { abertos, pagos, vencidos, valorEmAberto: Math.round(valorEmAberto * 100) / 100, adimplente: vencidos === 0, diasAtraso };
 }

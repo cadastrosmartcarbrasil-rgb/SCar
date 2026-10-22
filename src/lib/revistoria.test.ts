@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   exigeRevistoria, extensaoDoVideo, formatarSegundos, mensagemRevistoria, mimeDeGravacao,
-  progressoRevistoria, resumoExigencia, validarVideo, VIDEO_MAX_BYTES,
+  progressoRevistoria, resumoExigencia, validarVideo, VIDEO_MAX_BYTES, boletosParaSegundaVia, textoAtraso,
 } from './revistoria';
 
 describe('exigeRevistoria', () => {
@@ -83,5 +83,27 @@ describe('formatarSegundos', () => {
   it('m:ss', () => {
     expect(formatarSegundos(28.4)).toBe('0:28');
     expect(formatarSegundos(65)).toBe('1:05');
+  });
+});
+
+describe('boletosParaSegundaVia', () => {
+  const b = (veiculo_id: string | null, status: string, linha: string | null = '748x') =>
+    ({ veiculo_id, status, origem: 'MUTUAL' as const, linha_digitavel: linha });
+  it('leva os vencidos do veiculo e os sem veiculo; nao os de outro veiculo, a vencer ou pagos', () => {
+    const lista = [b('v1', 'vencido'), b(null, 'vencido'), b('v2', 'vencido'), b('v1', 'aberto'), b('v1', 'pago')];
+    const r = boletosParaSegundaVia(lista, 'v1', () => true);
+    expect(r).toEqual([lista[0], lista[1]]);
+  });
+  it('respeita a regra de negociavel', () => {
+    const lista = [b('v1', 'vencido', null), b('v1', 'vencido')];
+    expect(boletosParaSegundaVia(lista, 'v1', (x) => x.linha_digitavel !== null)).toEqual([lista[1]]);
+  });
+});
+
+describe('textoAtraso', () => {
+  it('singular, plural e em dia', () => {
+    expect(textoAtraso(0)).toBe('Em dia');
+    expect(textoAtraso(1)).toBe('Inadimplente há 1 dia');
+    expect(textoAtraso(12)).toBe('Inadimplente há 12 dias');
   });
 });

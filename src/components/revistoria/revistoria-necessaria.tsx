@@ -4,7 +4,7 @@
 // so sai com a revistoria do veiculo aprovada — ou liberada com justificativa.
 // O banco recusa de qualquer jeito (trigger); aqui a tela diz POR QUE e da o
 // caminho: gerar o link, mandar no WhatsApp, acompanhar, liberar.
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { CheckCircle2, Copy, ExternalLink, Loader2, MessageCircle, ShieldAlert, Unlock } from 'lucide-react';
@@ -27,11 +27,15 @@ export function useBloqueioRevistoria(clienteId: string, origens: { origem: stri
 }
 
 export function RevistoriaNecessaria({
-  linhas, nome, celular,
+  linhas, nome, celular, titulo, acaoLiberada,
 }: {
   linhas: RevistoriaExigida[];
   nome: string | null | undefined;
   celular: string | null | undefined;
+  /** Substitui a frase do topo (o SAC fala com o atendente, nao com quem emite). */
+  titulo?: ReactNode;
+  /** O que oferecer no veiculo ja liberado (no SAC: "Gerar a 2a via agora"). */
+  acaoLiberada?: (l: RevistoriaExigida) => ReactNode;
 }) {
   if (linhas.length === 0) return null;
   const r = resumoExigencia(linhas);
@@ -41,18 +45,23 @@ export function RevistoriaNecessaria({
         {r.bloqueia
           ? <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
           : <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />}
-        {r.bloqueia
+        {titulo ?? (r.bloqueia
           ? 'Revistoria necessária: há boleto vencido acima do limite'
-          : 'Revistoria em ordem: a 2ª via pode sair'}
+          : 'Revistoria em ordem: a 2ª via pode sair')}
       </p>
       <ul className="mt-2 space-y-2">
-        {linhas.map((l) => <LinhaVeiculo key={l.veiculo_id} l={l} nome={nome} celular={celular} />)}
+        {linhas.map((l) => (
+          <LinhaVeiculo key={l.veiculo_id} l={l} nome={nome} celular={celular} acaoLiberada={acaoLiberada} />
+        ))}
       </ul>
     </div>
   );
 }
 
-function LinhaVeiculo({ l, nome, celular }: { l: RevistoriaExigida; nome?: string | null; celular?: string | null }) {
+function LinhaVeiculo({ l, nome, celular, acaoLiberada }: {
+  l: RevistoriaExigida; nome?: string | null; celular?: string | null;
+  acaoLiberada?: (l: RevistoriaExigida) => ReactNode;
+}) {
   const solicitar = useSolicitarRevistoria();
   const dispensar = useDispensarRevistoria();
   const podePedir = usePode('revistoria.criar');
@@ -81,6 +90,7 @@ function LinhaVeiculo({ l, nome, celular }: { l: RevistoriaExigida; nome?: strin
           : rot && <span className={`rounded px-2 py-0.5 text-xs font-medium ${rot.tom}`}>{rot.rotulo}</span>}
       </div>
 
+      {l.liberada && acaoLiberada && <div className="mt-2">{acaoLiberada(l)}</div>}
       {!l.liberada && (
         <div className="mt-2 flex flex-wrap items-center gap-2">
           {!l.situacao && podePedir && (
@@ -89,7 +99,7 @@ function LinhaVeiculo({ l, nome, celular }: { l: RevistoriaExigida; nome?: strin
               onError: (e) => toast.error(e.message),
             })} disabled={solicitar.isPending}>
               {solicitar.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              Gerar link da revistoria
+              Sim, gerar o link da revistoria
             </Button>
           )}
           {l.situacao === 'AGUARDANDO' && link && (
