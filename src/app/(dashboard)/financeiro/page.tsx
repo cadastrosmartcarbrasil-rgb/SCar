@@ -12,17 +12,19 @@ import { RelatoriosFinanceiros } from '@/components/financeiro/relatorios-financ
 import { usePerfilAtual } from '@/hooks/use-config';
 import { temAcessoGlobal } from '@/lib/unidade';
 import { useMinhasContasBancarias } from '@/hooks/use-tesouraria';
+import { usePode } from '@/hooks/use-permissoes';
 
 type Aba = 'contas' | 'saldos' | 'extrato' | 'diario' | 'fluxo' | 'dre' | 'relatorios';
 
 // matriz: so admin/financeiro. operador: tambem quem opera uma conta (0126).
-const ABAS: { id: Aba; label: string; descricao: string; icon: React.ElementType; matriz?: boolean; operador?: boolean }[] = [
+// dre: so quem tem "Financeiro — DRE" na grade (0141); o banco tambem confere.
+const ABAS: { id: Aba; label: string; descricao: string; icon: React.ElementType; matriz?: boolean; operador?: boolean; dre?: boolean }[] = [
   { id: 'contas', label: 'Contas a Pagar / Receber', descricao: 'Carteira, baixas e inadimplência', icon: Wallet },
   { id: 'saldos', label: 'Contas e Saldos', descricao: 'Saldo de cada conta, saldo total e conferência com o DRE', icon: Landmark, matriz: true, operador: true },
   { id: 'extrato', label: 'Extrato e Conciliação', descricao: 'Extrato por conta e conciliação do OFX do banco', icon: ScrollText, matriz: true, operador: true },
   { id: 'diario', label: 'Fluxo Diário', descricao: 'Realizado x a realizar dia a dia e a carga de pagamentos', icon: CalendarDays, matriz: true },
   { id: 'fluxo', label: 'Fluxo Mensal', descricao: 'Previsto x realizado por mês e aging', icon: Waves },
-  { id: 'dre', label: 'DRE', descricao: 'Resultado por regime e centro de custo', icon: BarChart3 },
+  { id: 'dre', label: 'DRE', descricao: 'Resultado por regime e centro de custo', icon: BarChart3, dre: true },
   { id: 'relatorios', label: 'Relatórios', descricao: 'Extrato, fluxo e plano de contas x centro de custo, com exportação', icon: FileBarChart, matriz: true },
 ];
 
@@ -35,7 +37,8 @@ export default function FinanceiroPage() {
   // quem opera conta bancaria (ex.: a conta da 24h no Inter) ve Saldos e Extrato so dela
   const { data: minhasContas } = useMinhasContasBancarias();
   const operador = (minhasContas?.length ?? 0) > 0;
-  const abas = ABAS.filter((a) => !a.matriz || matriz || (a.operador && operador));
+  const veDre = usePode('financeiro_dre.ver');
+  const abas = ABAS.filter((a) => (!a.dre || veDre) && (!a.matriz || matriz || (a.operador && operador)));
   const atual = abas.find((a) => a.id === aba) ?? abas[0];
 
   return (

@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { FormField, Input, Select } from '@/components/ui/field';
 import { rotuloPapel } from '@/lib/usuario';
 import {
-  ACOES, ALCADAS, MODULOS, ROTULO_ACAO, chaveCelula, celulaAplica, chavePermiteExtra,
+  ACOES, ALCADAS, MODULOS, ROTULO_ACAO, chaveCelula, celulaAplica, chavePermiteExtra, coerenciaVerEditar,
   temPermissao, extraVigente, hojeSaoPaulo, mudancasDosExtras, resumoDaCopia, rotuloDaChave,
   basesDosPerfis, chaveDoUsuario,
   type ExtraUsuario,
@@ -71,11 +71,14 @@ export function ModalPermissoesExtras({ usuario, onClose }: { usuario: UsuarioLi
   const papel = usuario.papel;
   const ehAdmin = papel === 'admin';
   const doPapel = (k: string) => temPermissao(chaveDoUsuario(usuario), k, concessoes, basesDosPerfis(perfis));
+  // Nas abas das Configuracoes (0141), editar traz o ver e tirar o ver leva o editar.
   const alternar = (k: string) =>
     setMarcados((m) => {
       const n = { ...m };
-      if (k in n) delete n[k];
-      else n[k] = validade || null;
+      for (const [chave, on] of Object.entries(coerenciaVerEditar(k, !(k in m)))) {
+        if (!on) delete n[chave];
+        else if (!(chave in n) && !doPapel(chave)) n[chave] = validade || null;
+      }
       return n;
     });
 

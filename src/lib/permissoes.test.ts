@@ -4,6 +4,7 @@ import {
   mudancasDoPerfil, moduloDaRota, celulaEditavel, todasAsChaves, permissoesDoPapel,
   chaveDoExtra, extraParaBanco, chavePermiteExtra, extraVigente, hojeSaoPaulo, permissoesEfetivas,
   mudancasDosExtras, resumoDaCopia, rotuloDaChave, basesDosPerfis, valorDoSeletor, lerSeletor, chaveDoUsuario,
+  abasConfiguracoesPermitidas, abaConfiguracaoDaRota, coerenciaVerEditar,
 } from './permissoes';
 
 describe('grade modulo x acao (0111)', () => {
@@ -12,9 +13,10 @@ describe('grade modulo x acao (0111)', () => {
     for (const m of MODULOS) for (const a of m.acoes) expect(ACOES).toContain(a);
   });
 
-  it('89 celulas editaveis (as mesmas de permissao_celula_valida) + 3 alcadas', () => {
+  it('123 celulas editaveis (as mesmas de permissao_celula_valida) + 3 alcadas', () => {
     const editaveis = MODULOS.filter((m) => !m.fixo).flatMap((m) => m.acoes);
-    expect(editaveis.length).toBe(89);
+    // 89 ate a 0140 + DRE (ver, exportar) + 16 abas de Configuracoes x (ver, editar) — 0141
+    expect(editaveis.length).toBe(123);
     expect(ALCADAS.length).toBe(3);
   });
 
@@ -183,5 +185,45 @@ describe('perfil personalizado (0130)', () => {
     const conc = { [ID]: { 'veiculos.excluir': false } };
     const { perde } = diferencaEntrePapeis('financeiro', ID, conc, bases);
     expect(perde).toContain('Veículos: Excluir');
+  });
+});
+
+describe('configuracoes por aba e DRE (0141)', () => {
+  it('o DRE nasce com quem ja tinha o Financeiro', () => {
+    for (const p of ['financeiro', 'gestor_regional', 'assistencia_24h', 'supervisor', 'cobranca']) {
+      expect(temPermissao(p, 'financeiro_dre.ver')).toBe(temPermissao(p, 'financeiro.ver'));
+    }
+    expect(temPermissao('consultor_vendas', 'financeiro_dre.ver')).toBe(false);
+    // retirado do perfil, o DRE some e o financeiro fica
+    const c = { gestor_regional: { 'financeiro_dre.ver': false } };
+    expect(temPermissao('gestor_regional', 'financeiro_dre.ver', c)).toBe(false);
+    expect(temPermissao('gestor_regional', 'financeiro.ver', c)).toBe(true);
+  });
+
+  it('as abas nascem sem ninguem e aceitam extra', () => {
+    expect(temPermissao('financeiro', 'cfg_plano_contas.editar')).toBe(false);
+    expect(chavePermiteExtra('cfg_plano_contas.editar')).toBe(true);
+    expect(chavePermiteExtra('cfg_plano_contas.excluir')).toBe(false);
+    expect(chavePermiteExtra('configuracoes.ver')).toBe(false);
+  });
+
+  it('a rota da aba vence a de Configuracoes', () => {
+    expect(moduloDaRota('/configuracoes/marcas-modelos')?.chave).toBe('cfg_marcas_modelos');
+    expect(moduloDaRota('/configuracoes/usuarios')?.chave).toBe('configuracoes');
+    expect(abaConfiguracaoDaRota('/configuracoes/plano-contas')?.chave).toBe('cfg_plano_contas');
+    expect(abaConfiguracaoDaRota('/configuracoes/termos')).toBeUndefined();
+  });
+
+  it('abas que a pessoa abre', () => {
+    expect(abasConfiguracoesPermitidas(true, [])).toBeNull();
+    expect(abasConfiguracoesPermitidas(false, ['cfg_cores.ver', 'cfg_plano_contas.editar', 'termos_modelos.ver']))
+      .toEqual(['/configuracoes/cores', '/configuracoes/plano-contas', '/configuracoes/termos']);
+    expect(abasConfiguracoesPermitidas(false, ['financeiro.ver'])).toEqual([]);
+  });
+
+  it('editar traz o ver; tirar o ver leva o editar', () => {
+    expect(coerenciaVerEditar('cfg_cores.editar', true)).toEqual({ 'cfg_cores.editar': true, 'cfg_cores.ver': true });
+    expect(coerenciaVerEditar('cfg_cores.ver', false)).toEqual({ 'cfg_cores.ver': false, 'cfg_cores.editar': false });
+    expect(coerenciaVerEditar('veiculos.editar', true)).toEqual({ 'veiculos.editar': true });
   });
 });

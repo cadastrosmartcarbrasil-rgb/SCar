@@ -8,7 +8,7 @@ import { Modal } from '@/components/ui/modal';
 import { FormField, Input, Select } from '@/components/ui/field';
 import { PAPEIS_USUARIO, rotuloPapel } from '@/lib/usuario';
 import {
-  ACOES, ALCADAS, MODULOS, ROTULO_ACAO, chaveCelula, celulaAplica, celulaEditavel, basesDosPerfis,
+  ACOES, ALCADAS, MODULOS, ROTULO_ACAO, chaveCelula, celulaAplica, celulaEditavel, basesDosPerfis, coerenciaVerEditar,
   temPermissao, mudancasDoPerfil, permissoesDoPapel, rotuloDaChave,
   type Concessoes, type BasesDePerfil, type PerfilAcesso,
 } from '@/lib/permissoes';
@@ -65,8 +65,9 @@ function CartaoPerfil({ papel, concessoes, podeEditar, usuarios, perfil, bases, 
       onError: (e) => toast.error(e.message),
     });
   }
+  // Nas abas das Configuracoes (0141), editar traz o ver e tirar o ver leva o editar.
   const alternar = (chave: string) =>
-    setRascunho((r) => ({ ...(r ?? {}), [chave]: !valor(chave) }));
+    setRascunho((r) => ({ ...(r ?? {}), ...coerenciaVerEditar(chave, !valor(chave)) }));
 
   function gravar() {
     const celulas = mudancasDoPerfil(papel, concessoes, rascunho ?? {}, bases);

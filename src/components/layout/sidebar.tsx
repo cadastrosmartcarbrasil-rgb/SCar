@@ -38,7 +38,7 @@ import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import type { PapelUsuario } from '@/lib/database.types';
-import { moduloDaRota } from '@/lib/permissoes';
+import { abasConfiguracoesPermitidas, moduloDaRota } from '@/lib/permissoes';
 import { useRevistoriasEmAnaliseContagem } from '@/hooks/use-revistoria';
 
 /** `contador`: numero vermelho ao lado do item (o que espera alguem agir). */
@@ -265,13 +265,13 @@ export function Sidebar({ papel, logoUrl, permissoes = null }: {
   const integracao = ['admin', 'financeiro'].includes(papel ?? '')
     ? [{ href: '/integracao/mutual', label: 'Integração Mutual', icon: Database }]
     : [];
-  // Termos (0123): quem recebeu "gerenciar modelos" como extra ve o atalho
-  // direto para a aba Termos das Configuracoes.
-  const gereTermos = papel !== 'admin' && (permissoes ?? []).some((p) => p.startsWith('termos_modelos.'));
+  // Configuracoes: o admin abre tudo; os demais veem o atalho quando o perfil
+  // ou um extra libera alguma aba (0141) ou os modelos de Termos (0123).
+  const abasConfig = papel === 'admin' ? null : abasConfiguracoesPermitidas(false, permissoes);
   const gestao = papel === 'admin'
     ? [...GESTAO, ...integracao, { href: '/configuracoes', label: 'Configurações', icon: Settings }]
-    : gereTermos
-      ? [...GESTAO, ...integracao, { href: '/configuracoes/termos', label: 'Termos', icon: Settings }]
+    : abasConfig && abasConfig.length > 0
+      ? [...GESTAO, ...integracao, { href: abasConfig[0], label: 'Configurações', icon: Settings }]
       : [...GESTAO, ...integracao];
 
   // REGIONAIS e um grupo, nao um link: o painel (leitura consolidada de todas

@@ -72,7 +72,7 @@ begin
   assert ok, 'gestor nao ajusta perfil';
 
   perform set_config('request.jwt.claim.sub', adm::text, false);
-  assert array_length(minhas_permissoes(), 1) = 92, 'admin tem tudo (89 celulas desde a 0137 + 3 alcadas)';
+  assert array_length(minhas_permissoes(), 1) = 126, 'admin tem tudo (123 celulas desde a 0141 + 3 alcadas)';
   begin
     perform salvar_permissoes_perfil('admin', '[]');
     ok := false;

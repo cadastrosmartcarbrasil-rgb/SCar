@@ -1,9 +1,12 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { ConfigTabs } from '@/components/configuracoes/config-tabs';
-import { SoTermos } from '@/components/configuracoes/so-termos';
+import { AbasPermitidas } from '@/components/configuracoes/abas-permitidas';
+import { abasConfiguracoesPermitidas } from '@/lib/permissoes';
 
-// Area de configuracoes: restrita a administradores.
+// Configuracoes: o admin abre tudo. Os demais so as abas liberadas no perfil
+// ou como extra (0141 — Ver/Editar por aba; Termos pela 0123). Usuarios e
+// permissoes continua so do admin.
 export default async function ConfiguracoesLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
   const {
@@ -18,21 +21,20 @@ export default async function ConfiguracoesLayout({ children }: { children: Reac
     .maybeSingle();
 
   if (perfil?.papel !== 'admin') {
-    // Termos (0123): quem recebeu "gerenciar modelos" como extra entra so ali.
     const { data: permissoes } = await supabase.rpc('minhas_permissoes');
-    const termos = (permissoes ?? []).some((p) => p.startsWith('termos_modelos.'));
-    if (termos) {
+    const permitidas = abasConfiguracoesPermitidas(false, permissoes) ?? [];
+    if (permitidas.length > 0) {
       return (
         <div className="space-y-6">
           <h1 className="text-2xl font-semibold text-slate-900">Configurações</h1>
-          <ConfigTabs somente={['/configuracoes/termos']} />
-          <SoTermos>{children}</SoTermos>
+          <ConfigTabs somente={permitidas} />
+          <AbasPermitidas permitidas={permitidas} permissoes={permissoes ?? []}>{children}</AbasPermitidas>
         </div>
       );
     }
     return (
       <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800">
-        Acesso restrito. Somente administradores podem acessar as Configurações.
+        Acesso restrito. Seu perfil não tem nenhuma aba das Configurações liberada.
       </div>
     );
   }

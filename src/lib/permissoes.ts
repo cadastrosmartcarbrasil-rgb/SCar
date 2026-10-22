@@ -38,6 +38,31 @@ export interface Modulo {
   fixo?: string[];
 }
 
+/**
+ * As abas das Configuracoes que podem ser liberadas por perfil ou extra (0141):
+ * uma linha Ver/Editar cada. Usuarios, Comunicados e Termos ficam de fora
+ * (Usuarios so admin; os outros tem modulo proprio). Mexeu aqui, mexa em
+ * `permissao_celula_valida` (SQL).
+ */
+export const ABAS_CONFIGURACOES_BASE = [
+  { chave: 'cfg_empresa', rotulo: 'Empresa', href: '/configuracoes/empresa' },
+  { chave: 'cfg_regionais', rotulo: 'Regionais', href: '/configuracoes/regionais' },
+  { chave: 'cfg_vendedores', rotulo: 'Vendedores', href: '/configuracoes/vendedores' },
+  { chave: 'cfg_marcas_modelos', rotulo: 'Marcas & Modelos', href: '/configuracoes/marcas-modelos' },
+  { chave: 'cfg_tipos_veiculo', rotulo: 'Tipos de Veículo', href: '/configuracoes/tipos-veiculo' },
+  { chave: 'cfg_cores', rotulo: 'Cores', href: '/configuracoes/cores' },
+  { chave: 'cfg_cotas', rotulo: 'Cotas de Participação', href: '/configuracoes/cotas-participacao' },
+  { chave: 'cfg_tipos_evento', rotulo: 'Tipos de Evento', href: '/configuracoes/tipos-evento' },
+  { chave: 'cfg_documentos_evento', rotulo: 'Prazos e Documentos do Evento', href: '/configuracoes/documentos-evento' },
+  { chave: 'cfg_alertas', rotulo: 'Alertas', href: '/configuracoes/alertas' },
+  { chave: 'cfg_produtos', rotulo: 'Produtos', href: '/configuracoes/produtos' },
+  { chave: 'cfg_planos', rotulo: 'Planos & Combos', href: '/configuracoes/planos' },
+  { chave: 'cfg_contas_bancarias', rotulo: 'Contas Bancárias', href: '/configuracoes/contas-bancarias' },
+  { chave: 'cfg_integracoes', rotulo: 'Integrações Bancárias', href: '/configuracoes/integracoes' },
+  { chave: 'cfg_plano_contas', rotulo: 'Plano de Contas', href: '/configuracoes/plano-contas' },
+  { chave: 'cfg_centros_custo', rotulo: 'Centros de Custo', href: '/configuracoes/centros-custo' },
+] as const;
+
 export const MODULOS: Modulo[] = [
   { chave: 'painel', rotulo: 'Painel / Visão Geral', acoes: ['ver', 'exportar'], rotas: ['/dashboard'] },
   { chave: 'sac', rotulo: 'SAC / Atendimento', acoes: ['ver', 'criar', 'editar', 'transferir', 'fechar'],
@@ -72,9 +97,11 @@ export const MODULOS: Modulo[] = [
     notas: { editar: 'alterar a tabela de preços' }, rotas: ['/precificacao'] },
   { chave: 'fornecedores', rotulo: 'Fornecedores', acoes: ['ver', 'criar', 'editar', 'excluir', 'exportar'],
     rotas: ['/fornecedores'] },
-  { chave: 'financeiro', rotulo: 'Financeiro / DRE',
+  { chave: 'financeiro', rotulo: 'Financeiro — contas a pagar/receber e extrato',
     acoes: ['ver', 'criar', 'editar', 'excluir', 'exportar', 'baixar', 'estornar', 'cancelar'],
     rotas: ['/financeiro'] },
+  { chave: 'financeiro_dre', rotulo: 'Financeiro — DRE', acoes: ['ver', 'exportar'],
+    notas: { ver: 'abrir a aba DRE (e o resumo por centro de custo)' }, rotas: [] },
   { chave: 'comunicados', rotulo: 'Comunicados', acoes: ['ver', 'criar', 'editar', 'excluir'],
     notas: { criar: 'publicar no mural' }, rotas: [] },
   { chave: 'termos', rotulo: 'Termos — emitir', acoes: ['ver', 'criar', 'exportar', 'cancelar'],
@@ -89,7 +116,11 @@ export const MODULOS: Modulo[] = [
     rotas: ['/integracao'], fixo: ['admin', 'financeiro'] },
   { chave: 'usuarios', rotulo: 'Usuários e permissões', acoes: ['ver', 'criar', 'editar', 'excluir'],
     rotas: [], fixo: ['admin'] },
-  { chave: 'configuracoes', rotulo: 'Configurações', acoes: ['ver', 'editar'],
+  ...ABAS_CONFIGURACOES_BASE.map((a): Modulo => ({
+    chave: a.chave, rotulo: `Configurações — ${a.rotulo}`, acoes: ['ver', 'editar'],
+    notas: { editar: 'incluir, alterar e excluir' }, rotas: [a.href],
+  })),
+  { chave: 'configuracoes', rotulo: 'Configurações — demais abas (só admin)', acoes: ['ver', 'editar'],
     rotas: ['/configuracoes'], fixo: ['admin'] },
 ];
 
@@ -153,6 +184,10 @@ const PADRAO: Record<string, readonly string[]> = {
   'financeiro.baixar': ['financeiro', 'gestor_regional', 'assistencia_24h'],
   'financeiro.excluir': ['financeiro'], 'financeiro.estornar': ['financeiro'],
   'financeiro.cancelar': ['financeiro', 'gestor_regional'],
+  // 0141: o DRE nasce com quem ja tinha o Financeiro (ninguem perde na virada).
+  'financeiro_dre.ver': ['financeiro', 'gestor_regional', 'assistencia_24h', 'supervisor', 'cobranca'],
+  'financeiro_dre.exportar': ['financeiro', 'gestor_regional', 'assistencia_24h', 'supervisor', 'cobranca'],
+  // As abas das Configuracoes (cfg_*) nascem sem ninguem: o admin libera.
   'comunicados.ver': TODOS, 'comunicados.criar': ['financeiro', 'gestor_regional'],
   'comunicados.editar': ['financeiro', 'gestor_regional'],
   'comunicados.excluir': ['financeiro', 'gestor_regional'],
@@ -321,6 +356,38 @@ export function moduloDaRota(pathname: string): Modulo | undefined {
     }
   }
   return melhor;
+}
+
+/**
+ * As abas das Configuracoes que a pessoa abre (0141): admin todas; os demais
+ * as `cfg_*` com Ver ou Editar, e Termos com qualquer `termos_modelos.*`.
+ * Devolve os hrefs, na ordem das abas.
+ */
+export function abasConfiguracoesPermitidas(admin: boolean, permissoes: string[] | null | undefined): string[] | null {
+  if (admin) return null; // null = todas
+  const p = permissoes ?? [];
+  const out: string[] = ABAS_CONFIGURACOES_BASE
+    .filter((a) => p.includes(`${a.chave}.ver`) || p.includes(`${a.chave}.editar`))
+    .map((a) => a.href);
+  if (p.some((k) => k.startsWith('termos_modelos.'))) out.push('/configuracoes/termos');
+  return out;
+}
+
+/** A aba das Configuracoes desta rota, quando ela e liberavel (0141). */
+export function abaConfiguracaoDaRota(pathname: string) {
+  return ABAS_CONFIGURACOES_BASE.find((a) => pathname === a.href || pathname.startsWith(a.href + '/'));
+}
+
+/**
+ * Ao marcar EDITAR numa aba das Configuracoes, o VER vem junto (a tela e a
+ * leitura da lista dependem dele); ao tirar o VER, o EDITAR sai junto.
+ */
+export function coerenciaVerEditar(chave: string, valor: boolean): Record<string, boolean> {
+  const [mod, acao] = chave.split('.');
+  if (!mod.startsWith('cfg_')) return { [chave]: valor };
+  if (acao === 'editar' && valor) return { [chave]: true, [`${mod}.ver`]: true };
+  if (acao === 'ver' && !valor) return { [chave]: false, [`${mod}.editar`]: false };
+  return { [chave]: valor };
 }
 
 // ---------------------------------------------------------------------------

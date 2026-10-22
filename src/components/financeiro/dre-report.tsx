@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select } from '@/components/ui/field';
 import { useDre, useDreComparativo, useDreMensal, useDreResumo } from '@/hooks/use-dre';
 import { useCentrosCusto } from '@/hooks/use-financeiro';
+import { usePode } from '@/hooks/use-permissoes';
 import { calcularIndicadores, estruturarDre, periodoAnterior, variacaoPercentual } from '@/lib/financeiro';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { RegimeDre } from '@/lib/database.types';
@@ -35,6 +36,7 @@ export function DreReport({ regionalId }: { regionalId?: string | null }) {
   const [regime, setRegime] = useState<RegimeDre>('CAIXA');
   const [centroCustoId, setCentroCustoId] = useState('');
   const [comparar, setComparar] = useState(true);
+  const podeExportar = usePode('financeiro_dre.exportar');
 
   const filtro = { ...periodo, regionalId, regime, centroCustoId: centroCustoId || null };
   const { data: linhas, isLoading } = useDre(filtro);
@@ -109,8 +111,10 @@ export function DreReport({ regionalId }: { regionalId?: string | null }) {
           Comparar com período anterior
         </label>
         <div className="ml-auto flex gap-2 print:hidden">
-          <Button variant="secondary" onClick={exportar}><Download className="h-4 w-4" /> CSV</Button>
-          <Button variant="secondary" onClick={() => window.print()}><Printer className="h-4 w-4" /> Imprimir</Button>
+          {podeExportar && <>
+            <Button variant="secondary" onClick={exportar}><Download className="h-4 w-4" /> CSV</Button>
+            <Button variant="secondary" onClick={() => window.print()}><Printer className="h-4 w-4" /> Imprimir</Button>
+          </>}
         </div>
       </FiltroPeriodo>
 
