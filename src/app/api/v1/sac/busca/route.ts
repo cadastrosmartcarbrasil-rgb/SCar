@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { identificacaoVeiculo } from '@/lib/placa';
+import { filtroBuscaAssociados } from '@/lib/busca-cadastro';
 
 // GET /api/v1/sac/busca?q=...  — busca global por Nome, CPF/CNPJ ou Placa.
 // Base compartilhada por SAC, Assistencia 24h e Chatbot.
@@ -65,7 +66,11 @@ export async function GET(request: Request) {
 
   // Por CPF/CNPJ (digitos) ou Nome — leva a ficha do associado (lista de veiculos)
   let cq = supabase.from('clientes').select('id, nome_razao_social, cpf_cnpj').limit(10);
-  cq = digitos.length >= 3 ? cq.ilike('cpf_cnpj', `%${digitos}%`) : cq.ilike('nome_razao_social', `%${q}%`);
+  // Nome sem depender de acento nem das palavras do meio (padraoNomeTolerante).
+  const nome = filtroBuscaAssociados(q);
+  if (digitos.length >= 3) cq = cq.ilike('cpf_cnpj', `%${digitos}%`);
+  else if (nome) cq = cq.or(nome).order('nome_razao_social');
+  else cq = cq.ilike('nome_razao_social', `%${q}%`);
   const { data: cli, error: erroCli } = await cq;
   if (erroCli) return NextResponse.json({ error: erroCli.message }, { status: 500 });
   for (const c of cli ?? []) {

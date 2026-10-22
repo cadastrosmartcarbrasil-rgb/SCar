@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { filtroBuscaVeiculos, filtroBuscaAssociados, resumoPagina, statusDaSituacao } from './busca-cadastro';
+import { filtroBuscaVeiculos, filtroBuscaAssociados, padraoNomeTolerante, resumoPagina, statusDaSituacao } from './busca-cadastro';
 
 describe('busca no banco de veiculos e associados', () => {
   it('placa com separador vira so alfanumerico, em caixa alta', () => {
@@ -19,6 +19,16 @@ describe('busca no banco de veiculos e associados', () => {
     const f = filtroBuscaAssociados('maria, (silva)*')!;
     expect(f).not.toMatch(/[()*,]\s*silva/);
     expect(f.startsWith('nome_razao_social.ilike.*maria silva*')).toBe(true);
+  });
+  it('nome sem depender de acento, espaco nem palavra do meio', () => {
+    // caso real: FLAVIO RODRIGO NASCIMENTO DE SOUSA
+    const p = padraoNomeTolerante('Flávio  Nascimento')!;
+    expect(p).toBe('FL_V__*N_S__M_NT_');
+    const re = new RegExp('^.*' + p.replace(/_/g, '.').replace(/\*/g, '.*') + '.*$');
+    expect(re.test('FLAVIO RODRIGO NASCIMENTO DE SOUSA')).toBe(true);
+    expect(re.test('FLÁVIO RODRIGO NASCIMENTO DE SOUSA')).toBe(true);
+    expect(padraoNomeTolerante('a')).toBeNull();
+    expect(filtroBuscaAssociados('Flávio Nascimento')).toContain('nome_razao_social.ilike.*FL_V__*N_S__M_NT_*');
   });
   it('CPF digitado com mascara procura por digitos', () => {
     expect(filtroBuscaAssociados('123.456.789-09')).toContain('cpf_cnpj.ilike.*12345678909*');

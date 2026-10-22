@@ -55,12 +55,34 @@ export function filtroBuscaVeiculos(bruto: string, clienteIds: string[] = []): s
   return partes.length > 0 ? partes.join(',') : null;
 }
 
+/**
+ * Padrao `ilike` para NOME que nao depende de acento, de espaco nem das
+ * palavras do meio (22/10/2026). O `ilike` cru exigia o trecho EXATO: "Flávio"
+ * nao achava "FLAVIO" (e vice-versa — 600 dos 5.526 nomes tem acento), espaco
+ * duplo da carga quebrava, e "FLAVIO NASCIMENTO" nao achava "FLAVIO RODRIGO
+ * NASCIMENTO" — o atendente concluia que o associado nao estava no sistema.
+ * Cada letra que pode levar acento (vogal e C) vira `_` (um caractere
+ * qualquer) e as palavras se ligam por `*`, na ordem digitada. `null` = curto.
+ */
+export function padraoNomeTolerante(bruto: string): string | null {
+  const palavras = (bruto ?? '')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toUpperCase().replace(/[^A-Z0-9 ]/g, ' ')
+    .split(/\s+/).filter(Boolean);
+  if (palavras.join('').length < 2) return null;
+  return palavras.map((p) => p.replace(/[AEIOUC]/g, '_')).join('*');
+}
+
 /** Filtro `or` da lista de associados: nome, CPF/CNPJ (so digitos) e matricula. */
 export function filtroBuscaAssociados(bruto: string): string | null {
   const t = termoSeguro(bruto);
   const digitos = (bruto ?? '').replace(/\D/g, '');
   const partes: string[] = [];
-  if (t.length >= 2) partes.push(`nome_razao_social.ilike.*${t}*`);
+  if (t.length >= 2) {
+    partes.push(`nome_razao_social.ilike.*${t}*`);
+    const tolerante = padraoNomeTolerante(t);
+    if (tolerante && tolerante !== t) partes.push(`nome_razao_social.ilike.*${tolerante}*`);
+  }
   if (digitos.length >= 3) partes.push(`cpf_cnpj.ilike.*${digitos}*`, `matricula.ilike.*${digitos}*`);
   else if (t.length >= 2) partes.push(`matricula.ilike.*${t}*`);
   return partes.length > 0 ? partes.join(',') : null;
