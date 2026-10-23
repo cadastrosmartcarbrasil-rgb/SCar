@@ -722,7 +722,7 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 ### Estado de validação (fim da fase)
 - **Migrations `0001`..`0144`** + `schema.sql` consolidado aplicam limpos no harness local.
 - **121 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 1182 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Vitest: 1185 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Os portais e páginas públicas
@@ -3640,6 +3640,10 @@ manda o link sozinho. Decisões do usuário: a equipe pode **liberar sem revisto
   array cru sem `next`): de 14 a 23/10 a rotina regravou o mesmo conjunto por até 17 min, todo dia, até o
   Mutual derrubar a conexão ("fetch failed"/502). Corrigido em `temProximaPagina` (página cheia = EXATAMENTE
   o tamanho pedido; lista maior = acabou). O dado não se perdeu: a 1ª página já trazia tudo (45.696).
+- **Queda do Mutual no meio da captura (23/10/2026):** PERSON e INVOICE pararam em "fetch failed" (24.500 boletos
+  e a captura completa perdida). Agora cada PÁGINA é tentada de novo até 3 vezes (espera 2 s, 5 s, 15 s) em queda de
+  rede, 5xx, 429 ou corpo cortado — `lerPaginaMutual` (`src/lib/mutual-captura-server.ts`), regra pura
+  `deveRetentarMutual` (`src/lib/mutual.ts`, testada). 4xx não repete (é recusa). Vale para a tela e para a rotina.
 - **No corte de dezembro: tirar a linha do crontab** (item do checklist pós-corte).
 
 ## A CARGA EM BLOCOS (0094) e as MOTOS pela tela — leia antes de carregar outra unidade

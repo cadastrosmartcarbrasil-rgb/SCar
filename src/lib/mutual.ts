@@ -146,6 +146,19 @@ export function extrairTotal(json: unknown): number | null {
   return null;
 }
 
+/**
+ * Nova tentativa da MESMA pagina quando o Mutual cai no meio da captura
+ * (23/10/2026: PERSON e INVOICE pararam em "fetch failed" e a captura inteira
+ * se perdia). Repete queda de rede (status `null`), 5xx e 429; nunca 4xx — esse
+ * e recusa de verdade e repetir so atrasa o erro.
+ */
+export const ESPERAS_RETENTATIVA_MUTUAL_MS = [2_000, 5_000, 15_000];
+
+export function deveRetentarMutual(status: number | null, tentativa: number): boolean {
+  if (tentativa >= ESPERAS_RETENTATIVA_MUTUAL_MS.length) return false;
+  return status === null || status === 429 || status >= 500;
+}
+
 /** Ha proxima pagina? `next` do DRF, ou pagina cheia quando nao ha envelope. */
 export function temProximaPagina(json: unknown, tamanhoPagina: number): boolean {
   if (json && typeof json === 'object' && !Array.isArray(json)) {

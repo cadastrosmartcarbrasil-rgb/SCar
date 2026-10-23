@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  urlMutual, ehProdutoTerceiros, comObjeto, cabecalhoMutual, extrairLista, extrairTotal, temProximaPagina,
+  urlMutual, deveRetentarMutual, ESPERAS_RETENTATIVA_MUTUAL_MS, ehProdutoTerceiros, comObjeto, cabecalhoMutual, extrairLista, extrairTotal, temProximaPagina,
   textoOuNulo, numeroOuNulo, dataLocalDeIso, tipoPessoaMutual,
   statusVeiculoDoContrato, statusTituloMutual, ehMensalidade, problemasDoObjeto,
   mesesDoPeriodoMutual, ehFilaOperacional, ehFunilDeVenda, statusDeTexto,
@@ -1112,5 +1112,21 @@ describe('vendedor dos migrados (0095)', () => {
       { motivo: 'SEM_CONSULTOR', veiculos: 2 },
     ]);
     expect(t).toEqual({ ligar: 409, jaLigados: 22, mantidos: 14, semVendedor: 5, total: 450 });
+  });
+});
+
+describe('deveRetentarMutual', () => {
+  it('queda de rede, 5xx e 429 repetem', () => {
+    expect(deveRetentarMutual(null, 0)).toBe(true);
+    expect(deveRetentarMutual(502, 0)).toBe(true);
+    expect(deveRetentarMutual(503, 1)).toBe(true);
+    expect(deveRetentarMutual(429, 2)).toBe(true);
+  });
+  it('4xx e recusa de verdade: nao repete', () => {
+    expect(deveRetentarMutual(400, 0)).toBe(false);
+    expect(deveRetentarMutual(404, 0)).toBe(false);
+  });
+  it('para depois da ultima espera', () => {
+    expect(deveRetentarMutual(null, ESPERAS_RETENTATIVA_MUTUAL_MS.length)).toBe(false);
   });
 });

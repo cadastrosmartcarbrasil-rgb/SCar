@@ -1,7 +1,8 @@
 import 'server-only';
 import {
   ENTIDADES_PAGINADAS, urlMutual, cabecalhoMutual, extrairLista, extrairTotal,
-  temProximaPagina, resumoDoCorpo, type EntidadeMutual,
+  temProximaPagina, resumoDoCorpo, deveRetentarMutual, ESPERAS_RETENTATIVA_MUTUAL_MS,
+  type EntidadeMutual,
 } from '@/lib/mutual';
 import type { Database, Json } from '@/lib/database.types';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -71,13 +72,7 @@ export async function capturarEntidade(
         page_size: paginada ? tamanho : undefined,
         updated_at__gte: op.updatedAtGte || undefined,
       });
-      const res = await fetch(url, { headers: cabecalhoMutual(token), cache: 'no-store' });
-      if (!res.ok) {
-        // O motivo da recusa vai junto: "HTTP 400" sozinho manda a proxima pessoa chutar.
-        const detalhe = resumoDoCorpo(await res.text().catch(() => ''));
-        throw new Error(`HTTP ${res.status} em ${url}${detalhe ? ` — ${detalhe}` : ''}`);
-      }
-      const corpo = (await res.json()) as unknown;
+      const corpo = await lerPaginaMutual(url, token);
 
       const lista = extrairLista(corpo);
       total = total ?? extrairTotal(corpo);
@@ -102,5 +97,34 @@ export async function capturarEntidade(
     await fechar(erro);
     return { ok: false, entidade, paginas, registros, total_remoto: total, proxima_pagina: proxima, erro,
       sincronia_id: sinc?.id ?? null };
+  }
+}
+
+const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Le UMA pagina, tentando de novo quando o Mutual derruba a conexao (queda de
+ * rede, 5xx, 429 ou corpo cortado no meio). 4xx sai na hora, com o motivo.
+ */
+async function lerPaginaMutual(url: string, token: string): Promise<unknown> {
+  for (let tentativa = 0; ; tentativa++) {
+    let status: number | null = null;
+    try {
+      const res = await fetch(url, { headers: cabecalhoMutual(token), cache: 'no-store' });
+      status = res.status;
+      if (!res.ok) {
+        // O motivo da recusa vai junto: "HTTP 400" sozinho manda a proxima pessoa chutar.
+        const detalhe = resumoDoCorpo(await res.text().catch(() => ''));
+        throw new Error(`HTTP ${res.status} em ${url}${detalhe ? ` — ${detalhe}` : ''}`);
+      }
+      status = null;   // daqui em diante, falha e corpo cortado: conta como queda
+      return (await res.json()) as unknown;
+    } catch (e) {
+      if (!deveRetentarMutual(status, tentativa)) {
+        const msg = (e as Error).message;
+        throw new Error(tentativa > 0 ? `${msg} (depois de ${tentativa + 1} tentativas)` : msg);
+      }
+      await esperar(ESPERAS_RETENTATIVA_MUTUAL_MS[tentativa]);
+    }
   }
 }
