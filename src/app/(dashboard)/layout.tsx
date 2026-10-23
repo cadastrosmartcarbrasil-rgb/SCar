@@ -44,10 +44,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // Permissoes do perfil (0111): o VER esconde o modulo do menu e barra a tela.
   // Se a leitura falhar, nao esconde nada (o banco continua decidindo o dado).
   const { data: permissoes } = await supabase.rpc('minhas_permissoes');
+  // Quem tambem tem cadastro de vendedor ganha o atalho para o portal dele.
+  const { data: vendedorId } = await supabase.rpc('vendedor_atual');
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
-      <Sidebar papel={perfil.papel} logoUrl={empresa?.logo_url ?? null} permissoes={permissoes ?? null} />
+      <Sidebar papel={perfil.papel} logoUrl={empresa?.logo_url ?? null} permissoes={permissoes ?? null} ehVendedor={!!vendedorId} />
       <div className="min-w-0 flex-1">
         <Topbar nome={perfil.nome} papel={perfil.papel} />
         <main className="mx-auto w-full max-w-[1600px] p-4 md:p-8">

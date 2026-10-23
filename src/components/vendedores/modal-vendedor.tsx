@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { FormField, Input, PercentInput, Select, Textarea } from '@/components/ui/field';
 import { useRegionais, useUsuarios } from '@/hooks/use-config';
+import { vinculoDeOutraPessoa } from '@/lib/acesso';
 import { opcoesParaEscolher } from '@/lib/regional';
 import { useAcessoPortal, useSalvarVendedor, useSugerirCodigo } from '@/hooks/use-vendedores';
 import { validarComissaoVendedor } from '@/lib/vendas';
@@ -64,6 +65,7 @@ export function ModalVendedor({ inicial, onClose, regionalFixa }: {
   const acesso = useAcessoPortal();
 
   const edicao = !!form.id;
+  const loginLigado = (usuarios ?? []).find((u) => u.id === form.usuario_id) ?? null;
   const set = (p: Partial<VendedoresRow>) => setForm((f) => ({ ...f, ...p }));
 
   const regional = useMemo(
@@ -86,6 +88,17 @@ export function ModalVendedor({ inicial, onClose, regionalFixa }: {
     if (senha && senha !== confirmar) return toast.error('As senhas não conferem');
     if (senha && senha.length < 8) return toast.error('A senha precisa de ao menos 8 caracteres');
     if (senha && !form.email?.trim()) return toast.error('Informe o e-mail para criar o acesso ao portal');
+
+    // 20/10/2026: o vendedor BIANCA2 foi ligado ao login da MARIA CAROLINE e ela
+    // passou a entrar como Bianca. Login de outra pessoa pede confirmacao.
+    if (form.usuario_id && loginLigado && vinculoDeOutraPessoa(form.nome, loginLigado.nome)
+        && (form.usuario_id !== inicial.usuario_id || senha)) {
+      const ok = window.confirm(
+        `O login escolhido é de ${loginLigado.nome} (${loginLigado.email}), e o vendedor é ${form.nome}.\n\n`
+        + `${senha ? 'A nova senha vai valer para o login dessa pessoa. ' : 'Essa pessoa vai entrar no portal como este vendedor. '}`
+        + 'Confirma?');
+      if (!ok) return;
+    }
 
     try {
       const id = await salvar.mutateAsync(form);
@@ -238,6 +251,18 @@ export function ModalVendedor({ inicial, onClose, regionalFixa }: {
               <Input type="password" value={confirmar} onChange={(e) => setConfirmar(e.target.value)} autoComplete="new-password" />
             </FormField>
           </div>
+          {form.usuario_id && (
+            <div className={`flex flex-wrap items-center justify-between gap-2 rounded-lg px-3 py-2 text-xs ${
+              loginLigado && vinculoDeOutraPessoa(form.nome, loginLigado.nome) ? 'bg-rose-50 text-rose-800' : 'bg-white/60 text-slate-600'}`}>
+              <span>
+                Login ligado: <b>{loginLigado ? `${loginLigado.nome} (${loginLigado.email})` : 'usuário fora da sua lista'}</b>
+                {loginLigado && vinculoDeOutraPessoa(form.nome, loginLigado.nome) && ' — é OUTRA pessoa: ela entra no portal como este vendedor.'}
+              </span>
+              <Button type="button" variant="secondary" className="px-2 py-1 text-xs" onClick={() => set({ usuario_id: null })}>
+                Desvincular login
+              </Button>
+            </div>
+          )}
           {!regionalFixa && (usuarios ?? []).length > 0 && !form.usuario_id && (
             <FormField label="Ou vincular a um usuário já existente">
               <Select value={form.usuario_id ?? ''} onChange={(e) => set({ usuario_id: e.target.value || null })}>

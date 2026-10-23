@@ -38,6 +38,27 @@ export function destinoAposLogin(
   if (perfil && temAcessoGlobal(perfil.papel)) return '/dashboard';
   // O gestor mora na unidade dele — sem regional no cadastro o portal nao abre.
   if (perfil?.papel === 'gestor_regional' && perfil.regional_id) return '/regional';
-  if (ehVendedor) return '/vendedor';
+  // 23/10/2026: quem tem OUTRO papel de operacao (cobranca, supervisor, eventos,
+  // 24h, auditoria) e tambem vende entra no sistema — o portal do vendedor fica
+  // no menu ("Meu Portal de Vendas"). So o consultor (e o gestor sem unidade,
+  // que nao tem portal proprio) cai direto no portal do vendedor.
+  if (ehVendedor && (!perfil || ['consultor_vendas', 'gestor_regional'].includes(perfil.papel))) return '/vendedor';
   return '/dashboard';
+}
+
+function primeiroNome(nome: string | null | undefined): string {
+  return (nome ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .trim().split(/\s+/)[0]?.toUpperCase() ?? '';
+}
+
+/**
+ * O login escolhido para o cadastro de vendedor e da MESMA pessoa? Compara o
+ * primeiro nome. Foi o defeito de 20/10/2026: o vendedor BIANCA2 (BIANCA MENDEZ)
+ * foi ligado ao login da MARIA CAROLINE, e ela passou a entrar no portal como
+ * Bianca. Sem nome dos dois lados nao ha como conferir: nao acusa.
+ */
+export function vinculoDeOutraPessoa(nomeVendedor: string | null | undefined, nomeUsuario: string | null | undefined): boolean {
+  const a = primeiroNome(nomeVendedor);
+  const b = primeiroNome(nomeUsuario);
+  return !!a && !!b && a !== b;
 }

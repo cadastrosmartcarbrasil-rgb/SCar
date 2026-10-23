@@ -3026,6 +3026,16 @@ cria acesso**, `/api/v1/vendedores/acesso` exige admin/financeiro/gestor e nasce
 traz `papel` — é isso que impede o associado do `/portal` de virar equipe. **Consulta em
 `vendedores` traz gente que não tem perfil nenhum; a lista de perfis é `usuarios_listar`.**
 
+**ACESSO MISTO (23/10/2026, caso MARIA CAROLINE):** ela é da cobrança e também vende, e entrava no portal do
+vendedor **como BIANCA** — o cadastro de vendedor BIANCA2 tinha sido ligado ao login dela em 20/10 pelo seletor
+"Ou vincular a um usuário já existente" de Configurações → Vendedores (e o *Redefinir senha* desse vendedor trocaria a
+senha DELA). Agora: (1) o login vai para `/vendedor` só para `consultor_vendas` (e gestor sem unidade); qualquer outro
+papel de operação com ficha de vendedor entra no sistema, com **Meu Portal de Vendas** no menu (o layout passa
+`ehVendedor` por `vendedor_atual()`), e o portal do vendedor ganhou o botão **Sistema** de volta; (2) o cadastro do
+vendedor mostra **Login ligado: NOME (e-mail)**, em vermelho quando o primeiro nome não confere
+(`vinculoDeOutraPessoa`, `src/lib/acesso.ts`, testada), com **Desvincular login**, e pede confirmação para ligar ou
+trocar a senha de login de outra pessoa.
+
 **Ao diagnosticar "fulano não tem o acesso que deveria", olhe nesta ordem:**
 `usuarios.ativo` (desde a `0068` derruba TUDO, inclusive o portal do vendedor) → `usuarios.papel`
 (o acesso criado por `/api/v1/vendedores/acesso` nasce **`consultor_vendas`**; promover exige

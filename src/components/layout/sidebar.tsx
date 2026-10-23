@@ -242,8 +242,10 @@ function Nav({ pathname, menuGestao, onNav, permissoes, compacto }: {
   );
 }
 
-export function Sidebar({ papel, logoUrl, permissoes = null }: {
+export function Sidebar({ papel, logoUrl, permissoes = null, ehVendedor = false }: {
   papel?: PapelUsuario; logoUrl?: string | null; permissoes?: string[] | null;
+  /** Tem cadastro de vendedor ativo ligado ao login (`vendedor_atual`). */
+  ehVendedor?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -289,7 +291,7 @@ export function Sidebar({ papel, logoUrl, permissoes = null }: {
             { href: '/regional', label: 'Acesso as Regionais', icon: DoorOpen },
           ],
         } satisfies Grupo] : []),
-    ...(['consultor_vendas', 'admin'].includes(papel ?? '')
+    ...(ehVendedor || ['consultor_vendas', 'admin'].includes(papel ?? '')
       ? [{ href: '/vendedor', label: 'Meu Portal de Vendas', icon: UserRound }] : []),
   ];
   const menuGestao: Entrada[] = [...portais, ...gestao];

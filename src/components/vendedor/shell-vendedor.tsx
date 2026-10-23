@@ -93,13 +93,16 @@ export function ShellVendedor({ nome, unidade, codigo, logoUrl, papelStaff, chil
     href === '/vendedor' ? pathname === href : pathname.startsWith(href);
 
   // Quem tem outro chapeu volta para a casa DELE: a matriz para o painel de
-  // gestao, o gestor para o portal da franquia. O consultor de vendas nao tem
-  // outra casa — para ele o portal e tudo.
+  // gestao, o gestor para o portal da franquia, os demais papeis de operacao
+  // para o sistema. O consultor de vendas nao tem outra casa.
   const outraCasa = temAcessoGlobal(papelStaff ?? '')
     ? { href: '/dashboard', label: 'Sistema da matriz' }
     : papelStaff === 'gestor_regional'
       ? { href: '/regional', label: 'Portal da franquia' }
-      : null;
+      // 23/10/2026: cobranca, supervisor, eventos, 24h, auditoria tambem tem casa.
+      : papelStaff && papelStaff !== 'consultor_vendas'
+        ? { href: '/dashboard', label: 'Sistema' }
+        : null;
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
