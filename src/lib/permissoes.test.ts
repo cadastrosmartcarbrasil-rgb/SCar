@@ -4,7 +4,7 @@ import {
   mudancasDoPerfil, moduloDaRota, celulaEditavel, todasAsChaves, permissoesDoPapel,
   chaveDoExtra, extraParaBanco, chavePermiteExtra, extraVigente, hojeSaoPaulo, permissoesEfetivas,
   mudancasDosExtras, resumoDaCopia, rotuloDaChave, basesDosPerfis, valorDoSeletor, lerSeletor, chaveDoUsuario,
-  abasConfiguracoesPermitidas, abaConfiguracaoDaRota, coerenciaVerEditar,
+  abasConfiguracoesPermitidas, abaConfiguracaoDaRota, coerenciaVerEditar, acoesNaAba,
 } from './permissoes';
 
 describe('grade modulo x acao (0111)', () => {
@@ -13,10 +13,10 @@ describe('grade modulo x acao (0111)', () => {
     for (const m of MODULOS) for (const a of m.acoes) expect(ACOES).toContain(a);
   });
 
-  it('123 celulas editaveis (as mesmas de permissao_celula_valida) + 3 alcadas', () => {
+  it('155 celulas editaveis (as mesmas de permissao_celula_valida) + 3 alcadas', () => {
     const editaveis = MODULOS.filter((m) => !m.fixo).flatMap((m) => m.acoes);
     // 89 ate a 0140 + DRE (ver, exportar) + 16 abas de Configuracoes x (ver, editar) — 0141
-    expect(editaveis.length).toBe(123);
+    expect(editaveis.length).toBe(155);
     expect(ALCADAS.length).toBe(3);
   });
 
@@ -203,7 +203,9 @@ describe('configuracoes por aba e DRE (0141)', () => {
   it('as abas nascem sem ninguem e aceitam extra', () => {
     expect(temPermissao('financeiro', 'cfg_plano_contas.editar')).toBe(false);
     expect(chavePermiteExtra('cfg_plano_contas.editar')).toBe(true);
-    expect(chavePermiteExtra('cfg_plano_contas.excluir')).toBe(false);
+    expect(chavePermiteExtra('cfg_plano_contas.criar')).toBe(true);
+    expect(chavePermiteExtra('cfg_plano_contas.excluir')).toBe(true);
+    expect(chavePermiteExtra('cfg_plano_contas.exportar')).toBe(false);
     expect(chavePermiteExtra('configuracoes.ver')).toBe(false);
   });
 
@@ -221,9 +223,21 @@ describe('configuracoes por aba e DRE (0141)', () => {
     expect(abasConfiguracoesPermitidas(false, ['financeiro.ver'])).toEqual([]);
   });
 
+  it('o que a pessoa faz na aba', () => {
+    expect(acoesNaAba('cfg_plano_contas', false, ['cfg_plano_contas.ver', 'cfg_plano_contas.criar']))
+      .toEqual({ criar: true, editar: false, excluir: false, soConsulta: false });
+    expect(acoesNaAba('cfg_plano_contas', false, ['cfg_plano_contas.ver']).soConsulta).toBe(true);
+    expect(acoesNaAba('cfg_plano_contas', true, []))
+      .toEqual({ criar: true, editar: true, excluir: true, soConsulta: false });
+  });
+
   it('editar traz o ver; tirar o ver leva o editar', () => {
     expect(coerenciaVerEditar('cfg_cores.editar', true)).toEqual({ 'cfg_cores.editar': true, 'cfg_cores.ver': true });
-    expect(coerenciaVerEditar('cfg_cores.ver', false)).toEqual({ 'cfg_cores.ver': false, 'cfg_cores.editar': false });
+    expect(coerenciaVerEditar('cfg_cores.criar', true)).toEqual({ 'cfg_cores.criar': true, 'cfg_cores.ver': true });
+    expect(coerenciaVerEditar('cfg_cores.ver', false)).toEqual({
+      'cfg_cores.ver': false, 'cfg_cores.criar': false, 'cfg_cores.editar': false, 'cfg_cores.excluir': false,
+    });
+    expect(coerenciaVerEditar('cfg_cores.excluir', false)).toEqual({ 'cfg_cores.excluir': false });
     expect(coerenciaVerEditar('veiculos.editar', true)).toEqual({ 'veiculos.editar': true });
   });
 });

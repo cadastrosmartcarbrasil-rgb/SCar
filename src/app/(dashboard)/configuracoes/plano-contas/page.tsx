@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { FormField, Input, Select } from '@/components/ui/field';
 import { usePlanoContas, useSaveCategoria, useDeleteCategoria } from '@/hooks/use-config';
+import { useAcoesNaAba } from '@/hooks/use-permissoes';
 import type { CategoriasDreRow, TipoCategoriaDre } from '@/lib/database.types';
 
 const TIPOS: { value: TipoCategoriaDre; label: string; cor: string }[] = [
@@ -20,6 +21,7 @@ export default function PlanoContasPage() {
   const { data: categorias, isLoading } = usePlanoContas();
   const salvar = useSaveCategoria();
   const excluir = useDeleteCategoria();
+  const pode = useAcoesNaAba('cfg_plano_contas');
 
   const [aberto, setAberto] = useState(false);
   const [ed, setEd] = useState<Partial<CategoriasDreRow> | null>(null);
@@ -48,9 +50,11 @@ export default function PlanoContasPage() {
           Estrutura de contas usada no DRE. Edite os códigos, nomes e classificações conforme sua
           contabilidade.
         </p>
-        <Button onClick={novo}>
-          <Plus className="h-4 w-4" /> Nova Conta
-        </Button>
+        {pode.criar && (
+          <Button onClick={novo}>
+            <Plus className="h-4 w-4" /> Nova Conta
+          </Button>
+        )}
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-slate-200 bg-superficie">
@@ -88,6 +92,7 @@ export default function PlanoContasPage() {
                   </td>
                   <td className="px-4 py-2">
                     <div className="flex justify-end gap-1">
+{pode.editar && (
                       <button
                         onClick={() => {
                           setEd(c);
@@ -97,6 +102,8 @@ export default function PlanoContasPage() {
                       >
                         <Pencil className="h-4 w-4" />
                       </button>
+                      )}
+                      {pode.excluir && (
                       <button
                         onClick={() => {
                           if (confirm(`Excluir a conta "${c.nome}"?`))
@@ -109,6 +116,7 @@ export default function PlanoContasPage() {
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
+                      )}
                     </div>
                   </td>
                 </tr>

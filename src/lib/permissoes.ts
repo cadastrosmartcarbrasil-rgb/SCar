@@ -117,8 +117,8 @@ export const MODULOS: Modulo[] = [
   { chave: 'usuarios', rotulo: 'Usuários e permissões', acoes: ['ver', 'criar', 'editar', 'excluir'],
     rotas: [], fixo: ['admin'] },
   ...ABAS_CONFIGURACOES_BASE.map((a): Modulo => ({
-    chave: a.chave, rotulo: `Configurações — ${a.rotulo}`, acoes: ['ver', 'editar'],
-    notas: { editar: 'incluir, alterar e excluir' }, rotas: [a.href],
+    chave: a.chave, rotulo: `Configurações — ${a.rotulo}`, acoes: ['ver', 'criar', 'editar', 'excluir'],
+    notas: { criar: 'incluir', editar: 'alterar o que existe', excluir: 'apagar' }, rotas: [a.href],
   })),
   { chave: 'configuracoes', rotulo: 'Configurações — demais abas (só admin)', acoes: ['ver', 'editar'],
     rotas: ['/configuracoes'], fixo: ['admin'] },
@@ -358,16 +358,19 @@ export function moduloDaRota(pathname: string): Modulo | undefined {
   return melhor;
 }
 
+const ACOES_CFG = ['ver', 'criar', 'editar', 'excluir'] as const;
+const ACOES_CFG_ESCRITA = ['criar', 'editar', 'excluir'] as const;
+
 /**
  * As abas das Configuracoes que a pessoa abre (0141): admin todas; os demais
- * as `cfg_*` com Ver ou Editar, e Termos com qualquer `termos_modelos.*`.
+ * as `cfg_*` com qualquer acao (Ver, Criar, Editar, Excluir), e Termos com qualquer `termos_modelos.*`.
  * Devolve os hrefs, na ordem das abas.
  */
 export function abasConfiguracoesPermitidas(admin: boolean, permissoes: string[] | null | undefined): string[] | null {
   if (admin) return null; // null = todas
   const p = permissoes ?? [];
   const out: string[] = ABAS_CONFIGURACOES_BASE
-    .filter((a) => p.includes(`${a.chave}.ver`) || p.includes(`${a.chave}.editar`))
+    .filter((a) => ACOES_CFG.some((ac) => p.includes(`${a.chave}.${ac}`)))
     .map((a) => a.href);
   if (p.some((k) => k.startsWith('termos_modelos.'))) out.push('/configuracoes/termos');
   return out;
@@ -378,15 +381,27 @@ export function abaConfiguracaoDaRota(pathname: string) {
   return ABAS_CONFIGURACOES_BASE.find((a) => pathname === a.href || pathname.startsWith(a.href + '/'));
 }
 
+/** O que a pessoa pode fazer numa aba das Configuracoes (0141). */
+export function acoesNaAba(chave: string, admin: boolean, permissoes: string[] | null | undefined) {
+  const p = permissoes ?? [];
+  const tem = (a: string) => admin || p.includes(`${chave}.${a}`);
+  const criar = tem('criar');
+  const editar = tem('editar');
+  const excluir = tem('excluir');
+  return { criar, editar, excluir, soConsulta: !criar && !editar && !excluir };
+}
+
 /**
- * Ao marcar EDITAR numa aba das Configuracoes, o VER vem junto (a tela e a
- * leitura da lista dependem dele); ao tirar o VER, o EDITAR sai junto.
+ * Ao marcar CRIAR, EDITAR ou EXCLUIR numa aba das Configuracoes, o VER vem junto
+ * (a tela e a leitura da lista dependem dele); ao tirar o VER, as tres saem juntas.
  */
 export function coerenciaVerEditar(chave: string, valor: boolean): Record<string, boolean> {
   const [mod, acao] = chave.split('.');
   if (!mod.startsWith('cfg_')) return { [chave]: valor };
-  if (acao === 'editar' && valor) return { [chave]: true, [`${mod}.ver`]: true };
-  if (acao === 'ver' && !valor) return { [chave]: false, [`${mod}.editar`]: false };
+  if ((ACOES_CFG_ESCRITA as readonly string[]).includes(acao) && valor) return { [chave]: true, [`${mod}.ver`]: true };
+  if (acao === 'ver' && !valor) {
+    return { [chave]: false, ...Object.fromEntries(ACOES_CFG_ESCRITA.map((a) => [`${mod}.${a}`, false])) };
+  }
   return { [chave]: valor };
 }
 

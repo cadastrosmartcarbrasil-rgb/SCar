@@ -6,7 +6,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import {
-  mapaDeConcessoes, chaveDoExtra, extraParaBanco, type Concessoes, type ExtraUsuario, type PerfilAcesso,
+  acoesNaAba, mapaDeConcessoes, chaveDoExtra, extraParaBanco, type Concessoes, type ExtraUsuario, type PerfilAcesso,
 } from '@/lib/permissoes';
 
 export function useConcessoesPapeis() {
@@ -42,6 +42,15 @@ export function useMinhasPermissoes() {
 export function usePode(chave: string): boolean {
   const { data } = useMinhasPermissoes();
   return (data ?? []).includes(chave);
+}
+
+/**
+ * O que o usuario logado faz numa aba das Configuracoes (0141): incluir,
+ * alterar, excluir. O admin recebe tudo de `minhas_permissoes`.
+ */
+export function useAcoesNaAba(chave: string) {
+  const { data } = useMinhasPermissoes();
+  return acoesNaAba(chave, false, data);
 }
 
 export function useSalvarPermissoesPerfil() {

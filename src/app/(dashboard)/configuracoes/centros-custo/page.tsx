@@ -9,6 +9,7 @@ import { FormField, Input } from '@/components/ui/field';
 import {
   useCentrosCusto, useExcluirCentroCusto, useSaveCentroCusto, useUsoCentrosCusto,
 } from '@/hooks/use-financeiro';
+import { useAcoesNaAba } from '@/hooks/use-permissoes';
 import { ehCentroDoSistema, podeExcluirCentro, validarCentroCusto } from '@/lib/centros-custo';
 import type { CentrosCustoRow } from '@/lib/database.types';
 
@@ -19,6 +20,7 @@ export default function CentrosCustoPage() {
   const { data: uso } = useUsoCentrosCusto((centros ?? []).map((c) => c.id));
   const salvar = useSaveCentroCusto();
   const excluir = useExcluirCentroCusto();
+  const pode = useAcoesNaAba('cfg_centros_custo');
   const [ed, setEd] = useState<Edicao | null>(null);
 
   const original = ed?.id ? (centros ?? []).find((c) => c.id === ed.id) : undefined;
@@ -49,9 +51,11 @@ export default function CentrosCustoPage() {
           Centros de custo classificam os lançamentos do Financeiro e filtram o DRE. Os inativos deixam de
           ser oferecidos em lançamento novo, mas continuam nos relatórios.
         </p>
-        <Button onClick={() => setEd({ nome: '', codigo: '', ativo: true })}>
-          <Plus className="h-4 w-4" /> Novo centro de custo
-        </Button>
+        {pode.criar && (
+          <Button onClick={() => setEd({ nome: '', codigo: '', ativo: true })}>
+            <Plus className="h-4 w-4" /> Novo centro de custo
+          </Button>
+        )}
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-slate-200 bg-superficie">
@@ -92,9 +96,12 @@ export default function CentrosCustoPage() {
                   </td>
                   <td className="px-4 py-2">
                     <div className="flex justify-end gap-1">
+                      {pode.editar && (
                       <button onClick={() => editar(c)} className="rounded p-1.5 text-slate-500 hover:bg-slate-100" title="Editar">
                         <Pencil className="h-4 w-4" />
                       </button>
+                      )}
+                      {pode.excluir && (
                       <button
                         disabled={!podeExcluir}
                         title={
@@ -112,6 +119,7 @@ export default function CentrosCustoPage() {
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
+                      )}
                     </div>
                   </td>
                 </tr>
