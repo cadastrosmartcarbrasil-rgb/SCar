@@ -3,8 +3,10 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { segredoConfere } from '@/lib/baixa-banco';
 import { capturarEntidade } from '@/lib/mutual-captura-server';
 import { somarBlocosCarga } from '@/lib/mutual';
+import type { CobrancaImportacaoBloco } from '@/lib/database.types';
 import {
   ENTIDADES_DA_SINCRONIA, PAGINAS_MAXIMAS_SINCRONIA, LOTE_CARGA_AGENDADOR,
+  PAGINAS_MAXIMAS_INVOICE, LOTE_BOLETOS_AGENDADOR, modoCapturaInvoice,
   unidadesParaCarregar, equipesSemUnidade, resumoDaSincronia, type PassoSincronia,
 } from '@/lib/mutual-sincronia';
 
@@ -21,7 +23,9 @@ import {
 // 3) liga o vendedor de quem ficou sem (0095);
 // 4) importa o HISTORICO DE EVENTOS (0101) dos associados ja carregados — depois
 //    da carga, porque o associado novo so existe depois dela;
-// 5) relata as equipes NOVAS sem unidade: essas a rotina nao decide.
+// 5) importa o HISTORICO DE BOLETOS (0097/0099) — INVOICE capturado de forma
+//    incremental (completa aos domingos), importado em blocos de 2.000;
+// 6) relata as equipes NOVAS sem unidade: essas a rotina nao decide.
 //
 // Captura que falha NAO impede a carga: ela roda com o que ja estava capturado
 // (e re-executavel). Demora minutos — o script espera ate 1 h.
@@ -56,6 +60,38 @@ export async function POST(request: Request) {
           : r.erro ?? 'falhou',
       });
     }
+  }
+
+  // --------------------------------------------- boletos (INVOICE) incremental
+  // A marca e a ULTIMA captura de INVOICE da propria rotina que terminou inteira
+  // (sem erro); a da tela vem em blocos e nao prova que pegou tudo.
+  if (!body.sem_captura) {
+    const { data: marca } = await supabase
+      .from('mutual_sincronias')
+      .select('iniciada_em')
+      .eq('entidade', 'INVOICE').is('executada_por', null).is('erro', null)
+      .not('concluida_em', 'is', null)
+      .order('iniciada_em', { ascending: false }).limit(1).maybeSingle();
+    const modo = modoCapturaInvoice(marca?.iniciada_em ?? null, new Date());
+    const r = await capturarEntidade(supabase, base, token, 'INVOICE', {
+      maxPaginas: PAGINAS_MAXIMAS_INVOICE, usuarioId: null,
+      updatedAtGte: modo.completa ? undefined : modo.desde,
+    });
+    const parouNoTeto = r.ok && r.proxima_pagina !== null;
+    // Parar no teto NAO pode virar marca: a proxima rodada voltaria a ser incremental
+    // a partir de uma captura que nao pegou tudo.
+    if (parouNoTeto && r.sincronia_id) {
+      await supabase.from('mutual_sincronias')
+        .update({ erro: 'parou no teto de paginas' }).eq('id', r.sincronia_id as never);
+    }
+    passos.push({
+      etapa: 'captura INVOICE',
+      ok: r.ok && !parouNoTeto,
+      detalhe: r.ok
+        ? `${modo.completa ? `completa (${modo.motivo})` : `incremental desde ${modo.desde}`}: `
+          + `${r.registros} registro(s) em ${r.paginas} página(s)${parouNoTeto ? ' — PAROU NO TETO' : ''}`
+        : r.erro ?? 'falhou',
+    });
   }
 
   // ------------------------------------------------- unidades e equipes novas
@@ -146,6 +182,38 @@ export async function POST(request: Request) {
       ? { etapa: 'historico de eventos', ok: false, detalhe: error?.message ?? 'o banco não devolveu o resultado' }
       : { etapa: 'historico de eventos', ok: true,
           detalhe: `${r.gravados} gravado(s)/atualizado(s); ${r.importaveis} de ${r.lidos} com associado na base` });
+  }
+
+  // ------------------------------------------ historico de boletos (0097/0099)
+  // Passada inteira sobre o INVOICE capturado, em blocos pelo cursor: re-executavel,
+  // so regrava o que mudou (0096) e respeita o pago pelo banco (0117) e o
+  // renegociado/substituido (0121/0140), que os gatilhos protegem.
+  {
+    let cursor: string | null = null;
+    let lidos = 0, gravados = 0, blocos = 0;
+    let erro: string | null = null;
+    let fim = false;
+    for (let i = 0; i < 1000; i++) {
+      const resp: { data: CobrancaImportacaoBloco[] | null; error: { message: string } | null } =
+        await supabase.rpc('cobranca_importar_historico_mutual', {
+          p_cursor: cursor, p_lote: LOTE_BOLETOS_AGENDADOR, p_confirmar: true,
+        });
+      if (resp.error) { erro = resp.error.message; break; }
+      const b: CobrancaImportacaoBloco | undefined = (resp.data ?? [])[0];
+      if (!b) { fim = true; break; }
+      blocos += 1;
+      lidos += Number(b.lidos);
+      gravados += Number(b.gravados);
+      if (b.fim || !b.proximo_cursor) { fim = true; break; }
+      cursor = b.proximo_cursor;
+    }
+    passos.push({
+      etapa: 'historico de boletos',
+      ok: !erro && fim,
+      detalhe: erro
+        ? `${erro} (parou depois de ${blocos} bloco(s), ${gravados} gravado(s))`
+        : `${gravados} gravado(s)/atualizado(s) em ${lidos} lido(s), ${blocos} bloco(s)${fim ? '' : ' — NAO TERMINOU'}`,
+    });
   }
 
   const ok = passos.every((p) => p.ok);

@@ -1,7 +1,26 @@
 import { describe, it, expect } from 'vitest';
 import {
   ENTIDADES_DA_SINCRONIA, unidadesParaCarregar, equipesSemUnidade, resumoDaSincronia,
+  modoCapturaInvoice,
 } from './mutual-sincronia';
+
+describe('modoCapturaInvoice', () => {
+  // 23/10/2026 e sexta; 25/10/2026 e domingo (Sao Paulo)
+  const sexta = new Date('2026-10-23T06:20:00Z');
+  it('sem marca da rotina, captura tudo', () => {
+    expect(modoCapturaInvoice(null, sexta).completa).toBe(true);
+  });
+  it('com marca recente, incremental desde a marca menos 3 dias', () => {
+    expect(modoCapturaInvoice('2026-10-22T06:20:00Z', sexta)).toEqual({ completa: false, desde: '2026-10-19' });
+  });
+  it('no domingo, passada completa', () => {
+    expect(modoCapturaInvoice('2026-10-24T06:20:00Z', new Date('2026-10-25T06:20:00Z')).completa).toBe(true);
+  });
+  it('marca velha (rotina parada) ou ilegivel, completa', () => {
+    expect(modoCapturaInvoice('2026-10-10T06:20:00Z', sexta).completa).toBe(true);
+    expect(modoCapturaInvoice('xx', sexta).completa).toBe(true);
+  });
+});
 
 describe('ENTIDADES_DA_SINCRONIA', () => {
   it('a equipe vem antes e o veiculo por ultimo', () => {

@@ -29,6 +29,7 @@ export interface ResultadoCaptura {
   total_remoto: number | null;
   proxima_pagina: number | null;
   erro?: string;
+  sincronia_id?: number | string | null;  // a linha em mutual_sincronias desta captura
 }
 
 export async function capturarEntidade(
@@ -94,10 +95,12 @@ export async function capturarEntidade(
       proxima = pagina + 1;
     }
     await fechar();
-    return { ok: true, entidade, paginas, registros, total_remoto: total, proxima_pagina: proxima };
+    return { ok: true, entidade, paginas, registros, total_remoto: total, proxima_pagina: proxima,
+      sincronia_id: sinc?.id ?? null };
   } catch (e) {
     const erro = (e as Error).message;
     await fechar(erro);
-    return { ok: false, entidade, paginas, registros, total_remoto: total, proxima_pagina: proxima, erro };
+    return { ok: false, entidade, paginas, registros, total_remoto: total, proxima_pagina: proxima, erro,
+      sincronia_id: sinc?.id ?? null };
   }
 }

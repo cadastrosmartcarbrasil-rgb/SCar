@@ -67,3 +67,47 @@ export function resumoDaSincronia(passos: PassoSincronia[]): string {
   if (falhas.length === 0) return base;
   return `${base}; FALHOU: ${falhas.map((f) => `${f.etapa} (${f.detalhe})`).join('; ')}`;
 }
+
+// ---------------------------------------------------------------------------
+// BOLETOS (INVOICE) na rotina — 23/10/2026. O historico de boletos (0097/0099)
+// so era atualizado a mao (recapturar INVOICE + Importar), entao boleto pago,
+// vencido ou emitido no Mutual depois disso nao aparecia no SAC nem no painel.
+// INVOICE tem ~207 mil linhas: a captura e INCREMENTAL (`updated_at__gte`),
+// com uma passada COMPLETA por semana como rede de seguranca — o filtro e
+// declarado no swagger, mas nunca foi provado com o payload (ele nao traz
+// `updated_at`), entao a semanal corrige o que ele deixar passar.
+// ---------------------------------------------------------------------------
+
+/** Teto de paginas da captura de INVOICE (~420 paginas de 500 em 23/10/2026). */
+export const PAGINAS_MAXIMAS_INVOICE = 700;
+
+/** Bloco da importacao dos boletos no agendador. 4.000 levam ~1,3 s sem gravar
+ *  (medido em 23/10/2026); 2.000 deixa folga no teto de 8 s do service_role. */
+export const LOTE_BOLETOS_AGENDADOR = 2000;
+
+/** Folga do incremental: o que mudou ate N dias antes da ultima captura completa. */
+export const MARGEM_INCREMENTAL_DIAS = 3;
+
+export type ModoCapturaInvoice =
+  | { completa: true; motivo: string }
+  | { completa: false; desde: string };
+
+/**
+ * Como capturar os boletos nesta rodada. `ultimaCompleta` e o INICIO da ultima
+ * captura de INVOICE feita PELA ROTINA que terminou sem erro e sem parar no teto
+ * (captura manual da tela vem em blocos e nao prova que pegou tudo).
+ * Completa quando: nao ha marca, e domingo em Sao Paulo, ou a marca tem mais de
+ * 8 dias (a rotina ficou parada). Senao, incremental desde a marca menos a folga.
+ */
+export function modoCapturaInvoice(ultimaCompleta: string | null, agora: Date): ModoCapturaInvoice {
+  if (!ultimaCompleta) return { completa: true, motivo: 'primeira captura da rotina' };
+  const marca = new Date(ultimaCompleta);
+  if (Number.isNaN(marca.getTime())) return { completa: true, motivo: 'marca ilegivel' };
+  const domingo = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Sao_Paulo', weekday: 'short' })
+    .format(agora) === 'Sun';
+  if (domingo) return { completa: true, motivo: 'passada semanal (domingo)' };
+  const dias = (agora.getTime() - marca.getTime()) / 86_400_000;
+  if (dias > 8) return { completa: true, motivo: `ultima captura completa ha ${Math.floor(dias)} dias` };
+  const desde = new Date(marca.getTime() - MARGEM_INCREMENTAL_DIAS * 86_400_000);
+  return { completa: false, desde: desde.toISOString().slice(0, 10) };
+}

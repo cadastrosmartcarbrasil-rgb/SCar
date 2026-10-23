@@ -722,7 +722,7 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 ### Estado de validação (fim da fase)
 - **Migrations `0001`..`0141`** + `schema.sql` consolidado aplicam limpos no harness local.
 - **118 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 1157 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Vitest: 1161 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Os portais e páginas públicas
@@ -3590,7 +3590,14 @@ manda o link sozinho. Decisões do usuário: a equipe pode **liberar sem revisto
 - **VPS:** `crontab -e` → `20 3 * * * /opt/scar/scripts/mutual-sincronizar.sh` (log em
   `/var/log/scar-mutual.log`). Rodar à mão a primeira vez e conferir o log. Depois da carga e dos
   vendedores, importa o histórico de eventos (0101) — passo `historico de eventos` no log.
-  ⚠️ O histórico de BOLETOS (0097/0099, INVOICE) ainda NÃO está na rotina: recapturar e importar à mão.
+  **Boletos na rotina (23/10/2026):** depois das entidades, captura INVOICE **incremental**
+  (`updated_at__gte` = início da última captura completa DA ROTINA − 3 dias; `modoCapturaInvoice`,
+  `src/lib/mutual-sincronia.ts`, testada) com **passada completa aos domingos**, na primeira rodada e se
+  a marca tiver mais de 8 dias — o filtro do Mutual nunca foi provado com o payload, a semanal corrige.
+  A marca é `mutual_sincronias` da rotina (`executada_por` nulo, sem erro); captura que para no teto
+  (700 páginas) é gravada com erro e não vira marca. Depois das cargas, importa o histórico de
+  boletos inteiro em blocos de 2.000 (`cobranca_importar_historico_mutual`, ~1,3 s por 4.000) — passo
+  `historico de boletos` no log. A 1ª rodada após o deploy é a completa (~420 páginas, ~15 min).
 - **No corte de dezembro: tirar a linha do crontab** (item do checklist pós-corte).
 
 ## A CARGA EM BLOCOS (0094) e as MOTOS pela tela — leia antes de carregar outra unidade
