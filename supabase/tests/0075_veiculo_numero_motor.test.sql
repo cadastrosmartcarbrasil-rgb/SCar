@@ -56,6 +56,8 @@ begin
     crlv_qrcode = 'https://gov.br/crlv/xyz', plano_id = pl, vendedor_id = v_id,
     adesao_forma = 'VENDEDOR_NA_HORA', adesao_valor = 350, adesao_recebida_em = current_date
   where id = l_id;
+  insert into cotacoes (lead_id, fipe, tipo_veiculo_id, total_mensalidade, taxa_adesao)
+    values (l_id, 102077, tv, 150, 350);  -- 0145: adesao pela tabela
 
   insert into vistorias (lead_id, tipo, status, data_vistoria)
     values (l_id, 'inicial', 'PENDENTE', current_date) returning id into vist_id;
@@ -90,6 +92,8 @@ begin
     crlv_qrcode = 'https://gov.br/crlv/abc', plano_id = pl, vendedor_id = v_id,
     adesao_forma = 'VENDEDOR_NA_HORA', adesao_valor = 350, adesao_recebida_em = current_date
   where id = l_id;
+  insert into cotacoes (lead_id, fipe, tipo_veiculo_id, total_mensalidade, taxa_adesao)
+    values (l_id, 45000, tv, 150, 350);  -- 0145: adesao pela tabela
 
   insert into vistorias (lead_id, tipo, status, data_vistoria)
     values (l_id, 'inicial', 'PENDENTE', current_date) returning id into vist_id;

@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import {
-  AlertTriangle, ArrowLeft, Ban, Car, ClipboardList, DollarSign, FileSignature, FileText, LifeBuoy, Pencil, UserRound,
+  AlertTriangle, ArrowLeft, Ban, Car, ClipboardList, DollarSign, FileSignature, FileText, LifeBuoy, Pencil, ReceiptText, UserRound,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { AlertasVeiculo } from '@/components/veiculos/alertas-veiculo';
@@ -17,6 +17,7 @@ import {
 import { TermosDoCadastro } from '@/components/termos/termos-do-cadastro';
 import { usePode } from '@/hooks/use-permissoes';
 import { CancelamentosRegistrados, ModalCancelamentoVeiculo } from '@/components/veiculos/cancelamento-veiculo';
+import { ModalCarne } from '@/components/cobrancas/carne-veiculo';
 import { useVeiculoFicha } from '@/hooks/use-vida-cadastro';
 import { primeiraAtivacao, statusVeiculoResumo } from '@/lib/sac';
 import { formatarDocumento } from '@/lib/documento';
@@ -31,6 +32,11 @@ export default function FichaVeiculo({ params }: { params: { id: string } }) {
   const verTermos = usePode('termos.ver');
   const podeCancelar = usePode('veiculos.cancelar');
   const [cancelando, setCancelando] = useState(false);
+  // 0145: carne de mensalidades (cobranca, Auditoria ou matriz; o banco confere)
+  const podeCarneCobranca = usePode('cobranca.criar');
+  const podeCarneAuditoria = usePode('vendas.fechar');
+  const podeCarne = podeCarneCobranca || podeCarneAuditoria;
+  const [carne, setCarne] = useState(false);
 
   if (isLoading) return <p className="text-sm text-slate-500">Carregando veículo...</p>;
   if (error) return <p className="text-sm text-rose-600">Não foi possível carregar: {(error as Error).message}</p>;
@@ -87,6 +93,12 @@ export default function FichaVeiculo({ params }: { params: { id: string } }) {
           >
             <Pencil className="h-4 w-4" /> Editar cadastro
           </Link>
+          {podeCarne && !v.cobranca_externa && !['inativo', 'baixado', 'excluido', 'suspenso'].includes(v.status) && (
+            <button onClick={() => setCarne(true)}
+              className="inline-flex items-center gap-1 rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50">
+              <ReceiptText className="h-4 w-4" /> Carnê / boletos
+            </button>
+          )}
           {podeCancelar && !['inativo', 'baixado', 'excluido'].includes(v.status) && (
             <button onClick={() => setCancelando(true)}
               className="inline-flex items-center gap-1 rounded-md border border-rose-300 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-50">
@@ -110,6 +122,16 @@ export default function FichaVeiculo({ params }: { params: { id: string } }) {
           </button>
         ))}
       </div>
+
+      {carne && (
+        <ModalCarne
+          veiculo={{
+            id: v.id, placa: v.placa, nome: v.clientes?.nome_razao_social ?? '',
+            celular: (v.clientes as { celular?: string | null } | null)?.celular ?? null,
+          }}
+          onClose={() => setCarne(false)}
+        />
+      )}
 
       {cancelando && (
         <ModalCancelamentoVeiculo veiculo={v} onClose={() => setCancelando(false)} />

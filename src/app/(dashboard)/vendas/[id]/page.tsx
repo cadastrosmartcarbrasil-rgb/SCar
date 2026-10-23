@@ -12,7 +12,10 @@ import { EditarCotacao } from '@/components/vendas/editar-cotacao';
 import {
   useLead, useCotacoes, useHistoricoLead, useMoverLead, useAutorizarEntrada,
 } from '@/hooks/use-vendas';
-import { Input } from '@/components/ui/field';
+import { FormField, Input, Select } from '@/components/ui/field';
+import { ModalCarne, SeletorMesesCarne } from '@/components/cobrancas/carne-veiculo';
+import { DIAS_VENCIMENTO, MESES_CARNE_PADRAO, vencimentoPadraoAdesao } from '@/lib/carne';
+import { hojeSaoPaulo } from '@/lib/permissoes';
 import { Button } from '@/components/ui/button';
 import { ESTEIRA, STATUS_LEAD, acoesDoLead, podeEditarCotacao } from '@/lib/crm';
 import type { IntencaoAcao } from '@/lib/crm';
@@ -40,6 +43,11 @@ export default function LeadDetailPage() {
   const faltando = pendencias((checklist ?? []).map((c) => ({ ...c, detalhe: c.detalhe ?? null })));
 
   const [cpf, setCpf] = useState('');
+  // 0145: na aprovacao — dia de vencimento, boleto da adesao e o carne.
+  const [diaVenc, setDiaVenc] = useState<number>(10);
+  const [vencAdesao, setVencAdesao] = useState<string>(() => vencimentoPadraoAdesao(hojeSaoPaulo()));
+  const [mesesCarne, setMesesCarne] = useState<number>(MESES_CARNE_PADRAO);
+  const [carne, setCarne] = useState<{ veiculoId: string; meses: number } | null>(null);
   const [editando, setEditando] = useState<CotacoesRow | null>(null);
   const [perdendo, setPerdendo] = useState(false);
   const [colhendoAceite, setColhendoAceite] = useState<CotacoesRow | null>(null);
@@ -61,9 +69,20 @@ export default function LeadDetailPage() {
     });
   }
 
+  const adesaoPelaSmartCar = lead.adesao_forma === 'BOLETO' || lead.adesao_forma === 'PIX';
+
   function autorizarEntrada() {
-    autorizar.mutate({ leadId: lead!.id, cpfCnpj: cpf || lead!.cpf_cnpj || null }, {
-      onSuccess: () => toast.success('Entrada autorizada - veículo cadastrado na base'),
+    autorizar.mutate({
+      leadId: lead!.id, cpfCnpj: cpf || lead!.cpf_cnpj || null,
+      diaVencimento: diaVenc, vencimentoAdesao: adesaoPelaSmartCar ? vencAdesao : null,
+    }, {
+      onSuccess: (veiculoId) => {
+        toast.success('Entrada autorizada - veículo cadastrado na base');
+        // O carne (e o boleto da adesao) sai NO ATO da aprovacao.
+        if (veiculoId && (mesesCarne > 0 || adesaoPelaSmartCar)) {
+          setCarne({ veiculoId, meses: mesesCarne });
+        }
+      },
       onError: (e) => toast.error(e.message),
     });
   }
@@ -212,6 +231,25 @@ export default function LeadDetailPage() {
               )}
               <label className="text-xs text-amber-800">CPF/CNPJ do titular (confirme antes de autorizar)</label>
               <Input value={cpf} onChange={(e) => setCpf(e.target.value)} placeholder={lead.cpf_cnpj ?? 'Somente números'} className="mt-0" />
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <FormField label="Dia de vencimento da mensalidade">
+                  <Select value={String(diaVenc)} onChange={(e) => setDiaVenc(Number(e.target.value))}>
+                    {DIAS_VENCIMENTO.map((d) => <option key={d} value={d}>Dia {d}</option>)}
+                  </Select>
+                </FormField>
+                <FormField label="Carnê de mensalidades">
+                  <SeletorMesesCarne valor={mesesCarne} onChange={setMesesCarne} permitirNenhum />
+                </FormField>
+                {adesaoPelaSmartCar && (
+                  <FormField label="Vencimento do boleto da adesão">
+                    <Input type="date" value={vencAdesao} min={hojeSaoPaulo()} onChange={(e) => setVencAdesao(e.target.value)} />
+                  </FormField>
+                )}
+              </div>
+              <p className="text-[11.5px] text-amber-800">
+                Adesão de <b className="tnum">{formatCurrency(Number(lead.adesao_valor ?? 0))}</b> pela tabela (cotação aceita)
+                {adesaoPelaSmartCar ? ' — o boleto (com PIX) é emitido pela Smart Car junto com o carnê.' : '.'}
+              </p>
               <Button
                 onClick={autorizarEntrada}
                 disabled={autorizar.isPending || faltando.length > 0}
@@ -228,10 +266,27 @@ export default function LeadDetailPage() {
         </div>
       )}
 
+      {carne && (
+        <ModalCarne
+          veiculo={{ id: carne.veiculoId, placa: lead.placa, nome: lead.nome, celular: lead.celular, email: lead.email }}
+          mesesIniciais={carne.meses}
+          emitirAoAbrir
+          onClose={() => setCarne(null)}
+        />
+      )}
+
       {lead.status === 'ATIVO' && (
         <div className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
           <CheckCircle2 className="h-4 w-4" /> Ativo na base.
-          {lead.veiculo_id && <Link href="/veiculos" className="ml-auto font-medium underline">Ver veículo</Link>}
+          {lead.veiculo_id && (
+            <span className="ml-auto flex items-center gap-3">
+              <button type="button" className="font-medium underline"
+                onClick={() => setCarne({ veiculoId: lead.veiculo_id!, meses: MESES_CARNE_PADRAO })}>
+                Carnê / boletos
+              </button>
+              <Link href={`/veiculos/${lead.veiculo_id}`} className="font-medium underline">Ver veículo</Link>
+            </span>
+          )}
         </div>
       )}
 

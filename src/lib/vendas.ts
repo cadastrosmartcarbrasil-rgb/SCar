@@ -61,9 +61,9 @@ export type FormaAdesao = 'VENDEDOR_NA_HORA' | 'BOLETO' | 'PIX' | 'CARTAO';
 
 export const FORMA_ADESAO_ROTULO: Record<FormaAdesao, string> = {
   VENDEDOR_NA_HORA: 'Vendedor recebeu na hora',
-  BOLETO: 'Boleto',
-  PIX: 'PIX',
-  CARTAO: 'Cartão',
+  BOLETO: 'Boleto emitido pela Smart Car (boleto + PIX)',
+  PIX: 'PIX emitido pela Smart Car (boleto + PIX)',
+  CARTAO: 'Cartão (maquininha ou link) — baixa manual',
 };
 
 /** O dinheiro passou pela conta da associacao? So entao entra no DRE. */
@@ -110,7 +110,9 @@ export function ratearAdesao(
     vendedor: doVendedor,
     associacao: arredondarMoeda(total - doVendedor),
     entraNoCaixa: true,
-    resumo: `Entra como receita e ${pct(taxaVendedor || 0)} sai depois no repasse ao vendedor.`,
+    resumo: forma === 'CARTAO'
+      ? `Entra como conta a receber (baixa manual) e ${pct(taxaVendedor || 0)} sai depois no repasse ao vendedor.`
+      : `A Smart Car emite o boleto (com PIX) na aprovação; quando o associado pagar, ${pct(taxaVendedor || 0)} vira comissão do vendedor.`,
   };
 }
 

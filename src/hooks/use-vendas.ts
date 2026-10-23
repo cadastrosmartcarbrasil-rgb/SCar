@@ -236,13 +236,32 @@ export function useSalvarCotacao() {
   });
 }
 
+// 0145: a adesao da TABELA (cotacao aceita, ja com o desconto aprovado).
+export function useAdesaoTabela(leadId: string | null | undefined) {
+  const supabase = createClient();
+  return useQuery<number | null>({
+    queryKey: ['vendas', 'cotacoes', leadId ?? 'none', 'adesao-tabela'],
+    enabled: !!leadId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('lead_adesao_tabela', { p_lead_id: leadId as string });
+      if (error) throw error;
+      return data == null ? null : Number(data);
+    },
+  });
+}
+
 // Auditoria autoriza a entrada na base (cria cliente + veiculo). So papel auditoria/admin.
 export function useAutorizarEntrada() {
   const supabase = createClient();
   const qc = useQueryClient();
-  return useMutation<string, Error, { leadId: string; cpfCnpj?: string | null }>({
-    mutationFn: async ({ leadId, cpfCnpj }) => {
-      const { data, error } = await supabase.rpc('autorizar_entrada_lead', { p_lead_id: leadId, p_cpf_cnpj: cpfCnpj ?? null });
+  return useMutation<string, Error, {
+    leadId: string; cpfCnpj?: string | null; diaVencimento?: number | null; vencimentoAdesao?: string | null;
+  }>({
+    mutationFn: async ({ leadId, cpfCnpj, diaVencimento, vencimentoAdesao }) => {
+      const { data, error } = await supabase.rpc('autorizar_entrada_lead', {
+        p_lead_id: leadId, p_cpf_cnpj: cpfCnpj ?? null,
+        p_dia_vencimento: diaVencimento ?? null, p_vencimento_adesao: vencimentoAdesao ?? null,
+      });
       if (error) throw error;
       return data as unknown as string;
     },

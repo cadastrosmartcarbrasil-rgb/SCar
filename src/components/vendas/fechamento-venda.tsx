@@ -11,6 +11,7 @@ import { FormField, Input, MoneyInput, Select } from '@/components/ui/field';
 import {
   useBuscarAssociadoPorDocumento, useChecklistLead, useSalvarFichaLead, useUploadCrlv,
   useUrlAssinadaVendas, useVendedoresDaRegional,
+  useAdesaoTabela,
 } from '@/hooks/use-vendas';
 import { usePlanos } from '@/hooks/use-precificacao';
 import { buscarCep } from '@/lib/cep';
@@ -102,8 +103,11 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
     () => (vendedores ?? []).find((v) => v.id === form.vendedor_id),
     [vendedores, form.vendedor_id],
   );
+  // 0145: a adesao e a da TABELA (cotacao aceita, com o desconto aprovado).
+  const { data: adesaoTabela } = useAdesaoTabela(lead.id);
+  const valorAdesao = adesaoTabela ?? Number(form.adesao_valor ?? 0);
   const rateio = ratearAdesao(
-    Number(form.adesao_valor ?? 0),
+    valorAdesao,
     (form.adesao_forma ?? null) as FormaAdesao | null,
     Number(vendedorSel?.taxa_comissao_adesao ?? 0),
   );
@@ -516,8 +520,15 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
                 ))}
               </Select>
             </FormField>
-            <FormField label="Valor da adesão *">
-              <MoneyInput value={form.adesao_valor ?? null} onChange={(v) => set({ adesao_valor: v })} />
+            <FormField label="Valor da adesão (tabela)">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
+                {adesaoTabela != null
+                  ? <b className="tnum">{formatCurrency(adesaoTabela)}</b>
+                  : <span className="text-amber-700">Gere a cotação: a adesão sai da tabela</span>}
+              </div>
+              <p className="mt-1 text-[11px] text-slate-500">
+                Vem da cotação aceita. Desconto só pela alçada, na cotação.
+              </p>
             </FormField>
             <FormField label="Forma de recebimento *">
               <Select value={form.adesao_forma ?? ''} onChange={(e) => set({ adesao_forma: (e.target.value || null) as LeadsRow['adesao_forma'] })}>

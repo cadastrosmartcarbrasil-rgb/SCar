@@ -117,7 +117,7 @@ export function useVeiculoFicha(id: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('veiculos')
-        .select('*, clientes(id, nome_razao_social, matricula, cpf_cnpj, tipo_pessoa), planos_protecao(nome), tipos_veiculo(nome), regionais!veiculos_regional_id_fkey(nome)')
+        .select('*, clientes(id, nome_razao_social, matricula, cpf_cnpj, tipo_pessoa, celular, email), planos_protecao(nome), tipos_veiculo(nome), regionais!veiculos_regional_id_fkey(nome)')
         .eq('id', id)
         .maybeSingle();
       if (error) throw error;

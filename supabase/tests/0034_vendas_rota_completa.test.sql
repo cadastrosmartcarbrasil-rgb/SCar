@@ -72,6 +72,9 @@ begin
     plano_id = pl, vendedor_id = v_id,
     adesao_forma = 'VENDEDOR_NA_HORA', adesao_valor = 350, adesao_recebida_em = current_date
   where id = l_id;
+  -- 0145: a adesao sai da cotacao (tabela), nao do que foi digitado
+  insert into cotacoes (lead_id, fipe, tipo_veiculo_id, total_mensalidade, taxa_adesao)
+    values (l_id, 45000, tv, 150, 350);
 
   -- vistoria com fotos (ainda sem veiculo: nasce no lead)
   insert into vistorias (lead_id, tipo, status, data_vistoria)
@@ -139,6 +142,8 @@ begin
           'XYZ9K88', '9BWZZZ377VT004252', '98765432109', 'Fiat', 'Argo', 2022, 2023, 'Branco',
           60000, tv, 'https://gov.br/crlv/abc', pl, v_id, r_id, u_id, 'EM_AUDITORIA', 'BOLETO', 500)
   returning id into l_id;
+  insert into cotacoes (lead_id, fipe, tipo_veiculo_id, total_mensalidade, taxa_adesao)
+    values (l_id, 60000, tv, 180, 500);
 
   insert into vistorias (lead_id, tipo, status) values (l_id, 'inicial', 'PENDENTE') returning id into vist_id;
   insert into vistoria_anexos (vistoria_id, url, tipo) values
@@ -148,9 +153,14 @@ begin
 
   veic := autorizar_entrada_lead(l_id);
 
-  select count(*) into n from lancamentos_financeiros
-   where tipo = 'RECEITA' and observacoes like '%' || l_id::text || '%';
-  assert n = 1, 'adesao no boleto deveria virar titulo a receber, achei ' || n;
+  -- 0145: a Smart Car emite o boleto da adesao (titulo do SCar); a comissao
+  -- de adesao nasce quando o associado PAGA.
+  select count(*) into n from titulos_financeiros where adesao_lead_id = l_id and valor = 500;
+  assert n = 1, 'adesao no boleto deveria virar titulo do SCar, achei ' || n;
+  select count(*) into n from comissoes_vendas where veiculo_id = veic;
+  assert n = 0, 'a comissao nao nasce antes do pagamento';
+  update titulos_financeiros set status = 'pago', valor_pago = 500, data_pagamento = current_date
+   where adesao_lead_id = l_id;
 
   select valor_comissao into v_num from comissoes_vendas
    where veiculo_id = veic and is_adesao;
@@ -158,7 +168,7 @@ begin
   select count(*) into n from comissoes_vendas
    where veiculo_id = veic and is_adesao and status_pagamento = 'pendente';
   assert n = 1, 'comissao deveria nascer pendente para repasse';
-  raise notice 'OK adesao pelo nosso sistema vira receita + comissao pendente';
+  raise notice 'OK adesao pelo nosso sistema vira boleto + comissao pendente no pagamento';
 
   -- ------------------------------------------------- repasse ao vendedor
   select id into v_txt from comissoes_vendas where veiculo_id = veic and is_adesao;

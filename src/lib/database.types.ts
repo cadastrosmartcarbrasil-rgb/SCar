@@ -1453,6 +1453,8 @@ export type TitulosFinanceirosRow = Timestamps & {
   // 0121: boleto novo de 2a via / acordo (sem fatura)
   renegociacao_id?: string | null;
   renegociacao_parcela?: number | null;
+  /** 0145: boleto da TAXA DE ADESAO desta venda (lead). */
+  adesao_lead_id?: string | null;
 };
 
 // 0121: renegociacao (2a via vencida / acordo) — boleto novo do SCar + baixa dos originais
@@ -4617,6 +4619,17 @@ export type Database = {
       };
       registrar_baixa_original: { Args: { p_origem_id: string; p_status: string; p_erro?: string | null }; Returns: string };
       renegociacoes_do_cliente: { Args: { p_cliente_id: string }; Returns: RenegociacaoCliente[] };
+      gerar_carne_veiculo: {
+        Args: { p_veiculo_id: string; p_meses: number };
+        Returns: {
+          titulo_id: string; competencia: string | null; vencimento: string; valor: number;
+          adesao: boolean; registrado: boolean;
+        }[];
+      };
+      lead_adesao_tabela: {
+        Args: { p_lead_id: string };
+        Returns: number | null;
+      };
       pro_rata_veiculo: {
         Args: { p_veiculo_id: string; p_ate: string; p_desde?: string | null };
         Returns: ProRataVeiculo[];
@@ -5401,7 +5414,10 @@ export type Database = {
         Returns: string;
       };
       autorizar_entrada_lead: {
-        Args: { p_lead_id: string; p_cpf_cnpj?: string | null };
+        Args: {
+          p_lead_id: string; p_cpf_cnpj?: string | null;
+          p_dia_vencimento?: number | null; p_vencimento_adesao?: string | null;
+        };
         Returns: string;
       };
       substituir_tabela_precos: {
