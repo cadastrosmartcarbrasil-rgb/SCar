@@ -2,7 +2,7 @@
 // Fonte unica reutilizada pelo SAC interno e pelo Portal do Associado.
 import {
   AlertTriangle, LifeBuoy, ClipboardCheck, Pencil, Wallet,
-  MessageCircle, Mail, Ticket, FileSignature,
+  MessageCircle, Mail, Ticket, FileSignature, Ban,
   type LucideIcon,
 } from 'lucide-react';
 import type { TipoAtendimento, StatusAtendimento, StatusEvento } from '@/lib/database.types';
@@ -15,10 +15,11 @@ import type { TipoAtendimento, StatusAtendimento, StatusEvento } from '@/lib/dat
 //             (O antigo card "2a via de Boleto" saiu em 22/10/2026: duplicava este
 //             e ainda GERAVA faturas da competencia pelo motor antigo.)
 // 'whatsapp' / 'email' sao disparos rapidos ao associado;
-// 'termos'   emite e consulta os termos do veiculo (0123).
+// 'termos'   emite e consulta os termos do veiculo (0123);
+// 'cancelamento' cancela SO este veiculo, com motivo, retorno e pro-rata (0144).
 export type ModoServico =
   | 'chamado' | 'evento' | 'assistencia'
-  | 'editar' | 'financeiro' | 'whatsapp' | 'email' | 'termos';
+  | 'editar' | 'financeiro' | 'whatsapp' | 'email' | 'termos' | 'cancelamento';
 
 export interface ServicoSac {
   id: string;
@@ -87,8 +88,9 @@ export const SERVICOS_SAC: ServicoSac[] = [
     subtipos: ['Vistoria', 'Inclusao de acessorio'],
   },
   {
-    id: 'cancelamento', titulo: 'Cancelamento', descricao: 'Solicitação de cancelamento do item',
-    icon: ClipboardCheck, cor: 'bg-slate-100 text-slate-600', modo: 'chamado',
+    id: 'cancelamento', titulo: 'Cancelamento de Proteção Veicular',
+    descricao: 'Cancela só este veículo: motivo, retorno e pró-rata',
+    icon: Ban, cor: 'bg-rose-50 text-rose-600', modo: 'cancelamento',
     tipos: [{ value: 'CANCELAMENTO', label: 'Cancelamento' }],
   },
 ];

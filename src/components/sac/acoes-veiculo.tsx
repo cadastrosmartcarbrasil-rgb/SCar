@@ -3,13 +3,15 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import {
-  Wallet, MessageCircle, Mail, Pencil, Barcode, QrCode, Copy, Repeat2, Loader2,
+  Wallet, MessageCircle, Mail, Pencil, Barcode, QrCode, Copy, Repeat2, Loader2, Calculator,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { FormField, Input, Textarea, MoneyInput } from '@/components/ui/field';
 import { useTitulosCliente, useAjustarTitulo } from '@/hooks/use-protocolos';
 import { BoletosNegociados, ModalNegociarBoletos, useContatoAssociado } from '@/components/cobrancas/negociacao-boletos';
+import { ModalBoletoProRata } from '@/components/veiculos/cancelamento-veiculo';
+import { usePode } from '@/hooks/use-permissoes';
 import { ehLinhaSicredi, mensagemDoBoleto, motivoNaoNegociavel } from '@/lib/renegociacao';
 import {
   linkWhatsAppAssociado, mensagemPadrao, assuntoPadrao, linkEmail,
@@ -63,6 +65,9 @@ export function HistoricoFinanceiroLista({
   // 0121: selecao dos boletos em aberto para 2a via / negociacao (Mutual e SCar).
   const [marcados, setMarcados] = useState<Set<string>>(new Set());
   const [negociando, setNegociando] = useState<TituloCliente[] | null>(null);
+  // 0144: boleto pro-rata avulso, pela data de vencimento do veiculo.
+  const [proRata, setProRata] = useState(false);
+  const podeCobranca = usePode('cobranca.ver');
   const negociaveis = (titulos ?? []).filter((t) => !motivoNaoNegociavel(t));
   const selecionados = negociaveis.filter((t) => marcados.has(t.id));
   const alternar = (id: string) => setMarcados((m) => {
@@ -77,6 +82,13 @@ export function HistoricoFinanceiroLista({
         <p className="text-sm text-slate-400">Nenhum boleto encontrado — nem no SCar, nem no histórico do Mutual.</p>
       )}
       <BoletosNegociados clienteId={clienteId} />
+      {veiculoId && podeCobranca && (
+        <div className="mb-2 flex justify-end">
+          <Button variant="secondary" className="px-2.5 py-1 text-xs" onClick={() => setProRata(true)}>
+            <Calculator className="h-3.5 w-3.5" /> Boleto pró-rata
+          </Button>
+        </div>
+      )}
       {negociaveis.length > 0 && (
         <div className="sticky top-0 z-10 mb-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-cyan-200 bg-superficie px-3 py-2">
           <p className="text-xs text-slate-600">
@@ -211,6 +223,10 @@ export function HistoricoFinanceiroLista({
         ))}
       </ul>
 
+      {proRata && veiculoId && (
+        <ModalBoletoProRata veiculoId={veiculoId} placa={(titulos ?? []).find((t) => t.veiculo_id === veiculoId)?.placa}
+          onClose={() => setProRata(false)} />
+      )}
       {editando && <ModalEditarBoleto titulo={editando} onClose={() => setEditando(null)} />}
       {negociando && (
         <ModalNegociarBoletos clienteId={clienteId} selecionados={negociando}

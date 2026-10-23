@@ -291,6 +291,8 @@ export type VeiculosRow = Timestamps & {
   placa: string | null;
   /** 0136 — veiculo 0 km / placa pendente. Fica true como historico quando a placa chega. */
   zero_km: boolean;
+  /** 0144 — data do pedido de cancelamento; sem evento nem 24h a partir dela. Limpa ao reativar. */
+  cancelado_em: string | null;
   chassi: string | null;
   renavam: string | null;
   numero_motor: string | null;
@@ -1477,7 +1479,7 @@ export type OrigemRenegociacao = {
 };
 export type RenegociacaoCliente = {
   id: string;
-  tipo: 'SEGUNDA_VIA' | 'ACORDO';
+  tipo: 'SEGUNDA_VIA' | 'ACORDO' | 'PRO_RATA';
   situacao: 'EMITINDO' | 'EMITIDA' | 'ERRO';
   erro: string | null;
   valor_original: number;
@@ -1488,6 +1490,40 @@ export type RenegociacaoCliente = {
   created_at: string;
   boletos: BoletoRenegociacao[];
   origens: OrigemRenegociacao[];
+};
+
+// 0144: pro-rata pela data de vencimento do veiculo (ciclo pos-pago)
+export type ProRataVeiculo = {
+  valor_mensal: number;
+  dia_vencimento: number;
+  ciclo_inicio: string;
+  ciclo_fim: string;
+  vencimento_ciclo: string;
+  desde: string;
+  ate: string;
+  dias_ciclo: number;
+  dias_usados: number;
+  valor: number;
+};
+
+// 0144: o cancelamento do veiculo (trilha)
+export type CancelamentoVeiculo = {
+  id: string;
+  data_cancelamento: string;
+  motivo: string;
+  previsao_retorno: boolean;
+  data_retorno: string | null;
+  status_anterior: string;
+  cobranca_externa: boolean;
+  pro_rata: ProRataVeiculo | null;
+  lead_retorno_id: string | null;
+  renegociacao_id: string | null;
+  renegociacao_situacao: 'EMITINDO' | 'EMITIDA' | 'ERRO' | null;
+  faturas_ajustadas: number;
+  observacao: string | null;
+  criado_por: string | null;
+  created_at: string;
+  reativado_em: string | null;
 };
 
 // 0025: fila de envio ao banco (remessa de cobranca)
@@ -3870,6 +3906,14 @@ export type Database = {
         valor_original: number; valor_total: number; observacao: string | null; situacao: string;
         erro: string | null; integracao_id: string | null; criado_por: string | null;
         created_at: string; emitida_em: string | null;
+        veiculo_id: string | null; pro_rata: Json | null;
+      }>;
+      veiculo_cancelamentos: TableDef<{
+        id: string; veiculo_id: string; cliente_id: string; regional_id: string | null;
+        data_cancelamento: string; motivo: string; previsao_retorno: boolean; data_retorno: string | null;
+        status_anterior: string; cobranca_externa: boolean; pro_rata: Json | null;
+        lead_retorno_id: string | null; renegociacao_id: string | null; faturas_ajustadas: number;
+        observacao: string | null; criado_por: string | null; created_at: string; reativado_em: string | null;
       }>;
       cobranca_renegociacao_origens: TableDef<{
         id: string; renegociacao_id: string; origem: string; boleto_historico_id: string | null;
@@ -4573,6 +4617,26 @@ export type Database = {
       };
       registrar_baixa_original: { Args: { p_origem_id: string; p_status: string; p_erro?: string | null }; Returns: string };
       renegociacoes_do_cliente: { Args: { p_cliente_id: string }; Returns: RenegociacaoCliente[] };
+      pro_rata_veiculo: {
+        Args: { p_veiculo_id: string; p_ate: string; p_desde?: string | null };
+        Returns: ProRataVeiculo[];
+      };
+      cancelar_veiculo: {
+        Args: {
+          p_veiculo_id: string; p_data: string; p_motivo: string;
+          p_previsao_retorno?: boolean; p_data_retorno?: string | null; p_observacao?: string | null;
+        };
+        Returns: string;
+      };
+      criar_renegociacao_pro_rata: {
+        Args: {
+          p_veiculo_id: string; p_ate: string; p_desde?: string | null; p_cobrar?: boolean;
+          p_vencimento?: string | null; p_origens?: Json; p_cancelamento_id?: string | null;
+          p_observacao?: string | null;
+        };
+        Returns: string | null;
+      };
+      cancelamentos_do_veiculo: { Args: { p_veiculo_id: string }; Returns: CancelamentoVeiculo[] };
       revistoria_exigida: { Args: { p_cliente_id: string; p_origens?: Json | null }; Returns: RevistoriaExigida[] };
       solicitar_revistoria_cobranca: { Args: { p_veiculo_id: string; p_origem?: string }; Returns: RevistoriaSolicitada[] };
       revistoria_por_token: { Args: { p_token: string }; Returns: RevistoriaPublica[] };

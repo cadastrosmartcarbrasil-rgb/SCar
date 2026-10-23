@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import {
-  AlertTriangle, ArrowLeft, Car, ClipboardList, DollarSign, FileSignature, FileText, LifeBuoy, Pencil, UserRound,
+  AlertTriangle, ArrowLeft, Ban, Car, ClipboardList, DollarSign, FileSignature, FileText, LifeBuoy, Pencil, UserRound,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { AlertasVeiculo } from '@/components/veiculos/alertas-veiculo';
@@ -16,6 +16,7 @@ import {
 } from '@/components/cadastro/vida-cadastro';
 import { TermosDoCadastro } from '@/components/termos/termos-do-cadastro';
 import { usePode } from '@/hooks/use-permissoes';
+import { CancelamentosRegistrados, ModalCancelamentoVeiculo } from '@/components/veiculos/cancelamento-veiculo';
 import { useVeiculoFicha } from '@/hooks/use-vida-cadastro';
 import { primeiraAtivacao, statusVeiculoResumo } from '@/lib/sac';
 import { formatarDocumento } from '@/lib/documento';
@@ -28,6 +29,8 @@ export default function FichaVeiculo({ params }: { params: { id: string } }) {
   const { data: v, isLoading, error } = useVeiculoFicha(params.id);
   const [aba, setAba] = useState<Aba>('dados');
   const verTermos = usePode('termos.ver');
+  const podeCancelar = usePode('veiculos.cancelar');
+  const [cancelando, setCancelando] = useState(false);
 
   if (isLoading) return <p className="text-sm text-slate-500">Carregando veículo...</p>;
   if (error) return <p className="text-sm text-rose-600">Não foi possível carregar: {(error as Error).message}</p>;
@@ -84,6 +87,12 @@ export default function FichaVeiculo({ params }: { params: { id: string } }) {
           >
             <Pencil className="h-4 w-4" /> Editar cadastro
           </Link>
+          {podeCancelar && !['inativo', 'baixado', 'excluido'].includes(v.status) && (
+            <button onClick={() => setCancelando(true)}
+              className="inline-flex items-center gap-1 rounded-md border border-rose-300 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-50">
+              <Ban className="h-4 w-4" /> Cancelar proteção
+            </button>
+          )}
         </div>
       </div>
 
@@ -101,6 +110,12 @@ export default function FichaVeiculo({ params }: { params: { id: string } }) {
           </button>
         ))}
       </div>
+
+      {cancelando && (
+        <ModalCancelamentoVeiculo veiculo={v} onClose={() => setCancelando(false)} />
+      )}
+
+      {aba === 'dados' && <CancelamentosRegistrados veiculoId={v.id} />}
 
       {aba === 'dados' && (
         <div className="grid gap-4 lg:grid-cols-3">

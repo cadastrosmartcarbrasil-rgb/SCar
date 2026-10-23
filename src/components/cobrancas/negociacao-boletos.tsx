@@ -271,7 +271,7 @@ function CartaoRenegociacao({ clienteId, r, destaque }: { clienteId: string; r: 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm font-semibold text-slate-800">
           <CheckCircle2 className="mr-1 inline h-4 w-4 text-emerald-600" />
-          {r.tipo === 'ACORDO' ? `Acordo em ${r.boletos.length}x` : '2a via negociada'} · {formatCurrency(Number(r.valor_total))}
+          {r.tipo === 'ACORDO' ? `Acordo em ${r.boletos.length}x` : r.tipo === 'PRO_RATA' ? (r.boletos.length ? 'Pró-rata' : 'Baixa por cancelamento') : '2a via negociada'} · {formatCurrency(Number(r.valor_total))}
           <span className="ml-2 text-xs font-normal text-slate-500">
             substitui {r.origens.length} boleto(s) de {formatCurrency(Number(r.valor_original))} · {formatDate(r.created_at)}
             {r.criado_por ? ` · ${r.criado_por}` : ''}

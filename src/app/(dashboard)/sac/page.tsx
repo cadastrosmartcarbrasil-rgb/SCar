@@ -24,6 +24,7 @@ import { usePerfilAtual } from '@/hooks/use-config';
 import { useContratosVeiculo, useVistoriasVeiculo } from '@/hooks/use-veiculo-ficha';
 import { useHistoricoAssistenciaVeiculo } from '@/hooks/use-assistencia';
 import { ModalHistoricoFinanceiro, ModalWhatsApp, ModalEmail } from '@/components/sac/acoes-veiculo';
+import { CancelamentosRegistrados, ModalCancelamentoVeiculo } from '@/components/veiculos/cancelamento-veiculo';
 import { AlertasVeiculo } from '@/components/veiculos/alertas-veiculo';
 import { useAbrirProtocolo } from '@/hooks/use-protocolos';
 import { CATEGORIAS_PROTOCOLO, PRIORIDADES } from '@/lib/protocolos';
@@ -367,6 +368,7 @@ function AtendimentoVeiculo({ clienteId, associado, veiculoId, podeTrocar, onTro
   const [whats, setWhats] = useState(false);
   const [email, setEmail] = useState(false);
   const [termos, setTermos] = useState(false);
+  const [cancelando, setCancelando] = useState(false);
   const verTermos = usePode('termos.ver');
   const { data: atendimentos } = useAtendimentosVeiculo(veiculoId);
   // Historico da Assistencia 24h na propria ficha do veiculo.
@@ -392,6 +394,8 @@ function AtendimentoVeiculo({ clienteId, associado, veiculoId, podeTrocar, onTro
     if (s.modo === 'whatsapp') { setWhats(true); return; }
     if (s.modo === 'email') { setEmail(true); return; }
     if (s.modo === 'termos') { setTermos(true); return; }
+    // 0144: cancela SO este veiculo (motivo, retorno, pro-rata e baixa dos futuros).
+    if (s.modo === 'cancelamento') { setCancelando(true); return; }
     setServico(s);
   }
 
@@ -408,6 +412,7 @@ function AtendimentoVeiculo({ clienteId, associado, veiculoId, podeTrocar, onTro
       ) : (
         <>
           <VeiculoDetalheCard clienteId={clienteId} veiculo={veiculo} />
+          <CancelamentosRegistrados veiculoId={veiculo.id} />
 
           <div>
             <p className="mb-2 text-sm font-semibold text-slate-700">O que você precisa para este veículo?</p>
@@ -492,6 +497,7 @@ function AtendimentoVeiculo({ clienteId, associado, veiculoId, podeTrocar, onTro
           )}
           {whats && <ModalWhatsApp associado={associado} placa={veiculo.placa} onClose={() => setWhats(false)} />}
           {email && <ModalEmail associado={associado} placa={veiculo.placa} onClose={() => setEmail(false)} />}
+          {cancelando && <ModalCancelamentoVeiculo veiculo={veiculo} onClose={() => setCancelando(false)} />}
           <Modal open={termos} onClose={() => setTermos(false)} title={`Termos — ${veiculo.placa}`} tamanho="xl">
             {termos && <TermosDoCadastro clienteId={clienteId} veiculoId={veiculo.id} />}
           </Modal>
