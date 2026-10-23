@@ -19,7 +19,9 @@ import {
 //    ja existe e atualizado, o que foi vendido no Mutual depois da ultima
 //    rodada e criado, sempre com `cobranca_externa` (nenhum boleto sai daqui);
 // 3) liga o vendedor de quem ficou sem (0095);
-// 4) relata as equipes NOVAS sem unidade: essas a rotina nao decide.
+// 4) importa o HISTORICO DE EVENTOS (0101) dos associados ja carregados — depois
+//    da carga, porque o associado novo so existe depois dela;
+// 5) relata as equipes NOVAS sem unidade: essas a rotina nao decide.
 //
 // Captura que falha NAO impede a carga: ela roda com o que ja estava capturado
 // (e re-executavel). Demora minutos — o script espera ate 1 h.
@@ -133,6 +135,17 @@ export async function POST(request: Request) {
     } catch (e) {
       passos.push({ etapa: `carga ${nome}`, ok: false, detalhe: (e as Error).message });
     }
+  }
+
+  // ------------------------------------------- historico de eventos (0101)
+  // Re-executavel e so regrava o que mudou; ~1,5 s em 23/10/2026 (2.914 eventos).
+  {
+    const { data, error } = await supabase.rpc('mutual_importar_eventos_historico', { p_confirmar: true });
+    const r = (data ?? [])[0];
+    passos.push(error || !r
+      ? { etapa: 'historico de eventos', ok: false, detalhe: error?.message ?? 'o banco não devolveu o resultado' }
+      : { etapa: 'historico de eventos', ok: true,
+          detalhe: `${r.gravados} gravado(s)/atualizado(s); ${r.importaveis} de ${r.lidos} com associado na base` });
   }
 
   const ok = passos.every((p) => p.ok);

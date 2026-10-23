@@ -3577,7 +3577,7 @@ manda o link sozinho. Decisões do usuário: a equipe pode **liberar sem revisto
   convivência (até dezembro) isso se repete a cada venda — então virou rotina, não clique.
 - **Rota:** `POST /api/v1/mutual/sincronizar` (só `x-cron-secret` = `COBRANCA_CRON_SECRET`, o mesmo
   da baixa; segredo errado = 404). Faz: (1) recaptura `ENTIDADES_DA_SINCRONIA` (SALE_TEAM, CONTRACT,
-  PERSON, ADDRESS, CONTRACT_OBJECT — `src/lib/mutual-sincronia.ts`); (2) carga de cada unidade com
+  PERSON, ADDRESS, CONTRACT_OBJECT, EVENT — `src/lib/mutual-sincronia.ts`; EVENT desde 23/10); (2) carga de cada unidade com
   equipe ligada, em blocos de 100 (`LOTE_CARGA_AGENDADOR`: o service_role herda os 8 s do
   `authenticator`); (3) `mutual_vincular_vendedores`; (4) devolve `equipes_sem_unidade` — equipe
   NOVA sem de-para não carrega e a rotina NÃO decide: vincular na tela. Captura que falha não
@@ -3588,7 +3588,9 @@ manda o link sozinho. Decisões do usuário: a equipe pode **liberar sem revisto
   `mutual_executar_carga` para aceitar o caminho sem sessão (`... or auth.uid() is null`, padrão da
   0052). Corpos conferidos idênticos aos de produção (md5) em 14/10/2026.
 - **VPS:** `crontab -e` → `20 3 * * * /opt/scar/scripts/mutual-sincronizar.sh` (log em
-  `/var/log/scar-mutual.log`). Rodar à mão a primeira vez e conferir o log.
+  `/var/log/scar-mutual.log`). Rodar à mão a primeira vez e conferir o log. Depois da carga e dos
+  vendedores, importa o histórico de eventos (0101) — passo `historico de eventos` no log.
+  ⚠️ O histórico de BOLETOS (0097/0099, INVOICE) ainda NÃO está na rotina: recapturar e importar à mão.
 - **No corte de dezembro: tirar a linha do crontab** (item do checklist pós-corte).
 
 ## A CARGA EM BLOCOS (0094) e as MOTOS pela tela — leia antes de carregar outra unidade
@@ -4441,8 +4443,13 @@ coberturas ABERTAS, sem clique para expandir.
   (eventos no mês e em 12 meses somando as duas fontes, série empilhada SCar × Mutual, tipos dos
   últimos 12 meses com `somarPorTipo`, que casa "COLISÃO" e "Colisao").
 - **Importar:** `/integracao/mutual` → *Histórico de eventos* → *Simular* / *Importar*. Re-executável
-  (regra 0096: só regrava o que mudou). Rodar de novo depois de cada recaptura de EVENT e de cada
-  carga de unidade.
+  (regra 0096: só regrava o que mudou). **Desde 23/10/2026 a rotina diária faz isso sozinha**
+  (`/api/v1/mutual/sincronizar`: captura EVENT depois do CONTRACT_OBJECT e importa o histórico depois
+  das cargas). O defeito: a importação rodou UMA vez (13/10) e nada a repetia — eventos abertos depois
+  e associados carregados depois (acervo de RP em 14/10, 0 km em 21/10) ficaram fora: **502 eventos**
+  (MATHEUS CAMPOS OLIVEIRA, LUIS CARLOS ALVES, ROBERTO CARLOS VIEIRA RIOS, PEDRO HENRIQUE APARECIDO
+  PEREIRA, ANDRE LUIS DE AQUINO…). Reimportado pelo agente (autorizado) em 23/10: 558 gravados, histórico
+  com 1.331 eventos.
 - **✅ DECISÃO DO USUÁRIO (13/10/2026): o histórico NÃO consome cota.** Os limites por janela dos
   opcionais (parabrisa 1×/ano etc., `opcionais_elegibilidade`/`opcionais_veiculo`) contam só
   `eventos_sinistro` — *"não conte os eventos de parabrisa, vamos contar daqui pra frente"*. Há 525

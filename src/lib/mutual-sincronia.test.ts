@@ -6,7 +6,10 @@ import {
 describe('ENTIDADES_DA_SINCRONIA', () => {
   it('a equipe vem antes e o veiculo por ultimo', () => {
     expect(ENTIDADES_DA_SINCRONIA[0]).toBe('SALE_TEAM');
-    expect(ENTIDADES_DA_SINCRONIA.at(-1)).toBe('CONTRACT_OBJECT');
+    // o evento depois do objeto: o historico le o evento pelo veiculo do objeto
+    expect(ENTIDADES_DA_SINCRONIA.at(-1)).toBe('EVENT');
+    expect(ENTIDADES_DA_SINCRONIA.indexOf('CONTRACT_OBJECT'))
+      .toBeLessThan(ENTIDADES_DA_SINCRONIA.indexOf('EVENT'));
     expect(ENTIDADES_DA_SINCRONIA).toContain('CONTRACT');
     expect(ENTIDADES_DA_SINCRONIA).toContain('PERSON');
   });

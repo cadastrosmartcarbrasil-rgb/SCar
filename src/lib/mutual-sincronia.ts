@@ -9,11 +9,14 @@ import type { EntidadeMutual } from './mutual';
 /**
  * O que a carga le, na ordem em que precisa. A EQUIPE vem antes (e ela que
  * diz a unidade), o CONTRATO traz a equipe e o dia de vencimento, o ASSOCIADO e
- * o ENDERECO viram o cadastro, e o OBJETO (o veiculo) por ultimo, para pegar o
- * que entrou enquanto o resto era puxado.
+ * o ENDERECO viram o cadastro, e o OBJETO (o veiculo) depois, para pegar o
+ * que entrou enquanto o resto era puxado. O EVENTO vem no fim: o historico de
+ * eventos (0101) le o evento pelo veiculo do objeto, e sem ele aqui o evento
+ * aberto no Mutual depois da ultima captura manual nao chegava ao SAC
+ * (23/10/2026: 502 eventos de associados ja carregados fora do historico).
  */
 export const ENTIDADES_DA_SINCRONIA: EntidadeMutual[] = [
-  'SALE_TEAM', 'CONTRACT', 'PERSON', 'ADDRESS', 'CONTRACT_OBJECT',
+  'SALE_TEAM', 'CONTRACT', 'PERSON', 'ADDRESS', 'CONTRACT_OBJECT', 'EVENT',
 ];
 
 /** Teto de paginas por entidade numa rodada (ADDRESS tem ~90 de 500). */
