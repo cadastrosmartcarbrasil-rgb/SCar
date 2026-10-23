@@ -3598,6 +3598,10 @@ manda o link sozinho. Decisões do usuário: a equipe pode **liberar sem revisto
   (700 páginas) é gravada com erro e não vira marca. Depois das cargas, importa o histórico de
   boletos inteiro em blocos de 2.000 (`cobranca_importar_historico_mutual`, ~1,3 s por 4.000) — passo
   `historico de boletos` no log. A 1ª rodada após o deploy é a completa (~420 páginas, ~15 min).
+  **ADDRESS ignora a paginação** (`/core/address/` devolve os ~45 mil endereços inteiros em toda página,
+  array cru sem `next`): de 14 a 23/10 a rotina regravou o mesmo conjunto por até 17 min, todo dia, até o
+  Mutual derrubar a conexão ("fetch failed"/502). Corrigido em `temProximaPagina` (página cheia = EXATAMENTE
+  o tamanho pedido; lista maior = acabou). O dado não se perdeu: a 1ª página já trazia tudo (45.696).
 - **No corte de dezembro: tirar a linha do crontab** (item do checklist pós-corte).
 
 ## A CARGA EM BLOCOS (0094) e as MOTOS pela tela — leia antes de carregar outra unidade

@@ -65,6 +65,9 @@ describe('envelope de resposta', () => {
     expect(temProximaPagina([{ id: 1 }, { id: 2 }], 2)).toBe(true);
     expect(temProximaPagina([{ id: 1 }], 2)).toBe(false);
   });
+  it('lista maior que a pagina pedida = o servidor ignorou a paginacao (ADDRESS)', () => {
+    expect(temProximaPagina([{ id: 1 }, { id: 2 }, { id: 3 }], 2)).toBe(false);
+  });
   it('next nulo encerra mesmo com pagina cheia', () => {
     expect(temProximaPagina({ next: null, results: [1, 2] }, 2)).toBe(false);
   });

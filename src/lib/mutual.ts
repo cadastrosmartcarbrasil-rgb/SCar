@@ -152,7 +152,11 @@ export function temProximaPagina(json: unknown, tamanhoPagina: number): boolean 
     const n = (json as { next?: unknown }).next;
     if (n !== undefined) return Boolean(n);
   }
-  return extrairLista(json).length >= tamanhoPagina;
+  // Pagina CHEIA e exatamente o tamanho pedido. Lista MAIOR que o pedido e o
+  // servidor ignorando a paginacao (o /core/address/ devolve os ~45 mil
+  // enderecos inteiros em toda pagina): seguir pedindo regravava o mesmo
+  // conjunto por 17 minutos ate o Mutual derrubar a conexao (rotina, 10/2026).
+  return extrairLista(json).length === tamanhoPagina;
 }
 
 // ---------------------------------------------------------------------------
