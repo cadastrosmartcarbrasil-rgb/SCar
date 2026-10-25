@@ -4,6 +4,8 @@
  * (realizado ate hoje, projetado depois) e a leitura de carga de cada dia.
  */
 
+import { somarMoeda } from './money';
+
 export interface DiaFluxo {
   dia: string;
   realizado_entrada: number;
@@ -139,6 +141,83 @@ export function diaAnteriorIso(dia: string | null | undefined): string {
   if (Number.isNaN(d.getTime())) return '';
   d.setUTCDate(d.getUTCDate() - 1);
   return d.toISOString().slice(0, 10);
+}
+
+export type GrupoExtrato = 'PIX' | 'COMPE_REDE' | 'COBRANCA';
+
+export const ROTULO_GRUPO_EXTRATO: Record<GrupoExtrato, string> = {
+  PIX: 'Recebimentos PIX da cobrança',
+  COMPE_REDE: 'Boletos liquidados (COMPE e REDE)',
+  COBRANCA: 'Recebimentos da cobrança',
+};
+
+type LinhaAgrupavel = {
+  data: string;
+  conta_id: string;
+  grupo?: GrupoExtrato | null;
+  entrada: number | string;
+  saida: number | string;
+  saldo: number | string | null;
+  conciliado: boolean;
+};
+
+export type ItemExtrato<L> =
+  | { tipo: 'linha'; linha: L }
+  | {
+      tipo: 'grupo';
+      chave: string;
+      grupo: GrupoExtrato;
+      data: string;
+      conta_id: string;
+      linhas: L[];
+      entrada: number;
+      saida: number;
+      saldo: number | null;
+      conciliados: number;
+    };
+
+/**
+ * Junta as linhas CONTIGUAS do mesmo dia, conta e grupo (o banco ja as entrega juntas,
+ * 0149) numa linha de total. O saldo do grupo e o da ultima linha: o saldo real depois
+ * do grupo inteiro. Grupo de um so vira linha comum; sem `agrupar`, tudo e linha.
+ */
+export function agruparExtrato<L extends LinhaAgrupavel>(linhas: L[], agrupar = true): ItemExtrato<L>[] {
+  const out: ItemExtrato<L>[] = [];
+  let atual: L[] = [];
+  const fechar = () => {
+    if (!atual.length) return;
+    if (atual.length === 1) {
+      out.push({ tipo: 'linha', linha: atual[0] });
+    } else {
+      const p = atual[0];
+      const ult = atual[atual.length - 1];
+      out.push({
+        tipo: 'grupo',
+        chave: `${p.data}|${p.conta_id}|${p.grupo}`,
+        grupo: p.grupo as GrupoExtrato,
+        data: p.data,
+        conta_id: p.conta_id,
+        linhas: atual,
+        entrada: somarMoeda(...atual.map((l) => Number(l.entrada))),
+        saida: somarMoeda(...atual.map((l) => Number(l.saida))),
+        saldo: ult.saldo === null ? null : Number(ult.saldo),
+        conciliados: atual.filter((l) => l.conciliado).length,
+      });
+    }
+    atual = [];
+  };
+  for (const l of linhas) {
+    if (!agrupar || !l.grupo) {
+      fechar();
+      out.push({ tipo: 'linha', linha: l });
+      continue;
+    }
+    const p = atual[0];
+    if (p && (p.data !== l.data || p.conta_id !== l.conta_id || p.grupo !== l.grupo)) fechar();
+    atual.push(l);
+  }
+  fechar();
+  return out;
 }
 
 /** Resumo da fila de conciliacao. */

@@ -2704,6 +2704,8 @@ export type ExtratoContaRow = {
   saldo_anterior: number;
   conciliado: boolean;
   extrato_item_id: string | null;
+  /** 0149: recebimento da cobranca pelo banco (os membros vem juntos no dia). */
+  grupo: 'PIX' | 'COMPE_REDE' | 'COBRANCA' | null;
 };
 
 export type FluxoDiarioRow = {

@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
-import { CheckCheck, CheckCircle2, FileUp, Layers, Link2, RefreshCw, Undo2, Upload } from 'lucide-react';
+import { Fragment, useMemo, useRef, useState } from 'react';
+import { CheckCheck, CheckCircle2, ChevronDown, ChevronRight, FileUp, Layers, Link2, RefreshCw, Undo2, Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
@@ -28,10 +28,10 @@ import { useCentrosCusto, useContasBancarias } from '@/hooks/use-financeiro';
 import { usePlanoContas } from '@/hooks/use-config';
 import { useFornecedores } from '@/hooks/use-fornecedores';
 import { contaDoArquivoConfere, decodificarOfx, interpretarOfx, resumoOfx, type ExtratoOfx } from '@/lib/ofx';
-import { ROTULO_ORIGEM, ROTULO_SITUACAO_EXTRATO, resumoConciliacao, diaAnteriorIso } from '@/lib/tesouraria';
+import { ROTULO_GRUPO_EXTRATO, ROTULO_ORIGEM, ROTULO_SITUACAO_EXTRATO, agruparExtrato, resumoConciliacao, diaAnteriorIso } from '@/lib/tesouraria';
 import { somarMoeda } from '@/lib/money';
 import { formatCurrency } from '@/lib/utils';
-import type { ExtratoItensRow } from '@/lib/database.types';
+import type { ExtratoContaRow, ExtratoItensRow } from '@/lib/database.types';
 import { FiltroPeriodo, periodoPreset, Vazio, type Periodo } from './ui-financeiro';
 import { BotoesExportar, Dinheiro, SELECT_CLS, SeletorConta, dataBR } from './tesouraria-ui';
 
@@ -72,6 +72,9 @@ function ExtratoTabela({ conta, periodo }: { conta: string | null; periodo: Peri
   const [centro, setCentro] = useState('');
   const [categoria, setCategoria] = useState('');
   const [transf, setTransf] = useState(false);
+  // 0149: os recebimentos da cobranca (PIX, COMPE/REDE) viram uma linha de total por dia
+  const [agrupar, setAgrupar] = useState(true);
+  const [abertos, setAbertos] = useState<Set<string>>(() => new Set());
   const { data: centros } = useCentrosCusto();
   const { data: plano } = usePlanoContas();
   const { data: contas } = useContasBancarias();
@@ -81,6 +84,12 @@ function ExtratoTabela({ conta, periodo }: { conta: string | null; periodo: Peri
   });
   const { data: saldoFim } = useSaldoEm(periodo.fim, conta);
   const linhas = data ?? [];
+  const itens = useMemo(() => agruparExtrato(linhas, agrupar), [linhas, agrupar]);
+  const alternar = (chave: string) => setAbertos((a) => {
+    const n = new Set(a);
+    if (n.has(chave)) n.delete(chave); else n.add(chave);
+    return n;
+  });
   const anterior = linhas[0]?.saldo_anterior ?? null;
   const { data: saldoIni } = useSaldoEm(diaAnteriorIso(periodo.inicio), conta);
   const tEnt = somarMoeda(...linhas.map((l) => Number(l.entrada)));
@@ -92,11 +101,23 @@ function ExtratoTabela({ conta, periodo }: { conta: string | null; periodo: Peri
     titulo: `Extrato — ${nomeConta}`,
     subtitulo: `${dataBR(periodo.inicio)} a ${dataBR(periodo.fim)} · saldo anterior ${Number(saldoIni ?? anterior ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}${filtrado ? ' · com filtros' : ''}`,
     cabecalho: ['Data', ...(conta ? [] : ['Conta']), 'Descrição', 'Contraparte', 'Documento', 'Plano de contas', 'Centro de custo', 'Entrada', 'Saída', 'Saldo', 'Conferido'],
-    linhas: linhas.map((l) => [
-      dataBR(l.data), ...(conta ? [] : [l.conta]), l.descricao ?? '', l.contraparte ?? '', l.documento ?? '',
-      l.categoria_codigo ? `${l.categoria_codigo} ${l.categoria}` : '', l.centro_custo ?? '',
-      Number(l.entrada) || '', Number(l.saida) || '', l.saldo === null ? '' : Number(l.saldo), l.conciliado ? 'sim' : 'nao',
-    ]),
+    linhas: itens.map((i) => {
+      if (i.tipo === 'grupo') {
+        const p = i.linhas[0];
+        return [
+          dataBR(i.data), ...(conta ? [] : [p.conta]), `${ROTULO_GRUPO_EXTRATO[i.grupo]} (${i.linhas.length})`, '', '',
+          p.categoria_codigo ? `${p.categoria_codigo} ${p.categoria}` : '', '',
+          i.entrada || '', i.saida || '', i.saldo === null ? '' : i.saldo,
+          i.conciliados === i.linhas.length ? 'sim' : `${i.conciliados}/${i.linhas.length}`,
+        ];
+      }
+      const l = i.linha;
+      return [
+        dataBR(l.data), ...(conta ? [] : [l.conta]), l.descricao ?? '', l.contraparte ?? '', l.documento ?? '',
+        l.categoria_codigo ? `${l.categoria_codigo} ${l.categoria}` : '', l.centro_custo ?? '',
+        Number(l.entrada) || '', Number(l.saida) || '', l.saldo === null ? '' : Number(l.saldo), l.conciliado ? 'sim' : 'nao',
+      ];
+    }),
     rodape: ['Totais', ...(conta ? [] : ['']), '', '', '', '', '', tEnt, tSai, Number(saldoFim ?? 0), ''],
     colunasMoeda: conta ? [6, 7, 8] : [7, 8, 9],
   });
@@ -126,6 +147,10 @@ function ExtratoTabela({ conta, periodo }: { conta: string | null; periodo: Peri
               <option value="">Todos</option>
               {(plano ?? []).map((c) => <option key={c.id} value={c.id}>{c.codigo_estruturado} {c.nome}</option>)}
             </select>
+          </label>
+          <label className="flex items-center gap-1.5 pb-2 text-sm text-slate-600"
+            title="Os boletos pagos pelo banco viram uma linha por dia e tipo (PIX, COMPE/REDE); clique na linha para ver os boletos">
+            <input type="checkbox" checked={agrupar} onChange={(e) => setAgrupar(e.target.checked)} /> Agrupar recebimentos da cobrança
           </label>
           {!conta && (
             <label className="flex items-center gap-1.5 pb-2 text-sm text-slate-600">
@@ -160,26 +185,43 @@ function ExtratoTabela({ conta, periodo }: { conta: string | null; periodo: Peri
             {!isLoading && !linhas.length && (
               <tr><td colSpan={8} className="px-3 py-8 text-center text-sm text-slate-500">Nenhum movimento no período.</td></tr>
             )}
-            {linhas.map((l) => (
-              <tr key={`${l.origem}-${l.ref_id}-${l.conta_id}`}>
-                <td className="tnum whitespace-nowrap px-3 py-2">{dataBR(l.data)}</td>
-                {!conta && <td className="px-3 py-2 text-xs text-slate-600">{l.conta}</td>}
-                <td className="px-3 py-2">
-                  <p className="text-slate-800">{l.descricao}</p>
-                  <p className="text-xs text-slate-500">{[ROTULO_ORIGEM[l.origem], l.contraparte, l.documento].filter(Boolean).join(' · ')}</p>
-                </td>
-                <td className="px-3 py-2 text-xs text-slate-600">
-                  {l.categoria_codigo ? `${l.categoria_codigo} ${l.categoria}` : <span className="text-slate-400">—</span>}
-                  {l.centro_custo && <p className="text-slate-400">{l.centro_custo}</p>}
-                </td>
-                <td className="px-3 py-2 text-right">{Number(l.entrada) ? <Dinheiro v={l.entrada} /> : ''}</td>
-                <td className="px-3 py-2 text-right">{Number(l.saida) ? <Dinheiro v={-Number(l.saida)} /> : ''}</td>
-                <td className="px-3 py-2 text-right">{l.saldo === null ? '' : <Dinheiro v={l.saldo} />}</td>
-                <td className="px-3 py-2 text-center" title={l.conciliado ? 'Conferido com o extrato do banco' : 'Ainda não conferido com o extrato'}>
-                  {l.conciliado ? <CheckCircle2 className="mx-auto h-4 w-4 text-emerald-600" /> : <span className="text-xs text-slate-300">·</span>}
-                </td>
-              </tr>
-            ))}
+            {itens.map((i) => {
+              if (i.tipo === 'linha') return <LinhaExtrato key={`${i.linha.origem}-${i.linha.ref_id}-${i.linha.conta_id}`} l={i.linha} conta={conta} />;
+              const aberto = abertos.has(i.chave);
+              const todos = i.conciliados === i.linhas.length;
+              return (
+                <Fragment key={i.chave}>
+                  <tr className="cursor-pointer bg-cyan-50/40 hover:bg-cyan-50" onClick={() => alternar(i.chave)}>
+                    <td className="tnum whitespace-nowrap px-3 py-2">{dataBR(i.data)}</td>
+                    {!conta && <td className="px-3 py-2 text-xs text-slate-600">{i.linhas[0].conta}</td>}
+                    <td className="px-3 py-2">
+                      <p className="flex items-center gap-1 font-medium text-slate-800">
+                        {aberto ? <ChevronDown className="h-4 w-4 text-slate-500" /> : <ChevronRight className="h-4 w-4 text-slate-500" />}
+                        {ROTULO_GRUPO_EXTRATO[i.grupo]}
+                      </p>
+                      <p className="pl-5 text-xs text-slate-500">
+                        {i.linhas.length} boleto(s) · {aberto ? 'clique para fechar' : 'clique para ver os boletos'}
+                      </p>
+                    </td>
+                    <td className="px-3 py-2 text-xs text-slate-600">
+                      {i.linhas[0].categoria_codigo ? `${i.linhas[0].categoria_codigo} ${i.linhas[0].categoria}` : <span className="text-slate-400">—</span>}
+                    </td>
+                    <td className="px-3 py-2 text-right">{i.entrada ? <Dinheiro v={i.entrada} forte /> : ''}</td>
+                    <td className="px-3 py-2 text-right">{i.saida ? <Dinheiro v={-i.saida} forte /> : ''}</td>
+                    <td className="px-3 py-2 text-right">{i.saldo === null ? '' : <Dinheiro v={i.saldo} />}</td>
+                    <td className="px-3 py-2 text-center"
+                      title={todos ? 'Todos conferidos com o extrato do banco' : `${i.conciliados} de ${i.linhas.length} conferidos com o extrato`}>
+                      {todos
+                        ? <CheckCircle2 className="mx-auto h-4 w-4 text-emerald-600" />
+                        : <span className="tnum text-xs text-slate-500">{i.conciliados}/{i.linhas.length}</span>}
+                    </td>
+                  </tr>
+                  {aberto && i.linhas.map((l) => (
+                    <LinhaExtrato key={`${l.origem}-${l.ref_id}-${l.conta_id}`} l={l} conta={conta} membro />
+                  ))}
+                </Fragment>
+              );
+            })}
           </tbody>
           <tfoot className="border-t-2 border-slate-300 bg-slate-50">
             <tr>
@@ -194,6 +236,31 @@ function ExtratoTabela({ conta, periodo }: { conta: string | null; periodo: Peri
         {filtrado && <p className="px-4 py-2 text-xs text-slate-500">Com filtro, o saldo de cada linha continua sendo o saldo real da conta naquele ponto.</p>}
       </CardContent>
     </Card>
+  );
+}
+
+function LinhaExtrato({ l, conta, membro }: { l: ExtratoContaRow; conta: string | null; membro?: boolean }) {
+  return (
+    <tr className={membro ? 'bg-slate-50/70 text-[13px]' : undefined}>
+      <td className="tnum whitespace-nowrap px-3 py-2">{membro ? '' : dataBR(l.data)}</td>
+      {!conta && <td className="px-3 py-2 text-xs text-slate-600">{membro ? '' : l.conta}</td>}
+      <td className={`px-3 py-2 ${membro ? 'pl-9' : ''}`}>
+        <p className="text-slate-800">{membro ? (l.contraparte || l.descricao) : l.descricao}</p>
+        <p className="text-xs text-slate-500">
+          {(membro ? [l.forma, l.documento] : [ROTULO_ORIGEM[l.origem], l.contraparte, l.documento]).filter(Boolean).join(' · ')}
+        </p>
+      </td>
+      <td className="px-3 py-2 text-xs text-slate-600">
+        {membro ? '' : l.categoria_codigo ? `${l.categoria_codigo} ${l.categoria}` : <span className="text-slate-400">—</span>}
+        {!membro && l.centro_custo && <p className="text-slate-400">{l.centro_custo}</p>}
+      </td>
+      <td className="px-3 py-2 text-right">{Number(l.entrada) ? <Dinheiro v={l.entrada} /> : ''}</td>
+      <td className="px-3 py-2 text-right">{Number(l.saida) ? <Dinheiro v={-Number(l.saida)} /> : ''}</td>
+      <td className="px-3 py-2 text-right">{membro || l.saldo === null ? '' : <Dinheiro v={l.saldo} />}</td>
+      <td className="px-3 py-2 text-center" title={l.conciliado ? 'Conferido com o extrato do banco' : 'Ainda não conferido com o extrato'}>
+        {l.conciliado ? <CheckCircle2 className="mx-auto h-4 w-4 text-emerald-600" /> : <span className="text-xs text-slate-300">·</span>}
+      </td>
+    </tr>
   );
 }
 
