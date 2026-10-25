@@ -274,14 +274,15 @@ function Conciliacao({ conta, periodo }: { conta: string; periodo: Periodo }) {
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" disabled={lotes.isPending}
-              title="Liga o crédito somado da cobrança (LIQ.COBRANCA) às baixas dos boletos COMPE/REDE creditados no mesmo dia"
+              title="Crédito somado da cobrança (LIQ.COBRANCA) com as baixas COMPE/REDE do dia, e cada PIX da cobrança com a baixa PIX de mesmo valor no dia"
               onClick={() => lotes.mutate(conta, {
-                onSuccess: (r) => setAviso(r.conciliados
-                  ? `${r.conciliados} crédito(s) da cobrança conciliado(s) em lote, ${formatCurrency(Number(r.valor))}.`
-                  : 'Nenhum crédito da cobrança fechou com as baixas do dia.'),
+                onSuccess: (r) => setAviso(r.lotes || r.pix
+                  ? `Cobrança conciliada: ${r.lotes} crédito(s) em lote (${formatCurrency(r.valorLotes)}) e `
+                    + `${r.pix} PIX por valor no dia (${formatCurrency(r.valorPix)}).`
+                  : 'Nada da cobrança fechou com as baixas do banco.'),
                 onError: (e) => alert(mensagemErro(e)),
               })}>
-              <Layers className="h-4 w-4" /> Conciliar lotes da cobrança
+              <Layers className="h-4 w-4" /> Conciliar cobrança (lotes e PIX)
             </Button>
             <Button variant="secondary" disabled={reclassificar.isPending}
               onClick={() => reclassificar.mutate(conta, {

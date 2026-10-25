@@ -95,6 +95,14 @@ export async function POST(request: Request) {
     if (el) console.warn('[baixa-banco] lotes da cobranca:', el.message);
     else if (rl?.[0]) lotes = { conciliados: Number(rl[0].conciliados), valor: Number(rl[0].valor) };
   }
+  // 0148: o PIX da cobranca do extrato casa por valor no mesmo dia.
+  let pix = { conciliados: 0, valor: 0 };
+  {
+    const desde = diaAnterior(diaAnterior(diaAnterior(diasDaBaixa(hoje)[0])));
+    const { data: rp, error: ep } = await supabase.rpc('conciliar_pix_cobranca', { p_conta: null, p_desde: desde });
+    if (ep) console.warn('[baixa-banco] PIX da cobranca:', ep.message);
+    else if (rp?.[0]) pix = { conciliados: Number(rp[0].conciliados), valor: Number(rp[0].valor) };
+  }
 
   const ok = falhasConsulta.length === 0 && resumo.erros === 0;
   return NextResponse.json(
@@ -110,6 +118,7 @@ export async function POST(request: Request) {
         expirados: avisos.expirados,
       },
       lotes_conciliados: lotes,
+      pix_conciliados: pix,
       falhas_consulta: falhasConsulta,
       resultados,
     },

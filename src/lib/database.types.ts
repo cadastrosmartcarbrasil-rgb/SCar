@@ -4515,6 +4515,8 @@ export type Database = {
       lote_cobranca_extrato_item: { Args: { p_item: string }; Returns: LoteCobrancaExtrato[] };
       conciliar_lote_extrato_item: { Args: { p_item: string }; Returns: LoteCobrancaExtrato[] };
       conciliar_lotes_cobranca: { Args: { p_conta?: string | null; p_desde?: string | null }; Returns: { conciliados: number; valor: number }[] };
+      // 0148: PIX da cobranca casado por valor no mesmo dia
+      conciliar_pix_cobranca: { Args: { p_conta?: string | null; p_desde?: string | null }; Returns: { conciliados: number; valor: number }[] };
       candidatos_extrato_item: { Args: { p_item: string; p_dias?: number }; Returns: CandidatoExtratoRow[] };
       reprocessar_liquidacoes_banco: {
         Args: { p_desde?: string | null };

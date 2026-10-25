@@ -292,15 +292,25 @@ export function useReclassificarExtrato() {
   });
 }
 
-/** 0147: concilia os creditos somados da cobranca (COMPE/REDE) com as baixas do dia. */
+/**
+ * Concilia a cobranca do extrato: os creditos somados COMPE/REDE em lote (0147)
+ * e os PIX por valor no mesmo dia (0148).
+ */
 export function useConciliarLotes() {
   const supabase = createClient();
   const invalidar = useInvalidar();
   return useMutation({
     mutationFn: async (conta: string) => {
-      const { data, error } = await supabase.rpc('conciliar_lotes_cobranca', { p_conta: conta, p_desde: null });
-      if (error) throw error;
-      return data?.[0] ?? { conciliados: 0, valor: 0 };
+      const lotes = await supabase.rpc('conciliar_lotes_cobranca', { p_conta: conta, p_desde: null });
+      if (lotes.error) throw lotes.error;
+      const pix = await supabase.rpc('conciliar_pix_cobranca', { p_conta: conta, p_desde: null });
+      if (pix.error) throw pix.error;
+      const l = lotes.data?.[0] ?? { conciliados: 0, valor: 0 };
+      const p = pix.data?.[0] ?? { conciliados: 0, valor: 0 };
+      return {
+        lotes: Number(l.conciliados), valorLotes: Number(l.valor),
+        pix: Number(p.conciliados), valorPix: Number(p.valor),
+      };
     },
     onSuccess: invalidar,
   });
