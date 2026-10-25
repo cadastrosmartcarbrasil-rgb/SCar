@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  avisoExpirou, diaAnterior, diaValido, diasDaBaixa, diasParaConfirmar, diasParaReconferir, hojeEmSaoPaulo, resumoDaBaixa,
+  avisoExpirou, dataCreditoLiquidacao, diaAnterior, diaUtilSeguinte, diaValido, diasDaBaixa, diasParaConfirmar, diasParaReconferir, hojeEmSaoPaulo, resumoDaBaixa,
   segredoConfere,
 } from './baixa-banco';
 
@@ -81,5 +81,27 @@ describe('reconferencia dos avisos pendentes (0122)', () => {
     expect(avisoExpirou('2026-10-18T11:00:00Z', '2026-11-03')).toBe(true);
     // 01h UTC do dia 19 ainda e dia 18 em Sao Paulo
     expect(avisoExpirou('2026-10-19T01:00:00Z', '2026-11-03')).toBe(true);
+  });
+});
+
+describe('data do credito (0146)', () => {
+  const feriados = new Set(['2026-10-12', '2026-11-20']);
+  it('PIX credita no dia, inclusive sabado', () => {
+    expect(dataCreditoLiquidacao('2026-10-09', 'PIX', feriados)).toBe('2026-10-09');
+    expect(dataCreditoLiquidacao('2026-10-17', 'PIX', feriados)).toBe('2026-10-17');
+  });
+  it('COMPE/REDE no proximo dia util', () => {
+    // os 42 boletos de 09/10 (sexta) creditados em 13/10 (12/10 feriado)
+    expect(dataCreditoLiquidacao('2026-10-09', 'COMPE', feriados)).toBe('2026-10-13');
+    expect(dataCreditoLiquidacao('2026-10-13', 'COMPE', feriados)).toBe('2026-10-14');
+    expect(dataCreditoLiquidacao('2026-10-16', 'REDE', feriados)).toBe('2026-10-19');
+    expect(dataCreditoLiquidacao('2026-11-19', 'COMPE', feriados)).toBe('2026-11-23');
+  });
+  it('sem tipo: o proprio dia', () => {
+    expect(dataCreditoLiquidacao('2026-10-13', null, feriados)).toBe('2026-10-13');
+  });
+  it('dia util seguinte', () => {
+    expect(diaUtilSeguinte('2026-10-12', feriados)).toBe('2026-10-13');
+    expect(diaUtilSeguinte('2026-10-14', feriados)).toBe('2026-10-14');
   });
 });

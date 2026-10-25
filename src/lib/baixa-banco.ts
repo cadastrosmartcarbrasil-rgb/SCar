@@ -128,3 +128,29 @@ export function avisoExpirou(recebidoEm: string, hoje: string, prazo: number = P
   const recebido = hojeEmSaoPaulo(new Date(recebidoEm));
   return diasEntre(recebido, hoje) > prazo;
 }
+
+/** Proximo dia util a partir de `iso` (o proprio, se ja for): sem sabado, domingo e feriado. */
+export function diaUtilSeguinte(iso: string, feriados: ReadonlySet<string> = new Set()): string {
+  let d = iso;
+  for (let i = 0; i < 15; i++) {
+    const dow = new Date(`${d}T12:00:00Z`).getUTCDay();
+    if (dow !== 0 && dow !== 6 && !feriados.has(d)) return d;
+    d = diaSeguinte(d);
+  }
+  return d;
+}
+
+/**
+ * Dia em que o pagamento cai na conta (0146). Espelho de `data_credito_banco`:
+ * PIX credita no proprio dia (inclusive fim de semana); boleto liquidado por
+ * COMPE (outro banco) ou REDE (loterica/correspondente) credita no proximo dia
+ * util. Sem tipo: o proprio dia (nao se inventa atraso).
+ */
+export function dataCreditoLiquidacao(
+  dataPagamento: string,
+  tipo: string | null | undefined,
+  feriados: ReadonlySet<string> = new Set(),
+): string {
+  if (!tipo || /PIX/i.test(tipo)) return dataPagamento;
+  return diaUtilSeguinte(diaSeguinte(dataPagamento), feriados);
+}

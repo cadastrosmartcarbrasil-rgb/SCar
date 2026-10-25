@@ -1441,6 +1441,8 @@ export type TitulosFinanceirosRow = Timestamps & {
   pix_qrcode_url: string | null;
   integracao_id: string | null;
   gateway_status: string | null;
+  /** 0146: dia do credito do pagamento do banco (nulo = baixa manual). */
+  data_credito?: string | null;
   gateway_erro: string | null;
   enviado_em: string | null;
   // 0029: ajuste do boleto em aberto (SAC)
@@ -1575,6 +1577,10 @@ export type CobrancaLiquidacoesRow = Timestamps & {
   valor_divergente: boolean;
   dia_consultado: string;
   payload: Json | null;
+  /** 0146: PIX | COMPE | REDE (do liquidados/dia). */
+  tipo_liquidacao: string | null;
+  /** 0146: dia do credito na conta (PIX no dia; COMPE/REDE no proximo dia util). */
+  data_credito: string | null;
 };
 
 /** 0122: aviso do banco (webhook) que ainda nao apareceu em liquidados/dia. */

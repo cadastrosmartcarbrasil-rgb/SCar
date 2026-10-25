@@ -47,6 +47,8 @@ begin
     values (c4,'QWE9A97', r3, tv, 'ativo', current_date - 400, 100, true) returning id into v4;
 
   -- ===================================================== A) helpers
+  -- a 0146 semeia os feriados nacionais; este bloco testa o cadastro a partir do vazio
+  delete from cobranca_feriados where data = date '2026-09-07';
   assert dia_util_seguinte(date '2026-09-04') = date '2026-09-04', 'sexta e dia util';
   assert dia_util_seguinte(date '2026-09-05') = date '2026-09-07', 'sabado vai para segunda';
   perform salvar_feriado_cobranca(date '2026-09-07', 'Independencia');
