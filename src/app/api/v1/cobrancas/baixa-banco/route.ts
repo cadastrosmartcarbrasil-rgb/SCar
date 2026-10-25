@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { SicrediGateway, configSicrediDoAmbiente, variaveisSicrediFaltando } from '@/lib/pagamentos/sicredi';
 import {
+  diaAnterior,
   diaValido,
   diasDaBaixa,
   hojeEmSaoPaulo,
@@ -83,6 +84,18 @@ export async function POST(request: Request) {
   resultados.push(...avisos.resultados);
 
   const resumo = resumoDaBaixa(resultados);
+  // 0147: o credito somado da cobranca (COMPE/REDE) ja importado do extrato fecha
+  // com as baixas que acabaram de entrar. Falhar aqui nao derruba a baixa.
+  let lotes = { conciliados: 0, valor: 0 };
+  {
+    const desde = diasDaBaixa(hoje)[0];
+    const { data: rl, error: el } = await supabase.rpc('conciliar_lotes_cobranca', {
+      p_conta: null, p_desde: diaAnterior(diaAnterior(diaAnterior(desde))),
+    });
+    if (el) console.warn('[baixa-banco] lotes da cobranca:', el.message);
+    else if (rl?.[0]) lotes = { conciliados: Number(rl[0].conciliados), valor: Number(rl[0].valor) };
+  }
+
   const ok = falhasConsulta.length === 0 && resumo.erros === 0;
   return NextResponse.json(
     {
@@ -96,6 +109,7 @@ export async function POST(request: Request) {
         aguardando: avisos.aguardando,
         expirados: avisos.expirados,
       },
+      lotes_conciliados: lotes,
       falhas_consulta: falhasConsulta,
       resultados,
     },

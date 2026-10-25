@@ -292,6 +292,36 @@ export function useReclassificarExtrato() {
   });
 }
 
+/** 0147: concilia os creditos somados da cobranca (COMPE/REDE) com as baixas do dia. */
+export function useConciliarLotes() {
+  const supabase = createClient();
+  const invalidar = useInvalidar();
+  return useMutation({
+    mutationFn: async (conta: string) => {
+      const { data, error } = await supabase.rpc('conciliar_lotes_cobranca', { p_conta: conta, p_desde: null });
+      if (error) throw error;
+      return data?.[0] ?? { conciliados: 0, valor: 0 };
+    },
+    onSuccess: invalidar,
+  });
+}
+
+/** 0147: um item — previa (sem gravar) e, se fechar, a conciliacao. */
+export function useLoteDoItem() {
+  const supabase = createClient();
+  const invalidar = useInvalidar();
+  return useMutation({
+    mutationFn: async (a: { item: string; gravar: boolean }) => {
+      const { data, error } = await supabase.rpc(
+        a.gravar ? 'conciliar_lote_extrato_item' : 'lote_cobranca_extrato_item', { p_item: a.item });
+      if (error) throw error;
+      const r = data?.[0];
+      return r ? { ...r, soma: Number(r.soma), valor_extrato: Number(r.valor_extrato), diferenca: Number(r.diferenca) } : null;
+    },
+    onSuccess: (_d, a) => { if (a.gravar) invalidar(); },
+  });
+}
+
 export function useCriarLancamentoExtrato() {
   const supabase = createClient();
   const invalidar = useInvalidar();

@@ -1558,6 +1558,16 @@ export type CobrancaRemessaItensRow = Timestamps & {
   retorno: Json | null;
 };
 
+/** 0147: previa/resultado do lote da cobranca de um item do extrato. */
+export type LoteCobrancaExtrato = {
+  quantidade: number;
+  soma: number;
+  valor_extrato: number;
+  diferenca: number;
+  quantidade_extrato: number | null;
+  confere: boolean;
+};
+
 // Trilha da baixa bancaria (0105)
 export type SituacaoLiquidacaoBanco = 'BAIXADO' | 'JA_PAGO' | 'NAO_ENCONTRADO' | 'TITULO_CANCELADO';
 export type CobrancaLiquidacoesRow = Timestamps & {
@@ -4501,6 +4511,10 @@ export type Database = {
       cancelar_transferencia_bancaria: { Args: { p_id: string; p_motivo: string }; Returns: undefined };
       ignorar_extrato_item: { Args: { p_item: string; p_motivo: string }; Returns: undefined };
       desfazer_extrato_item: { Args: { p_item: string }; Returns: undefined };
+      // 0147: conciliacao em LOTE do credito somado da cobranca (COMPE/REDE)
+      lote_cobranca_extrato_item: { Args: { p_item: string }; Returns: LoteCobrancaExtrato[] };
+      conciliar_lote_extrato_item: { Args: { p_item: string }; Returns: LoteCobrancaExtrato[] };
+      conciliar_lotes_cobranca: { Args: { p_conta?: string | null; p_desde?: string | null }; Returns: { conciliados: number; valor: number }[] };
       candidatos_extrato_item: { Args: { p_item: string; p_dias?: number }; Returns: CandidatoExtratoRow[] };
       reprocessar_liquidacoes_banco: {
         Args: { p_desde?: string | null };

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
-import { CheckCheck, CheckCircle2, FileUp, Link2, RefreshCw, Undo2, Upload } from 'lucide-react';
+import { CheckCheck, CheckCircle2, FileUp, Layers, Link2, RefreshCw, Undo2, Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
@@ -18,6 +18,8 @@ import {
   useImportacoesExtrato,
   useImportarOfx,
   useItensExtrato,
+  useConciliarLotes,
+  useLoteDoItem,
   useReclassificarExtrato,
   useSaldoEm,
   useTransferenciaExtrato,
@@ -28,6 +30,7 @@ import { useFornecedores } from '@/hooks/use-fornecedores';
 import { contaDoArquivoConfere, decodificarOfx, interpretarOfx, resumoOfx, type ExtratoOfx } from '@/lib/ofx';
 import { ROTULO_ORIGEM, ROTULO_SITUACAO_EXTRATO, resumoConciliacao, diaAnteriorIso } from '@/lib/tesouraria';
 import { somarMoeda } from '@/lib/money';
+import { formatCurrency } from '@/lib/utils';
 import type { ExtratoItensRow } from '@/lib/database.types';
 import { FiltroPeriodo, periodoPreset, Vazio, type Periodo } from './ui-financeiro';
 import { BotoesExportar, Dinheiro, SELECT_CLS, SeletorConta, dataBR } from './tesouraria-ui';
@@ -218,7 +221,32 @@ function Conciliacao({ conta, periodo }: { conta: string; periodo: Periodo }) {
   const confirmar = useConfirmarSugestoes();
   const reclassificar = useReclassificarExtrato();
   const desfazer = useDesfazerItem();
+  const lotes = useConciliarLotes();
+  const lote = useLoteDoItem();
   const [aberto, setAberto] = useState<ExtratoItensRow | null>(null);
+
+  // 0147: credito somado da cobranca (COMPE/REDE) x as baixas de boleto creditadas no dia
+  async function conciliarLote(i: ExtratoItensRow) {
+    try {
+      const pv = await lote.mutateAsync({ item: i.id, gravar: false });
+      if (!pv || !pv.quantidade) {
+        alert(`Nenhuma baixa de boleto (COMPE/REDE) com crédito em ${dataBR(i.data)} nesta conta.`);
+        return;
+      }
+      const qtdExtrato = pv.quantidade_extrato != null ? ` (o extrato diz ${pv.quantidade_extrato})` : '';
+      if (!pv.confere) {
+        alert(`Não fecha: ${pv.quantidade} baixa(s) de boleto creditada(s) em ${dataBR(i.data)}${qtdExtrato} somam `
+          + `${formatCurrency(pv.soma)}; o extrato tem ${formatCurrency(pv.valor_extrato)} (diferença ${formatCurrency(pv.diferenca)}).`);
+        return;
+      }
+      if (!confirm(`Conciliar este crédito com ${pv.quantidade} baixa(s) de boleto${qtdExtrato}, `
+        + `somando ${formatCurrency(pv.soma)}? O saldo não muda.`)) return;
+      await lote.mutateAsync({ item: i.id, gravar: true });
+      setAviso(`Lote conciliado: ${pv.quantidade} boleto(s), ${formatCurrency(pv.soma)}.`);
+    } catch (e) {
+      alert(mensagemErro(e));
+    }
+  }
   const [aviso, setAviso] = useState('');
 
   const todos = itens ?? [];
@@ -245,6 +273,16 @@ function Conciliacao({ conta, periodo }: { conta: string; periodo: Periodo }) {
             })}
           </div>
           <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" disabled={lotes.isPending}
+              title="Liga o crédito somado da cobrança (LIQ.COBRANCA) às baixas dos boletos COMPE/REDE creditados no mesmo dia"
+              onClick={() => lotes.mutate(conta, {
+                onSuccess: (r) => setAviso(r.conciliados
+                  ? `${r.conciliados} crédito(s) da cobrança conciliado(s) em lote, ${formatCurrency(Number(r.valor))}.`
+                  : 'Nenhum crédito da cobrança fechou com as baixas do dia.'),
+                onError: (e) => alert(mensagemErro(e)),
+              })}>
+              <Layers className="h-4 w-4" /> Conciliar lotes da cobrança
+            </Button>
             <Button variant="secondary" disabled={reclassificar.isPending}
               onClick={() => reclassificar.mutate(conta, {
                 onSuccess: (r) => setAviso(`Regras reaplicadas: ${r.sugeridos} sugestão(oes) nova(s), ${r.ignorados} ignorado(s).`),
@@ -298,6 +336,14 @@ function Conciliacao({ conta, periodo }: { conta: string; periodo: Periodo }) {
                         <button className="rounded-md px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50"
                           onClick={() => confirmar.mutate({ conta, itens: [i.id] }, { onError: (e) => alert(mensagemErro(e)) })}>
                           Confirmar
+                        </button>
+                      )}
+                      {i.valor > 0 && (i.situacao === 'PENDENTE' || i.situacao === 'SUGERIDO'
+                        || (i.situacao === 'IGNORADO' && (i.motivo ?? '').startsWith('MENSALIDADE'))) && (
+                        <button className="rounded-md px-2 py-1 text-xs font-medium text-cyan-700 hover:bg-cyan-50"
+                          disabled={lote.isPending} title="Conciliar com as baixas de boleto (COMPE/REDE) creditadas neste dia"
+                          onClick={() => conciliarLote(i)}>
+                          Lote da cobrança
                         </button>
                       )}
                       {(i.situacao === 'PENDENTE' || i.situacao === 'SUGERIDO') && (
