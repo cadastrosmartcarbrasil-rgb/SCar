@@ -22,30 +22,12 @@ import {
   type Previa,
   type RegionalAlvo,
 } from '@/lib/vendedores-import';
+import { matrizDeXlsx as lerXlsx } from '@/lib/planilha-xlsx';
 
 /** Le .xlsx com o exceljs (import dinamico: nao pesa no bundle da pagina). */
 async function matrizDeXlsx(arquivo: File): Promise<string[][]> {
   const ExcelJS = (await import('exceljs')).default;
-  const wb = new ExcelJS.Workbook();
-  await wb.xlsx.load(await arquivo.arrayBuffer());
-  const ws = wb.worksheets[0];
-  if (!ws) throw new Error('A planilha não tem nenhuma aba.');
-
-  const linhas: string[][] = [];
-  ws.eachRow((row) => {
-    const valores = (row.values as unknown[]).slice(1);
-    const celulas: string[] = [];
-    valores.forEach((v, i) => {
-      celulas[i] =
-        v == null ? '' :
-        typeof v === 'object' && 'result' in (v as object) ? String((v as { result: unknown }).result ?? '') :
-        typeof v === 'object' && 'text' in (v as object) ? String((v as { text: unknown }).text ?? '') :
-        v instanceof Date ? v.toLocaleDateString('pt-BR') :
-        String(v);
-    });
-    linhas.push(Array.from({ length: celulas.length }, (_, i) => celulas[i] ?? ''));
-  });
-  return linhas.filter((l) => l.some((c) => c.trim() !== ''));
+  return lerXlsx(ExcelJS, await arquivo.arrayBuffer());
 }
 
 export function ImportarVendedores({ aberto, onClose }: { aberto: boolean; onClose: () => void }) {

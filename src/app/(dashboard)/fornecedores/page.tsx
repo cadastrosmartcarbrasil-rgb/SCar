@@ -3,7 +3,7 @@
 import { Suspense, useMemo, useState } from 'react';
 import { fornecedorCasaComBusca } from '@/lib/fornecedores';
 import { useSearchParams } from 'next/navigation';
-import { Plus, Pencil, Store, Search, LifeBuoy, Satellite } from 'lucide-react';
+import { Plus, Pencil, Store, Search, LifeBuoy, Satellite, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFornecedores, type TipoFornecedor } from '@/hooks/use-fornecedores';
 import {
@@ -13,6 +13,7 @@ import { formatarDocumento, formatarTelefone } from '@/lib/documento';
 import { formatCurrency } from '@/lib/utils';
 import type { FornecedoresRow } from '@/lib/database.types';
 import { SePode } from '@/components/layout/se-pode';
+import { ImportarFornecedores } from '@/components/fornecedores/importar-fornecedores';
 
 // Um cadastro so: fornecedor de pecas, prestador da 24h e rastreadora. Os
 // filtros abaixo sao marcacoes na mesma tabela, nao telas diferentes (0051).
@@ -29,6 +30,7 @@ function Conteudo() {
   const [aba, setAba] = useState<TipoFornecedor>(ABAS.some((a) => a.id === inicial) ? inicial : 'todos');
   const [busca, setBusca] = useState('');
   const [edit, setEdit] = useState<FormFornecedor | null>(null);
+  const [importando, setImportando] = useState(false);
 
   const { data: fornecedores, isLoading } = useFornecedores(aba);
 
@@ -51,11 +53,16 @@ function Conteudo() {
           </p>
         </div>
         <SePode chave="fornecedores.criar">
+        <div className="flex flex-wrap gap-2">
+        <Button variant="secondary" onClick={() => setImportando(true)}>
+          <FileSpreadsheet className="h-4 w-4" /> Importar planilha
+        </Button>
         <Button onClick={() => setEdit(formularioVazio(
           aba === 'prestador' ? 'prestador' : aba === 'rastreadora' ? 'rastreadora' : undefined,
         ))}>
           <Plus className="h-4 w-4" /> Novo fornecedor
         </Button>
+        </div>
         </SePode>
       </div>
 
@@ -147,6 +154,7 @@ function Conteudo() {
       {edit && (
         <ModalFornecedor aberto inicial={edit} onClose={() => setEdit(null)} />
       )}
+      {importando && <ImportarFornecedores aberto onClose={() => setImportando(false)} />}
     </div>
   );
 }

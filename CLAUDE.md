@@ -722,7 +722,7 @@ hotlink /v/<CODIGO>            (vendedor OU franquia; codigo unico em vendedores
 ### Estado de validação (fim da fase)
 - **Migrations `0001`..`0149`** + `schema.sql` consolidado aplicam limpos no harness local.
 - **126 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 1205 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Vitest: 1222 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Os portais e páginas públicas
@@ -5644,7 +5644,21 @@ teste afirma `row_count = 0` e que a linha continua lá).
   valor acordado) e os demais no grupo "sem valor acordado". O banco já aceitava: sem acordo, valem o
   valor padrão e o KM do serviço.
 - **Quem cadastra:** `pode_cadastrar_fornecedor()` = admin/financeiro + time da 24h + **gestor
-  regional**. Cadastro operacional não pode depender de quem tem acesso a Configurações.
+  regional**.
+- **IMPORTAÇÃO POR PLANILHA (25/10/2026, sem migration):** Fornecedores → **Importar planilha**
+  (`<ImportarFornecedores>`, `src/components/fornecedores/importar-fornecedores.tsx`; botão só com
+  `fornecedores.criar`). **Baixar modelo** gera o `.xlsx` na hora (`modeloFornecedoresXlsx`,
+  `src/lib/planilha-xlsx.ts`: aba Fornecedores com colunas em TEXTO — o Excel não come o zero do
+  CNPJ/CEP —, SIM/NAO em lista e a aba Instrucoes). Só RAZAO SOCIAL é obrigatória. **Anti-duplicidade**
+  (`montarPreviaFornecedores`, `src/lib/fornecedores-import.ts`, testada): casa pelo CNPJ/CPF; sem ele,
+  pelo nome (razão ou fantasia, sem acento, pontuação e LTDA/ME/EIRELI/SA) contra cadastro sem documento
+  ou com o mesmo; nome igual com CNPJ diferente entra como NOVO com aviso (filial); repetido na planilha
+  e CNPJ/CPF com dígito errado ficam de fora. **Já cadastrado nunca é sobrescrito:** com a opção marcada
+  (padrão), só os campos VAZIOS são completados e as marcas 24h/rastreadora só são acrescentadas;
+  endereço só entra se o cadastro não tem nenhum. CNPJ que perdeu o zero no Excel é completado. A linha
+  de exemplo do modelo é ignorada. Grava pelo cliente (RLS), em blocos de 100; bloco recusado é refeito
+  linha a linha e a tela diz qual linha falhou. Leitura de `.xlsx` compartilhada com vendedores
+  (`matrizDeXlsx`). Cadastro operacional não pode depender de quem tem acesso a Configurações.
 
 ## Rastreadores (0049 + 0050 + 0051) — arquitetura
 > A especificação que originou a fase 2 está em `docs/modulos/rastreadores.md`, com um cabeçalho

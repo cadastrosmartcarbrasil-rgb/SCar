@@ -70,3 +70,57 @@ export function useSaveFornecedor() {
     },
   });
 }
+
+export interface ResultadoImportacaoFornecedores {
+  criados: number;
+  completados: number;
+  /** Linha da planilha + o motivo do banco, quando alguma recusou. */
+  falhas: { linha: number; nome: string; erro: string }[];
+}
+
+/**
+ * Importacao por planilha: insere os NOVOS em blocos de 100 (bloco que falha e
+ * refeito linha a linha, para dizer QUAL recusou) e completa os ja cadastrados
+ * so com o que estava vazio — a previa (`montarPreviaFornecedores`) decide o
+ * que entra em cada lista.
+ */
+export function useImportarFornecedores() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<
+    ResultadoImportacaoFornecedores,
+    Error,
+    {
+      novos: { linha: number; nome: string; registro: Record<string, unknown> }[];
+      completar: { linha: number; nome: string; id: string; campos: Record<string, unknown> }[];
+    }
+  >({
+    mutationFn: async ({ novos, completar }) => {
+      const r: ResultadoImportacaoFornecedores = { criados: 0, completados: 0, falhas: [] };
+      const traduz = (m: string) =>
+        /duplicate key|unique/i.test(m) ? 'CNPJ/CPF já cadastrado (alguém cadastrou enquanto a prévia estava aberta)' : m;
+
+      for (let i = 0; i < novos.length; i += 100) {
+        const bloco = novos.slice(i, i + 100);
+        const { error } = await supabase.from('fornecedores').insert(bloco.map((n) => n.registro) as never);
+        if (!error) { r.criados += bloco.length; continue; }
+        for (const n of bloco) {
+          const { error: e1 } = await supabase.from('fornecedores').insert(n.registro as never);
+          if (e1) r.falhas.push({ linha: n.linha, nome: n.nome, erro: traduz(e1.message) });
+          else r.criados += 1;
+        }
+      }
+      for (const c of completar) {
+        const { error } = await supabase.from('fornecedores').update(c.campos as never).eq('id', c.id);
+        if (error) r.falhas.push({ linha: c.linha, nome: c.nome, erro: traduz(error.message) });
+        else r.completados += 1;
+      }
+      return r;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['fornecedores'] });
+      qc.invalidateQueries({ queryKey: ['rastreamento'] });
+      qc.invalidateQueries({ queryKey: ['assistencia'] });
+    },
+  });
+}
