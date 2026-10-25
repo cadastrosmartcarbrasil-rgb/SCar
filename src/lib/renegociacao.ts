@@ -15,6 +15,7 @@ export interface BoletoNegociavel {
   valor: number;
   data_vencimento: string;
   linha_digitavel?: string | null;
+  observacao?: string | null;
 }
 
 /** Banco Sicredi (748) na linha digitavel = o boleto tem nosso numero para a baixa. */
@@ -33,7 +34,14 @@ export function motivoNaoNegociavel(b: BoletoNegociavel): string | null {
   if (b.origem === 'MUTUAL' && !ehLinhaSicredi(b.linha_digitavel)) {
     return 'boleto do Mutual sem linha do Sicredi (trate no Mutual)';
   }
+  // 0150: boleto avulso (adesao, vistoria...) nao vira 2a via de mensalidade.
+  if (ehBoletoAvulso(b.observacao)) return 'boleto avulso (emita outro avulso)';
   return null;
+}
+
+/** O titulo e um boleto AVULSO do SAC (0150)? O banco grava a observacao assim. */
+export function ehBoletoAvulso(observacao: string | null | undefined): boolean {
+  return !!observacao && observacao.startsWith('Boleto avulso — ');
 }
 
 export function podeNegociar(b: BoletoNegociavel): boolean {

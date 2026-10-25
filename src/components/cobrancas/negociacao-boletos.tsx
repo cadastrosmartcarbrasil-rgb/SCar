@@ -227,7 +227,7 @@ export function ModalNegociarBoletos({
   );
 }
 
-function ResultadoEmissao({ clienteId, renegociacaoId, onClose }: { clienteId: string; renegociacaoId: string; onClose: () => void }) {
+export function ResultadoEmissao({ clienteId, renegociacaoId, onClose }: { clienteId: string; renegociacaoId: string; onClose: () => void }) {
   const q = useRenegociacoes(clienteId);
   const r = (q.data ?? []).find((x) => x.id === renegociacaoId);
   if (q.isLoading) return <p className="text-sm text-slate-400">Carregando...</p>;
@@ -271,9 +271,9 @@ function CartaoRenegociacao({ clienteId, r, destaque }: { clienteId: string; r: 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm font-semibold text-slate-800">
           <CheckCircle2 className="mr-1 inline h-4 w-4 text-emerald-600" />
-          {r.tipo === 'ACORDO' ? `Acordo em ${r.boletos.length}x` : r.tipo === 'PRO_RATA' ? (r.boletos.length ? 'Pró-rata' : 'Baixa por cancelamento') : '2a via negociada'} · {formatCurrency(Number(r.valor_total))}
+          {r.tipo === 'AVULSO' ? `Boleto avulso — ${r.observacao ?? ''}` : r.tipo === 'ACORDO' ? `Acordo em ${r.boletos.length}x` : r.tipo === 'PRO_RATA' ? (r.boletos.length ? 'Pró-rata' : 'Baixa por cancelamento') : '2a via negociada'} · {formatCurrency(Number(r.valor_total))}
           <span className="ml-2 text-xs font-normal text-slate-500">
-            substitui {r.origens.length} boleto(s) de {formatCurrency(Number(r.valor_original))} · {formatDate(r.created_at)}
+            {r.origens.length > 0 && <>substitui {r.origens.length} boleto(s) de {formatCurrency(Number(r.valor_original))} · </>}{formatDate(r.created_at)}
             {r.criado_por ? ` · ${r.criado_por}` : ''}
           </span>
         </p>
@@ -281,7 +281,7 @@ function CartaoRenegociacao({ clienteId, r, destaque }: { clienteId: string; r: 
       <ul className="mt-2 space-y-1.5">
         {abertos.map((b) => <LinhaBoletoNovo key={b.id} b={b} varios={abertos.length > 1} />)}
       </ul>
-      <EnvioBoletos clienteId={clienteId} boletos={abertos.filter((b) => b.status !== 'pago')} />
+      <EnvioBoletos clienteId={clienteId} boletos={abertos.filter((b) => b.status !== 'pago')} substitui={r.origens.length > 0} />
       {pend > 0 && (
         <div className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
           <p className="font-medium">{pend} boleto(s) original(is) ainda sem baixa no banco — o associado ainda consegue paga-lo(s).</p>
@@ -340,11 +340,11 @@ function LinhaBoletoNovo({ b, varios }: { b: BoletoRenegociacao; varios: boolean
 }
 
 /** Envio na hora: WhatsApp (texto com linha + PIX) e e-mail (com o PDF). */
-export function EnvioBoletos({ clienteId, boletos }: { clienteId: string; boletos: BoletoRenegociacao[] }) {
+export function EnvioBoletos({ clienteId, boletos, substitui = true }: { clienteId: string; boletos: BoletoRenegociacao[]; substitui?: boolean }) {
   const contato = useContatoAssociado(clienteId);
   const email = useEnviarBoletoEmail();
   if (boletos.length === 0) return null;
-  const texto = mensagemDoBoleto({ nome: contato.data?.nome_razao_social ?? '', boletos });
+  const texto = mensagemDoBoleto({ nome: contato.data?.nome_razao_social ?? '', boletos, substitui });
   const zap = linkWhatsAppAssociado(contato.data?.celular ?? contato.data?.telefone, texto);
   return (
     <div className="mt-2 flex flex-wrap gap-2 border-t border-slate-100 pt-2">

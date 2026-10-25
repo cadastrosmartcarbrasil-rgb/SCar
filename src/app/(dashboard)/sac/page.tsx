@@ -25,6 +25,7 @@ import { useContratosVeiculo, useVistoriasVeiculo } from '@/hooks/use-veiculo-fi
 import { useHistoricoAssistenciaVeiculo } from '@/hooks/use-assistencia';
 import { ModalHistoricoFinanceiro, ModalWhatsApp, ModalEmail } from '@/components/sac/acoes-veiculo';
 import { CancelamentosRegistrados, ModalCancelamentoVeiculo } from '@/components/veiculos/cancelamento-veiculo';
+import { ModalBoletoAvulso } from '@/components/cobrancas/boleto-avulso';
 import { AlertasVeiculo } from '@/components/veiculos/alertas-veiculo';
 import { useAbrirProtocolo } from '@/hooks/use-protocolos';
 import { CATEGORIAS_PROTOCOLO, PRIORIDADES } from '@/lib/protocolos';
@@ -369,7 +370,10 @@ function AtendimentoVeiculo({ clienteId, associado, veiculoId, podeTrocar, onTro
   const [email, setEmail] = useState(false);
   const [termos, setTermos] = useState(false);
   const [cancelando, setCancelando] = useState(false);
+  const [avulso, setAvulso] = useState(false);
   const verTermos = usePode('termos.ver');
+  // 0150: o banco confere Cobranca: Criar + escopo; a tela so nao oferece a quem ele recusaria.
+  const emiteAvulso = usePode('cobranca.criar');
   const { data: atendimentos } = useAtendimentosVeiculo(veiculoId);
   // Historico da Assistencia 24h na propria ficha do veiculo.
   const { data: acionamentos24h } = useHistoricoAssistenciaVeiculo(veiculoId);
@@ -396,6 +400,7 @@ function AtendimentoVeiculo({ clienteId, associado, veiculoId, podeTrocar, onTro
     if (s.modo === 'termos') { setTermos(true); return; }
     // 0144: cancela SO este veiculo (motivo, retorno, pro-rata e baixa dos futuros).
     if (s.modo === 'cancelamento') { setCancelando(true); return; }
+    if (s.modo === 'avulso') { setAvulso(true); return; }
     setServico(s);
   }
 
@@ -417,7 +422,7 @@ function AtendimentoVeiculo({ clienteId, associado, veiculoId, podeTrocar, onTro
           <div>
             <p className="mb-2 text-sm font-semibold text-slate-700">O que você precisa para este veículo?</p>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {SERVICOS_SAC.filter((s) => s.modo !== 'termos' || verTermos).map((s) => (
+              {SERVICOS_SAC.filter((s) => (s.modo !== 'termos' || verTermos) && (s.modo !== 'avulso' || emiteAvulso)).map((s) => (
                 <button key={s.id} onClick={() => acionar(s)}
                   className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-superficie p-4 text-left shadow-sm transition hover:border-cyan-400 hover:shadow-md disabled:opacity-60">
                   <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${s.cor}`}>
@@ -498,6 +503,14 @@ function AtendimentoVeiculo({ clienteId, associado, veiculoId, podeTrocar, onTro
           {whats && <ModalWhatsApp associado={associado} placa={veiculo.placa} onClose={() => setWhats(false)} />}
           {email && <ModalEmail associado={associado} placa={veiculo.placa} onClose={() => setEmail(false)} />}
           {cancelando && <ModalCancelamentoVeiculo veiculo={veiculo} onClose={() => setCancelando(false)} />}
+          {avulso && (
+            <ModalBoletoAvulso
+              clienteId={clienteId}
+              associado={associado.nome_razao_social}
+              veiculo={{ id: veiculo.id, rotulo: identificacaoVeiculo(veiculo.placa, veiculo.chassi) }}
+              onClose={() => setAvulso(false)}
+            />
+          )}
           <Modal open={termos} onClose={() => setTermos(false)} title={`Termos — ${veiculo.placa}`} tamanho="xl">
             {termos && <TermosDoCadastro clienteId={clienteId} veiculoId={veiculo.id} />}
           </Modal>

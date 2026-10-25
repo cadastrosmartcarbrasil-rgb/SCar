@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Building2, Users, Landmark, ListTree, Car, BadgeDollarSign, AlertTriangle, Truck, Package, Building, Wallet, Percent, Layers, Bell, Megaphone, Palette, Target, FileCheck2, FileSignature,
+  Building2, Users, Landmark, ListTree, Car, BadgeDollarSign, AlertTriangle, Truck, Package, Building, Wallet, Percent, Layers, Bell, Megaphone, Palette, Target, FileCheck2, FileSignature, Receipt,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -27,6 +27,7 @@ const TABS = [
   { href: '/configuracoes/integracoes', label: 'Integrações Bancárias', icon: Landmark },
   { href: '/configuracoes/plano-contas', label: 'Plano de Contas', icon: ListTree },
   { href: '/configuracoes/centros-custo', label: 'Centros de Custo', icon: Target },
+  { href: '/configuracoes/boletos-avulsos', label: 'Boletos Avulsos', icon: Receipt },
 ];
 
 export function ConfigTabs({ somente }: { somente?: string[] } = {}) {

@@ -11,6 +11,11 @@ describe('o que pode ser negociado', () => {
     expect(podeNegociar({ id: '1', status: 'vencido', valor: 10, data_vencimento: '2026-09-01', origem: 'SCAR' })).toBe(true);
     expect(motivoNaoNegociavel({ id: '1', status: 'pago', valor: 10, data_vencimento: '2026-09-01' })).toBe('boleto pago');
   });
+  it('boleto avulso (0150) nao se negocia', () => {
+    expect(motivoNaoNegociavel({ id: '1', status: 'vencido', valor: 10, data_vencimento: '2026-09-01', origem: 'SCAR',
+      observacao: 'Boleto avulso — Vistoria' })).toBe('boleto avulso (emita outro avulso)');
+    expect(podeNegociar({ id: '1', status: 'vencido', valor: 10, data_vencimento: '2026-09-01', observacao: 'renegociado' })).toBe(true);
+  });
   it('Mutual so com linha do Sicredi', () => {
     expect(ehLinhaSicredi(linha748)).toBe(true);
     expect(ehLinhaSicredi('00190000090000000000000000000000000000000009000')).toBe(false);

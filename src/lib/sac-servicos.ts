@@ -2,7 +2,7 @@
 // Fonte unica reutilizada pelo SAC interno e pelo Portal do Associado.
 import {
   AlertTriangle, LifeBuoy, ClipboardCheck, Pencil, Wallet,
-  MessageCircle, Mail, Ticket, FileSignature, Ban,
+  MessageCircle, Mail, Ticket, FileSignature, Ban, Receipt,
   type LucideIcon,
 } from 'lucide-react';
 import type { TipoAtendimento, StatusAtendimento, StatusEvento } from '@/lib/database.types';
@@ -16,10 +16,11 @@ import type { TipoAtendimento, StatusAtendimento, StatusEvento } from '@/lib/dat
 //             e ainda GERAVA faturas da competencia pelo motor antigo.)
 // 'whatsapp' / 'email' sao disparos rapidos ao associado;
 // 'termos'   emite e consulta os termos do veiculo (0123);
-// 'cancelamento' cancela SO este veiculo, com motivo, retorno e pro-rata (0144).
+// 'cancelamento' cancela SO este veiculo, com motivo, retorno e pro-rata (0144);
+// 'avulso'   emite boleto que NAO e mensalidade, no banco padrao (0150).
 export type ModoServico =
   | 'chamado' | 'evento' | 'assistencia'
-  | 'editar' | 'financeiro' | 'whatsapp' | 'email' | 'termos' | 'cancelamento';
+  | 'editar' | 'financeiro' | 'whatsapp' | 'email' | 'termos' | 'cancelamento' | 'avulso';
 
 export interface ServicoSac {
   id: string;
@@ -54,6 +55,12 @@ export const SERVICOS_SAC: ServicoSac[] = [
   {
     id: 'financeiro', titulo: 'Boletos e 2ª via', descricao: 'Histórico, PDF, 2ª via, negociação e envio',
     icon: Wallet, cor: 'bg-emerald-50 text-emerald-600', modo: 'financeiro',
+    tipos: [{ value: 'FINANCEIRO', label: 'Financeiro' }],
+  },
+  {
+    id: 'avulso', titulo: 'Emitir boleto avulso',
+    descricao: 'Adesão, vistoria, rastreador, acordo... (não é mensalidade)',
+    icon: Receipt, cor: 'bg-teal-50 text-teal-600', modo: 'avulso',
     tipos: [{ value: 'FINANCEIRO', label: 'Financeiro' }],
   },
   {

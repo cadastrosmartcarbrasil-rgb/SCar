@@ -1457,6 +1457,8 @@ export type TitulosFinanceirosRow = Timestamps & {
   renegociacao_parcela?: number | null;
   /** 0145: boleto da TAXA DE ADESAO desta venda (lead). */
   adesao_lead_id?: string | null;
+  // 0150 — boleto AVULSO do SAC (o tipo)
+  tipo_avulso_id?: string | null;
 };
 
 // 0121: renegociacao (2a via vencida / acordo) — boleto novo do SCar + baixa dos originais
@@ -1483,7 +1485,7 @@ export type OrigemRenegociacao = {
 };
 export type RenegociacaoCliente = {
   id: string;
-  tipo: 'SEGUNDA_VIA' | 'ACORDO' | 'PRO_RATA';
+  tipo: 'SEGUNDA_VIA' | 'ACORDO' | 'PRO_RATA' | 'AVULSO';
   situacao: 'EMITINDO' | 'EMITIDA' | 'ERRO';
   erro: string | null;
   valor_original: number;
@@ -2572,6 +2574,17 @@ export type HistoricoAssistencia = {
   concluido_em: string | null;
   negado_motivo: MotivoNegativaAcionamento | null;
   negado_observacao: string | null;
+};
+
+// 0150 — tipos de boleto AVULSO do SAC
+export type TiposBoletoAvulsoRow = {
+  id: string;
+  nome: string;
+  categoria_dre_id: string | null;
+  exige_veiculo: boolean;
+  ativo: boolean;
+  ordem: number;
+  created_at: string;
 };
 
 export type CentrosCustoRow = {
@@ -4076,6 +4089,7 @@ export type Database = {
         [Rel<'acionamento_id', 'acionamentos_assistencia'>, Rel<'enviado_por', 'usuarios'>]
       >;
       centros_custo: TableDef<CentrosCustoRow>;
+      tipos_boleto_avulso: TableDef<TiposBoletoAvulsoRow, [Rel<'categoria_dre_id', 'categorias_dre'>]>;
       contas_bancarias: TableDef<ContasBancariasRow>;
       conta_bancaria_operadores: TableDef<ContaBancariaOperadoresRow, [Rel<'conta_bancaria_id', 'contas_bancarias'>]>;
       transferencias_bancarias: TableDef<TransferenciasBancariasRow, [Rel<'conta_origem_id', 'contas_bancarias'>, Rel<'conta_destino_id', 'contas_bancarias'>]>;
@@ -4662,6 +4676,13 @@ export type Database = {
         Args: {
           p_veiculo_id: string; p_data: string; p_motivo: string;
           p_previsao_retorno?: boolean; p_data_retorno?: string | null; p_observacao?: string | null;
+        };
+        Returns: string;
+      };
+      criar_boleto_avulso: {
+        Args: {
+          p_cliente_id: string; p_tipo_id: string; p_valor: number; p_vencimento: string;
+          p_veiculo_id?: string | null; p_descricao?: string | null;
         };
         Returns: string;
       };

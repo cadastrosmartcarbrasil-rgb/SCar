@@ -12,7 +12,7 @@ import { useTitulosCliente, useAjustarTitulo } from '@/hooks/use-protocolos';
 import { BoletosNegociados, ModalNegociarBoletos, useContatoAssociado } from '@/components/cobrancas/negociacao-boletos';
 import { ModalBoletoProRata } from '@/components/veiculos/cancelamento-veiculo';
 import { usePode } from '@/hooks/use-permissoes';
-import { ehLinhaSicredi, mensagemDoBoleto, motivoNaoNegociavel } from '@/lib/renegociacao';
+import { ehBoletoAvulso, ehLinhaSicredi, mensagemDoBoleto, motivoNaoNegociavel } from '@/lib/renegociacao';
 import {
   linkWhatsAppAssociado, mensagemPadrao, assuntoPadrao, linkEmail,
   valorAjustado, validarAjuste,
@@ -136,6 +136,9 @@ export function HistoricoFinanceiroLista({
                     </span>
                   )}
                 </p>
+                {ehBoletoAvulso(t.observacao) && (
+                  <p className="text-xs font-medium text-teal-700">{t.observacao}</p>
+                )}
                 <p className="text-xs text-slate-500">
                   Vence {formatDate(t.data_vencimento)}
                   {t.placa ? ` · ${t.placa}` : ' · fatura do associado'}

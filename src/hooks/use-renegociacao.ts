@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
-import type { RenegociacaoCliente } from '@/lib/database.types';
+import type { RenegociacaoCliente, TiposBoletoAvulsoRow } from '@/lib/database.types';
 import type { ParcelaNegociada } from '@/lib/renegociacao';
 
 // 2a via vencida e boleto negociado (0121). As escritas passam pela rota do
@@ -70,5 +70,59 @@ export function useBaixarOriginais() {
 export function useEnviarBoletoEmail() {
   return useMutation<{ enviado: boolean; para?: string; aviso?: string; texto: string }, Error, { titulo_ids: string[] }>({
     mutationFn: (b) => postar('/api/v1/cobrancas/boleto', b),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// BOLETO AVULSO do SAC (0150): o catalogo de tipos e a emissao no banco padrao.
+// ---------------------------------------------------------------------------
+export type TipoBoletoAvulso = TiposBoletoAvulsoRow & {
+  categorias_dre?: { codigo_estruturado: string; nome: string } | null;
+};
+
+export function useTiposBoletoAvulso() {
+  const supabase = createClient();
+  return useQuery<TipoBoletoAvulso[]>({
+    queryKey: ['tipos-boleto-avulso'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('tipos_boleto_avulso')
+        .select('*, categorias_dre(codigo_estruturado, nome)')
+        .order('ordem').order('nome');
+      if (error) throw error;
+      return (data ?? []) as unknown as TipoBoletoAvulso[];
+    },
+  });
+}
+
+export function useSalvarTipoBoletoAvulso() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<void, Error, Partial<TiposBoletoAvulsoRow> & { nome: string }>({
+    mutationFn: async ({ id, nome, categoria_dre_id, exige_veiculo, ativo, ordem }) => {
+      const linha = {
+        nome: nome.trim(), categoria_dre_id: categoria_dre_id ?? null,
+        exige_veiculo: !!exige_veiculo, ativo: ativo ?? true, ordem: ordem ?? 0,
+      };
+      const { error } = id
+        ? await supabase.from('tipos_boleto_avulso').update(linha).eq('id', id)
+        : await supabase.from('tipos_boleto_avulso').insert(linha);
+      if (error) {
+        if (error.code === '23505') throw new Error('Já existe um tipo com esse nome.');
+        throw error;
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['tipos-boleto-avulso'] }),
+  });
+}
+
+export function useEmitirBoletoAvulso() {
+  const invalidar = useInvalidar();
+  return useMutation<
+    { renegociacao_id: string },
+    Error,
+    { cliente_id: string; tipo_id: string; valor: number; vencimento: string; veiculo_id?: string | null; descricao?: string | null }
+  >({
+    mutationFn: (b) => postar('/api/v1/cobrancas/avulso', b),
+    onSettled: invalidar,
   });
 }
