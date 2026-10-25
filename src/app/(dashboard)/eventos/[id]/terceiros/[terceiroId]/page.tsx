@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { ArrowLeft, DollarSign, Info, Plus, Wrench } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { TerceiroForm } from '@/components/eventos/terceiro-form';
@@ -19,7 +20,9 @@ type Aba = 'dados' | 'reparo' | 'financeiro';
 // (indenizacao/compras) — sempre sob o vinculo Evento X do Associado Y.
 export default function TerceiroPage({ params }: { params: { id: string; terceiroId: string } }) {
   const { data: t, isLoading, error } = useTerceiro(params.terceiroId);
-  const [aba, setAba] = useState<Aba>('dados');
+  // ?aba=financeiro: link vindo do historico do fornecedor
+  const abaInicial = useSearchParams()?.get('aba');
+  const [aba, setAba] = useState<Aba>(abaInicial === 'reparo' || abaInicial === 'financeiro' ? abaInicial : 'dados');
   const { data: perfil } = usePerfilAtual();
   const trata = usePode('eventos.editar');
 

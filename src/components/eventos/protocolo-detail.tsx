@@ -42,7 +42,9 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
   const { data: documentos } = useDocumentosEvento(eventoId);
   const { data: comunicacoes } = useComunicacoesEvento(eventoId);
   const abaInicial = useSearchParams()?.get('aba');
-  const [aba, setAba] = useState<Aba>(abaInicial === 'comunicacoes' ? 'comunicacoes' : 'info');
+  const [aba, setAba] = useState<Aba>(
+    abaInicial === 'comunicacoes' || abaInicial === 'financeiro' ? abaInicial : 'info',
+  );
   const [editando, setEditando] = useState(false);
 
   if (isLoading || !evento) return <p className="text-sm text-slate-500">Carregando protocolo...</p>;

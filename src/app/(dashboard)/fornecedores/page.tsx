@@ -2,8 +2,8 @@
 
 import { Suspense, useMemo, useState } from 'react';
 import { fornecedorCasaComBusca } from '@/lib/fornecedores';
-import { useSearchParams } from 'next/navigation';
-import { Plus, Pencil, Store, Search, LifeBuoy, Satellite, FileSpreadsheet } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Plus, Pencil, Store, Search, LifeBuoy, Satellite, FileSpreadsheet, Receipt } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFornecedores, type TipoFornecedor } from '@/hooks/use-fornecedores';
 import {
@@ -14,6 +14,8 @@ import { formatCurrency } from '@/lib/utils';
 import type { FornecedoresRow } from '@/lib/database.types';
 import { SePode } from '@/components/layout/se-pode';
 import { ImportarFornecedores } from '@/components/fornecedores/importar-fornecedores';
+import { HistoricoFornecedor } from '@/components/fornecedores/historico-fornecedor';
+import { usePode } from '@/hooks/use-permissoes';
 
 // Um cadastro so: fornecedor de pecas, prestador da 24h e rastreadora. Os
 // filtros abaixo sao marcacoes na mesma tabela, nao telas diferentes (0051).
@@ -26,8 +28,21 @@ const ABAS: { id: TipoFornecedor; label: string; icon: React.ElementType }[] = [
 
 function Conteudo() {
   const params = useSearchParams();
+  const router = useRouter();
   const inicial = (params.get('tipo') as TipoFornecedor) || 'todos';
   const [aba, setAba] = useState<TipoFornecedor>(ABAS.some((a) => a.id === inicial) ? inicial : 'todos');
+  // Aba "Historico financeiro" (?aba=historico&fornecedor=<id>): a URL guarda o
+  // fornecedor, entao "voltar" da origem do lancamento cai no mesmo historico.
+  const veFinanceiro = usePode('financeiro.ver');
+  const historico = veFinanceiro && params.get('aba') === 'historico';
+  const fornecedorHistorico = params.get('fornecedor') ?? '';
+  function abrirHistorico(id: string) {
+    router.replace(`/fornecedores?aba=historico${id ? `&fornecedor=${id}` : ''}`, { scroll: false });
+  }
+  function abrirLista(t: TipoFornecedor) {
+    setAba(t);
+    if (params.get('aba')) router.replace(`/fornecedores${t !== 'todos' ? `?tipo=${t}` : ''}`, { scroll: false });
+  }
   const [busca, setBusca] = useState('');
   const [edit, setEdit] = useState<FormFornecedor | null>(null);
   const [importando, setImportando] = useState(false);
@@ -68,14 +83,27 @@ function Conteudo() {
 
       <div className="flex flex-wrap gap-1 border-b border-slate-200">
         {ABAS.map((a) => (
-          <button key={a.id} onClick={() => setAba(a.id)}
+          <button key={a.id} onClick={() => abrirLista(a.id)}
             className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm ${
-              aba === a.id ? 'border-brand-600 font-medium text-brand-700' : 'border-transparent text-slate-500 hover:text-slate-700'
+              !historico && aba === a.id ? 'border-brand-600 font-medium text-brand-700' : 'border-transparent text-slate-500 hover:text-slate-700'
             }`}>
             <a.icon className="h-4 w-4" /> {a.label}
           </button>
         ))}
+        {veFinanceiro && (
+          <button onClick={() => abrirHistorico(fornecedorHistorico)}
+            className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm ${
+              historico ? 'border-brand-600 font-medium text-brand-700' : 'border-transparent text-slate-500 hover:text-slate-700'
+            }`}>
+            <Receipt className="h-4 w-4" /> Histórico financeiro
+          </button>
+        )}
       </div>
+
+      {historico ? (
+        <HistoricoFornecedor fornecedorId={fornecedorHistorico} onFornecedor={abrirHistorico} />
+      ) : (
+      <>
 
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
@@ -138,7 +166,13 @@ function Conteudo() {
                   {f.ativo ? <span className="text-emerald-600">Sim</span> : <span className="text-slate-400">Nao</span>}
                 </td>
                 <td className="px-4 py-2 text-right">
-                  <button onClick={() => editar(f)} className="rounded p-1.5 text-slate-500 hover:bg-slate-100">
+                  {veFinanceiro && (
+                    <button onClick={() => abrirHistorico(f.id)} title="Histórico financeiro"
+                      className="rounded p-1.5 text-slate-500 hover:bg-slate-100">
+                      <Receipt className="h-4 w-4" />
+                    </button>
+                  )}
+                  <button onClick={() => editar(f)} title="Editar" className="rounded p-1.5 text-slate-500 hover:bg-slate-100">
                     <Pencil className="h-4 w-4" />
                   </button>
                 </td>
@@ -150,6 +184,8 @@ function Conteudo() {
           </tbody>
         </table>
       </div>
+      </>
+      )}
 
       {edit && (
         <ModalFornecedor aberto inicial={edit} onClose={() => setEdit(null)} />

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { BarChart3, CalendarDays, FileBarChart, Landmark, ScrollText, Wallet, Waves } from 'lucide-react';
 import { DreReport } from '@/components/financeiro/dre-report';
 import { ContasFinanceiro } from '@/components/financeiro/contas-financeiro';
@@ -29,7 +30,19 @@ const ABAS: { id: Aba; label: string; descricao: string; icon: React.ElementType
 ];
 
 export default function FinanceiroPage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-slate-400">Carregando...</p>}>
+      <Financeiro />
+    </Suspense>
+  );
+}
+
+function Financeiro() {
   const [aba, setAba] = useState<Aba>('contas');
+  // ?lancamento=<id>: link vindo do historico do fornecedor — abre a carteira com aquele titulo.
+  const params = useSearchParams();
+  const router = useRouter();
+  const lancamentoLink = params.get('lancamento');
   const [contaExtrato, setContaExtrato] = useState<string | null>(null);
   const { data: perfil } = usePerfilAtual();
   // A tesouraria e da matriz; o operador de conta (0126) ve so a conta liberada. O banco confere.
@@ -52,7 +65,7 @@ export default function FinanceiroPage() {
         {abas.map((a) => (
           <button
             key={a.id}
-            onClick={() => setAba(a.id)}
+            onClick={() => { setAba(a.id); if (lancamentoLink) router.replace('/financeiro', { scroll: false }); }}
             aria-current={atual.id === a.id ? 'page' : undefined}
             className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm transition ${
               atual.id === a.id
@@ -66,7 +79,12 @@ export default function FinanceiroPage() {
         ))}
       </nav>
 
-      {atual.id === 'contas' && <ContasFinanceiro />}
+      {atual.id === 'contas' && (
+        <ContasFinanceiro
+          lancamentoId={lancamentoLink}
+          onLimparLancamento={() => router.replace('/financeiro', { scroll: false })}
+        />
+      )}
       {atual.id === 'saldos' && <SaldosContas matriz={matriz} onAbrirExtrato={(id) => { setContaExtrato(id); setAba('extrato'); }} />}
       {atual.id === 'extrato' && <ExtratoConciliacao key={contaExtrato ?? 'todas'} contaInicial={contaExtrato} />}
       {atual.id === 'diario' && <FluxoDiario />}

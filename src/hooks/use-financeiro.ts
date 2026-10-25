@@ -34,6 +34,8 @@ export interface FiltroLancamentos {
   centroCustoId?: string;
   /** Favorecido (0132): so os titulos deste fornecedor. */
   fornecedorId?: string;
+  /** Um titulo so (link do historico do fornecedor): ignora periodo e demais filtros. */
+  id?: string;
   /** Filtra pelo campo de data escolhido na tela. */
   campoData?: 'data_vencimento' | 'data_emissao' | 'competencia';
 }
@@ -46,6 +48,7 @@ export function useLancamentos(filtro?: FiltroLancamentos) {
       'lancamentos', filtro?.tipo ?? 'all', filtro?.status ?? 'all',
       filtro?.inicio ?? '-', filtro?.fim ?? '-', campo,
       filtro?.categoriaId ?? '-', filtro?.centroCustoId ?? '-', filtro?.fornecedorId ?? '-',
+      filtro?.id ?? '-',
     ],
     queryFn: async () => {
       let q = supabase
@@ -55,6 +58,11 @@ export function useLancamentos(filtro?: FiltroLancamentos) {
             'categorias_dre(codigo_estruturado, nome), centros_custo(nome), evento_terceiros(codigo, nome)',
         )
         .order('data_vencimento', { ascending: true });
+      if (filtro?.id) {
+        const { data, error } = await q.eq('id', filtro.id);
+        if (error) throw error;
+        return (data ?? []) as unknown as LancamentoComRel[];
+      }
       if (filtro?.fornecedorId) q = q.eq('fornecedor_id', filtro.fornecedorId);
       if (filtro?.tipo) q = q.eq('tipo', filtro.tipo);
       // "Em atraso" e o vencido em aberto pela DATA, nao so o que a rotina ja
@@ -70,6 +78,41 @@ export function useLancamentos(filtro?: FiltroLancamentos) {
       const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as unknown as LancamentoComRel[];
+    },
+  });
+}
+
+export interface LancamentoHistoricoFornecedor extends LancamentoComRel {
+  eventos_sinistro?: { numero_protocolo: string | null } | null;
+  acionamentos_assistencia?: { id: string; codigo_os: string | null; protocolo: string | null }[] | null;
+  baixas_financeiras?: {
+    id: string; data_pagamento: string; valor_liquido: number; valor_pago: number;
+    forma_pagamento: string | null; contas_bancarias?: { nome: string } | null;
+  }[] | null;
+}
+
+/**
+ * Historico financeiro do fornecedor: todos os titulos (pagar e receber), com os
+ * pagamentos e a origem (OS da 24h, evento). A RLS do lancamento decide o que vem.
+ */
+export function useHistoricoFornecedor(fornecedorId: string | null | undefined) {
+  const supabase = createClient();
+  return useQuery<LancamentoHistoricoFornecedor[]>({
+    queryKey: ['lancamentos', 'fornecedor-historico', fornecedorId ?? '-'],
+    enabled: !!fornecedorId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('lancamentos_financeiros')
+        .select(
+          '*, categorias_dre(codigo_estruturado, nome), centros_custo(nome), evento_terceiros(codigo, nome), ' +
+            'eventos_sinistro(numero_protocolo), acionamentos_assistencia(id, codigo_os, protocolo), ' +
+            'baixas_financeiras(id, data_pagamento, valor_liquido, valor_pago, forma_pagamento, contas_bancarias(nome))',
+        )
+        .eq('fornecedor_id', fornecedorId!)
+        .order('data_vencimento', { ascending: false })
+        .limit(1000);
+      if (error) throw error;
+      return (data ?? []) as unknown as LancamentoHistoricoFornecedor[];
     },
   });
 }

@@ -45,7 +45,13 @@ const STATUS_FILTRO: { valor: StatusLancamento | ''; rotulo: string }[] = [
  * A tela abre com o painel do periodo (previsto x realizado x inadimplencia),
  * a carteira filtrada e o rodape somando o que esta em tela.
  */
-export function ContasFinanceiro() {
+export function ContasFinanceiro({
+  lancamentoId, onLimparLancamento,
+}: {
+  /** Link de um titulo so (historico do fornecedor): a carteira mostra so ele. */
+  lancamentoId?: string | null;
+  onLimparLancamento?: () => void;
+} = {}) {
   // Permissoes do perfil (0111): os botoes so aparecem para quem tem a acao.
   const pode = {
     criar: usePode('financeiro.criar'), editar: usePode('financeiro.editar'),
@@ -76,6 +82,7 @@ export function ContasFinanceiro() {
     categoriaId: categoriaId || undefined,
     centroCustoId: centroCustoId || undefined,
     fornecedorId: fornecedorId || undefined,
+    id: lancamentoId || undefined,
   };
 
   const { data: lancamentos, isLoading } = useLancamentos(filtro);
@@ -226,6 +233,19 @@ export function ContasFinanceiro() {
           />
         </div>
       </div>
+
+      {lancamentoId && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-cyan-200 bg-cyan-50 px-4 py-2.5 text-sm text-cyan-800">
+          <span>
+            Mostrando só o lançamento aberto pelo link
+            {lista[0] ? <> — <strong>{lista[0].descricao}</strong></> : !isLoading && ' (não encontrado ou sem permissão)'}.
+            Os filtros de período e situação não valem enquanto ele estiver aberto.
+          </span>
+          {onLimparLancamento && (
+            <button onClick={onLimparLancamento} className="font-medium underline hover:text-cyan-900">Ver toda a carteira</button>
+          )}
+        </div>
+      )}
 
       {/* Carteira */}
       <div className="overflow-x-auto rounded-2xl border border-slate-200/80 bg-superficie shadow-[0_1px_2px_rgba(20,33,61,0.04)]">

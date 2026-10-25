@@ -5643,6 +5643,15 @@ teste afirma `row_count = 0` e que a linha continua lá).
   `opcoesPrestadorDoServico` (`src/lib/fornecedores.ts`, testada) põe os vinculados primeiro (com o
   valor acordado) e os demais no grupo "sem valor acordado". O banco já aceitava: sem acordo, valem o
   valor padrão e o KM do serviço.
+- **HISTÓRICO FINANCEIRO DO FORNECEDOR (25/10/2026, sem migration):** aba **Histórico financeiro** em
+  `/fornecedores` (e o ícone de recibo em cada linha; URL `?aba=historico&fornecedor=<id>`), só para quem tem
+  `financeiro.ver`. Lista todos os títulos a pagar/receber do fornecedor (`useHistoricoFornecedor`, até 1.000,
+  RLS do lançamento) com os pagamentos de cada um, totais (pago, a pagar, vencido, recebido) e filtro. **Clicar
+  na linha abre a ORIGEM** (`origemDoLancamento`, `src/lib/origem-lancamento.ts`, testada): OS da 24h
+  (`/assistencia?acionamento=`, pelo reverso de `acionamentos_assistencia.lancamento_id`) > terceiro do evento
+  (`/eventos/<id>/terceiros/<t>?aba=financeiro`) > evento (`/eventos/<id>?aba=financeiro`) > o próprio título
+  (`/financeiro?lancamento=<id>`, a carteira mostra só ele com "Ver toda a carteira"). Título antigo de OS que
+  trocou de prestador perde o vínculo (a OS aponta para o novo) e cai no Financeiro.
 - **Quem cadastra:** `pode_cadastrar_fornecedor()` = admin/financeiro + time da 24h + **gestor
   regional**.
 - **IMPORTAÇÃO POR PLANILHA (25/10/2026, sem migration):** Fornecedores → **Importar planilha**
