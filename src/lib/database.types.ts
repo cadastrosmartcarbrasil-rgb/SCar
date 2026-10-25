@@ -2616,6 +2616,67 @@ export type ModoMensalidadeOfx = 'NENHUM' | 'POR_TEXTO' | 'TODOS_CREDITOS';
 export type SituacaoExtratoItem = 'PENDENTE' | 'SUGERIDO' | 'CONCILIADO' | 'IGNORADO';
 export type TipoConciliacaoExtrato = 'BAIXA' | 'TITULO' | 'TRANSFERENCIA' | 'LANCAMENTO';
 
+export type ApiIntegracoesRow = {
+  id: string;
+  nome: string;
+  descricao: string | null;
+  fornecedor_id: string | null;
+  escopos: string[];
+  regional_ids: string[] | null;
+  ips_permitidos: string[] | null;
+  chave_prefixo: string;
+  chave_hash: string;
+  ativo: boolean;
+  expira_em: string | null;
+  revogada_em: string | null;
+  revogada_por: string | null;
+  revogacao_motivo: string | null;
+  ultimo_uso_em: string | null;
+  ultimo_ip: string | null;
+  criado_por: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ApiRequisicoesRow = {
+  id: number;
+  integracao_id: string | null;
+  metodo: string;
+  rota: string;
+  status: number;
+  ip: string | null;
+  duracao_ms: number | null;
+  registros: number | null;
+  erro: string | null;
+  created_at: string;
+};
+
+export type ApiIntegracaoLista = Omit<ApiIntegracoesRow, 'chave_hash' | 'revogada_por' | 'criado_por' | 'updated_at'> & {
+  fornecedor_nome: string | null;
+  requisicoes_24h: number;
+  erros_24h: number;
+};
+
+export type ApiVeiculo = {
+  veiculo_id: string; placa: string | null; chassi: string | null; renavam: string | null; zero_km: boolean;
+  marca: string | null; modelo: string | null; ano_fabricacao: number | null; ano_modelo: number | null; cor: string | null;
+  tipo_veiculo: string | null; status: string; situacao_rastreamento: string; status_desde: string | null;
+  data_ativacao: string | null; data_saida: string | null; unidade_id: string | null; unidade_nome: string | null;
+  rastreador_imei: string | null; rastreador_chip: string | null; rastreadora_id: string | null; rastreadora_nome: string | null;
+  cliente_id: string; associado_nome: string | null; associado_documento: string | null; associado_tipo_pessoa: string | null;
+  associado_telefone: string | null; associado_celular: string | null; associado_email: string | null;
+  alterado_em: string;
+};
+
+export type ApiRastreador = {
+  rastreador_id: string; imei: string; numero_serie: string | null; iccid: string | null; linha: string | null;
+  operadora: string | null; modelo: string | null; fabricante: string | null; status: string; status_numero: number;
+  status_desde: string; rastreadora_id: string | null; rastreadora_nome: string | null; unidade_id: string | null;
+  unidade_nome: string | null; veiculo_id: string | null; placa: string | null; chassi: string | null;
+  veiculo_status: string | null; situacao_rastreamento: string | null; data_instalacao: string | null;
+  ultima_comunicacao: string | null; ultima_posicao: Json | null; alterado_em: string;
+};
+
 export type ContaBancariaOperadoresRow = {
   conta_bancaria_id: string;
   usuario_id: string;
@@ -4091,6 +4152,8 @@ export type Database = {
       centros_custo: TableDef<CentrosCustoRow>;
       tipos_boleto_avulso: TableDef<TiposBoletoAvulsoRow, [Rel<'categoria_dre_id', 'categorias_dre'>]>;
       contas_bancarias: TableDef<ContasBancariasRow>;
+      api_integracoes: TableDef<ApiIntegracoesRow, [Rel<'fornecedor_id', 'fornecedores'>]>;
+      api_requisicoes: TableDef<ApiRequisicoesRow, [Rel<'integracao_id', 'api_integracoes'>]>;
       conta_bancaria_operadores: TableDef<ContaBancariaOperadoresRow, [Rel<'conta_bancaria_id', 'contas_bancarias'>]>;
       transferencias_bancarias: TableDef<TransferenciasBancariasRow, [Rel<'conta_origem_id', 'contas_bancarias'>, Rel<'conta_destino_id', 'contas_bancarias'>]>;
       extrato_importacoes: TableDef<ExtratoImportacoesRow, [Rel<'conta_id', 'contas_bancarias'>]>;
@@ -4511,6 +4574,43 @@ export type Database = {
       };
       transferencia_extrato_item: { Args: { p_item: string; p_outra_conta: string; p_descricao?: string | null }; Returns: string };
       minhas_contas_bancarias: { Args: Record<string, never>; Returns: string[] };
+      criar_api_integracao: {
+        Args: {
+          p_nome: string; p_descricao: string | null; p_fornecedor_id: string | null; p_escopos: string[];
+          p_regional_ids: string[] | null; p_ips: string[] | null; p_expira_em: string | null;
+          p_prefixo: string; p_hash: string;
+        };
+        Returns: string;
+      };
+      atualizar_api_integracao: {
+        Args: {
+          p_id: string; p_nome: string; p_descricao: string | null; p_fornecedor_id: string | null; p_escopos: string[];
+          p_regional_ids: string[] | null; p_ips: string[] | null; p_expira_em: string | null; p_ativo: boolean;
+        };
+        Returns: undefined;
+      };
+      girar_chave_api_integracao: { Args: { p_id: string; p_prefixo: string; p_hash: string }; Returns: undefined };
+      revogar_api_integracao: { Args: { p_id: string; p_motivo: string }; Returns: undefined };
+      api_integracoes_listar: { Args: Record<string, never>; Returns: ApiIntegracaoLista[] };
+      api_veiculos: {
+        Args: {
+          p_integracao_id: string; p_desde?: string | null; p_cursor_em?: string | null; p_cursor_id?: string | null;
+          p_limite?: number; p_placa?: string | null; p_chassi?: string | null; p_imei?: string | null;
+          p_veiculo_id?: string | null; p_situacao?: string | null;
+        };
+        Returns: ApiVeiculo[];
+      };
+      api_rastreadores: {
+        Args: {
+          p_integracao_id: string; p_desde?: string | null; p_cursor_em?: string | null; p_cursor_id?: string | null;
+          p_limite?: number; p_imei?: string | null;
+        };
+        Returns: ApiRastreador[];
+      };
+      api_registrar_comunicacoes: {
+        Args: { p_integracao_id: string; p_itens: Json };
+        Returns: { imei: string; resultado: string; situacao_rastreamento: string | null }[];
+      };
       estornar_baixa: {
         Args: { p_baixa_id: string; p_motivo: string };
         Returns: { lancamento_id: string; status: string; valor_saldo: number; extrato_reaberto: boolean };
