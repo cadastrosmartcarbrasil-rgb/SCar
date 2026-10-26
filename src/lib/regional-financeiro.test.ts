@@ -10,8 +10,8 @@ describe('movimentos do financeiro da franquia', () => {
   });
 
   it('carrega a classificacao contabil pronta (a unidade nao escolhe conta)', () => {
-    expect(movimentoRegional('COMISSAO_RECEBER')?.categoria).toBe('1.3.01');
-    expect(movimentoRegional('COMISSAO_PAGAR')?.categoria).toBe('3.2.01');
+    expect(movimentoRegional('COMISSAO_RECEBER')?.categoria).toBe('3.1.1.06');
+    expect(movimentoRegional('COMISSAO_PAGAR')?.categoria).toBe('4.1.2.01');
     expect(movimentoRegional('COMISSAO_RECEBER')?.tipo).toBe('RECEITA');
     expect(movimentoRegional('COMISSAO_PAGAR')?.tipo).toBe('DESPESA');
   });

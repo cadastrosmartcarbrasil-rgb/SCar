@@ -28,8 +28,8 @@ begin
   perform set_config('request.jwt.claim.sub', u_adm::text, false);
 
   select id into tv from tipos_veiculo where nome ilike 'passeio%' limit 1;
-  select id into cat_rec  from categorias_dre where codigo_estruturado = '1.1.01';
-  select id into cat_desp from categorias_dre where tipo = 'CUSTO_VARIAVEL' limit 1;
+  select id into cat_rec  from categorias_dre where codigo_estruturado = '3.1.1.03';
+  select id into cat_desp from categorias_dre where codigo_estruturado = '4.1.4.02';
 
   ini := (current_date - 29);
   fim := current_date;
@@ -99,16 +99,16 @@ begin
    where not exists (select 1 from empresa);
 
   begin
-    perform salvar_intervalo_contas_painel('1.0.00', '3.9.99');
+    perform salvar_intervalo_contas_painel('3.0.00', '4.9.99');
   exception when others then
     raise exception 'admin deveria poder salvar o intervalo: %', sqlerrm;
   end;
   select * into rec from intervalo_contas_painel();
-  assert rec.conta_de = '1.0.00' and rec.conta_ate = '3.9.99',
+  assert rec.conta_de = '3.0.00' and rec.conta_ate = '4.9.99',
     'o intervalo salvo tem de voltar na leitura';
 
   begin
-    perform salvar_intervalo_contas_painel('3.9.99', '1.0.00');
+    perform salvar_intervalo_contas_painel('4.9.99', '3.0.00');
     raise exception 'intervalo invertido deveria ter sido recusado';
   exception when others then
     assert sqlerrm like '%maior que a final%', 'mensagem de intervalo invertido: ' || sqlerrm;
@@ -167,7 +167,7 @@ begin
   assert rec.veiculos_ativos = 0, 'MT ficou sem carteira';
 
   -- O RECORTE DE CONTAS muda o numero: fora dele, a despesa do evento sai.
-  select * into rec from regionais_painel_resumo(ini, fim, r_sp, '1.0.00', '1.9.99');
+  select * into rec from regionais_painel_resumo(ini, fim, r_sp, '3.0.00', '3.9.99');
   assert rec.gasto_eventos = 0,
     format('com recorte 1.x a despesa de evento nao entra (veio %s)', rec.gasto_eventos);
 

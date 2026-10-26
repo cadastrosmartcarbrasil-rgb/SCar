@@ -32,7 +32,7 @@ begin
   insert into lancamentos_financeiros (tipo, descricao, regional_id, valor_original,
                                        data_emissao, data_vencimento, competencia, categoria_dre_id)
     values ('DESPESA', 'Assistencia 24h OS-TESTE', r_a, 5000, date '2026-10-10', date '2026-10-10',
-            date '2026-10-10', (select id from categorias_dre where codigo_estruturado = '3.1.02'))
+            date '2026-10-10', (select id from categorias_dre where codigo_estruturado = '4.1.4.01'))
     returning id into t_matriz;
   insert into baixas_financeiras (lancamento_id, data_pagamento, valor_pago)
     values (t_matriz, date '2026-10-10', 5000);

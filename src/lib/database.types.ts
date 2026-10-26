@@ -1418,8 +1418,28 @@ export type CategoriasDreRow = {
   id: string;
   codigo_estruturado: string;
   nome: string;
-  tipo: TipoCategoriaDre;
+  /** Nulo nas contas de balanco (0152). */
+  tipo: TipoCategoriaDre | null;
   ativo: boolean;
+  created_at: string;
+  /** Plano padrao (0152): analitica recebe lancamento, sintetica so agrupa. */
+  analitica: boolean;
+  natureza: string | null;
+  destino: string | null;
+  /** Alimentada pelo sistema (disponibilidades, receber, pagar): sem lancamento direto. */
+  automatica: boolean;
+  codigo_anterior: string | null;
+};
+
+export type PlanoContasMigracaoRow = {
+  id: number;
+  categoria_id: string | null;
+  codigo_antigo: string | null;
+  nome_antigo: string | null;
+  codigo_novo: string | null;
+  nome_novo: string | null;
+  acao: 'RECODIFICADA' | 'CRIADA' | 'JA_EXISTIA' | 'SEM_CORRESPONDENCIA';
+  lancamentos: number;
   created_at: string;
 };
 
@@ -2610,6 +2630,8 @@ export type ContasBancariasRow = {
   saldo_inicial_em: string | null;
   ofx_mensalidades: ModoMensalidadeOfx;
   ofx_textos_mensalidade: string[];
+  /** Linha do fluxo de caixa evolutivo e conta do balancete (0152). */
+  classe_fluxo: 'CONTA_CORRENTE' | 'INVESTIMENTO' | 'DINHEIRO' | 'OUTROS';
 };
 
 export type ModoMensalidadeOfx = 'NENHUM' | 'POR_TEXTO' | 'TODOS_CREDITOS';
@@ -3953,6 +3975,7 @@ export type Database = {
         ]
       >;
       categorias_dre: TableDef<CategoriasDreRow>;
+      plano_contas_migracao: TableDef<PlanoContasMigracaoRow>;
       titulos_financeiros: TableDef<
         TitulosFinanceirosRow,
         [Rel<'cliente_id', 'clientes'>, Rel<'veiculo_id', 'veiculos'>]
@@ -4534,6 +4557,11 @@ export type Database = {
         Returns: { situacao: SituacaoLiquidacaoBanco; titulo_id: string | null; valor_divergente: boolean }[];
       };
       saldos_contas: { Args: { p_data?: string | null }; Returns: SaldoContaRow[] };
+      balancete_verificacao: {
+        Args: { p_inicio: string; p_fim: string };
+        Returns: { codigo: string; saldo_anterior: number; debitos: number; creditos: number; saldo_final: number }[];
+      };
+      fluxo_caixa_evolutivo: { Args: { p_inicio: string; p_fim: string }; Returns: Json };
       saldo_consolidado_em: { Args: { p_data: string; p_conta?: string | null }; Returns: number | null };
       extrato_conta: {
         Args: {

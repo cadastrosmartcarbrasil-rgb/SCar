@@ -20,8 +20,8 @@ begin
     values ('PF', 'Assistido Refino', '11144477735', r_id) returning id into c_id;
   select id into tv from tipos_veiculo where nome ilike 'passeio%' limit 1;
   if tv is null then insert into tipos_veiculo (nome) values ('Passeio') returning id into tv; end if;
-  select id into cat_desp from categorias_dre where tipo = 'DESPESA_FIXA' limit 1;
-  select id into cat_rec  from categorias_dre where tipo = 'RECEITA' limit 1;
+  select id into cat_desp from categorias_dre where analitica and not automatica and tipo = 'DESPESA_FIXA' limit 1;
+  select id into cat_rec  from categorias_dre where analitica and not automatica and tipo = 'RECEITA' limit 1;
 
   insert into veiculos (cliente_id, placa, modelo, regional_id, tipo_veiculo_id, status)
     values (c_id, 'REF1A11', 'Onix', r_id, tv, 'ativo') returning id into v1;

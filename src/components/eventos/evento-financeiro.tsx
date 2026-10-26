@@ -48,7 +48,7 @@ export function EventoFinanceiro({
   // Gastar no evento e TRATAR o evento (0077): o botao so aparece para o time.
   const trata = usePode('eventos.editar');
   // Sugestao de classificacao (0103): reparo de evento. Indenizacao = 3.1.05.
-  const categoriaPadrao = (categorias ?? []).find((c) => c.codigo_estruturado === '3.1.04')?.id ?? null;
+  const categoriaPadrao = (categorias ?? []).find((c) => c.codigo_estruturado === '4.1.4.02')?.id ?? null;
 
   const lista = lancs ?? [];
   const r = resumoFinanceiroEvento(lista);

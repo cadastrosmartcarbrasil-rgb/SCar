@@ -72,14 +72,14 @@ begin
   select cat.codigo_estruturado into v_txt
     from lancamentos_financeiros l join categorias_dre cat on cat.id = l.categoria_dre_id
    where l.id = t_receber;
-  assert v_txt = '1.3.01', 'comissao a receber = 1.3.01, veio ' || coalesce(v_txt,'nenhuma');
+  assert v_txt = '3.1.1.06', 'comissao a receber = 1.3.01, veio ' || coalesce(v_txt,'nenhuma');
 
   t_pagar := regional_lancar_titulo(r1, 'COMISSAO_PAGAR',
     'Repasse Amanda - agosto', 800, current_date - 3, v1);
   select cat.codigo_estruturado into v_txt
     from lancamentos_financeiros l join categorias_dre cat on cat.id = l.categoria_dre_id
    where l.id = t_pagar;
-  assert v_txt = '3.2.01', 'repasse ao vendedor = 3.2.01, veio ' || coalesce(v_txt,'nenhuma');
+  assert v_txt = '4.1.2.01', 'repasse ao vendedor = 3.2.01, veio ' || coalesce(v_txt,'nenhuma');
   raise notice 'OK a franquia lanca sem escolher plano de contas';
 
   -- movimento fora dos dois de comissao e recusado

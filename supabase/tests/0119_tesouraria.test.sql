@@ -19,8 +19,8 @@ begin
   insert into contas_bancarias (nome, banco, tipo, saldo_inicial, saldo_inicial_em)
     values ('SICREDI T', 'BANCO SICREDI', 'corrente', 1000, date '2026-10-12') returning id into ca;
   insert into contas_bancarias (nome, tipo) values ('CAIXA T', 'caixa') returning id into cb2;
-  select id into cat_r from categorias_dre where codigo_estruturado = '1.1.00';
-  select id into cat_d from categorias_dre where tipo::text like 'DESPESA%' order by codigo_estruturado limit 1;
+  select id into cat_r from categorias_dre where codigo_estruturado = '3.1.1.01';
+  select id into cat_d from categorias_dre where analitica and not automatica and tipo::text like 'DESPESA%' order by codigo_estruturado limit 1;
   cat_tar := cat_d;
   insert into centros_custo (nome, codigo) values ('ADM T', 'ADMT') returning id into cc;
 

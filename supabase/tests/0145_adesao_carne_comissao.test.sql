@@ -162,10 +162,10 @@ begin
     'a parte do veiculo B e proporcional ao item';
 
   select count(*) into n from dre_movimentos(v_hoje - 1, v_hoje + 1, null, 'CAIXA')
-   where categoria_codigo = '1.1.00' and valor = (select valor_pago from titulos_financeiros where id = ta);
+   where categoria_codigo = '3.1.1.01' and valor = (select valor_pago from titulos_financeiros where id = ta);
   assert n = 1, 'o boleto AGRUPADO entra no DRE';
   select count(*) into n from dre_movimentos(v_hoje - 1, v_hoje + 1, null, 'CAIXA')
-   where categoria_codigo = '1.1.01' and valor = 400;
+   where categoria_codigo = '3.1.1.03' and valor = 400;
   assert n = 1, 'o boleto da adesao entra no DRE como adesao';
   raise notice 'OK agrupado: comissao por veiculo e DRE';
 

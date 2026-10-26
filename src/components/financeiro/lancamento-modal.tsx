@@ -17,6 +17,7 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import { erroFavorecidoEvento } from '@/lib/terceiros';
 import type { FormaPagamento, LancamentosFinanceirosRow, TipoMovimentacao } from '@/lib/database.types';
 import { AnexosLancamento } from './anexos-lancamento';
+import { contasParaLancamento } from '@/lib/plano-contas';
 
 const FORMAS: FormaPagamento[] = ['PIX', 'BOLETO', 'TRANSFERENCIA', 'CARTAO', 'DINHEIRO'];
 const PERIODICIDADES: { valor: Periodicidade; rotulo: string }[] = [
@@ -95,10 +96,11 @@ export function LancamentoModal({
   const set = (patch: Form) => setForm((p) => ({ ...p, ...patch }));
   const receita = form.tipo === 'RECEITA';
 
-  // Categorias coerentes com o tipo do lancamento (receita x custo/despesa).
+  // Contas ANALITICAS coerentes com o tipo do lancamento (0152): receita x custo/despesa,
+  // e as de balanco (imobilizado, emprestimo, capital) nos dois lados.
   const categoriasDoTipo = useMemo(
-    () => (categorias ?? []).filter((c) => (receita ? c.tipo === 'RECEITA' : c.tipo !== 'RECEITA')),
-    [categorias, receita],
+    () => contasParaLancamento(categorias ?? [], receita ? 'RECEITA' : 'DESPESA', form.categoria_dre_id),
+    [categorias, receita, form.categoria_dre_id],
   );
 
   const previa = useMemo(() => {
@@ -241,7 +243,7 @@ export function LancamentoModal({
 
         <Secao titulo="Classificação contabil">
           <div className="grid gap-3 sm:grid-cols-2">
-            <FormField label="Categoria do DRE">
+            <FormField label="Conta do plano de contas">
               <Select value={form.categoria_dre_id ?? ''} onChange={(e) => set({ categoria_dre_id: e.target.value || null })}>
                 <option value="">-- Não classificado --</option>
                 {categoriasDoTipo.map((c) => (

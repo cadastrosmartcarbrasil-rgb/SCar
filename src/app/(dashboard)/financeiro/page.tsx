@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { BarChart3, CalendarDays, FileBarChart, Landmark, ScrollText, Wallet, Waves } from 'lucide-react';
+import { BarChart3, CalendarDays, CalendarRange, FileBarChart, Landmark, Scale, ScrollText, Wallet, Waves } from 'lucide-react';
 import { DreReport } from '@/components/financeiro/dre-report';
 import { ContasFinanceiro } from '@/components/financeiro/contas-financeiro';
 import { FluxoCaixa } from '@/components/financeiro/fluxo-caixa';
@@ -10,12 +10,14 @@ import { SaldosContas } from '@/components/financeiro/saldos-contas';
 import { ExtratoConciliacao } from '@/components/financeiro/extrato-conciliacao';
 import { FluxoDiario } from '@/components/financeiro/fluxo-diario';
 import { RelatoriosFinanceiros } from '@/components/financeiro/relatorios-financeiros';
+import { Balancete } from '@/components/financeiro/balancete';
+import { FluxoEvolutivo } from '@/components/financeiro/fluxo-evolutivo';
 import { usePerfilAtual } from '@/hooks/use-config';
 import { temAcessoGlobal } from '@/lib/unidade';
 import { useMinhasContasBancarias } from '@/hooks/use-tesouraria';
 import { usePode } from '@/hooks/use-permissoes';
 
-type Aba = 'contas' | 'saldos' | 'extrato' | 'diario' | 'fluxo' | 'dre' | 'relatorios';
+type Aba = 'contas' | 'saldos' | 'extrato' | 'diario' | 'evolutivo' | 'fluxo' | 'dre' | 'balancete' | 'relatorios';
 
 // matriz: so admin/financeiro. operador: tambem quem opera uma conta (0126).
 // dre: so quem tem "Financeiro — DRE" na grade (0141); o banco tambem confere.
@@ -24,8 +26,10 @@ const ABAS: { id: Aba; label: string; descricao: string; icon: React.ElementType
   { id: 'saldos', label: 'Contas e Saldos', descricao: 'Saldo de cada conta, saldo total e conferência com o DRE', icon: Landmark, matriz: true, operador: true },
   { id: 'extrato', label: 'Extrato e Conciliação', descricao: 'Extrato por conta e conciliação do OFX do banco', icon: ScrollText, matriz: true, operador: true },
   { id: 'diario', label: 'Fluxo Diário', descricao: 'Realizado x a realizar dia a dia e a carga de pagamentos', icon: CalendarDays, matriz: true },
+  { id: 'evolutivo', label: 'Fluxo Evolutivo', descricao: 'Fluxo de caixa realizado em colunas diárias: saldos por conta, entradas e saídas por rubrica', icon: CalendarRange, matriz: true },
   { id: 'fluxo', label: 'Fluxo Mensal', descricao: 'Previsto x realizado por mês e aging', icon: Waves },
-  { id: 'dre', label: 'DRE', descricao: 'Resultado por regime e centro de custo', icon: BarChart3, dre: true },
+  { id: 'dre', label: 'DRE', descricao: 'DRE gerencial: receita bruta, deduções, lucro bruto, despesas operacionais e lucro líquido', icon: BarChart3, dre: true },
+  { id: 'balancete', label: 'Balancete', descricao: 'Balancete de verificação: saldo anterior, débitos, créditos e saldo final por conta', icon: Scale, matriz: true, dre: true },
   { id: 'relatorios', label: 'Relatórios', descricao: 'Extrato, fluxo e plano de contas x centro de custo, com exportação', icon: FileBarChart, matriz: true },
 ];
 
@@ -89,7 +93,9 @@ function Financeiro() {
       {atual.id === 'extrato' && <ExtratoConciliacao key={contaExtrato ?? 'todas'} contaInicial={contaExtrato} />}
       {atual.id === 'diario' && <FluxoDiario />}
       {atual.id === 'fluxo' && <FluxoCaixa />}
+      {atual.id === 'evolutivo' && <FluxoEvolutivo />}
       {atual.id === 'dre' && <DreReport />}
+      {atual.id === 'balancete' && <Balancete />}
       {atual.id === 'relatorios' && <RelatoriosFinanceiros />}
     </div>
   );

@@ -12,6 +12,7 @@ import { somarMoeda } from '@/lib/money';
 import type { TabelaExportavel } from './exportar';
 import { FiltroPeriodo, Vazio, periodoPreset, type Periodo } from './ui-financeiro';
 import { BotoesExportar, Dinheiro, SELECT_CLS, SeletorConta, dataBR } from './tesouraria-ui';
+import { ehAnalitica, ordenarPlano } from '@/lib/plano-contas';
 
 type Tipo = 'extrato' | 'fluxo' | 'demonstrativo';
 type Status = '' | 'PAGO' | 'PENDENTE' | 'ATRASADO' | 'CONCILIADO';
@@ -74,7 +75,7 @@ export function RelatoriosFinanceiros() {
               <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Plano de contas</span>
               <select className={SELECT_CLS} value={categoria} onChange={(e) => setCategoria(e.target.value)}>
                 <option value="">Todos</option>
-                {(plano ?? []).map((c) => <option key={c.id} value={c.id}>{c.codigo_estruturado} {c.nome}</option>)}
+                {ordenarPlano(plano ?? []).filter(ehAnalitica).map((c) => <option key={c.id} value={c.id}>{c.codigo_estruturado} {c.nome}</option>)}
               </select>
             </label>
             <label className="block">

@@ -21,7 +21,7 @@ begin
     values ('INTER T', 'INTER', 'corrente', 500, date '2026-10-12') returning id into c_inter;
   insert into contas_bancarias (nome, banco, tipo, saldo_inicial, saldo_inicial_em)
     values ('SICREDI T', 'SICREDI', 'corrente', 9000, date '2026-10-12') returning id into c_sic;
-  select id into cat_d from categorias_dre where tipo::text like 'DESPESA%' order by codigo_estruturado limit 1;
+  select id into cat_d from categorias_dre where analitica and not automatica and tipo::text like 'DESPESA%' order by codigo_estruturado limit 1;
 
   -- so a matriz libera
   perform set_config('request.jwt.claim.sub', u_op::text, false);

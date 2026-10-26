@@ -10,6 +10,7 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import { useContasBancarias, useSaveContaBancaria, useDeleteContaBancaria } from '@/hooks/use-financeiro';
 import type { ContasBancariasRow } from '@/lib/database.types';
 import { ModalOperadoresConta, NomesOperadores } from '@/components/financeiro/operadores-conta';
+import { CLASSES_FLUXO } from '@/lib/plano-contas';
 
 const TIPOS = [
   { v: 'corrente', l: 'Conta Corrente', icon: Landmark },
@@ -64,7 +65,9 @@ export default function ContasBancariasPage() {
                   <div className="rounded-lg bg-brand-50 p-2 text-brand-600"><meta.icon className="h-5 w-5" /></div>
                   <div>
                     <p className="font-medium text-slate-800">{c.nome}</p>
-                    <p className="text-xs text-slate-400">{meta.l}</p>
+                    <p className="text-xs text-slate-400">
+                      {meta.l} · {CLASSES_FLUXO.find((x) => x.valor === c.classe_fluxo)?.rotulo ?? 'Banco Conta Corrente'}
+                    </p>
                   </div>
                 </div>
                 <span className={`rounded px-2 py-0.5 text-xs ${c.ativo ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
@@ -112,11 +115,22 @@ export default function ContasBancariasPage() {
               <Input value={ed?.nome ?? ''} onChange={(e) => setEd((p) => ({ ...p, nome: e.target.value }))} placeholder="Ex.: Conta Principal, Caixa Interno" />
             </FormField>
             <FormField label="Tipo">
-              <Select value={ed?.tipo ?? 'corrente'} onChange={(e) => setEd((p) => ({ ...p, tipo: e.target.value }))}>
+              <Select value={ed?.tipo ?? 'corrente'} onChange={(e) => {
+                const tipo = e.target.value;
+                setEd((p) => ({ ...p, tipo, classe_fluxo: tipo === 'caixa' ? 'DINHEIRO' : tipo === 'poupanca' ? 'INVESTIMENTO' : p?.classe_fluxo === 'DINHEIRO' ? 'CONTA_CORRENTE' : p?.classe_fluxo }));
+              }}>
                 {TIPOS.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}
               </Select>
             </FormField>
           </div>
+          <FormField label="Linha no fluxo de caixa e no balancete">
+            <Select value={ed?.classe_fluxo ?? 'CONTA_CORRENTE'}
+              onChange={(e) => setEd((p) => ({ ...p, classe_fluxo: e.target.value as ContasBancariasRow['classe_fluxo'] }))}>
+              {CLASSES_FLUXO.map((c) => (
+                <option key={c.valor} value={c.valor}>{c.conta ? `${c.conta} · ${c.rotulo}` : `${c.rotulo} (conta 1.1.1.02)`}</option>
+              ))}
+            </Select>
+          </FormField>
           {ed?.tipo !== 'caixa' && (
             <>
               <FormField label="Banco">

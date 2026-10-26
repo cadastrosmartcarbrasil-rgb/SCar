@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import type {
   RegionaisRow,
   CategoriasDreRow,
+  PlanoContasMigracaoRow,
   IntegracoesBancariasRow,
   UsuariosRow,
   PapelUsuario,
@@ -146,10 +147,13 @@ export function useSaveCategoria() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (c: Partial<CategoriasDreRow>) => {
+      // O `tipo` antigo sai da natureza no banco (0152); a duplicidade tambem e conferida la.
       const payload = {
-        codigo_estruturado: c.codigo_estruturado,
-        nome: c.nome,
-        tipo: c.tipo,
+        codigo_estruturado: c.codigo_estruturado?.trim(),
+        nome: c.nome?.trim(),
+        natureza: c.natureza ?? null,
+        analitica: c.analitica ?? true,
+        destino: c.destino?.trim() || null,
         ativo: c.ativo ?? true,
       };
       if (c.id) {
@@ -161,6 +165,22 @@ export function useSaveCategoria() {
       }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['config', 'plano-contas'] }),
+  });
+}
+
+/** O de-para da migracao para o plano padrao (0152). */
+export function useMigracaoPlano() {
+  const supabase = createClient();
+  return useQuery<PlanoContasMigracaoRow[]>({
+    queryKey: ['config', 'plano-contas', 'migracao'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('plano_contas_migracao')
+        .select('*')
+        .order('codigo_novo', { nullsFirst: false });
+      if (error) throw error;
+      return data ?? [];
+    },
   });
 }
 

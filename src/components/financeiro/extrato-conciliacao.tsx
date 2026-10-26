@@ -34,6 +34,7 @@ import { formatCurrency } from '@/lib/utils';
 import type { ExtratoContaRow, ExtratoItensRow } from '@/lib/database.types';
 import { FiltroPeriodo, periodoPreset, Vazio, type Periodo } from './ui-financeiro';
 import { BotoesExportar, Dinheiro, SELECT_CLS, SeletorConta, dataBR } from './tesouraria-ui';
+import { contasParaLancamento, ehAnalitica, ordenarPlano } from '@/lib/plano-contas';
 
 type Visao = 'extrato' | 'conciliacao';
 
@@ -145,7 +146,7 @@ function ExtratoTabela({ conta, periodo }: { conta: string | null; periodo: Peri
             <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Plano de contas</span>
             <select className={SELECT_CLS} value={categoria} onChange={(e) => setCategoria(e.target.value)}>
               <option value="">Todos</option>
-              {(plano ?? []).map((c) => <option key={c.id} value={c.id}>{c.codigo_estruturado} {c.nome}</option>)}
+              {ordenarPlano(plano ?? []).filter(ehAnalitica).map((c) => <option key={c.id} value={c.id}>{c.codigo_estruturado} {c.nome}</option>)}
             </select>
           </label>
           <label className="flex items-center gap-1.5 pb-2 text-sm text-slate-600"
@@ -568,7 +569,7 @@ function ModalConciliar({ item, onClose }: { item: ExtratoItensRow; onClose: () 
   const [fornecedor, setFornecedor] = useState('');
   const [outra, setOutra] = useState('');
   const [motivo, setMotivo] = useState('');
-  const cats = useMemo(() => (plano ?? []).filter((c) => c.ativo && (credito ? c.tipo === 'RECEITA' : c.tipo !== 'RECEITA')), [plano, credito]);
+  const cats = useMemo(() => contasParaLancamento(plano ?? [], credito ? 'RECEITA' : 'DESPESA'), [plano, credito]);
   const ok = () => onClose();
   const falha = (e: unknown) => setErro(mensagemErro(e));
 

@@ -24,6 +24,7 @@ import { BaixaModal } from './baixa-modal';
 import { LancamentoModal } from './lancamento-modal';
 import { FiltroPeriodo, Indicador, Selo, Vazio, baixarCsv, periodoPreset, type Periodo } from './ui-financeiro';
 import { usePode } from '@/hooks/use-permissoes';
+import { ehAnalitica, ordenarPlano } from '@/lib/plano-contas';
 
 const CAMPOS_DATA = [
   { valor: 'data_vencimento', rotulo: 'Vencimento' },
@@ -209,7 +210,7 @@ export function ContasFinanceiro({
         </Select>
         <Select className="mt-0 w-56 py-1.5" value={categoriaId} onChange={(e) => setCategoriaId(e.target.value)}>
           <option value="">Todas as categorias</option>
-          {(categorias ?? []).map((c) => <option key={c.id} value={c.id}>{c.codigo_estruturado} · {c.nome}</option>)}
+          {ordenarPlano(categorias ?? []).filter(ehAnalitica).map((c) => <option key={c.id} value={c.id}>{c.codigo_estruturado} · {c.nome}</option>)}
         </Select>
         <Select className="mt-0 w-48 py-1.5" value={centroCustoId} onChange={(e) => setCentroCustoId(e.target.value)}>
           <option value="">Todos os centros de custo</option>

@@ -10,6 +10,7 @@ import { usePlanoContas } from '@/hooks/use-config';
 import { useServicosAssistencia, useSaveServicoAssistencia } from '@/hooks/use-assistencia';
 import { formatCurrency } from '@/lib/utils';
 import type { ServicosAssistenciaRow } from '@/lib/database.types';
+import { contasParaLancamento } from '@/lib/plano-contas';
 
 // Cadastro/parametrizacao dos servicos de Assistencia 24h.
 export function Servicos24h() {
@@ -107,7 +108,7 @@ export function Servicos24h() {
                 onChange={(e) => setEdit({ ...edit, categoria_dre_id: e.target.value || null })}
               >
                 <option value="">Selecione...</option>
-                {(planoContas ?? []).map((c) => (
+                {contasParaLancamento(planoContas ?? [], 'DESPESA', edit?.categoria_dre_id).map((c) => (
                   <option key={c.id} value={c.id}>{c.codigo_estruturado} — {c.nome}</option>
                 ))}
               </Select>

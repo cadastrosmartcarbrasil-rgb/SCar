@@ -9,7 +9,7 @@ begin
   insert into contas_bancarias (nome, banco) values ('SICREDI', 'BANCO SICREDI') returning id into conta;
   insert into clientes (tipo_pessoa, nome_razao_social, cpf_cnpj, regional_id)
     values ('PF', 'PAGADOR 149', '35169335695', reg) returning id into c;
-  select id into cat_r from categorias_dre where codigo_estruturado = '1.1.00';
+  select id into cat_r from categorias_dre where codigo_estruturado = '3.1.1.01';
   perform set_config('request.jwt.claim.sub', '', false);
 
   insert into boletos_historico (id_externo, cliente_id, tipo, competencia, vencimento_original,

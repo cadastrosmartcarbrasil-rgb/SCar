@@ -383,6 +383,8 @@ export function useSaveContaBancaria() {
         // Saldo inicial (0119): saldo do banco no FIM do dia `saldo_inicial_em`.
         saldo_inicial: Number(c.saldo_inicial ?? 0),
         saldo_inicial_em: c.saldo_inicial_em || null,
+        // Linha do fluxo evolutivo e conta do balancete (0152).
+        classe_fluxo: c.classe_fluxo ?? (c.tipo === 'caixa' ? 'DINHEIRO' : c.tipo === 'poupanca' ? 'INVESTIMENTO' : 'CONTA_CORRENTE'),
       };
       if (c.id) {
         const { error } = await supabase.from('contas_bancarias').update(payload).eq('id', c.id);

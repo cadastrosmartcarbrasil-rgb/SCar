@@ -11,6 +11,7 @@ import { Modal } from '@/components/ui/modal';
 import { FormField, Input, Select } from '@/components/ui/field';
 import { usePlanoContas } from '@/hooks/use-config';
 import { useSalvarTipoBoletoAvulso, useTiposBoletoAvulso, type TipoBoletoAvulso } from '@/hooks/use-renegociacao';
+import { contasParaLancamento } from '@/lib/plano-contas';
 
 type Edicao = { id?: string; nome: string; categoria_dre_id: string; exige_veiculo: boolean; ativo: boolean; ordem: number };
 
@@ -19,7 +20,7 @@ export default function BoletosAvulsosPage() {
   const { data: contas } = usePlanoContas();
   const salvar = useSalvarTipoBoletoAvulso();
   const [ed, setEd] = useState<Edicao | null>(null);
-  const receitas = (contas ?? []).filter((c) => c.tipo === 'RECEITA' && c.ativo);
+  const receitas = contasParaLancamento(contas ?? [], 'RECEITA', ed?.categoria_dre_id || null);
 
   function editar(t: TipoBoletoAvulso) {
     setEd({ id: t.id, nome: t.nome, categoria_dre_id: t.categoria_dre_id ?? '', exige_veiculo: t.exige_veiculo, ativo: t.ativo, ordem: t.ordem });

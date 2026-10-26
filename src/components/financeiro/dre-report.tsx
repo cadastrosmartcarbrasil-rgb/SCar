@@ -8,10 +8,12 @@ import { BarChart3, Download, Printer, Target, TrendingDown, TrendingUp, Wallet 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select } from '@/components/ui/field';
-import { useDre, useDreComparativo, useDreMensal, useDreResumo } from '@/hooks/use-dre';
+import { useDre, useDreComparativo, useDreMensal } from '@/hooks/use-dre';
 import { useCentrosCusto } from '@/hooks/use-financeiro';
+import { usePlanoContas } from '@/hooks/use-config';
 import { usePode } from '@/hooks/use-permissoes';
-import { calcularIndicadores, estruturarDre, periodoAnterior, variacaoPercentual } from '@/lib/financeiro';
+import { periodoAnterior, variacaoPercentual } from '@/lib/financeiro';
+import { indicadoresDre, montarDreGerencial } from '@/lib/plano-contas';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { RegimeDre } from '@/lib/database.types';
 import { FiltroPeriodo, Indicador, Vazio, baixarCsv, periodoPreset, type Periodo } from './ui-financeiro';
@@ -36,21 +38,31 @@ export function DreReport({ regionalId }: { regionalId?: string | null }) {
   const [regime, setRegime] = useState<RegimeDre>('CAIXA');
   const [centroCustoId, setCentroCustoId] = useState('');
   const [comparar, setComparar] = useState(true);
+  const [detalhar, setDetalhar] = useState(true);
   const podeExportar = usePode('financeiro_dre.exportar');
 
   const filtro = { ...periodo, regionalId, regime, centroCustoId: centroCustoId || null };
   const { data: linhas, isLoading } = useDre(filtro);
   const { data: anteriores } = useDreComparativo(filtro, comparar);
-  const { data: resumo } = useDreResumo(filtro);
   const { data: serie } = useDreMensal({ ...filtro, ...periodoLargo(periodo) });
   const { data: centros } = useCentrosCusto();
+  const { data: plano } = usePlanoContas();
 
-  const grupos = useMemo(
-    () => estruturarDre(linhas ?? [], comparar ? anteriores ?? [] : undefined),
-    [linhas, anteriores, comparar],
+  // A DRE gerencial do plano padrao (0152): receita bruta, deducoes, receita
+  // liquida, custos, lucro bruto, despesas operacionais, resultado operacional,
+  // resultado financeiro e lucro liquido — a aba "DRE Gerencial Modelo" da planilha.
+  const dre = useMemo(
+    () => montarDreGerencial(plano ?? [], linhas ?? [], comparar ? anteriores ?? [] : undefined),
+    [plano, linhas, anteriores, comparar],
   );
-  const ind = useMemo(() => calcularIndicadores(resumo ?? {}), [resumo]);
+  const ind = useMemo(() => indicadoresDre(dre), [dre]);
+  const indAnt = useMemo(
+    () => (comparar && anteriores ? indicadoresDre(montarDreGerencial(plano ?? [], anteriores)) : null),
+    [plano, anteriores, comparar],
+  );
   const anterior = periodoAnterior(periodo.inicio, periodo.fim);
+  const visiveis = detalhar ? dre : dre.filter((l) => l.tipo !== 'conta');
+  const vazio = (linhas ?? []).length === 0;
 
   const grafico = (serie ?? []).map((m) => ({
     mes: rotuloMes(m.mes),
@@ -62,34 +74,24 @@ export function DreReport({ regionalId }: { regionalId?: string | null }) {
 
   function exportar() {
     baixarCsv(`dre-${regime.toLowerCase()}-${periodo.inicio}-a-${periodo.fim}.csv`, [
-      [`DRE ${regime === 'CAIXA' ? 'Regime de Caixa' : 'Regime de Competência'}`],
+      [`DRE Gerencial — ${regime === 'CAIXA' ? 'Regime de Caixa' : 'Regime de Competência'}`],
       [`Período: ${formatDate(periodo.inicio)} a ${formatDate(periodo.fim)}`],
       [],
-      ['Código', 'Categoria', 'Grupo', 'Valor', 'AV %'],
-      ...grupos.flatMap((g) => [
-        ['', g.rotulo, g.grupo, g.subtotal, g.analiseVertical],
-        ...g.linhas.map((l) => [l.categoria_codigo, l.categoria_nome, g.grupo, l.total, l.analiseVertical]),
+      ['Estrutura da DRE', 'Conta', 'Valor (R$)', '% sobre Receita Bruta', ...(comparar ? ['Período anterior'] : [])],
+      ...dre.map((l) => [
+        `${'  '.repeat(l.nivel)}${l.rotulo}`, l.codigo ?? '', l.valor, l.percentual,
+        ...(comparar ? [l.anterior ?? ''] : []),
       ]),
-      [],
-      ['Receita bruta', ind.receitaBruta],
-      ['Custos variáveis', -ind.custoVariavel],
-      ['Margem de contribuição', ind.margemContribuicao],
-      ['Despesas fixas', -ind.despesaFixa],
-      ['Resultado líquido', ind.resultadoLiquido],
-      ['Margem líquida %', ind.margemLiquidaPercentual],
-      ['Ponto de equilíbrio', ind.pontoEquilibrio],
     ]);
   }
 
-  const varResultado = comparar && anteriores
-    ? variacaoPercentual(ind.resultadoLiquido, calcularIndicadores(agregar(anteriores)).resultadoLiquido)
-    : null;
+  const varLucro = indAnt ? variacaoPercentual(ind.lucroLiquido, indAnt.lucroLiquido) : null;
 
   return (
     <div className="space-y-5">
       <FiltroPeriodo periodo={periodo} onChange={setPeriodo}>
         <label className="block">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Regime contabil</span>
+          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Regime contábil</span>
           <Select className="mt-1 w-52 py-1.5" value={regime} onChange={(e) => setRegime(e.target.value as RegimeDre)}>
             {REGIMES.map((r) => <option key={r.valor} value={r.valor}>{r.rotulo}</option>)}
           </Select>
@@ -102,13 +104,14 @@ export function DreReport({ regionalId }: { regionalId?: string | null }) {
           </Select>
         </label>
         <label className="flex items-center gap-2 pb-1.5 text-xs font-medium text-slate-600">
-          <input
-            type="checkbox"
-            checked={comparar}
-            onChange={(e) => setComparar(e.target.checked)}
-            className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-cyan-500"
-          />
+          <input type="checkbox" checked={comparar} onChange={(e) => setComparar(e.target.checked)}
+            className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-cyan-500" />
           Comparar com período anterior
+        </label>
+        <label className="flex items-center gap-2 pb-1.5 text-xs font-medium text-slate-600">
+          <input type="checkbox" checked={detalhar} onChange={(e) => setDetalhar(e.target.checked)}
+            className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-cyan-500" />
+          Abrir as contas analíticas
         </label>
         <div className="ml-auto flex gap-2 print:hidden">
           {podeExportar && <>
@@ -123,30 +126,26 @@ export function DreReport({ regionalId }: { regionalId?: string | null }) {
         {comparar && ` Comparativo: ${formatDate(anterior.inicio)} a ${formatDate(anterior.fim)}.`}
       </p>
 
-      {/* Indicadores gerenciais */}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Indicador titulo="Receita bruta" valor={ind.receitaBruta} icon={TrendingUp} tom="receita"
-          detalhe="Total reconhecido no período" />
-        <Indicador titulo="Margem de contribuição" valor={ind.margemContribuicao} icon={Wallet} tom="destaque"
-          detalhe={`${ind.margemContribuicaoPercentual.toFixed(1)}% da receita — sobra após os custos variáveis`} />
-        <Indicador titulo="Despesas fixas" valor={ind.despesaFixa} icon={TrendingDown} tom="despesa"
-          detalhe={`Custos variáveis no período: ${formatCurrency(ind.custoVariavel)}`} />
+        <Indicador titulo="Receita operacional bruta" valor={ind.receitaBruta} icon={TrendingUp} tom="receita"
+          detalhe={`Receita líquida: ${formatCurrency(ind.receitaLiquida)}`} />
+        <Indicador titulo="Lucro bruto operacional" valor={ind.lucroBruto} icon={Wallet} tom="destaque"
+          detalhe={`${ind.margemBruta.toFixed(1)}% da receita bruta`} />
+        <Indicador titulo="Resultado operacional (EBITDA)" valor={ind.resultadoOperacional} icon={TrendingDown}
+          tom={ind.resultadoOperacional >= 0 ? 'receita' : 'despesa'}
+          detalhe={`${ind.margemOperacional.toFixed(1)}% da receita bruta`} />
         <Indicador
-          titulo="Resultado líquido" valor={ind.resultadoLiquido} icon={Target}
-          tom={ind.resultadoLiquido >= 0 ? 'receita' : 'despesa'}
-          detalhe={`Margem de ${ind.margemLiquidaPercentual.toFixed(1)}%${
-            varResultado != null ? ` · ${varResultado >= 0 ? '+' : ''}${varResultado.toFixed(1)}% vs período anterior` : ''
+          titulo="Lucro líquido do exercício" valor={ind.lucroLiquido} icon={Target}
+          tom={ind.lucroLiquido >= 0 ? 'receita' : 'despesa'}
+          detalhe={`Margem de ${ind.margemLiquida.toFixed(1)}%${
+            varLucro != null ? ` · ${varLucro >= 0 ? '+' : ''}${varLucro.toFixed(1)}% vs período anterior` : ''
           }`}
         />
       </div>
 
-      {/* Evolucao mensal */}
       <Card className="print:hidden">
         <CardHeader className="flex-row items-center justify-between">
           <CardTitle>Evolução do resultado (12 meses)</CardTitle>
-          <span className="text-[11px] text-slate-400">
-            Ponto de equilíbrio: {formatCurrency(ind.pontoEquilibrio)} de receita/periodo
-          </span>
         </CardHeader>
         <CardContent>
           {grafico.length === 0 ? (
@@ -163,7 +162,7 @@ export function DreReport({ regionalId }: { regionalId?: string | null }) {
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 <Bar dataKey="Receita" fill="#0BACE2" radius={[4, 4, 0, 0]} maxBarSize={26} />
-                <Bar dataKey="Custos" fill="#F5A524" radius={[4, 4, 0, 0]} maxBarSize={26} />
+                <Bar dataKey="Custos" name="Custos e deduções" fill="#F5A524" radius={[4, 4, 0, 0]} maxBarSize={26} />
                 <Bar dataKey="Despesas" fill="#E5484D" radius={[4, 4, 0, 0]} maxBarSize={26} />
                 <Line type="monotone" dataKey="Resultado" stroke="#142445" strokeWidth={2.5} dot={{ r: 3 }} />
               </ComposedChart>
@@ -172,10 +171,9 @@ export function DreReport({ regionalId }: { regionalId?: string | null }) {
         </CardContent>
       </Card>
 
-      {/* Demonstrativo estruturado */}
       <Card>
         <CardHeader>
-          <CardTitle>Demonstração do Resultado do Exercício</CardTitle>
+          <CardTitle>Demonstração do Resultado do Exercício (DRE Gerencial)</CardTitle>
           <p className="text-xs text-slate-500">
             {formatDate(periodo.inicio)} a {formatDate(periodo.fim)} ·{' '}
             {regime === 'CAIXA' ? 'regime de caixa' : 'regime de competência'}
@@ -187,80 +185,67 @@ export function DreReport({ regionalId }: { regionalId?: string | null }) {
             <div className="space-y-2 py-4">
               {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-5 animate-pulse rounded bg-slate-100" />)}
             </div>
-          ) : grupos.length === 0 ? (
+          ) : vazio ? (
             <Vazio
               icon={BarChart3}
               titulo="Nenhum movimento classificado no período"
-              descricao="Lance contas a pagar/receber com categoria do plano de contas — o DRE lê automaticamente as baixas (caixa) e a competência dos títulos."
+              descricao="Lance contas a pagar/receber numa conta analítica do plano de contas — a DRE lê automaticamente as baixas (caixa) e a competência dos títulos."
             />
           ) : (
-            <table className="w-full min-w-[640px] text-sm">
+            <table className="w-full min-w-[680px] text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-left text-[11px] uppercase tracking-wide text-slate-400">
-                  <th className="py-2 font-semibold">Código</th>
+                  <th className="py-2 font-semibold">Estrutura da DRE</th>
                   <th className="py-2 font-semibold">Conta</th>
-                  <th className="py-2 text-right font-semibold">Valor</th>
-                  <th className="py-2 text-right font-semibold">AV %</th>
+                  <th className="py-2 text-right font-semibold">Valor (R$)</th>
+                  <th className="py-2 text-right font-semibold">% s/ receita bruta</th>
                   {comparar && <th className="py-2 text-right font-semibold">Período anterior</th>}
                   {comparar && <th className="py-2 text-right font-semibold">Var. %</th>}
                 </tr>
               </thead>
-
-              {grupos.map((g) => (
-                <tbody key={g.grupo}>
-                  <tr className="bg-slate-50">
-                    <td colSpan={2} className="py-2 pl-1 font-semibold text-slate-700">{g.rotulo}</td>
-                    <td className="tnum py-2 text-right font-semibold text-slate-700">{formatCurrency(Math.abs(g.subtotal))}</td>
-                    <td className="tnum py-2 text-right text-xs font-semibold text-slate-500">{g.analiseVertical.toFixed(1)}%</td>
-                    {comparar && (
-                      <td className="tnum py-2 text-right text-xs text-slate-500">
-                        {formatCurrency(Math.abs(g.subtotalAnterior ?? 0))}
+              <tbody>
+                {visiveis.map((l) => {
+                  const destaque = l.tipo === 'secao' || l.tipo === 'subtotal' || l.tipo === 'resultado';
+                  const cls =
+                    l.tipo === 'resultado' ? 'border-t-2 border-slate-300 text-base font-bold text-slate-900'
+                    : l.tipo === 'subtotal' ? 'border-t border-slate-200 bg-slate-50 font-semibold text-slate-800'
+                    : l.tipo === 'secao' ? 'bg-slate-50/70 font-semibold text-slate-700'
+                    : l.tipo === 'grupo' ? 'font-medium text-slate-700'
+                    : 'text-slate-600';
+                  const inverso = l.valor < 0 || ['deducoes', 'custos', 'despesas'].includes(l.chave.split(':')[0]);
+                  return (
+                    <tr key={l.chave} className={`border-b border-slate-50 ${cls}`}>
+                      <td className="py-1.5 pr-3" style={{ paddingLeft: `${4 + l.nivel * 18}px` }}>
+                        {l.tipo === 'grupo' || l.tipo === 'conta' ? `• ${l.rotulo}` : l.rotulo}
                       </td>
-                    )}
-                    {comparar && <td className="py-2 text-right"><Variacao valor={variacaoPercentual(g.subtotal, g.subtotalAnterior ?? 0)} inverso={g.grupo !== 'RECEITA'} /></td>}
-                  </tr>
-                  {g.linhas.map((l) => (
-                    <tr key={l.categoria_codigo} className="border-b border-slate-50 last:border-0">
-                      <td className="py-1.5 pl-1 font-mono text-[11px] text-slate-400">{l.categoria_codigo}</td>
-                      <td className="py-1.5 pl-3 text-slate-600">{l.categoria_nome}</td>
-                      <td className="tnum py-1.5 text-right text-slate-700">{formatCurrency(l.valorAbsoluto)}</td>
-                      <td className="tnum py-1.5 text-right text-xs text-slate-400">{l.analiseVertical.toFixed(1)}%</td>
+                      <td className="py-1.5 font-mono text-[11px] text-slate-400">{l.codigo ?? (destaque ? 'Subtotal' : '')}</td>
+                      <td className={`tnum py-1.5 text-right ${l.tipo === 'resultado' ? (l.valor >= 0 ? 'text-emerald-700' : 'text-rose-700') : ''}`}>
+                        {formatCurrency(l.valor)}
+                      </td>
+                      <td className="tnum py-1.5 text-right text-xs text-slate-500">{l.percentual.toFixed(1)}%</td>
                       {comparar && (
                         <td className="tnum py-1.5 text-right text-xs text-slate-400">
-                          {l.totalAnterior == null ? '—' : formatCurrency(Math.abs(l.totalAnterior))}
+                          {l.anterior == null ? '—' : formatCurrency(l.anterior)}
                         </td>
                       )}
-                      {comparar && <td className="py-1.5 text-right"><Variacao valor={l.variacao ?? null} inverso={g.grupo !== 'RECEITA'} /></td>}
+                      {comparar && (
+                        <td className="py-1.5 text-right">
+                          <Variacao valor={l.anterior == null ? null : variacaoPercentual(l.valor, l.anterior)} inverso={inverso && l.tipo !== 'resultado' && l.tipo !== 'subtotal'} />
+                        </td>
+                      )}
                     </tr>
-                  ))}
-                </tbody>
-              ))}
-
-              <tfoot className="text-sm">
-                <tr className="border-t border-slate-200">
-                  <td colSpan={2} className="py-2 pl-1 font-semibold text-slate-600">(=) Margem de contribuição</td>
-                  <td className="tnum py-2 text-right font-semibold text-slate-800">{formatCurrency(ind.margemContribuicao)}</td>
-                  <td className="tnum py-2 text-right text-xs text-slate-500">{ind.margemContribuicaoPercentual.toFixed(1)}%</td>
-                  {comparar && <td colSpan={2} />}
-                </tr>
-                <tr className="border-t-2 border-slate-300">
-                  <td colSpan={2} className="py-3 pl-1 font-bold text-slate-900">(=) Resultado líquido do período</td>
-                  <td className={`tnum py-3 text-right text-base font-bold ${ind.resultadoLiquido >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
-                    {formatCurrency(ind.resultadoLiquido)}
-                  </td>
-                  <td className="tnum py-3 text-right text-xs font-semibold text-slate-600">{ind.margemLiquidaPercentual.toFixed(1)}%</td>
-                  {comparar && <td colSpan={2} className="py-3 text-right"><Variacao valor={varResultado} /></td>}
-                </tr>
-              </tfoot>
+                  );
+                })}
+              </tbody>
             </table>
           )}
         </CardContent>
       </Card>
 
       <p className="text-[11px] leading-relaxed text-slate-400">
-        AV % = análise vertical (participação da conta sobre a receita bruta do período). Contas sem
-        categoria do plano de contas aparecem como &quot;não classificadas&quot; — classifique-as em
-        Financeiro › Contas para um DRE fiel. Valores em reais (R$).
+        % = participação sobre a receita operacional bruta do período. Custos, deduções e despesas aparecem
+        negativos. Contas de balanço (imobilizado, empréstimos, capital) não entram na DRE — aparecem no
+        Balancete. Lançamento sem conta aparece como &quot;não classificado&quot; (3.1.1.99 / 4.2.1.99).
       </p>
     </div>
   );
@@ -273,11 +258,6 @@ function periodoLargo(p: Periodo): Periodo {
   const iso = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   return { inicio: iso(inicio), fim: iso(new Date(fim.getFullYear(), fim.getMonth() + 1, 0)) };
-}
-
-function agregar(linhas: { grupo: string; total: number }[]) {
-  const soma = (g: string) => linhas.filter((l) => l.grupo === g).reduce((s, l) => s + Number(l.total), 0);
-  return { receita_bruta: soma('RECEITA'), custo_variavel: soma('CUSTO_VARIAVEL'), despesa_fixa: soma('DESPESA_FIXA') };
 }
 
 /** Seta de variacao. `inverso` = para custos/despesas, subir e ruim. */

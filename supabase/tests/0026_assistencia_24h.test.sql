@@ -25,7 +25,7 @@ begin
 
   select id into tv from tipos_veiculo where nome ilike 'passeio%' limit 1;
   if tv is null then insert into tipos_veiculo (nome) values ('Passeio') returning id into tv; end if;
-  select id into cat from categorias_dre limit 1;
+  select id into cat from categorias_dre where analitica and not automatica limit 1;
 
   insert into veiculos (cliente_id, placa, modelo, regional_id, tipo_veiculo_id, status, valor_mensalidade, dia_vencimento)
     values (c_id, 'ASS1A11', 'Onix', r_id, tv, 'ativo', 150, 10) returning id into v_ok;

@@ -21,7 +21,7 @@ begin
   perform set_config('request.jwt.claim.sub', u_adm::text, false);
 
   select id into tv from tipos_veiculo where nome ilike 'passeio%' limit 1;
-  select id into cat_desp from categorias_dre where tipo = 'DESPESA_FIXA' limit 1;
+  select id into cat_desp from categorias_dre where analitica and not automatica and tipo = 'DESPESA_FIXA' limit 1;
   select id into s_reboque from servicos_assistencia where descricao = 'Reboque Passeio';
   select id into s_chave   from servicos_assistencia where descricao ilike 'chaveiro%';
   update servicos_assistencia set categoria_dre_id = cat_desp where id in (s_reboque, s_chave);

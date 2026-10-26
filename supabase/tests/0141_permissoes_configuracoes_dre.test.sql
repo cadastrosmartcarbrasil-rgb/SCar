@@ -82,7 +82,7 @@ begin
   end;
   assert ok, 'editar sem criar nao inclui';
   execute 'set local role authenticated';
-  update categorias_dre set nome = nome where codigo_estruturado = '1.1.01';
+  update categorias_dre set nome = nome where codigo_estruturado = '3.1.1.03';
   get diagnostics n = row_count;
   execute 'reset role';
   assert n = 1, 'editar altera o que existe';

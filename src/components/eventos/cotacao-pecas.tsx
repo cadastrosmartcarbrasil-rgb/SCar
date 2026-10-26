@@ -129,7 +129,7 @@ export function CotacaoPecas({
   const inicialLancamento = (c: Cotacao): Partial<LancamentosFinanceirosRow> =>
     lancamentoDaCotacao(c, {
       eventoId, regionalId: regionalId ?? null, protocolo: protocolo ?? null,
-      categoriaId: (categorias ?? []).find((x) => x.codigo_estruturado === '3.1.04')?.id ?? null,
+      categoriaId: (categorias ?? []).find((x) => x.codigo_estruturado === '4.1.4.02')?.id ?? null,
       hoje: new Date().toISOString().slice(0, 10),
     });
 

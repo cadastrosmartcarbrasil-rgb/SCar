@@ -23,8 +23,8 @@ begin
 
   insert into centros_custo (nome) values ('Matriz CC') returning id into cc_id;
   insert into contas_bancarias (nome, banco) values ('Conta Movimento', '341') returning id into cb_id;
-  select id into cat_rec  from categorias_dre where codigo_estruturado = '1.2.01';
-  select id into cat_desp from categorias_dre where codigo_estruturado = '4.1.01';
+  select id into cat_rec  from categorias_dre where codigo_estruturado = '3.1.1.02';
+  select id into cat_desp from categorias_dre where codigo_estruturado = '4.2.2.02';
 
   -- ------------------------------------------------------- saldo cacheado
   insert into lancamentos_financeiros
@@ -80,14 +80,14 @@ begin
   -- ------------------------------------------------------- DRE regime CAIXA
   select total into v_num
     from gerar_dre_completo(current_date - 1, current_date + 1, null, 'CAIXA')
-   where categoria_codigo = '1.2.01';
+   where categoria_codigo = '3.1.1.02';
   assert v_num = 1000.00, 'DRE caixa deve ver a receita liquidada, veio ' || coalesce(v_num::text, 'nada');
   raise notice 'OK DRE regime caixa le as baixas';
 
   -- ------------------------------------------------------- DRE regime COMPETENCIA
   select count(*) into n
     from gerar_dre_completo(current_date - 1, current_date + 1, null, 'COMPETENCIA')
-   where categoria_codigo = '4.9.99' and total = -250.00;
+   where categoria_codigo = '4.2.1.99' and total = -250.00;
   assert n = 1, 'titulo sem categoria deve virar linha "nao classificadas"';
 
   select resultado_liquido into v_num

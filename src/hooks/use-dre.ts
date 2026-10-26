@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { periodoAnterior } from '@/lib/financeiro';
 import type { DreLinha, DreMes, DreResumo, RegimeDre, ResumoCentroCusto } from '@/lib/database.types';
+import type { DadosFluxoEvolutivo, SaldoContaBalancete } from '@/lib/plano-contas';
 
 export interface DreFiltro {
   inicio: string;
@@ -95,6 +96,39 @@ export function useResumoCentroCusto({ inicio, fim, regionalId }: DreFiltro) {
       });
       if (error) throw error;
       return data ?? [];
+    },
+  });
+}
+
+// Balancete de verificacao (0152): saldo anterior, debitos, creditos e saldo final por conta analitica.
+export function useBalancete(inicio: string, fim: string) {
+  const supabase = createClient();
+  return useQuery<SaldoContaBalancete[]>({
+    queryKey: ['dre', 'balancete', inicio, fim],
+    enabled: !!inicio && !!fim && inicio <= fim,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('balancete_verificacao', { p_inicio: inicio, p_fim: fim });
+      if (error) throw error;
+      return (data ?? []).map((l) => ({
+        codigo: l.codigo,
+        saldo_anterior: Number(l.saldo_anterior), debitos: Number(l.debitos),
+        creditos: Number(l.creditos), saldo_final: Number(l.saldo_final),
+      }));
+    },
+  });
+}
+
+// Fluxo de caixa evolutivo (0152): colunas diarias montadas na tela.
+export function useFluxoEvolutivo(inicio: string, fim: string) {
+  const supabase = createClient();
+  return useQuery<DadosFluxoEvolutivo>({
+    queryKey: ['tesouraria', 'fluxo-evolutivo', inicio, fim],
+    enabled: !!inicio && !!fim && inicio <= fim,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('fluxo_caixa_evolutivo', { p_inicio: inicio, p_fim: fim });
+      if (error) throw error;
+      const d = (data ?? {}) as unknown as Partial<DadosFluxoEvolutivo>;
+      return { contas: d.contas ?? [], por_conta: d.por_conta ?? [], por_categoria: d.por_categoria ?? [] };
     },
   });
 }

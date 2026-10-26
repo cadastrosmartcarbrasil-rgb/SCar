@@ -22,7 +22,7 @@ export default function ComissoesRegionalPage() {
   const repassar = useRepassarComissao();
 
   // Repassar = virar contas a pagar da unidade. O titulo nasce no financeiro
-  // da franquia (categoria 3.2.01) e a baixa e feita la.
+  // da franquia (conta 4.1.2.01) e a baixa e feita la.
   function repassarComissao(id: string, vendedor: string) {
     repassar.mutate(id, {
       onSuccess: () => toast.success(`Repasse de ${vendedor} lançado no financeiro da unidade`),

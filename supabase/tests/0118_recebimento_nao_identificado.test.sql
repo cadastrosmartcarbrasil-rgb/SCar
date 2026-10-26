@@ -23,7 +23,7 @@ begin
   select lf.status::text as st, lf.cliente_id, lf.regional_id, lf.valor_original, cat.codigo_estruturado as cod
     into l from lancamentos_financeiros lf join categorias_dre cat on cat.id = lf.categoria_dre_id where lf.id = lanc;
   assert l.st = 'quitado' and l.cliente_id is null and l.regional_id is null and l.valor_original = 61.00;
-  assert l.cod = '1.9.98';
+  assert l.cod = '3.1.1.98';
   assert (select conta_bancaria_id from baixas_financeiras where lancamento_id = lanc) = conta;
 
   -- re-executar nao duplica (o reprocessar passa por ele de novo)
@@ -42,7 +42,7 @@ begin
   assert n = 1, 'reprocessar identifica';
   select lf.cliente_id, lf.regional_id, cat.codigo_estruturado as cod, lf.competencia
     into l from lancamentos_financeiros lf join categorias_dre cat on cat.id = lf.categoria_dre_id where lf.id = lanc;
-  assert l.cliente_id = c and l.regional_id = reg and l.cod = '1.1.00' and l.competencia = date '2026-10-01';
+  assert l.cliente_id = c and l.regional_id = reg and l.cod = '3.1.1.01' and l.competencia = date '2026-10-01';
   assert (select lancamento_id from boletos_historico where id_externo = '118-1') = lanc;
   select count(*) into n from lancamentos_financeiros where numero_documento = 'SICREDI-600733333';
   assert n = 1;
@@ -77,7 +77,7 @@ begin
     date '2026-10-17', 45, date '2026-10-17', null);
   perform set_config('request.jwt.claim.sub', u_adm::text, false);
   assert (select coalesce(sum(valor), 0) from dre_movimentos(date '2026-10-01', date '2026-10-31', null, 'CAIXA')
-           where categoria_codigo = '1.9.98') = 45, 'nao identificado no DRE';
+           where categoria_codigo = '3.1.1.98') = 45, 'nao identificado no DRE';
   perform set_config('request.jwt.claim.sub', '', false);
 
   raise notice '=== TESTES 0118 (recebimento nao identificado) PASSARAM ===';

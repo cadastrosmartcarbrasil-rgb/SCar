@@ -70,7 +70,7 @@ begin
    where lf.id = (select lancamento_id from boletos_historico where id = h1);
   assert l.tipo = 'RECEITA' and l.status = 'quitado', 'recebimento quitado: ' || l.status;
   assert l.valor_original = 172.50 and l.regional_id = reg and l.cliente_id = c;
-  assert l.cod = '1.1.00' and l.competencia = date '2026-10-01';
+  assert l.cod = '3.1.1.01' and l.competencia = date '2026-10-01';
 
   select b.conta_bancaria_id, b.forma_pagamento::text as forma, b.status_conciliacao::text as conc,
          b.data_pagamento, b.valor_liquido
@@ -82,7 +82,7 @@ begin
   -- entra no DRE de caixa da unidade (lido pela matriz)
   perform set_config('request.jwt.claim.sub', u_adm::text, false);
   assert (select coalesce(sum(valor), 0) from dre_movimentos(date '2026-10-01', date '2026-10-31', reg, 'CAIXA')
-           where categoria_codigo = '1.1.00') = 172.50, 'recebido entra no DRE de caixa';
+           where categoria_codigo = '3.1.1.01') = 172.50, 'recebido entra no DRE de caixa';
   perform set_config('request.jwt.claim.sub', '', false);
 
   -- Re-executar nao duplica

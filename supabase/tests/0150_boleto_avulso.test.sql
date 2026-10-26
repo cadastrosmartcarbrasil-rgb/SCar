@@ -36,7 +36,7 @@ begin
   select id into t_venda from tipos_boleto_avulso where nome = 'Venda de Rastreador';
   assert (select exige_veiculo from tipos_boleto_avulso where id = t_vist), 'vistoria exige o veiculo';
   assert (select c.codigo_estruturado from tipos_boleto_avulso t join categorias_dre c on c.id = t.categoria_dre_id
-           where t.nome = 'Adesão') = '1.1.01', 'adesao vai para a receita de adesao';
+           where t.nome = 'Adesão') = '3.1.1.03', 'adesao vai para a receita de adesao';
 
   -- ============================================== B) validacoes
   ok := false;
@@ -105,7 +105,7 @@ begin
 
   update titulos_financeiros set status = 'pago', valor_pago = 80, data_pagamento = v_hoje where id = tit;
   select * into d from dre_movimentos(v_hoje - 1, v_hoje + 1, null, 'CAIXA') where valor = 80;
-  assert d.categoria_codigo = '1.2.03', format('DRE na categoria do tipo (veio %s)', d.categoria_codigo);
+  assert d.categoria_codigo = '3.1.1.04', format('DRE na categoria do tipo (veio %s)', d.categoria_codigo);
 
   raise notice '=== 0150 boleto avulso: TODOS OS TESTES PASSARAM ===';
 end $$;

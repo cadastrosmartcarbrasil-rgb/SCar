@@ -20,7 +20,7 @@ begin
     values ('PF', 'Maria Associada', '52998224725', r1, u_cli) returning id into cli;
 
   -- um movimento de caixa em CADA unidade, para o DRE ter o que somar
-  select id into cat from categorias_dre where tipo = 'RECEITA' limit 1;
+  select id into cat from categorias_dre where analitica and not automatica and tipo = 'RECEITA' limit 1;
   insert into movimentacoes_caixa (tipo, valor, data_competencia, categoria_dre_id, regional_id, descricao)
     values ('RECEITA', 1000, current_date, cat, r1, 'Receita Cuiaba'),
            ('RECEITA', 7777, current_date, cat, r2, 'Receita Natal');
