@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { soDigitos } from '@/lib/documento';
+import { lerTodas } from '@/lib/paginacao';
 import type { FornecedoresRow } from '@/lib/database.types';
 
 /** Tipo do fornecedor — e so uma marcacao na MESMA tabela (0051). */
@@ -13,13 +14,15 @@ export function useFornecedores(tipo: TipoFornecedor = 'todos') {
   return useQuery<FornecedoresRow[]>({
     queryKey: ['fornecedores', tipo],
     queryFn: async () => {
-      let q = supabase.from('fornecedores').select('*').order('razao_social');
-      if (tipo === 'prestador') q = q.eq('prestador_assistencia', true);
-      if (tipo === 'rastreadora') q = q.eq('empresa_rastreamento', true);
-      if (tipo === 'geral') q = q.eq('prestador_assistencia', false).eq('empresa_rastreamento', false);
-      const { data, error } = await q;
-      if (error) throw error;
-      return data ?? [];
+      // Passa de 1.000 linhas desde a importacao por planilha: sem paginar, o
+      // PostgREST corta em silencio e o fornecedor some da lista e da busca.
+      return lerTodas<FornecedoresRow>((de, ate) => {
+        let q = supabase.from('fornecedores').select('*').order('razao_social').order('id');
+        if (tipo === 'prestador') q = q.eq('prestador_assistencia', true);
+        if (tipo === 'rastreadora') q = q.eq('empresa_rastreamento', true);
+        if (tipo === 'geral') q = q.eq('prestador_assistencia', false).eq('empresa_rastreamento', false);
+        return q.range(de, ate);
+      });
     },
   });
 }

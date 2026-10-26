@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
+import { lerTodas } from '@/lib/paginacao';
 import { comprimirImagem, validarArquivo } from '@/lib/imagem';
 import type {
   AcionamentoAnexosRow,
@@ -609,13 +610,13 @@ export function usePrestadores() {
   return useQuery<FornecedoresRow[]>({
     queryKey: ['assistencia', 'prestadores-lista'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      return lerTodas<FornecedoresRow>((de, ate) => supabase
         .from('fornecedores')
         .select('*')
         .eq('prestador_assistencia', true)
-        .order('razao_social');
-      if (error) throw error;
-      return data ?? [];
+        .order('razao_social')
+        .order('id')
+        .range(de, ate));
     },
   });
 }

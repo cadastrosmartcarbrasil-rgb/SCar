@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { FormField, Input, Select, Textarea, MoneyInput } from '@/components/ui/field';
 import { useSaveFornecedor } from '@/hooks/use-fornecedores';
+import { createClient } from '@/lib/supabase/client';
 import { consultarCnpj } from '@/lib/cnpj';
 import { paraCaixaAlta } from '@/lib/texto';
 import { buscarCep } from '@/lib/cep';
@@ -108,9 +109,18 @@ export function ModalFornecedor({
     }
     salvar.mutate(form, {
       onSuccess: (id) => { toast.success('Fornecedor salvo'); onSaved?.(id); onClose(); },
-      onError: (err) => toast.error(
-        err.message.includes('documento') ? 'Documento já cadastrado em outro fornecedor' : err.message,
-      ),
+      onError: async (err) => {
+        if (!err.message.includes('documento')) return toast.error(err.message);
+        // Diz QUEM ja tem o documento: sem o nome, a pessoa procura na lista e
+        // conclui que o cadastro nao existe.
+        const { data } = await createClient().from('fornecedores')
+          .select('razao_social, nome_fantasia, ativo')
+          .eq('documento', soDigitos(form.documento ?? '')).neq('id', form.id ?? '00000000-0000-0000-0000-000000000000')
+          .maybeSingle();
+        toast.error(data
+          ? `Documento já cadastrado: ${data.nome_fantasia ? `${data.nome_fantasia} (${data.razao_social})` : data.razao_social}${data.ativo === false ? ' — inativo' : ''}. Procure por esse nome na lista.`
+          : 'Documento já cadastrado em outro fornecedor');
+      },
     });
   }
 

@@ -5676,6 +5676,11 @@ teste afirma `row_count = 0` e que a linha continua lá).
   (`/eventos/<id>/terceiros/<t>?aba=financeiro`) > evento (`/eventos/<id>?aba=financeiro`) > o próprio título
   (`/financeiro?lancamento=<id>`, a carteira mostra só ele com "Ver toda a carteira"). Título antigo de OS que
   trocou de prestador perde o vínculo (a OS aponta para o novo) e cai no Financeiro.
+- **A lista de fornecedores passa de 1.000 linhas** (1.253 em 26/10/2026, depois da importação por planilha):
+  `useFornecedores`, `usePrestadores` e `useEmpresasRastreamento` leem com `lerTodas`. Antes o corte silencioso
+  do PostgREST escondia o que vinha depois da posição 1.000 na ordem alfabética (caso REDE TOP10 CAR,
+  CNPJ 23319065000108: não aparecia na lista e o cadastro novo dava "documento já cadastrado"). O erro de
+  documento duplicado agora diz o NOME de quem já tem o documento.
 - **Quem cadastra:** `pode_cadastrar_fornecedor()` = admin/financeiro + time da 24h + **gestor
   regional**.
 - **IMPORTAÇÃO POR PLANILHA (25/10/2026, sem migration):** Fornecedores → **Importar planilha**
