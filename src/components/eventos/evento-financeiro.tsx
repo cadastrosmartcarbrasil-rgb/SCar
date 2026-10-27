@@ -9,6 +9,7 @@ import { ExcluirLancamentoModal, PagamentosModal } from '@/components/financeiro
 import { Selo } from '@/components/financeiro/ui-financeiro';
 import { usePerfilAtual, usePlanoContas } from '@/hooks/use-config';
 import { usePode } from '@/hooks/use-permissoes';
+import { useEvento } from '@/hooks/use-eventos';
 import { useLancamentosEvento, useMovimentacoesLegadasEvento, useTerceirosEvento } from '@/hooks/use-terceiros';
 import type { LancamentoComRel } from '@/hooks/use-financeiro';
 import { resumoFinanceiroEvento, tipoFavorecido } from '@/lib/terceiros';
@@ -20,7 +21,8 @@ import type { LancamentosFinanceirosRow } from '@/lib/database.types';
 /**
  * Compras e pagamentos do evento. Grava em lancamentos_financeiros (o mesmo
  * Contas a Pagar/Receber do /financeiro, com baixa, saldo e DRE), sempre com
- * FAVORECIDO na conta a pagar: fornecedor ou terceiro do evento.
+ * FAVORECIDO na conta a pagar: fornecedor, terceiro do evento ou o proprio
+ * associado (indenizacao, 0156).
  * Com `terceiroId`, a tela mostra so o que trata daquele terceiro e ja abre o
  * lancamento amarrado a ele.
  */
@@ -38,6 +40,10 @@ export function EventoFinanceiro({
   const { data: lancs, isLoading } = useLancamentosEvento(eventoId, terceiroId);
   const { data: terceiros } = useTerceirosEvento(eventoId);
   const { data: legado } = useMovimentacoesLegadasEvento(terceiroId ? '' : eventoId);
+  const { data: ev } = useEvento(eventoId);
+  const associado = ev?.cliente_id
+    ? { id: ev.cliente_id as string, nome: (ev.clientes as { nome_razao_social?: string } | null)?.nome_razao_social ?? 'Associado' }
+    : null;
   const [editando, setEditando] = useState<Partial<LancamentosFinanceirosRow> | null>(null);
   const [baixando, setBaixando] = useState<LancamentoComRel | null>(null);
   const [pagamentos, setPagamentos] = useState<LancamentoComRel | null>(null);
@@ -78,7 +84,7 @@ export function EventoFinanceiro({
 
       <div className="flex items-center justify-between">
         <p className="text-xs text-slate-500">
-          Lançamentos entram no Contas a Pagar/Receber e no DRE. Conta a pagar exige fornecedor ou terceiro.
+          Lançamentos entram no Contas a Pagar/Receber e no DRE. Conta a pagar exige fornecedor, terceiro ou a indenização ao associado.
         </p>
         {trata && (
           <Button type="button" onClick={novo}>
@@ -181,6 +187,7 @@ export function EventoFinanceiro({
           evento={{
             protocolo,
             terceiros: (terceiros ?? []).map((t) => ({ id: t.id, codigo: t.codigo, nome: t.nome })),
+            associado,
           }}
         />
       )}
@@ -207,6 +214,14 @@ function Favorecido({ l }: { l: LancamentoComRel }) {
       <>
         {l.evento_terceiros?.nome}
         <span className="block text-[11px] text-slate-400">terceiro {l.evento_terceiros?.codigo}</span>
+      </>
+    );
+  }
+  if (tipo === 'ASSOCIADO') {
+    return (
+      <>
+        {l.clientes?.nome_razao_social}
+        <span className="block text-[11px] text-slate-400">indenização ao associado</span>
       </>
     );
   }

@@ -46,13 +46,16 @@ function Secao({ titulo, children }: { titulo: string; children: React.ReactNode
 export interface ContextoEvento {
   protocolo: string | null;
   terceiros: { id: string; codigo: string; nome: string }[];
+  /** O associado do evento: o favorecido da indenizacao ao proprio beneficiario (0156). */
+  associado?: { id: string; nome: string } | null;
 }
 
 /**
  * Cadastro de titulo a pagar/receber.
  * Dentro de um evento (`evento`), a conta a pagar exige FAVORECIDO: um
- * fornecedor cadastrado ou um terceiro do evento (indenizacao). O banco
- * aplica a mesma regra (trigger fn_lanc_evento_favorecido, 0103).
+ * fornecedor cadastrado, um terceiro do evento ou o proprio associado do
+ * evento (indenizacao, 0156). O banco aplica a mesma regra (trigger
+ * fn_lanc_evento_favorecido).
  * Todo o dinheiro passa pelo <MoneyInput> (campo comeca vazio com placeholder
  * 0,00 e aceita digitacao corrida) e o parcelamento e pre-visualizado antes
  * de gravar.
@@ -95,6 +98,28 @@ export function LancamentoModal({
 
   const set = (patch: Form) => setForm((p) => ({ ...p, ...patch }));
   const receita = form.tipo === 'RECEITA';
+
+  // Indenizacao ao proprio associado do evento (0156): o favorecido e ele,
+  // sem fornecedor nem terceiro.
+  const podeIndenizarAssociado = !receita && !!form.evento_id && !!evento?.associado;
+  const indenizaAssociado = podeIndenizarAssociado
+    && !form.fornecedor_id && !form.evento_terceiro_id && form.cliente_id === evento?.associado?.id;
+
+  function marcarIndenizacao(marcado: boolean) {
+    const assoc = evento?.associado;
+    if (!assoc) return;
+    if (!marcado) return set({ cliente_id: null });
+    const conta = (categorias ?? []).find((c) => c.codigo_estruturado === '4.1.4.03')?.id;
+    set({
+      cliente_id: assoc.id,
+      fornecedor_id: null,
+      evento_terceiro_id: null,
+      categoria_dre_id: conta ?? form.categoria_dre_id ?? null,
+      descricao: form.descricao?.trim()
+        ? form.descricao
+        : `INDENIZAÇÃO AO ASSOCIADO ${assoc.nome}${evento?.protocolo ? ` — EVENTO ${evento.protocolo}` : ''}`,
+    });
+  }
 
   // Contas ANALITICAS coerentes com o tipo do lancamento (0152): receita x custo/despesa,
   // e as de balanco (imobilizado, emprestimo, capital) nos dois lados.
@@ -193,6 +218,12 @@ export function LancamentoModal({
                 <SeletorAssociado value={form.cliente_id} onChange={(id) => set({ cliente_id: id || null })}
                   placeholder="Não vinculado — digite para buscar" />
               </FormField>
+            ) : indenizaAssociado ? (
+              <FormField label="Favorecido (associado do evento)">
+                <div className="flex h-10 items-center rounded-lg border border-slate-200 bg-fundo px-3 text-sm font-medium text-slate-800">
+                  {evento?.associado?.nome}
+                </div>
+              </FormField>
             ) : (
               <FormField label={form.evento_id ? 'Fornecedor (favorecido)' : 'Favorecido (fornecedor)'}>
                 <SeletorFornecedor
@@ -220,6 +251,24 @@ export function LancamentoModal({
               <p className="text-[11.5px] font-semibold uppercase tracking-wide text-cyan-800">
                 Evento {evento.protocolo ?? ''}
               </p>
+              {podeIndenizarAssociado && (
+                <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-cyan-200 bg-superficie p-2.5 text-sm">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={indenizaAssociado}
+                    onChange={(e) => marcarIndenizacao(e.target.checked)}
+                  />
+                  <span>
+                    <span className="font-medium text-slate-800">Indenização ao associado (o próprio beneficiário)</span>
+                    <span className="block text-[11.5px] text-slate-500">
+                      Paga a {evento.associado?.nome} pelo evento {evento.protocolo ?? ''}. O nome e o número do evento
+                      aparecem na lista do financeiro.
+                    </span>
+                  </span>
+                </label>
+              )}
+              {!indenizaAssociado && (
               <FormField label={form.fornecedor_id ? 'Terceiro relacionado (opcional)' : 'Terceiro favorecido'}>
                 <Select
                   value={form.evento_terceiro_id ?? ''}
@@ -231,10 +280,11 @@ export function LancamentoModal({
                   ))}
                 </Select>
               </FormField>
-              {!receita && !form.fornecedor_id && !form.evento_terceiro_id && (
+              )}
+              {!receita && !form.fornecedor_id && !form.evento_terceiro_id && !indenizaAssociado && (
                 <p className="flex items-start gap-1.5 text-[11.5px] leading-relaxed text-rose-700">
                   <ShieldAlert className="mt-px h-3.5 w-3.5 shrink-0" />
-                  Conta a pagar do evento exige favorecido: escolha o fornecedor ou o terceiro.
+                  Conta a pagar do evento exige favorecido: escolha o fornecedor, o terceiro ou marque a indenização ao associado.
                 </p>
               )}
             </div>

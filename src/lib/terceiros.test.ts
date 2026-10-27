@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   erroFavorecidoEvento, lancamentoDaCotacao, resumoFinanceiroEvento, rotuloVinculo, terceiroPendente,
-  tipoFavorecido, validarTerceiro,
+  rotuloFavorecido, tipoFavorecido, validarTerceiro,
 } from './terceiros';
 
 describe('validarTerceiro', () => {
@@ -57,6 +57,11 @@ describe('favorecido das contas do evento', () => {
     expect(tipoFavorecido({ fornecedor_id: null, evento_terceiro_id: 't1' })).toBe('TERCEIRO');
     expect(tipoFavorecido({ fornecedor_id: null, evento_terceiro_id: null })).toBeNull();
   });
+  it('sem fornecedor e sem terceiro, o associado do evento e o favorecido (0156)', () => {
+    expect(tipoFavorecido({ fornecedor_id: null, evento_terceiro_id: null, cliente_id: 'c1' })).toBe('ASSOCIADO');
+    expect(tipoFavorecido({ fornecedor_id: 'f1', evento_terceiro_id: null, cliente_id: 'c1' })).toBe('FORNECEDOR');
+    expect(erroFavorecidoEvento({ ...base, cliente_id: 'c1' })).toBeNull();
+  });
 });
 
 describe('resumoFinanceiroEvento', () => {
@@ -97,5 +102,24 @@ describe('lancamentoDaCotacao (0132)', () => {
     expect(l.fornecedor_id).toBeNull();
     expect(erroFavorecidoEvento(l)).not.toBeNull();
     expect(l.observacoes).toBeNull();
+  });
+});
+
+describe('rotuloFavorecido', () => {
+  it('indenizacao ao associado mostra o nome e o numero do evento', () => {
+    expect(rotuloFavorecido({ tipo: 'DESPESA', associado: 'DIOGO', evento: 'EVT-1' }))
+      .toEqual({ nome: 'DIOGO', detalhe: 'Indenização ao associado · Evento EVT-1' });
+  });
+  it('fornecedor do evento leva o numero do evento', () => {
+    expect(rotuloFavorecido({ tipo: 'DESPESA', fornecedor: 'FUNILARIA', evento: 'EVT-1' }))
+      .toEqual({ nome: 'FUNILARIA', detalhe: 'Evento EVT-1' });
+  });
+  it('terceiro indenizado', () => {
+    expect(rotuloFavorecido({ tipo: 'DESPESA', terceiro: { nome: 'FULANO', codigo: 'EVT-1-T01' }, evento: 'EVT-1' }))
+      .toEqual({ nome: 'FULANO', detalhe: 'Indenização a terceiro EVT-1-T01 · Evento EVT-1' });
+  });
+  it('fora de evento, so o nome', () => {
+    expect(rotuloFavorecido({ tipo: 'DESPESA', fornecedor: 'ALUGUEL' })).toEqual({ nome: 'ALUGUEL', detalhe: null });
+    expect(rotuloFavorecido({ tipo: 'DESPESA' })).toEqual({ nome: '', detalhe: null });
   });
 });

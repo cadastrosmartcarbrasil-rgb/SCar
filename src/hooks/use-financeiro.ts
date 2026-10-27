@@ -23,6 +23,8 @@ export interface LancamentoComRel extends LancamentosFinanceirosRow {
   centros_custo?: { nome: string } | null;
   /** 0103 — terceiro do evento (favorecido quando nao ha fornecedor). */
   evento_terceiros?: { codigo: string; nome: string } | null;
+  /** 0156 — o numero do evento, para a lista do financeiro. */
+  eventos_sinistro?: { numero_protocolo: string | null } | null;
 }
 
 export interface FiltroLancamentos {
@@ -55,7 +57,8 @@ export function useLancamentos(filtro?: FiltroLancamentos) {
         .from('lancamentos_financeiros')
         .select(
           '*, fornecedores(razao_social, nome_fantasia), clientes(nome_razao_social), ' +
-            'categorias_dre(codigo_estruturado, nome), centros_custo(nome), evento_terceiros(codigo, nome)',
+            'categorias_dre(codigo_estruturado, nome), centros_custo(nome), evento_terceiros(codigo, nome), ' +
+            'eventos_sinistro(numero_protocolo)',
         )
         .order('data_vencimento', { ascending: true });
       if (filtro?.id) {

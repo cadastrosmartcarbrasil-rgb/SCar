@@ -15,6 +15,7 @@ import {
 import { usePlanoContas } from '@/hooks/use-config';
 import { acoesDoTitulo, diasAtraso, saldoTitulo, situacaoTitulo } from '@/lib/financeiro';
 import { rotuloFornecedor } from '@/lib/fornecedores';
+import { rotuloFavorecido } from '@/lib/terceiros';
 import { SeletorFornecedor } from '@/components/fornecedores/seletor-fornecedor';
 import { ExcluirLancamentoModal, PagamentosModal } from './acoes-titulo';
 import { somarMoeda } from '@/lib/money';
@@ -292,7 +293,16 @@ export function ContasFinanceiro({
                     </div>
                   </td>
                   <td className="px-4 py-2.5 text-slate-600">
-                    {favorecidoTexto(l) || <span className="text-slate-300">—</span>}
+                    {(() => {
+                      const f = favorecido(l);
+                      if (!f.nome && !f.detalhe) return <span className="text-slate-300">—</span>;
+                      return (
+                        <>
+                          {f.nome || <span className="text-amber-600">sem favorecido</span>}
+                          {f.detalhe && <span className="block text-[11px] text-slate-400">{f.detalhe}</span>}
+                        </>
+                      );
+                    })()}
                   </td>
                   <td className="px-4 py-2.5">
                     {l.categorias_dre ? (
@@ -427,11 +437,20 @@ export function ContasFinanceiro({
   );
 }
 
-/** Favorecido/pagador: fornecedor, terceiro do evento (indenizacao) ou associado. */
+/** Favorecido/pagador (0103/0156): quem recebe e, na conta de evento, o numero do evento. */
+function favorecido(l: LancamentoComRel) {
+  return rotuloFavorecido({
+    tipo: l.tipo,
+    fornecedor: l.fornecedores?.razao_social ? rotuloFornecedor(l.fornecedores) : null,
+    terceiro: l.evento_terceiros ?? null,
+    associado: l.clientes?.nome_razao_social ?? null,
+    evento: l.eventos_sinistro?.numero_protocolo ?? null,
+  });
+}
+
 function favorecidoTexto(l: LancamentoComRel): string {
-  if (l.fornecedores?.razao_social) return rotuloFornecedor(l.fornecedores);
-  if (l.evento_terceiros) return `${l.evento_terceiros.nome} (terceiro ${l.evento_terceiros.codigo})`;
-  return l.clientes?.nome_razao_social ?? '';
+  const f = favorecido(l);
+  return [f.nome, f.detalhe].filter(Boolean).join(' — ');
 }
 
 function IconeAcao({

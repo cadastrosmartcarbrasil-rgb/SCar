@@ -67,25 +67,49 @@ export function terceiroPendente(possuiTerceiros: boolean, qtdCadastrados: numbe
 // ---------------------------------------------------------------------------
 // Favorecido das contas do evento
 // ---------------------------------------------------------------------------
-type LancFav = Pick<LancamentosFinanceirosRow, 'tipo' | 'evento_id' | 'fornecedor_id' | 'evento_terceiro_id'>;
+type LancFav = Pick<LancamentosFinanceirosRow, 'tipo' | 'evento_id' | 'fornecedor_id' | 'evento_terceiro_id' | 'cliente_id'>;
 
-export type TipoFavorecido = 'FORNECEDOR' | 'TERCEIRO' | null;
+export type TipoFavorecido = 'FORNECEDOR' | 'TERCEIRO' | 'ASSOCIADO' | null;
 
 /**
- * Quem recebe o pagamento. Regra (igual ao banco): fornecedor preenchido manda;
- * sem fornecedor e com terceiro, o favorecido e o proprio terceiro (indenizacao).
+ * Quem recebe o pagamento. Regra (igual ao banco, 0103/0156): fornecedor
+ * preenchido manda; sem fornecedor e com terceiro, o favorecido e o terceiro;
+ * sem os dois, o associado do evento (indenizacao ao proprio associado).
  */
-export function tipoFavorecido(l: Pick<LancFav, 'fornecedor_id' | 'evento_terceiro_id'>): TipoFavorecido {
+export function tipoFavorecido(
+  l: Pick<LancFav, 'fornecedor_id' | 'evento_terceiro_id'> & { cliente_id?: string | null },
+): TipoFavorecido {
   if (l.fornecedor_id) return 'FORNECEDOR';
   if (l.evento_terceiro_id) return 'TERCEIRO';
+  if (l.cliente_id) return 'ASSOCIADO';
   return null;
 }
 
 /** Mensagem de erro se a conta a pagar do evento estiver sem favorecido. */
 export function erroFavorecidoEvento(l: Partial<LancFav>): string | null {
   if (l.tipo !== 'DESPESA' || !l.evento_id) return null;
-  if (l.fornecedor_id || l.evento_terceiro_id) return null;
-  return 'Conta a pagar do evento exige favorecido: informe o fornecedor ou o terceiro';
+  if (l.fornecedor_id || l.evento_terceiro_id || l.cliente_id) return null;
+  return 'Conta a pagar do evento exige favorecido: informe o fornecedor, o terceiro ou marque a indenização ao associado';
+}
+
+/**
+ * Texto do favorecido para as LISTAS do financeiro: quem recebe e, quando a
+ * conta e de um evento, o numero do evento — para conferir sem abrir o titulo.
+ */
+export function rotuloFavorecido(l: {
+  tipo: string;
+  fornecedor?: string | null;
+  terceiro?: { nome: string; codigo: string } | null;
+  associado?: string | null;
+  evento?: string | null;
+}): { nome: string; detalhe: string | null } {
+  const ev = l.evento ? `Evento ${l.evento}` : null;
+  const junta = (...p: (string | null)[]) => p.filter(Boolean).join(' · ') || null;
+  if (l.tipo === 'RECEITA') return { nome: l.associado ?? '', detalhe: ev };
+  if (l.fornecedor) return { nome: l.fornecedor, detalhe: junta(ev, l.terceiro ? `ref. terceiro ${l.terceiro.codigo}` : null) };
+  if (l.terceiro) return { nome: l.terceiro.nome, detalhe: junta(`Indenização a terceiro ${l.terceiro.codigo}`, ev) };
+  if (l.associado) return { nome: l.associado, detalhe: junta(l.evento ? 'Indenização ao associado' : null, ev) };
+  return { nome: '', detalhe: ev };
 }
 
 // ---------------------------------------------------------------------------
