@@ -2630,8 +2630,10 @@ export type ContasBancariasRow = {
   saldo_inicial_em: string | null;
   ofx_mensalidades: ModoMensalidadeOfx;
   ofx_textos_mensalidade: string[];
-  /** Linha do fluxo de caixa evolutivo e conta do balancete (0152). */
+  /** Linha do fluxo de caixa evolutivo e grupo do balancete (0152). */
   classe_fluxo: 'CONTA_CORRENTE' | 'INVESTIMENTO' | 'DINHEIRO' | 'OUTROS';
+  /** A analitica da conta em Disponibilidades (1.1.1.0x.NN), mantida por trigger (0153). */
+  conta_contabil_id: string | null;
 };
 
 export type ModoMensalidadeOfx = 'NENHUM' | 'POR_TEXTO' | 'TODOS_CREDITOS';

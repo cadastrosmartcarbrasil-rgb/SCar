@@ -118,16 +118,19 @@ begin
   assert (select sum(saldo_final) from balancete_verificacao(date '2026-06-01', date '2026-06-30')) = 0,
     'saldos devedores = saldos credores';
 
-  select * into rec from balancete_verificacao(date '2026-06-01', date '2026-06-30') where codigo = '1.1.1.02';
+  select sum(saldo_anterior) as saldo_anterior, sum(debitos) as debitos, sum(creditos) as creditos, sum(saldo_final) as saldo_final
+    into rec from balancete_verificacao(date '2026-06-01', date '2026-06-30') where codigo like '1.1.1.02.%'; -- 0153: a analitica da conta
   assert rec.saldo_anterior = 1000 and rec.debitos = 500 and rec.creditos = 800 and rec.saldo_final = 700,
     format('banco: %s / %s / %s / %s', rec.saldo_anterior, rec.debitos, rec.creditos, rec.saldo_final);
-  select * into rec from balancete_verificacao(date '2026-06-01', date '2026-06-30') where codigo = '1.1.1.03';
+  select sum(saldo_anterior) as saldo_anterior, sum(debitos) as debitos, sum(creditos) as creditos, sum(saldo_final) as saldo_final
+    into rec from balancete_verificacao(date '2026-06-01', date '2026-06-30') where codigo like '1.1.1.03.%'; -- 0153: a analitica da conta
   assert rec.saldo_final = 200, 'aplicacao recebeu a transferencia';
   select * into rec from balancete_verificacao(date '2026-06-01', date '2026-06-30') where codigo = '2.1.1.01';
   assert rec.saldo_final = -3000, 'notebook ainda a pagar (saldo credor)';
   select * into rec from balancete_verificacao(date '2026-06-01', date '2026-06-30') where codigo = '1.2.1.01';
   assert rec.saldo_final = 3000, 'imobilizado';
-  select * into rec from balancete_verificacao(date '2026-06-03', date '2026-06-30') where codigo = '1.1.1.02';
+  select sum(saldo_anterior) as saldo_anterior, sum(debitos) as debitos, sum(creditos) as creditos, sum(saldo_final) as saldo_final
+    into rec from balancete_verificacao(date '2026-06-03', date '2026-06-30') where codigo like '1.1.1.02.%'; -- 0153: a analitica da conta
   assert rec.saldo_anterior = 1500, 'saldo anterior inclui o que veio antes do periodo';
 
   -- fluxo evolutivo: o que a tela precisa

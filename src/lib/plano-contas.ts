@@ -417,10 +417,10 @@ export function montarBalancete(
 export type ClasseFluxo = 'CONTA_CORRENTE' | 'INVESTIMENTO' | 'DINHEIRO' | 'OUTROS';
 
 export const CLASSES_FLUXO: { valor: ClasseFluxo; rotulo: string; conta: string }[] = [
-  { valor: 'CONTA_CORRENTE', rotulo: 'Banco Conta Corrente', conta: '1.1.1.02' },
+  { valor: 'CONTA_CORRENTE', rotulo: 'Bancos Conta Corrente', conta: '1.1.1.02' },
   { valor: 'INVESTIMENTO', rotulo: 'Aplicações Financeiras', conta: '1.1.1.03' },
   { valor: 'DINHEIRO', rotulo: 'Caixas / Dinheiro', conta: '1.1.1.01' },
-  { valor: 'OUTROS', rotulo: 'Outros Saldos Disponíveis', conta: '' },
+  { valor: 'OUTROS', rotulo: 'Outras Disponibilidades', conta: '1.1.1.04' },
 ];
 
 export interface DadosFluxoEvolutivo {
@@ -432,7 +432,7 @@ export interface DadosFluxoEvolutivo {
 export interface LinhaFluxo {
   chave: string;
   rotulo: string;
-  tipo: 'secao' | 'saldo' | 'total' | 'entrada' | 'saida' | 'resultado';
+  tipo: 'secao' | 'saldo' | 'conta' | 'total' | 'entrada' | 'saida' | 'resultado';
   valores: number[];
   /** Total do periodo (entradas/saidas) ou ultimo valor (saldos). */
   total: number | null;
@@ -451,7 +451,7 @@ export function diasDoPeriodo(inicio: string, fim: string): string[] {
 
 /**
  * A grade do fluxo: SALDOS INICIAIS por classe de conta (o saldo no INICIO de
- * cada dia), TOTAIS SALDOS, ENTRADAS por conta do plano, SAIDAS (negativas,
+ * cada dia) com cada conta bancaria abaixo da sua classe, TOTAIS SALDOS, ENTRADAS por conta do plano, SAIDAS (negativas,
  * como na planilha) e o SALDO FINAL de cada dia. Transferencia entre contas
  * mexe nos saldos por classe e nao aparece como entrada nem saida.
  * O saldo inicial de implantacao da conta e o saldo no FIM do dia
@@ -473,16 +473,21 @@ export function montarFluxoEvolutivo(dados: DadosFluxoEvolutivo, inicio: string,
     movConta.set(m.conta_id, arr);
   }
   const saldoClasse = new Map<ClasseFluxo, number[]>(CLASSES_FLUXO.map((c) => [c.valor, zeros()]));
-  for (const c of dados.contas) {
+  // cada conta bancaria tem a sua linha abaixo da classe (0153)
+  const contasDaClasse = new Map<ClasseFluxo, { id: string; nome: string; valores: number[] }[]>();
+  for (const c of [...dados.contas].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))) {
     const classe = (CLASSES_FLUXO.some((x) => x.valor === c.classe) ? c.classe : 'OUTROS') as ClasseFluxo;
     const linha = saldoClasse.get(classe)!;
+    const daConta = zeros();
     const mov = movConta.get(c.id) ?? zeros();
     let acumulado = Number(c.movimento_antes ?? 0);
     dias.forEach((dia, i) => {
       const implantado = !c.saldo_inicial_em || c.saldo_inicial_em < dia ? Number(c.saldo_inicial ?? 0) : 0;
-      linha[i] = somarMoeda(linha[i], implantado, acumulado);
+      daConta[i] = somarMoeda(implantado, acumulado);
+      linha[i] = somarMoeda(linha[i], daConta[i]);
       acumulado = somarMoeda(acumulado, mov[i]);
     });
+    contasDaClasse.set(classe, [...(contasDaClasse.get(classe) ?? []), { id: c.id, nome: c.nome, valores: daConta }]);
   }
 
   // entradas e saidas por conta do plano
@@ -515,6 +520,9 @@ export function montarFluxoEvolutivo(dados: DadosFluxoEvolutivo, inicio: string,
   for (const c of CLASSES_FLUXO) {
     const v = saldoClasse.get(c.valor)!;
     linhas.push({ chave: `saldo:${c.valor}`, rotulo: c.conta ? `${c.conta} ${c.rotulo}` : c.rotulo, tipo: 'saldo', valores: v, total: v[0] ?? 0 });
+    for (const conta of contasDaClasse.get(c.valor) ?? []) {
+      linhas.push({ chave: `conta:${conta.id}`, rotulo: conta.nome, tipo: 'conta', valores: conta.valores, total: conta.valores[0] ?? 0 });
+    }
   }
   const totalSaldos = somaColunas([...saldoClasse.values()]);
   linhas.push({ chave: 'totais_saldos', rotulo: 'TOTAIS SALDOS', tipo: 'total', valores: totalSaldos, total: totalSaldos[0] ?? 0 });

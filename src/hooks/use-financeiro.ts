@@ -396,6 +396,8 @@ export function useSaveContaBancaria() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['contas-bancarias'] });
+      // a conta ganha/ajusta a sua analitica em Disponibilidades (0153)
+      qc.invalidateQueries({ queryKey: ['config', 'plano-contas'] });
       qc.invalidateQueries({ queryKey: ['tesouraria'] });
     },
   });

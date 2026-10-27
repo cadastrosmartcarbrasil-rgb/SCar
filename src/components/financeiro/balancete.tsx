@@ -145,7 +145,7 @@ export function Balancete() {
       <p className="text-[11px] leading-relaxed text-slate-400">
         Como as partidas são montadas: o título a receber debita Contas a Receber (1.1.2) e credita a conta de
         receita; o título a pagar debita a conta de custo/despesa (ou de balanço, como imobilizado) e credita
-        Fornecedores a Pagar (2.1.1.01); o pagamento movimenta a disponibilidade da conta bancária (1.1.1, pela
+        Fornecedores a Pagar (2.1.1.01); o pagamento movimenta a conta da própria conta bancária em Disponibilidades (1.1.1, dentro do grupo da
         classe da conta); o saldo inicial das contas entra contra Lucros/Prejuízos Acumulados (2.2.2.01).
         Títulos cancelados não entram.
       </p>

@@ -11,6 +11,7 @@ import { useContasBancarias, useSaveContaBancaria, useDeleteContaBancaria } from
 import type { ContasBancariasRow } from '@/lib/database.types';
 import { ModalOperadoresConta, NomesOperadores } from '@/components/financeiro/operadores-conta';
 import { CLASSES_FLUXO } from '@/lib/plano-contas';
+import { usePlanoContas } from '@/hooks/use-config';
 
 const TIPOS = [
   { v: 'corrente', l: 'Conta Corrente', icon: Landmark },
@@ -21,6 +22,8 @@ const tipoMeta = (t: string | null) => TIPOS.find((x) => x.v === t) ?? TIPOS[0];
 
 export default function ContasBancariasPage() {
   const { data: contas, isLoading } = useContasBancarias();
+  const { data: plano } = usePlanoContas();
+  const contaContabil = (id: string | null) => (id ? plano?.find((p) => p.id === id) : undefined);
   const salvar = useSaveContaBancaria();
   const excluir = useDeleteContaBancaria();
   const [aberto, setAberto] = useState(false);
@@ -66,8 +69,13 @@ export default function ContasBancariasPage() {
                   <div>
                     <p className="font-medium text-slate-800">{c.nome}</p>
                     <p className="text-xs text-slate-400">
-                      {meta.l} · {CLASSES_FLUXO.find((x) => x.valor === c.classe_fluxo)?.rotulo ?? 'Banco Conta Corrente'}
+                      {meta.l} · {CLASSES_FLUXO.find((x) => x.valor === c.classe_fluxo)?.rotulo ?? 'Bancos Conta Corrente'}
                     </p>
+                    {contaContabil(c.conta_contabil_id) && (
+                      <p className="text-xs text-slate-500" title="Conta desta conta bancária em Disponibilidades (criada automaticamente)">
+                        Plano de contas: <span className="font-mono">{contaContabil(c.conta_contabil_id)!.codigo_estruturado}</span>
+                      </p>
+                    )}
                   </div>
                 </div>
                 <span className={`rounded px-2 py-0.5 text-xs ${c.ativo ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
@@ -127,7 +135,7 @@ export default function ContasBancariasPage() {
             <Select value={ed?.classe_fluxo ?? 'CONTA_CORRENTE'}
               onChange={(e) => setEd((p) => ({ ...p, classe_fluxo: e.target.value as ContasBancariasRow['classe_fluxo'] }))}>
               {CLASSES_FLUXO.map((c) => (
-                <option key={c.valor} value={c.valor}>{c.conta ? `${c.conta} · ${c.rotulo}` : `${c.rotulo} (conta 1.1.1.02)`}</option>
+                <option key={c.valor} value={c.valor}>{`${c.conta} · ${c.rotulo}`}</option>
               ))}
             </Select>
           </FormField>

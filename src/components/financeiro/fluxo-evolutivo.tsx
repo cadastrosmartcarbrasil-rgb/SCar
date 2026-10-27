@@ -28,7 +28,8 @@ const valor = (v: number) => (v ? formatCurrency(v) : '—');
 
 const ESTILO: Record<LinhaFluxo['tipo'], string> = {
   secao: 'bg-brand-600 text-white font-semibold text-xs tracking-wide',
-  saldo: 'text-slate-700',
+  saldo: 'font-medium text-slate-800',
+  conta: 'text-slate-500',
   total: 'bg-slate-100 font-semibold text-slate-900',
   entrada: 'text-slate-700',
   saida: 'text-slate-700',
@@ -149,7 +150,7 @@ export function FluxoEvolutivo() {
                       <tr key={l.chave} className={ESTILO[l.tipo]}>
                         <td className={`sticky left-0 z-10 whitespace-nowrap border-b border-slate-100 px-3 py-1.5 ${
                           l.tipo === 'secao' ? 'bg-brand-600' : l.tipo === 'total' ? 'bg-slate-100' : l.tipo === 'resultado' ? 'bg-slate-50' : 'bg-superficie'}`}
-                          style={l.tipo === 'entrada' || l.tipo === 'saida' || l.tipo === 'saldo' ? { paddingLeft: 22 } : undefined}>
+                          style={l.tipo === 'conta' ? { paddingLeft: 40 } : l.tipo === 'entrada' || l.tipo === 'saida' || l.tipo === 'saldo' ? { paddingLeft: 22 } : undefined}>
                           {l.rotulo}
                         </td>
                         {l.tipo === 'secao'
@@ -178,7 +179,7 @@ export function FluxoEvolutivo() {
 
       <p className="text-[11px] leading-relaxed text-slate-400">
         O tipo de cada conta (conta corrente, aplicação, dinheiro ou outros) é escolhido em Configurações → Contas
-        Bancárias. O saldo de implantação da conta é o do fim do dia informado e passa a contar no dia seguinte.
+        Bancárias; cada conta aparece abaixo do seu tipo e tem a sua própria conta em Disponibilidades (1.1.1). O saldo de implantação da conta é o do fim do dia informado e passa a contar no dia seguinte.
       </p>
     </div>
   );

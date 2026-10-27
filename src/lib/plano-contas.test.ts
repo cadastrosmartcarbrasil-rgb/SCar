@@ -170,6 +170,11 @@ describe('fluxo de caixa evolutivo', () => {
     expect(l('saldo:CONTA_CORRENTE').valores).toEqual([1000, 1500, 700]);
     expect(l('saldo:INVESTIMENTO').valores).toEqual([50, 50, 250]);
     expect(l('saldo:OUTROS').valores).toEqual([0, 300, 300]); // implantada no fim de 01/06
+    // cada conta bancaria logo abaixo da sua classe (0153)
+    const iCc = linhas.findIndex((x) => x.chave === 'saldo:CONTA_CORRENTE');
+    expect(linhas[iCc + 1]).toMatchObject({ chave: 'conta:b', rotulo: 'BANCO', tipo: 'conta' });
+    expect(l('conta:b').valores).toEqual([1000, 1500, 700]);
+    expect(l('conta:n').valores).toEqual([0, 300, 300]);
     expect(l('totais_saldos').valores).toEqual([1050, 1850, 1250]);
     expect(l('entrada:3.1.1.01').total).toBe(500);
     expect(l('saida:4.2.1.01').valores).toEqual([0, -600, 0]);
