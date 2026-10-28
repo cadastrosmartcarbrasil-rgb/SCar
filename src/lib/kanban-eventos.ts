@@ -56,3 +56,47 @@ export const PREFIXO_DO_MUTUAL = 'Trazido do historico do Mutual';
 export function veioDoMutual(descricao: string | null | undefined): boolean {
   return (descricao ?? '').startsWith(PREFIXO_DO_MUTUAL);
 }
+
+// Busca do Kanban (28/10/2026): achar o evento sem abrir coluna por coluna.
+// Os eventos ja estao todos na tela (useEventos), entao a busca e local e
+// responde a cada tecla. Casa protocolo, placa, associado, CPF/CNPJ, chassi,
+// tipo do evento e unidade — sem acento, sem caixa e sem separador.
+export interface EventoBuscavel {
+  numero_protocolo?: string | null;
+  descricao?: string | null;
+  veiculos?: { placa?: string | null; chassi?: string | null; marca?: string | null; modelo?: string | null } | null;
+  clientes?: { nome_razao_social?: string | null; cpf_cnpj?: string | null } | null;
+  tipos_evento?: { nome?: string | null } | null;
+  regionais?: { nome?: string | null } | null;
+}
+
+function normalizar(v: string | null | undefined): string {
+  return (v ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+}
+const soAlfanumerico = (v: string | null | undefined) => normalizar(v).replace(/[^a-z0-9]/g, '');
+
+/** Termo com menos de 2 caracteres nao filtra (devolve true para todos). */
+export function eventoCasaComBusca(evento: EventoBuscavel, termo: string): boolean {
+  const t = normalizar(termo).trim();
+  if (t.length < 2) return true;
+  const textos = [
+    evento.clientes?.nome_razao_social,
+    evento.tipos_evento?.nome,
+    evento.regionais?.nome,
+    evento.veiculos?.marca,
+    evento.veiculos?.modelo,
+  ].map(normalizar);
+  // cada palavra do termo tem de aparecer em algum lugar ("joao civic" acha)
+  const palavras = t.split(/\s+/).filter(Boolean);
+  const alfa = soAlfanumerico(termo);
+  const digitos = termo.replace(/\D/g, '');
+  const chaves = [
+    soAlfanumerico(evento.numero_protocolo),
+    soAlfanumerico(evento.veiculos?.placa),
+    soAlfanumerico(evento.veiculos?.chassi),
+  ];
+  if (alfa.length >= 2 && chaves.some((c) => c.includes(alfa))) return true;
+  if (digitos.length >= 3 && (evento.clientes?.cpf_cnpj ?? '').replace(/\D/g, '').includes(digitos)) return true;
+  const tudo = [...textos, ...chaves].join(' ');
+  return palavras.every((p) => tudo.includes(p) || tudo.includes(p.replace(/[^a-z0-9]/g, '')));
+}

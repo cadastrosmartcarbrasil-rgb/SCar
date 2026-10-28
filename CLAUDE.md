@@ -786,7 +786,7 @@ software de rastreador, que fará o cruzamento das informações". **Leia `docs/
 ### Estado de validação (fim da fase)
 - **Migrations `0001`..`0160`** + `schema.sql` consolidado aplicam limpos no harness local.
 - **137 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 1293 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Vitest: 1299 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Os portais e páginas públicas
@@ -2529,6 +2529,10 @@ categorias **Associados** e **Veículos**.
   abre só os cards dela, "Ver todos" abre a coluna inteira, "Recolher" volta, e há
   "Expandir/Recolher todas". A coluna aceita o arrasto nos dois modos. Regra pura em
   `src/lib/kanban-eventos.ts` (testada); `useEventos` passou a trazer `regionais(nome)`.
+- **Busca no Kanban (28/10/2026, sem migration):** campo acima das colunas procura por associado, placa, nº do
+  evento (com ou sem traço), CPF/CNPJ, chassi, tipo e unidade, sem acento; com termo, as colunas mostram só o que
+  casa e já ABERTAS ("Recolher" ainda fecha). Busca local (os eventos já vêm todos), regra pura
+  `eventoCasaComBusca` (`src/lib/kanban-eventos.ts`, testada); `useEventos` traz `chassi` e `cpf_cnpj`.
 - **Limpeza dos testes (17/10/2026):** script em `supabase/limpeza/2026-10-17_eventos_negados.sql`
   (os 6 eventos, todos em NEGADO, + a conta a pagar, as movimentações e os protocolos ligados a
   eles). O `execute_sql` do MCP estourou os 60 s sem gravar nada; **rodado pelo usuário e CONFERIDO

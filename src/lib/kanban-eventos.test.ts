@@ -47,3 +47,40 @@ describe('veioDoMutual', () => {
     expect(veioDoMutual(null)).toBe(false);
   });
 });
+
+import { eventoCasaComBusca } from './kanban-eventos';
+
+describe('eventoCasaComBusca', () => {
+  const e = {
+    numero_protocolo: 'EVT-20261015-0042',
+    veiculos: { placa: 'QQQ5D49', chassi: '9BWZZZ377VT004251', marca: 'HONDA', modelo: 'CIVIC' },
+    clientes: { nome_razao_social: 'JOÃO DA SILVA', cpf_cnpj: '529.982.247-25' },
+    tipos_evento: { nome: 'Colisão' },
+    regionais: { nome: 'RIBEIRÃO PRETO' },
+  };
+  it('termo curto nao filtra', () => {
+    expect(eventoCasaComBusca(e, '')).toBe(true);
+    expect(eventoCasaComBusca(e, 'x')).toBe(true);
+  });
+  it('acha pelo protocolo, com ou sem separador', () => {
+    expect(eventoCasaComBusca(e, 'EVT-20261015-0042')).toBe(true);
+    expect(eventoCasaComBusca(e, '0042')).toBe(true);
+    expect(eventoCasaComBusca(e, '202610150042')).toBe(true);
+  });
+  it('acha pela placa com traco e minuscula', () => {
+    expect(eventoCasaComBusca(e, 'qqq-5d49')).toBe(true);
+  });
+  it('acha pelo nome sem acento e por palavras soltas', () => {
+    expect(eventoCasaComBusca(e, 'joao silva')).toBe(true);
+    expect(eventoCasaComBusca(e, 'joao civic')).toBe(true);
+    expect(eventoCasaComBusca(e, 'maria')).toBe(false);
+  });
+  it('acha pelo CPF e pelo final do chassi', () => {
+    expect(eventoCasaComBusca(e, '52998224725')).toBe(true);
+    expect(eventoCasaComBusca(e, '004251')).toBe(true);
+  });
+  it('acha pelo tipo e pela unidade', () => {
+    expect(eventoCasaComBusca(e, 'colisao')).toBe(true);
+    expect(eventoCasaComBusca(e, 'ribeirao')).toBe(true);
+  });
+});

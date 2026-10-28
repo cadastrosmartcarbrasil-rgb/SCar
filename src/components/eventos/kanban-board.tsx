@@ -3,10 +3,10 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { AlertOctagon, ChevronDown, ChevronUp, Eye, Maximize2, Minimize2 } from 'lucide-react';
+import { AlertOctagon, ChevronDown, ChevronUp, Eye, Maximize2, Minimize2, Search, X } from 'lucide-react';
 import { PIPELINE_SINISTRO, TIPO_EVENTO_LABEL } from '@/types/domain';
 import { useEventos, useAtualizarStatusEvento, type EventoComRelacionamentos } from '@/hooks/use-eventos';
-import { agruparPorRegional, filtrarPorExpansao, veioDoMutual, type ExpansaoColuna } from '@/lib/kanban-eventos';
+import { agruparPorRegional, eventoCasaComBusca, filtrarPorExpansao, veioDoMutual, type ExpansaoColuna } from '@/lib/kanban-eventos';
 import { formatDate } from '@/lib/utils';
 import { useEventosPrazos } from '@/hooks/use-prazo-eventos';
 import { SeloPrazo } from './prazo-regulatorio';
@@ -34,13 +34,21 @@ export function KanbanBoard() {
   const urgentes = (prazos ?? []).filter((p) => p.nivel === 'URGENCIA').length;
   const [dragId, setDragId] = useState<string | null>(null);
   const [expansao, setExpansao] = useState<Partial<Record<StatusEvento, ExpansaoColuna>>>({});
+  // busca: com termo, o Kanban mostra so os eventos que casam e ja ABERTOS
+  // (ninguem precisa expandir coluna por coluna para achar um evento)
+  const [busca, setBusca] = useState('');
+  const buscando = busca.trim().length >= 2;
+  const encontrados = useMemo(
+    () => (buscando ? (eventos ?? []).filter((e) => eventoCasaComBusca(e, busca)) : eventos ?? []),
+    [eventos, busca, buscando],
+  );
 
   const porStatus = useMemo(() => {
     const map = new Map<StatusEvento, EventoComRelacionamentos[]>();
     for (const col of PIPELINE_SINISTRO) map.set(col.status, []);
-    for (const e of eventos ?? []) map.get(e.status)?.push(e);
+    for (const e of encontrados) map.get(e.status)?.push(e);
     return map;
-  }, [eventos]);
+  }, [encontrados]);
 
   const algumaAberta = Object.values(expansao).some((x) => x != null);
 
@@ -84,9 +92,31 @@ export function KanbanBoard() {
           <span className="ml-auto text-xs underline">ver painel</span>
         </Link>
       )}
+      <div className="relative max-w-xl">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <input
+          type="search"
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          placeholder="Procurar por associado, placa, nº do evento, CPF, chassi, tipo ou unidade"
+          className="w-full rounded-lg border border-slate-300 bg-superficie py-2 pl-9 pr-9 text-sm focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
+        />
+        {busca && (
+          <button
+            type="button"
+            onClick={() => setBusca('')}
+            title="Limpar a busca"
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-slate-400 hover:text-slate-700"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs text-slate-500">
-          {eventos?.length ?? 0} protocolo(s) no pipeline. As colunas mostram o resumo por regional — abra para ver os cards.
+          {buscando
+            ? `${encontrados.length} de ${eventos?.length ?? 0} protocolo(s) encontrado(s) para "${busca.trim()}".`
+            : `${eventos?.length ?? 0} protocolo(s) no pipeline. As colunas mostram o resumo por regional — abra para ver os cards.`}
         </p>
         <button
           type="button"
@@ -102,7 +132,8 @@ export function KanbanBoard() {
         {PIPELINE_SINISTRO.map((col) => {
           const items = porStatus.get(col.status) ?? [];
           const grupos = agruparPorRegional(items);
-          const atual = expansao[col.status] ?? null;
+          const atual: ExpansaoColuna =
+            buscando && expansao[col.status] === undefined ? 'todos' : expansao[col.status] ?? null;
           const cards = filtrarPorExpansao(items, atual);
           const tituloFiltro =
             atual && atual !== 'todos' ? grupos.find((g) => g.regionalId === atual.regionalId)?.nome : null;
@@ -120,7 +151,7 @@ export function KanbanBoard() {
 
               {items.length === 0 && (
                 <p className="rounded-lg border border-dashed border-slate-200 p-4 text-center text-xs text-slate-400">
-                  Nenhum protocolo
+                  {buscando ? 'Nada encontrado aqui' : 'Nenhum protocolo'}
                 </p>
               )}
 
