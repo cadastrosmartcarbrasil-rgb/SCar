@@ -8,16 +8,15 @@ import {
 } from '@/lib/assistencia-profissional';
 
 // ---------------------------------------------------------------------------
-// Assistencia Profissional (0158): o valor do consultor embutido na
-// mensalidade. Some quando a unidade nao paga — so mostra a linha de aviso
-// se ja ha valor gravado (cotacao antiga de unidade que deixou de pagar).
+// Assistencia Profissional (0158/0159): o valor do consultor embutido na
+// mensalidade. Toda unidade pode cobrar; o texto diz se ela repassa a
+// Assistencia ao consultor ou se o valor so aumenta a base da comissao.
 // ---------------------------------------------------------------------------
 export function CampoAssistenciaProfissional({ regras, valor, onChange }: {
   regras: RegrasAssistenciaProfissional | null | undefined;
   valor: number | null;
   onChange: (v: number | null) => void;
 }) {
-  if (!regras?.paga && !valor) return null;
   const erro = validarAssistenciaProfissional(valor, regras);
   return (
     <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-3">
@@ -28,9 +27,12 @@ export function CampoAssistenciaProfissional({ regras, valor, onChange }: {
       <div className="mt-1.5 grid gap-2 sm:grid-cols-[180px_1fr] sm:items-center">
         <MoneyInput value={valor} onChange={onChange} placeholder="0,00" />
         <p className="text-[11.5px] leading-snug text-slate-500">
+          Entre {formatCurrency(regras?.minimo ?? 1)} e {formatCurrency(regras?.maximo ?? 40)}
+          {regras?.regional_nome ? ` (${regras.regional_nome})` : ''}. Entra no total da mensalidade e fica fora do desconto.{' '}
           {regras?.paga
-            ? <>Entre {formatCurrency(regras.minimo)} e {formatCurrency(regras.maximo)} ({regras.regional_nome}). Entra no total da mensalidade, fica fora do desconto e é sua por inteiro. <b>O cliente não vê esta linha.</b></>
-            : <>A unidade deste atendimento não paga Assistência Profissional — zere o valor.</>}
+            ? <>Esta unidade repassa a Assistência: em cada mensalidade paga você recebe ela <b>no lugar da comissão</b>.</>
+            : <>Esta unidade não repassa a Assistência: ela aumenta a mensalidade e, com isso, a sua comissão.</>}{' '}
+          <b>O cliente não vê esta linha.</b>
         </p>
       </div>
       {erro && <p className="mt-1 text-[11.5px] text-rose-600">{erro}</p>}

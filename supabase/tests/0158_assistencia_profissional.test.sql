@@ -31,13 +31,12 @@ begin
           50000, tv, 'https://gov.br/crlv/158', pl, vend, r1, u_adm, 'EM_NEGOCIACAO')
   returning id into l_id;
 
-  -- ============================================== A) a unidade precisa pagar
-  ok := false;
-  begin
-    insert into cotacoes (lead_id, fipe, tipo_veiculo_id, total_mensalidade, taxa_adesao, valor_assistencia_profissional)
-      values (l_id, 50000, tv, 150, 400, 10);
-  exception when check_violation then ok := true; end;
-  assert ok, 'unidade que nao paga recusa Assistencia Profissional';
+  -- ============================================== A) qualquer unidade cobra (0159)
+  insert into cotacoes (lead_id, fipe, tipo_veiculo_id, total_mensalidade, taxa_adesao, valor_assistencia_profissional)
+    values (l_id, 50000, tv, 150, 400, 10) returning id into cot;
+  assert (select total_com_desconto from cotacoes where id = cot) = 160,
+    'unidade que nao repassa tambem cobra a Assistencia (0159)';
+  delete from cotacoes where id = cot;
 
   insert into cotacoes (lead_id, fipe, tipo_veiculo_id, total_mensalidade, taxa_adesao)
     values (l_id, 50000, tv, 150, 400) returning id into cot;
@@ -103,14 +102,15 @@ begin
   assert valor_mensalidade_veiculo(veic) = 300, 'override ja inclui a assistencia: nao soma de novo';
   raise notice 'OK veiculo';
 
-  -- ============================================== F) comissao
+  -- ============================================== F) comissao OU assistencia (0159)
+  update veiculos set valor_mensalidade = 175 where id = veic;
   insert into titulos_financeiros (cliente_id, veiculo_id, valor, data_vencimento, status)
     values (cli, veic, 175, v_hoje, 'pendente') returning id into t1;
   update titulos_financeiros set status = 'pago', valor_pago = 175, data_pagamento = v_hoje where id = t1;
   select * into rec from comissoes_vendas where titulo_id = t1;
   assert not rec.is_adesao, 'mensalidade (a adesao ja foi do vendedor na hora)';
-  assert rec.valor_assistencia_profissional = 25, 'a assistencia inteira e do vendedor';
-  assert rec.valor_comissao = 40, format('(175 - 25) x 10%% + 25 = 40 (veio %s)', rec.valor_comissao);
+  assert rec.valor_assistencia_profissional = 25, 'a unidade repassa: a assistencia e do vendedor';
+  assert rec.valor_comissao = 25, format('so a assistencia, sem percentual (veio %s)', rec.valor_comissao);
 
   update regionais set paga_assistencia_profissional = false where id = r1;
   insert into titulos_financeiros (cliente_id, veiculo_id, valor, data_vencimento, status)
@@ -118,7 +118,7 @@ begin
   update titulos_financeiros set status = 'pago', valor_pago = 175, data_pagamento = v_hoje where id = t2;
   select * into rec from comissoes_vendas where titulo_id = t2;
   assert rec.valor_assistencia_profissional = 0 and rec.valor_comissao = 17.5,
-    format('unidade que deixou de pagar: so os 10%% (veio %s)', rec.valor_comissao);
+    format('unidade que nao repassa: 10%% sobre o valor cheio, com a assistencia dentro (veio %s)', rec.valor_comissao);
   raise notice 'OK comissao';
 
   -- ============================================== G) migrados do Mutual

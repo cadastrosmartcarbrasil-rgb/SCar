@@ -145,10 +145,11 @@ begin
   select count(*) into n from cobranca_boletos_base(null, null, null) where boleto_id = h2;
   assert n = 1, 'o corte continua no 1o boleto COM fatura';
 
-  -- F) pagar o boleto novo nao gera comissao
+  -- F) pagar o boleto novo GERA comissao (0159: a comissao e da liquidacao)
   perform set_config('request.jwt.claim.sub', u_adm::text, false);
   update titulos_financeiros set status = 'pago', valor_pago = 105.5, data_pagamento = current_date where id = tnovo;
-  assert not exists (select 1 from comissoes_vendas where titulo_id = tnovo), 'renegociacao nao comissiona';
+  assert exists (select 1 from comissoes_vendas where titulo_id = tnovo and not is_adesao),
+    'renegociacao paga comissiona (0159), nunca como adesao';
 
   -- ===================================================== E) acordo de 2 parcelas (Mutual + SCar)
   perform set_config('request.jwt.claim.sub', u_cob::text, false);

@@ -207,9 +207,11 @@ export default function RegionaisPage() {
                     }`}>
                       {Number(bruta?.percentual_maximo_desconto_venda ?? 0).toFixed(2).replace('.', ',')}%
                     </span>
-                    {bruta?.paga_assistencia_profissional && (
-                      <span className="mt-1 block text-[11px] text-slate-500" title="Assistência Profissional paga aos consultores">
+                    {bruta && (
+                      <span className="mt-1 block text-[11px] text-slate-500"
+                        title={bruta.paga_assistencia_profissional ? 'Repassa a Assistência ao consultor no lugar da comissão' : 'Assistência entra na base da comissão'}>
                         Assist. prof. {formatCurrency(Number(bruta.assistencia_profissional_min))}–{formatCurrency(Number(bruta.assistencia_profissional_max))}
+                        {bruta.paga_assistencia_profissional ? ' · repassa' : ''}
                       </span>
                     )}
                   </td>
@@ -452,14 +454,16 @@ export default function RegionaisPage() {
                 onChange={(e) => setEditando((p) => ({ ...p, paga_assistencia_profissional: e.target.checked }))}
               />
               <span>
-                Esta unidade paga a Assistência Profissional aos seus consultores
+                Repassar a Assistência Profissional aos consultores (no lugar da comissão)
                 <span className="block text-xs text-slate-500">
-                  O consultor informa o valor na cotação; ele entra na mensalidade, fica fora do desconto,
-                  não aparece para o cliente e volta inteiro para o consultor na comissão de cada mensalidade paga.
+                  Toda unidade pode cobrar a Assistência na cotação: ela entra na mensalidade, fica fora do desconto
+                  e não aparece para o cliente. <b>Marcado:</b> em cada mensalidade paga o consultor recebe a
+                  Assistência do veículo e não recebe a comissão recorrente (veículo sem Assistência segue com a
+                  comissão). <b>Desmarcado:</b> o consultor recebe só a comissão, sobre o valor cheio — a Assistência
+                  aumenta a base.
                 </span>
               </span>
             </label>
-            {editando?.paga_assistencia_profissional && (
               <div className="mt-2.5 grid gap-3 sm:grid-cols-2">
                 <FormField label="Valor mínimo">
                   <MoneyInput
@@ -474,7 +478,6 @@ export default function RegionaisPage() {
                   />
                 </FormField>
               </div>
-            )}
           </div>
 
           {/* Regras de atribuicao do lead (0041) — sao da franquia, nao do codigo. */}

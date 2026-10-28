@@ -1,9 +1,10 @@
 // ---------------------------------------------------------------------------
-// ASSISTENCIA PROFISSIONAL (0158) — o valor que o consultor embute na
-// mensalidade. Aparece para quem cota e NUNCA para o cliente; o limite e a
-// unidade que paga moram no banco (fn_cotacao_valida_desconto). Aqui ficam o
-// espelho da validacao, para a tela avisar antes, e a montagem do que o
-// cliente ve.
+// ASSISTENCIA PROFISSIONAL (0158/0159) — o valor que o consultor embute na
+// mensalidade. Aparece para quem cota e NUNCA para o cliente. Qualquer unidade
+// cobra (dentro do limite dela); so a que REPASSA paga a Assistencia ao
+// consultor, e no LUGAR da comissao recorrente (nunca as duas). O limite mora
+// no banco (fn_cotacao_valida_desconto) e a comissao em fn_calcular_comissao;
+// aqui ficam os espelhos, para a tela avisar antes, e o que o cliente ve.
 // ---------------------------------------------------------------------------
 
 export type RegrasAssistenciaProfissional = {
@@ -22,11 +23,30 @@ export function validarAssistenciaProfissional(
   const v = Number(valor ?? 0);
   if (!Number.isFinite(v) || v < 0) return 'Valor inválido';
   if (v === 0) return null;
-  if (!regras?.paga) return 'A unidade deste atendimento não paga Assistência Profissional';
-  if (v < regras.minimo || v > regras.maximo) {
-    return `O valor deve ficar entre ${moeda(regras.minimo)} e ${moeda(regras.maximo)}`;
-  }
+  const min = regras?.minimo ?? 1;
+  const max = regras?.maximo ?? 40;
+  if (v < min || v > max) return `O valor deve ficar entre ${moeda(min)} e ${moeda(max)}`;
   return null;
+}
+
+/**
+ * Espelho de fn_calcular_comissao (0159) para a MENSALIDADE paga: comissao OU
+ * Assistencia, nunca as duas. `base` e a parte paga deste veiculo; a parte da
+ * Assistencia e proporcional ao que o pagamento cobre da mensalidade (juros
+ * nao a aumentam, salvo renegociacao de varios meses).
+ */
+export function comissaoDoPagamento(p: {
+  base: number; taxaRecorrente: number; assistencia: number; mensalidade: number;
+  unidadeRepassa: boolean; renegociacao?: boolean;
+}): { comissao: number; assistencia: number } {
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  const base = Math.max(Number(p.base) || 0, 0);
+  const ap = Math.max(Number(p.assistencia) || 0, 0);
+  if (!p.unidadeRepassa || ap === 0) return { comissao: r2(base * p.taxaRecorrente), assistencia: 0 };
+  let parte = p.mensalidade > 0 ? r2((ap * base) / p.mensalidade) : ap;
+  if (!p.renegociacao) parte = Math.min(parte, ap);
+  parte = Math.max(Math.min(parte, base), 0);
+  return { comissao: parte, assistencia: parte };
 }
 
 /** O total que o cliente paga: tabela com desconto + a Assistência (fora do desconto). */
