@@ -66,12 +66,21 @@ export function ImportarTabela() {
   const [arquivo, setArquivo] = useState<string>('');
 
   // Mesma regra do editor: so os obrigatorios que variam por faixa viram coluna.
+  const faixa = useMemo(
+    () => (produtos ?? []).filter((p) => p.metodo_preco === 'FAIXA_FIPE' && p.status && p.obrigatorio),
+    [produtos],
+  );
   const colunasProduto: ProdutoColuna[] = useMemo(
-    () => (produtos ?? [])
-      .filter((p) => p.metodo_preco === 'FAIXA_FIPE' && p.status && p.obrigatorio
-        && produtoAtendeTipo(p.id, tipoId, tiposPorProduto))
-      .map((p) => ({ id: p.id, nome: p.nome })),
-    [produtos, tipoId, tiposPorProduto],
+    () => faixa.filter((p) => produtoAtendeTipo(p.id, tipoId, tiposPorProduto))
+      .map((p) => ({ id: p.id, nome: p.nome, categoria: p.categoria })),
+    [faixa, tipoId, tiposPorProduto],
+  );
+  // Os de faixa que NAO servem este tipo: a coluna deles na planilha bloqueia,
+  // e a tela diz por que nao viraram coluna.
+  const foraDoTipo: ProdutoColuna[] = useMemo(
+    () => (tipoId ? faixa.filter((p) => !produtoAtendeTipo(p.id, tipoId, tiposPorProduto)) : [])
+      .map((p) => ({ id: p.id, nome: p.nome, categoria: p.categoria })),
+    [faixa, tipoId, tiposPorProduto],
   );
 
   // Tabela em vigor, no mesmo formato do arquivo — base da comparacao.
@@ -119,7 +128,7 @@ export function ImportarTabela() {
         const matriz = /\.xlsx$/i.test(file.name)
           ? await matrizDeXlsx(file)
           : matrizDeCsv(await file.text());
-        setResultado(interpretarPlanilha(matriz, colunasProduto));
+        setResultado(interpretarPlanilha(matriz, colunasProduto, foraDoTipo));
         setArquivo(file.name);
       } catch (err) {
         toast.error(`Não consegui ler o arquivo: ${(err as Error).message}`);
@@ -127,7 +136,7 @@ export function ImportarTabela() {
         setLendo(false);
       }
     },
-    [tipoId, colunasProduto],
+    [tipoId, colunasProduto, foraDoTipo],
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -218,6 +227,7 @@ export function ImportarTabela() {
               {colunasProduto.length > 0 && <> ({colunasProduto.map((p) => p.nome).join(', ')})</>}.
             </p>
           )}
+          {tipoId && <ForaDoTipo produtos={foraDoTipo} tipo={(tipos ?? []).find((t) => t.id === tipoId)?.nome ?? ''} />}
 
           <div
             {...getRootProps()}
@@ -388,4 +398,22 @@ function Selo({ tom, children }: { tom: 'verde' | 'ambar' | 'cinza'; children: R
     cinza: 'bg-slate-100 text-slate-500 ring-slate-200',
   }[tom];
   return <span className={`rounded-full px-2 py-0.5 text-[10.5px] font-medium ring-1 ring-inset ${cor}`}>{children}</span>;
+}
+
+/**
+ * Componente de faixa que nao atende o tipo escolhido (0089) nao vira coluna —
+ * e isso nao pode ser silencioso: e o caso do casco que nao estava marcado para Moto.
+ */
+export function ForaDoTipo({ produtos, tipo }: { produtos: { id: string; nome: string }[]; tipo: string }) {
+  if (produtos.length === 0) return null;
+  return (
+    <p className="flex items-start gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11.5px] leading-relaxed text-amber-800">
+      <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" />
+      <span>
+        Fora desta tabela porque o produto não está marcado para <b>{tipo}</b>:{' '}
+        <b>{produtos.map((p) => p.nome).join(', ')}</b>. O preço de {tipo} não cobra esse componente.
+        Se ele deve fazer parte, marque o tipo em <b>Configurações → Produtos</b> e a coluna aparece aqui e no modelo.
+      </span>
+    </p>
+  );
 }

@@ -5032,6 +5032,19 @@ mesmo veículo aciona, e poder excluir acionamento lançado por engano.
 - **.xlsx** e lido com `exceljs` em **import dinamico** (nao pesa no bundle da pagina); `.csv` e
   parseado sem dependencia (detecta `;` ou `,`, respeita aspas e BOM).
 
+## Precificação — o componente FORA do tipo (28/10/2026, sem migration)
+- **O caso:** a tabela de Moto não tinha coluna de Casco nem na tela nem no modelo — o produto
+  "Protecao Casco (RFC)" estava marcado só para Passeio/Pick-up/Diesel/Caminhão (0089), então o
+  editor e o importador (que só mostram FAIXA_FIPE obrigatório que atende o tipo) o escondiam calados,
+  e a coluna "Casco" da planilha do usuário seria só "ignorada".
+- **Agora:** a tela (editor e importação) mostra em âmbar o componente de faixa que ficou de fora por
+  não atender o tipo (`<ForaDoTipo>`); a coluna desse produto na planilha **bloqueia** a importação
+  (antes gravava a tabela sem ele); o cabeçalho casa também pelo nome sem parênteses e pelo apelido da
+  categoria quando ela é única na tabela ("Casco" → CASCO, "Taxa Adm" → ADMIN — `cabecalhosDoProduto`);
+  duas colunas do mesmo produto bloqueiam; e componente que fica mais barato numa faixa de FIPE maior
+  vira aviso. Regras em `src/lib/precificacao-import.ts` (testadas).
+- **O conserto do dado é cadastro:** marcar o tipo no produto em Configurações → Produtos.
+
 ## Rota de venda (0034) — do lead à entrada na base
 - **A rota tem 4 etapas e o veículo só entra na base no fim:** cotação → **Fechamento da venda**
   (`<FechamentoVenda>` em `/vendas/[id]`) → Auditoria → base.

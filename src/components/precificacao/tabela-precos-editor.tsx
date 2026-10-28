@@ -11,6 +11,7 @@ import {
 } from '@/hooks/use-precificacao';
 import { AdicionalRiscoRegional } from './adicional-risco';
 import { produtoAtendeTipo } from '@/lib/produtos';
+import { ForaDoTipo } from './importar-tabela';
 
 interface Banda {
   fipe_minimo: number;
@@ -49,6 +50,12 @@ export function TabelaPrecosEditor() {
     // So o produto que atende ESTE tipo vira coluna (0089): o motor nao cobra o resto.
     () => (produtos ?? []).filter((p) => p.metodo_preco === 'FAIXA_FIPE' && p.status && p.obrigatorio
       && produtoAtendeTipo(p.id, tipoId, tiposPorProduto)),
+    [produtos, tipoId, tiposPorProduto],
+  );
+
+  const foraDoTipo = useMemo(
+    () => (tipoId ? (produtos ?? []).filter((p) => p.metodo_preco === 'FAIXA_FIPE' && p.status && p.obrigatorio
+      && !produtoAtendeTipo(p.id, tipoId, tiposPorProduto)) : []),
     [produtos, tipoId, tiposPorProduto],
   );
 
@@ -211,6 +218,8 @@ export function TabelaPrecosEditor() {
       {/* O adicional de risco e da MESMA natureza da regra acima: uma regra que
           sobe por cima da matriz inteira deste tipo. Por isso mora aqui. */}
       {tipoId && <AdicionalRiscoRegional tipoVeiculoId={tipoId} />}
+
+      {tipoId && <ForaDoTipo produtos={foraDoTipo} tipo={tipoSel?.nome ?? ''} />}
 
       {!tipoId ? (
         <p className="text-sm text-slate-400">Selecione um tipo de veículo para editar a matriz de preços.</p>

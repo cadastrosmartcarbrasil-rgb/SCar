@@ -192,3 +192,48 @@ describe('compararTabelas', () => {
     expect(d).toMatchObject({ adicionadas: [], removidas: [], alteradas: [], inalteradas: 1 });
   });
 });
+
+describe('planilha das motos (28/10/2026)', () => {
+  const MOTO: ProdutoColuna[] = [{ id: 'p-admin', nome: 'Taxa Administrativa', categoria: 'ADMIN' }];
+  const CASCO: ProdutoColuna = { id: 'p-casco', nome: 'Protecao Casco (RFC)', categoria: 'CASCO' };
+  const CSV = [
+    'FIPE_MINIMO;FIPE_MAXIMO;PARTICIPACAO;PARTICIPACAO_TIPO;ADESAO;Taxa Administrativa;Casco',
+    '0;10000;1200;VALOR;350;25; R$ 25,00 ',
+    '10000,01;13000;1400;VALOR;350;25; R$ 44,00 ',
+    '13000,01;16000;1500;VALOR;350;25; R$ 11,00 ',
+  ].join('\n');
+
+  it('casa "Casco" com o produto de casco pela categoria e le "R$ 25,00"', () => {
+    const r = interpretarPlanilha(matrizDeCsv(CSV), [...MOTO, CASCO]);
+    expect(r.erros).toEqual([]);
+    expect(r.bandas[0].valores['p-casco']).toBe(25);
+    expect(r.bandas[1].valores['p-casco']).toBe(44);
+  });
+
+  it('avisa quando o componente cai numa faixa de FIPE maior', () => {
+    const r = interpretarPlanilha(matrizDeCsv(CSV), [...MOTO, CASCO]);
+    expect(r.avisos.some((a) => a.includes('cai de') && a.includes('linha 4'))).toBe(true);
+  });
+
+  it('BLOQUEIA a coluna de produto que nao atende o tipo, em vez de ignorar', () => {
+    const r = interpretarPlanilha(matrizDeCsv(CSV), MOTO, [CASCO]);
+    expect(r.erros.some((e) => e.includes('Protecao Casco (RFC)') && e.includes('nao esta marcado'))).toBe(true);
+    expect(r.colunasIgnoradas).toEqual([]);
+  });
+
+  it('o nome sem parenteses tambem casa', () => {
+    const r = interpretarPlanilha(matrizDeCsv('FIPE_MINIMO;FIPE_MAXIMO;Protecao Casco\n0;1000;30'), [CASCO]);
+    expect(r.bandas[0].valores['p-casco']).toBe(30);
+  });
+
+  it('apelido de categoria repetida nao casa (ambiguo)', () => {
+    const dois = [CASCO, { id: 'p-c2', nome: 'Casco Especial X', categoria: 'CASCO' }];
+    const r = interpretarPlanilha(matrizDeCsv('FIPE_MINIMO;FIPE_MAXIMO;Casco\n0;1000;30'), dois);
+    expect(r.colunasIgnoradas).toEqual(['Casco']);
+  });
+
+  it('duas colunas do mesmo produto bloqueiam', () => {
+    const r = interpretarPlanilha(matrizDeCsv('FIPE_MINIMO;FIPE_MAXIMO;Casco;Protecao Casco (RFC)\n0;1000;30;31'), [CASCO]);
+    expect(r.erros.some((e) => e.includes('mesmo produto'))).toBe(true);
+  });
+});

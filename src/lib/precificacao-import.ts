@@ -24,6 +24,37 @@ import { formatCurrency } from './utils';
 export interface ProdutoColuna {
   id: string;
   nome: string;
+  /** Categoria do produto (CASCO, ADMIN...). Deixa casar o cabecalho "Casco"
+   *  com "Protecao Casco (RFC)" quando so um produto da tabela e daquela categoria. */
+  categoria?: string | null;
+}
+
+/** Nomes curtos que a planilha costuma usar para cada categoria. */
+const APELIDOS_CATEGORIA: Record<string, string[]> = {
+  CASCO: ['CASCO', 'PROTECAO CASCO', 'PROTECAO DE CASCO'],
+  ADMIN: ['TAXA ADMINISTRATIVA', 'TAXA ADM', 'ADMINISTRATIVA', 'TAXA ADMIN'],
+};
+
+/**
+ * Os cabecalhos que valem para cada produto: o nome, o nome sem o que vem entre
+ * parenteses e, quando a categoria e UNICA na lista, os apelidos dela.
+ */
+export function cabecalhosDoProduto(produtos: ProdutoColuna[]): Map<string, ProdutoColuna> {
+  const mapa = new Map<string, ProdutoColuna>();
+  const porCategoria = new Map<string, number>();
+  produtos.forEach((p) => {
+    if (p.categoria) porCategoria.set(p.categoria, (porCategoria.get(p.categoria) ?? 0) + 1);
+  });
+  // O nome exato vence qualquer apelido.
+  produtos.forEach((p) => mapa.set(normalizarCabecalho(p.nome), p));
+  produtos.forEach((p) => {
+    const semParenteses = normalizarCabecalho(p.nome.replace(/\([^)]*\)/g, ''));
+    if (semParenteses && !mapa.has(semParenteses)) mapa.set(semParenteses, p);
+    if (p.categoria && porCategoria.get(p.categoria) === 1) {
+      (APELIDOS_CATEGORIA[p.categoria] ?? []).forEach((a) => { if (!mapa.has(a)) mapa.set(a, p); });
+    }
+  });
+  return mapa;
 }
 
 export interface BandaImportada {
@@ -121,7 +152,12 @@ const faixaTexto = (min: number, max: number) => `${formatCurrency(min)} a ${for
  * Le a matriz da planilha e devolve as bandas prontas para o editor/RPC.
  * Nunca lanca: os problemas voltam em `erros` (bloqueiam) e `avisos` (passam).
  */
-export function interpretarPlanilha(matriz: string[][], produtos: ProdutoColuna[]): ResultadoImportacao {
+export function interpretarPlanilha(
+  matriz: string[][],
+  produtos: ProdutoColuna[],
+  /** Produtos de faixa que NAO atendem o tipo escolhido (0089): coluna deles bloqueia. */
+  foraDoTipo: ProdutoColuna[] = [],
+): ResultadoImportacao {
   const erros: string[] = [];
   const avisos: string[] = [];
   const colunasIgnoradas: string[] = [];
@@ -147,15 +183,30 @@ export function interpretarPlanilha(matriz: string[][], produtos: ProdutoColuna[
   if (erros.length > 0) return { bandas: [], erros, avisos, colunasIgnoradas: [], produtosAusentes: [] };
 
   // Casa cada coluna restante com um produto cadastrado (pelo nome).
-  const porNome = new Map(produtos.map((p) => [normalizarCabecalho(p.nome), p]));
+  const porNome = cabecalhosDoProduto(produtos);
+  const fora = cabecalhosDoProduto(foraDoTipo);
   const fixas = new Set<number>([iMin, iMax, iPart, iPartTipo, iAdesao].filter((i) => i >= 0));
   const colunasProduto: { indice: number; produto: ProdutoColuna }[] = [];
 
   cabecalho.forEach((titulo, i) => {
     if (fixas.has(i) || titulo === '') return;
     const produto = porNome.get(titulo);
-    if (produto) colunasProduto.push({ indice: i, produto });
-    else colunasIgnoradas.push(matriz[0][i]);
+    if (produto) {
+      if (colunasProduto.some((c) => c.produto.id === produto.id)) {
+        erros.push(`As colunas "${matriz[0][colunasProduto.find((c) => c.produto.id === produto.id)!.indice]}" e "${matriz[0][i]}" sao do mesmo produto (${produto.nome}). Deixe uma so.`);
+      } else colunasProduto.push({ indice: i, produto });
+      return;
+    }
+    const outro = fora.get(titulo);
+    if (outro) {
+      // Ignorar seria gravar a tabela SEM esse componente e cobrar a menos, calado.
+      erros.push(
+        `A coluna "${matriz[0][i]}" e do produto "${outro.nome}", que nao esta marcado para este tipo de veiculo. ` +
+        `Marque o tipo no produto (Configuracoes -> Produtos) e importe de novo, ou tire a coluna da planilha.`,
+      );
+      return;
+    }
+    colunasIgnoradas.push(matriz[0][i]);
   });
 
   const trazidos = new Set(colunasProduto.map((c) => c.produto.id));
@@ -253,6 +304,23 @@ export function interpretarPlanilha(matriz: string[][], produtos: ProdutoColuna[
     }
     if (at.fipe_maximo > maiorFim) { maiorFim = at.fipe_maximo; dona = at; }
   }
+
+  // Componente que fica MAIS BARATO numa faixa de FIPE maior costuma ser erro de digitacao.
+  colunasProduto.forEach(({ produto }) => {
+    let anterior: BandaImportada | null = null;
+    for (const b of bandas) {
+      const v = b.valores[produto.id];
+      if (v === undefined) continue;
+      const va = anterior?.valores[produto.id];
+      if (anterior && va !== undefined && v < va) {
+        avisos.push(
+          `"${produto.nome}" cai de ${formatCurrency(va)} (linha ${anterior.linha}) para ${formatCurrency(v)} ` +
+          `(linha ${b.linha}) numa faixa de FIPE maior — confira se nao e erro de digitacao.`,
+        );
+      }
+      anterior = b;
+    }
+  });
 
   if (bandas.length === 0 && erros.length === 0) erros.push('Nenhuma faixa valida encontrada.');
   if (colunasIgnoradas.length > 0) {
