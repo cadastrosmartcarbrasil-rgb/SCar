@@ -59,6 +59,19 @@ export function useCriarRenegociacao() {
   });
 }
 
+/** Cancela boleto(s) com motivo (0157): sem boleto novo, so a baixa no banco. */
+export function useCancelarBoletos() {
+  const invalidar = useInvalidar();
+  return useMutation<
+    { renegociacao_id: string; erros_baixa: number },
+    Error,
+    { cliente_id: string; origens: { origem: 'SCAR' | 'MUTUAL'; id: string }[]; motivo: string }
+  >({
+    mutationFn: (b) => postar('/api/v1/cobrancas/renegociacao', { acao: 'cancelar', ...b }),
+    onSettled: invalidar,
+  });
+}
+
 export function useBaixarOriginais() {
   const invalidar = useInvalidar();
   return useMutation<{ erros_baixa: number }, Error, string>({

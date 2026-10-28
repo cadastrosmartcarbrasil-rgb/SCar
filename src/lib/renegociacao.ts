@@ -44,6 +44,30 @@ export function ehBoletoAvulso(observacao: string | null | undefined): boolean {
   return !!observacao && observacao.startsWith('Boleto avulso — ');
 }
 
+/**
+ * Cancelamento (0157): em aberto e, se do Mutual, com a linha do Sicredi (a
+ * baixa e pelo nosso numero). Boleto avulso TAMBEM se cancela — o avulso
+ * emitido errado e o caso classico. null = cancelavel.
+ */
+export function motivoNaoCancelavel(b: BoletoNegociavel & { valor_pago?: number | null }): string | null {
+  if (b.status !== 'aberto' && b.status !== 'vencido' && b.status !== 'pendente') {
+    return `boleto ${b.status}`;
+  }
+  if (Number(b.valor_pago ?? 0) > 0) return 'boleto com pagamento parcial';
+  if (b.origem === 'MUTUAL' && !ehLinhaSicredi(b.linha_digitavel)) {
+    return 'boleto do Mutual sem linha do Sicredi (cancele no Mutual)';
+  }
+  return null;
+}
+
+export const MOTIVO_CANCELAMENTO_MINIMO = 5;
+
+export function validarMotivoCancelamento(motivo: string): string | null {
+  return motivo.trim().length < MOTIVO_CANCELAMENTO_MINIMO
+    ? `Informe o motivo do cancelamento (mínimo ${MOTIVO_CANCELAMENTO_MINIMO} caracteres).`
+    : null;
+}
+
 export function podeNegociar(b: BoletoNegociavel): boolean {
   return motivoNaoNegociavel(b) === null;
 }

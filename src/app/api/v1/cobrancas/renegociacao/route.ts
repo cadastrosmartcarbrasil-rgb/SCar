@@ -11,6 +11,7 @@ import type { Json } from '@/lib/database.types';
 //     parcelas:[{vencimento,valor}], acordo_id?, observacao? }
 //   { acao: 'pro_rata', veiculo_id, ate, desde?, vencimento, origens?, observacao? }  (0144)
 //   { acao: 'baixar', renegociacao_id }   -> tenta de novo a baixa dos originais
+//   { acao: 'cancelar', cliente_id, origens:[{origem,id}], motivo }  (0157) -> so baixa, sem boleto novo
 //
 // A ordem (criar pela sessao -> emitir -> fechar -> baixar) esta em
 // `src/lib/pagamentos/renegociacao-server.ts`.
@@ -26,7 +27,7 @@ export async function POST(request: Request) {
   if (!perfil) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
 
   const body = (await request.json().catch(() => ({}))) as {
-    acao?: 'criar' | 'baixar' | 'pro_rata';
+    acao?: 'criar' | 'baixar' | 'pro_rata' | 'cancelar';
     cliente_id?: string;
     veiculo_id?: string;
     tipo?: string;
@@ -38,6 +39,7 @@ export async function POST(request: Request) {
     ate?: string;
     desde?: string | null;
     vencimento?: string | null;
+    motivo?: string | null;
   };
   const admin = createAdminClient();
 
@@ -57,6 +59,28 @@ export async function POST(request: Request) {
     } catch (e) {
       return NextResponse.json({ error: (e as Error).message }, { status: 400 });
     }
+  }
+
+  // ---- CANCELAR boleto(s) com motivo (0157): o banco confere a celula
+  // `cobranca.cancelar` (perfil ou extra) e o escopo; depois, a baixa no banco.
+  if (body.acao === 'cancelar') {
+    if (!body.cliente_id) return NextResponse.json({ error: 'cliente_id obrigatório' }, { status: 400 });
+    const { data: cliente } = await admin.from('clientes').select('regional_id').eq('id', body.cliente_id).maybeSingle();
+    if (!cliente) return NextResponse.json({ error: 'Associado não encontrado' }, { status: 404 });
+    let gw: Awaited<ReturnType<typeof resolverGateway>>;
+    try {
+      gw = await resolverGateway(admin, cliente.regional_id);
+    } catch (e) {
+      return NextResponse.json({ error: (e as Error).message }, { status: 400 });
+    }
+    const { data: id, error } = await supabase.rpc('criar_cancelamento_boletos', {
+      p_cliente_id: body.cliente_id,
+      p_origens: (body.origens ?? []) as unknown as Json,
+      p_motivo: body.motivo ?? '',
+    });
+    if (error || !id) return NextResponse.json({ error: error?.message ?? 'Falha ao cancelar' }, { status: 400 });
+    const erros = await baixarOriginais(admin, gw.gateway, id);
+    return NextResponse.json({ ok: true, renegociacao_id: id, erros_baixa: erros });
   }
 
   // ---- boleto PRO-RATA avulso (0144): pela data de vencimento do veiculo

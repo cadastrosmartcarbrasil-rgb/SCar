@@ -5,6 +5,8 @@ import { toast } from 'sonner';
 import { Receipt, PlayCircle, FileText, Ban, ChevronDown, ChevronRight, Barcode } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
+import { usePode } from '@/hooks/use-permissoes';
+import { MOTIVO_CANCELAMENTO_MINIMO, validarMotivoCancelamento } from '@/lib/renegociacao';
 import { FormField, Input, Select } from '@/components/ui/field';
 import { useRegionais } from '@/hooks/use-config';
 import { rotuloUnidade } from '@/lib/regional';
@@ -45,6 +47,10 @@ export function FaturasCompetencia() {
   const emitirLote = useEmitirTitulos();
   const emitirUma = useEmitirTituloFatura();
   const cancelar = useCancelarFatura();
+  // 0157: celula `cobranca.cancelar` (perfil ou extra) e motivo obrigatorio.
+  const podeCancelar = usePode('cobranca.cancelar');
+  const [cancelando, setCancelando] = useState<FaturaComRel | null>(null);
+  const [motivo, setMotivo] = useState('');
 
   const kpis = useMemo(() => {
     const l = faturas ?? [];
@@ -180,17 +186,37 @@ export function FaturasCompetencia() {
                     onError: (e) => toast.error(e.message),
                   })
                 }
-                onCancelar={() =>
-                  cancelar.mutate(f.id, {
-                    onSuccess: () => toast.success('Fatura cancelada'),
-                    onError: (e) => toast.error(e.message),
-                  })
-                }
+                onCancelar={podeCancelar ? () => { cancelar.reset(); setMotivo(''); setCancelando(f); } : undefined}
               />
             ))}
           </tbody>
         </table>
       </div>
+
+      <Modal open={!!cancelando} onClose={() => setCancelando(null)} title="Cancelar fatura">
+        <div className="space-y-3 text-sm text-slate-600">
+          <p>
+            Cancela a fatura e o boleto dela. Se o boleto já foi registrado no banco, o cancelamento é feito pelo
+            <b> Histórico financeiro</b> do associado (SAC), que dá a baixa no banco.
+          </p>
+          <label className="block">
+            <span className="text-xs font-medium text-slate-600">Motivo do cancelamento *</span>
+            <textarea rows={3} value={motivo} autoFocus onChange={(e) => setMotivo(e.target.value)}
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+            <span className="text-[11px] text-slate-400">Mínimo de {MOTIVO_CANCELAMENTO_MINIMO} caracteres.</span>
+          </label>
+          {cancelar.error && <p className="text-xs text-rose-600">{cancelar.error.message}</p>}
+          <div className="flex justify-end gap-2 border-t border-slate-100 pt-3">
+            <Button variant="secondary" onClick={() => setCancelando(null)}>Voltar</Button>
+            <Button variant="danger" disabled={!!validarMotivoCancelamento(motivo) || cancelar.isPending}
+              onClick={() => cancelando && cancelar.mutate({ faturaId: cancelando.id, motivo: motivo.trim() }, {
+                onSuccess: () => { toast.success('Fatura cancelada'); setCancelando(null); },
+              })}>
+              <Ban className="h-4 w-4" /> Cancelar fatura
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal open={gerando} onClose={() => setGerando(false)} title={`Gerar cobranças — ${rotuloCompetencia(competencia)}`}>
         <div className="space-y-3 text-sm text-slate-600">
@@ -226,7 +252,7 @@ function FaturaLinha({
   aberta: boolean;
   onToggle: () => void;
   onEmitir: () => void;
-  onCancelar: () => void;
+  onCancelar?: () => void;
 }) {
   const agrupada = fatura.tipo_faturamento === 'AGRUPADO_ASSOCIADO';
   const { data: itens } = useFaturaItens(aberta && agrupada ? fatura.id : null);
@@ -275,7 +301,7 @@ function FaturaLinha({
                 <FileText className="h-3.5 w-3.5" /> Emitir título
               </Button>
             )}
-            {fatura.status !== 'PAGA' && fatura.status !== 'CANCELADA' && (
+            {onCancelar && fatura.status !== 'PAGA' && fatura.status !== 'CANCELADA' && (
               <Button variant="ghost" className="px-2 py-1 text-xs text-rose-600" onClick={onCancelar}>
                 <Ban className="h-3.5 w-3.5" /> Cancelar
               </Button>

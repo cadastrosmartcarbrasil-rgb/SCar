@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  motivoNaoCancelavel, validarMotivoCancelamento,
   baixaJaFeitaNoBanco, baixasPendentes, ehLinhaSicredi, mensagemDoBoleto, motivoNaoNegociavel, parcelasDaNegociacao,
   podeNegociar, totalOriginais, validarNegociacao, valorNegociado,
 } from './renegociacao';
@@ -83,5 +84,26 @@ describe('mensagem e baixas', () => {
     expect(baixaJaFeitaNoBanco('Sicredi HTTP 422: título já liquidado')).toBe(false);
     expect(baixaJaFeitaNoBanco('Sicredi HTTP 500: erro interno')).toBe(false);
     expect(baixaJaFeitaNoBanco(null)).toBe(false);
+  });
+});
+
+describe('cancelamento (0157)', () => {
+  const base = { id: '1', valor: 100, data_vencimento: '2026-10-10' };
+  it('so boleto em aberto, sem pagamento parcial', () => {
+    expect(motivoNaoCancelavel({ ...base, status: 'aberto' })).toBeNull();
+    expect(motivoNaoCancelavel({ ...base, status: 'vencido' })).toBeNull();
+    expect(motivoNaoCancelavel({ ...base, status: 'pago' })).toBe('boleto pago');
+    expect(motivoNaoCancelavel({ ...base, status: 'cancelado' })).toBe('boleto cancelado');
+    expect(motivoNaoCancelavel({ ...base, status: 'aberto', valor_pago: 10 })).toMatch(/parcial/);
+  });
+  it('Mutual so com linha do Sicredi; avulso tambem se cancela', () => {
+    expect(motivoNaoCancelavel({ ...base, status: 'aberto', origem: 'MUTUAL', linha_digitavel: null })).toMatch(/Mutual/);
+    expect(motivoNaoCancelavel({ ...base, status: 'aberto', origem: 'MUTUAL', linha_digitavel: linha748 })).toBeNull();
+    expect(motivoNaoCancelavel({ ...base, status: 'aberto', observacao: 'Boleto avulso — Vistoria: x' })).toBeNull();
+  });
+  it('motivo obrigatorio, sem contar espacos', () => {
+    expect(validarMotivoCancelamento('   ')).not.toBeNull();
+    expect(validarMotivoCancelamento(' abc ')).not.toBeNull();
+    expect(validarMotivoCancelamento('duplicado')).toBeNull();
   });
 });

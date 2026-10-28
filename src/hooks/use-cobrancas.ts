@@ -124,9 +124,9 @@ export function useEmitirTituloFatura() {
 export function useCancelarFatura() {
   const supabase = createClient();
   const qc = useQueryClient();
-  return useMutation<void, Error, string>({
-    mutationFn: async (faturaId) => {
-      const { error } = await supabase.rpc('cancelar_fatura', { p_fatura_id: faturaId });
+  return useMutation<void, Error, { faturaId: string; motivo: string }>({
+    mutationFn: async ({ faturaId, motivo }) => {
+      const { error } = await supabase.rpc('cancelar_fatura', { p_fatura_id: faturaId, p_motivo: motivo });
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['cobrancas'] }),

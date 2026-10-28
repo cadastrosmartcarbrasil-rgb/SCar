@@ -1505,7 +1505,7 @@ export type OrigemRenegociacao = {
 };
 export type RenegociacaoCliente = {
   id: string;
-  tipo: 'SEGUNDA_VIA' | 'ACORDO' | 'PRO_RATA' | 'AVULSO';
+  tipo: 'SEGUNDA_VIA' | 'ACORDO' | 'PRO_RATA' | 'AVULSO' | 'CANCELAMENTO';
   situacao: 'EMITINDO' | 'EMITIDA' | 'ERRO';
   erro: string | null;
   valor_original: number;
@@ -4502,7 +4502,7 @@ export type Database = {
         Returns: TitulosFinanceirosRow;
       };
       cancelar_fatura: {
-        Args: { p_fatura_id: string };
+        Args: { p_fatura_id: string; p_motivo: string };
         Returns: FaturasRow;
       };
       gerar_primeira_cobranca_veiculo: {
@@ -4814,6 +4814,10 @@ export type Database = {
           p_cliente_id: string; p_tipo_id: string; p_valor: number; p_vencimento: string;
           p_veiculo_id?: string | null; p_descricao?: string | null;
         };
+        Returns: string;
+      };
+      criar_cancelamento_boletos: {
+        Args: { p_cliente_id: string; p_origens: Json; p_motivo: string };
         Returns: string;
       };
       criar_renegociacao_pro_rata: {

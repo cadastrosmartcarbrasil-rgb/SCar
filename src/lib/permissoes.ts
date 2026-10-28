@@ -88,7 +88,7 @@ export const MODULOS: Modulo[] = [
     notas: { editar: 'tratar: fase, peças, nota fiscal', transferir: 'tramitar e pedir parecer' },
     rotas: ['/eventos'] },
   { chave: 'cobranca', rotulo: 'Cobrança', acoes: ['ver', 'criar', 'editar', 'exportar', 'baixar', 'cancelar'],
-    notas: { criar: 'gerar faturas e remessas', editar: 'ajustar boleto' }, rotas: ['/cobrancas'] },
+    notas: { criar: 'gerar faturas e remessas', editar: 'ajustar boleto', cancelar: 'cancelar boleto(s) com motivo (baixa no banco)' }, rotas: ['/cobrancas'] },
   { chave: 'revistoria', rotulo: 'Revistoria do boleto vencido', acoes: ['ver', 'criar', 'fechar', 'cancelar'],
     notas: { criar: 'pedir e reenviar o link ao associado', fechar: 'aprovar ou reprovar',
       cancelar: 'liberar a 2a via SEM revistoria (com justificativa)' },

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import {
-  Wallet, MessageCircle, Mail, Pencil, Barcode, QrCode, Copy, Repeat2, Loader2, Calculator,
+  Wallet, MessageCircle, Mail, Pencil, Barcode, QrCode, Copy, Repeat2, Loader2, Calculator, Ban,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
@@ -12,7 +12,8 @@ import { useTitulosCliente, useAjustarTitulo } from '@/hooks/use-protocolos';
 import { BoletosNegociados, ModalNegociarBoletos, useContatoAssociado } from '@/components/cobrancas/negociacao-boletos';
 import { ModalBoletoProRata } from '@/components/veiculos/cancelamento-veiculo';
 import { usePode } from '@/hooks/use-permissoes';
-import { ehBoletoAvulso, ehLinhaSicredi, mensagemDoBoleto, motivoNaoNegociavel } from '@/lib/renegociacao';
+import { ehBoletoAvulso, ehLinhaSicredi, mensagemDoBoleto, motivoNaoCancelavel, motivoNaoNegociavel } from '@/lib/renegociacao';
+import { ModalCancelarBoletos } from '@/components/cobrancas/cancelar-boletos';
 import {
   linkWhatsAppAssociado, mensagemPadrao, assuntoPadrao, linkEmail,
   valorAjustado, validarAjuste,
@@ -68,8 +69,15 @@ export function HistoricoFinanceiroLista({
   // 0144: boleto pro-rata avulso, pela data de vencimento do veiculo.
   const [proRata, setProRata] = useState(false);
   const podeCobranca = usePode('cobranca.ver');
-  const negociaveis = (titulos ?? []).filter((t) => !motivoNaoNegociavel(t));
+  // 0157: cancelar boleto(s) com motivo — celula `cobranca.cancelar` (perfil ou extra).
+  const podeCancelar = usePode('cobranca.cancelar');
+  const [cancelando, setCancelando] = useState<TituloCliente[] | null>(null);
+  const cancelavel = (t: TituloCliente) => podeCancelar && !motivoNaoCancelavel(t);
+  const marcavel = (t: TituloCliente) => !motivoNaoNegociavel(t) || cancelavel(t);
+  const negociaveis = (titulos ?? []).filter(marcavel);
   const selecionados = negociaveis.filter((t) => marcados.has(t.id));
+  const selecaoNegociavel = selecionados.length > 0 && selecionados.every((t) => !motivoNaoNegociavel(t));
+  const selecaoCancelavel = selecionados.length > 0 && selecionados.every(cancelavel);
   const alternar = (id: string) => setMarcados((m) => {
     const n = new Set(m); if (n.has(id)) n.delete(id); else n.add(id); return n;
   });
@@ -94,7 +102,7 @@ export function HistoricoFinanceiroLista({
           <p className="text-xs text-slate-600">
             {selecionados.length > 0
               ? <>Selecionados: <b className="tnum">{selecionados.length}</b> · {formatCurrency(selecionados.reduce((s, t) => s + Number(t.valor), 0))}</>
-              : <>Marque os boletos em aberto para gerar a 2a via ou negociar (um boleto novo, ou parcelado).</>}
+              : <>Marque os boletos em aberto para gerar a 2a via ou negociar (um boleto novo, ou parcelado){podeCancelar ? ', ou para cancelar' : ''}.</>}
           </p>
           <span className="flex gap-1">
             {selecionados.length === 0 && negociaveis.some((t) => t.status === 'vencido') && (
@@ -103,9 +111,16 @@ export function HistoricoFinanceiroLista({
                 Marcar os vencidos
               </Button>
             )}
-            <Button className="px-2.5 py-1 text-xs" disabled={selecionados.length === 0} onClick={() => setNegociando(selecionados)}>
+            <Button className="px-2.5 py-1 text-xs" disabled={!selecaoNegociavel} onClick={() => setNegociando(selecionados)}
+              title={selecionados.length > 0 && !selecaoNegociavel ? 'Há boleto avulso na seleção: avulso não vira 2a via' : undefined}>
               <Repeat2 className="h-3.5 w-3.5" /> 2a via / negociar
             </Button>
+            {podeCancelar && (
+              <Button variant="danger" className="px-2.5 py-1 text-xs" disabled={!selecaoCancelavel}
+                onClick={() => setCancelando(selecionados)}>
+                <Ban className="h-3.5 w-3.5" /> Cancelar
+              </Button>
+            )}
           </span>
         </div>
       )}
@@ -121,7 +136,7 @@ export function HistoricoFinanceiroLista({
           <li key={t.id} className={`rounded-xl border p-3 ${marcados.has(t.id) ? 'border-cyan-400 bg-cyan-50/40' : 'border-slate-200'}`}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-start gap-2">
-                {!motivoNaoNegociavel(t) && (
+                {marcavel(t) && (
                   <input type="checkbox" className="mt-1 h-4 w-4" checked={marcados.has(t.id)} onChange={() => alternar(t.id)}
                     aria-label="Selecionar para 2a via / negociação" />
                 )}
@@ -138,6 +153,11 @@ export function HistoricoFinanceiroLista({
                 </p>
                 {ehBoletoAvulso(t.observacao) && (
                   <p className="text-xs font-medium text-teal-700">{t.observacao}</p>
+                )}
+                {t.status === 'cancelado' && t.observacao?.includes('Cancelado: ') && (
+                  <p className="text-xs text-slate-500">
+                    {t.observacao.slice(t.observacao.indexOf('Cancelado: '))}
+                  </p>
                 )}
                 <p className="text-xs text-slate-500">
                   Vence {formatDate(t.data_vencimento)}
@@ -215,6 +235,11 @@ export function HistoricoFinanceiroLista({
                   <Repeat2 className="h-3.5 w-3.5" /> {t.status === 'vencido' ? '2a via (novo boleto)' : 'Negociar'}
                 </Button>
               )}
+              {cancelavel(t) && (
+                <Button variant="ghost" className="px-2 py-1 text-xs text-rose-600" onClick={() => setCancelando([t])}>
+                  <Ban className="h-3.5 w-3.5" /> Cancelar
+                </Button>
+              )}
               {/* Ja registrado no banco: mudar valor/vencimento aqui desencontraria do boleto — use "Negociar". */}
               {editavelNoScar(t) && !t.linha_digitavel && (
                 <Button variant="ghost" className="px-2 py-1 text-xs" onClick={() => setEditando(t)}>
@@ -231,6 +256,10 @@ export function HistoricoFinanceiroLista({
           onClose={() => setProRata(false)} />
       )}
       {editando && <ModalEditarBoleto titulo={editando} onClose={() => setEditando(null)} />}
+      {cancelando && (
+        <ModalCancelarBoletos clienteId={clienteId} selecionados={cancelando}
+          onClose={() => { setCancelando(null); setMarcados(new Set()); }} />
+      )}
       {negociando && (
         <ModalNegociarBoletos clienteId={clienteId} selecionados={negociando}
           onClose={() => { setNegociando(null); setMarcados(new Set()); }} />

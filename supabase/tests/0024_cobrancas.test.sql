@@ -116,11 +116,11 @@ begin
   assert (select status from faturas where id = f_agr.id) = 'PAGA', 'trigger titulo->fatura (pago)';
 
   -- cancelamento
-  perform cancelar_fatura(f_ind.id);
+  perform cancelar_fatura(f_ind.id, 'teste de cancelamento');
   assert (select status from faturas where id = f_ind.id) = 'CANCELADA', 'fatura cancelada';
   assert (select status from titulos_financeiros where id = (select titulo_id from faturas where id = f_ind.id)) = 'cancelado', 'titulo cancelado';
   begin
-    perform cancelar_fatura(f_agr.id);
+    perform cancelar_fatura(f_agr.id, 'teste de cancelamento');
     raise exception 'deveria ter bloqueado cancelamento de fatura paga';
   exception when others then
     if sqlerrm not like '%ja paga%' then raise; end if;
