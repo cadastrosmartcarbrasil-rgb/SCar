@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Copy, KeyRound, Plus, Pencil, RefreshCw, Ban, History, FileJson, AlertTriangle } from 'lucide-react';
+import { Copy, KeyRound, Plus, Pencil, RefreshCw, Ban, History, FileJson, AlertTriangle, BookOpen, Link2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { FormField, Input, Textarea } from '@/components/ui/field';
@@ -131,8 +131,14 @@ export default function ApiIntegracoesPage() {
           Cada sistema tem a sua chave: revogar uma não afeta as outras.
         </p>
         <div className="flex gap-2">
-          <a href="/api/externa/v1/openapi.json" target="_blank" rel="noreferrer">
-            <Button variant="secondary"><FileJson className="h-4 w-4" /> Documentação (OpenAPI)</Button>
+          <a href="/api/externa/v1/docs" target="_blank" rel="noreferrer">
+            <Button variant="secondary"><BookOpen className="h-4 w-4" /> Documentação da API</Button>
+          </a>
+          <Button variant="secondary" onClick={() => copiar(`${origem}/api/externa/v1/docs`)}>
+            <Link2 className="h-4 w-4" /> Copiar link para o parceiro
+          </Button>
+          <a href="/api/externa/v1/openapi.json" target="_blank" rel="noreferrer" title="Especificação OpenAPI 3 (para Swagger)">
+            <Button variant="secondary"><FileJson className="h-4 w-4" /> OpenAPI</Button>
           </a>
           <Button onClick={() => setForm({ ...VAZIO })}><Plus className="h-4 w-4" /> Nova integração</Button>
         </div>
@@ -199,7 +205,7 @@ export default function ApiIntegracoesPage() {
       <details className="rounded-2xl border border-slate-200 bg-superficie p-4 text-sm">
         <summary className="cursor-pointer font-medium text-slate-700">Como o sistema parceiro usa a API</summary>
         <div className="mt-3 space-y-3 text-slate-600">
-          <p>Endereço base: <code className="codigo">{origem}/api/externa/v1</code> — envie também o link da documentação acima.</p>
+          <p>Endereço base: <code className="codigo">{origem}/api/externa/v1</code> — envie também o link da documentação completa: <code className="codigo">{origem}/api/externa/v1/docs</code> (endpoints, exemplos, erros, coleção Postman).</p>
           <pre className="overflow-x-auto rounded-lg bg-slate-100 p-3 text-xs">{`# conferir a chave
 curl -H "Authorization: Bearer <chave>" ${origem}/api/externa/v1/status
 
@@ -332,7 +338,8 @@ curl -X POST -H "Authorization: Bearer <chave>" -H "Content-Type: application/js
             </div>
             <p className="text-sm text-slate-500">
               Endereço: <code className="codigo">{origem}/api/externa/v1</code> · Documentação:{' '}
-              <code className="codigo">{origem}/api/externa/v1/openapi.json</code>
+              <code className="codigo">{origem}/api/externa/v1/docs</code>
+              {' '}(coleção Postman em <code className="codigo">/api/externa/v1/postman.json</code>)
             </p>
             <div className="flex justify-end"><Button onClick={() => setChaveNova(null)}>Já copiei</Button></div>
           </div>

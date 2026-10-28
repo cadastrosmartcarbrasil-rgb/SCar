@@ -764,8 +764,11 @@ analíticas da proteção** dentro dos grupos do plano.
 ## API EXTERNA (0151) — integração com outros sistemas (a 1ª: a rastreadora)
 Pedido do usuário (25/10/2026): "criar a API do software para integrar com outros sistemas; a primeira será com um
 software de rastreador, que fará o cruzamento das informações". **Leia `docs/modulos/api-externa.md` antes de mexer.**
-- **Base:** `/api/externa/v1` (em `PUBLIC_PATHS`: autentica por CHAVE, nunca por sessão). Documentação OpenAPI pública
-  em `/api/externa/v1/openapi.json` (`src/lib/api-externa-openapi.ts` — rota ou campo novo: mude ali, há teste dos `$ref`).
+- **Base:** `/api/externa/v1` (em `PUBLIC_PATHS`: autentica por CHAVE, nunca por sessão). **Documentação para o parceiro
+  (28/10/2026):** `/api/externa/v1/docs` (página HTML), `docs.md`, `postman.json` e `openapi.json` (com exemplos), todos
+  gerados do catálogo `src/lib/api-externa-doc.ts` + `src/lib/api-externa-openapi.ts` — rota ou campo novo: mude OS DOIS
+  (teste confere rotas, erros e `$ref`). É o link `/docs` que se manda ao parceiro, não o `openapi.json` cru (a New Tracker
+  recebeu só ele e respondeu que "faltavam os endpoints"). Botões em Configurações → API e Integrações.
 - **Rotas:** `GET /status` · `GET /veiculos` (cursor, `atualizados_desde`, placa/chassi/imei/situacao) ·
   `GET /veiculos/{placa|chassi|id}` · `GET /rastreadores` · `POST /rastreadores/comunicacao` (até 500).
 - **Chave:** Configurações → **API e Integrações** (`/configuracoes/api`, só admin — não entra na grade de permissões).

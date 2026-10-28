@@ -5,7 +5,13 @@ ela cruza os veículos do SCar com os equipamentos dela e devolve a última comu
 de cada IMEI.
 
 - **Endereço:** `https://appsmartcar.com.br/api/externa/v1`
-- **Documentação (OpenAPI 3, pública):** `GET /api/externa/v1/openapi.json` — importa no Swagger/Postman.
+- **Documentação para o parceiro (pública, sem chave):** `GET /api/externa/v1/docs` (página com endpoints,
+  parâmetros, curl, respostas de exemplo e erros) · `docs.md` (a mesma em Markdown) · `postman.json` (coleção
+  pronta, variáveis `base_url` e `chave`) · `openapi.json` (OpenAPI 3 com exemplos, operationId e tags).
+- **Fonte única da documentação:** `src/lib/api-externa-doc.ts` (`ENDPOINTS_API`, `ERROS_API`). Mudou rota,
+  parâmetro ou campo: mude ali e em `src/lib/api-externa-openapi.ts` — o teste confere que os dois listam as
+  mesmas rotas e que todo código de erro citado existe. (O parceiro recebeu só o `openapi.json` cru em 28/10/2026
+  e respondeu que "faltavam os endpoints": JSON de especificação sem guia nem exemplo não é documentação.)
 - **Chave:** Configurações → **API e Integrações** (só admin). Uma chave por sistema.
   Formato `scar_<prefixo>_<segredo>`; aparece **uma vez**; o banco guarda só o SHA-256.
 - **Autenticação:** `Authorization: Bearer <chave>` ou `x-api-key: <chave>`.

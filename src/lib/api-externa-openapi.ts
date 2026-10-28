@@ -1,6 +1,8 @@
 // Especificacao OpenAPI 3.0 da API externa (0151). Servida em
 // GET /api/externa/v1/openapi.json — e o que se entrega ao fornecedor que vai
-// integrar (Swagger/Postman importam direto). Mudou rota ou campo: mude aqui.
+// integrar (Swagger/Postman importam direto). Mudou rota ou campo: mude aqui E
+// no catalogo de src/lib/api-externa-doc.ts (exemplos, tags, operationId saem de la).
+import { ENDPOINTS_API, VERSAO_DOC } from '@/lib/api-externa-doc';
 
 const str = { type: 'string' };
 const strN = { type: 'string', nullable: true };
@@ -22,11 +24,11 @@ const paginacao = [
 ];
 
 export function especificacaoApiExterna(servidor: string) {
-  return {
+  const spec = {
     openapi: '3.0.3',
     info: {
       title: 'SCar — API de integração',
-      version: '1.0.0',
+      version: VERSAO_DOC,
       description:
         'API da Smart Car Brasil para sistemas parceiros. Autenticação por chave (emitida pela Smart Car em ' +
         'Configurações → API e Integrações): `Authorization: Bearer <chave>` ou `x-api-key: <chave>`. ' +
@@ -34,7 +36,8 @@ export function especificacaoApiExterna(servidor: string) {
         'Para sincronia incremental, guarde o maior `alterado_em` recebido e use-o em `atualizados_desde` na próxima rodada.\n\n' +
         '**situacao_rastreamento** (o que a plataforma faz com o veículo): ' +
         '`ATIVO` = manter o rastreamento; `SUSPENSO` = associado inadimplente/suspenso, benefícios bloqueados, equipamento continua; ' +
-        '`ENCERRADO` = veículo saiu da base, encerrar e recolher o equipamento.',
+        '`ENCERRADO` = veículo saiu da base, encerrar e recolher o equipamento.\n\n' +
+        `Documentação completa, com exemplos: ${servidor}/api/externa/v1/docs`,
     },
     servers: [{ url: `${servidor}/api/externa/v1` }],
     security: [{ bearer: [] }, { chave: [] }],
@@ -103,7 +106,11 @@ export function especificacaoApiExterna(servidor: string) {
         Erro: { type: 'object', properties: { erro: str, codigo: str } },
         Status: {
           type: 'object',
-          properties: { ok: { type: 'boolean' }, integracao: str, escopos: { type: 'array', items: str }, seu_ip: str, servidor_em: dataHora, versao: str },
+          properties: {
+            ok: { type: 'boolean' }, integracao: str, escopos: { type: 'array', items: str },
+            unidades: { description: '"todas" ou a lista de ids das unidades liberadas para a chave.', oneOf: [str, { type: 'array', items: str }] },
+            seu_ip: str, servidor_em: dataHora, versao: str,
+          },
         },
         Veiculo: {
           type: 'object',
@@ -180,4 +187,23 @@ export function especificacaoApiExterna(servidor: string) {
       },
     },
   };
+
+  // operationId, tags e exemplos saem do catalogo (o mesmo da pagina /docs)
+  const paths = spec.paths as Record<string, Record<string, Record<string, unknown>>>;
+  for (const e of ENDPOINTS_API) {
+    const op = paths[e.caminho]?.[e.metodo.toLowerCase()];
+    if (!op) continue;
+    op.operationId = e.id.replace(/-(\w)/g, (_m, c: string) => c.toUpperCase());
+    op.tags = [e.caminho.startsWith('/rastreadores') ? 'Rastreadores' : e.caminho.startsWith('/veiculos') ? 'Veículos' : 'Acesso'];
+    const parametros = op.parameters as { name: string; example?: string }[] | undefined;
+    for (const p of parametros ?? []) {
+      const ex = e.parametros.find((x) => x.nome === p.name)?.exemplo;
+      if (ex) p.example = ex;
+    }
+    const ok = (op.responses as Record<string, { content?: Record<string, Record<string, unknown>> }>)[200];
+    if (ok?.content?.['application/json']) ok.content['application/json'].example = e.resposta;
+    const corpo = (op.requestBody as { content?: Record<string, Record<string, unknown>> } | undefined)?.content?.['application/json'];
+    if (corpo && e.corpo) corpo.example = e.corpo;
+  }
+  return spec;
 }
