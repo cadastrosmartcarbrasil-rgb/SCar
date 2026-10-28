@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { formatCurrency } from '@/lib/utils';
+import { itensParaCliente, totalDoCliente } from '@/lib/assistencia-profissional';
 import { LogoSmartCar } from '@/components/hotlink/marca';
 import { PrintButton } from './print-button';
 
@@ -37,7 +38,9 @@ export default async function CotacaoPublicaPage({ params }: { params: { token: 
       .maybeSingle(),
   ]);
   const detalhada = cot.modo_envio !== 'CONSOLIDADA';
-  const itens = Array.isArray(cot.itens) ? cot.itens : [];
+  // 0158: a Assistencia Profissional nao tem linha — soma na Taxa Administrativa
+  // para a soma dos itens bater; o total ja a inclui (total_com_desconto).
+  const itens = itensParaCliente(Array.isArray(cot.itens) ? cot.itens : [], cot.valor_assistencia_profissional);
   const nomeEmpresa = empresa?.nome_fantasia || empresa?.razao_social || 'Proteção Veicular';
 
   return (
@@ -89,7 +92,7 @@ export default async function CotacaoPublicaPage({ params }: { params: { token: 
           {/* Total */}
           <div className="mt-5 rounded-xl bg-brand-50 p-4 text-center">
             <p className="text-xs uppercase tracking-wide text-brand-600">Mensalidade</p>
-            <p className="text-3xl font-bold text-brand-700">{formatCurrency(cot.total_mensalidade)}</p>
+            <p className="text-3xl font-bold text-brand-700">{formatCurrency(totalDoCliente(cot))}</p>
             <p className="mt-1 text-xs text-slate-500">por mês</p>
           </div>
 

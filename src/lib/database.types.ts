@@ -143,6 +143,10 @@ export type RegionaisRow = Timestamps & {
   // 0028: politica de desconto da franquia/regional
   percentual_maximo_desconto_venda: number;
   desconto_observacao: string | null;
+  /** 0158 — a unidade paga a Assistencia Profissional aos consultores, entre min e max. */
+  paga_assistencia_profissional: boolean;
+  assistencia_profissional_min: number;
+  assistencia_profissional_max: number;
   taxa_comissao_adesao: number;
   taxa_comissao_recorrente: number;
   dia_pagto_entrada_padrao: number | null;
@@ -282,6 +286,8 @@ export type VeiculosRow = Timestamps & {
   /** 0081 — o adicional carimbado na ENTRADA. O faturamento usa este, nao o cadastro. */
   valor_adicional_regional: number;
   regional_preco_id: string | null;
+  /** 0158 — Assistencia Profissional carimbada (o override ja a inclui). */
+  valor_assistencia_profissional: number;
   /** 0082 — a mensalidade e cobrada FORA do SCar. Nao e bloqueio: so nao gera fatura aqui. */
   cobranca_externa: boolean;
   cobranca_externa_desde: string | null;
@@ -1283,6 +1289,8 @@ export type CotacoesRow = {
   /** 0081 — quem precificou e quanto foi o adicional, congelados. */
   regional_id: string | null;
   valor_adicional_regional: number;
+  /** 0158 — interna: fora do desconto, entra em total_com_desconto, nunca e item. */
+  valor_assistencia_profissional: number;
   id: string;
   lead_id: string;
   fipe: number;
@@ -1390,6 +1398,7 @@ export type CotacaoItem = {
   nome: string;
   valor: number;
   obrigatorio: boolean;
+  categoria?: string | null;
 };
 
 export type LeadHistoricoRow = {
@@ -1776,6 +1785,8 @@ export type ComissoesVendasRow = Timestamps & {
   valor_comissao: number;
   is_adesao: boolean;
   status_pagamento: StatusComissao;
+  /** 0158 — parte de valor_comissao que veio da Assistencia Profissional. */
+  valor_assistencia_profissional: number;
 };
 
 export type EventosSinistroRow = Timestamps & {
@@ -5274,6 +5285,7 @@ export type Database = {
           p_desconto_percentual?: number | null;
           p_desconto_justificativa?: string | null;
           p_limpar_plano?: boolean;
+          p_valor_assistencia_profissional?: number | null;
         };
         Returns: CotacoesRow;
       };
@@ -5723,6 +5735,30 @@ export type Database = {
       mutual_desfazer_carga: {
         Args: { p_regional_id: string; p_confirmar?: boolean };
         Returns: MutualDesfazerResultado[];
+      };
+      assistencia_profissional_regras: {
+        Args: { p_lead_id?: string | null };
+        Returns: { regional_id: string | null; regional_nome: string | null; paga: boolean; minimo: number; maximo: number }[];
+      };
+      mutual_assistencia_profissional_veiculos: {
+        Args: { p_regional_id?: string | null };
+        Returns: {
+          veiculo_id: string; placa: string | null; associado: string | null; regional_id: string | null;
+          regional_nome: string | null; produto_nome: string; subproduct_config_id: string | null;
+          valor_mutual: number | null; valor_atual: number; situacao: 'APLICAR' | 'JA_APLICADO' | 'DIFERENTE' | 'SEM_VALOR';
+        }[];
+      };
+      mutual_assistencia_profissional_configs: {
+        Args: Record<string, never>;
+        Returns: { subproduct_config_id: string; veiculos: number; valor: number | null }[];
+      };
+      mutual_definir_valor_assistencia_profissional: {
+        Args: { p_config: string; p_valor: number | null };
+        Returns: undefined;
+      };
+      mutual_aplicar_assistencia_profissional: {
+        Args: { p_regional_id?: string | null; p_confirmar?: boolean };
+        Returns: { aplicar: number; ja_aplicado: number; diferente: number; sem_valor: number; gravados: number }[];
       };
       mutual_vendedores_resumo: {
         Args: { p_regional_id: string };

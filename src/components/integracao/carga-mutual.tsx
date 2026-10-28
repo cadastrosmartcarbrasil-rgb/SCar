@@ -9,7 +9,12 @@ import {
   useMutualTiposVeiculo, useMutualPlanos, useMutualCategorias, useVincularCatalogo,
   useCargaPrevia, useCargaLinhas, useExecutarCarga, useDesfazerCarga,
   useClassificarPorTerceiros, useMutualVendedores, useVincularVendedores,
+  useAssistenciaProfissionalMigrados, useAssistenciaProfissionalConfigs,
+  useDefinirValorAssistenciaConfig, useAplicarAssistenciaProfissional,
 } from '@/hooks/use-mutual';
+import { MoneyInput } from '@/components/ui/field';
+import { formatCurrency } from '@/lib/utils';
+import { totaisApMigrados } from '@/lib/assistencia-profissional';
 import { useRegionais } from '@/hooks/use-config';
 import { usePlanos, useTiposVeiculo } from '@/hooks/use-precificacao';
 import {
@@ -362,6 +367,7 @@ export function CargaMutual() {
 
       {unidade && <MotosPorProdutos unidade={unidade} nomeUnidade={nomeUnidade} />}
       {unidade && <VendedoresDosVeiculos unidade={unidade} nomeUnidade={nomeUnidade} />}
+      {unidade && <AssistenciaProfissionalMigrados unidade={unidade} nomeUnidade={nomeUnidade} />}
 
       {!unidade && (
         <p className="text-sm text-slate-500">
@@ -849,6 +855,134 @@ function VendedoresDosVeiculos({ unidade, nomeUnidade }: { unidade: string; nome
               }}
             >
               {vincular.isPending ? 'Ligando...' : `Ligar ${t.ligar} ao vendedor`}
+            </Button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 0158 — Assistencia Profissional dos migrados. O Mutual lista o produto sem
+// preco: o legado ("7 ASSISTENCIA PROFISSIONAL 28MIG") traz o valor no nome;
+// o novo ("Assistencia Profissional") so pela configuracao, que se informa
+// aqui uma vez. O boleto NAO muda: so separa a comissao do vendedor.
+// ---------------------------------------------------------------------------
+function AssistenciaProfissionalMigrados({ unidade, nomeUnidade }: { unidade: string; nomeUnidade: string }) {
+  const linhasQ = useAssistenciaProfissionalMigrados(unidade);
+  const linhas = linhasQ.data ?? [];
+  const t = totaisApMigrados(linhas);
+  const configsQ = useAssistenciaProfissionalConfigs(t.semValor > 0);
+  const definir = useDefinirValorAssistenciaConfig();
+  const aplicar = useAplicarAssistenciaProfissional();
+  const [edicao, setEdicao] = useState<Record<string, number | null>>({});
+  const configsDaUnidade = new Set(linhas.filter((l) => l.situacao === 'SEM_VALOR').map((l) => l.subproduct_config_id ?? '(sem configuracao)'));
+  const configs = (configsQ.data ?? []).filter((c) => configsDaUnidade.has(c.subproduct_config_id) || c.valor != null);
+
+  return (
+    <div className="rounded-xl border border-slate-200/80 p-4">
+      <h3 className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+        <ShieldCheck className="h-4 w-4 text-cyan-600" aria-hidden /> Assistência Profissional dos migrados
+      </h3>
+      <p className="mb-3 text-xs leading-relaxed text-slate-500">
+        No Mutual ela é um <strong>produto</strong> do veículo, sem preço na lista. O produto antigo traz o
+        valor no nome (&quot;7 ASSISTENCIA PROFISSIONAL <strong>28</strong>MIG&quot; = R$ 28); o novo depende da
+        <strong> configuração</strong> — informe o valor de cada uma abaixo (veja no Mutual quanto ela cobra).
+        Gravar o valor <strong>não muda o boleto</strong>: só separa, na comissão, o que é do vendedor.
+      </p>
+
+      <ErroLeitura q={linhasQ} />
+      {linhasQ.isLoading && <p className="text-xs text-slate-500">Lendo...</p>}
+      {!linhasQ.isLoading && !linhasQ.isError && t.total === 0 && (
+        <p className="text-xs text-slate-500">
+          Nenhum veículo desta unidade tem o produto (ou os produtos dos veículos ainda não foram puxados).
+        </p>
+      )}
+
+      {t.total > 0 && (
+        <>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {[
+              ['A gravar', t.aplicar],
+              ['Já gravados', t.jaAplicado],
+              ['Valor diferente (mantido)', t.diferente],
+              ['Sem valor conhecido', t.semValor],
+            ].map(([rotulo, valor]) => (
+              <div key={rotulo as string} className="rounded-lg bg-fundo p-2">
+                <p className="text-[11px] text-slate-500">{rotulo}</p>
+                <p className="tnum text-lg font-semibold text-slate-900">{valor}</p>
+              </div>
+            ))}
+          </div>
+
+          {configs.length > 0 && (
+            <div className="mt-3">
+              <p className="mb-1 text-xs font-semibold text-slate-600">Valor por configuração do produto novo</p>
+              <ErroLeitura q={configsQ} />
+              <ul className="space-y-1.5">
+                {configs.map((c) => {
+                  const atual = c.subproduct_config_id in edicao ? edicao[c.subproduct_config_id] : c.valor;
+                  const semConfig = c.subproduct_config_id === '(sem configuracao)';
+                  return (
+                    <li key={c.subproduct_config_id} className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200/80 p-2 text-xs">
+                      <span className="min-w-[150px] font-medium text-slate-800">
+                        Configuração {c.subproduct_config_id}
+                        <span className="tnum font-normal text-slate-500"> · {c.veiculos} veíc. (base toda)</span>
+                      </span>
+                      {semConfig ? (
+                        <span className="text-amber-700">sem configuração no Mutual — grave na ficha do veículo</span>
+                      ) : (
+                        <>
+                          <div className="w-32">
+                            <MoneyInput
+                              value={atual ?? null}
+                              onChange={(v) => setEdicao((p) => ({ ...p, [c.subproduct_config_id]: v }))}
+                              placeholder="0,00"
+                            />
+                          </div>
+                          <Button
+                            variant="secondary"
+                            disabled={definir.isPending || atual === c.valor}
+                            onClick={() => definir.mutate(
+                              { config: c.subproduct_config_id, valor: atual ?? null },
+                              {
+                                onSuccess: () => toast.success(atual == null
+                                  ? 'Valor removido'
+                                  : `Configuração ${c.subproduct_config_id}: ${formatCurrency(atual)}`),
+                                onError: (e) => toast.error(e.message),
+                              },
+                            )}
+                          >
+                            Salvar
+                          </Button>
+                        </>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+
+          <div className="mt-3">
+            <Button
+              disabled={t.aplicar === 0 || aplicar.isPending}
+              onClick={() => {
+                if (!window.confirm(
+                  `Gravar a Assistência Profissional em ${t.aplicar} veículo(s) de "${nomeUnidade}"?\n\n`
+                  + 'O boleto não muda. Valor já gravado e diferente não é trocado. Confirmar?',
+                )) return;
+                aplicar.mutate(
+                  { regionalId: unidade },
+                  {
+                    onSuccess: (n) => toast.success(`${n} veículo(s) com a Assistência Profissional gravada`),
+                    onError: (e) => toast.error(e.message),
+                  },
+                );
+              }}
+            >
+              {aplicar.isPending ? 'Gravando...' : `Gravar em ${t.aplicar} veículo(s)`}
             </Button>
           </div>
         </>

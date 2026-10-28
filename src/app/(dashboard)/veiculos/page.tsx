@@ -242,7 +242,8 @@ function VeiculosConteudo() {
     const pedido = ++pedidoCotacao.current;
     if (!form.tipo_veiculo_id || !(form.valor_fipe ?? 0)) { setValorCotado(null); return; }
     calcMensal.mutate(
-      { fipe: form.valor_fipe ?? 0, tipoVeiculoId: form.tipo_veiculo_id, planoId, opcionaisIds: avulsosIds },
+      { fipe: form.valor_fipe ?? 0, tipoVeiculoId: form.tipo_veiculo_id, planoId, opcionaisIds: avulsosIds,
+        acrescimo: Number(form.valor_assistencia_profissional ?? 0) },
       {
         onSuccess: (valor) => {
           if (pedido !== pedidoCotacao.current) return;
@@ -335,7 +336,8 @@ function VeiculosConteudo() {
   function calcularMensalidade() {
     const pedido = ++pedidoCotacao.current;
     calcMensal.mutate(
-      { fipe: form.valor_fipe ?? 0, tipoVeiculoId: form.tipo_veiculo_id ?? null, planoId: form.plano_protecao_id ?? null, opcionaisIds: [...opcionais] },
+      { fipe: form.valor_fipe ?? 0, tipoVeiculoId: form.tipo_veiculo_id ?? null, planoId: form.plano_protecao_id ?? null, opcionaisIds: [...opcionais],
+        acrescimo: Number(form.valor_assistencia_profissional ?? 0) },
       {
         onSuccess: (valor) => {
           if (pedido !== pedidoCotacao.current) return;
@@ -865,6 +867,21 @@ function VeiculosConteudo() {
               <FormField label="Dia de vencimento">
                 <Input type="number" min={1} max={31} value={form.dia_vencimento ?? ''} onChange={(e) => setF({ dia_vencimento: Number(e.target.value) || null })} placeholder="ex.: 10" />
               </FormField>
+            </div>
+            {/* 0158 — Assistencia Profissional: interna. Ja esta DENTRO do valor da
+                mensalidade (o Calcular soma); aqui so separa a comissao do vendedor. */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <FormField label="Assistência Profissional (R$, uso interno)">
+                <MoneyInput
+                  value={Number(form.valor_assistencia_profissional ?? 0) || null}
+                  onChange={(v) => setF({ valor_assistencia_profissional: v ?? 0 })}
+                  placeholder="0,00"
+                />
+              </FormField>
+              <p className="self-end pb-2 text-xs text-slate-500 sm:col-span-2">
+                Já faz parte da mensalidade (o Calcular soma este valor). Na comissão, volta inteiro para o
+                vendedor quando a unidade dele paga Assistência Profissional. Não aparece para o associado.
+              </p>
             </div>
 
             {/* O faturamento usa o valor GRAVADO (valor_mensalidade_veiculo, 0024):

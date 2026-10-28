@@ -51,11 +51,11 @@ export function ModalOpcionaisVeiculo({ veiculo, planoNome, onClose }: {
   const novos = useMemo(() => [...(marcados ?? [])], [marcados]);
   const antes = useMensalidadeCalculada({
     fipe: veiculo.valor_fipe, tipoVeiculoId: veiculo.tipo_veiculo_id,
-    planoId: veiculo.plano_protecao_id, avulsos: atuais ?? [], ativo: !!atuais,
+    planoId: veiculo.plano_protecao_id, acrescimo: Number(veiculo.valor_assistencia_profissional ?? 0), avulsos: atuais ?? [], ativo: !!atuais,
   });
   const depois = useMensalidadeCalculada({
     fipe: veiculo.valor_fipe, tipoVeiculoId: veiculo.tipo_veiculo_id,
-    planoId: veiculo.plano_protecao_id, avulsos: novos, ativo: !!marcados,
+    planoId: veiculo.plano_protecao_id, acrescimo: Number(veiculo.valor_assistencia_profissional ?? 0), avulsos: novos, ativo: !!marcados,
   });
 
   const gravado = veiculo.valor_mensalidade != null ? Number(veiculo.valor_mensalidade) : null;

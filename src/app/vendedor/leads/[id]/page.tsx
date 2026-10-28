@@ -127,6 +127,11 @@ export default function LeadVendedorPage({ params }: { params: Promise<{ id: str
                     {formatCurrency(Number(c.total_com_desconto ?? c.total_mensalidade))}
                   </span>
                 </div>
+                {Number(c.valor_assistencia_profissional) > 0 && (
+                  <p className="-mt-1.5 text-[11.5px] text-slate-500">
+                    Inclui {formatCurrency(Number(c.valor_assistencia_profissional))} de Assistência Profissional (o cliente não vê).
+                  </p>
+                )}
                 <LinkDaProposta token={c.token} compacto celular={lead.celular} nome={lead.nome} />
                 {/* Com o cliente na frente, nao ha por que depender do celular
                     dele: o aceite entra como colhido pelo VENDEDOR. */}

@@ -166,6 +166,7 @@ export function useSaveVeiculo() {
         alienado_financeira: v.alienado_financeira || null,
         numero_portas: v.numero_portas ?? null,
         valor_mensalidade: v.valor_mensalidade ?? null,
+        valor_assistencia_profissional: Number(v.valor_assistencia_profissional ?? 0),
         dia_vencimento: v.dia_vencimento ?? null,
         // rastreamento
         rastreador_imei: normalizarDigitos(v.rastreador_imei) || null,

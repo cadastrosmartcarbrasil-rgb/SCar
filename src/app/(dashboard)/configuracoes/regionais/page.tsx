@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, Building2, Power, PowerOff, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
-import { FormField, Input, PercentInput, Select } from '@/components/ui/field';
+import { FormField, Input, MoneyInput, PercentInput, Select } from '@/components/ui/field';
 import {
   useRegionais,
   useRegionaisPainel,
@@ -15,6 +15,7 @@ import {
   useUsuarios,
 } from '@/hooks/use-config';
 import { buscarCep } from '@/lib/cep';
+import { formatCurrency } from '@/lib/utils';
 import { avisoDeInativacao, pendenciasDaUnidade } from '@/lib/regional';
 import type { RegionaisRow } from '@/lib/database.types';
 
@@ -64,6 +65,7 @@ export default function RegionaisPage() {
       percentual_maximo_desconto_venda: 0,
       taxa_comissao_adesao: 0, taxa_comissao_recorrente: 0,
       dias_protecao_lead: 30, dias_sem_contato_lead: 7, distribuicao_lead: 'MANUAL',
+      paga_assistencia_profissional: false, assistencia_profissional_min: 1, assistencia_profissional_max: 40,
     });
     setAberto(true);
   }
@@ -205,6 +207,11 @@ export default function RegionaisPage() {
                     }`}>
                       {Number(bruta?.percentual_maximo_desconto_venda ?? 0).toFixed(2).replace('.', ',')}%
                     </span>
+                    {bruta?.paga_assistencia_profissional && (
+                      <span className="mt-1 block text-[11px] text-slate-500" title="Assistência Profissional paga aos consultores">
+                        Assist. prof. {formatCurrency(Number(bruta.assistencia_profissional_min))}–{formatCurrency(Number(bruta.assistencia_profissional_max))}
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-2">
                     <div className="flex justify-end gap-1">
@@ -432,6 +439,43 @@ export default function RegionaisPage() {
               placeholder="Ex.: até 10% em campanhas de fim de ano"
             />
           </FormField>
+
+          {/* Assistencia Profissional (0158) — valor do consultor embutido na mensalidade. */}
+          <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+            <h4 className="mb-1 text-[11.5px] font-bold uppercase tracking-wide text-slate-600">
+              Assistência Profissional
+            </h4>
+            <label className="flex items-start gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox" className="mt-0.5"
+                checked={!!editando?.paga_assistencia_profissional}
+                onChange={(e) => setEditando((p) => ({ ...p, paga_assistencia_profissional: e.target.checked }))}
+              />
+              <span>
+                Esta unidade paga a Assistência Profissional aos seus consultores
+                <span className="block text-xs text-slate-500">
+                  O consultor informa o valor na cotação; ele entra na mensalidade, fica fora do desconto,
+                  não aparece para o cliente e volta inteiro para o consultor na comissão de cada mensalidade paga.
+                </span>
+              </span>
+            </label>
+            {editando?.paga_assistencia_profissional && (
+              <div className="mt-2.5 grid gap-3 sm:grid-cols-2">
+                <FormField label="Valor mínimo">
+                  <MoneyInput
+                    value={editando?.assistencia_profissional_min ?? null}
+                    onChange={(v) => setEditando((p) => ({ ...p, assistencia_profissional_min: v ?? 0 }))}
+                  />
+                </FormField>
+                <FormField label="Valor máximo">
+                  <MoneyInput
+                    value={editando?.assistencia_profissional_max ?? null}
+                    onChange={(v) => setEditando((p) => ({ ...p, assistencia_profissional_max: v ?? 0 }))}
+                  />
+                </FormField>
+              </div>
+            )}
+          </div>
 
           {/* Regras de atribuicao do lead (0041) — sao da franquia, nao do codigo. */}
           <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">

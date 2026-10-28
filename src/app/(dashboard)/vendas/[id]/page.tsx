@@ -321,12 +321,18 @@ export default function LeadDetailPage() {
                       {formatCurrency(Number(c.total_com_desconto ?? c.total_mensalidade))}/mes
                       {Number(c.desconto_percentual) > 0 && (
                         <span className="ml-2 text-xs font-normal text-slate-400 line-through">
-                          {formatCurrency(c.total_mensalidade)}
+                          {formatCurrency(Number(c.total_mensalidade) + Number(c.valor_assistencia_profissional ?? 0))}
                         </span>
                       )}
                     </span>
                     <span className="text-[10px] uppercase text-slate-400">{c.modo_envio === 'CONSOLIDADA' ? 'Consolidada' : 'Detalhada'}</span>
                   </div>
+                  {Number(c.valor_assistencia_profissional) > 0 && (
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      Inclui {formatCurrency(Number(c.valor_assistencia_profissional))} de Assistência Profissional
+                      <span className="text-slate-400"> (uso interno — o cliente não vê)</span>
+                    </p>
+                  )}
                   {Number(c.desconto_percentual) > 0 && (
                     <p className="mt-0.5 inline-flex items-center gap-1 text-xs text-emerald-700">
                       <Percent className="h-3 w-3" />

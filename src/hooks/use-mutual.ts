@@ -833,3 +833,71 @@ export function useDesfazerCarga() {
     },
   });
 }
+
+// ---------------------------------------------------------------------------
+// 0158 — ASSISTENCIA PROFISSIONAL dos migrados. O Mutual lista o produto sem
+// preco: o legado traz o valor no nome, o novo pela configuracao, informada
+// aqui uma vez. Carimbar o valor NAO muda o boleto (override do Mutual): so
+// separa a comissao do vendedor.
+// ---------------------------------------------------------------------------
+type ApVeiculoMutual = Database['public']['Functions']['mutual_assistencia_profissional_veiculos']['Returns'][number];
+type ApConfigMutual = Database['public']['Functions']['mutual_assistencia_profissional_configs']['Returns'][number];
+
+export function useAssistenciaProfissionalMigrados(regionalId: string | null) {
+  const supabase = createClient();
+  return useQuery<ApVeiculoMutual[]>({
+    queryKey: ['mutual', 'assistencia-profissional', regionalId ?? 'todas'],
+    enabled: !!regionalId,
+    queryFn: ({ signal }) => naFila(async () => {
+      const { data, error } = await supabase.rpc('mutual_assistencia_profissional_veiculos', {
+        p_regional_id: regionalId,
+      });
+      if (error) throw error;
+      return data ?? [];
+    }, signal),
+  });
+}
+
+export function useAssistenciaProfissionalConfigs(ativo: boolean) {
+  const supabase = createClient();
+  return useQuery<ApConfigMutual[]>({
+    queryKey: ['mutual', 'assistencia-profissional', 'configs'],
+    enabled: ativo,
+    queryFn: ({ signal }) => naFila(async () => {
+      const { data, error } = await supabase.rpc('mutual_assistencia_profissional_configs', {});
+      if (error) throw error;
+      return data ?? [];
+    }, signal),
+  });
+}
+
+export function useDefinirValorAssistenciaConfig() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<void, Error, { config: string; valor: number | null }>({
+    mutationFn: async ({ config, valor }) => {
+      const { error } = await supabase.rpc('mutual_definir_valor_assistencia_profissional', {
+        p_config: config, p_valor: valor,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['mutual', 'assistencia-profissional'] }),
+  });
+}
+
+export function useAplicarAssistenciaProfissional() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<number, Error, { regionalId: string }>({
+    mutationFn: async ({ regionalId }) => {
+      const { data, error } = await supabase.rpc('mutual_aplicar_assistencia_profissional', {
+        p_regional_id: regionalId, p_confirmar: true,
+      });
+      if (error) throw error;
+      return Number((data ?? [])[0]?.gravados ?? 0);
+    },
+    onSuccess: () => {
+      for (const k of [['mutual'], ['veiculos']]) void qc.invalidateQueries({ queryKey: k });
+    },
+  });
+}

@@ -14,9 +14,11 @@ import type { RegistroPlaca } from '@/lib/fipe';
 import { useTiposVeiculo, useProdutos, useCotasParticipacao, useTiposPorProduto } from '@/hooks/use-precificacao';
 import { produtosParaTipo, regraRastreadorCobra, semRastreadorDaRegra } from '@/lib/produtos';
 import {
-  useAvisoDeCaptura, useCotacaoComparativa, useProdutosDoPlano, useSalvarCotacao, useSaveLead,
-  type PlanoComparado,
+  useAvisoDeCaptura, useCotacaoComparativa, useProdutosDoPlano, useRegrasAssistenciaProfissional,
+  useSalvarCotacao, useSaveLead, type PlanoComparado,
 } from '@/hooks/use-vendas';
+import { CampoAssistenciaProfissional } from '@/components/vendas/campo-assistencia-profissional';
+import { validarAssistenciaProfissional } from '@/lib/assistencia-profissional';
 import { avisoDeCaptura } from '@/lib/atribuicao';
 import { formatarDocumento, validarDocumento } from '@/lib/documento';
 import { avulsosParaCotacao, separarOpcionais } from '@/lib/vistoria';
@@ -81,6 +83,9 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
   const [escolha, setEscolha] = useState('');
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [modoEnvio, setModoEnvio] = useState<'DETALHADA' | 'CONSOLIDADA'>('DETALHADA');
+  // 0158 — Assistencia Profissional (interna; a unidade de quem cota decide)
+  const { data: regrasAp } = useRegrasAssistenciaProfissional(null);
+  const [assistencia, setAssistencia] = useState<number | null>(null);
   // Lead
   const [nome, setNome] = useState('');
   const [celular, setCelular] = useState('');
@@ -178,6 +183,8 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
     if (celular.replace(/\D/g, '').length < 10) return toast.error('Informe um celular válido');
     // CPF e opcional na captura; digitado errado, nao.
     if (docPreenchido && !docValido) return toast.error('CPF/CNPJ invalido');
+    const erroAp = validarAssistenciaProfissional(assistencia, regrasAp);
+    if (erroAp) return toast.error(`Assistência Profissional: ${erroAp}`);
     try {
       const lead = await criar({
         nome: nome.trim(),
@@ -208,6 +215,7 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
         planoId: escolhido.plano_id,
         produtosIds: avulsosParaCotacao(selecionados, idsDoPlano),
         modoEnvio,
+        assistenciaProfissional: assistencia ?? 0,
       });
       toast.success('Cotação gerada');
       aoConcluir(lead.id);
@@ -456,6 +464,7 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
         <Campo label="E-mail">
           <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="opcional" />
         </Campo>
+        <CampoAssistenciaProfissional regras={regrasAp} valor={assistencia} onChange={setAssistencia} />
         <div>
           <p className="mb-1 text-xs font-medium uppercase text-slate-400">Envio ao cliente</p>
           <div className="flex gap-2">
@@ -476,7 +485,8 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
         <div className="mx-auto max-w-2xl space-y-1.5">
           {escolhido && (
             <p className="text-center text-[11.5px] text-slate-500">
-              {escolhido.nome} · <b className="tnum text-brand-700">{formatCurrency(escolhido.mensalidade)}/mes</b>
+              {escolhido.nome} · <b className="tnum text-brand-700">{formatCurrency(escolhido.mensalidade + (assistencia ?? 0))}/mes</b>
+              {(assistencia ?? 0) > 0 && <> (inclui {formatCurrency(assistencia ?? 0)} de Assistência Profissional)</>}
               {escolhido.adesao > 0 && <> · adesão {formatCurrency(escolhido.adesao)}</>}
             </p>
           )}

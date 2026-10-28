@@ -1,6 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { RegrasAssistenciaProfissional } from '@/lib/assistencia-profissional';
 import { createClient } from '@/lib/supabase/client';
 import { camposGravaveisDoLead, filtroBuscaLeads } from '@/lib/crm';
 import { comprimirImagem, validarArquivo } from '@/lib/imagem';
@@ -189,9 +190,14 @@ export function useSalvarCotacao() {
   return useMutation<
     CotacoesRow,
     Error,
-    { leadId: string; fipe: number; tipoVeiculoId: string; cotaId?: string | null; planoId?: string | null; produtosIds: string[]; modoEnvio?: string }
+    {
+      leadId: string; fipe: number; tipoVeiculoId: string; cotaId?: string | null; planoId?: string | null;
+      produtosIds: string[]; modoEnvio?: string;
+      /** 0158 — Assistencia Profissional: interna, fora do desconto, nunca vira item. */
+      assistenciaProfissional?: number | null;
+    }
   >({
-    mutationFn: async ({ leadId, fipe, tipoVeiculoId, cotaId, planoId, produtosIds, modoEnvio }) => {
+    mutationFn: async ({ leadId, fipe, tipoVeiculoId, cotaId, planoId, produtosIds, modoEnvio, assistenciaProfissional }) => {
       const { data: { user } } = await supabase.auth.getUser();
       // 0081 — quem precifica e a unidade do ASSOCIADO (a do lead enquanto ele
       // nao existe). Sem isso o CRM gravaria a cotacao pelo preco da matriz.
@@ -207,6 +213,7 @@ export function useSalvarCotacao() {
       const calc = cot.data as unknown as CotacaoPlano;
       const itens: CotacaoItem[] = calc.detalhamento_produtos.map((i) => ({
         produto_id: i.produto_id, nome: i.nome, valor: i.valor, obrigatorio: i.obrigatorio,
+        categoria: i.categoria ?? null,
       }));
       const { data, error } = await supabase.from('cotacoes').insert({
         lead_id: leadId,
@@ -222,6 +229,7 @@ export function useSalvarCotacao() {
         modo_envio: modoEnvio ?? 'DETALHADA',
         regional_id: (calc.regional_id as string | null) ?? null,
         valor_adicional_regional: Number(calc.adicional_regional ?? 0),
+        valor_assistencia_profissional: Number(assistenciaProfissional ?? 0),
         created_by: user?.id ?? null,
       }).select('*').single();
       if (error) throw error;
@@ -232,6 +240,21 @@ export function useSalvarCotacao() {
     onSuccess: (c) => {
       qc.invalidateQueries({ queryKey: ['vendas', 'cotacoes', c.lead_id] });
       qc.invalidateQueries({ queryKey: ['vendas'] });
+    },
+  });
+}
+
+// 0158 — a unidade paga Assistencia Profissional? Entre quanto e quanto?
+// Com lead, pela unidade dele; sem lead (a captura), pela de quem cota.
+export function useRegrasAssistenciaProfissional(leadId?: string | null) {
+  const supabase = createClient();
+  return useQuery<RegrasAssistenciaProfissional | null>({
+    queryKey: ['vendas', 'assistencia-profissional', leadId ?? 'eu'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('assistencia_profissional_regras', { p_lead_id: leadId ?? null });
+      if (error) throw error;
+      const r = (data ?? [])[0];
+      return r ? { ...r, minimo: Number(r.minimo), maximo: Number(r.maximo) } : null;
     },
   });
 }
@@ -325,6 +348,8 @@ export interface AtualizarCotacaoInput {
   descontoJustificativa?: string | null;
   /** Descer ate a cobertura base: sem isto, plano nulo mantem o combo atual. */
   limparPlano?: boolean;
+  /** 0158 — Assistencia Profissional (interna). Ausente = mantem. */
+  assistenciaProfissional?: number | null;
 }
 
 export function useAtualizarCotacao() {
@@ -345,6 +370,7 @@ export function useAtualizarCotacao() {
         // Sem isto, plano nulo significa "mantem o que esta" (0028) e o
         // downgrade ate a cobertura base salvava calado, com o combo antigo.
         p_limpar_plano: i.limparPlano ?? false,
+        p_valor_assistencia_profissional: i.assistenciaProfissional ?? null,
       });
       if (error) throw error;
       return data as CotacoesRow;

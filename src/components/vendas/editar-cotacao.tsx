@@ -10,8 +10,11 @@ import { usePlanos, useProdutos, useProdutosPorPlano, useTiposPorProduto, useTip
 import { produtosParaTipo, regraRastreadorCobra, semRastreadorDaRegra } from '@/lib/produtos';
 import {
   useAtualizarCotacao, useProdutosObrigatorios, useSimularDesconto, useAprovarDesconto,
+  useRegrasAssistenciaProfissional,
 } from '@/hooks/use-vendas';
 import { calcularDesconto, podeEditarCotacao } from '@/lib/crm';
+import { validarAssistenciaProfissional } from '@/lib/assistencia-profissional';
+import { CampoAssistenciaProfissional } from '@/components/vendas/campo-assistencia-profissional';
 import { avulsosDoVeiculo } from '@/lib/planos';
 import { separarOpcionais } from '@/lib/vistoria';
 import { formatCurrency } from '@/lib/utils';
@@ -38,6 +41,10 @@ export function EditarCotacao({
   const [planoId, setPlanoId] = useState(cotacao.plano_id ?? '');
   const [opcionais, setOpcionais] = useState<string[]>(cotacao.opcionais_ids ?? []);
   const [desconto, setDesconto] = useState(Number(cotacao.desconto_percentual ?? 0));
+  // 0158 — Assistencia Profissional: interna e fora do desconto
+  const { data: regrasAp } = useRegrasAssistenciaProfissional(lead.id);
+  const [assistencia, setAssistencia] = useState<number | null>(Number(cotacao.valor_assistencia_profissional ?? 0) || null);
+  const erroAp = validarAssistenciaProfissional(assistencia, regrasAp);
   const [alcada, setAlcada] = useState<{ email: string; senha: string; justificativa: string } | null>(null);
 
   const { data: obrigatorios } = useProdutosObrigatorios(cotacao.tipo_veiculo_id, planoId || null, fipe ?? 0);
@@ -99,6 +106,7 @@ export function EditarCotacao({
 
   function salvar(e: React.FormEvent) {
     e.preventDefault();
+    if (erroAp) return toast.error(`Assistência Profissional: ${erroAp}`);
     if (previa.exigeAprovacao) {
       // Desconto acima do limite da franquia: pede a alcada do gestor.
       setAlcada({ email: '', senha: '', justificativa: '' });
@@ -113,6 +121,7 @@ export function EditarCotacao({
         // so o que e vendido A PARTE: o combo entra pelo proprio plano
         opcionaisIds: avulsosDoVeiculo(opcionais, idsDoPlano),
         descontoPercentual: desconto,
+        assistenciaProfissional: assistencia ?? 0,
       },
       {
         onSuccess: (c) => {
@@ -137,6 +146,7 @@ export function EditarCotacao({
         planoId: planoId || null,
         limparPlano: !planoId,
         opcionaisIds: avulsosDoVeiculo(opcionais, idsDoPlano),
+        assistenciaProfissional: assistencia ?? 0,
       },
       {
         onSuccess: () => {
@@ -265,7 +275,7 @@ export function EditarCotacao({
 
           <div className="mt-2 grid gap-1 text-sm sm:grid-cols-2">
             <p className="text-slate-600">
-              Mensalidade: <span className="tnum font-medium">{formatCurrency(previa.mensalidadeFinal)}</span>
+              Mensalidade: <span className="tnum font-medium">{formatCurrency(previa.mensalidadeFinal + (assistencia ?? 0))}</span>
               {previa.descontoMensalidade > 0 && (
                 <span className="ml-1 text-xs text-slate-400 line-through">
                   {formatCurrency(Number(cotacao.total_mensalidade))}
@@ -294,6 +304,8 @@ export function EditarCotacao({
             </p>
           )}
         </div>
+
+        <CampoAssistenciaProfissional regras={regrasAp} valor={assistencia} onChange={setAssistencia} />
 
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>

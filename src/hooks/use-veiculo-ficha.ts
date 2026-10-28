@@ -122,14 +122,19 @@ export function useResolverAlertaVeiculo() {
 // Calcula a mensalidade (motor cotar_plano) para o veiculo em edicao.
 export function useCalcularMensalidadeVeiculo() {
   const supabase = createClient();
-  return useMutation<number, Error, { fipe: number; tipoVeiculoId: string | null; planoId: string | null; opcionaisIds: string[] }>({
-    mutationFn: async ({ fipe, tipoVeiculoId, planoId, opcionaisIds }) => {
+  return useMutation<number, Error, {
+    fipe: number; tipoVeiculoId: string | null; planoId: string | null; opcionaisIds: string[];
+    /** 0158 — somado ao motor: a Assistencia Profissional do veiculo. */
+    acrescimo?: number;
+  }>({
+    mutationFn: async ({ fipe, tipoVeiculoId, planoId, opcionaisIds, acrescimo }) => {
       if (!tipoVeiculoId) throw new Error('Selecione a categoria de risco (tipo de veículo)');
       const { data, error } = await supabase.rpc('cotar_plano', {
         p_fipe: fipe, p_tipo_veiculo_id: tipoVeiculoId, p_plano_id: planoId ?? null, p_avulsos_ids: opcionaisIds,
       });
       if (error) throw error;
-      return Number((data as unknown as CotacaoPlano)?.valor_total_mensalidade ?? 0);
+      const motor = Number((data as unknown as CotacaoPlano)?.valor_total_mensalidade ?? 0);
+      return Math.round((motor + Number(acrescimo ?? 0)) * 100) / 100;
     },
   });
 }
@@ -201,11 +206,13 @@ export function useSalvarOpcionaisVeiculo() {
 /** Mensalidade que o motor calcula para plano + avulsos (leitura, sem gravar). */
 export function useMensalidadeCalculada(args: {
   fipe: number | null; tipoVeiculoId: string | null; planoId: string | null; avulsos: string[]; ativo?: boolean;
+  /** 0158 — a Assistencia Profissional do veiculo, somada ao motor. */
+  acrescimo?: number;
 }) {
   const supabase = createClient();
   const chave = [...args.avulsos].sort().join(',');
   return useQuery<number | null>({
-    queryKey: ['ficha', 'mensalidade-calculada', args.fipe, args.tipoVeiculoId, args.planoId, chave],
+    queryKey: ['ficha', 'mensalidade-calculada', args.fipe, args.tipoVeiculoId, args.planoId, chave, args.acrescimo ?? 0],
     enabled: (args.ativo ?? true) && !!args.tipoVeiculoId,
     queryFn: async () => {
       const { data, error } = await supabase.rpc('cotar_plano', {
@@ -214,7 +221,7 @@ export function useMensalidadeCalculada(args: {
       });
       if (error) throw error;
       const v = (data as unknown as CotacaoPlano)?.valor_total_mensalidade;
-      return v == null ? null : Number(v);
+      return v == null ? null : Math.round((Number(v) + Number(args.acrescimo ?? 0)) * 100) / 100;
     },
   });
 }

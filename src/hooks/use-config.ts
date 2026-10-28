@@ -65,6 +65,10 @@ export function useSaveRegional() {
         telefone: r.telefone || null,
         email: r.email || null,
         ativo: r.ativo ?? true,
+        // Assistencia Profissional (0158): a unidade paga aos consultores?
+        paga_assistencia_profissional: r.paga_assistencia_profissional ?? false,
+        assistencia_profissional_min: r.assistencia_profissional_min ?? 1,
+        assistencia_profissional_max: r.assistencia_profissional_max ?? 40,
       };
       if (r.id) {
         const { error } = await supabase.from('regionais').update(payload).eq('id', r.id);
