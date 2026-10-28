@@ -122,3 +122,44 @@ export function podeSincronizarMensalidade(
   if (ultimoCotado == null) return false;
   return !mensalidadeCongelada(override, ultimoCotado);
 }
+
+// ----------------------------------------------------------------------------
+// 0160 — desconto na base e participacao multiplicada (Plano Economico)
+// Espelho dos CHECKs de planos_protecao e do que cotar_plano faz.
+// ----------------------------------------------------------------------------
+
+export const DESCONTO_BASE_MAXIMO = 90;
+export const MULTIPLICADOR_MINIMO = 0.5;
+export const MULTIPLICADOR_MAXIMO = 5;
+
+/** Mensagem de erro (ou null) para os dois campos do plano — o banco recusa o mesmo. */
+export function validarRegrasDoPlano(descontoBase: number, multiplicador: number): string | null {
+  if (!(descontoBase >= 0 && descontoBase <= DESCONTO_BASE_MAXIMO)) {
+    return `O desconto na base vai de 0% a ${DESCONTO_BASE_MAXIMO}%.`;
+  }
+  if (!(multiplicador >= MULTIPLICADOR_MINIMO && multiplicador <= MULTIPLICADOR_MAXIMO)) {
+    return `O multiplicador da participação vai de ${MULTIPLICADOR_MINIMO} a ${MULTIPLICADOR_MAXIMO}.`;
+  }
+  return null;
+}
+
+/** Desconto de um item da base, como o banco calcula: centavos arredondados por item. */
+export function descontoDoItem(valor: number, percentual: number): number {
+  if (!(percentual > 0)) return 0;
+  return Math.round(valor * percentual) / 100;
+}
+
+/** "cota de 5% vira 10%" — a cota do veiculo no plano. */
+export function cotaNoPlano(cotaPercentual: number, multiplicador: number): number {
+  return Math.round(cotaPercentual * multiplicador * 10000) / 10000;
+}
+
+/** Selos do cartao do plano. Vazio = plano sem regra especial. */
+export function selosDoPlano(p: { desconto_base_percentual?: number | null; multiplicador_participacao?: number | null }): string[] {
+  const selos: string[] = [];
+  const d = Number(p.desconto_base_percentual ?? 0);
+  const m = Number(p.multiplicador_participacao ?? 1);
+  if (d > 0) selos.push(`-${d.toLocaleString('pt-BR')}% na base`);
+  if (m !== 1) selos.push(`participação ${m.toLocaleString('pt-BR')}x`);
+  return selos;
+}

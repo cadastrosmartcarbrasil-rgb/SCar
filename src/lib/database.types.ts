@@ -280,6 +280,10 @@ export type PlanosProtecaoRow = Timestamps & {
   nivel: number;
   /** 0088 — plano SEM protecao de casco: cotar_plano tira o casco obrigatorio. */
   sem_casco: boolean;
+  /** 0160 — desconto (%) sobre os PRODUTOS obrigatorios da base (Taxa Adm, 24h, Casco). */
+  desconto_base_percentual: number;
+  /** 0160 — multiplica a participacao/franquia (2 = o dobro). */
+  multiplicador_participacao: number;
 };
 
 export type VeiculosRow = Timestamps & {
@@ -1399,6 +1403,9 @@ export type CotacaoItem = {
   valor: number;
   obrigatorio: boolean;
   categoria?: string | null;
+  /** 0160 — item com desconto do plano: o valor de tabela e o desconto. */
+  valor_tabela?: number;
+  desconto_plano?: number;
 };
 
 export type LeadHistoricoRow = {
@@ -2995,6 +3002,10 @@ export interface ItemMensalidade {
   fornecedor: string;
   categoria: string;
   obrigatorio: boolean;
+  /** 0160 — presentes so no item com desconto do plano. */
+  valor_tabela?: number;
+  desconto_plano?: number;
+  desconto_plano_percentual?: number;
 }
 export interface CalculoMensalidade {
   valor_fipe: number;
@@ -3019,6 +3030,10 @@ export interface CotacaoPlano {
   /** 0081 — o adicional da regional, DISCRIMINADO (nunca embutido). 0 = matriz pura. */
   adicional_regional?: number;
   regional_id?: string | null;
+  /** 0160 — desconto da base e multiplicador da participacao do plano. */
+  desconto_base_percentual?: number;
+  desconto_base_valor?: number;
+  multiplicador_participacao?: number;
 }
 
 export type HistoricoProtocoloRow = {
@@ -4468,6 +4483,10 @@ export type Database = {
         Args:
           | { p_fipe: number; p_tipo_veiculo_id: string }
           | { p_fipe: number; p_tipo_veiculo_id: string; p_cota_id: string | null };
+        Returns: number;
+      };
+      participacao_do_plano: {
+        Args: { p_fipe: number; p_tipo_veiculo_id: string; p_cota_id: string | null; p_plano_id: string | null };
         Returns: number;
       };
       calcular_participacao_veiculo: {

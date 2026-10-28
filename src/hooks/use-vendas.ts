@@ -206,7 +206,7 @@ export function useSalvarCotacao() {
       });
       const [cot, part] = await Promise.all([
         supabase.rpc('cotar_plano', { p_fipe: fipe, p_tipo_veiculo_id: tipoVeiculoId, p_plano_id: planoId ?? null, p_avulsos_ids: produtosIds, p_regional_id: regionalPreco ?? null }),
-        supabase.rpc('calcular_participacao', { p_fipe: fipe, p_tipo_veiculo_id: tipoVeiculoId, p_cota_id: cotaId ?? null }),
+        supabase.rpc('participacao_do_plano', { p_fipe: fipe, p_tipo_veiculo_id: tipoVeiculoId, p_cota_id: cotaId ?? null, p_plano_id: planoId ?? null }),
       ]);
       if (cot.error) throw cot.error;
       if (part.error) throw part.error;
@@ -214,6 +214,7 @@ export function useSalvarCotacao() {
       const itens: CotacaoItem[] = calc.detalhamento_produtos.map((i) => ({
         produto_id: i.produto_id, nome: i.nome, valor: i.valor, obrigatorio: i.obrigatorio,
         categoria: i.categoria ?? null,
+        ...(i.valor_tabela != null ? { valor_tabela: i.valor_tabela, desconto_plano: i.desconto_plano } : {}),
       }));
       const { data, error } = await supabase.from('cotacoes').insert({
         lead_id: leadId,
@@ -828,6 +829,8 @@ export interface PlanoComparado {
   mensalidade: number;
   adesao: number;
   participacao: number;
+  /** 0160 — desconto do plano sobre a base (R$), ja abatido da mensalidade. */
+  desconto_base: number;
   itens: { nome: string; valor: number; obrigatorio: boolean }[];
   /** Avulsos que sobraram para este plano (os que ele ja inclui saem da conta). */
   avulsos_cobrados: string[];
@@ -888,7 +891,11 @@ export function useCotacaoComparativa(entrada: {
           nivel: o.nivel,
           mensalidade: Number(c.valor_total_mensalidade ?? 0),
           adesao: Number(c.taxa_adesao ?? 0),
-          participacao: Number(part ?? c.franquia_participacao ?? 0),
+          // 0160 — a base (com a cota) vezes o multiplicador do plano.
+          participacao: part != null
+            ? Math.round(Number(part) * Number(c.multiplicador_participacao ?? 1) * 100) / 100
+            : Number(c.franquia_participacao ?? 0),
+          desconto_base: Number(c.desconto_base_valor ?? 0),
           itens: (c.detalhamento_produtos ?? []).map((i) => ({
             nome: i.nome, valor: Number(i.valor), obrigatorio: i.obrigatorio,
           })),

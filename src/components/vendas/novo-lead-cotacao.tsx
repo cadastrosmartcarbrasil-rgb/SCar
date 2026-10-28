@@ -397,6 +397,7 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
                         </ul>
                       )}
                       <p className="mt-2 text-[11px] text-slate-500">
+                        {p.desconto_base > 0 && <>Desconto do plano já aplicado: <b>{formatCurrency(p.desconto_base)}</b>. </>}
                         {p.adesao > 0 && <>Adesão única de <b>{formatCurrency(p.adesao)}</b>. </>}
                         {p.participacao > 0 && <>Participação no evento: <b>{formatCurrency(p.participacao)}</b>.</>}
                       </p>

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   avulsosDoVeiculo, compararTrocaDePlano, mensalidadeCongelada,
   podeSincronizarMensalidade, sentidoDaTroca,
+  validarRegrasDoPlano, descontoDoItem, cotaNoPlano, selosDoPlano,
 } from './planos';
 
 describe('sentidoDaTroca', () => {
@@ -114,5 +115,30 @@ describe('podeSincronizarMensalidade', () => {
 
   it('ficha recem-aberta (sem cotacao para comparar) nao e tocada', () => {
     expect(podeSincronizarMensalidade(225.5, null)).toBe(false);
+  });
+});
+
+describe('0160 — desconto na base e participação do plano', () => {
+  it('valida os limites que o banco também recusa', () => {
+    expect(validarRegrasDoPlano(30, 2)).toBeNull();
+    expect(validarRegrasDoPlano(0, 1)).toBeNull();
+    expect(validarRegrasDoPlano(91, 1)).toMatch(/90%/);
+    expect(validarRegrasDoPlano(-1, 1)).toMatch(/desconto/);
+    expect(validarRegrasDoPlano(30, 0)).toMatch(/multiplicador/);
+    expect(validarRegrasDoPlano(30, 6)).toMatch(/multiplicador/);
+  });
+  it('desconto por item arredonda em centavos, como round(v*p/100, 2)', () => {
+    expect(descontoDoItem(70, 30)).toBe(21);
+    expect(descontoDoItem(33.33, 30)).toBe(10);
+    expect(descontoDoItem(20, 0)).toBe(0);
+  });
+  it('cota de 5% vira 10% no Econômico', () => {
+    expect(cotaNoPlano(0.05, 2)).toBe(0.1);
+    expect(cotaNoPlano(0.05, 1)).toBe(0.05);
+  });
+  it('selos do cartão', () => {
+    expect(selosDoPlano({ desconto_base_percentual: 30, multiplicador_participacao: 2 }))
+      .toEqual(['-30% na base', 'participação 2x']);
+    expect(selosDoPlano({})).toEqual([]);
   });
 });

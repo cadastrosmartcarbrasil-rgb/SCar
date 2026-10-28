@@ -82,6 +82,7 @@ export async function POST(req: Request) {
       mensalidade: Number(c.valor_total_mensalidade ?? 0),
       adesao: Number(c.taxa_adesao ?? 0),
       participacao: Number(c.franquia_participacao ?? 0),
+      desconto_base: Number(c.desconto_base_valor ?? 0),
       itens: (c.detalhamento_produtos ?? []).map((i) => ({ nome: i.nome, valor: i.valor })),
     });
   }

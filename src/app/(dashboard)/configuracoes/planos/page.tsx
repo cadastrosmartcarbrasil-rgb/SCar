@@ -5,11 +5,12 @@ import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
-import { FormField, Input } from '@/components/ui/field';
+import { FormField, Input, PercentInput } from '@/components/ui/field';
 import {
   usePlanos, useProdutos, usePlanoProdutos, useSavePlano, useDeletePlano, useTiposVeiculo, useTiposPorProduto,
 } from '@/hooks/use-precificacao';
 import { rotuloTiposDoProduto } from '@/lib/produtos';
+import { selosDoPlano, validarRegrasDoPlano } from '@/lib/planos';
 import type { PlanosProtecaoRow } from '@/lib/database.types';
 
 interface Edicao {
@@ -19,6 +20,8 @@ interface Edicao {
   nivel: number;
   ativo: boolean;
   semCasco: boolean;
+  descontoBase: number;
+  multiplicador: number;
   produtosIds: Set<string>;
 }
 
@@ -49,7 +52,7 @@ export default function PlanosPage() {
 
   function novo() {
     setEditId(undefined);
-    setEd({ nome: '', descricao_comercial: '', nivel: (planos?.length ?? 0) + 1, ativo: true, semCasco: false, produtosIds: new Set() });
+    setEd({ nome: '', descricao_comercial: '', nivel: (planos?.length ?? 0) + 1, ativo: true, semCasco: false, descontoBase: 0, multiplicador: 1, produtosIds: new Set() });
     setAberto(true);
   }
 
@@ -62,6 +65,8 @@ export default function PlanosPage() {
       nivel: p.nivel ?? 0,
       ativo: p.ativo,
       semCasco: p.sem_casco ?? false,
+      descontoBase: Number(p.desconto_base_percentual ?? 0),
+      multiplicador: Number(p.multiplicador_participacao ?? 1),
       produtosIds: new Set(),
     });
     setAberto(true);
@@ -79,6 +84,8 @@ export default function PlanosPage() {
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!ed?.nome.trim()) return toast.error('Informe o nome do plano');
+    const erroRegra = validarRegrasDoPlano(ed.descontoBase, ed.multiplicador);
+    if (erroRegra) return toast.error(erroRegra);
     salvar.mutate(
       {
         id: ed.id,
@@ -87,6 +94,8 @@ export default function PlanosPage() {
         nivel: ed.nivel,
         ativo: ed.ativo,
         sem_casco: ed.semCasco,
+        desconto_base_percentual: ed.descontoBase,
+        multiplicador_participacao: ed.multiplicador,
         produtosIds: [...ed.produtosIds],
       },
       {
@@ -113,7 +122,8 @@ export default function PlanosPage() {
           Combos comerciais (ex.: Prata, Ouro, Diamante). Todo plano já inclui a cotação base
           (casco + taxa admin + assistência 24h + rastreador se aplicável); aqui você amarra os
           opcionais que compõem cada nível. Plano marcado como <strong>sem proteção de casco</strong>{' '}
-          (ex.: só terceiros, rastreamento) não leva o casco da base.
+          (ex.: só terceiros, rastreamento) não leva o casco da base. O plano pode ter{' '}
+          <strong>desconto na base</strong> e <strong>participação multiplicada</strong> (ex.: Econômico).
         </p>
         <Button onClick={novo}><Plus className="h-4 w-4" /> Novo Plano</Button>
       </div>
@@ -196,6 +206,42 @@ export default function PlanosPage() {
               </span>
             </label>
 
+            <div className="rounded-lg border border-slate-200 p-3">
+              <p className="text-sm font-medium text-slate-700">Desconto e participação do plano</p>
+              <p className="mb-2 text-xs text-slate-500">
+                Para planos como o Econômico: desconto sobre os itens obrigatórios da base (taxa
+                administrativa, assistência 24h e proteção do casco) em troca de uma participação
+                maior no evento. A regra do rastreador, o adicional da unidade e os opcionais não
+                têm desconto.
+              </p>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <FormField label="Desconto na base (%)">
+                  <PercentInput value={ed.descontoBase} max={90}
+                    onChange={(v) => setEd({ ...ed, descontoBase: v ?? 0 })} />
+                </FormField>
+                <FormField label="Participação no evento">
+                  <select value={String(ed.multiplicador)}
+                    onChange={(e) => setEd({ ...ed, multiplicador: Number(e.target.value) })}
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
+                    {[1, 1.5, 2, 2.5, 3].map((m) => (
+                      <option key={m} value={m}>
+                        {m === 1 ? 'Normal (a do veículo)' : `${m.toLocaleString('pt-BR')}x a do veículo`}
+                      </option>
+                    ))}
+                    {![1, 1.5, 2, 2.5, 3].includes(ed.multiplicador) && (
+                      <option value={ed.multiplicador}>{ed.multiplicador.toLocaleString('pt-BR')}x a do veículo</option>
+                    )}
+                  </select>
+                </FormField>
+              </div>
+              {ed.multiplicador !== 1 && (
+                <p className="mt-2 text-xs text-slate-500">
+                  Exemplo: veículo com cota de 5% da FIPE passa a ter{' '}
+                  {(5 * ed.multiplicador).toLocaleString('pt-BR')}% neste plano.
+                </p>
+              )}
+            </div>
+
             <label className="flex items-center gap-2 text-sm text-slate-600">
               <input type="checkbox" checked={ed.ativo} onChange={(e) => setEd({ ...ed, ativo: e.target.checked })} className="h-4 w-4 rounded border-slate-300" />
               Ativo
@@ -224,6 +270,9 @@ function PlanoCard({ plano, onEdit, onDelete }: { plano: PlanosProtecaoRow; onEd
           <h3 className="font-semibold text-slate-800">{plano.nome}</h3>
           {!plano.ativo && <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] uppercase text-slate-500">inativo</span>}
           {plano.sem_casco && <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] uppercase text-amber-800">sem casco</span>}
+          {selosDoPlano(plano).map((s) => (
+            <span key={s} className="rounded bg-cyan-50 px-1.5 py-0.5 text-[10px] uppercase text-cyan-700">{s}</span>
+          ))}
         </div>
         <div className="flex gap-1">
           <button onClick={onEdit} className="rounded p-1.5 text-slate-500 hover:bg-slate-100"><Pencil className="h-4 w-4" /></button>

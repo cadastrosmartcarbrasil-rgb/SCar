@@ -428,8 +428,9 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
                       ))}
                     </ul>
                   )}
-                  {ativo && (p.adesao > 0 || p.participacao > 0) && (
+                  {ativo && (p.adesao > 0 || p.participacao > 0 || (p.desconto_base ?? 0) > 0) && (
                     <p className="mt-2 text-[11px] text-slate-500">
+                      {(p.desconto_base ?? 0) > 0 && <>Desconto do plano já aplicado: <b>{dinheiro(p.desconto_base ?? 0)}</b>. </>}
                       {p.adesao > 0 && <>Adesão única de <b>{dinheiro(p.adesao)}</b>. </>}
                       {p.participacao > 0 && <>Participação no evento: <b>{dinheiro(p.participacao)}</b>.</>}
                     </p>

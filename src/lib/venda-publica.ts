@@ -20,6 +20,8 @@ export interface PlanoCotado {
   mensalidade: number;
   adesao: number;
   participacao: number;
+  /** 0160 — desconto do plano sobre a base (R$), ja abatido da mensalidade. */
+  desconto_base?: number;
   itens: { nome: string; valor: number }[];
 }
 

@@ -93,10 +93,12 @@ export function useSimularPreco() {
           // 0081 — null = matriz pura, que e o comportamento historico.
           p_regional_id: regionalId ?? null,
         }),
-        supabase.rpc('calcular_participacao', {
+        // 0160 — a participacao leva o multiplicador do plano (Economico = 2x).
+        supabase.rpc('participacao_do_plano', {
           p_fipe: fipe,
           p_tipo_veiculo_id: tipoVeiculoId,
           p_cota_id: cotaId ?? null,
+          p_plano_id: planoId ?? null,
         }),
       ]);
       if (cot.error) throw cot.error;
@@ -383,15 +385,19 @@ export function useSavePlano() {
   return useMutation<
     string,
     Error,
-    { id?: string; nome: string; descricao_comercial?: string | null; nivel?: number; ativo?: boolean; sem_casco?: boolean; produtosIds: string[] }
+    { id?: string; nome: string; descricao_comercial?: string | null; nivel?: number; ativo?: boolean; sem_casco?: boolean;
+      desconto_base_percentual?: number; multiplicador_participacao?: number; produtosIds: string[] }
   >({
-    mutationFn: async ({ id, nome, descricao_comercial, nivel, ativo, sem_casco, produtosIds }) => {
+    mutationFn: async ({ id, nome, descricao_comercial, nivel, ativo, sem_casco, desconto_base_percentual, multiplicador_participacao, produtosIds }) => {
       const payload = {
         nome: nome.trim(),
         descricao_comercial: descricao_comercial ?? null,
         nivel: nivel ?? 0,
         ativo: ativo ?? true,
         sem_casco: sem_casco ?? false,
+        // 0160 — Plano Economico: desconto na base e participacao multiplicada.
+        desconto_base_percentual: desconto_base_percentual ?? 0,
+        multiplicador_participacao: multiplicador_participacao ?? 1,
       };
       let planoId = id;
       if (planoId) {

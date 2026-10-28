@@ -57,9 +57,9 @@ export async function POST(req: Request) {
       p_plano_id: planoId, p_avulsos_ids: [],
       p_regional_id: regionalPreco ?? null,
     }),
-    admin.rpc('calcular_participacao', {
+    admin.rpc('participacao_do_plano', {
       p_fipe: lead.valor_fipe, p_tipo_veiculo_id: lead.tipo_veiculo_id,
-      p_cota_id: lead.cota_participacao_id ?? null,
+      p_cota_id: lead.cota_participacao_id ?? null, p_plano_id: planoId,
     }),
   ]);
   if (cot.error) return NextResponse.json({ error: cot.error.message }, { status: 400 });
@@ -67,6 +67,7 @@ export async function POST(req: Request) {
   const calc = cot.data as unknown as CotacaoPlano;
   const itens: CotacaoItem[] = (calc.detalhamento_produtos ?? []).map((i) => ({
     produto_id: i.produto_id, nome: i.nome, valor: i.valor, obrigatorio: i.obrigatorio,
+    ...(i.valor_tabela != null ? { valor_tabela: i.valor_tabela, desconto_plano: i.desconto_plano } : {}),
   }));
 
   const { data: cotacao, error: erroCotacao } = await admin
