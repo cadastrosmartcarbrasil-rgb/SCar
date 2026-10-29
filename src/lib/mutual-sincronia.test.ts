@@ -11,7 +11,13 @@ describe('modoCapturaInvoice', () => {
     expect(modoCapturaInvoice(null, sexta).completa).toBe(true);
   });
   it('com marca recente, incremental desde a marca menos 3 dias', () => {
-    expect(modoCapturaInvoice('2026-10-22T06:20:00Z', sexta)).toEqual({ completa: false, desde: '2026-10-19' });
+    expect(modoCapturaInvoice('2026-10-22T06:20:00Z', sexta))
+      .toEqual({ completa: false, desde: '2026-10-19T06:20:00Z' });
+  });
+  it('o filtro leva data E hora (o Mutual recusa so a data com HTTP 400)', () => {
+    const m = modoCapturaInvoice('2026-10-25T06:20:46.668Z', new Date('2026-10-28T06:20:00Z'));
+    expect(m.completa).toBe(false);
+    if (!m.completa) expect(m.desde).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
   });
   it('no domingo, passada completa', () => {
     expect(modoCapturaInvoice('2026-10-24T06:20:00Z', new Date('2026-10-25T06:20:00Z')).completa).toBe(true);

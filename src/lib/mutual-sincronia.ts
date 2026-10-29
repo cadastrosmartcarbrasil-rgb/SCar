@@ -109,5 +109,7 @@ export function modoCapturaInvoice(ultimaCompleta: string | null, agora: Date): 
   const dias = (agora.getTime() - marca.getTime()) / 86_400_000;
   if (dias > 8) return { completa: true, motivo: `ultima captura completa ha ${Math.floor(dias)} dias` };
   const desde = new Date(marca.getTime() - MARGEM_INCREMENTAL_DIAS * 86_400_000);
-  return { completa: false, desde: desde.toISOString().slice(0, 10) };
+  // DATA E HORA, em ISO: o Mutual recusa so a data com HTTP 400 ("updated_at__gte:
+  // Informe uma data/hora valida") — de 26 a 29/10/2026 a rotina nao trouxe boleto nenhum.
+  return { completa: false, desde: `${desde.toISOString().slice(0, 19)}Z` };
 }

@@ -3878,6 +3878,14 @@ manda o link sozinho. Decisões do usuário: a equipe pode **liberar sem revisto
   (700 páginas) é gravada com erro e não vira marca. Depois das cargas, importa o histórico de
   boletos inteiro em blocos de 2.000 (`cobranca_importar_historico_mutual`, ~1,3 s por 4.000) — passo
   `historico de boletos` no log. A 1ª rodada após o deploy é a completa (~420 páginas, ~15 min).
+  **🔴 O INCREMENTAL DO INVOICE FALHOU DE 26 A 29/10/2026** (HTTP 400 "updated_at__gte: Informe uma
+  data/hora válida"): o filtro ia só com a DATA (`2026-10-22`) e o Mutual exige data E hora. Nesses dias a
+  rotina não trouxe boleto nenhum (achado pelo caso AMARILDO GRACIANO: 2ª via paga em 28/10 pelo BRADESCO,
+  fora do Sicredi, sem baixa no SCar). Corrigido em 29/10: `desde` em ISO com hora (`2026-10-19T06:20:00Z`)
+  e, se o incremental falhar, a rotina faz a passada completa na mesma rodada. **Ainda não provado contra o
+  Mutual** — conferir o log da próxima rotina (`captura INVOICE incremental desde ...`).
+  **A 2ª via do Mutual pode sair por OUTRO BANCO** (bank_id 15 = Bradesco, linha 237): essa não passa pelo
+  Sicredi, então a baixa dela só chega pela captura do INVOICE + importação (e a 0140 cancela o original).
   **ADDRESS ignora a paginação** (`/core/address/` devolve os ~45 mil endereços inteiros em toda página,
   array cru sem `next`): de 14 a 23/10 a rotina regravou o mesmo conjunto por até 17 min, todo dia, até o
   Mutual derrubar a conexão ("fetch failed"/502). Corrigido em `temProximaPagina` (página cheia = EXATAMENTE

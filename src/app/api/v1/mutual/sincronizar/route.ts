@@ -72,11 +72,19 @@ export async function POST(request: Request) {
       .eq('entidade', 'INVOICE').is('executada_por', null).is('erro', null)
       .not('concluida_em', 'is', null)
       .order('iniciada_em', { ascending: false }).limit(1).maybeSingle();
-    const modo = modoCapturaInvoice(marca?.iniciada_em ?? null, new Date());
-    const r = await capturarEntidade(supabase, base, token, 'INVOICE', {
+    let modo = modoCapturaInvoice(marca?.iniciada_em ?? null, new Date());
+    let r = await capturarEntidade(supabase, base, token, 'INVOICE', {
       maxPaginas: PAGINAS_MAXIMAS_INVOICE, usuarioId: null,
       updatedAtGte: modo.completa ? undefined : modo.desde,
     });
+    // Incremental recusado pelo Mutual (foi o HTTP 400 de 26 a 29/10/2026) nao pode
+    // deixar a rotina dias sem boleto: cai na passada completa na mesma rodada.
+    if (!r.ok && !modo.completa) {
+      modo = { completa: true, motivo: `incremental falhou: ${r.erro ?? 'erro'}` };
+      r = await capturarEntidade(supabase, base, token, 'INVOICE', {
+        maxPaginas: PAGINAS_MAXIMAS_INVOICE, usuarioId: null,
+      });
+    }
     const parouNoTeto = r.ok && r.proxima_pagina !== null;
     // Parar no teto NAO pode virar marca: a proxima rodada voltaria a ser incremental
     // a partir de uma captura que nao pegou tudo.
