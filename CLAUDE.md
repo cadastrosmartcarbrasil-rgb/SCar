@@ -3886,6 +3886,16 @@ manda o link sozinho. Decisões do usuário: a equipe pode **liberar sem revisto
   Mutual** — conferir o log da próxima rotina (`captura INVOICE incremental desde ...`).
   **A 2ª via do Mutual pode sair por OUTRO BANCO** (bank_id 15 = Bradesco, linha 237): essa não passa pelo
   Sicredi, então a baixa dela só chega pela captura do INVOICE + importação (e a 0140 cancela o original).
+  **✅ Reposto pelo agente em 29/10/2026 (autorizado):** depois de uma captura manual de INVOICE, a importação
+  não tinha alcançado 113 boletos de associados carregados (67 ausentes + 46 com situação velha, AMARILDO
+  incluído). Importados um a um pela própria `cobranca_importar_historico_mutual(<id anterior>, 1, true)`;
+  conferido: 0 ausentes, 0 divergentes; 21 originais viraram cancelado/substituído pela 0140. **Para importar
+  só uma lista de ids** sem a passada inteira: cursor = o `id_externo` de INVOICE imediatamente anterior
+  (`max(id_externo) where id_externo < alvo`) e lote 1. **Dois casos para a equipe** (VICTOR HUGO PORFIRO DA
+  SILVA, R$ 248; ERICA FILOMENA DOS SANTOS, R$ 193,75): pagaram a 2ª via do SCar em 28/10 e a via do Mutual
+  (Bradesco) aparece paga em 29/10 com `last_change_type: MANUAL` e crédito 28/10 — provável baixa manual no
+  Mutual espelhando o pagamento do SCar, não pagamento em dobro; confirmar no extrato do Bradesco
+  (nosso número 02153107806 e 02153091938).
   **ADDRESS ignora a paginação** (`/core/address/` devolve os ~45 mil endereços inteiros em toda página,
   array cru sem `next`): de 14 a 23/10 a rotina regravou o mesmo conjunto por até 17 min, todo dia, até o
   Mutual derrubar a conexão ("fetch failed"/502). Corrigido em `temProximaPagina` (página cheia = EXATAMENTE
