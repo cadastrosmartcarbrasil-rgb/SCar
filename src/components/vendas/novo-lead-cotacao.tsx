@@ -11,7 +11,11 @@ import { Button } from '@/components/ui/button';
 import { FipeConsulta } from '@/components/fipe/fipe-consulta';
 import { useFipePorPlaca } from '@/hooks/use-fipe';
 import type { RegistroPlaca } from '@/lib/fipe';
-import { useTiposVeiculo, useProdutos, useCotasParticipacao, useTiposPorProduto } from '@/hooks/use-precificacao';
+import {
+  useTiposVeiculo, useProdutos, useCotasParticipacao, useTiposPorProduto, useTiposPorPlano, useSugestoesPorPlano,
+  useModeloDoCatalogo,
+} from '@/hooks/use-precificacao';
+import { alternarOpcional, sugestoesDoPlano } from '@/lib/planos-oferta';
 import { produtosParaTipo, regraRastreadorCobra, semRastreadorDaRegra } from '@/lib/produtos';
 import {
   useAvisoDeCaptura, useCotacaoComparativa, useProdutosDoPlano, useRegrasAssistenciaProfissional,
@@ -56,6 +60,8 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
   const { data: produtos } = useProdutos();
   const { data: tiposPorProduto } = useTiposPorProduto();
   const { data: cotas } = useCotasParticipacao();
+  const { data: tiposPorPlano } = useTiposPorPlano();
+  const { data: sugestoesPorPlano } = useSugestoesPorPlano();
   const fipePorPlaca = useFipePorPlaca();
   const salvarLead = useSaveLead();
   const salvarCotacao = useSalvarCotacao();
@@ -77,6 +83,9 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
   const [valorFipe, setValorFipe] = useState<number | null>(null);
   const [codigoFipe, setCodigoFipe] = useState('');
   const [cotaId, setCotaId] = useState('');
+  // 0162 — a cota vem do modelo do catalogo; escolher na mao desliga o automatico.
+  const [cotaManual, setCotaManual] = useState(false);
+  const [modeloId, setModeloId] = useState<string | null>(null);
   const [origemFipe, setOrigemFipe] = useState<OrigemFipe>('MANUAL');
   const [mostrarCascata, setMostrarCascata] = useState(false);
   // Cotacao
@@ -98,17 +107,14 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
   const { data: classificacao } = useAvisoDeCaptura({ celular, cpfCnpj, placa });
   const aviso = avisoDeCaptura(classificacao);
 
-  // Um preco por plano, recalculado sozinho a cada mudanca de veiculo/opcional.
-  const comparativo = useCotacaoComparativa({
-    fipe: valorFipe, tipoVeiculoId, cotaId: cotaId || null, avulsos: [...selecionados],
-  });
-  const planos = useMemo(() => comparativo.data ?? [], [comparativo.data]);
-  const escolhido = planos.find((p) => chaveDoPlano(p) === escolha) ?? null;
-  // O do meio e onde a maioria fecha — sugerimos, o vendedor decide.
-  const sugerido = planos.length > 1 ? chaveDoPlano(planos[Math.min(2, planos.length - 1)]) : null;
-
-  const { data: doPlano } = useProdutosDoPlano(escolhido?.plano_id ?? null);
-  const idsDoPlano = useMemo(() => (doPlano ?? []).map((p) => p.produto_id), [doPlano]);
+  const catalogo = useModeloDoCatalogo(marca, modelo);
+  useEffect(() => {
+    if (catalogo.isFetching) return;
+    const r = catalogo.data;
+    setModeloId(r?.modelo_id ?? null);
+    if (!cotaManual) setCotaId(r?.cota_id ?? '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [catalogo.data, catalogo.isFetching]);
   // So o que atende o tipo do veiculo (0089): sem parabrisa para moto. O motor
   // ignora o resto de qualquer jeito; aqui e para a tela nao oferecer.
   const opcionais = useMemo(
@@ -119,10 +125,43 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
     ),
     [produtos, tipoVeiculoId, tiposPorProduto, tipos, valorFipe],
   );
+
+  // 0162 — os pre-marcados de cada plano, so do que esta sendo oferecido aqui.
+  const oferecidosIds = useMemo(() => opcionais.map((p) => p.id), [opcionais]);
+  const sugestoes = useMemo(() => {
+    const m: Record<string, string[]> = {};
+    for (const id of Object.keys(sugestoesPorPlano ?? {})) {
+      m[id] = sugestoesDoPlano(id, sugestoesPorPlano, oferecidosIds);
+    }
+    return m;
+  }, [sugestoesPorPlano, oferecidosIds]);
+
+  // Um preco por plano, recalculado sozinho a cada mudanca de veiculo/opcional.
+  const comparativo = useCotacaoComparativa({
+    fipe: valorFipe, tipoVeiculoId, cotaId: cotaId || null, avulsos: [...selecionados],
+    escolha, sugestoes, tiposPorPlano,
+  });
+  const planos = useMemo(() => comparativo.data ?? [], [comparativo.data]);
+  const escolhido = planos.find((p) => chaveDoPlano(p) === escolha) ?? null;
+  // O do meio e onde a maioria fecha — sugerimos, o vendedor decide.
+  const sugerido = planos.length > 1 ? chaveDoPlano(planos[Math.min(2, planos.length - 1)]) : null;
+
+  const { data: doPlano } = useProdutosDoPlano(escolhido?.plano_id ?? null);
+  const idsDoPlano = useMemo(() => (doPlano ?? []).map((p) => p.produto_id), [doPlano]);
   const { inclusos, avulsos } = useMemo(
     () => separarOpcionais(opcionais, idsDoPlano),
     [opcionais, idsDoPlano],
   );
+  const preMarcados = useMemo(
+    () => new Set(escolha && escolha !== 'BASE' ? sugestoes[escolha] ?? [] : []),
+    [escolha, sugestoes],
+  );
+
+  // Trocar de plano = comecar dos pre-marcados dele (o consultor tira/troca depois).
+  useEffect(() => {
+    setSelecionados(new Set(escolha && escolha !== 'BASE' ? sugestoes[escolha] ?? [] : []));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [escolha]);
 
   // Enquanto a lista nao chega, nada esta escolhido; quando chega, cai no sugerido.
   useEffect(() => {
@@ -168,11 +207,8 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
   }
 
   function toggle(id: string) {
-    setSelecionados((s) => {
-      const n = new Set(s);
-      if (n.has(id)) n.delete(id); else n.add(id);
-      return n;
-    });
+    // Marcar um vidro/terceiros/carro reserva troca o outro do mesmo grupo.
+    setSelecionados((s) => alternarOpcional(s, id, opcionais));
   }
 
   async function gerar() {
@@ -200,6 +236,7 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
         valor_fipe: valorFipe,
         codigo_fipe: codigoFipe || null,
         cota_participacao_id: cotaId || null,
+        modelo_id: modeloId,
         origem_fipe: origemFipe,
         // Registro do documento, quando a placa trouxe
         chassi: registro?.chassi ?? null,
@@ -327,12 +364,20 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
             </Select>
           </Campo>
           <Campo label="Cota de participação">
-            <Select value={cotaId} onChange={(e) => setCotaId(e.target.value)}>
+            <Select value={cotaId} onChange={(e) => { setCotaId(e.target.value); setCotaManual(true); }}>
               <option value="">Padrão da faixa</option>
               {(cotas ?? []).map((c) => (
-                <option key={c.id} value={c.id}>{c.codigo} — {(c.percentual * 100).toFixed(0)}%</option>
+                <option key={c.id} value={c.id}>{c.codigo} — {(c.percentual * 100).toLocaleString('pt-BR')}%</option>
               ))}
             </Select>
+            <p className="mt-0.5 text-[11px] leading-snug text-slate-400">
+              {catalogo.isFetching ? 'Procurando o modelo no catálogo...'
+                : catalogo.data
+                  ? catalogo.data.cota_codigo
+                    ? <>Do catálogo: <b>{catalogo.data.modelo}</b> ({catalogo.data.cota_codigo} — {(Number(catalogo.data.cota_percentual) * 100).toLocaleString('pt-BR')}%){cotaManual && ' · alterada à mão'}</>
+                    : <>Modelo <b>{catalogo.data.modelo}</b> sem cota no catálogo: vale a faixa.</>
+                  : marca && modelo ? 'Modelo não achado no catálogo de Marcas/Modelos: vale a faixa.' : null}
+            </p>
           </Campo>
         </div>
       </Secao>
@@ -412,7 +457,7 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
         {/* Adicionais: marcar/desmarcar recotiza todos os planos */}
         {planos.length > 0 && (
           <div className="space-y-2 border-t border-slate-100 pt-3">
-            <p className="text-xs font-medium uppercase text-slate-400">Adicionais</p>
+            <p className="text-xs font-medium uppercase text-slate-400">Adicionais {escolhido && <span className="normal-case">— de {escolhido.nome}</span>}</p>
             {inclusos.length > 0 && (
               <div className="space-y-1">
                 {inclusos.map((p) => (
@@ -433,8 +478,20 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
                     className="h-4 w-4 rounded border-slate-300" />
                   {p.nome}
                   {p.valor_fixo != null && <span className="text-xs text-slate-400">({formatCurrency(p.valor_fixo)})</span>}
+                  {preMarcados.has(p.id) && (
+                    <span className={`rounded-full px-1.5 py-px text-[10px] font-bold uppercase ring-1 ring-inset ${
+                      selecionados.has(p.id) ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-slate-50 text-slate-400 ring-slate-200 line-through'
+                    }`}>
+                      sugerido no plano
+                    </span>
+                  )}
                 </label>
               ))}
+              {preMarcados.size > 0 && (
+                <p className="text-[11px] text-slate-400">
+                  Os sugeridos já vêm marcados no preço. Desmarque ou troque (ex.: marcar o parabrisa troca o vidros completo) para chegar ao valor.
+                </p>
+              )}
               {avulsos.length === 0 && <span className="text-xs text-slate-400">Nenhum adicional cadastrado.</span>}
             </div>
           </div>

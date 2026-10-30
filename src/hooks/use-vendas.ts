@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { RegrasAssistenciaProfissional } from '@/lib/assistencia-profissional';
 import { createClient } from '@/lib/supabase/client';
+import { planosDoTipo } from '@/lib/planos-oferta';
 import { camposGravaveisDoLead, filtroBuscaLeads } from '@/lib/crm';
 import { comprimirImagem, validarArquivo } from '@/lib/imagem';
 import type {
@@ -839,18 +840,29 @@ export function useCotacaoComparativa(entrada: {
   fipe?: number | null;
   tipoVeiculoId?: string | null;
   cotaId?: string | null;
+  /** Os opcionais marcados para o plano ESCOLHIDO (chave = plano_id ou 'BASE'). */
   avulsos?: string[];
+  escolha?: string | null;
+  /** 0162 — pre-marcados de cada plano (ja filtrados pelo que e oferecido). */
+  sugestoes?: Record<string, string[]>;
+  /** 0162 — plano -> tipos (sem entrada = todos). */
+  tiposPorPlano?: Record<string, string[]>;
 }) {
   const supabase = createClient();
   const { fipe, tipoVeiculoId, cotaId } = entrada;
   const avulsos = [...(entrada.avulsos ?? [])].sort();
+  const escolha = entrada.escolha ?? '';
+  const sugestoes = entrada.sugestoes ?? {};
+  const tiposPorPlano = entrada.tiposPorPlano ?? {};
   const pronto = !!fipe && fipe > 0 && !!tipoVeiculoId;
 
   return useQuery<PlanoComparado[]>({
-    queryKey: ['vendas', 'comparativo', fipe ?? 0, tipoVeiculoId ?? '', cotaId ?? '', avulsos.join(',')],
+    queryKey: ['vendas', 'comparativo', fipe ?? 0, tipoVeiculoId ?? '', cotaId ?? '', escolha, avulsos.join(','),
+      JSON.stringify(sugestoes), JSON.stringify(tiposPorPlano)],
     enabled: pronto,
+    placeholderData: (anterior) => anterior,
     queryFn: async () => {
-      const [{ data: planos, error: erroPlanos }, { data: vinculos }, { data: part }] = await Promise.all([
+      const [{ data: planosTodos, error: erroPlanos }, { data: vinculos }, { data: part }] = await Promise.all([
         supabase.from('planos_protecao').select('id, nome, descricao_comercial, nivel')
           .eq('ativo', true).order('nivel').order('nome'),
         supabase.from('plano_produtos').select('plano_id, produto_id'),
@@ -859,6 +871,8 @@ export function useCotacaoComparativa(entrada: {
         }),
       ]);
       if (erroPlanos) throw erroPlanos;
+      // 0162 — so os planos do tipo deste veiculo.
+      const planos = planosDoTipo(planosTodos ?? [], tipoVeiculoId, tiposPorPlano);
 
       const doPlano = (planoId: string) =>
         (vinculos ?? []).filter((v) => v.plano_id === planoId).map((v) => v.produto_id);
@@ -866,7 +880,7 @@ export function useCotacaoComparativa(entrada: {
       // A cobertura base entra como primeira opcao: ha venda que fecha sem combo.
       const opcoes: { id: string | null; nome: string; descricao: string | null; nivel: number | null }[] = [
         { id: null, nome: 'Cobertura base', descricao: 'Somente os itens obrigatórios', nivel: -1 },
-        ...(planos ?? []).map((p) => ({
+        ...planos.map((p) => ({
           id: p.id, nome: p.nome, descricao: p.descricao_comercial, nivel: p.nivel,
         })),
       ];
@@ -874,7 +888,9 @@ export function useCotacaoComparativa(entrada: {
       const cotados = await Promise.all(opcoes.map(async (o) => {
         // O que o plano ja inclui nao pode ser cobrado de novo como avulso.
         const incluidos = o.id ? doPlano(o.id) : [];
-        const cobrados = avulsos.filter((a) => !incluidos.includes(a));
+        // O plano escolhido leva o que o consultor marcou; os outros, os pre-marcados deles.
+        const marcados = (o.id ?? 'BASE') === escolha ? avulsos : (o.id ? sugestoes[o.id] ?? [] : []);
+        const cobrados = marcados.filter((a) => !incluidos.includes(a));
         const { data, error } = await supabase.rpc('cotar_plano', {
           p_fipe: fipe as number,
           p_tipo_veiculo_id: tipoVeiculoId as string,

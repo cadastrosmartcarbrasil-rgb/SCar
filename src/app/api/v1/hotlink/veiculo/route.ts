@@ -65,8 +65,16 @@ export async function POST(req: Request) {
     tipos ?? [],
   );
 
+  // 0162 — a cota de participacao vem do modelo do catalogo (Marcas/Modelos).
+  const { data: doCatalogo } = fipe.marca && fipe.modelo
+    ? await admin.rpc('modelo_do_catalogo', { p_marca: fipe.marca, p_modelo: fipe.modelo })
+    : { data: null };
+  const cat = doCatalogo?.[0] ?? null;
+
   await admin.from('leads').update({
     placa,
+    modelo_id: cat?.modelo_id ?? null,
+    cota_participacao_id: cat?.cota_id ?? null,
     marca: fipe.marca,
     modelo: fipe.modelo,
     ano_modelo: fipe.anoModelo,

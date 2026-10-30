@@ -4170,6 +4170,16 @@ export type Database = {
       participacao_faixa: TableDef<ParticipacaoFaixaRow, [Rel<'tipo_veiculo_id', 'tipos_veiculo'>]>;
       adesao_faixa: TableDef<AdesaoFaixaRow, [Rel<'tipo_veiculo_id', 'tipos_veiculo'>]>;
       plano_produtos: TableDef<{ plano_id: string; produto_id: string }>;
+      /** 0162 — para quais tipos o plano e oferecido. Sem linha = todos os tipos. */
+      plano_tipos_veiculo: TableDef<
+        { plano_id: string; tipo_veiculo_id: string },
+        [Rel<'plano_id', 'planos_protecao'>, Rel<'tipo_veiculo_id', 'tipos_veiculo'>]
+      >;
+      /** 0162 — opcionais que ja vem marcados (avulso removivel) ao escolher o plano. */
+      plano_sugestoes: TableDef<
+        { plano_id: string; produto_id: string },
+        [Rel<'plano_id', 'planos_protecao'>, Rel<'produto_id', 'produtos'>]
+      >;
       /** 0089 — para quais tipos o produto se aplica. Sem linha = todos os tipos. */
       produto_tipos_veiculo: TableDef<
         { produto_id: string; tipo_veiculo_id: string; created_at: string },
@@ -4501,6 +4511,14 @@ export type Database = {
           | { p_fipe: number; p_tipo_veiculo_id: string }
           | { p_fipe: number; p_tipo_veiculo_id: string; p_cota_id: string | null };
         Returns: number;
+      };
+      /** 0162 — o modelo do catalogo (e a cota) pela marca/modelo da FIPE. */
+      modelo_do_catalogo: {
+        Args: { p_marca: string; p_modelo: string };
+        Returns: {
+          modelo_id: string; marca: string; modelo: string; cota_id: string | null;
+          cota_codigo: string | null; cota_percentual: number | null; similaridade: number;
+        }[];
       };
       participacao_do_plano: {
         Args: { p_fipe: number; p_tipo_veiculo_id: string; p_cota_id: string | null; p_plano_id: string | null };

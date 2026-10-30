@@ -6,7 +6,10 @@ import { Lock, Percent, ShieldCheck, Loader2 } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { FormField, Input, Select, MoneyInput } from '@/components/ui/field';
-import { usePlanos, useProdutos, useProdutosPorPlano, useTiposPorProduto, useTiposVeiculo } from '@/hooks/use-precificacao';
+import {
+  usePlanos, useProdutos, useProdutosPorPlano, useTiposPorProduto, useTiposVeiculo, useTiposPorPlano, useSugestoesPorPlano,
+} from '@/hooks/use-precificacao';
+import { alternarOpcional, planosDoTipo, sugestoesDoPlano } from '@/lib/planos-oferta';
 import { produtosParaTipo, regraRastreadorCobra, semRastreadorDaRegra } from '@/lib/produtos';
 import {
   useAtualizarCotacao, useProdutosObrigatorios, useSimularDesconto, useAprovarDesconto,
@@ -34,6 +37,8 @@ export function EditarCotacao({
   const { data: produtosPorPlano } = useProdutosPorPlano();
   const { data: tiposPorProduto } = useTiposPorProduto();
   const { data: tiposVeiculo } = useTiposVeiculo();
+  const { data: tiposPorPlano } = useTiposPorPlano();
+  const { data: sugestoesPorPlano } = useSugestoesPorPlano();
   const atualizar = useAtualizarCotacao();
   const aprovar = useAprovarDesconto();
 
@@ -91,6 +96,14 @@ export function EditarCotacao({
     desconto,
     limite,
   );
+
+  // 0162 — trocar de plano = comecar dos pre-marcados do plano novo (removiveis).
+  function trocarPlano(novo: string) {
+    setPlanoId(novo);
+    const incluidos = novo ? produtosPorPlano?.[novo] ?? [] : [];
+    const sug = sugestoesDoPlano(novo || null, sugestoesPorPlano, disponiveis.map((d) => d.id), incluidos);
+    setOpcionais(sug);
+  }
 
   if (!podeEditarCotacao(lead.status)) {
     return (
@@ -182,9 +195,11 @@ export function EditarCotacao({
             <MoneyInput value={fipe} onChange={setFipe} />
           </FormField>
           <FormField label="Plano / combo">
-            <Select value={planoId} onChange={(e) => setPlanoId(e.target.value)}>
+            <Select value={planoId} onChange={(e) => trocarPlano(e.target.value)}>
               <option value="">Somente cobertura base</option>
-              {(planos ?? []).filter((p) => p.ativo).map((p) => (
+              {planosDoTipo((planos ?? []).filter((p) => p.ativo || p.id === planoId), cotacao.tipo_veiculo_id, tiposPorPlano)
+                .concat((planos ?? []).filter((p) => p.id === planoId && !planosDoTipo([p], cotacao.tipo_veiculo_id, tiposPorPlano).length))
+                .map((p) => (
                 <option key={p.id} value={p.id}>{p.nome}</option>
               ))}
             </Select>
@@ -241,9 +256,7 @@ export function EditarCotacao({
                 <input
                   type="checkbox"
                   checked={opcionais.includes(p.id)}
-                  onChange={(e) =>
-                    setOpcionais((ids) => (e.target.checked ? [...ids, p.id] : ids.filter((x) => x !== p.id)))
-                  }
+                  onChange={() => setOpcionais((ids) => [...alternarOpcional(ids, p.id, disponiveis)])}
                 />
                 {p.nome}
                 {p.foraDoTipo && (

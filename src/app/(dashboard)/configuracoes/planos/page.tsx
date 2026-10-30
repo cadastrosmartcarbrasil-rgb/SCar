@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/modal';
 import { FormField, Input, PercentInput } from '@/components/ui/field';
 import {
   usePlanos, useProdutos, usePlanoProdutos, useSavePlano, useDeletePlano, useTiposVeiculo, useTiposPorProduto,
+  useTiposPorPlano, useSugestoesPorPlano,
 } from '@/hooks/use-precificacao';
 import { rotuloTiposDoProduto } from '@/lib/produtos';
 import { selosDoPlano, validarRegrasDoPlano } from '@/lib/planos';
@@ -23,6 +24,10 @@ interface Edicao {
   descontoBase: number;
   multiplicador: number;
   produtosIds: Set<string>;
+  /** 0162 — vazio = todos os tipos. */
+  tiposIds: Set<string>;
+  /** 0162 — opcionais que ja vem marcados na cotacao (removiveis). */
+  sugestoesIds: Set<string>;
 }
 
 export default function PlanosPage() {
@@ -30,6 +35,8 @@ export default function PlanosPage() {
   const { data: produtos } = useProdutos();
   const { data: tipos } = useTiposVeiculo();
   const { data: tiposPorProduto } = useTiposPorProduto();
+  const { data: tiposPorPlano } = useTiposPorPlano();
+  const { data: sugestoesPorPlano } = useSugestoesPorPlano();
   const nomeDoTipo = (id: string) => (tipos ?? []).find((t) => t.id === id)?.nome;
   const salvar = useSavePlano();
   const excluir = useDeletePlano();
@@ -52,7 +59,7 @@ export default function PlanosPage() {
 
   function novo() {
     setEditId(undefined);
-    setEd({ nome: '', descricao_comercial: '', nivel: (planos?.length ?? 0) + 1, ativo: true, semCasco: false, descontoBase: 0, multiplicador: 1, produtosIds: new Set() });
+    setEd({ nome: '', descricao_comercial: '', nivel: (planos?.length ?? 0) + 1, ativo: true, semCasco: false, descontoBase: 0, multiplicador: 1, produtosIds: new Set(), tiposIds: new Set(), sugestoesIds: new Set() });
     setAberto(true);
   }
 
@@ -68,6 +75,8 @@ export default function PlanosPage() {
       descontoBase: Number(p.desconto_base_percentual ?? 0),
       multiplicador: Number(p.multiplicador_participacao ?? 1),
       produtosIds: new Set(),
+      tiposIds: new Set(tiposPorPlano?.[p.id] ?? []),
+      sugestoesIds: new Set(sugestoesPorPlano?.[p.id] ?? []),
     });
     setAberto(true);
   }
@@ -76,8 +85,28 @@ export default function PlanosPage() {
     setEd((e) => {
       if (!e) return e;
       const n = new Set(e.produtosIds);
-      n.has(id) ? n.delete(id) : n.add(id);
-      return { ...e, produtosIds: n };
+      const sug = new Set(e.sugestoesIds);
+      if (n.has(id)) n.delete(id); else { n.add(id); sug.delete(id); }
+      return { ...e, produtosIds: n, sugestoesIds: sug };
+    });
+  }
+
+  function toggleSugestao(id: string) {
+    setEd((e) => {
+      if (!e) return e;
+      const n = new Set(e.sugestoesIds);
+      const inc = new Set(e.produtosIds);
+      if (n.has(id)) n.delete(id); else { n.add(id); inc.delete(id); }
+      return { ...e, sugestoesIds: n, produtosIds: inc };
+    });
+  }
+
+  function toggleTipo(id: string) {
+    setEd((e) => {
+      if (!e) return e;
+      const n = new Set(e.tiposIds);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return { ...e, tiposIds: n };
     });
   }
 
@@ -97,6 +126,8 @@ export default function PlanosPage() {
         desconto_base_percentual: ed.descontoBase,
         multiplicador_participacao: ed.multiplicador,
         produtosIds: [...ed.produtosIds],
+        tiposIds: [...ed.tiposIds],
+        sugestoesIds: [...ed.sugestoesIds],
       },
       {
         onSuccess: () => { toast.success('Plano salvo'); setAberto(false); },
@@ -119,7 +150,7 @@ export default function PlanosPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="max-w-2xl text-sm text-slate-500">
-          Combos comerciais (ex.: Prata, Ouro, Diamante). Todo plano já inclui a cotação base
+          Planos comerciais, cada um oferecido aos tipos de veículo marcados. Todo plano já inclui a cotação base
           (casco + taxa admin + assistência 24h + rastreador se aplicável); aqui você amarra os
           opcionais que compõem cada nível. Plano marcado como <strong>sem proteção de casco</strong>{' '}
           (ex.: só terceiros, rastreamento) não leva o casco da base. O plano pode ter{' '}
@@ -162,30 +193,58 @@ export default function PlanosPage() {
             </FormField>
 
             <div>
-              <p className="mb-1 text-sm font-medium text-slate-600">Opcionais inclusos no plano</p>
-              <div className="max-h-56 space-y-1 overflow-y-auto rounded-lg border border-slate-200 p-2">
-                {opcionais.length === 0 && <p className="p-2 text-xs text-slate-400">Nenhum opcional cadastrado em Produtos.</p>}
-                {opcionais.map((p) => (
-                  <label key={p.id} className="flex items-center justify-between gap-2 rounded px-2 py-1 text-sm hover:bg-slate-50">
-                    <span className="flex items-center gap-2 text-slate-700">
-                      <input
-                        type="checkbox"
-                        checked={ed.produtosIds.has(p.id)}
-                        onChange={() => toggleProduto(p.id)}
-                        className="h-4 w-4 rounded border-slate-300"
-                      />
-                      {p.nome}
-                      <span className="rounded bg-slate-100 px-1.5 text-[10px] uppercase text-slate-500">{p.categoria}</span>
-                    </span>
-                    {tiposPorProduto?.[p.id]?.length ? (
-                      <span className="text-[11px] text-slate-500">só {rotuloTiposDoProduto(p.id, tiposPorProduto, nomeDoTipo)}</span>
-                    ) : null}
+              <p className="mb-1 text-sm font-medium text-slate-600">Oferecido para</p>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 rounded-lg border border-slate-200 p-2">
+                {(tipos ?? []).map((t) => (
+                  <label key={t.id} className="flex items-center gap-2 text-sm text-slate-700">
+                    <input type="checkbox" checked={ed.tiposIds.has(t.id)} onChange={() => toggleTipo(t.id)}
+                      className="h-4 w-4 rounded border-slate-300" />
+                    {t.nome}
                   </label>
                 ))}
               </div>
               <p className="mt-1 text-xs text-slate-400">
-                A cotação base entra automaticamente; marque apenas os adicionais. O plano pode servir
-                vários tipos de veículo: cada veículo só leva (e só paga) o opcional que atende o tipo dele.
+                {ed.tiposIds.size === 0
+                  ? 'Nenhum marcado: o plano aparece para TODOS os tipos de veículo.'
+                  : 'A cotação só oferece este plano para os tipos marcados (sem plano de moto para carro, e vice-versa).'}
+              </p>
+            </div>
+
+            <div>
+              <div className="mb-1 flex items-end justify-between gap-2">
+                <p className="text-sm font-medium text-slate-600">Opcionais do plano</p>
+                <p className="text-[11px] text-slate-400"><b>Incluso</b> = faz parte do plano · <b>Pré-marcado</b> = já vem marcado, o cliente pode tirar ou trocar</p>
+              </div>
+              <div className="max-h-64 space-y-1 overflow-y-auto rounded-lg border border-slate-200 p-2">
+                {opcionais.length === 0 && <p className="p-2 text-xs text-slate-400">Nenhum opcional cadastrado em Produtos.</p>}
+                {opcionais.map((p) => (
+                  <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded px-2 py-1 text-sm hover:bg-slate-50">
+                    <span className="flex min-w-0 items-center gap-2 text-slate-700">
+                      {p.nome}
+                      <span className="rounded bg-slate-100 px-1.5 text-[10px] uppercase text-slate-500">{p.categoria}</span>
+                      {tiposPorProduto?.[p.id]?.length ? (
+                        <span className="text-[11px] text-slate-500">só {rotuloTiposDoProduto(p.id, tiposPorProduto, nomeDoTipo)}</span>
+                      ) : null}
+                    </span>
+                    <span className="flex items-center gap-3">
+                      <label className="flex items-center gap-1 text-xs text-slate-600">
+                        <input type="checkbox" checked={ed.produtosIds.has(p.id)} onChange={() => toggleProduto(p.id)}
+                          className="h-4 w-4 rounded border-slate-300" />
+                        Incluso
+                      </label>
+                      <label className="flex items-center gap-1 text-xs text-slate-600">
+                        <input type="checkbox" checked={ed.sugestoesIds.has(p.id)} onChange={() => toggleSugestao(p.id)}
+                          className="h-4 w-4 rounded border-slate-300" />
+                        Pré-marcado
+                      </label>
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-1 text-xs text-slate-400">
+                A cotação base entra automaticamente. O <b>pré-marcado</b> entra no preço como opcional e o
+                consultor (ou o cliente) tira ou troca na hora — marcar &quot;Parabrisa&quot; troca o &quot;Vidros
+                completo&quot;, uma faixa de terceiros troca a outra. Cada veículo só leva o opcional que atende o tipo dele.
               </p>
             </div>
 
@@ -261,7 +320,12 @@ export default function PlanosPage() {
 function PlanoCard({ plano, onEdit, onDelete }: { plano: PlanosProtecaoRow; onEdit: () => void; onDelete: () => void }) {
   const { data: vinculos } = usePlanoProdutos(plano.id);
   const { data: produtos } = useProdutos();
+  const { data: tipos } = useTiposVeiculo();
+  const { data: tiposPorPlano } = useTiposPorPlano();
+  const { data: sugestoesPorPlano } = useSugestoesPorPlano();
   const nomes = (vinculos ?? []).map((id) => (produtos ?? []).find((p) => p.id === id)?.nome).filter(Boolean);
+  const tiposDoPlano = (tiposPorPlano?.[plano.id] ?? []).map((id) => (tipos ?? []).find((t) => t.id === id)?.nome).filter(Boolean);
+  const premarcados = (sugestoesPorPlano?.[plano.id] ?? []).map((id) => (produtos ?? []).find((p) => p.id === id)?.nome).filter(Boolean);
   return (
     <div className="rounded-xl border border-slate-200 bg-superficie p-4">
       <div className="flex items-start justify-between gap-2">
@@ -280,6 +344,19 @@ function PlanoCard({ plano, onEdit, onDelete }: { plano: PlanosProtecaoRow; onEd
         </div>
       </div>
       {plano.descricao_comercial && <p className="mt-1 text-xs text-slate-500">{plano.descricao_comercial}</p>}
+      <p className="mt-2 text-[11px] text-slate-500">
+        Para: <b>{tiposDoPlano.length ? tiposDoPlano.join(', ') : 'todos os tipos'}</b>
+      </p>
+      {premarcados.length > 0 && (
+        <div className="mt-2">
+          <p className="text-[10px] font-medium uppercase text-slate-400">Pré-marcados (removíveis)</p>
+          <ul className="mt-1 flex flex-wrap gap-1">
+            {premarcados.map((n) => (
+              <li key={n} className="rounded bg-cyan-50 px-2 py-0.5 text-xs text-cyan-700">{n}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       <div className="mt-3">
         <p className="text-[10px] font-medium uppercase text-slate-400">Opcionais</p>
         {nomes.length === 0 ? (

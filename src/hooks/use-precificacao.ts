@@ -379,6 +379,56 @@ export function useProdutosPorPlano() {
   });
 }
 
+/** 0162 — plano -> tipos de veiculo (sem entrada = todos). */
+export function useTiposPorPlano() {
+  const supabase = createClient();
+  return useQuery<Record<string, string[]>>({
+    queryKey: ['precificacao', 'tipos-por-plano'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('plano_tipos_veiculo').select('plano_id, tipo_veiculo_id');
+      if (error) throw error;
+      const mapa: Record<string, string[]> = {};
+      for (const v of data ?? []) (mapa[v.plano_id] ??= []).push(v.tipo_veiculo_id);
+      return mapa;
+    },
+  });
+}
+
+/** 0162 — plano -> opcionais pre-marcados. */
+export function useSugestoesPorPlano() {
+  const supabase = createClient();
+  return useQuery<Record<string, string[]>>({
+    queryKey: ['precificacao', 'sugestoes-por-plano'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('plano_sugestoes').select('plano_id, produto_id');
+      if (error) throw error;
+      const mapa: Record<string, string[]> = {};
+      for (const v of data ?? []) (mapa[v.plano_id] ??= []).push(v.produto_id);
+      return mapa;
+    },
+  });
+}
+
+/**
+ * 0162 — o modelo do catalogo (Configuracoes > Marcas e Modelos) mais parecido
+ * com a marca/modelo da FIPE, com a cota de participacao dele.
+ */
+export function useModeloDoCatalogo(marca?: string | null, modelo?: string | null) {
+  const supabase = createClient();
+  const m = (marca ?? '').trim();
+  const md = (modelo ?? '').trim();
+  return useQuery({
+    queryKey: ['precificacao', 'modelo-do-catalogo', m, md],
+    enabled: m.length >= 2 && md.length >= 2,
+    staleTime: 10 * 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('modelo_do_catalogo', { p_marca: m, p_modelo: md });
+      if (error) throw error;
+      return (data ?? [])[0] ?? null;
+    },
+  });
+}
+
 export function useSavePlano() {
   const supabase = createClient();
   const qc = useQueryClient();
@@ -386,9 +436,13 @@ export function useSavePlano() {
     string,
     Error,
     { id?: string; nome: string; descricao_comercial?: string | null; nivel?: number; ativo?: boolean; sem_casco?: boolean;
-      desconto_base_percentual?: number; multiplicador_participacao?: number; produtosIds: string[] }
+      desconto_base_percentual?: number; multiplicador_participacao?: number; produtosIds: string[];
+      /** 0162 — vazio = todos os tipos. */
+      tiposIds?: string[];
+      /** 0162 — opcionais pre-marcados. */
+      sugestoesIds?: string[] }
   >({
-    mutationFn: async ({ id, nome, descricao_comercial, nivel, ativo, sem_casco, desconto_base_percentual, multiplicador_participacao, produtosIds }) => {
+    mutationFn: async ({ id, nome, descricao_comercial, nivel, ativo, sem_casco, desconto_base_percentual, multiplicador_participacao, produtosIds, tiposIds, sugestoesIds }) => {
       const payload = {
         nome: nome.trim(),
         descricao_comercial: descricao_comercial ?? null,
@@ -417,12 +471,33 @@ export function useSavePlano() {
           .insert(produtosIds.map((pid) => ({ plano_id: planoId!, produto_id: pid })));
         if (insErr) throw insErr;
       }
+      if (tiposIds) {
+        const { error: e1 } = await supabase.from('plano_tipos_veiculo').delete().eq('plano_id', planoId!);
+        if (e1) throw e1;
+        if (tiposIds.length > 0) {
+          const { error: e2 } = await supabase.from('plano_tipos_veiculo')
+            .insert(tiposIds.map((t) => ({ plano_id: planoId!, tipo_veiculo_id: t })));
+          if (e2) throw e2;
+        }
+      }
+      if (sugestoesIds) {
+        const { error: e1 } = await supabase.from('plano_sugestoes').delete().eq('plano_id', planoId!);
+        if (e1) throw e1;
+        const livres = sugestoesIds.filter((s) => !produtosIds.includes(s));
+        if (livres.length > 0) {
+          const { error: e2 } = await supabase.from('plano_sugestoes')
+            .insert(livres.map((pid) => ({ plano_id: planoId!, produto_id: pid })));
+          if (e2) throw e2;
+        }
+      }
       return planoId!;
     },
     onSuccess: (planoId) => {
       qc.invalidateQueries({ queryKey: ['precificacao', 'planos'] });
       qc.invalidateQueries({ queryKey: ['precificacao', 'plano-produtos', planoId] });
       qc.invalidateQueries({ queryKey: ['precificacao', 'produtos-por-plano'] });
+      qc.invalidateQueries({ queryKey: ['precificacao', 'tipos-por-plano'] });
+      qc.invalidateQueries({ queryKey: ['precificacao', 'sugestoes-por-plano'] });
     },
   });
 }

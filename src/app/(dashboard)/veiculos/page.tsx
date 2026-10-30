@@ -17,7 +17,8 @@ import { useAdiado } from '@/hooks/use-adiado';
 import { SITUACOES_LISTA, type SituacaoLista } from '@/lib/busca-cadastro';
 import { useRegionais, useVendedores, useUsuarios, useMarcas, useModelos } from '@/hooks/use-config';
 import { rotuloUnidade } from '@/lib/regional';
-import { useTiposVeiculo, usePlanos, useProdutos, useProdutosPorPlano, useTiposPorProduto } from '@/hooks/use-precificacao';
+import { useTiposVeiculo, usePlanos, useProdutos, useProdutosPorPlano, useTiposPorProduto, useTiposPorPlano } from '@/hooks/use-precificacao';
+import { planoAtendeTipo } from '@/lib/planos-oferta';
 import { produtoAtendeTipo, produtosParaTipo, regraRastreadorCobra, semRastreadorDaRegra } from '@/lib/produtos';
 import { useVeiculosPagina, useVeiculo, useSaveVeiculo, useExcluirVeiculo } from '@/hooks/use-veiculos';
 import { useEmpresasRastreamento } from '@/hooks/use-rastreamento';
@@ -110,6 +111,7 @@ function VeiculosConteudo() {
   const { data: marcas } = useMarcas();
   const { data: tiposVeiculo } = useTiposVeiculo();
   const { data: planos } = usePlanos();
+  const { data: tiposPorPlano } = useTiposPorPlano();
   const { data: produtos } = useProdutos();
   const { data: produtosPorPlano } = useProdutosPorPlano();
   const { data: tiposPorProduto } = useTiposPorProduto();
@@ -782,7 +784,8 @@ function VeiculosConteudo() {
             <FormField label="Plano de proteção">
               <Select value={form.plano_protecao_id ?? ''} onChange={(e) => trocarPlano(e.target.value || null)}>
                 <option value="">-- Sem plano --</option>
-                {(planos ?? []).filter((p) => p.ativo).map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                {(planos ?? []).filter((p) => p.id === form.plano_protecao_id || (p.ativo && planoAtendeTipo(p.id, form.tipo_veiculo_id, tiposPorPlano)))
+                  .map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
               </Select>
             </FormField>
 

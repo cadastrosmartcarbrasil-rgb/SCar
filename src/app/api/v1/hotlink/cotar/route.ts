@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { normalizarPlaca } from '@/lib/placa';
 import type { CotacaoPlano } from '@/lib/database.types';
+import { ofertaDosPlanos } from '@/lib/hotlink-planos-server';
 
 /**
  * Cotacao publica do hotlink.
@@ -66,10 +67,12 @@ export async function POST(req: Request) {
     .eq('ativo', true)
     .order('nivel');
 
+  // 0162 — so os planos do tipo, cada um com os opcionais pre-marcados.
+  const oferta = await ofertaDosPlanos(admin, tipoVeiculoId);
   const cotados = [];
-  for (const p of planos ?? []) {
+  for (const p of (planos ?? []).filter((x) => oferta.atende(x.id))) {
     const { data, error } = await admin.rpc('cotar_plano', {
-      p_fipe: valorFipe, p_tipo_veiculo_id: tipoVeiculoId, p_plano_id: p.id, p_avulsos_ids: [],
+      p_fipe: valorFipe, p_tipo_veiculo_id: tipoVeiculoId, p_plano_id: p.id, p_avulsos_ids: oferta.avulsosDo(p.id),
       p_regional_id: regionalPreco ?? null,
     });
     if (error) continue;

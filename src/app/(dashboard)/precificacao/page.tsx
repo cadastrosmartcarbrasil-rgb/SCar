@@ -6,7 +6,8 @@ import { Calculator, Loader2, Table2, Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FormField, Input, Select } from '@/components/ui/field';
-import { useTiposVeiculo, useProdutos, useSimularPreco, useCotasParticipacao, usePlanos, useTiposPorProduto, type ResultadoSimulacao } from '@/hooks/use-precificacao';
+import { useTiposVeiculo, useProdutos, useSimularPreco, useCotasParticipacao, usePlanos, useTiposPorProduto, useTiposPorPlano, type ResultadoSimulacao } from '@/hooks/use-precificacao';
+import { planoAtendeTipo } from '@/lib/planos-oferta';
 import { produtosParaTipo, regraRastreadorCobra, semRastreadorDaRegra } from '@/lib/produtos';
 import { TabelaPrecosEditor } from '@/components/precificacao/tabela-precos-editor';
 import { ImportarTabela } from '@/components/precificacao/importar-tabela';
@@ -48,6 +49,7 @@ function Simulador() {
   const { data: tiposPorProduto } = useTiposPorProduto();
   const { data: cotas } = useCotasParticipacao();
   const { data: planos } = usePlanos();
+  const { data: tiposPorPlano } = useTiposPorPlano();
   const { data: regionais } = useRegionais();
   const simular = useSimularPreco();
 
@@ -133,7 +135,7 @@ function Simulador() {
               <FormField label="Plano / Combo (opcional)">
                 <Select value={planoId} onChange={(e) => setPlanoId(e.target.value)}>
                   <option value="">Sem combo (base + avulsos)</option>
-                  {(planos ?? []).filter((p) => p.ativo).map((p) => (
+                  {(planos ?? []).filter((p) => p.ativo && planoAtendeTipo(p.id, tipoVeiculoId, tiposPorPlano)).map((p) => (
                     <option key={p.id} value={p.id}>{p.nome}</option>
                   ))}
                 </Select>

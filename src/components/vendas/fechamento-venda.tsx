@@ -13,7 +13,8 @@ import {
   useUrlAssinadaVendas, useVendedoresDaRegional,
   useAdesaoTabela,
 } from '@/hooks/use-vendas';
-import { usePlanos } from '@/hooks/use-precificacao';
+import { usePlanos, useTiposPorPlano } from '@/hooks/use-precificacao';
+import { planoAtendeTipo } from '@/lib/planos-oferta';
 import { buscarCep } from '@/lib/cep';
 import { formatarDocumento, validarDocumento } from '@/lib/documento';
 import { maskCelular, formatCurrency } from '@/lib/utils';
@@ -65,6 +66,7 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
 
   const { data: checklist } = useChecklistLead(lead.id);
   const { data: planos } = usePlanos();
+  const { data: tiposPorPlano } = useTiposPorPlano();
   const { data: vendedores } = useVendedoresDaRegional(lead.regional_id);
   const salvar = useSalvarFichaLead();
   const buscarAssociado = useBuscarAssociadoPorDocumento();
@@ -466,7 +468,8 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
             <FormField label="Plano contratado *">
               <Select value={form.plano_id ?? ''} onChange={(e) => set({ plano_id: e.target.value || null })}>
                 <option value="">-- Selecione --</option>
-                {(planos ?? []).map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                {(planos ?? []).filter((p) => p.id === form.plano_id || (p.ativo && planoAtendeTipo(p.id, form.tipo_veiculo_id, tiposPorPlano)))
+                  .map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
               </Select>
             </FormField>
           </div>

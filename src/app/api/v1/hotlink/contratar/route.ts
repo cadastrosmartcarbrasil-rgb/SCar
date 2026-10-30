@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { validarDocumento } from '@/lib/documento';
 import type { CotacaoItem, CotacaoPlano } from '@/lib/database.types';
+import { ofertaDosPlanos } from '@/lib/hotlink-planos-server';
 
 /**
  * Aceite da proposta na pagina do hotlink.
@@ -51,10 +52,17 @@ export async function POST(req: Request) {
     p_lead_id: lead.id,
   });
 
+  // 0162 — o mesmo pacote que a tela de planos mostrou (pre-marcados do plano).
+  const oferta = await ofertaDosPlanos(admin, lead.tipo_veiculo_id);
+  if (!oferta.atende(planoId)) {
+    return NextResponse.json({ error: 'Este plano não é oferecido para o seu veículo' }, { status: 400 });
+  }
+  const avulsos = oferta.avulsosDo(planoId);
+
   const [cot, part] = await Promise.all([
     admin.rpc('cotar_plano', {
       p_fipe: lead.valor_fipe, p_tipo_veiculo_id: lead.tipo_veiculo_id,
-      p_plano_id: planoId, p_avulsos_ids: [],
+      p_plano_id: planoId, p_avulsos_ids: avulsos,
       p_regional_id: regionalPreco ?? null,
     }),
     admin.rpc('participacao_do_plano', {
@@ -78,7 +86,7 @@ export async function POST(req: Request) {
       tipo_veiculo_id: lead.tipo_veiculo_id,
       cota_participacao_id: lead.cota_participacao_id ?? null,
       plano_id: planoId,
-      opcionais_ids: [],
+      opcionais_ids: avulsos,
       itens,
       total_mensalidade: calc.valor_total_mensalidade,
       participacao: Number(part.data ?? calc.franquia_participacao ?? 0),
