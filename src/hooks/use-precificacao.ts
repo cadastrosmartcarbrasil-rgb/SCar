@@ -125,6 +125,19 @@ export function useSaveTipoVeiculo() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['precificacao', 'tipos-veiculo'] }),
   });
 }
+/** 0164 — km do reboque (ida/volta) que a proposta mostra para o tipo. */
+export function useSaveKmReboqueTipo() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (a: { id: string; ida: number | null; volta: number | null }) => {
+      const { error } = await supabase.from('tipos_veiculo')
+        .update({ km_reboque_ida: a.ida, km_reboque_volta: a.volta }).eq('id', a.id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['precificacao', 'tipos-veiculo'] }),
+  });
+}
 export function useDeleteTipoVeiculo() {
   const supabase = createClient();
   const qc = useQueryClient();

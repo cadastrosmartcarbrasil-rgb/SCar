@@ -120,7 +120,9 @@ function caminhoChromium(): string {
  * saem sempre iguais). Uma instancia por chamada: emissao e rara, e o
  * navegador nao fica ocupando memoria no conteiner entre uma e outra.
  */
-export async function gerarPdf(html: string): Promise<Buffer> {
+export async function gerarPdf(html: string, opcoes: { rodape?: boolean } = {}): Promise<Buffer> {
+  // Proposta comercial (30/10/2026): folhas sem o rodape "Pagina x de y" dos termos.
+  const rodape = opcoes.rodape !== false;
   const puppeteer = await import('puppeteer-core');
   const browser = await puppeteer.launch({
     executablePath: caminhoChromium(),
@@ -140,7 +142,7 @@ export async function gerarPdf(html: string): Promise<Buffer> {
       format: 'A4',
       printBackground: true,
       preferCSSPageSize: true,
-      displayHeaderFooter: true,
+      displayHeaderFooter: rodape,
       headerTemplate: '<span></span>',
       footerTemplate: '<div style="font-size:7pt;color:#4b5873;width:100%;text-align:center;">'
         + 'Página <span class="pageNumber"></span> de <span class="totalPages"></span></div>',

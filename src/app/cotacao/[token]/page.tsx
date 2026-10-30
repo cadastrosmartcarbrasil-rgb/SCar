@@ -1,132 +1,38 @@
+import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
+import type { Metadata } from 'next';
+import { carregarProposta, qrDaProposta } from '@/lib/proposta-server';
+import { origemDaRequisicao } from '@/lib/api-externa-doc';
+import { PropostaCapa, PropostaCondicoes, PropostaPlano } from '@/components/proposta/documento';
+import { VisorProposta } from '@/components/proposta/visor-proposta';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { formatCurrency } from '@/lib/utils';
-import { itensParaCliente, totalDoCliente } from '@/lib/assistencia-profissional';
-import { LogoSmartCar } from '@/components/hotlink/marca';
-import { PrintButton } from './print-button';
 
-// Cotacao publica (link compartilhavel enviado ao cliente). Sem login.
-// Busca via service_role (bypassa RLS) restrita ao token informado.
+// Proposta publica (link enviado ao cliente), sem login. PROPOSTA v2
+// (30/10/2026): as 3 folhas A4 da proposta comercial, as mesmas do PDF
+// (/api/v1/cotacoes/pdf). Leitura via service_role restrita ao token.
 export const dynamic = 'force-dynamic';
 
+export const metadata: Metadata = { title: 'Proposta de proteção veicular', robots: { index: false } };
+
 export default async function CotacaoPublicaPage({ params }: { params: { token: string } }) {
-  const supabase = createAdminClient();
+  const proposta = await carregarProposta(params.token, origemDaRequisicao(headers()));
+  if (!proposta) notFound();
+  const { dados } = proposta;
 
-  // Duas consultas em vez de um embed `cotacoes -> leads`. Desde que
-  // `leads.aceite_cotacao_id` (0042) passou a apontar de volta para `cotacoes`,
-  // existem DUAS relacoes entre as tabelas e o embed vira ambiguo: o PostgREST
-  // devolve erro, `data` fica nulo e a pagina caia em 404. Sem embed, nenhuma
-  // chave estrangeira futura quebra este link publico de novo.
-  const { data: cot } = await supabase
-    .from('cotacoes')
-    .select('*')
-    .eq('token', params.token)
-    .maybeSingle();
-
-  if (!cot) notFound();
-
-  const [{ data: lead }, { data: empresa }] = await Promise.all([
-    supabase
-      .from('leads')
-      .select('nome, placa, marca, modelo, ano_modelo, valor_fipe')
-      .eq('id', cot.lead_id)
-      .maybeSingle(),
-    supabase
-      .from('empresa')
-      .select('razao_social, nome_fantasia, logo_url, whatsapp_principal')
-      .limit(1)
-      .maybeSingle(),
+  const [qr, { data: empresa }] = await Promise.all([
+    qrDaProposta(dados.link),
+    createAdminClient().from('empresa').select('whatsapp_principal').limit(1).maybeSingle(),
   ]);
-  const detalhada = cot.modo_envio !== 'CONSOLIDADA';
-  // 0158: a Assistencia Profissional nao tem linha — soma na Taxa Administrativa
-  // para a soma dos itens bater; o total ja a inclui (total_com_desconto).
-  const itens = itensParaCliente(Array.isArray(cot.itens) ? cot.itens : [], cot.valor_assistencia_profissional);
-  const nomeEmpresa = empresa?.nome_fantasia || empresa?.razao_social || 'Proteção Veicular';
+  const logo = proposta.logoUrl ?? '/logo-smartcar.svg';
+  // WhatsApp: o do consultor; sem ele, o da empresa.
+  const whatsapp = (dados.consultor?.telefone ?? empresa?.whatsapp_principal ?? '').replace(/\D/g, '');
 
   return (
-    <main className="mx-auto min-h-screen max-w-md bg-slate-50 px-4 py-6 text-slate-800">
-      <div className="overflow-hidden rounded-2xl bg-superficie shadow-sm ring-1 ring-slate-200">
-        {/* Cabecalho */}
-        {/* A marca vem de Configuracoes -> Empresa; o SVG e so o fallback. */}
-        <div className="flex items-center justify-center border-b border-slate-100 bg-superficie px-5 py-4">
-          <LogoSmartCar url={empresa?.logo_url} className="max-h-14 w-auto object-contain" />
-        </div>
-        <div className="bg-faixa px-5 py-2 text-center text-[10.5px] font-semibold uppercase tracking-[0.2em] text-white/90">
-          {nomeEmpresa}
-        </div>
-
-        <div className="px-5 py-5">
-          <p className="text-xs uppercase tracking-wide text-slate-400">Proposta de proteção veicular</p>
-          <h1 className="mt-1 text-lg font-semibold text-slate-900">Olá, {lead?.nome ?? 'Cliente'}!</h1>
-
-          {/* Veiculo */}
-          <div className="mt-4 rounded-xl bg-slate-50 p-4 text-sm">
-            <p className="font-medium text-slate-800">
-              {[lead?.marca, lead?.modelo].filter(Boolean).join(' ') || 'Veiculo'}
-              {lead?.ano_modelo ? ` ${lead.ano_modelo}` : ''}
-            </p>
-            <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
-              {lead?.placa && <span>Placa: <b className="font-mono">{lead.placa}</b></span>}
-              {lead?.valor_fipe != null && <span>FIPE: {formatCurrency(lead.valor_fipe)}</span>}
-            </div>
-          </div>
-
-          {/* Itens (modo detalhado) */}
-          {detalhada && itens.length > 0 && (
-            <div className="mt-5">
-              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">O que está incluso</p>
-              <ul className="divide-y divide-slate-100">
-                {itens.map((i, idx) => (
-                  <li key={idx} className="flex items-center justify-between py-2 text-sm">
-                    <span className="text-slate-700">
-                      {i.nome}
-                      {!i.obrigatorio && <span className="ml-1 text-[10px] uppercase text-brand-500">opcional</span>}
-                    </span>
-                    <span className="font-medium text-slate-900">{formatCurrency(i.valor)}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Total */}
-          <div className="mt-5 rounded-xl bg-brand-50 p-4 text-center">
-            <p className="text-xs uppercase tracking-wide text-brand-600">Mensalidade</p>
-            <p className="text-3xl font-bold text-brand-700">{formatCurrency(totalDoCliente(cot))}</p>
-            <p className="mt-1 text-xs text-slate-500">por mês</p>
-          </div>
-
-          {/* Taxa de adesao (cobranca unica) */}
-          {cot.taxa_adesao > 0 && (
-            <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-center text-xs text-emerald-800">
-              Taxa de adesão (cobrança única): <b>{formatCurrency(cot.taxa_adesao)}</b>
-            </p>
-          )}
-
-          {/* Participacao */}
-          {cot.participacao > 0 && (
-            <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-              Participação (cota de rateio) em caso de evento: <b>{formatCurrency(cot.participacao)}</b>
-            </p>
-          )}
-
-          <div className="mt-6 flex flex-col gap-2">
-            {empresa?.whatsapp_principal && (
-              <a
-                href={`https://wa.me/55${empresa.whatsapp_principal.replace(/\D/g, '')}`}
-                className="rounded-xl bg-emerald-500 px-4 py-3 text-center text-sm font-medium text-white"
-              >
-                Falar com um consultor
-              </a>
-            )}
-            <PrintButton />
-          </div>
-
-          <p className="mt-4 text-center text-[10px] text-slate-400">
-            Valores sujeitos a análise e aprovação. {nomeEmpresa}.
-          </p>
-        </div>
-      </div>
-    </main>
+    <VisorProposta folhas={3} token={dados.token} whatsapp={whatsapp.length >= 10 ? whatsapp : null}
+      aceite={dados.aceite} placa={dados.veiculo.placa}>
+      <PropostaCapa d={dados} logo={logo} />
+      <PropostaPlano d={dados} logo={logo} />
+      <PropostaCondicoes d={dados} logo={logo} qr={qr} />
+    </VisorProposta>
   );
 }

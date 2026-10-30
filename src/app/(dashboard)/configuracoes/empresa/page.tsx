@@ -240,6 +240,25 @@ export default function EmpresaPage() {
             </CardContent>
           </Card>
 
+          {/* Proposta comercial (0164) */}
+          <Card>
+            <CardContent className="space-y-3 pt-5">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-700">Proposta comercial</h2>
+                <p className="mt-1 text-xs text-slate-500">
+                  A proposta enviada ao cliente mostra &quot;válida até&quot; a data da cotação mais estes dias.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <FormField label="Validade da proposta (dias)">
+                  <Input type="number" min={1} max={180}
+                    value={form.validade_proposta_dias ?? 30}
+                    onChange={(e) => setF({ validade_proposta_dias: Number(e.target.value) })} />
+                </FormField>
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="flex justify-end">
             <Button type="submit" disabled={salvar.isPending}>{salvar.isPending ? 'Salvando...' : 'Salvar empresa'}</Button>
           </div>

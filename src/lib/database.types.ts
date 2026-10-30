@@ -1982,6 +1982,9 @@ export type TiposVeiculoRow = Timestamps & {
   exige_rastreador: boolean;
   valor_limite_isencao: number;
   valor_mensalidade_rastreador: number;
+  /** 0164 — km do reboque da Assistencia 24h mostrado na proposta (nulo = nao informado). */
+  km_reboque_ida: number | null;
+  km_reboque_volta: number | null;
 };
 
 export type ProdutosRow = Timestamps & {
@@ -2979,6 +2982,8 @@ export type EmpresaRow = Timestamps & {
   painel_conta_ate: string | null;
   // Link do regulamento citado nos termos (0123).
   regulamento_url: string | null;
+  /** 0164 — dias de validade da proposta comercial. */
+  validade_proposta_dias: number;
 };
 
 export type MandatosRow = Timestamps & {
