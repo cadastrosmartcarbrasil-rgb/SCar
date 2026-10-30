@@ -3649,6 +3649,10 @@ Pedido do usuário (30/10/2026), na nova cotação. Os planos Ouro/Prata/Diamant
   Configurações → Planos → *Oferecido para*. A cotação (CRM, portal do vendedor, edição da cotação, hotlink, simulador,
   ficha do veículo e fechamento) só oferece o plano do tipo; o plano já gravado continua na lista. O banco recusa a
   cotação com plano de outro tipo (`trg_cotacao_plano_do_tipo`, só quando plano/tipo MUDA). Puro: `src/lib/planos-oferta.ts`.
+- **✅ Tipos gravados em produção (30/10/2026, autorizado):** nenhum plano tinha *Oferecido para* marcado e o Onix via
+  plano de moto e de pesado. Gravado: ESSENCIAL - VEÍCULOS, ECONÔMICO e Roubo e Furto → Passeio, Pick-up/Van, Utilitário ·
+  MOTOCICLETA ESSENCIAL → Moto · PESADOS BÁSICO e DIESEL MIGRADO MUTUAL → Caminhão Pesado, Diesel Leve · RASTREAMENTO →
+  RASTREAMENTO SEM PROTEÇÃO. Plano sem tipo aparece em âmbar em Configurações → Planos (vale para todos).
 - **Benefícios pré-marcados:** `plano_sugestoes` — opcionais que já vêm MARCADOS (como avulso) ao escolher o plano;
   Configurações → Planos, coluna *Pré-marcado* (ao lado de *Incluso*, que é item do plano). Na cotação, o plano escolhido
   leva o que o consultor marcou e os outros cards mostram o preço com os pré-marcados deles; trocar de plano recomeça dos

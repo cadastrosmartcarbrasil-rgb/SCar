@@ -205,7 +205,7 @@ export default function PlanosPage() {
               </div>
               <p className="mt-1 text-xs text-slate-400">
                 {ed.tiposIds.size === 0
-                  ? 'Nenhum marcado: o plano aparece para TODOS os tipos de veículo.'
+                  ? 'Nenhum marcado: o plano aparece para TODOS os tipos de veículo (carro, moto e pesado).'
                   : 'A cotação só oferece este plano para os tipos marcados (sem plano de moto para carro, e vice-versa).'}
               </p>
             </div>
@@ -344,9 +344,16 @@ function PlanoCard({ plano, onEdit, onDelete }: { plano: PlanosProtecaoRow; onEd
         </div>
       </div>
       {plano.descricao_comercial && <p className="mt-1 text-xs text-slate-500">{plano.descricao_comercial}</p>}
-      <p className="mt-2 text-[11px] text-slate-500">
-        Para: <b>{tiposDoPlano.length ? tiposDoPlano.join(', ') : 'todos os tipos'}</b>
-      </p>
+      {tiposDoPlano.length ? (
+        <p className="mt-2 text-[11px] text-slate-500">
+          Para: <b>{tiposDoPlano.join(', ')}</b>
+        </p>
+      ) : (
+        <p className="mt-2 rounded bg-amber-50 px-2 py-1 text-[11px] text-amber-800">
+          Oferecido para <b>todos os tipos</b> de veículo. Edite e marque <b>Oferecido para</b> para
+          o plano não aparecer na cotação de carro, moto e pesado ao mesmo tempo.
+        </p>
+      )}
       {premarcados.length > 0 && (
         <div className="mt-2">
           <p className="text-[10px] font-medium uppercase text-slate-400">Pré-marcados (removíveis)</p>
