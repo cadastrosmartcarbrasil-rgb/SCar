@@ -10,6 +10,7 @@ import { formatarMoedaBR } from '@/lib/money';
 import { formatarDocumento } from '@/lib/documento';
 import { normalizarPlaca } from '@/lib/placa';
 import type { PlanoCotado, TipoVeiculoPublico } from '@/lib/venda-publica';
+import { planoInicial, valorVisivel } from '@/lib/planos-oferta';
 import {
   ORDEM_ETAPAS, linkWhatsApp, mensagemDaProposta, mensagemDeErro, placaCompleta, podeAvancar,
 } from '@/lib/venda-publica';
@@ -56,6 +57,8 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
   >(null);
   const [planos, setPlanos] = useState<PlanoCotado[]>([]);
   const [planoId, setPlanoId] = useState('');
+  // 0163 — os planos fora do preferencial so mostram o valor depois do clique.
+  const [revelados, setRevelados] = useState<Set<string>>(new Set());
 
   const [aceite, setAceite] = useState({ nome: '', documento: '', por: 'CLIENTE', marcado: false });
   const [contratado, setContratado] = useState<
@@ -149,7 +152,7 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
       );
       if (!veiculo) setVeiculo({ marca: null, modelo: null, ano: null, valor_fipe: Number(r.valor_fipe) });
       setPlanos(r.planos);
-      setPlanoId(r.planos[Math.min(1, r.planos.length - 1)]?.plano_id ?? '');
+      setPlanoId(planoInicial(r.planos, r.planos[Math.min(1, r.planos.length - 1)])?.plano_id ?? '');
       setEtapa('planos');
     } catch (err) {
       setErro((err as Error).message);
@@ -396,9 +399,11 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
           <div className="mt-4 space-y-3">
             {planos.map((p) => {
               const ativo = p.plano_id === planoId;
+              const mostraValor = ativo || valorVisivel(p, planos, revelados, p.plano_id);
               return (
                 <button
-                  key={p.plano_id} type="button" onClick={() => setPlanoId(p.plano_id)}
+                  key={p.plano_id} type="button"
+                  onClick={() => { setPlanoId(p.plano_id); setRevelados((r) => new Set(r).add(p.plano_id)); }}
                   className={`w-full rounded-2xl border p-4 text-left transition ${
                     ativo
                       ? 'border-cyan-500 bg-cyan-50/50 ring-1 ring-cyan-400'
@@ -406,16 +411,31 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-[15px] font-bold text-brand-800">{p.nome}</p>
+                      <p className="flex items-center gap-1.5 text-[15px] font-bold text-brand-800">
+                        {p.nome}
+                        {p.preferencial && (
+                          <span className="rounded-full bg-cyan-100 px-1.5 py-0.5 text-[9.5px] font-bold uppercase text-cyan-800">
+                            recomendado
+                          </span>
+                        )}
+                      </p>
                       {p.descricao && (
                         <p className="mt-0.5 text-[11.5px] leading-relaxed text-slate-500">{p.descricao}</p>
                       )}
                     </div>
                     <div className="shrink-0 text-right">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">por mês</p>
-                      <p className="tnum text-[20px] font-bold leading-tight text-brand-700">
-                        {dinheiro(p.mensalidade)}
-                      </p>
+                      {mostraValor ? (
+                        <>
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">por mês</p>
+                          <p className="tnum text-[20px] font-bold leading-tight text-brand-700">
+                            {dinheiro(p.mensalidade)}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="rounded-lg border border-slate-200 px-2 py-1 text-[11px] font-semibold text-cyan-700">
+                          Toque para ver o valor
+                        </p>
+                      )}
                     </div>
                   </div>
                   {ativo && p.itens.length > 0 && (

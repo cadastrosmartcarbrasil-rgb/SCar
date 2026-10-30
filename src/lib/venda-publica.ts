@@ -17,6 +17,8 @@ export interface PlanoCotado {
   nome: string;
   descricao: string | null;
   nivel: number | null;
+  /** 0163 — no topo e ja escolhido; os outros mostram o valor so no clique. */
+  preferencial?: boolean;
   mensalidade: number;
   adesao: number;
   participacao: number;

@@ -435,20 +435,21 @@ export function useSavePlano() {
   return useMutation<
     string,
     Error,
-    { id?: string; nome: string; descricao_comercial?: string | null; nivel?: number; ativo?: boolean; sem_casco?: boolean;
+    { id?: string; nome: string; descricao_comercial?: string | null; nivel?: number; ativo?: boolean; sem_casco?: boolean; preferencial?: boolean;
       desconto_base_percentual?: number; multiplicador_participacao?: number; produtosIds: string[];
       /** 0162 — vazio = todos os tipos. */
       tiposIds?: string[];
       /** 0162 — opcionais pre-marcados. */
       sugestoesIds?: string[] }
   >({
-    mutationFn: async ({ id, nome, descricao_comercial, nivel, ativo, sem_casco, desconto_base_percentual, multiplicador_participacao, produtosIds, tiposIds, sugestoesIds }) => {
+    mutationFn: async ({ id, nome, descricao_comercial, nivel, ativo, sem_casco, preferencial, desconto_base_percentual, multiplicador_participacao, produtosIds, tiposIds, sugestoesIds }) => {
       const payload = {
         nome: nome.trim(),
         descricao_comercial: descricao_comercial ?? null,
         nivel: nivel ?? 0,
         ativo: ativo ?? true,
         sem_casco: sem_casco ?? false,
+        preferencial: preferencial ?? false,
         // 0160 — Plano Economico: desconto na base e participacao multiplicada.
         desconto_base_percentual: desconto_base_percentual ?? 0,
         multiplicador_participacao: multiplicador_participacao ?? 1,

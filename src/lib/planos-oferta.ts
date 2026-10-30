@@ -64,3 +64,32 @@ export function sugestoesDoPlano(
   if (!planoId) return [];
   return (mapa?.[planoId] ?? []).filter((id) => oferecidos.includes(id) && !incluidosNoPlano.includes(id));
 }
+
+// ---------------------------------------------------------------------------
+// PLANO PREFERENCIAL (0163) — pedido do usuario (30/10/2026): o preferencial
+// aparece no TOPO e ja vem escolhido; os demais aparecem SEM o valor ate o
+// consultor (ou o cliente) clicar neles. Sem preferencial entre os oferecidos,
+// nada se esconde (esconder tudo seria pior que o de antes).
+// ---------------------------------------------------------------------------
+export type PlanoOrdenavel = { plano_id: string | null; preferencial?: boolean | null };
+
+/** Preferenciais primeiro; o resto mantem a ordem que veio (nivel, nome). */
+export function ordenarPorPreferencia<T extends PlanoOrdenavel>(planos: T[]): T[] {
+  return planos
+    .map((p, i) => ({ p, i }))
+    .sort((a, b) => Number(!!b.p.preferencial) - Number(!!a.p.preferencial) || a.i - b.i)
+    .map((x) => x.p);
+}
+
+/** O plano que ja vem escolhido: o preferencial; sem ele, `reserva` (a regra antiga da tela). */
+export function planoInicial<T extends PlanoOrdenavel>(planos: T[], reserva: T | null | undefined): T | null {
+  return planos.find((p) => p.preferencial) ?? reserva ?? planos[0] ?? null;
+}
+
+/** O valor deste plano ja pode aparecer? */
+export function valorVisivel(
+  plano: PlanoOrdenavel, todos: PlanoOrdenavel[], revelados: ReadonlySet<string>, chave: string,
+): boolean {
+  if (!todos.some((p) => p.preferencial)) return true;
+  return !!plano.preferencial || revelados.has(chave);
+}

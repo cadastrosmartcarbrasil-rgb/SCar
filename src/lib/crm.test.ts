@@ -17,6 +17,7 @@ import {
   camposGravaveisDoLead,
   filtroBuscaLeads,
   leadCasaComBusca,
+  percentualParaValorFinal,
 } from './crm';
 import type { CotacaoItem, StatusLead } from '@/lib/database.types';
 
@@ -298,5 +299,18 @@ describe('leadCasaComBusca', () => {
   it('termo curto nao esconde ninguem', () => {
     expect(leadCasaComBusca(lead, '')).toBe(true);
     expect(leadCasaComBusca(lead, 'a')).toBe(true);
+  });
+});
+
+describe('desconto pelo valor final', () => {
+  it('acha o % que leva a tabela ao valor desejado', () => {
+    expect(percentualParaValorFinal(135, 121.5)).toBe(10);
+    expect(percentualParaValorFinal(200, 189)).toBe(5.5);
+  });
+  it('nao aumenta preco e nao passa de 100', () => {
+    expect(percentualParaValorFinal(135, 150)).toBe(0);
+    expect(percentualParaValorFinal(135, -10)).toBe(100);
+    expect(percentualParaValorFinal(0, 50)).toBe(0);
+    expect(percentualParaValorFinal(135, null)).toBe(0);
   });
 });

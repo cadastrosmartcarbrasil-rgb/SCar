@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { normalizarPlaca } from '@/lib/placa';
 import type { CotacaoPlano } from '@/lib/database.types';
 import { ofertaDosPlanos } from '@/lib/hotlink-planos-server';
+import { ordenarPorPreferencia } from '@/lib/planos-oferta';
 
 /**
  * Cotacao publica do hotlink.
@@ -63,9 +64,10 @@ export async function POST(req: Request) {
   // 4) Um preco por plano ativo.
   const { data: planos } = await admin
     .from('planos_protecao')
-    .select('id, nome, descricao_comercial, nivel')
+    .select('id, nome, descricao_comercial, nivel, preferencial')
     .eq('ativo', true)
-    .order('nivel');
+    .order('nivel')
+    .order('nome');
 
   // 0162 — so os planos do tipo, cada um com os opcionais pre-marcados.
   const oferta = await ofertaDosPlanos(admin, tipoVeiculoId);
@@ -82,6 +84,7 @@ export async function POST(req: Request) {
       nome: p.nome,
       descricao: p.descricao_comercial,
       nivel: p.nivel,
+      preferencial: !!p.preferencial,
       mensalidade: Number(c.valor_total_mensalidade ?? 0),
       adesao: Number(c.taxa_adesao ?? 0),
       participacao: Number(c.franquia_participacao ?? 0),
@@ -94,5 +97,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Não há planos disponíveis para este veículo agora.' }, { status: 422 });
   }
 
-  return NextResponse.json({ ok: true, valor_fipe: valorFipe, planos: cotados });
+  // 0163 — o preferencial no topo (a pagina ja o deixa escolhido).
+  return NextResponse.json({ ok: true, valor_fipe: valorFipe, planos: ordenarPorPreferencia(cotados) });
 }

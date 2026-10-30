@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { RegrasAssistenciaProfissional } from '@/lib/assistencia-profissional';
 import { createClient } from '@/lib/supabase/client';
-import { planosDoTipo } from '@/lib/planos-oferta';
+import { ordenarPorPreferencia, planosDoTipo } from '@/lib/planos-oferta';
 import { camposGravaveisDoLead, filtroBuscaLeads } from '@/lib/crm';
 import { comprimirImagem, validarArquivo } from '@/lib/imagem';
 import type {
@@ -826,6 +826,8 @@ export interface PlanoComparado {
   nome: string;
   descricao: string | null;
   nivel: number | null;
+  /** 0163 — vai para o topo e ja vem escolhido. */
+  preferencial: boolean;
   mensalidade: number;
   adesao: number;
   participacao: number;
@@ -863,7 +865,7 @@ export function useCotacaoComparativa(entrada: {
     placeholderData: (anterior) => anterior,
     queryFn: async () => {
       const [{ data: planosTodos, error: erroPlanos }, { data: vinculos }, { data: part }] = await Promise.all([
-        supabase.from('planos_protecao').select('id, nome, descricao_comercial, nivel')
+        supabase.from('planos_protecao').select('id, nome, descricao_comercial, nivel, preferencial')
           .eq('ativo', true).order('nivel').order('nome'),
         supabase.from('plano_produtos').select('plano_id, produto_id'),
         supabase.rpc('calcular_participacao', {
@@ -878,10 +880,10 @@ export function useCotacaoComparativa(entrada: {
         (vinculos ?? []).filter((v) => v.plano_id === planoId).map((v) => v.produto_id);
 
       // A cobertura base entra como primeira opcao: ha venda que fecha sem combo.
-      const opcoes: { id: string | null; nome: string; descricao: string | null; nivel: number | null }[] = [
-        { id: null, nome: 'Cobertura base', descricao: 'Somente os itens obrigatórios', nivel: -1 },
+      const opcoes: { id: string | null; nome: string; descricao: string | null; nivel: number | null; preferencial: boolean }[] = [
+        { id: null, nome: 'Cobertura base', descricao: 'Somente os itens obrigatórios', nivel: -1, preferencial: false },
         ...planos.map((p) => ({
-          id: p.id, nome: p.nome, descricao: p.descricao_comercial, nivel: p.nivel,
+          id: p.id, nome: p.nome, descricao: p.descricao_comercial, nivel: p.nivel, preferencial: !!p.preferencial,
         })),
       ];
 
@@ -904,6 +906,7 @@ export function useCotacaoComparativa(entrada: {
           nome: o.nome,
           descricao: o.descricao,
           nivel: o.nivel,
+          preferencial: o.preferencial,
           mensalidade: Number(c.valor_total_mensalidade ?? 0),
           adesao: Number(c.taxa_adesao ?? 0),
           // 0160 — a base (com a cota) vezes o multiplicador do plano.
@@ -918,7 +921,8 @@ export function useCotacaoComparativa(entrada: {
         } as PlanoComparado;
       }));
 
-      return cotados.filter((c): c is PlanoComparado => c !== null);
+      // 0163 — o preferencial no topo.
+      return ordenarPorPreferencia(cotados.filter((c): c is PlanoComparado => c !== null));
     },
   });
 }
@@ -990,6 +994,44 @@ export function useRegistrarAceite() {
       qc.invalidateQueries({ queryKey: ['vendas', 'lead', l.id] });
       qc.invalidateQueries({ queryKey: ['vendas', 'kanban'] });
       qc.invalidateQueries({ queryKey: ['vendas', 'leads'] });
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Edicao da cotacao com os VALORES de cada produto (pedido de 30/10/2026).
+//
+// O consultor precisa ver quanto cada item custa para ajustar a proposta. Duas
+// chamadas ao mesmo motor que grava (`cotar_plano`, com a unidade que precificou
+// a cotacao): a do que esta marcado (o total e o detalhamento de agora) e uma
+// com TODOS os opcionais oferecidos, so para saber o preco de cada um antes de
+// marcar. Assim o valor da tela e o do banco ao salvar.
+// ---------------------------------------------------------------------------
+export function useCotacaoAoVivo(entrada: {
+  fipe: number | null; tipoVeiculoId: string | null; planoId: string | null;
+  avulsos: string[]; oferecidos: string[]; regionalId: string | null;
+}) {
+  const supabase = createClient();
+  const avulsos = [...entrada.avulsos].sort();
+  const oferecidos = [...entrada.oferecidos].sort();
+  const pronto = !!entrada.fipe && entrada.fipe > 0 && !!entrada.tipoVeiculoId;
+  return useQuery<{ atual: CotacaoPlano; precoOpcional: Record<string, number> }>({
+    queryKey: ['vendas', 'cotacao-ao-vivo', entrada.fipe ?? 0, entrada.tipoVeiculoId ?? '', entrada.planoId ?? '',
+      avulsos.join(','), oferecidos.join(','), entrada.regionalId ?? ''],
+    enabled: pronto,
+    placeholderData: (anterior) => anterior,
+    queryFn: async () => {
+      const cotar = (ids: string[]) => supabase.rpc('cotar_plano', {
+        p_fipe: entrada.fipe as number, p_tipo_veiculo_id: entrada.tipoVeiculoId as string,
+        p_plano_id: entrada.planoId, p_avulsos_ids: ids, p_regional_id: entrada.regionalId,
+      });
+      const [atual, todos] = await Promise.all([cotar(avulsos), cotar(oferecidos)]);
+      if (atual.error) throw atual.error;
+      const precoOpcional: Record<string, number> = {};
+      for (const i of ((todos.data as unknown as CotacaoPlano | null)?.detalhamento_produtos ?? [])) {
+        if (i.produto_id) precoOpcional[i.produto_id] = Number(i.valor);
+      }
+      return { atual: atual.data as unknown as CotacaoPlano, precoOpcional };
     },
   });
 }

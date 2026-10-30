@@ -21,6 +21,7 @@ interface Edicao {
   nivel: number;
   ativo: boolean;
   semCasco: boolean;
+  preferencial: boolean;
   descontoBase: number;
   multiplicador: number;
   produtosIds: Set<string>;
@@ -59,7 +60,7 @@ export default function PlanosPage() {
 
   function novo() {
     setEditId(undefined);
-    setEd({ nome: '', descricao_comercial: '', nivel: (planos?.length ?? 0) + 1, ativo: true, semCasco: false, descontoBase: 0, multiplicador: 1, produtosIds: new Set(), tiposIds: new Set(), sugestoesIds: new Set() });
+    setEd({ nome: '', descricao_comercial: '', nivel: (planos?.length ?? 0) + 1, ativo: true, semCasco: false, preferencial: false, descontoBase: 0, multiplicador: 1, produtosIds: new Set(), tiposIds: new Set(), sugestoesIds: new Set() });
     setAberto(true);
   }
 
@@ -72,6 +73,7 @@ export default function PlanosPage() {
       nivel: p.nivel ?? 0,
       ativo: p.ativo,
       semCasco: p.sem_casco ?? false,
+      preferencial: p.preferencial ?? false,
       descontoBase: Number(p.desconto_base_percentual ?? 0),
       multiplicador: Number(p.multiplicador_participacao ?? 1),
       produtosIds: new Set(),
@@ -123,6 +125,7 @@ export default function PlanosPage() {
         nivel: ed.nivel,
         ativo: ed.ativo,
         sem_casco: ed.semCasco,
+        preferencial: ed.preferencial,
         desconto_base_percentual: ed.descontoBase,
         multiplicador_participacao: ed.multiplicador,
         produtosIds: [...ed.produtosIds],
@@ -248,6 +251,23 @@ export default function PlanosPage() {
               </p>
             </div>
 
+            <label className="flex items-start gap-2 rounded-lg border border-cyan-200 bg-cyan-50/40 p-2 text-sm text-slate-600">
+              <input
+                type="checkbox"
+                checked={ed.preferencial}
+                onChange={(e) => setEd({ ...ed, preferencial: e.target.checked })}
+                className="mt-0.5 h-4 w-4 rounded border-slate-300"
+              />
+              <span>
+                <span className="font-medium text-slate-700">Plano preferencial</span>
+                <span className="block text-xs text-slate-500">
+                  Aparece no topo da cotação (CRM, portal do vendedor e link do cliente) e já vem escolhido.
+                  Os outros planos aparecem sem o valor até o consultor ou o cliente clicar neles.
+                  Marque um por tipo de veículo (ex.: um para carro, outro para moto).
+                </span>
+              </span>
+            </label>
+
             <label className="flex items-start gap-2 rounded-lg border border-slate-200 p-2 text-sm text-slate-600">
               <input
                 type="checkbox"
@@ -332,6 +352,7 @@ function PlanoCard({ plano, onEdit, onDelete }: { plano: PlanosProtecaoRow; onEd
         <div className="flex items-center gap-2">
           <Layers className="h-4 w-4 text-brand-500" />
           <h3 className="font-semibold text-slate-800">{plano.nome}</h3>
+          {plano.preferencial && <span className="rounded bg-cyan-500 px-1.5 py-0.5 text-[10px] font-bold uppercase text-white">preferencial</span>}
           {!plano.ativo && <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] uppercase text-slate-500">inativo</span>}
           {plano.sem_casco && <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] uppercase text-amber-800">sem casco</span>}
           {selosDoPlano(plano).map((s) => (

@@ -15,7 +15,7 @@ import {
   useTiposVeiculo, useProdutos, useCotasParticipacao, useTiposPorProduto, useTiposPorPlano, useSugestoesPorPlano,
   useModeloDoCatalogo,
 } from '@/hooks/use-precificacao';
-import { alternarOpcional, sugestoesDoPlano } from '@/lib/planos-oferta';
+import { alternarOpcional, planoInicial, sugestoesDoPlano, valorVisivel } from '@/lib/planos-oferta';
 import { produtosParaTipo, regraRastreadorCobra, semRastreadorDaRegra } from '@/lib/produtos';
 import {
   useAvisoDeCaptura, useCotacaoComparativa, useProdutosDoPlano, useRegrasAssistenciaProfissional,
@@ -143,8 +143,12 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
   });
   const planos = useMemo(() => comparativo.data ?? [], [comparativo.data]);
   const escolhido = planos.find((p) => chaveDoPlano(p) === escolha) ?? null;
-  // O do meio e onde a maioria fecha — sugerimos, o vendedor decide.
-  const sugerido = planos.length > 1 ? chaveDoPlano(planos[Math.min(2, planos.length - 1)]) : null;
+  // 0163 — o PREFERENCIAL (marcado em Configuracoes -> Planos) vem escolhido;
+  // sem ele, o do meio, onde a maioria fecha. O vendedor decide.
+  const inicial = planos.length > 1 ? planoInicial(planos, planos[Math.min(2, planos.length - 1)]) : null;
+  const sugerido = inicial ? chaveDoPlano(inicial) : null;
+  // Os demais so mostram o valor depois do clique.
+  const [revelados, setRevelados] = useState<Set<string>>(new Set());
 
   const { data: doPlano } = useProdutosDoPlano(escolhido?.plano_id ?? null);
   const idsDoPlano = useMemo(() => (doPlano ?? []).map((p) => p.produto_id), [doPlano]);
@@ -401,9 +405,11 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
             {planos.map((p) => {
               const chave = chaveDoPlano(p);
               const ativo = chave === escolha;
+              const mostraValor = ativo || valorVisivel(p, planos, revelados, chave);
               return (
                 <button
-                  key={chave} type="button" onClick={() => setEscolha(chave)}
+                  key={chave} type="button"
+                  onClick={() => { setEscolha(chave); setRevelados((r) => new Set(r).add(chave)); }}
                   className={`w-full rounded-2xl border p-3 text-left transition ${
                     ativo ? 'border-cyan-500 bg-cyan-50/50 ring-1 ring-cyan-400'
                       : 'border-slate-200 bg-superficie hover:border-slate-300'
@@ -415,7 +421,7 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
                         {p.nome}
                         {chave === sugerido && (
                           <span className="inline-flex items-center gap-0.5 rounded-full bg-cyan-100 px-1.5 py-0.5 text-[9.5px] font-bold uppercase text-cyan-800">
-                            <Sparkles className="h-2.5 w-2.5" /> sugerido
+                            <Sparkles className="h-2.5 w-2.5" /> {p.preferencial ? 'preferencial' : 'sugerido'}
                           </span>
                         )}
                       </p>
@@ -424,10 +430,18 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
                       )}
                     </div>
                     <div className="shrink-0 text-right">
-                      <p className="text-[9.5px] font-semibold uppercase tracking-wide text-slate-400">por mês</p>
-                      <p className="tnum text-[19px] font-bold leading-tight text-brand-700">
-                        {formatCurrency(p.mensalidade)}
-                      </p>
+                      {mostraValor ? (
+                        <>
+                          <p className="text-[9.5px] font-semibold uppercase tracking-wide text-slate-400">por mês</p>
+                          <p className="tnum text-[19px] font-bold leading-tight text-brand-700">
+                            {formatCurrency(p.mensalidade)}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="rounded-lg border border-slate-200 px-2 py-1 text-[11px] font-semibold text-cyan-700">
+                          Ver valor
+                        </p>
+                      )}
                     </div>
                   </div>
                   {ativo && (

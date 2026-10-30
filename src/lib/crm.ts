@@ -287,3 +287,15 @@ export function leadCasaComBusca(lead: LeadBuscavel, bruto: string): boolean {
   }
   return false;
 }
+
+/**
+ * O caminho inverso do desconto: "quanto fica por R$ 89?". Devolve o % (duas
+ * casas) que leva a mensalidade de tabela ao valor desejado. Valor acima da
+ * tabela = 0 (desconto nao aumenta preco); abaixo de zero = 100.
+ */
+export function percentualParaValorFinal(mensalidade: number, alvo: number | null | undefined): number {
+  const m = Number(mensalidade) || 0;
+  if (m <= 0 || alvo == null) return 0;
+  const pct = (1 - Number(alvo) / m) * 100;
+  return Math.max(0, Math.min(100, Math.round(pct * 100) / 100));
+}

@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { Lock, Percent, ShieldCheck, Loader2 } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
-import { FormField, Input, Select, MoneyInput } from '@/components/ui/field';
+import { FormField, Input, Select, MoneyInput, PercentInput } from '@/components/ui/field';
 import {
   usePlanos, useProdutos, useProdutosPorPlano, useTiposPorProduto, useTiposVeiculo, useTiposPorPlano, useSugestoesPorPlano,
 } from '@/hooks/use-precificacao';
@@ -13,9 +13,9 @@ import { alternarOpcional, planosDoTipo, sugestoesDoPlano } from '@/lib/planos-o
 import { produtosParaTipo, regraRastreadorCobra, semRastreadorDaRegra } from '@/lib/produtos';
 import {
   useAtualizarCotacao, useProdutosObrigatorios, useSimularDesconto, useAprovarDesconto,
-  useRegrasAssistenciaProfissional,
+  useRegrasAssistenciaProfissional, useCotacaoAoVivo,
 } from '@/hooks/use-vendas';
-import { calcularDesconto, podeEditarCotacao } from '@/lib/crm';
+import { calcularDesconto, percentualParaValorFinal, podeEditarCotacao } from '@/lib/crm';
 import { validarAssistenciaProfissional } from '@/lib/assistencia-profissional';
 import { CampoAssistenciaProfissional } from '@/components/vendas/campo-assistencia-profissional';
 import { avulsosDoVeiculo } from '@/lib/planos';
@@ -89,13 +89,24 @@ export function EditarCotacao({
     [disponiveis, idsDoPlano],
   );
 
+  // O preco de AGORA (o mesmo motor que grava), item a item — antes a tela so
+  // mostrava o valor dos obrigatorios e o total da cotacao ja salva, entao o
+  // consultor trocava plano/opcional sem saber quanto ficava.
+  const avulsosCobrados = useMemo(() => avulsosDoVeiculo(opcionais, idsDoPlano), [opcionais, idsDoPlano]);
+  const aoVivo = useCotacaoAoVivo({
+    fipe, tipoVeiculoId: cotacao.tipo_veiculo_id, planoId: planoId || null,
+    avulsos: avulsosCobrados, oferecidos: livres.filter((p) => !p.foraDoTipo).map((p) => p.id),
+    regionalId: cotacao.regional_id ?? null,
+  });
+  const atual = aoVivo.data?.atual ?? null;
+  const precoOpcional = aoVivo.data?.precoOpcional ?? {};
+  const itens = atual?.detalhamento_produtos ?? [];
+  const totalTabela = atual ? Number(atual.valor_total_mensalidade) : Number(cotacao.total_mensalidade);
+  const adesaoTabela = atual ? Number(atual.taxa_adesao ?? 0) : Number(cotacao.taxa_adesao ?? 0);
+  const mudouTabela = Math.abs(totalTabela - Number(cotacao.total_mensalidade)) > 0.004;
+
   const limite = Number(simulacao?.limite_regional ?? 0);
-  const previa = calcularDesconto(
-    Number(cotacao.total_mensalidade),
-    Number(cotacao.taxa_adesao ?? 0),
-    desconto,
-    limite,
-  );
+  const previa = calcularDesconto(totalTabela, adesaoTabela, desconto, limite);
 
   // 0162 — trocar de plano = comecar dos pre-marcados do plano novo (removiveis).
   function trocarPlano(novo: string) {
@@ -206,46 +217,56 @@ export function EditarCotacao({
           </FormField>
         </div>
 
-        {/* Itens obrigatorios: travados */}
+        {/* A composicao de AGORA, item a item, com o valor de cada um */}
         <div className="rounded-lg border border-slate-200 p-3">
-          <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
-            <Lock className="h-3.5 w-3.5" /> Itens do plano (não removíveis)
+          <p className="mb-2 flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <span className="flex items-center gap-1.5"><Lock className="h-3.5 w-3.5" /> Composição da mensalidade</span>
+            {aoVivo.isFetching && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
           </p>
-          <ul className="space-y-1 text-sm">
-            {(obrigatorios ?? []).map((o) => (
-              <li key={o.produto_id} className="flex items-center justify-between text-slate-600">
-                <span className="flex items-center gap-2">
-                  <input type="checkbox" checked disabled />
-                  {o.nome}
-                </span>
-                <span className="tnum text-slate-500">{formatCurrency(Number(o.valor))}</span>
-              </li>
-            ))}
-            {(obrigatorios ?? []).length === 0 && (
-              <li className="text-slate-400">Selecione o tipo de veiculo/plano para ver os itens.</li>
+          <ul className={`space-y-1 text-sm transition ${aoVivo.isFetching ? 'opacity-60' : ''}`}>
+            {itens.map((i, idx) => {
+              const doPlano = !!i.produto_id && idsDoPlano.includes(i.produto_id);
+              const avulso = !!i.produto_id && avulsosCobrados.includes(i.produto_id);
+              return (
+                <li key={`${i.produto_id ?? i.nome}-${idx}`} className="flex items-center justify-between gap-2 text-slate-600">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="truncate">{i.nome}</span>
+                    {i.obrigatorio && <span className="rounded bg-slate-100 px-1.5 py-px text-[10px] uppercase text-slate-500">base</span>}
+                    {doPlano && <span className="rounded-full bg-cyan-50 px-1.5 py-px text-[10px] font-bold uppercase text-cyan-700 ring-1 ring-inset ring-cyan-200">no plano</span>}
+                    {avulso && <span className="rounded bg-amber-50 px-1.5 py-px text-[10px] uppercase text-amber-700">opcional</span>}
+                  </span>
+                  <span className="tnum shrink-0 text-right text-slate-700">
+                    {i.valor_tabela != null && Number(i.valor_tabela) > Number(i.valor) && (
+                      <span className="mr-1 text-xs text-slate-400 line-through">{formatCurrency(Number(i.valor_tabela))}</span>
+                    )}
+                    {formatCurrency(Number(i.valor))}
+                  </span>
+                </li>
+              );
+            })}
+            {itens.length === 0 && (
+              <li className="text-slate-400">{aoVivo.isLoading ? 'Calculando...' : 'Informe o valor FIPE para ver os itens.'}</li>
             )}
           </ul>
+          {itens.length > 0 && (
+            <p className="mt-2 flex items-center justify-between border-t border-slate-100 pt-2 text-sm font-semibold text-slate-700">
+              <span>Total de tabela</span>
+              <span className="tnum">
+                {mudouTabela && (
+                  <span className="mr-1 text-xs font-normal text-slate-400 line-through">{formatCurrency(Number(cotacao.total_mensalidade))}</span>
+                )}
+                {formatCurrency(totalTabela)}
+              </span>
+            </p>
+          )}
         </div>
 
-        {/* Opcionais: o que ja vem no combo aparece travado, o resto e livre */}
+        {/* Opcionais a parte, com o preco de cada um antes de marcar */}
         <div className="rounded-lg border border-slate-200 p-3">
           {noPlano.length > 0 && (
-            <div className="mb-3">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                Já incluídos neste plano
-              </p>
-              <div className="grid gap-1 sm:grid-cols-2">
-                {noPlano.map((p) => (
-                  <label key={p.id} className="flex items-center gap-2 text-sm text-slate-500">
-                    <input type="checkbox" checked disabled />
-                    {p.nome}
-                    <span className="rounded-full bg-cyan-50 px-1.5 py-px text-[10px] font-bold uppercase text-cyan-700 ring-1 ring-inset ring-cyan-200">
-                      no plano
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </div>
+            <p className="mb-2 text-xs text-slate-500">
+              Já incluídos em {planos?.find((p) => p.id === planoId)?.nome ?? 'este plano'}: {noPlano.map((p) => p.nome).join(', ')}.
+            </p>
           )}
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
             Opcionais a parte
@@ -258,11 +279,13 @@ export function EditarCotacao({
                   checked={opcionais.includes(p.id)}
                   onChange={() => setOpcionais((ids) => [...alternarOpcional(ids, p.id, disponiveis)])}
                 />
-                {p.nome}
-                {p.foraDoTipo && (
+                <span className="min-w-0 flex-1">{p.nome}</span>
+                {p.foraDoTipo ? (
                   <span className="rounded bg-amber-100 px-1.5 py-px text-[10px] uppercase text-amber-800">
                     não atende este tipo — não é cobrado
                   </span>
+                ) : precoOpcional[p.id] != null && (
+                  <span className="tnum shrink-0 text-xs text-slate-500">+ {formatCurrency(precoOpcional[p.id])}</span>
                 )}
               </label>
             ))}
@@ -274,12 +297,17 @@ export function EditarCotacao({
         <div className={`rounded-lg border p-3 ${previa.exigeAprovacao ? 'border-amber-300 bg-amber-50' : 'border-slate-200'}`}>
           <div className="flex flex-wrap items-end gap-3">
             <FormField label="Desconto (%)">
-              <Input
-                type="number" min={0} max={100} step="0.5"
-                value={desconto}
-                onChange={(e) => setDesconto(Number(e.target.value))}
-                className="w-28"
-              />
+              <div className="w-28">
+                <PercentInput value={desconto || null} onChange={(v) => setDesconto(v ?? 0)} max={100} />
+              </div>
+            </FormField>
+            <FormField label="ou o valor final (R$/mês)">
+              <div className="w-40">
+                <MoneyInput
+                  value={desconto > 0 ? previa.mensalidadeFinal : null}
+                  onChange={(v) => setDesconto(v == null ? 0 : percentualParaValorFinal(totalTabela, v))}
+                />
+              </div>
             </FormField>
             <p className="text-xs text-slate-500">
               Limite da franquia: <strong>{limite.toFixed(2).replace('.', ',')}%</strong>
@@ -291,7 +319,7 @@ export function EditarCotacao({
               Mensalidade: <span className="tnum font-medium">{formatCurrency(previa.mensalidadeFinal + (assistencia ?? 0))}</span>
               {previa.descontoMensalidade > 0 && (
                 <span className="ml-1 text-xs text-slate-400 line-through">
-                  {formatCurrency(Number(cotacao.total_mensalidade))}
+                  {formatCurrency(totalTabela)}
                 </span>
               )}
             </p>
@@ -299,7 +327,7 @@ export function EditarCotacao({
               Adesao: <span className="tnum font-medium">{formatCurrency(previa.adesaoFinal)}</span>
               {previa.descontoAdesao > 0 && (
                 <span className="ml-1 text-xs text-slate-400 line-through">
-                  {formatCurrency(Number(cotacao.taxa_adesao ?? 0))}
+                  {formatCurrency(adesaoTabela)}
                 </span>
               )}
             </p>

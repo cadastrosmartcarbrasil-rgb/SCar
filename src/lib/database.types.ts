@@ -285,6 +285,8 @@ export type PlanosProtecaoRow = Timestamps & {
   desconto_base_percentual: number;
   /** 0160 — multiplica a participacao/franquia (2 = o dobro). */
   multiplicador_participacao: number;
+  /** 0163 — aparece no topo da cotacao e ja vem escolhido. */
+  preferencial: boolean;
 };
 
 export type VeiculosRow = Timestamps & {
