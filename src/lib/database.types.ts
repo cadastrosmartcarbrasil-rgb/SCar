@@ -82,10 +82,11 @@ export type FormaPagamento = 'PIX' | 'BOLETO' | 'TRANSFERENCIA' | 'CARTAO' | 'DI
 export type StatusConciliacao = 'NAO_CONCILIADO' | 'CONCILIADO_MANUAL' | 'CONCILIADO_API';
 export type StatusCadastro = 'ATIVO' | 'INATIVO' | 'SUSPENSO';
 export type StatusLead =
-  | 'NOVO' | 'ORCAMENTO_GERADO' | 'PROPOSTA_ENVIADA' | 'EM_NEGOCIACAO'
+  | 'NOVO' | 'ORCAMENTO_GERADO' | 'PROPOSTA_ENVIADA' | 'EM_NEGOCIACAO' | 'AGUARDANDO_VISTORIA'
   | 'APROVADO' | 'EM_AUDITORIA' | 'ATIVO' | 'PERDIDO';
-// Status que o Kanban pode aplicar via drag-and-drop (0028)
-export type StatusKanban = Exclude<StatusLead, 'EM_AUDITORIA' | 'ATIVO'>;
+// Status que o Kanban pode aplicar via drag-and-drop (0028). ORCAMENTO_GERADO
+// saiu da esteira na 0161 (o enum nao perde valor; o funil recusa).
+export type StatusKanban = Exclude<StatusLead, 'EM_AUDITORIA' | 'ATIVO' | 'ORCAMENTO_GERADO'>;
 export type OrigemFipe = 'API' | 'MANUAL' | 'CONTINGENCIA';
 // 0045 :: agenda de vendas (interacoes do lead)
 export type TipoInteracaoLead = 'LIGACAO' | 'WHATSAPP' | 'EMAIL' | 'VISITA' | 'OBSERVACAO';
@@ -337,6 +338,8 @@ export type VeiculosRow = Timestamps & {
   numero_portas: number | null;
   valor_mensalidade: number | null;
   dia_vencimento: number | null;
+  /** 0161 — inicio da cobertura (entrada pela venda + 24h). Nulo = sem carencia. */
+  cobertura_desde: string | null;
   rastreador_imei: string | null;
   rastreador_chip: string | null;
   empresa_rastreamento_id: string | null;
@@ -1138,6 +1141,19 @@ export type RegionalAdicionalRiscoRow = {
   status: boolean;
   created_at: string;
   created_by: string | null;
+};
+
+/** 0040/0161 — as poses da vistoria (Configuracoes -> Fotos da vistoria). */
+export type VistoriaFotoModeloRow = {
+  id: string;
+  codigo: string;
+  nome: string;
+  instrucao: string | null;
+  obrigatorio: boolean;
+  ordem: number;
+  tipo_veiculo_id: string | null;
+  ativo: boolean;
+  created_at: string;
 };
 
 export type CoresRow = {
@@ -4067,6 +4083,7 @@ export type Database = {
       }>;
       marcas: TableDef<MarcasRow>;
       cores: TableDef<CoresRow>;
+      vistoria_fotos_modelo: TableDef<VistoriaFotoModeloRow, [Rel<'tipo_veiculo_id', 'tipos_veiculo'>]>;
       regional_adicional_risco: TableDef<
         RegionalAdicionalRiscoRow,
         [Rel<'regional_id', 'regionais'>, Rel<'tipo_veiculo_id', 'tipos_veiculo'>]

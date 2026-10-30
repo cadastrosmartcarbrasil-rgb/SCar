@@ -234,8 +234,7 @@ export function useSalvarCotacao() {
         created_by: user?.id ?? null,
       }).select('*').single();
       if (error) throw error;
-      // marca o lead como Orcamento Gerado (se ainda estiver em Novo)
-      await supabase.from('leads').update({ status: 'ORCAMENTO_GERADO' }).eq('id', leadId).eq('status', 'NOVO');
+      // 0161: o banco leva o lead de Novo para Proposta enviada (trigger da cotacao).
       return data;
     },
     onSuccess: (c) => {

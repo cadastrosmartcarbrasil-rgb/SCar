@@ -21,14 +21,16 @@ import {
 import type { CotacaoItem, StatusLead } from '@/lib/database.types';
 
 describe('esteira do CRM', () => {
-  it('inclui Em Negociacao entre Proposta e Aprovado', () => {
-    expect(ESTEIRA.indexOf('EM_NEGOCIACAO')).toBe(ESTEIRA.indexOf('PROPOSTA_ENVIADA') + 1);
+  it('0161: sem Cotacao criada, com Aguardando vistoria antes da Auditoria', () => {
+    expect(ESTEIRA).not.toContain('ORCAMENTO_GERADO');
+    expect(proximoStatus('NOVO')).toBe('PROPOSTA_ENVIADA');
     expect(proximoStatus('PROPOSTA_ENVIADA')).toBe('EM_NEGOCIACAO');
-    expect(proximoStatus('EM_NEGOCIACAO')).toBe('APROVADO');
+    expect(proximoStatus('EM_NEGOCIACAO')).toBe('AGUARDANDO_VISTORIA');
+    expect(proximoStatus('AGUARDANDO_VISTORIA')).toBe('APROVADO');
     expect(proximoStatus('ATIVO')).toBeNull();
   });
   it('todo status tem rotulo', () => {
-    (['NOVO', 'ORCAMENTO_GERADO', 'PROPOSTA_ENVIADA', 'EM_NEGOCIACAO', 'APROVADO', 'EM_AUDITORIA', 'ATIVO', 'PERDIDO'] as StatusLead[])
+    (['NOVO', 'ORCAMENTO_GERADO', 'PROPOSTA_ENVIADA', 'EM_NEGOCIACAO', 'AGUARDANDO_VISTORIA', 'APROVADO', 'EM_AUDITORIA', 'ATIVO', 'PERDIDO'] as StatusLead[])
       .forEach((s) => expect(STATUS_LEAD[s].label.length).toBeGreaterThan(0));
   });
 });
@@ -36,8 +38,12 @@ describe('esteira do CRM', () => {
 describe('colunas do Kanban', () => {
   it('tem as 6 fases pedidas, na ordem do funil', () => {
     expect(COLUNAS_KANBAN.map((c) => c.id)).toEqual([
-      'NOVO', 'ORCAMENTO_GERADO', 'PROPOSTA_ENVIADA', 'EM_NEGOCIACAO', 'APROVADO', 'PERDIDO',
+      'NOVO', 'PROPOSTA_ENVIADA', 'EM_NEGOCIACAO', 'AGUARDANDO_VISTORIA', 'APROVADO', 'PERDIDO',
     ]);
+  });
+
+  it('lead antigo em Cotacao criada aparece em Proposta enviada', () => {
+    expect(colunaDoLead('ORCAMENTO_GERADO')).toBe('PROPOSTA_ENVIADA');
   });
 
   it('auditoria e ativo aparecem na coluna Aprovado', () => {
@@ -128,7 +134,7 @@ describe('acoesDoLead', () => {
   const destinos = (s: Parameters<typeof acoesDoLead>[0]) => acoesDoLead(s).map((a) => a.destino);
 
   it('oferece um caminho so: avancar, voltar e perder', () => {
-    expect(destinos('PROPOSTA_ENVIADA')).toEqual(['EM_NEGOCIACAO', 'ORCAMENTO_GERADO', 'PERDIDO']);
+    expect(destinos('PROPOSTA_ENVIADA')).toEqual(['EM_NEGOCIACAO', 'NOVO', 'PERDIDO']);
   });
 
   it('alcanca Em Negociacao pela ficha (antes so existia arrastando)', () => {
@@ -136,7 +142,7 @@ describe('acoesDoLead', () => {
   });
 
   it('nao oferece duas acoes para o mesmo destino', () => {
-    (['NOVO', 'ORCAMENTO_GERADO', 'PROPOSTA_ENVIADA', 'EM_NEGOCIACAO', 'APROVADO'] as const)
+    (['NOVO', 'PROPOSTA_ENVIADA', 'EM_NEGOCIACAO', 'AGUARDANDO_VISTORIA', 'APROVADO'] as const)
       .forEach((s) => {
         const d = destinos(s);
         expect(new Set(d).size).toBe(d.length);
@@ -144,11 +150,16 @@ describe('acoesDoLead', () => {
   });
 
   it('lead novo nao tem para onde voltar', () => {
-    expect(destinos('NOVO')).toEqual(['ORCAMENTO_GERADO', 'PERDIDO']);
+    expect(destinos('NOVO')).toEqual(['PROPOSTA_ENVIADA', 'PERDIDO']);
+  });
+
+  it('Em negociacao avanca para o back-office; dali vai a Auditoria', () => {
+    expect(destinos('EM_NEGOCIACAO')[0]).toBe('AGUARDANDO_VISTORIA');
+    expect(destinos('AGUARDANDO_VISTORIA')).toEqual(['APROVADO', 'EM_NEGOCIACAO', 'PERDIDO']);
   });
 
   it('para em Aprovado — quem passa disso e a Auditoria', () => {
-    expect(destinos('APROVADO')).toEqual(['EM_NEGOCIACAO', 'PERDIDO']);
+    expect(destinos('APROVADO')).toEqual(['AGUARDANDO_VISTORIA', 'PERDIDO']);
   });
 
   it('nada a fazer em auditoria ou na base ativa', () => {
@@ -163,8 +174,8 @@ describe('acoesDoLead', () => {
   });
 
   it('so oferece destino que o banco aceita no funil', () => {
-    const validos = ['NOVO', 'ORCAMENTO_GERADO', 'PROPOSTA_ENVIADA', 'EM_NEGOCIACAO', 'APROVADO', 'PERDIDO'];
-    (['NOVO', 'ORCAMENTO_GERADO', 'PROPOSTA_ENVIADA', 'EM_NEGOCIACAO', 'APROVADO', 'PERDIDO'] as const)
+    const validos = ['NOVO', 'PROPOSTA_ENVIADA', 'EM_NEGOCIACAO', 'AGUARDANDO_VISTORIA', 'APROVADO', 'PERDIDO'];
+    (['NOVO', 'PROPOSTA_ENVIADA', 'EM_NEGOCIACAO', 'AGUARDANDO_VISTORIA', 'APROVADO', 'PERDIDO'] as const)
       .forEach((s) => acoesDoLead(s).forEach((a) => expect(validos).toContain(a.destino)));
   });
 });

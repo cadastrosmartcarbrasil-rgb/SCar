@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  codigoDaPose,
   avulsosParaCotacao, progressoVistoria, proximaPose, separarOpcionais,
 } from './vistoria';
 
@@ -75,5 +76,19 @@ describe('itens do plano x avulsos', () => {
 
   it('o que foi marcado antes de escolher o plano tambem e limpo', () => {
     expect(avulsosParaCotacao(new Set(['reserva']), ['reserva'])).toEqual([]);
+  });
+});
+
+describe('codigoDaPose (0161)', () => {
+  it('nasce do nome, sem acento e em caixa alta', () => {
+    expect(codigoDaPose('Banco traseiro / porta-malas')).toBe('BANCO_TRASEIRO_PORTA_MALAS');
+    expect(codigoDaPose('Hodômetro')).toBe('HODOMETRO');
+  });
+  it('nao repete um codigo existente', () => {
+    expect(codigoDaPose('Frente', ['FRENTE'])).toBe('FRENTE_2');
+    expect(codigoDaPose('Frente', ['FRENTE', 'frente_2'])).toBe('FRENTE_3');
+  });
+  it('nome vazio vira FOTO', () => {
+    expect(codigoDaPose('  ')).toBe('FOTO');
   });
 });

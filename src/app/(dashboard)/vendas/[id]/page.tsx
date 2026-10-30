@@ -47,7 +47,7 @@ export default function LeadDetailPage() {
   const [diaVenc, setDiaVenc] = useState<number>(10);
   const [vencAdesao, setVencAdesao] = useState<string>(() => vencimentoPadraoAdesao(hojeSaoPaulo()));
   const [mesesCarne, setMesesCarne] = useState<number>(MESES_CARNE_PADRAO);
-  const [carne, setCarne] = useState<{ veiculoId: string; meses: number } | null>(null);
+  const [carne, setCarne] = useState<{ veiculoId: string; meses: number; boasVindas?: boolean } | null>(null);
   const [editando, setEditando] = useState<CotacoesRow | null>(null);
   const [perdendo, setPerdendo] = useState(false);
   const [colhendoAceite, setColhendoAceite] = useState<CotacoesRow | null>(null);
@@ -78,10 +78,9 @@ export default function LeadDetailPage() {
     }, {
       onSuccess: (veiculoId) => {
         toast.success('Entrada autorizada - veículo cadastrado na base');
-        // O carne (e o boleto da adesao) sai NO ATO da aprovacao.
-        if (veiculoId && (mesesCarne > 0 || adesaoPelaSmartCar)) {
-          setCarne({ veiculoId, meses: mesesCarne });
-        }
+        // O carne (e o boleto da adesao) sai NO ATO da aprovacao, e com ele
+        // as boas-vindas (0161): e-mail com portal + boletos, e WhatsApp.
+        if (veiculoId) setCarne({ veiculoId, meses: mesesCarne, boasVindas: true });
       },
       onError: (e) => toast.error(e.message),
     });
@@ -185,8 +184,21 @@ export default function LeadDetailPage() {
 
           <p className={`mt-1.5 text-[11.5px] ${
             aceite.divergente || aceite.semVinculo ? 'text-amber-900/70' : 'text-emerald-900/70'}`}>
-            Ajuste os opcionais e complete a ficha abaixo. Quando estiver tudo certo, mande para a
-            Auditoria.
+            O back-office ajusta, completa a ficha abaixo e manda para a Auditoria.
+          </p>
+        </div>
+      )}
+
+      {/* 0161: o back-office assume em Aguardando vistoria */}
+      {lead.status === 'AGUARDANDO_VISTORIA' && (
+        <div className="rounded-2xl border border-teal-200 bg-teal-50 p-4 text-[12.5px] leading-relaxed text-teal-900">
+          <p className="text-[13px] font-bold">Com o back-office</p>
+          <p className="mt-1">
+            Mande o link da vistoria (aba <b>Documentos e fotos</b>), complete a ficha e envie para a
+            Auditoria.{' '}
+            {faltando.length > 0
+              ? <>Faltam <b>{faltando.length}</b> item(ns) do checklist — a Auditoria só recebe a ficha completa.</>
+              : <b>Checklist completo: pode enviar.</b>}
           </p>
         </div>
       )}
@@ -200,7 +212,8 @@ export default function LeadDetailPage() {
               variant={VARIANTE_ACAO[a.intencao]}
               className={a.intencao === 'perder' ? 'text-rose-500 hover:bg-rose-50' : undefined}
               onClick={() => mudar(a)}
-              disabled={mover.isPending}
+              disabled={mover.isPending || (a.destino === 'APROVADO' && faltando.length > 0)}
+              title={a.destino === 'APROVADO' && faltando.length > 0 ? 'Complete o checklist antes' : undefined}
             >
               <IconeAcao intencao={a.intencao} /> {a.rotulo}
             </Button>
@@ -248,7 +261,10 @@ export default function LeadDetailPage() {
               </div>
               <p className="text-[11.5px] text-amber-800">
                 Adesão de <b className="tnum">{formatCurrency(Number(lead.adesao_valor ?? 0))}</b> pela tabela (cotação aceita)
-                {adesaoPelaSmartCar ? ' — o boleto (com PIX) é emitido pela Smart Car junto com o carnê.' : '.'}
+                {adesaoPelaSmartCar ? ' — o boleto (com PIX) é emitido pela Smart Car junto com o carnê.' : ', recebida pelo consultor (sem boleto).'}
+                {' '}A cobertura começa <b>24 horas</b> depois da autorização; o 1º boleto do carnê cobra só os
+                dias até o vencimento (pró-rata). Na sequência saem as boas-vindas e, se houver rastreador, o
+                pedido de instalação.
               </p>
               <Button
                 onClick={autorizarEntrada}
@@ -271,6 +287,7 @@ export default function LeadDetailPage() {
           veiculo={{ id: carne.veiculoId, placa: lead.placa, nome: lead.nome, celular: lead.celular, email: lead.email }}
           mesesIniciais={carne.meses}
           emitirAoAbrir
+          boasVindas={carne.boasVindas}
           onClose={() => setCarne(null)}
         />
       )}

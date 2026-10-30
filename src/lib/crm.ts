@@ -1,8 +1,11 @@
 import type { CotacaoItem, StatusKanban, StatusLead } from '@/lib/database.types';
 
 // Esteira do CRM (ordem + rotulo + cor). PERDIDO fica fora da esteira linear.
+// 0161 (decisao do usuario): "Cotacao criada" saiu — a cotacao ja leva o lead a
+// Proposta enviada — e entrou "Aguardando vistoria", onde o back-office assume
+// (o aceite ou o "Cotacao aprovada" do consultor levam para la).
 export const ESTEIRA: StatusLead[] = [
-  'NOVO', 'ORCAMENTO_GERADO', 'PROPOSTA_ENVIADA', 'EM_NEGOCIACAO', 'APROVADO', 'EM_AUDITORIA', 'ATIVO',
+  'NOVO', 'PROPOSTA_ENVIADA', 'EM_NEGOCIACAO', 'AGUARDANDO_VISTORIA', 'APROVADO', 'EM_AUDITORIA', 'ATIVO',
 ];
 
 export const STATUS_LEAD: Record<StatusLead, { label: string; cor: string; curto: string }> = {
@@ -10,6 +13,7 @@ export const STATUS_LEAD: Record<StatusLead, { label: string; cor: string; curto
   ORCAMENTO_GERADO: { label: 'Cotação Criada',   curto: 'Cotação',    cor: 'bg-sky-100 text-sky-700' },
   PROPOSTA_ENVIADA: { label: 'Proposta Enviada', curto: 'Proposta',   cor: 'bg-indigo-100 text-indigo-700' },
   EM_NEGOCIACAO:    { label: 'Em Negociação',    curto: 'Negociação', cor: 'bg-cyan-100 text-cyan-700' },
+  AGUARDANDO_VISTORIA: { label: 'Aguardando Vistoria', curto: 'Vistoria', cor: 'bg-teal-100 text-teal-800' },
   APROVADO:         { label: 'Aprovado',         curto: 'Aprovado',   cor: 'bg-violet-100 text-violet-700' },
   EM_AUDITORIA:     { label: 'Em Auditoria',     curto: 'Auditoria',  cor: 'bg-amber-100 text-amber-800' },
   ATIVO:            { label: 'Ativo na Base',    curto: 'Ativo',      cor: 'bg-emerald-100 text-emerald-700' },
@@ -37,10 +41,10 @@ export interface ColunaKanban {
 
 export const COLUNAS_KANBAN: ColunaKanban[] = [
   { id: 'NOVO', titulo: 'Novo Lead', descricao: 'Contato recebido', aceita: ['NOVO'], cor: 'border-slate-300' },
-  { id: 'ORCAMENTO_GERADO', titulo: 'Cotação Criada', descricao: 'Orçamento montado', aceita: ['ORCAMENTO_GERADO'], cor: 'border-sky-300' },
-  { id: 'PROPOSTA_ENVIADA', titulo: 'Proposta Enviada', descricao: 'Link enviado ao cliente', aceita: ['PROPOSTA_ENVIADA'], cor: 'border-indigo-300' },
+  { id: 'PROPOSTA_ENVIADA', titulo: 'Proposta Enviada', descricao: 'Cotação enviada ao cliente', aceita: ['PROPOSTA_ENVIADA', 'ORCAMENTO_GERADO'], cor: 'border-indigo-300' },
   { id: 'EM_NEGOCIACAO', titulo: 'Em Negociação', descricao: 'Ajustando valores/itens', aceita: ['EM_NEGOCIACAO'], cor: 'border-cyan-300' },
-  { id: 'APROVADO', titulo: 'Aprovado (Auditoria)', descricao: 'Enviado para auditoria', aceita: ['APROVADO', 'EM_AUDITORIA', 'ATIVO'], cor: 'border-violet-300' },
+  { id: 'AGUARDANDO_VISTORIA', titulo: 'Aguardando Vistoria', descricao: 'Back-office: fotos e ficha', aceita: ['AGUARDANDO_VISTORIA'], cor: 'border-teal-300' },
+  { id: 'APROVADO', titulo: 'Em Auditoria', descricao: 'Ficha completa na Auditoria', aceita: ['APROVADO', 'EM_AUDITORIA', 'ATIVO'], cor: 'border-violet-300' },
   { id: 'PERDIDO', titulo: 'Perdido', descricao: 'Negociação encerrada', aceita: ['PERDIDO'], cor: 'border-rose-300' },
 ];
 
@@ -144,10 +148,10 @@ export interface AcaoLead {
 /** Como cada etapa e anunciada no botao (verbo do que acabou de acontecer). */
 export const ROTULO_DESTINO: Record<StatusKanban, string> = {
   NOVO: 'Voltar para Novo',
-  ORCAMENTO_GERADO: 'Marcar cotação criada',
   PROPOSTA_ENVIADA: 'Marcar proposta enviada',
   EM_NEGOCIACAO: 'Entrou em negociação',
-  APROVADO: 'Cliente aprovou (-> Auditoria)',
+  AGUARDANDO_VISTORIA: 'Cotação aprovada (-> back-office)',
+  APROVADO: 'Enviar para a Auditoria',
   PERDIDO: 'Perdido',
 };
 

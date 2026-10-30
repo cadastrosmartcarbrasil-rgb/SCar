@@ -60,7 +60,7 @@ export function margemRegional(vendedor: TetoComissao, regional: TetoComissao): 
 export type FormaAdesao = 'VENDEDOR_NA_HORA' | 'BOLETO' | 'PIX' | 'CARTAO';
 
 export const FORMA_ADESAO_ROTULO: Record<FormaAdesao, string> = {
-  VENDEDOR_NA_HORA: 'Vendedor recebeu na hora',
+  VENDEDOR_NA_HORA: 'Recebida pelo consultor (padrão)',
   BOLETO: 'Boleto emitido pela Smart Car (boleto + PIX)',
   PIX: 'PIX emitido pela Smart Car (boleto + PIX)',
   CARTAO: 'Cartão (maquininha ou link) — baixa manual',

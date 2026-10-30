@@ -184,9 +184,9 @@ export const ROTULO_STATUS_EVENTO: Record<string, string> = {
 /** A esteira do CRM na ordem do trabalho (0028), sem os desfechos. */
 export const ETAPAS_FUNIL = [
   { status: 'NOVO', rotulo: 'Novo lead' },
-  { status: 'ORCAMENTO_GERADO', rotulo: 'Cotação criada' },
   { status: 'PROPOSTA_ENVIADA', rotulo: 'Proposta enviada' },
   { status: 'EM_NEGOCIACAO', rotulo: 'Em negociação' },
+  { status: 'AGUARDANDO_VISTORIA', rotulo: 'Aguardando vistoria' },
   { status: 'APROVADO', rotulo: 'Aprovado' },
   { status: 'EM_AUDITORIA', rotulo: 'Em auditoria' },
 ] as const;

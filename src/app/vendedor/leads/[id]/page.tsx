@@ -4,14 +4,15 @@ import { use, useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import {
-  ArrowLeft, Camera, FileText, Handshake, Loader2, MessageCircle, Phone, Receipt,
+  ArrowLeft, Camera, CheckCircle2, FileText, Handshake, Loader2, MessageCircle, Phone, Receipt,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FotosVistoria } from '@/components/vistoria/fotos-vistoria';
 import { LinkDaProposta } from '@/components/hotlink/cotacao-publica';
 import { AceitePresencial } from '@/components/vendas/aceite-presencial';
-import { useCotacoes, useLead, useUploadCrlv } from '@/hooks/use-vendas';
+import { DadosBasicosLead } from '@/components/vendas/dados-basicos-lead';
+import { useCotacoes, useLead, useMoverLead, useUploadCrlv } from '@/hooks/use-vendas';
 import { podeEditarCotacao } from '@/lib/crm';
 import { SELO_STATUS_LEAD } from '@/lib/vendedor';
 import type { CotacoesRow } from '@/lib/database.types';
@@ -19,16 +20,17 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 
 /**
  * Ficha do lead no portal do vendedor.
- * O que ele faz aqui e o que so ele pode fazer: falar com o interessado e,
- * com a venda fechada, rodar a VISTORIA no carro — foto a foto, guiado pelo
- * modelo de poses. O resto do fechamento (dados do associado, adesao) segue
- * com a franquia.
+ * 0161: o consultor faz o basico (contato, documento, e-mail, endereco), o
+ * aceite e passa a venda adiante com "Cotacao aprovada" — dali o BACK-OFFICE
+ * completa a ficha e a vistoria. Se o cliente estiver com ele, ainda pode
+ * fazer a vistoria e mandar o CRLV.
  */
 export default function LeadVendedorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { data: lead, isLoading } = useLead(id);
   const { data: cotacoes } = useCotacoes(id);
   const uploadCrlv = useUploadCrlv(id);
+  const mover = useMoverLead();
   const [vistoriaAberta, setVistoriaAberta] = useState(false);
   const [colhendoAceite, setColhendoAceite] = useState<CotacoesRow | null>(null);
 
@@ -49,6 +51,14 @@ export default function LeadVendedorPage({ params }: { params: Promise<{ id: str
   const selo = SELO_STATUS_LEAD[lead.status] ?? SELO_STATUS_LEAD.NOVO;
   const fone = (lead.celular ?? '').replace(/\D/g, '');
   const fechado = lead.status === 'ATIVO' || lead.status === 'APROVADO' || lead.status === 'EM_AUDITORIA';
+  const podeAprovar = ['NOVO', 'PROPOSTA_ENVIADA', 'EM_NEGOCIACAO'].includes(lead.status) && (cotacoes ?? []).length > 0;
+
+  function cotacaoAprovada() {
+    mover.mutate({ id: lead!.id, status: 'AGUARDANDO_VISTORIA', obs: 'Cotacao aprovada pelo consultor' }, {
+      onSuccess: () => toast.success('Venda passada ao back-office — vistoria e ficha seguem com a empresa.'),
+      onError: (e) => toast.error(e.message),
+    });
+  }
 
   return (
     <div className="space-y-4">
@@ -100,11 +110,27 @@ export default function LeadVendedorPage({ params }: { params: Promise<{ id: str
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
           <p className="text-[13px] font-bold text-emerald-800">Cliente aceitou a proposta</p>
           <p className="mt-1 text-[12px] leading-relaxed text-emerald-900/80">
-            {lead.aceite_nome} aceitou em {formatDate(lead.aceite_em)}. Agora e completar a ficha
-            e a vistoria — depois disso a franquia manda para a análise.
+            {lead.aceite_nome} aceitou em {formatDate(lead.aceite_em)}. A venda está com o back-office,
+            que completa a ficha e a vistoria e manda para a Auditoria.
           </p>
         </div>
       )}
+
+      {podeAprovar && (
+        <div className="rounded-2xl border border-teal-200 bg-teal-50 p-4">
+          <p className="text-[13px] font-bold text-teal-900">Cliente fechou?</p>
+          <p className="mt-1 text-[12px] leading-relaxed text-teal-900/80">
+            Marque a cotação como aprovada: a venda passa ao back-office, que manda o link da
+            vistoria e completa a ficha. Preencha antes os dados do associado abaixo.
+          </p>
+          <Button className="mt-3 w-full" onClick={cotacaoAprovada} disabled={mover.isPending}>
+            {mover.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-1.5 h-4 w-4" />}
+            Cotação aprovada
+          </Button>
+        </div>
+      )}
+
+      <DadosBasicosLead key={lead.updated_at} lead={lead} somenteLeitura={fechado} />
 
       {/* A proposta com link proprio: o vendedor manda no WhatsApp e o cliente
           abre na hora, sem depender de e-mail. */}

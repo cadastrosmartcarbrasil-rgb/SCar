@@ -83,8 +83,8 @@ begin
   assert l.plano_id = plano, 'o plano da cotacao aceita vai para o lead';
 
   -- Desde o 0043 o aceite NAO pula para a auditoria: ele marca o lead e o
-  -- deixa em EM_NEGOCIACAO, para o vendedor ainda ajustar a cotacao.
-  assert l.status::text = 'EM_NEGOCIACAO',
+  -- 0158: o aceite leva para AGUARDANDO_VISTORIA (a cotacao segue editavel).
+  assert l.status::text = 'AGUARDANDO_VISTORIA',
     'aceite mantem o lead trabalhavel, veio ' || l.status::text;
   raise notice 'OK o aceite registra e mantem o lead na mao do vendedor';
 
@@ -115,7 +115,7 @@ begin
 
     l3r := registrar_aceite_venda(l3, cot3, 'VENDEDOR', 'Maria Souza', '11144477735');
     assert l3r.aceite_por = 'VENDEDOR', 'aceite presencial pelo vendedor';
-    assert l3r.status::text = 'EM_NEGOCIACAO', 'segue a mesma regra do 0043';
+    assert l3r.status::text = 'AGUARDANDO_VISTORIA', 'segue a mesma regra do 0043';
   end;
   raise notice 'OK o vendedor pode colher o aceite presencialmente';
 

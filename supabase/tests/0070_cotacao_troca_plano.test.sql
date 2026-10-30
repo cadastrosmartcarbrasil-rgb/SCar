@@ -29,7 +29,6 @@ begin
   insert into leads (nome, celular, valor_fipe, tipo_veiculo_id, consultor_id, regional_id)
     values ('Cliente Upgrade', '11999990070', 50000, tv, u_vend, r_id)
     returning id into lead;
-  perform mover_lead_status(lead, 'ORCAMENTO_GERADO');
   perform mover_lead_status(lead, 'PROPOSTA_ENVIADA');
   perform mover_lead_status(lead, 'EM_NEGOCIACAO');
 

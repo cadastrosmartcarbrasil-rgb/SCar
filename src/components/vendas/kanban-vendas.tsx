@@ -107,7 +107,7 @@ export function KanbanVendas({ busca, consultorId }: { busca?: string; consultor
                   // Tempo: o que o gestor precisa ver sem abrir o lead.
                   const agenda = situacaoAgenda(l.proximo_contato_em);
                   const esfriando = riscoDevolucao(l.dias_parado, l.limite_sem_contato)
-                    && l.status !== 'PERDIDO' && !travado;
+                    && l.status !== 'PERDIDO' && l.status !== 'AGUARDANDO_VISTORIA' && !travado;
                   return (
                     <div
                       key={l.id}

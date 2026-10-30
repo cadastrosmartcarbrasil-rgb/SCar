@@ -101,7 +101,7 @@ begin
                               null, 'CRM/vendas');
   assert l.aceite_por = 'VENDEDOR', 'aceite colhido pelo vendedor';
   assert l.aceite_documento = '11144477735', 'o documento e gravado so com digitos';
-  assert l.status::text = 'EM_NEGOCIACAO', 'o aceite nao pula para a auditoria (regra do 0043)';
+  assert l.status::text = 'AGUARDANDO_VISTORIA', 'o aceite nao pula para a auditoria (0158: vai para Aguardando vistoria)';
   assert l.aceite_cotacao_id = cot, 'fica gravado QUAL cotacao foi aceita';
 
   select count(*) into n from lead_atribuicoes where lead_id = l_id and motivo = 'ACEITE_VENDEDOR';

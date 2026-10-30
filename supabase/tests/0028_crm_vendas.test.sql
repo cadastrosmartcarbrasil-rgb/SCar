@@ -30,14 +30,13 @@ begin
   -- ------------------------------------------------------------ A) pipeline
   assert (select status::text from leads where id = lead) = 'NOVO', 'lead nasce em NOVO';
 
-  perform mover_lead_status(lead, 'ORCAMENTO_GERADO');
   perform mover_lead_status(lead, 'PROPOSTA_ENVIADA');
   select * into l from mover_lead_status(lead, 'EM_NEGOCIACAO');
   assert l.status::text = 'EM_NEGOCIACAO', format('status = %s', l.status);
 
   -- trilha do funil registrada
   select count(*) into n from lead_historico where lead_id = lead;
-  assert n >= 4, format('historico do funil = %s', n);
+  assert n >= 3, format('historico do funil = %s', n);  -- 0158: sem Cotacao criada
 
   -- status invalido e perda sem motivo sao bloqueados
   begin
@@ -157,7 +156,9 @@ begin
   raise notice 'OK desconto por regional + alcada de excecao';
 
   -- ------------------------------------------------- cotacao apos auditoria
-  perform mover_lead_status(lead, 'APROVADO');
+  -- 0158: pelo funil a Auditoria so recebe ficha completa; aqui o que se testa e
+  -- a trava DEPOIS dela, entao o status vai direto (o trigger leva a EM_AUDITORIA).
+  update leads set status = 'APROVADO' where id = lead;
   assert (select status::text from leads where id = lead) = 'EM_AUDITORIA', 'aprovar manda para auditoria';
   begin
     perform atualizar_cotacao(c.id, 90000);

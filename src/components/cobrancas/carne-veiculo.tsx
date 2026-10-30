@@ -14,6 +14,7 @@ import {
   MESES_CARNE_MAX, MESES_CARNE_PADRAO, mensagemDoCarne, resumoDoCarne, type BoletoDoCarne,
 } from '@/lib/carne';
 import { linkWhatsAppAssociado } from '@/lib/protocolos';
+import { mensagemBoasVindasWhatsApp } from '@/lib/boas-vindas';
 import { formatCurrency, formatDate } from '@/lib/utils';
 
 export function useEmitirCarne() {
@@ -57,11 +58,13 @@ export function SeletorMesesCarne({ valor, onChange, permitirNenhum = false }: {
   );
 }
 
-export function ModalCarne({ veiculo, onClose, mesesIniciais, emitirAoAbrir = false }: {
+export function ModalCarne({ veiculo, onClose, mesesIniciais, emitirAoAbrir = false, boasVindas = false }: {
   veiculo: VeiculoDoCarne;
   onClose: () => void;
   mesesIniciais?: number;
   emitirAoAbrir?: boolean;
+  /** 0161: associado novo — os envios viram as BOAS-VINDAS (portal + boletos). */
+  boasVindas?: boolean;
 }) {
   const [meses, setMeses] = useState(mesesIniciais ?? MESES_CARNE_PADRAO);
   const emitir = useEmitirCarne();
@@ -89,13 +92,13 @@ export function ModalCarne({ veiculo, onClose, mesesIniciais, emitirAoAbrir = fa
   }, [emitirAoAbrir]);
 
   return (
-    <Modal open onClose={onClose} tamanho="lg" title="Carnê de mensalidades"
+    <Modal open onClose={onClose} tamanho="lg" title={boasVindas ? 'Boas-vindas e carnê' : 'Carnê de mensalidades'}
       subtitulo={`${veiculo.placa ?? 'Veículo'} · ${veiculo.nome}`}>
       {!boletos ? (
         <div className="space-y-3">
           <p className="text-sm text-slate-600">
             Gera as mensalidades dos próximos meses deste veículo e registra os boletos (com PIX) no banco agora.
-            O primeiro vence no próximo vencimento a pelo menos 2 dias de hoje. O veículo passa a ter boleto próprio.
+            O primeiro vence no próximo vencimento a pelo menos 2 dias de hoje e cobra só os dias usados desde a ativação (pró-rata). O veículo passa a ter boleto próprio.
           </p>
           <FormField label="Quantos meses">
             <SeletorMesesCarne valor={meses} onChange={setMeses} />
@@ -109,7 +112,7 @@ export function ModalCarne({ veiculo, onClose, mesesIniciais, emitirAoAbrir = fa
           </div>
         </div>
       ) : (
-        <CarneEmitido veiculo={veiculo} boletos={boletos}
+        <CarneEmitido veiculo={veiculo} boletos={boletos} boasVindas={boasVindas}
           onTentarDeNovo={() => rodar(meses)} tentando={emitir.isPending} onClose={onClose} />
       )}
       {!boletos && emitir.isPending && (
@@ -121,16 +124,38 @@ export function ModalCarne({ veiculo, onClose, mesesIniciais, emitirAoAbrir = fa
   );
 }
 
-function CarneEmitido({ veiculo, boletos, onTentarDeNovo, tentando, onClose }: {
+function CarneEmitido({ veiculo, boletos, onTentarDeNovo, tentando, onClose, boasVindas = false }: {
   veiculo: VeiculoDoCarne;
   boletos: BoletoDoCarne[];
   onTentarDeNovo: () => void;
   tentando: boolean;
   onClose: () => void;
+  boasVindas?: boolean;
 }) {
   const r = resumoDoCarne(boletos);
-  const wa = linkWhatsAppAssociado(veiculo.celular, mensagemDoCarne(veiculo.nome, veiculo.placa, boletos));
+  const portalUrl = typeof window !== 'undefined' ? `${window.location.origin}/portal/login` : '/portal/login';
+  const wa = linkWhatsAppAssociado(veiculo.celular, boasVindas
+    ? mensagemBoasVindasWhatsApp({ nome: veiculo.nome, placa: veiculo.placa, portalUrl, boletos })
+    : mensagemDoCarne(veiculo.nome, veiculo.placa, boletos));
   const [enviando, setEnviando] = useState(false);
+
+  async function boasVindasPorEmail() {
+    setEnviando(true);
+    try {
+      const res = await fetch('/api/v1/vendas/boas-vindas', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ veiculo_id: veiculo.id, titulo_ids: boletos.map((b) => b.titulo_id) }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j.error ?? 'Falha ao enviar');
+      if (j.enviado) toast.success(`Boas-vindas enviadas para ${j.para}.`);
+      else toast.warning(j.aviso ?? 'O e-mail não saiu.');
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setEnviando(false);
+    }
+  }
 
   async function copiar(texto: string) {
     try { await navigator.clipboard.writeText(texto); toast.success('Copiado'); } catch { toast.error('Não foi possível copiar'); }
@@ -221,10 +246,16 @@ function CarneEmitido({ veiculo, boletos, onTentarDeNovo, tentando, onClose }: {
         <Button variant="secondary" onClick={imprimir} disabled={r.registrados === 0}>
           <Printer className="h-4 w-4" /> Imprimir carnê
         </Button>
-        <Button variant="secondary" onClick={porEmail} disabled={enviando || r.registrados === 0}>
-          {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />} Por e-mail
-        </Button>
-        {wa && r.registrados > 0 && (
+        {boasVindas ? (
+          <Button variant="secondary" onClick={boasVindasPorEmail} disabled={enviando}>
+            {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />} Boas-vindas por e-mail
+          </Button>
+        ) : (
+          <Button variant="secondary" onClick={porEmail} disabled={enviando || r.registrados === 0}>
+            {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />} Por e-mail
+          </Button>
+        )}
+        {wa && (boasVindas || r.registrados > 0) && (
           <a href={wa} target="_blank" rel="noreferrer"
             className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700">
             <MessageCircle className="h-4 w-4" /> WhatsApp

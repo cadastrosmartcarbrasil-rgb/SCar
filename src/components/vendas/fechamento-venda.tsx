@@ -108,7 +108,7 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
   const valorAdesao = adesaoTabela ?? Number(form.adesao_valor ?? 0);
   const rateio = ratearAdesao(
     valorAdesao,
-    (form.adesao_forma ?? null) as FormaAdesao | null,
+    (form.adesao_forma ?? 'VENDEDOR_NA_HORA') as FormaAdesao,
     Number(vendedorSel?.taxa_comissao_adesao ?? 0),
   );
 
@@ -334,7 +334,7 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
             <FormField label="E-mail *">
               <Input type="email" value={form.email ?? ''} onChange={(e) => set({ email: e.target.value })} />
             </FormField>
-            <FormField label={form.tipo_pessoa === 'PJ' ? 'Data de fundação *' : 'Data de nascimento *'}>
+            <FormField label={form.tipo_pessoa === 'PJ' ? 'Data de fundação' : 'Data de nascimento'}>
               <Input type="date" className="tnum" value={form.data_nascimento ?? ''} onChange={(e) => set({ data_nascimento: e.target.value })} />
             </FormField>
           </div>
@@ -373,7 +373,7 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
 
         {/* ---------------------------------------------------- Veiculo */}
         {aba === 'veiculo' && (
-        <Secao icone={Car} titulo="Veiculo" descricao="Chassi, Renavam e cor são obrigatórios para o veículo entrar na base.">
+        <Secao icone={Car} titulo="Veiculo" descricao="Chassi e cor são obrigatórios para o veículo entrar na base (Renavam é opcional).">
           <div className="grid gap-3 sm:grid-cols-4">
             <FormField label="Placa *">
               <div className="flex gap-1.5">
@@ -399,7 +399,7 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
             <FormField label="Chassi *" className="sm:col-span-2">
               <Input value={form.chassi ?? ''} onChange={(e) => set({ chassi: e.target.value.toUpperCase() })} maxLength={17} placeholder="17 caracteres" />
             </FormField>
-            <FormField label="Renavam *">
+            <FormField label="Renavam">
               <Input value={form.renavam ?? ''} onChange={(e) => set({ renavam: e.target.value.replace(/\D/g, '') })} maxLength={11} />
             </FormField>
             {/* Nao entra no checklist de propósito: o motor nao aparece em todo
@@ -530,9 +530,9 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
                 Vem da cotação aceita. Desconto só pela alçada, na cotação.
               </p>
             </FormField>
-            <FormField label="Forma de recebimento *">
-              <Select value={form.adesao_forma ?? ''} onChange={(e) => set({ adesao_forma: (e.target.value || null) as LeadsRow['adesao_forma'] })}>
-                <option value="">-- Selecione --</option>
+            <FormField label="Forma de recebimento">
+              {/* 0161: o padrao e a adesao com o consultor — nao trava a venda. */}
+              <Select value={form.adesao_forma ?? 'VENDEDOR_NA_HORA'} onChange={(e) => set({ adesao_forma: (e.target.value || 'VENDEDOR_NA_HORA') as LeadsRow['adesao_forma'] })}>
                 {(Object.keys(FORMA_ADESAO_ROTULO) as FormaAdesao[]).map((f) => (
                   <option key={f} value={f}>{FORMA_ADESAO_ROTULO[f]}</option>
                 ))}
@@ -540,20 +540,18 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
             </FormField>
           </div>
 
-          {form.adesao_forma && (
-            <div className={`rounded-xl border px-3 py-2.5 text-[11.5px] leading-relaxed ${
-              rateio.entraNoCaixa ? 'border-cyan-200 bg-cyan-50 text-cyan-900' : 'border-slate-200 bg-slate-50 text-slate-700'
-            }`}>
-              <p className="font-semibold">{rateio.resumo}</p>
-              {rateio.entraNoCaixa && (
-                <p className="tnum mt-1">
-                  Receita da associação {formatCurrency(rateio.valor)} · repasse ao vendedor{' '}
-                  {formatCurrency(rateio.vendedor)} · fica {formatCurrency(rateio.associacao)}
-                  {vendedorSel && <> (comissão de {(Number(vendedorSel.taxa_comissao_adesao) * 100).toFixed(0)}%)</>}
-                </p>
-              )}
-            </div>
-          )}
+          <div className={`rounded-xl border px-3 py-2.5 text-[11.5px] leading-relaxed ${
+            rateio.entraNoCaixa ? 'border-cyan-200 bg-cyan-50 text-cyan-900' : 'border-slate-200 bg-slate-50 text-slate-700'
+          }`}>
+            <p className="font-semibold">{rateio.resumo}</p>
+            {rateio.entraNoCaixa && (
+              <p className="tnum mt-1">
+                Receita da associação {formatCurrency(rateio.valor)} · repasse ao vendedor{' '}
+                {formatCurrency(rateio.vendedor)} · fica {formatCurrency(rateio.associacao)}
+                {vendedorSel && <> (comissão de {(Number(vendedorSel.taxa_comissao_adesao) * 100).toFixed(0)}%)</>}
+              </p>
+            )}
+          </div>
         </Secao>
 
         )}

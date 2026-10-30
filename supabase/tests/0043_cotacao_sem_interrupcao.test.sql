@@ -81,14 +81,19 @@ begin
   assert l.aceite_cotacao_id = cot, 'qual proposta foi aceita';
 
   -- o ponto do 0043: NAO pula para a auditoria
-  assert l.status::text = 'EM_NEGOCIACAO',
+  assert l.status::text = 'AGUARDANDO_VISTORIA',
     'aceite mantem o lead trabalhavel, veio ' || l.status::text;
   assert lead_em_negociacao(l_id),
     'sem isto a cotacao congela e o vendedor nao ajusta mais nada';
   raise notice 'OK depois do aceite o vendedor ainda ajusta a cotacao';
 
   -- e a esteira segue normal quando a equipe manda para a auditoria
-  perform mover_lead_status(l_id, 'APROVADO', 'ficha completa');
+  -- 0158: com a ficha incompleta o funil recusa; completa, a equipe envia.
+  begin
+    perform mover_lead_status(l_id, 'APROVADO', 'ficha incompleta');
+    assert false, 'ficha incompleta nao vai a Auditoria';
+  exception when check_violation then null; end;
+  update leads set status = 'APROVADO' where id = l_id;
   select status::text into rec from leads where id = l_id;
   assert rec.status = 'EM_AUDITORIA', 'a equipe leva para a auditoria, veio ' || rec.status;
   raise notice 'OK a equipe e quem envia para a auditoria';

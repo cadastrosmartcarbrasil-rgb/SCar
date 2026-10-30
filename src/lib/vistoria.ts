@@ -73,3 +73,24 @@ export function avulsosParaCotacao(selecionados: Iterable<string>, idsDoPlano: s
   const doPlano = new Set(idsDoPlano);
   return [...selecionados].filter((id) => !doPlano.has(id));
 }
+
+// ---------------------------------------------------------------------------
+// Configuracoes -> Fotos da vistoria (0161)
+// O CODIGO da pose e gravado em `vistoria_anexos.tipo` — e a ligacao entre a
+// foto e o item do checklist. Por isso ele nasce do nome (caixa alta, sem
+// acento, `_` no lugar de espaco) e NAO muda depois: trocar o codigo deixaria
+// as fotos ja enviadas sem pose.
+// ---------------------------------------------------------------------------
+export function codigoDaPose(nome: string, existentes: string[] = []): string {
+  const base = (nome || '')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '')
+    .slice(0, 40) || 'FOTO';
+  const usados = new Set(existentes.map((c) => c.toUpperCase()));
+  if (!usados.has(base)) return base;
+  for (let i = 2; i < 1000; i++) {
+    const c = `${base}_${i}`;
+    if (!usados.has(c)) return c;
+  }
+  return `${base}_${Date.now()}`;
+}

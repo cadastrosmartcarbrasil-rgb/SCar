@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Building2, Users, Landmark, ListTree, Car, BadgeDollarSign, AlertTriangle, Truck, Package, Building, Wallet, Percent, Layers, Bell, Megaphone, Palette, Target, FileCheck2, FileSignature, Receipt, KeyRound,
+  Building2, Users, Landmark, ListTree, Car, BadgeDollarSign, AlertTriangle, Truck, Package, Building, Wallet, Percent, Layers, Bell, Megaphone, Palette, Target, FileCheck2, FileSignature, Receipt, KeyRound, Camera,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -19,6 +19,7 @@ const TABS = [
   { href: '/configuracoes/tipos-evento', label: 'Tipos de Evento', icon: AlertTriangle },
   { href: '/configuracoes/documentos-evento', label: 'Prazos e Documentos do Evento', icon: FileCheck2 },
   { href: '/configuracoes/alertas', label: 'Alertas', icon: Bell },
+  { href: '/configuracoes/vistoria-fotos', label: 'Fotos da Vistoria', icon: Camera },
   { href: '/configuracoes/comunicados', label: 'Comunicados', icon: Megaphone },
   { href: '/configuracoes/termos', label: 'Termos', icon: FileSignature },
   { href: '/configuracoes/produtos', label: 'Produtos', icon: Package },
