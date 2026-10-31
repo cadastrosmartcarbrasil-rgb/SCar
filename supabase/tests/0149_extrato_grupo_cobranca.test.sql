@@ -36,16 +36,18 @@ begin
   assert n = 2, 'COMPE/REDE: ' || n;
   assert (select grupo from extrato_conta(conta, date '2026-10-13', date '2026-10-13') where descricao = 'Aporte') is null;
 
-  -- os membros de cada grupo vem juntos: COMPE_REDE, COMPE_REDE, PIX, PIX, e o resto
+  -- os membros de cada grupo vem juntos. O movimento sem grupo vem antes ou
+  -- depois dos grupos conforme a collation do banco (producao: antes; C: depois);
+  -- o que importa e cada grupo contiguo e o saldo coerente com a ordem.
   select string_agg(coalesce(grupo, '-'), ',') into ordem
     from extrato_conta(conta, date '2026-10-13', date '2026-10-13');
-  assert ordem = 'COMPE_REDE,COMPE_REDE,PIX,PIX,-', ordem;
+  assert ordem in ('COMPE_REDE,COMPE_REDE,PIX,PIX,-', '-,COMPE_REDE,COMPE_REDE,PIX,PIX'), ordem;
 
   -- o saldo do ultimo membro e o saldo depois do grupo inteiro; o fim confere
   select saldo into r from extrato_conta(conta, date '2026-10-13', date '2026-10-13') where grupo = 'COMPE_REDE'
    order by saldo desc limit 1;
-  assert r.saldo = 100.00, 'saldo depois do COMPE/REDE: ' || r.saldo;
-  select saldo into saldo_fim from extrato_conta(conta, date '2026-10-13', date '2026-10-13') where descricao = 'Aporte';
+  assert r.saldo = case when ordem like '-%' then 1100.00 else 100.00 end, 'saldo depois do COMPE/REDE: ' || r.saldo;
+  select max(saldo) into saldo_fim from extrato_conta(conta, date '2026-10-13', date '2026-10-13');
   assert saldo_fim = 1250.00, 'saldo final: ' || saldo_fim;
   assert saldo_fim = saldo_consolidado_em(date '2026-10-13', conta);
 
