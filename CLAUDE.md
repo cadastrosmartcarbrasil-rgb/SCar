@@ -3834,6 +3834,9 @@ Pedido do usuário: o carnê no padrão que a Smart Car já usa (modelo Sicredi 
 - **Placas e logo (31/10, pedido do usuário):** o boleto mostra TODAS as placas que ele cobra (canhoto "Veículos" e linha
   no bloco do pagador) — fatura AGRUPADA não tem `veiculo_id` no título, então saem dos `fatura_itens`; 0 km pelo chassi
   (`placasDoBoleto`). Logo = `empresa.logo_url`; se não carregar, a oficial embutida `public/logo-smartcar-oficial.png`.
+- **Espaço da ficha (31/10, 1º teste em produção):** a coluna de descontos/acréscimos virou só rótulo (4 mm por linha) e o
+  código de barras (13 mm) cabe inteiro no bloco de 91 mm. O endereço do portal sai de `origemDaRequisicao` (o
+  `request.url` no contêiner é `0.0.0.0:3000`) e o telefone com máscara.
 - **Texto das instruções:** sem "não receber após N dias" (o cadastro no Sicredi não define isso hoje); manda ao portal e
   ao contato da Empresa.
 

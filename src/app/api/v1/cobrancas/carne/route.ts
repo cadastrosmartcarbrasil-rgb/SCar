@@ -5,6 +5,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { gerarPdf, logoComoDataUrl } from '@/lib/termos-server';
 import { seuNumeroDoTitulo } from '@/lib/pagamentos/sicredi';
 import { readFile } from 'node:fs/promises';
+import { origemDaRequisicao } from '@/lib/api-externa-doc';
+import { maskCelular } from '@/lib/utils';
 import path from 'node:path';
 import { htmlDoCarne, placasDoBoleto, referenciaDoVencimento, referenteDoBoleto, type FichaCarne, type TipoCobrancaCarne } from '@/lib/carne-impressao';
 
@@ -138,7 +140,10 @@ export async function GET(request: Request) {
   const rua = [e.logradouro, e.numero, e.complemento, e.bairro].filter((x) => x && String(x).trim()).join(', ');
   const cep = (e.cep ?? '').replace(/\D/g, '');
   const cidade = [e.cidade, e.uf].filter(Boolean).join(' - ');
-  const contato = empresa?.whatsapp_principal || empresa?.telefone_fixo;
+  // Atras do proxy o request.url e o do conteiner (0.0.0.0:3000): o endereco publico vem dos cabecalhos.
+  const origem = origemDaRequisicao(request.headers);
+  const fone = empresa?.whatsapp_principal || empresa?.telefone_fixo;
+  const contato = fone ? maskCelular(fone) : null;
 
   const { html, impressas } = htmlDoCarne(fichas, {
     beneficiario: (empresa?.razao_social ?? 'SMART CAR BRASIL PROTEÇÃO VEICULAR').toUpperCase(),
@@ -146,7 +151,7 @@ export async function GET(request: Request) {
     logo: (await logoComoDataUrl(empresa?.logo_url)) ?? (await logoDeReserva()),
     instrucoes: [
       'Mantenha sua mensalidade em dia para garantir a proteção do seu veículo.',
-      `Segunda via e boletos: portal do associado ${url.origin}/portal${contato ? ` · Dúvidas: ${contato}` : ''}`,
+      `Segunda via e boletos: portal do associado ${origem.replace(/^https?:\/\//, '')}/portal${contato ? ` · Dúvidas: ${contato}` : ''}`,
     ],
     pagador: {
       nome: cliente.nome_razao_social,

@@ -247,7 +247,7 @@ export function htmlDaFicha(f: FichaCarne, cab: CabecalhoCarne): string | null {
         </td></tr>
       </table>
       <table class="rod"><tr>
-        <td class="barras">${svgCodigoDeBarras(codigo!, 103, 12)}</td>
+        <td class="barras">${svgCodigoDeBarras(codigo!, 103, 13)}</td>
         <td class="aut">Autenticação mecânica</td>
       </tr></table>
     </td>`;
@@ -284,21 +284,23 @@ body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: #000; }
 .v { font-size: 7pt; font-weight: bold; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .d { width: 38mm; }
 .destaque { background: #ddd; }
-.instr { vertical-align: top; padding: 1mm 1.5mm; position: relative; height: 23mm; }
+.instr { vertical-align: top; padding: 1mm 1.5mm; position: relative; height: 20mm; }
 .instr .txt { font-size: 6.5pt; font-weight: bold; padding-right: 30mm; }
 .instr .txt p { margin: 0 0 1.4mm; }
-.pix { position: absolute; right: 1.5mm; top: 1mm; width: 27mm; text-align: center; font-size: 5.5pt; font-weight: bold; }
-.pix svg { width: 18mm; height: 18mm; margin-top: 0.6mm; }
+.pix { position: absolute; right: 1.5mm; top: 0.4mm; width: 27mm; text-align: center; font-size: 5.5pt; font-weight: bold; }
+.pix svg { width: 12.5mm; height: 12.5mm; margin-top: 0.3mm; }
 .lado { vertical-align: top; padding: 0; }
 .lado table { width: 100%; border-collapse: collapse; }
-.lado .c { border-bottom: 0.3mm solid #000; height: 4.6mm; }
+.lado .c { border-bottom: 0.3mm solid #000; height: 4mm; padding-top: 0.3mm; }
 .lado tr:last-child .c { border-bottom: 0; }
+.lado .v { display: none; }
+.lado .r { white-space: nowrap; font-size: 5.5pt; }
 .pagador { padding: 0.6mm 1.5mm; font-size: 7pt; height: 11mm; }
 .pagador div { line-height: 1.25 !important; }
 .pagador .r { float: left; width: 16mm; font-style: normal; font-weight: bold; font-size: 7pt; }
 .pagador div { margin-left: 17mm; line-height: 1.35; }
 .rod { width: 100%; border-collapse: collapse; }
-.barras { padding: 1.2mm 0 0 1mm; vertical-align: top; }
+.barras { padding: 1.5mm 0 0 1mm; vertical-align: top; }
 .aut { width: 38mm; font-size: 7pt; font-weight: bold; vertical-align: top; padding-top: 1.5mm; }
 `;
 
