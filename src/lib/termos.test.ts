@@ -180,3 +180,25 @@ describe('layout do termo', () => {
       .toBe('<table><tr><td><p>☐ X</p></td></tr></table>');
   });
 });
+
+import { validarPdfTermo, tamanhoArquivo, PDF_TERMO_MAX_BYTES } from './termos';
+
+describe('PDF original do documento geral (0166)', () => {
+  const ok = { nome: 'Regimento.pdf', bytes: 2048, cabecalho: '%PDF-1.7', escopo: 'GERAL' };
+  it('aceita PDF em documento geral', () => {
+    expect(validarPdfTermo(ok)).toBeNull();
+  });
+  it('recusa termo por associado', () => {
+    expect(validarPdfTermo({ ...ok, escopo: 'ASSOCIADO' })).toMatch(/Geral/);
+  });
+  it('recusa o que nao e PDF, vazio e acima do teto', () => {
+    expect(validarPdfTermo({ ...ok, cabecalho: 'PK\u0003\u0004' })).toMatch(/não é um PDF/);
+    expect(validarPdfTermo({ ...ok, bytes: 0 })).toMatch(/vazio/);
+    expect(validarPdfTermo({ ...ok, bytes: PDF_TERMO_MAX_BYTES + 1 })).toMatch(/20 MB/);
+  });
+  it('tamanho legivel', () => {
+    expect(tamanhoArquivo(830 * 1024)).toBe('830 KB');
+    expect(tamanhoArquivo(2.4 * 1024 * 1024)).toBe('2,4 MB');
+    expect(tamanhoArquivo(null)).toBe('—');
+  });
+});

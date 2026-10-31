@@ -38,7 +38,7 @@ export function useVersoesTermo(modeloId: string | null | undefined) {
     enabled: !!modeloId,
     queryFn: async () => {
       const { data, error } = await supabase.from('termos_versoes')
-        .select('id, modelo_id, numero, nome, sha256, observacao, pdf_path, publicada_em, publicada_por')
+        .select('id, modelo_id, numero, nome, sha256, observacao, pdf_path, pdf_original, publicada_em, publicada_por')
         .eq('modelo_id', modeloId!).order('numero', { ascending: false });
       if (error) throw error;
       return (data ?? []) as Omit<TermoVersaoRow, 'conteudo_html' | 'declaracoes' | 'pdf_sha256'>[];
@@ -195,8 +195,30 @@ export function usePortalTermo() {
   });
 }
 
-export const urlPdfTermo = (a: { emitido?: string; versao?: string; baixar?: boolean }) =>
-  `/api/v1/termos/pdf?${a.emitido ? `emitido=${a.emitido}` : `versao=${a.versao}`}${a.baixar ? '&baixar=1' : ''}`;
+export const urlPdfTermo = (a: { emitido?: string; versao?: string; modelo?: string; baixar?: boolean }) =>
+  `/api/v1/termos/pdf?${a.emitido ? `emitido=${a.emitido}` : a.modelo ? `modelo=${a.modelo}` : `versao=${a.versao}`}${a.baixar ? '&baixar=1' : ''}`;
+
+/** PDF original do documento GERAL (0166): sobe (arquivo) ou tira (null) do rascunho. */
+export function usePdfOriginalTermo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (a: { modeloId: string; arquivo: File | null }) => {
+      let r: Response;
+      if (a.arquivo) {
+        const fd = new FormData();
+        fd.append('modelo_id', a.modeloId);
+        fd.append('arquivo', a.arquivo);
+        r = await fetch('/api/v1/termos/arquivo', { method: 'POST', body: fd });
+      } else {
+        r = await fetch(`/api/v1/termos/arquivo?modelo_id=${a.modeloId}`, { method: 'DELETE' });
+      }
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error ?? 'Falha ao processar o PDF.');
+      return j.modelo as TermoModeloRow;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['termos'] }),
+  });
+}
 
 /** Veiculos do associado para escolher no termo (os excluidos ficam de fora). */
 export function useVeiculosParaTermo(clienteId: string | null | undefined) {

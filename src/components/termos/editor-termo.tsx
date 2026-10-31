@@ -123,7 +123,9 @@ function SeletorCampo({ onEscolher, onFechar }: { onEscolher: (chave: string) =>
   );
 }
 
-function Barra({ editor, onImportar }: { editor: Editor; onImportar?: () => void }) {
+function Barra({ editor, onImportar, onImportarPdf }: {
+  editor: Editor; onImportar?: () => void; onImportarPdf?: () => void;
+}) {
   const [campos, setCampos] = useState(false);
   const naTabela = editor.isActive('table');
   function inserirCampo(chave: string) {
@@ -165,6 +167,13 @@ function Barra({ editor, onImportar }: { editor: Editor; onImportar?: () => void
           <FileUp className="h-4 w-4" /> Importar Word
         </button>
       )}
+      {onImportarPdf && (
+        <button type="button" onClick={onImportarPdf}
+          title="O PDF pronto vira o próprio documento (só documento Geral)"
+          className="flex items-center gap-1 rounded-lg px-2 py-1 text-sm text-slate-600 hover:bg-slate-100">
+          <FileUp className="h-4 w-4" /> Importar PDF
+        </button>
+      )}
       <div className="relative ml-auto">
         <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => setCampos((v) => !v)}
           className="flex items-center gap-1 rounded-lg bg-cyan-500 px-3 py-1 text-sm font-semibold text-navy hover:bg-cyan-400">
@@ -179,9 +188,11 @@ function Barra({ editor, onImportar }: { editor: Editor; onImportar?: () => void
 /**
  * Editor do texto do termo. `value` e o HTML guardado em `termos_modelos.rascunho_html`.
  * Importar Word (.docx) troca o texto inteiro, depois de confirmar.
+ * Importar PDF (so documento GERAL, 0166) e tratado por quem usa o editor:
+ * o arquivo vira o proprio documento, nao texto.
  */
-export function EditorTermo({ value, onChange, somenteLeitura }: {
-  value: string; onChange: (html: string) => void; somenteLeitura?: boolean;
+export function EditorTermo({ value, onChange, somenteLeitura, onImportarPdf }: {
+  value: string; onChange: (html: string) => void; somenteLeitura?: boolean; onImportarPdf?: () => void;
 }) {
   const arquivo = useRef<HTMLInputElement>(null);
   const editor = useEditor({
@@ -227,7 +238,7 @@ export function EditorTermo({ value, onChange, somenteLeitura }: {
   if (!editor) return <div className="h-96 animate-pulse rounded-xl bg-slate-100" />;
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-superficie">
-      {!somenteLeitura && <Barra editor={editor} onImportar={() => arquivo.current?.click()} />}
+      {!somenteLeitura && <Barra editor={editor} onImportar={() => arquivo.current?.click()} onImportarPdf={onImportarPdf} />}
       <input ref={arquivo} type="file" accept=".docx" className="hidden"
         onChange={(e) => { const f = e.target.files?.[0]; if (f) void importar(f); e.target.value = ''; }} />
       <EditorContent editor={editor} className="termo-editor max-h-[70vh] min-h-[24rem] overflow-y-auto p-6" />

@@ -11,7 +11,8 @@ import type { TermoEmitidoRow } from '@/lib/database.types';
 // TERMOS (0123) — uma rota, quatro acoes:
 //   previa     { modelo_id | versao_id, rascunho_html?, cliente_id?, veiculo_id? } -> HTML preenchido + vazios
 //   pdf_previa { mesmo }  -> o PDF sem gravar nada (conferir antes de publicar/emitir)
-//   publicar   { modelo_id, observacao? } -> congela a versao (e gera o PDF da versao GERAL)
+//   publicar   { modelo_id, observacao? } -> congela a versao (e gera o PDF da versao GERAL,
+//                                            ou copia o PDF original importado — 0166)
 //   emitir     { versao_id, cliente_id, veiculo_id?, visivel_portal? } -> grava o termo + PDF
 // A permissao e a unidade sao conferidas no banco (RPCs da 0123); a leitura
 // dos dados e pela sessao, entao a RLS vale aqui tambem.
@@ -92,9 +93,25 @@ export async function POST(request: Request) {
       if (error) return erro(error.message, error.code === '42501' ? 403 : 400);
       const versao = v!;
       // Documento GERAL (Regimento etc.): o PDF da versao sai agora, igual para todos.
-      const { data: m } = await supabase.from('termos_modelos').select('escopo').eq('id', c.modelo_id).maybeSingle();
+      const { data: m } = await supabase.from('termos_modelos')
+        .select('escopo, arquivo_pdf_path, arquivo_pdf_sha256').eq('id', c.modelo_id).maybeSingle();
       let avisoPdf: string | null = null;
-      if (m?.escopo === 'GERAL') {
+      if (versao.pdf_original && m?.arquivo_pdf_path) {
+        // 0166: o PDF importado E o documento — a versao ganha uma copia propria
+        // (trocar o arquivo do rascunho depois nao mexe no que foi publicado).
+        try {
+          const path = `versoes/${c.modelo_id}/${versao.id}.pdf`;
+          const admin = createAdminClient();
+          const cp = await admin.storage.from('termos').copy(m.arquivo_pdf_path, path);
+          if (cp.error) throw cp.error;
+          const { error: e2 } = await supabase.rpc('anexar_pdf_versao_termo', {
+            p_versao_id: versao.id, p_path: path, p_sha256: m.arquivo_pdf_sha256 ?? versao.sha256,
+          });
+          if (e2) throw e2;
+        } catch (e) {
+          avisoPdf = `A versão foi publicada, mas o PDF não foi copiado: ${(e as Error).message}`;
+        }
+      } else if (m?.escopo === 'GERAL') {
         try {
           const fontes = await carregarFontesTermo(supabase, { emitidoPor: perfil.nome });
           const r = preencherTermo(versao.conteudo_html, fontes);
@@ -116,8 +133,9 @@ export async function POST(request: Request) {
     if (c.acao === 'emitir') {
       if (!c.versao_id || !c.cliente_id) return erro('Informe o termo e o associado.');
       const { data: versao } = await supabase.from('termos_versoes')
-        .select('id, nome, numero, conteudo_html').eq('id', c.versao_id).maybeSingle();
+        .select('id, nome, numero, conteudo_html, pdf_original').eq('id', c.versao_id).maybeSingle();
       if (!versao) return erro('Versão do termo não encontrada.', 404);
+      if (versao.pdf_original) return erro('Este documento é um PDF pronto, o mesmo para todos: não se emite por associado.');
       const fontes = await carregarFontesTermo(supabase, {
         clienteId: c.cliente_id, veiculoId: c.veiculo_id ?? null, emitidoPor: perfil.nome,
       });

@@ -1686,6 +1686,11 @@ export type TermoModeloRow = Timestamps & {
   versao_atual_id: string | null;
   criado_por: string | null;
   atualizado_por: string | null;
+  /** 0166: PDF original do documento GERAL (o arquivo e o documento). */
+  arquivo_pdf_path: string | null;
+  arquivo_pdf_sha256: string | null;
+  arquivo_pdf_nome: string | null;
+  arquivo_pdf_bytes: number | null;
 };
 export type TermoVersaoRow = {
   id: string;
@@ -1698,6 +1703,8 @@ export type TermoVersaoRow = {
   observacao: string | null;
   pdf_path: string | null;
   pdf_sha256: string | null;
+  /** 0166: o PDF desta versao e o arquivo original (sha256 = hash do arquivo). */
+  pdf_original: boolean;
   publicada_por: string | null;
   publicada_em: string;
 };
@@ -5131,6 +5138,10 @@ export type Database = {
       minhas_permissoes: { Args: Record<string, never>; Returns: string[] };
       publicar_versao_termo: { Args: { p_modelo_id: string; p_observacao?: string | null }; Returns: TermoVersaoRow };
       anexar_pdf_versao_termo: { Args: { p_versao_id: string; p_path: string; p_sha256: string }; Returns: undefined };
+      definir_pdf_termo_modelo: {
+        Args: { p_modelo_id: string; p_path: string | null; p_sha256?: string | null; p_nome?: string | null; p_bytes?: number | null };
+        Returns: TermoModeloRow;
+      };
       registrar_termo_emitido: {
         Args: { p_versao_id: string; p_cliente_id: string; p_veiculo_id: string | null; p_html: string;
                 p_campos_vazios?: string[]; p_visivel_portal?: boolean | null };

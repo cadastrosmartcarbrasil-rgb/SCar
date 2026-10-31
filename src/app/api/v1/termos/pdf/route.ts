@@ -7,6 +7,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 //                    quando publicado no portal) — pode_ver_termo_emitido
 //   ?versao=<id>  -> o PDF da versao GERAL (equipe, ou o associado quando o
 //                    documento esta no portal)
+//   ?modelo=<id>  -> o PDF original importado no rascunho (0166) — so a equipe
 // `&baixar=1` manda como anexo em vez de abrir no navegador.
 export const dynamic = 'force-dynamic';
 
@@ -14,6 +15,7 @@ export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const emitidoId = params.get('emitido');
   const versaoId = params.get('versao');
+  const modeloId = params.get('modelo');
   const baixar = params.get('baixar') === '1';
 
   const supabase = createClient();
@@ -44,6 +46,13 @@ export async function GET(request: Request) {
       path = v?.pdf_path ?? null;
       nome = `${v?.nome ?? 'documento'}.pdf`;
     }
+  } else if (modeloId) {
+    // RLS de termos_modelos: so staff le
+    const { data: m } = await supabase.from('termos_modelos')
+      .select('arquivo_pdf_path, arquivo_pdf_nome, nome').eq('id', modeloId).maybeSingle();
+    if (!m) return NextResponse.json({ error: 'Termo não encontrado' }, { status: 404 });
+    path = m.arquivo_pdf_path;
+    nome = m.arquivo_pdf_nome ?? `${m.nome}.pdf`;
   } else {
     return NextResponse.json({ error: 'Informe o termo' }, { status: 400 });
   }

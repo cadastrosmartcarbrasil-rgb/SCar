@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Eye, FileDown, Save, Send, Trash2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Eye, FileDown, FileText, Save, Send, Trash2, AlertTriangle, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input, Select, Textarea, FormField } from '@/components/ui/field';
@@ -11,13 +11,15 @@ import { Modal } from '@/components/ui/modal';
 import { EditorTermo } from '@/components/termos/editor-termo';
 import { PreviaTermoModal } from '@/components/termos/previa-termo';
 import {
-  useExcluirTermoModelo, usePublicarTermo, useSalvarTermoModelo, useTermoModelo, useVersoesTermo,
-  urlPdfTermo, type ModeloEditavel,
+  useExcluirTermoModelo, usePdfOriginalTermo, usePublicarTermo, useSalvarTermoModelo, useTermoModelo,
+  useVersoesTermo, urlPdfTermo, type ModeloEditavel,
 } from '@/hooks/use-termos';
 import { usePode } from '@/hooks/use-permissoes';
 import { usePlanos, useTiposVeiculo } from '@/hooks/use-precificacao';
 import { useRegionais } from '@/hooks/use-config';
-import { TIPOS_TERMO, USOS_VEICULO, camposDoTexto, rotuloCampo, campoPorChave } from '@/lib/termos';
+import {
+  TIPOS_TERMO, USOS_VEICULO, camposDoTexto, rotuloCampo, campoPorChave, tamanhoArquivo, validarPdfTermo,
+} from '@/lib/termos';
 import { formatDateTime } from '@/lib/utils';
 
 // As 6 declaracoes do aceite (texto exato do pedido do usuario, 19/10/2026).
@@ -63,6 +65,8 @@ export default function TermoEditarPage() {
   const salvar = useSalvarTermoModelo();
   const publicar = usePublicarTermo();
   const excluir = useExcluirTermoModelo();
+  const pdfOriginal = usePdfOriginalTermo();
+  const inputPdf = useRef<HTMLInputElement>(null);
   const planos = usePlanos();
   const tipos = useTiposVeiculo();
   const regionais = useRegionais();
@@ -92,8 +96,11 @@ export default function TermoEditarPage() {
 
   async function gravar(silencioso = false) {
     try {
-      const { created_at: _c, updated_at: _u, versao_atual_id: _v, criado_por: _cp, atualizado_por: _ap, ...resto } =
-        f as ModeloEditavel & { created_at?: string; updated_at?: string };
+      // o PDF original tem rota propria (0166): o rascunho nunca o regrava
+      const {
+        created_at: _c, updated_at: _u, versao_atual_id: _v, criado_por: _cp, atualizado_por: _ap,
+        arquivo_pdf_path: _p1, arquivo_pdf_sha256: _p2, arquivo_pdf_nome: _p3, arquivo_pdf_bytes: _p4, ...resto
+      } = f as ModeloEditavel & { created_at?: string; updated_at?: string };
       await salvar.mutateAsync({ ...resto, id });
       setSujo(false);
       if (!silencioso) toast.success('Rascunho salvo. Publique uma versão para valer nas emissões.');
@@ -112,6 +119,35 @@ export default function TermoEditarPage() {
       if (r.aviso) toast.warning(r.aviso);
       setPublicando(false);
       setObs('');
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  }
+
+  const comPdf = f.escopo === 'GERAL' && !!f.arquivo_pdf_path;
+
+  async function importarPdf(arq: File) {
+    const cab = new TextDecoder('latin1').decode(await arq.slice(0, 8).arrayBuffer());
+    const problema = validarPdfTermo({ nome: arq.name, bytes: arq.size, cabecalho: cab, escopo: f!.escopo ?? 'ASSOCIADO' });
+    if (problema) { toast.error(problema); return; }
+    if (f!.arquivo_pdf_path && !window.confirm(`Trocar ${f!.arquivo_pdf_nome ?? 'o PDF atual'} por ${arq.name}?`)) return;
+    if (sujo && !(await gravar(true))) return;
+    try {
+      const m = await pdfOriginal.mutateAsync({ modeloId: id, arquivo: arq });
+      setF((x) => ({ ...x!, arquivo_pdf_path: m.arquivo_pdf_path, arquivo_pdf_sha256: m.arquivo_pdf_sha256,
+        arquivo_pdf_nome: m.arquivo_pdf_nome, arquivo_pdf_bytes: m.arquivo_pdf_bytes }));
+      toast.success(`${arq.name} importado. Publique uma versão para valer no portal e nas fichas.`);
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  }
+
+  async function removerPdf() {
+    if (!window.confirm('Tirar o PDF do rascunho e voltar a usar o texto do editor? As versões já publicadas não mudam.')) return;
+    try {
+      await pdfOriginal.mutateAsync({ modeloId: id, arquivo: null });
+      setF((x) => ({ ...x!, arquivo_pdf_path: null, arquivo_pdf_sha256: null, arquivo_pdf_nome: null, arquivo_pdf_bytes: null }));
+      toast.success('PDF retirado. O documento volta a ser o texto do editor.');
     } catch (e) {
       toast.error((e as Error).message);
     }
@@ -137,7 +173,13 @@ export default function TermoEditarPage() {
           <ArrowLeft className="h-4 w-4" /> Termos
         </Link>
         <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" onClick={() => setPrevia(true)}><Eye className="mr-1 h-4 w-4" /> Prévia</Button>
+          {comPdf ? (
+            <Button variant="secondary" onClick={() => window.open(urlPdfTermo({ modelo: id }), '_blank', 'noopener')}>
+              <Eye className="mr-1 h-4 w-4" /> Prévia
+            </Button>
+          ) : (
+            <Button variant="secondary" onClick={() => setPrevia(true)}><Eye className="mr-1 h-4 w-4" /> Prévia</Button>
+          )}
           {!ro && (
             <>
               <Button variant="secondary" onClick={() => gravar()} disabled={!sujo || salvar.isPending}>
@@ -166,7 +208,8 @@ export default function TermoEditarPage() {
             onChange={(e) => set({ descricao: e.target.value || null })} />
         </FormField>
         <FormField label="Documento">
-          <Select value={f.escopo ?? 'ASSOCIADO'} disabled={ro}
+          <Select value={f.escopo ?? 'ASSOCIADO'} disabled={ro || comPdf}
+            title={comPdf ? 'Documento com PDF importado é sempre Geral. Retire o PDF para mudar.' : undefined}
             onChange={(e) => set({ escopo: e.target.value as 'ASSOCIADO' | 'GERAL' })}>
             <option value="ASSOCIADO">Preenchido por associado/veículo</option>
             <option value="GERAL">Geral — o mesmo para todos (Regimento, Regulamento)</option>
@@ -225,12 +268,59 @@ export default function TermoEditarPage() {
         </p>
       )}
 
-      <EditorTermo value={f.rascunho_html ?? ''} somenteLeitura={ro}
-        onChange={(html) => { if (html !== f.rascunho_html) set({ rascunho_html: html }); }} />
+      <input ref={inputPdf} type="file" accept="application/pdf,.pdf" className="hidden"
+        onChange={(e) => { const a = e.target.files?.[0]; if (a) void importarPdf(a); e.target.value = ''; }} />
 
-      <p className="text-xs text-slate-500">
-        {campos.length} campo(s) no texto{campos.length ? `: ${campos.slice(0, 8).map(rotuloCampo).join(' · ')}${campos.length > 8 ? '…' : ''}` : ''}.
-      </p>
+      {comPdf ? (
+        <div className="rounded-xl border border-slate-200 bg-superficie p-5">
+          <div className="flex flex-wrap items-start gap-4">
+            <FileText className="h-10 w-10 shrink-0 text-cyan-600" />
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-slate-800">Documento em PDF</p>
+              <p className="truncate text-sm text-slate-700">{f.arquivo_pdf_nome ?? 'arquivo.pdf'}</p>
+              <p className="text-xs text-slate-500">
+                {tamanhoArquivo(f.arquivo_pdf_bytes)} · SHA-256 <span className="codigo">{f.arquivo_pdf_sha256?.slice(0, 16)}…</span>
+              </p>
+              <p className="mt-2 text-sm text-slate-600">
+                O próprio arquivo é o documento: ao publicar, ele vira a versão (com o hash do arquivo) e é o que o
+                portal e as fichas mostram. O texto do editor não é usado enquanto houver PDF.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" onClick={() => window.open(urlPdfTermo({ modelo: id }), '_blank', 'noopener')}>
+                <Eye className="mr-1 h-4 w-4" /> Ver PDF
+              </Button>
+              {!ro && (
+                <>
+                  <Button variant="secondary" onClick={() => inputPdf.current?.click()} disabled={pdfOriginal.isPending}>
+                    <Upload className="mr-1 h-4 w-4" /> {pdfOriginal.isPending ? 'Enviando…' : 'Trocar PDF'}
+                  </Button>
+                  <Button variant="ghost" onClick={removerPdf} disabled={pdfOriginal.isPending}>
+                    <Trash2 className="mr-1 h-4 w-4 text-rose-600" /> Usar texto
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          {f.escopo === 'GERAL' && !ro && (
+            <p className="text-xs text-slate-500">
+              Documento geral já pronto em PDF (Regimento, Regulamento)? Use <strong>Importar PDF</strong> na barra do
+              editor: o arquivo vira o próprio documento, sem passar para texto.
+              {pdfOriginal.isPending && ' Enviando…'}
+            </p>
+          )}
+          <EditorTermo value={f.rascunho_html ?? ''} somenteLeitura={ro}
+            onImportarPdf={f.escopo === 'GERAL' ? () => inputPdf.current?.click() : undefined}
+            onChange={(html) => { if (html !== f.rascunho_html) set({ rascunho_html: html }); }} />
+
+          <p className="text-xs text-slate-500">
+            {campos.length} campo(s) no texto{campos.length ? `: ${campos.slice(0, 8).map(rotuloCampo).join(' · ')}${campos.length > 8 ? '…' : ''}` : ''}.
+          </p>
+        </>
+      )}
 
       <div className="rounded-xl border border-slate-200 bg-superficie p-4">
         <h3 className="mb-2 font-semibold text-slate-800">Versões publicadas</h3>
@@ -246,6 +336,7 @@ export default function TermoEditarPage() {
                 <tr key={v.id} className="border-t border-slate-100">
                   <td className="py-1 font-medium">
                     v{v.numero}{v.id === modelo.data?.versao_atual_id && <span className="ml-1 text-xs text-emerald-700">(atual)</span>}
+                    {v.pdf_original && <span className="ml-1 text-xs text-slate-500">· PDF original</span>}
                   </td>
                   <td>{formatDateTime(v.publicada_em)}</td>
                   <td className="text-slate-600">{v.observacao ?? '—'}</td>
@@ -277,7 +368,9 @@ export default function TermoEditarPage() {
           <p className="text-slate-600">
             A versão publicada fica congelada (com hash) e passa a ser a usada nas próximas emissões.
             Os termos já emitidos continuam com a versão deles.
-            {f.escopo === 'GERAL' && ' O PDF do documento é gerado agora.'}
+            {comPdf
+              ? ' O PDF importado vira o documento desta versão, com o hash do próprio arquivo.'
+              : f.escopo === 'GERAL' && ' O PDF do documento é gerado agora.'}
           </p>
           {sujo && <p className="text-amber-700">O rascunho tem alterações não salvas: elas serão salvas antes de publicar.</p>}
           <FormField label="O que mudou (opcional)">

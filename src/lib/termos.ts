@@ -492,3 +492,26 @@ ${args.corpo}
 ${args.rodape ? `<div class="termo-rodape">${args.rodape}</div>` : ''}
 </body></html>`;
 }
+
+// ---------------------------------------------------------------------------
+// PDF original do documento GERAL (0166): o arquivo importado E o documento.
+// ---------------------------------------------------------------------------
+export const PDF_TERMO_MAX_BYTES = 20 * 1024 * 1024;
+
+/** Confere o arquivo antes de subir. `cabecalho` = os primeiros bytes como texto. */
+export function validarPdfTermo(a: { nome: string; bytes: number; cabecalho: string; escopo: string }): string | null {
+  if (a.escopo !== 'GERAL') {
+    return 'PDF pronto só vale para documento Geral (o mesmo para todos). Termo por associado precisa dos campos no texto: importe do Word.';
+  }
+  if (!a.bytes) return 'O arquivo está vazio.';
+  if (a.bytes > PDF_TERMO_MAX_BYTES) return 'O PDF passa de 20 MB. Reduza o arquivo e tente de novo.';
+  if (!a.cabecalho.startsWith('%PDF-')) return `${a.nome} não é um PDF.`;
+  return null;
+}
+
+/** "2,4 MB" / "830 KB". */
+export function tamanhoArquivo(bytes: number | null | undefined): string {
+  if (!bytes) return '—';
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1).replace('.', ',')} MB`;
+}
