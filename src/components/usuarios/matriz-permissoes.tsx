@@ -90,12 +90,12 @@ function CartaoPerfil({ papel, concessoes, podeEditar, usuarios, perfil, bases, 
         <div>
           <div className="flex items-center gap-2">
             <h3 className="text-base font-bold uppercase tracking-wide text-slate-900">{nome}</h3>
-            <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase',
+            <span className={cn('rounded px-1.5 py-0.5 text-[0.625rem] font-semibold uppercase',
               perfil ? 'bg-cyan-50 text-cyan-700' : 'bg-slate-100 text-slate-500')}>
               {ehAdmin ? 'sistema' : perfil ? 'personalizado' : 'perfil'}
             </span>
             {usuarios !== undefined && (
-              <span className="text-[11px] text-slate-400">{usuarios} usuário(s) ativo(s)</span>
+              <span className="text-[0.6875rem] text-slate-400">{usuarios} usuário(s) ativo(s)</span>
             )}
           </div>
           <p className="mt-0.5 text-xs uppercase text-slate-500">
@@ -133,7 +133,7 @@ function CartaoPerfil({ papel, concessoes, podeEditar, usuarios, perfil, bases, 
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            <tr className="bg-slate-50 text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-500">
               <th className="sticky left-0 bg-slate-50 px-3 py-2 text-left">Módulo</th>
               {ACOES.map((a) => <th key={a} className="px-2 py-2 text-center">{ROTULO_ACAO[a]}</th>)}
             </tr>
@@ -165,7 +165,7 @@ function CartaoPerfil({ papel, concessoes, podeEditar, usuarios, perfil, bases, 
       </div>
 
       <div className="mt-3 border-t border-slate-100 pt-3">
-        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Alçadas especiais</p>
+        <p className="mb-1.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-500">Alçadas especiais</p>
         <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3">
           {ALCADAS.map((al) => (
             <div key={al.chave} className="flex items-start gap-2 text-xs text-slate-600">
@@ -301,7 +301,7 @@ function ModalPerfil({ perfil, perfis, onClose, onCriado }: {
           </div>
         )}
         {!perfil && (
-          <p className="rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-[12px] leading-relaxed text-slate-600">
+          <p className="rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-[0.75rem] leading-relaxed text-slate-600">
             O <b>alcance</b> diz o que a pessoa enxerga: <b>Financeiro</b> vê a empresa inteira; <b>Gestor regional</b>,
             <b> Consultor</b>, <b>Auditoria</b>, <b>24h</b> e <b>Eventos</b> veem a unidade do cadastro (Eventos também as
             unidades de atuação); <b>Supervisor</b> vê as unidades marcadas; <b>Cobrança</b>, a cobrança do Brasil ou da
@@ -335,14 +335,14 @@ export function ResumoDoPapel({ papel }: { papel: string }) {
   }
   return (
     <div className="rounded-lg border border-slate-200 bg-superficie p-2.5">
-      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Este perfil libera</p>
+      <p className="mb-1.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-500">Este perfil libera</p>
       <ul className="grid grid-cols-1 gap-1 sm:grid-cols-2">
         {[...porModulo.entries()].map(([nome, acoes]) => (
-          <li key={nome} className="text-[12px] text-slate-600">
+          <li key={nome} className="text-[0.75rem] text-slate-600">
             <b className="font-medium text-slate-700">{nome}:</b> {acoes.join(', ')}
           </li>
         ))}
-        {alcadas.map((a) => <li key={a} className="text-[12px] text-slate-600">{a}</li>)}
+        {alcadas.map((a) => <li key={a} className="text-[0.75rem] text-slate-600">{a}</li>)}
       </ul>
     </div>
   );

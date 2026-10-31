@@ -170,7 +170,7 @@ export default function VendasPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="truncate font-medium text-slate-900">{l.nome}</span>
-                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${st.cor}`}>{st.curto}</span>
+                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[0.625rem] font-medium ${st.cor}`}>{st.curto}</span>
                     </div>
                     <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-slate-500">
                       <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" /> {l.celular}</span>
@@ -193,7 +193,7 @@ export default function VendasPage() {
       {/* A lista nao vem inteira: diz quantos apareceram e busca mais sob demanda */}
       {visao === 'lista' && !isLoading && (leads ?? []).length > 0 && (
         <div className="flex flex-col items-center gap-2 pt-1">
-          <p className="text-[11.5px] text-slate-400">
+          <p className="text-[0.7188rem] text-slate-400">
             {(leads ?? []).length} lead{(leads ?? []).length > 1 ? 's' : ''} em tela
             {(leads ?? []).length >= limite ? ' — há mais além deste ponto' : ''}
           </p>

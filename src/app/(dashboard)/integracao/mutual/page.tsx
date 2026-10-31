@@ -408,7 +408,7 @@ export default function IntegracaoMutualPage() {
                 />
               </div>
             ) : null}
-            <p className="mt-1.5 text-[11px] text-slate-500">
+            <p className="mt-1.5 text-[0.6875rem] text-slate-500">
               O botão <strong>Parar</strong> encerra no fim do bloco atual — não no meio de uma
               gravação.
             </p>
@@ -427,7 +427,7 @@ export default function IntegracaoMutualPage() {
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-sm font-medium text-slate-800">{e.rotulo}</span>
                   {ENTIDADES_INCREMENTAIS.includes(e.chave) && (
-                    <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ring-1 bg-emerald-50 text-emerald-700 ring-emerald-200">
+                    <span className="rounded px-1.5 py-0.5 text-[0.625rem] font-semibold uppercase ring-1 bg-emerald-50 text-emerald-700 ring-emerald-200">
                       incremental
                     </span>
                   )}
@@ -493,7 +493,7 @@ export default function IntegracaoMutualPage() {
                         <td className="py-2 pr-3 text-slate-800">{d.indicador}</td>
                         <td className="py-2 pr-3 text-xs text-slate-500">{d.detalhe}</td>
                         <td className="py-2 text-right">
-                          <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ring-1 ${TOM[d.severidade]}`}>
+                          <span className={`rounded px-1.5 py-0.5 text-[0.625rem] font-semibold uppercase ring-1 ${TOM[d.severidade]}`}>
                             {d.severidade}
                           </span>
                         </td>
@@ -534,10 +534,10 @@ export default function IntegracaoMutualPage() {
           As chaves que <strong>realmente vem</strong> no que foi capturado, com quantas chegam
           preenchidas e um exemplo. Serve para achar um campo <strong>sem supor onde ele mora</strong> —
           supor já custou duas rodadas aqui (o dia de vencimento estava no contrato, e a unidade não
-          está em <code className="text-[11px]">regional</code> em lugar nenhum). Para olhar dentro
+          está em <code className="text-[0.6875rem]">regional</code> em lugar nenhum). Para olhar dentro
           de um objeto, escreva o nome dele no campo ao lado (ex.:{' '}
-          <code className="text-[11px]">vehicle_data</code>,{' '}
-          <code className="text-[11px]">person_data</code>).
+          <code className="text-[0.6875rem]">vehicle_data</code>,{' '}
+          <code className="text-[0.6875rem]">person_data</code>).
         </p>
         <ErroLeitura q={campos} />
         {campos.isLoading && <p className="text-sm text-slate-500">Carregando...</p>}
@@ -589,10 +589,10 @@ export default function IntegracaoMutualPage() {
         )}
         {temLinhas && (<>
           <p className="mb-3 text-xs text-slate-500">
-            No SCar, <code className="text-[11px]">valor_mensalidade</code> e{' '}
+            No SCar, <code className="text-[0.6875rem]">valor_mensalidade</code> e{' '}
             <strong>mensal</strong>. No Mutual o contrato tem período (a tela mostra
             &quot;Semestral · 6 parcelas · parcela R$ 120,00 · total R$ 720,00&quot;), então é
-            preciso saber se o <code className="text-[11px]">final_total_value</code> do objeto e a{' '}
+            preciso saber se o <code className="text-[0.6875rem]">final_total_value</code> do objeto e a{' '}
             <strong>parcela</strong> ou o <strong>total</strong>. <strong>Compare as linhas:</strong>{' '}
             se o valor mediano do semestral for parecido com o do mensal, e parcela; se for umas 6
             vezes maior, e o total — e a carga precisa dividir, senão o associado recebe boleto de
@@ -616,7 +616,7 @@ export default function IntegracaoMutualPage() {
                     <td className="py-2 text-slate-800">
                       {p.meses ? ROTULO_PERIODO_MUTUAL[p.meses] ?? p.periodo : p.periodo}
                       {p.meses && p.meses > 1 && (
-                        <span className="ml-1.5 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ring-1 bg-amber-50 text-amber-700 ring-amber-200">
+                        <span className="ml-1.5 rounded px-1.5 py-0.5 text-[0.625rem] font-semibold uppercase ring-1 bg-amber-50 text-amber-700 ring-amber-200">
                           não mensal
                         </span>
                       )}
@@ -673,7 +673,7 @@ export default function IntegracaoMutualPage() {
                 {(naoMapeados.data ?? []).map((s) => (
                   <tr key={`${s.origem}-${s.status ?? '-'}`} className="border-t border-slate-100">
                     <td className="py-2">
-                      <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${
+                      <span className={`rounded px-1.5 py-0.5 text-[0.625rem] font-semibold uppercase ${
                         s.origem === 'OBJETO'
                           ? 'bg-amber-100 text-amber-800'
                           : 'bg-slate-100 text-slate-600'
@@ -921,12 +921,12 @@ export default function IntegracaoMutualPage() {
                             ))}
                           </select>
                           {sit === 'palpite' && (
-                            <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ring-1 ${TOM.ATENCAO}`}>
+                            <span className={`rounded px-1.5 py-0.5 text-[0.625rem] font-semibold uppercase ring-1 ${TOM.ATENCAO}`}>
                               palpite: {(regionais.data ?? []).find((r) => r.id === f.palpite_id)?.nome ?? '—'}
                             </span>
                           )}
                           {sit === 'vinculada' && (
-                            <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ring-1 ${TOM.OK}`}>
+                            <span className={`rounded px-1.5 py-0.5 text-[0.625rem] font-semibold uppercase ring-1 ${TOM.OK}`}>
                               decidida
                             </span>
                           )}
@@ -1052,7 +1052,7 @@ export default function IntegracaoMutualPage() {
                     <td className="py-2">
                       <div className="flex flex-wrap gap-1">
                         {q.motivos.map((m) => (
-                          <span key={m} className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ring-1 ${TOM.CRITICO}`}>
+                          <span key={m} className={`rounded px-1.5 py-0.5 text-[0.625rem] font-semibold ring-1 ${TOM.CRITICO}`}>
                             {ROTULO_QUARENTENA[m as keyof typeof ROTULO_QUARENTENA] ?? m}
                           </span>
                         ))}

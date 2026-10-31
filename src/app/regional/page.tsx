@@ -79,7 +79,7 @@ export default function PainelRegionalPage() {
       {/* Veiculo ativo que nao emite boleto aqui e o estado normal da carteira
           migrada (0082) — sem dizer isso, "cade a cobranca?" vira chamado. */}
       {avisoCobrancaExterna(p) && (
-        <div className="flex items-start gap-2 rounded-xl border border-sky-200 bg-sky-50/60 p-3 text-[12px] leading-relaxed text-sky-900">
+        <div className="flex items-start gap-2 rounded-xl border border-sky-200 bg-sky-50/60 p-3 text-[0.75rem] leading-relaxed text-sky-900">
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-sky-600" />
           <span>{avisoCobrancaExterna(p)}</span>
         </div>

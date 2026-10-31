@@ -4,10 +4,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import {
-  AlertTriangle, ArrowLeft, BadgeCheck, Calculator, Car, ExternalLink, Loader2, Sparkles, User,
+  AlertTriangle, ArrowLeft, Check, ExternalLink, Loader2, MonitorPlay, Pencil, Plus,
 } from 'lucide-react';
 import { Input, Select, MoneyInput } from '@/components/ui/field';
 import { Button } from '@/components/ui/button';
+import { CartaoDoPlano } from '@/components/vendas/cartao-plano';
 import { FipeConsulta } from '@/components/fipe/fipe-consulta';
 import { useFipePorPlaca } from '@/hooks/use-fipe';
 import type { RegistroPlaca } from '@/lib/fipe';
@@ -28,7 +29,7 @@ import { formatarDocumento, validarDocumento } from '@/lib/documento';
 import { avulsosParaCotacao, separarOpcionais } from '@/lib/vistoria';
 import { placaCompleta, tipoVeiculoSugerido } from '@/lib/venda-publica';
 import { normalizarPlaca } from '@/lib/placa';
-import { maskCelular, formatCurrency } from '@/lib/utils';
+import { cn, maskCelular, formatCurrency } from '@/lib/utils';
 import type { Combustivel, LeadsRow, OrigemFipe } from '@/lib/database.types';
 
 /** O que a tela precisa gravar para criar o lead. */
@@ -269,16 +270,46 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
   const docValido = docPreenchido && validarDocumento(cpfCnpj, cpfCnpj.length > 11 ? 'PJ' : 'PF');
   const salvando = salvarLead.isPending || salvarCotacao.isPending;
 
+  // Apresentar ao cliente: some o formulario e a tela mostra so o que ele precisa
+  // ver (e nada interno, como a Assistencia Profissional).
+  const [apresentando, setApresentando] = useState(false);
+  const podeApresentar = planos.length > 0 && !!escolhido;
+  useEffect(() => {
+    if (!podeApresentar) setApresentando(false);
+  }, [podeApresentar]);
+  const resumoDoVeiculo = [marca, modelo, anoModelo].filter(Boolean).join(' ');
+
   return (
-    <div className="mx-auto max-w-2xl space-y-5 pb-24">
-      <Link href={voltarPara.href} className="inline-flex items-center gap-1 text-sm text-slate-500">
-        <ArrowLeft className="h-4 w-4" /> {voltarPara.rotulo}
-      </Link>
-      <h1 className="text-xl font-semibold text-slate-900">Nova cotação</h1>
+    <div className="mx-auto max-w-[1500px] space-y-6 pb-24 lg:pb-8">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <Link href={voltarPara.href} className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700">
+            <ArrowLeft className="h-4 w-4" /> {voltarPara.rotulo}
+          </Link>
+          <h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-slate-900">Nova cotação</h1>
+          {!apresentando && (
+            <p className="mt-1 max-w-2xl text-sm text-slate-500">
+              Digite a placa: marca, modelo e valor FIPE vêm sozinhos e os planos aparecem em seguida.
+            </p>
+          )}
+        </div>
+        {podeApresentar && (
+          <Button
+            type="button"
+            variant={apresentando ? 'secondary' : 'accent'}
+            onClick={() => setApresentando((v) => !v)}
+            className={apresentando ? 'px-5 py-3 text-base' : 'px-5 py-3 text-base font-bold text-faixa'}
+          >
+            {apresentando
+              ? <><Pencil className="h-4 w-4" /> Voltar a editar</>
+              : <><MonitorPlay className="h-5 w-5" /> Apresentar ao cliente</>}
+          </Button>
+        )}
+      </div>
 
       {/* Aviso de duplicidade — informa, nunca bloqueia */}
-      {aviso && (
-        <div className={`flex items-start gap-2 rounded-2xl px-3.5 py-3 text-[12.5px] ring-1 ring-inset ${aviso.classe}`}>
+      {aviso && !apresentando && (
+        <div className={`flex items-start gap-2 rounded-2xl px-4 py-3 text-sm ring-1 ring-inset ${aviso.classe}`}>
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <div className="min-w-0 flex-1">
             <p className="font-semibold">{aviso.titulo}</p>
@@ -286,283 +317,268 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
             {aviso.linkDoLead && (
               <Link
                 href={aviso.linkDoLead}
-                className="mt-1 inline-flex items-center gap-1 text-[11.5px] font-semibold underline"
+                className="mt-1 inline-flex items-center gap-1 text-xs font-semibold underline"
               >
                 Abrir o atendimento que já existe <ExternalLink className="h-3 w-3" />
               </Link>
             )}
-            <p className="mt-1 text-[11px] opacity-70">
+            <p className="mt-1 text-xs opacity-70">
               Isto é um aviso: você pode seguir com a cotação normalmente.
             </p>
           </div>
         </div>
       )}
 
-      {/* 1. Veiculo — a conversa comeca na placa */}
-      <Secao icon={Car} titulo="1. Veículo">
-        <Campo label="Placa">
-          <div className="relative">
-            <Input
-              value={placa}
-              onChange={(e) => setPlaca(normalizarPlaca(e.target.value))}
-              placeholder="ABC1D23"
-              className="font-mono text-lg uppercase tracking-widest"
-              maxLength={7}
-              autoFocus
+      {/* No computador: dados do lado esquerdo, planos do lado direito. No celular: 1, 2, 3 em fila. */}
+      <div className={cn('grid gap-6 lg:items-start', apresentando ? 'lg:grid-cols-1' : 'lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]')}>
+        {/* 1. Veiculo — a conversa comeca na placa */}
+        <Secao passo={1} titulo="Veículo" className={cn('lg:col-start-1 lg:row-start-1', apresentando && 'hidden')}>
+          <Campo label="Placa">
+            <div className="relative">
+              <Input
+                value={placa}
+                onChange={(e) => setPlaca(normalizarPlaca(e.target.value))}
+                placeholder="ABC1D23"
+                className="py-3 font-mono text-2xl uppercase tracking-[0.25em]"
+                maxLength={7}
+                autoFocus
+              />
+              {fipePorPlaca.isPending && (
+                <Loader2 className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 animate-spin text-slate-400" />
+              )}
+            </div>
+          </Campo>
+
+          {!mostrarCascata && (
+            <button type="button" onClick={() => setMostrarCascata(true)} className="text-sm font-semibold text-brand-600 hover:underline">
+              Não tem a placa? Buscar por Tipo &gt; Marca &gt; Modelo &gt; Ano
+            </button>
+          )}
+          {mostrarCascata && (
+            <FipeConsulta
+              onSelecionar={(sel) => {
+                if (sel.marcaNome) setMarca(sel.marcaNome);
+                if (sel.modeloNome) setModelo(sel.modeloNome);
+                if (sel.valor.anoModelo) setAnoModelo(sel.valor.anoModelo);
+                if (sel.valor.combustivel) setCombustivel(sel.valor.combustivel as Combustivel);
+                if (sel.valor.valor != null) setValorFipe(sel.valor.valor);
+                if (sel.valor.codigoFipe) setCodigoFipe(sel.valor.codigoFipe);
+                setOrigemFipe('API');
+              }}
             />
-            {fipePorPlaca.isPending && (
-              <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-slate-400" />
-            )}
-          </div>
-          <p className="mt-1 text-[11px] text-slate-400">
-            Assim que a placa fica completa, buscamos marca, modelo e valor FIPE sozinhos.
-          </p>
-        </Campo>
+          )}
 
-        {!mostrarCascata && (
-          <button type="button" onClick={() => setMostrarCascata(true)} className="text-xs font-medium text-brand-600">
-            Não tem a placa? Buscar por Tipo &gt; Marca &gt; Modelo &gt; Ano
-          </button>
-        )}
-        {mostrarCascata && (
-          <FipeConsulta
-            onSelecionar={(sel) => {
-              if (sel.marcaNome) setMarca(sel.marcaNome);
-              if (sel.modeloNome) setModelo(sel.modeloNome);
-              if (sel.valor.anoModelo) setAnoModelo(sel.valor.anoModelo);
-              if (sel.valor.combustivel) setCombustivel(sel.valor.combustivel as Combustivel);
-              if (sel.valor.valor != null) setValorFipe(sel.valor.valor);
-              if (sel.valor.codigoFipe) setCodigoFipe(sel.valor.codigoFipe);
-              setOrigemFipe('API');
-            }}
-          />
-        )}
-
-        {(registro?.chassi || registro?.numeroMotor) && (
-          <p className="text-[11px] text-slate-400">
-            Do documento:{' '}
-            {registro.chassi && <span className="font-mono">chassi {registro.chassi}</span>}
-            {registro.chassi && registro.numeroMotor && ' · '}
-            {registro.numeroMotor && <span className="font-mono">motor {registro.numeroMotor}</span>}
-            {' '}— vai junto para a ficha da venda.
-          </p>
-        )}
-
-        <div className="grid grid-cols-2 gap-2">
-          <Campo label="Marca"><Input value={marca} onChange={(e) => setMarca(e.target.value)} /></Campo>
-          <Campo label="Modelo"><Input value={modelo} onChange={(e) => setModelo(e.target.value)} /></Campo>
-          <Campo label="Ano modelo">
-            <Input type="number" className="tnum" value={anoModelo}
-              onChange={(e) => setAnoModelo(e.target.value === '' ? '' : Number(e.target.value))} />
-          </Campo>
-          <Campo label="Valor FIPE (R$) *">
-            <MoneyInput value={valorFipe} placeholder="0,00"
-              onChange={(v) => { setValorFipe(v); if (origemFipe === 'API') setOrigemFipe('MANUAL'); }} />
-          </Campo>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <Campo label="Tipo de veículo *">
-            <Select value={tipoVeiculoId} onChange={(e) => setTipoVeiculoId(e.target.value)}>
-              <option value="">-- Selecione --</option>
-              {(tipos ?? []).map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
-            </Select>
-          </Campo>
-          <Campo label="Cota de participação">
-            <Select value={cotaId} onChange={(e) => { setCotaId(e.target.value); setCotaManual(true); }}>
-              <option value="">Padrão da faixa</option>
-              {(cotas ?? []).map((c) => (
-                <option key={c.id} value={c.id}>{c.codigo} — {(c.percentual * 100).toLocaleString('pt-BR')}%</option>
-              ))}
-            </Select>
-            <p className="mt-0.5 text-[11px] leading-snug text-slate-400">
-              {catalogo.isFetching ? 'Procurando o modelo no catálogo...'
-                : catalogo.data
-                  ? catalogo.data.cota_codigo
-                    ? <>Do catálogo: <b>{catalogo.data.modelo}</b> ({catalogo.data.cota_codigo} — {(Number(catalogo.data.cota_percentual) * 100).toLocaleString('pt-BR')}%){cotaManual && ' · alterada à mão'}</>
-                    : <>Modelo <b>{catalogo.data.modelo}</b> sem cota no catálogo: vale a faixa.</>
-                  : marca && modelo ? 'Modelo não achado no catálogo de Marcas/Modelos: vale a faixa.' : null}
+          {(registro?.chassi || registro?.numeroMotor) && (
+            <p className="text-xs text-slate-500">
+              Do documento:{' '}
+              {registro.chassi && <span className="font-mono">chassi {registro.chassi}</span>}
+              {registro.chassi && registro.numeroMotor && ' · '}
+              {registro.numeroMotor && <span className="font-mono">motor {registro.numeroMotor}</span>}
+              {' '}— vai junto para a ficha da venda.
             </p>
-          </Campo>
-        </div>
-      </Secao>
+          )}
 
-      {/* 2. Planos lado a lado */}
-      <Secao icon={Calculator} titulo="2. Planos para este veículo">
-        {!valorFipe || !tipoVeiculoId ? (
-          <p className="rounded-xl border border-dashed border-slate-200 px-3 py-6 text-center text-xs text-slate-400">
-            Informe o valor FIPE e o tipo do veículo para ver os planos.
-          </p>
-        ) : comparativo.isLoading ? (
-          <p className="flex items-center justify-center gap-2 py-6 text-xs text-slate-400">
-            <Loader2 className="h-4 w-4 animate-spin" /> Cotando os planos...
-          </p>
-        ) : planos.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-rose-200 px-3 py-6 text-center text-xs text-rose-500">
-            Nenhum plano disponível para este veículo.
-          </p>
-        ) : (
-          <div className={`space-y-2 transition ${comparativo.isFetching ? 'opacity-60' : ''}`}>
-            {planos.map((p) => {
-              const chave = chaveDoPlano(p);
-              const ativo = chave === escolha;
-              const mostraValor = ativo || valorVisivel(p, planos, revelados, chave);
-              return (
-                <button
-                  key={chave} type="button"
-                  onClick={() => { setEscolha(chave); setRevelados((r) => new Set(r).add(chave)); }}
-                  className={`w-full rounded-2xl border p-3 text-left transition ${
-                    ativo ? 'border-cyan-500 bg-cyan-50/50 ring-1 ring-cyan-400'
-                      : 'border-slate-200 bg-superficie hover:border-slate-300'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="flex items-center gap-1.5 text-[14px] font-bold text-brand-800">
-                        {p.nome}
-                        {chave === sugerido && (
-                          <span className="inline-flex items-center gap-0.5 rounded-full bg-cyan-100 px-1.5 py-0.5 text-[9.5px] font-bold uppercase text-cyan-800">
-                            <Sparkles className="h-2.5 w-2.5" /> {p.preferencial ? 'preferencial' : 'sugerido'}
-                          </span>
-                        )}
-                      </p>
-                      {p.descricao && (
-                        <p className="mt-0.5 text-[11.5px] leading-snug text-slate-500">{p.descricao}</p>
-                      )}
-                    </div>
-                    <div className="shrink-0 text-right">
-                      {mostraValor ? (
-                        <>
-                          <p className="text-[9.5px] font-semibold uppercase tracking-wide text-slate-400">por mês</p>
-                          <p className="tnum text-[19px] font-bold leading-tight text-brand-700">
-                            {formatCurrency(p.mensalidade)}
-                          </p>
-                        </>
-                      ) : (
-                        <p className="rounded-lg border border-slate-200 px-2 py-1 text-[11px] font-semibold text-cyan-700">
-                          Ver valor
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  {ativo && (
-                    <>
-                      {p.itens.length > 0 && (
-                        <ul className="mt-2.5 grid gap-1 border-t border-cyan-200/70 pt-2.5 sm:grid-cols-2">
-                          {p.itens.map((i) => (
-                            <li key={i.nome} className="flex items-center gap-1.5 text-[11.5px] text-slate-600">
-                              <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-cyan-600" /> {i.nome}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                      <p className="mt-2 text-[11px] text-slate-500">
-                        {p.desconto_base > 0 && <>Desconto do plano já aplicado: <b>{formatCurrency(p.desconto_base)}</b>. </>}
-                        {p.adesao > 0 && <>Adesão única de <b>{formatCurrency(p.adesao)}</b>. </>}
-                        {p.participacao > 0 && <>Participação no evento: <b>{formatCurrency(p.participacao)}</b>.</>}
-                      </p>
-                    </>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Adicionais: marcar/desmarcar recotiza todos os planos */}
-        {planos.length > 0 && (
-          <div className="space-y-2 border-t border-slate-100 pt-3">
-            <p className="text-xs font-medium uppercase text-slate-400">Adicionais {escolhido && <span className="normal-case">— de {escolhido.nome}</span>}</p>
-            {inclusos.length > 0 && (
-              <div className="space-y-1">
-                {inclusos.map((p) => (
-                  <label key={p.id} className="flex items-center gap-2 text-sm text-slate-500">
-                    <input type="checkbox" checked disabled className="h-4 w-4 rounded border-slate-300" />
-                    {p.nome}
-                    <span className="rounded-full bg-cyan-50 px-1.5 py-px text-[10px] font-bold uppercase text-cyan-700 ring-1 ring-inset ring-cyan-200">
-                      no plano
-                    </span>
-                  </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Campo label="Marca"><Input value={marca} onChange={(e) => setMarca(e.target.value)} /></Campo>
+            <Campo label="Modelo"><Input value={modelo} onChange={(e) => setModelo(e.target.value)} /></Campo>
+            <Campo label="Ano modelo">
+              <Input type="number" className="tnum" value={anoModelo}
+                onChange={(e) => setAnoModelo(e.target.value === '' ? '' : Number(e.target.value))} />
+            </Campo>
+            <Campo label="Valor FIPE (R$) *">
+              <MoneyInput value={valorFipe} placeholder="0,00"
+                onChange={(v) => { setValorFipe(v); if (origemFipe === 'API') setOrigemFipe('MANUAL'); }} />
+            </Campo>
+            <Campo label="Tipo de veículo *">
+              <Select value={tipoVeiculoId} onChange={(e) => setTipoVeiculoId(e.target.value)}>
+                <option value="">-- Selecione --</option>
+                {(tipos ?? []).map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
+              </Select>
+            </Campo>
+            <Campo label="Cota de participação">
+              <Select value={cotaId} onChange={(e) => { setCotaId(e.target.value); setCotaManual(true); }}>
+                <option value="">Padrão da faixa</option>
+                {(cotas ?? []).map((c) => (
+                  <option key={c.id} value={c.id}>{c.codigo} — {(c.percentual * 100).toLocaleString('pt-BR')}%</option>
                 ))}
+              </Select>
+            </Campo>
+          </div>
+          <p className="text-xs leading-snug text-slate-500">
+            {catalogo.isFetching ? 'Procurando o modelo no catálogo...'
+              : catalogo.data
+                ? catalogo.data.cota_codigo
+                  ? <>Cota do catálogo: <b>{catalogo.data.modelo}</b> ({catalogo.data.cota_codigo} — {(Number(catalogo.data.cota_percentual) * 100).toLocaleString('pt-BR')}%){cotaManual && ' · alterada à mão'}</>
+                  : <>Modelo <b>{catalogo.data.modelo}</b> sem cota no catálogo: vale a faixa.</>
+                : marca && modelo ? 'Modelo não achado no catálogo de Marcas/Modelos: vale a faixa.' : null}
+          </p>
+        </Secao>
+
+        {/* 2. Planos — painel escuro, feito para virar a tela para o cliente */}
+        <section
+          className={cn(
+            'relative overflow-hidden rounded-3xl bg-faixa text-white shadow-xl ring-1 ring-white/10',
+            'lg:col-start-2 lg:row-span-2 lg:row-start-1',
+            apresentando && 'mx-auto w-full max-w-5xl lg:col-start-1 lg:row-span-1',
+          )}
+        >
+          <div aria-hidden className="pointer-events-none absolute -right-24 -top-28 h-80 w-80 rounded-full bg-cyan-500/20 blur-3xl" />
+          <div className="relative space-y-6 p-5 sm:p-8">
+            <header className="flex items-start gap-3">
+              <span className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cyan-400 text-sm font-bold text-faixa">2</span>
+              <div className="min-w-0">
+                <h2 className="font-display text-2xl font-bold leading-tight sm:text-3xl">Escolha a proteção do seu veículo</h2>
+                {(placa || resumoDoVeiculo || valorFipe) && (
+                  <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-white/75">
+                    {placa && <span className="placa rounded-md bg-white px-2.5 py-1 text-sm font-bold tracking-widest text-faixa">{placa}</span>}
+                    {resumoDoVeiculo && <span className="min-w-0">{resumoDoVeiculo}</span>}
+                    {valorFipe != null && valorFipe > 0 && <span>FIPE <b className="tnum text-white">{formatCurrency(valorFipe)}</b></span>}
+                  </div>
+                )}
+              </div>
+            </header>
+
+            {!valorFipe || !tipoVeiculoId ? (
+              <p className="rounded-2xl border border-dashed border-white/25 px-4 py-12 text-center text-base text-white/70">
+                Informe o valor FIPE e o tipo do veículo para ver os planos.
+              </p>
+            ) : comparativo.isLoading ? (
+              <p className="flex items-center justify-center gap-2 py-12 text-base text-white/70">
+                <Loader2 className="h-5 w-5 animate-spin" /> Cotando os planos...
+              </p>
+            ) : planos.length === 0 ? (
+              <p className="rounded-2xl border border-dashed border-rose-300/50 px-4 py-12 text-center text-base text-rose-200">
+                Nenhum plano disponível para este veículo.
+              </p>
+            ) : (
+              <div className={cn('space-y-4 transition', comparativo.isFetching && 'opacity-60')}>
+                {planos.map((p) => {
+                  const chave = chaveDoPlano(p);
+                  const ativo = chave === escolha;
+                  return (
+                    <CartaoDoPlano
+                      key={chave}
+                      plano={p}
+                      ativo={ativo}
+                      mostraValor={ativo || valorVisivel(p, planos, revelados, chave)}
+                      selo={chave === sugerido ? (p.preferencial ? 'preferencial' : 'sugerido') : null}
+                      onEscolher={() => { setEscolha(chave); setRevelados((r) => new Set(r).add(chave)); }}
+                    />
+                  );
+                })}
               </div>
             )}
-            <div className="space-y-1">
-              {avulsos.map((p) => (
-                <label key={p.id} className="flex items-center gap-2 text-sm text-slate-700">
-                  <input type="checkbox" checked={selecionados.has(p.id)} onChange={() => toggle(p.id)}
-                    className="h-4 w-4 rounded border-slate-300" />
-                  {p.nome}
-                  {p.valor_fixo != null && <span className="text-xs text-slate-400">({formatCurrency(p.valor_fixo)})</span>}
-                  {preMarcados.has(p.id) && (
-                    <span className={`rounded-full px-1.5 py-px text-[10px] font-bold uppercase ring-1 ring-inset ${
-                      selecionados.has(p.id) ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-slate-50 text-slate-400 ring-slate-200 line-through'
-                    }`}>
-                      sugerido no plano
-                    </span>
+
+            {/* Adicionais: marcar/desmarcar recotiza todos os planos */}
+            {planos.length > 0 && (
+              <div className="space-y-3 border-t border-white/15 pt-6">
+                <div>
+                  <h3 className="font-display text-lg font-bold">Personalize com adicionais</h3>
+                  {escolhido && (
+                    <p className="mt-0.5 text-sm text-white/60">
+                      Valem para o plano {escolhido.nome}. Ao marcar, o valor dos planos se atualiza.
+                    </p>
                   )}
-                </label>
-              ))}
-              {preMarcados.size > 0 && (
-                <p className="text-[11px] text-slate-400">
-                  Os sugeridos já vêm marcados no preço. Desmarque ou troque (ex.: marcar o parabrisa troca o vidros completo) para chegar ao valor.
-                </p>
+                </div>
+                <div className="flex flex-wrap gap-2.5">
+                  {inclusos.map((p) => (
+                    <span key={p.id} className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm text-white/75 ring-1 ring-white/15">
+                      <Check className="h-4 w-4 text-cyan-300" /> {p.nome}
+                      <span className="text-xs font-bold text-cyan-200">no plano</span>
+                    </span>
+                  ))}
+                  {avulsos.map((p) => {
+                    const marcado = selecionados.has(p.id);
+                    return (
+                      <button
+                        key={p.id} type="button" aria-pressed={marcado} onClick={() => toggle(p.id)}
+                        className={cn(
+                          'inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold ring-1 transition',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300',
+                          marcado ? 'bg-cyan-400 text-faixa ring-cyan-300' : 'bg-white/5 text-white ring-white/25 hover:bg-white/10',
+                        )}
+                      >
+                        {marcado ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                        {p.nome}
+                        {p.valor_fixo != null && <span className="tnum font-normal opacity-80">{formatCurrency(p.valor_fixo)}</span>}
+                        {preMarcados.has(p.id) && marcado && <span className="text-xs font-bold opacity-80">sugerido</span>}
+                      </button>
+                    );
+                  })}
+                  {avulsos.length === 0 && inclusos.length === 0 && (
+                    <span className="text-sm text-white/60">Nenhum adicional cadastrado.</span>
+                  )}
+                </div>
+                {preMarcados.size > 0 && !apresentando && (
+                  <p className="text-xs text-white/50">
+                    Os sugeridos já vêm marcados no preço. Desmarque ou troque (ex.: marcar o parabrisa troca o vidros completo) para chegar ao valor.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* 3. Contato — depois que o numero agradou */}
+        <Secao passo={3} titulo="Dados do lead" className={cn('lg:col-start-1 lg:row-start-2', apresentando && 'hidden')}>
+          <Campo label="Nome *">
+            <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome do cliente" />
+          </Campo>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Campo label="Celular / WhatsApp *">
+              <Input value={celular} onChange={(e) => setCelular(maskCelular(e.target.value))}
+                inputMode="tel" placeholder="(11) 91234-5678" />
+            </Campo>
+            <Campo label="CPF / CNPJ">
+              <Input
+                value={formatarDocumento(cpfCnpj, cpfCnpj.length > 11 ? 'PJ' : 'PF')}
+                onChange={(e) => setCpfCnpj(e.target.value.replace(/\D/g, '').slice(0, 14))}
+                inputMode="numeric" placeholder="Ajuda a achar duplicidade"
+              />
+              {docPreenchido && !docValido && (
+                <p className="mt-0.5 text-xs text-rose-500">CPF/CNPJ invalido</p>
               )}
-              {avulsos.length === 0 && <span className="text-xs text-slate-400">Nenhum adicional cadastrado.</span>}
+            </Campo>
+          </div>
+          <Campo label="E-mail">
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="opcional" />
+          </Campo>
+          <CampoAssistenciaProfissional regras={regrasAp} valor={assistencia} onChange={setAssistencia} />
+          <div>
+            <p className="mb-1.5 text-sm font-medium text-slate-600">Envio ao cliente</p>
+            <div className="flex gap-2">
+              {(['DETALHADA', 'CONSOLIDADA'] as const).map((m) => (
+                <button key={m} type="button" onClick={() => setModoEnvio(m)}
+                  className={cn(
+                    'flex-1 rounded-lg border px-3 py-2.5 text-sm font-medium transition',
+                    modoEnvio === m ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-slate-200 text-slate-500 hover:bg-slate-50',
+                  )}>
+                  {m === 'DETALHADA' ? 'Detalhada (item a item)' : 'Consolidada (só o total)'}
+                </button>
+              ))}
             </div>
           </div>
+        </Secao>
+      </div>
+
+      {/* Barra de acao: no celular fica presa embaixo; no computador acompanha a rolagem */}
+      <div
+        className={cn(
+          'fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-superficie p-3',
+          'md:static md:border-0 md:bg-transparent md:p-0',
+          'lg:sticky lg:bottom-4 lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-superficie lg:p-4 lg:shadow-lg',
+          apresentando && 'hidden',
         )}
-      </Secao>
-
-      {/* 3. Contato — depois que o numero agradou */}
-      <Secao icon={User} titulo="3. Dados do lead">
-        <Campo label="Nome *">
-          <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome do cliente" />
-        </Campo>
-        <div className="grid grid-cols-2 gap-2">
-          <Campo label="Celular / WhatsApp *">
-            <Input value={celular} onChange={(e) => setCelular(maskCelular(e.target.value))}
-              inputMode="tel" placeholder="(11) 91234-5678" />
-          </Campo>
-          <Campo label="CPF / CNPJ">
-            <Input
-              value={formatarDocumento(cpfCnpj, cpfCnpj.length > 11 ? 'PJ' : 'PF')}
-              onChange={(e) => setCpfCnpj(e.target.value.replace(/\D/g, '').slice(0, 14))}
-              inputMode="numeric" placeholder="Ajuda a achar duplicidade"
-            />
-            {docPreenchido && !docValido && (
-              <p className="mt-0.5 text-[11px] text-rose-500">CPF/CNPJ invalido</p>
-            )}
-          </Campo>
-        </div>
-        <Campo label="E-mail">
-          <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="opcional" />
-        </Campo>
-        <CampoAssistenciaProfissional regras={regrasAp} valor={assistencia} onChange={setAssistencia} />
-        <div>
-          <p className="mb-1 text-xs font-medium uppercase text-slate-400">Envio ao cliente</p>
-          <div className="flex gap-2">
-            {(['DETALHADA', 'CONSOLIDADA'] as const).map((m) => (
-              <button key={m} type="button" onClick={() => setModoEnvio(m)}
-                className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium ${
-                  modoEnvio === m ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-slate-200 text-slate-500'
-                }`}>
-                {m === 'DETALHADA' ? 'Detalhada (item a item)' : 'Consolidada (só o total)'}
-              </button>
-            ))}
-          </div>
-        </div>
-      </Secao>
-
-      {/* Barra de acao fixa: mostra o que vai ser enviado */}
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-superficie p-3 md:static md:border-0 md:bg-transparent md:p-0">
-        <div className="mx-auto max-w-2xl space-y-1.5">
-          {escolhido && (
-            <p className="text-center text-[11.5px] text-slate-500">
-              {escolhido.nome} · <b className="tnum text-brand-700">{formatCurrency(escolhido.mensalidade + (assistencia ?? 0))}/mes</b>
+      >
+        <div className="mx-auto flex max-w-2xl flex-col gap-2 lg:max-w-none lg:flex-row lg:items-center lg:justify-between lg:gap-6">
+          {escolhido ? (
+            <p className="text-center text-sm text-slate-500 lg:text-left">
+              {escolhido.nome} · <b className="tnum text-base text-brand-700">{formatCurrency(escolhido.mensalidade + (assistencia ?? 0))}/mês</b>
               {(assistencia ?? 0) > 0 && <> (inclui {formatCurrency(assistencia ?? 0)} de Assistência Profissional)</>}
               {escolhido.adesao > 0 && <> · adesão {formatCurrency(escolhido.adesao)}</>}
             </p>
-          )}
-          <Button onClick={gerar} disabled={salvando || !escolhido} className="w-full">
+          ) : <span />}
+          <Button onClick={gerar} disabled={salvando || !escolhido} className="w-full lg:w-auto lg:min-w-[20rem] lg:py-3 lg:text-base">
             {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             Gerar cotação e link
           </Button>
@@ -572,14 +588,17 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
   );
 }
 
-function Secao({ icon: Icon, titulo, children }: { icon: React.ComponentType<{ className?: string }>; titulo: string; children: React.ReactNode }) {
+function Secao({ passo, titulo, children, className }: { passo: number; titulo: string; children: React.ReactNode; className?: string }) {
   return (
-    <section className="space-y-3 rounded-2xl border border-slate-200 bg-superficie p-4">
-      <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-700"><Icon className="h-4 w-4 text-brand-500" /> {titulo}</h2>
+    <section className={cn('space-y-4 rounded-2xl border border-slate-200 bg-superficie p-5 shadow-sm sm:p-6', className)}>
+      <h2 className="flex items-center gap-3 font-display text-xl font-bold text-slate-800">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-acao text-sm font-bold text-white">{passo}</span>
+        {titulo}
+      </h2>
       {children}
     </section>
   );
 }
 function Campo({ label, children }: { label: string; children: React.ReactNode }) {
-  return <div><label className="text-xs text-slate-500">{label}</label>{children}</div>;
+  return <div><label className="text-sm font-medium text-slate-600">{label}</label>{children}</div>;
 }

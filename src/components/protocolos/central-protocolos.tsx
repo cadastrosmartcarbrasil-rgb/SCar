@@ -150,7 +150,7 @@ export function CentralProtocolos({
                   {/* 0059: protocolo parado esperando alguem opinar nao pode
                       parecer "em andamento" como qualquer outro. */}
                   {p.pareceres_pendentes > 0 && (
-                    <span className="ml-1 rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+                    <span className="ml-1 rounded bg-amber-50 px-1.5 py-0.5 text-[0.625rem] font-medium text-amber-700">
                       {p.pareceres_pendentes} parecer(es) pendente(s)
                     </span>
                   )}
@@ -294,7 +294,7 @@ function DetalheProtocolo({ protocolo, onVoltar }: { protocolo: ProtocoloLinha; 
               </div>
               {i.mensagem && <p className="mt-0.5 text-slate-600">{i.mensagem}</p>}
               {!i.interno && (
-                <span className="mt-1 inline-block rounded bg-cyan-50 px-1.5 py-0.5 text-[10px] text-cyan-700">
+                <span className="mt-1 inline-block rounded bg-cyan-50 px-1.5 py-0.5 text-[0.625rem] text-cyan-700">
                   visível ao associado
                 </span>
               )}

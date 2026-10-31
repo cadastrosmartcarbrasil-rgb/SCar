@@ -223,7 +223,7 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
                         </p>
                       )}
                       {h.observacoes && <p className="text-xs text-slate-600">{h.observacoes}</p>}
-                      <p className="text-[11px] text-slate-400">{formatDate(h.created_at)}</p>
+                      <p className="text-[0.6875rem] text-slate-400">{formatDate(h.created_at)}</p>
                     </li>
                   ))}
                   {(historico ?? []).length === 0 && <li className="text-sm text-slate-400">Sem tramitações.</li>}

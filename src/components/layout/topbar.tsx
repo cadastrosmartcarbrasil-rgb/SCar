@@ -41,16 +41,16 @@ export function Topbar({ nome, papel }: { nome: string | null; papel: string }) 
         {rota ? (
           <>
             <p className="text-xs text-slate-500">{rota.area}</p>
-            <h1 className="truncate font-display text-[15px] font-semibold text-slate-900">{rota.label}</h1>
+            <h1 className="truncate font-display text-[0.9375rem] font-semibold text-slate-900">{rota.label}</h1>
           </>
         ) : (
-          <h1 className="font-display text-[15px] font-semibold text-slate-900">Painel de gestão</h1>
+          <h1 className="font-display text-[0.9375rem] font-semibold text-slate-900">Painel de gestão</h1>
         )}
       </div>
       <div className="flex items-center gap-3">
         <ThemeToggle />
         <div className="text-right leading-tight">
-          <p className="text-[13px] font-semibold text-slate-800">{nome}</p>
+          <p className="text-[0.8125rem] font-semibold text-slate-800">{nome}</p>
           <p className="text-xs capitalize text-slate-500">{papel}</p>
         </div>
         {/* tokens que não invertem: o texto é branco nos dois temas */}

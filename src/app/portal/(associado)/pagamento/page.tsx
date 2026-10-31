@@ -57,8 +57,8 @@ export default function PortalPagamentoPage() {
   return (
     <div className="space-y-4">
       <header>
-        <h1 className="text-[22px] font-bold tracking-tight text-brand-800">Pagamento</h1>
-        <p className="mt-0.5 text-[13px] text-slate-500">
+        <h1 className="text-[1.375rem] font-bold tracking-tight text-brand-800">Pagamento</h1>
+        <p className="mt-0.5 text-[0.8125rem] text-slate-500">
           Cadastre um cartão e a mensalidade e debitada automaticamente — sem boleto para lembrar.
         </p>
       </header>
@@ -69,21 +69,21 @@ export default function PortalPagamentoPage() {
         <ul className="space-y-2">
           {(cartoes ?? []).map((c) => (
             <li key={c.id} className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-superficie p-4">
-              <span className="grid h-11 w-14 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-acao to-faixa text-[10px] font-bold uppercase tracking-wide text-white">
+              <span className="grid h-11 w-14 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-acao to-faixa text-[0.625rem] font-bold uppercase tracking-wide text-white">
                 {c.bandeira ?? 'cartao'}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="tnum text-[15px] font-bold text-brand-800">
+                <p className="tnum text-[0.9375rem] font-bold text-brand-800">
                   •••• •••• •••• {c.ultimos_digitos ?? '????'}
                 </p>
-                <p className="text-[11.5px] text-slate-500">
+                <p className="text-[0.7188rem] text-slate-500">
                   {c.nome_portador}
                   {c.validade_mes && c.validade_ano
                     ? ` · vence ${String(c.validade_mes).padStart(2, '0')}/${String(c.validade_ano).slice(-2)}`
                     : ''}
                 </p>
                 {c.principal && (
-                  <span className="mt-1 inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-[10.5px] font-bold uppercase text-emerald-700 ring-1 ring-inset ring-emerald-200">
+                  <span className="mt-1 inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-[0.6562rem] font-bold uppercase text-emerald-700 ring-1 ring-inset ring-emerald-200">
                     cobrança automática
                   </span>
                 )}
@@ -108,7 +108,7 @@ export default function PortalPagamentoPage() {
         <Card>
           <CardContent className="p-6 text-center">
             <CreditCard className="mx-auto h-8 w-8 text-slate-300" />
-            <p className="mt-2 text-[13px] text-slate-500">
+            <p className="mt-2 text-[0.8125rem] text-slate-500">
               Você ainda não tem cartão cadastrado. Suas mensalidades vem por boleto.
             </p>
           </CardContent>
@@ -118,7 +118,7 @@ export default function PortalPagamentoPage() {
       {!mostrarForm ? (
         <button
           onClick={() => setMostrarForm(true)}
-          className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-acao px-4 py-3 text-[14px] font-semibold text-white transition hover:bg-acao-escura"
+          className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-acao px-4 py-3 text-[0.875rem] font-semibold text-white transition hover:bg-acao-escura"
         >
           <CreditCard className="h-4 w-4" />
           {(cartoes ?? []).length > 0 ? 'Trocar o cartão' : 'Cadastrar cartão'}
@@ -127,7 +127,7 @@ export default function PortalPagamentoPage() {
         <Card>
           <CardContent className="p-5">
             <form onSubmit={salvar} className="space-y-3">
-              <p className="flex items-start gap-1.5 rounded-xl bg-slate-50 px-3 py-2.5 text-[11.5px] leading-relaxed text-slate-600">
+              <p className="flex items-start gap-1.5 rounded-xl bg-slate-50 px-3 py-2.5 text-[0.7188rem] leading-relaxed text-slate-600">
                 <Lock className="mt-px h-3.5 w-3.5 shrink-0 text-slate-400" />
                 O número do seu cartão vai direto para a operadora e <b>não fica guardado
                 conosco</b>. Aqui ficam apenas a bandeira e os 4 últimos dígitos, para você
@@ -151,7 +151,7 @@ export default function PortalPagamentoPage() {
               </div>
 
               {(erro || (problema && form.numero.length > 6)) && (
-                <p className="rounded-lg bg-rose-50 px-3 py-2 text-[12.5px] text-rose-700">
+                <p className="rounded-lg bg-rose-50 px-3 py-2 text-[0.7812rem] text-rose-700">
                   {erro ?? problema}
                 </p>
               )}
@@ -159,13 +159,13 @@ export default function PortalPagamentoPage() {
               <div className="flex gap-2 pt-1">
                 <button
                   type="button" onClick={() => { setMostrarForm(false); setErro(null); }}
-                  className="flex-1 rounded-xl border border-slate-300 px-4 py-2.5 text-[13px] font-semibold text-slate-600 transition hover:bg-slate-50"
+                  className="flex-1 rounded-xl border border-slate-300 px-4 py-2.5 text-[0.8125rem] font-semibold text-slate-600 transition hover:bg-slate-50"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit" disabled={!!problema || enviando}
-                  className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-acao px-4 py-2.5 text-[13px] font-semibold text-white transition hover:bg-acao-escura disabled:opacity-50"
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-acao px-4 py-2.5 text-[0.8125rem] font-semibold text-white transition hover:bg-acao-escura disabled:opacity-50"
                 >
                   {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
                   Salvar cartão
@@ -176,7 +176,7 @@ export default function PortalPagamentoPage() {
         </Card>
       )}
 
-      <p className="px-1 text-[11.5px] leading-relaxed text-slate-400">
+      <p className="px-1 text-[0.7188rem] leading-relaxed text-slate-400">
         A cobrança no cartão acontece no vencimento de cada mensalidade. Boletos já emitidos
         continuam válidos e podem ser pagos normalmente em <b>Financeiro</b>.
       </p>
@@ -190,16 +190,16 @@ function Campo({ rotulo, valor, onChange, mono, inputMode, autoFocus, sufixo }: 
 }) {
   return (
     <label className="block">
-      <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{rotulo}</span>
+      <span className="text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-500">{rotulo}</span>
       <div className="relative mt-1">
         <input
           value={valor} inputMode={inputMode} autoFocus={autoFocus} autoComplete="off"
           onChange={(e) => onChange(e.target.value)}
-          className={`w-full rounded-xl border border-slate-300 px-3 py-2.5 text-[14px] outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 ${
+          className={`w-full rounded-xl border border-slate-300 px-3 py-2.5 text-[0.875rem] outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 ${
             mono ? 'font-mono tracking-wide' : ''} ${sufixo ? 'pr-24' : ''}`}
         />
         {sufixo && (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10.5px] font-bold uppercase tracking-wide text-cyan-600">
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[0.6562rem] font-bold uppercase tracking-wide text-cyan-600">
             {sufixo}
           </span>
         )}

@@ -219,7 +219,7 @@ export function ImportarTabela() {
           </div>
 
           {tipoId && (
-            <p className="flex items-start gap-1.5 rounded-lg bg-slate-50 px-3 py-2 text-[11.5px] leading-relaxed text-slate-600">
+            <p className="flex items-start gap-1.5 rounded-lg bg-slate-50 px-3 py-2 text-[0.7188rem] leading-relaxed text-slate-600">
               <Info className="mt-px h-3.5 w-3.5 shrink-0 text-slate-400" />
               O modelo já vem preenchido com a tabela em vigor deste tipo ({bandasAtuais.length} faixa(s)).
               Colunas: <b>FIPE_MINIMO</b>, <b>FIPE_MAXIMO</b>, <b>PARTICIPAÇÃO</b>, <b>PARTICIPACAO_TIPO</b>{' '}
@@ -245,7 +245,7 @@ export function ImportarTabela() {
                 <p className="text-xs font-medium text-slate-600">
                   {tipoId ? <>Arraste a planilha ou <span className="text-cyan-700 underline">selecione do computador</span></> : 'Escolha o tipo de veículo para liberar o envio'}
                 </p>
-                <p className="text-[11px] text-slate-400">.xlsx ou .csv · valores em formato brasileiro (1.234,56)</p>
+                <p className="text-[0.6875rem] text-slate-400">.xlsx ou .csv · valores em formato brasileiro (1.234,56)</p>
               </>
             )}
           </div>
@@ -320,7 +320,7 @@ export function ImportarTabela() {
                               const mudou = alt && antes !== undefined && antes !== depois;
                               return (
                                 <td key={p.id} className="tnum px-3 py-1.5 text-right">
-                                  {mudou && <span className="mr-1 text-[10px] text-slate-400 line-through">{formatCurrency(antes)}</span>}
+                                  {mudou && <span className="mr-1 text-[0.625rem] text-slate-400 line-through">{formatCurrency(antes)}</span>}
                                   <span className={mudou ? 'font-semibold text-amber-700' : 'text-slate-700'}>{formatCurrency(depois)}</span>
                                 </td>
                               );
@@ -338,7 +338,7 @@ export function ImportarTabela() {
             )}
 
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4">
-              <p className="text-[11.5px] text-slate-500">
+              <p className="text-[0.7188rem] text-slate-500">
                 Gravar substitui a tabela inteira de{' '}
                 <b>{(tipos ?? []).find((t) => t.id === tipoId)?.nome}</b>. Os outros tipos não mudam.
               </p>
@@ -354,7 +354,7 @@ export function ImportarTabela() {
       )}
 
       {!resultado && (
-        <p className="flex items-center gap-1.5 text-[11.5px] text-slate-400">
+        <p className="flex items-center gap-1.5 text-[0.7188rem] text-slate-400">
           <FileSpreadsheet className="h-3.5 w-3.5" />
           Para atualizar muitos preços de uma vez: baixe o modelo do tipo, edite no Excel e suba de volta.
           <ArrowRight className="h-3 w-3" /> nada é gravado sem a sua confirmação.
@@ -373,7 +373,7 @@ function Alerta({ tom, titulo, itens }: { tom: 'erro' | 'aviso'; titulo: string;
       <p className="flex items-center gap-1.5 text-xs font-semibold">
         <AlertTriangle className="h-3.5 w-3.5" /> {titulo}
       </p>
-      <ul className="mt-1 list-disc space-y-0.5 pl-5 text-[11.5px] leading-relaxed">
+      <ul className="mt-1 list-disc space-y-0.5 pl-5 text-[0.7188rem] leading-relaxed">
         {itens.slice(0, 12).map((i) => <li key={i}>{i}</li>)}
         {itens.length > 12 && <li>... e mais {itens.length - 12}.</li>}
       </ul>
@@ -385,7 +385,7 @@ function Contador({ rotulo, valor, tom = 'cinza' }: { rotulo: string; valor: num
   const cor = { cinza: 'text-slate-800', verde: 'text-emerald-700', ambar: 'text-amber-700', vermelho: 'text-rose-700' }[tom];
   return (
     <div className="rounded-xl border border-slate-200 px-3 py-2">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{rotulo}</p>
+      <p className="text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-500">{rotulo}</p>
       <p className={`tnum mt-0.5 text-xl font-bold ${cor}`}>{valor}</p>
     </div>
   );
@@ -397,7 +397,7 @@ function Selo({ tom, children }: { tom: 'verde' | 'ambar' | 'cinza'; children: R
     ambar: 'bg-amber-50 text-amber-700 ring-amber-200',
     cinza: 'bg-slate-100 text-slate-500 ring-slate-200',
   }[tom];
-  return <span className={`rounded-full px-2 py-0.5 text-[10.5px] font-medium ring-1 ring-inset ${cor}`}>{children}</span>;
+  return <span className={`rounded-full px-2 py-0.5 text-[0.6562rem] font-medium ring-1 ring-inset ${cor}`}>{children}</span>;
 }
 
 /**
@@ -407,7 +407,7 @@ function Selo({ tom, children }: { tom: 'verde' | 'ambar' | 'cinza'; children: R
 export function ForaDoTipo({ produtos, tipo }: { produtos: { id: string; nome: string }[]; tipo: string }) {
   if (produtos.length === 0) return null;
   return (
-    <p className="flex items-start gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11.5px] leading-relaxed text-amber-800">
+    <p className="flex items-start gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[0.7188rem] leading-relaxed text-amber-800">
       <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" />
       <span>
         Fora desta tabela porque o produto não está marcado para <b>{tipo}</b>:{' '}

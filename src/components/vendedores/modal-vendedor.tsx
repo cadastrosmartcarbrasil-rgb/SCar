@@ -40,7 +40,7 @@ export function Secao({ titulo, tom = 'cinza', children }: {
   const titulos = { cinza: 'text-slate-600', ambar: 'text-amber-700', azul: 'text-sky-700' }[tom];
   return (
     <section className={`rounded-xl border p-3 ${cor}`}>
-      <h4 className={`mb-2.5 text-[11.5px] font-bold uppercase tracking-wide ${titulos}`}>{titulo}</h4>
+      <h4 className={`mb-2.5 text-[0.7188rem] font-bold uppercase tracking-wide ${titulos}`}>{titulo}</h4>
       <div className="space-y-3">{children}</div>
     </section>
   );
@@ -167,11 +167,11 @@ export function ModalVendedor({ inicial, onClose, regionalFixa }: {
 
         <Secao titulo="Comissão individual" tom="ambar">
           {!form.regional_id ? (
-            <p className="text-[11.5px] text-amber-800">
+            <p className="text-[0.7188rem] text-amber-800">
               Escolha a franquia: a comissão do vendedor sai do que ela recebe.
             </p>
           ) : (
-            <p className="text-[11.5px] text-amber-800">
+            <p className="text-[0.7188rem] text-amber-800">
               Teto de <b>{regional?.nome}</b>: entrada até <b className="tnum">{pct(teto.adesao)}</b>,
               recorrência até <b className="tnum">{pct(teto.recorrente)}</b>.
             </p>
@@ -191,13 +191,13 @@ export function ModalVendedor({ inicial, onClose, regionalFixa }: {
             </FormField>
           </div>
           {!validacao.ok && (
-            <ul className="list-disc space-y-0.5 pl-4 text-[11.5px] font-medium text-rose-700">
+            <ul className="list-disc space-y-0.5 pl-4 text-[0.7188rem] font-medium text-rose-700">
               {validacao.erros.map((e) => <li key={e}>{e}</li>)}
             </ul>
           )}
 
           <div>
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-amber-700">Prazo de pagamento</p>
+            <p className="mb-2 text-[0.6875rem] font-semibold uppercase tracking-wide text-amber-700">Prazo de pagamento</p>
             <div className="grid gap-3 sm:grid-cols-2">
               <FormField label="Dia pagto entrada (semana)">
                 <Select
@@ -207,7 +207,7 @@ export function ModalVendedor({ inicial, onClose, regionalFixa }: {
                   <option value="">Padrão franquia</option>
                   {DIAS_SEMANA.map((d) => <option key={d.valor} value={d.valor}>{d.rotulo}</option>)}
                 </Select>
-                <p className="mt-1 text-[10.5px] uppercase tracking-wide text-slate-400">
+                <p className="mt-1 text-[0.6562rem] uppercase tracking-wide text-slate-400">
                   Comissão de adesão — paga semanalmente
                 </p>
               </FormField>
@@ -218,7 +218,7 @@ export function ModalVendedor({ inicial, onClose, regionalFixa }: {
                   onChange={(e) => set({ dia_pagto_recorrencia: e.target.value ? Number(e.target.value) : null })}
                   placeholder="Ex: 5"
                 />
-                <p className="mt-1 text-[10.5px] uppercase tracking-wide text-slate-400">
+                <p className="mt-1 text-[0.6562rem] uppercase tracking-wide text-slate-400">
                   Comissão mensal — último dia útil do mês anterior
                 </p>
               </FormField>
@@ -238,7 +238,7 @@ export function ModalVendedor({ inicial, onClose, regionalFixa }: {
         </Secao>
 
         <Secao titulo={form.usuario_id ? 'Redefinir senha do portal' : 'Criar acesso ao portal'} tom="azul">
-          <p className="text-[11.5px] text-sky-800">
+          <p className="text-[0.7188rem] text-sky-800">
             {form.usuario_id
               ? 'O vendedor já acessa o portal. Preencha para trocar a senha; deixe vazio para manter.'
               : 'Preencha para criar o login do vendedor (usa o e-mail acima). Deixe vazio para cadastrar sem acesso agora.'}

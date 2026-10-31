@@ -54,7 +54,7 @@ export function LoginAssociado({ logoUrl }: { logoUrl: string | null }) {
           aria-hidden
         />
         <div className="relative mx-auto max-w-md px-4 pb-24 pt-10">
-          <h1 className="text-center font-display text-[26px] font-semibold leading-tight text-white">
+          <h1 className="text-center font-display text-[1.625rem] font-semibold leading-tight text-white">
             Seus veículos e suas mensalidades
           </h1>
           <p className="mt-2 text-center text-sm text-white/70">Portal do associado</p>
@@ -76,7 +76,7 @@ export function LoginAssociado({ logoUrl }: { logoUrl: string | null }) {
                   const d = e.target.value.replace(/\D/g, '').slice(0, 14);
                   setDocumento(formatarDocumento(d, d.length > 11 ? 'PJ' : 'PF'));
                 }}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-center font-mono text-[16px] tracking-wide outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-center font-mono text-[1rem] tracking-wide outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
               />
             </label>
 
@@ -87,24 +87,24 @@ export function LoginAssociado({ logoUrl }: { logoUrl: string | null }) {
               <input
                 type="password" value={senha} autoComplete="current-password"
                 onChange={(e) => setSenha(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-[14px] outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-[0.875rem] outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
               />
             </label>
 
             {erro && (
-              <p className="rounded-lg bg-rose-50 px-3 py-2 text-[12.5px] text-rose-700">{erro}</p>
+              <p className="rounded-lg bg-rose-50 px-3 py-2 text-[0.7812rem] text-rose-700">{erro}</p>
             )}
 
             <button
               type="submit"
               disabled={enviando || digitos.length < 11 || !senha}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-acao px-4 py-3 text-[14px] font-semibold text-white transition hover:bg-acao-escura disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-acao px-4 py-3 text-[0.875rem] font-semibold text-white transition hover:bg-acao-escura disabled:opacity-50"
             >
               {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
               Entrar
             </button>
 
-            <p className="flex items-start gap-1.5 rounded-lg bg-slate-50 px-3 py-2.5 text-[11.5px] leading-relaxed text-slate-500">
+            <p className="flex items-start gap-1.5 rounded-lg bg-slate-50 px-3 py-2.5 text-[0.7188rem] leading-relaxed text-slate-500">
               <ShieldCheck className="mt-px h-3.5 w-3.5 shrink-0 text-cyan-600" />
               <span>
                 <b>Primeiro acesso?</b> Use o seu CPF também como senha. Vamos pedir que você crie

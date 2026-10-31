@@ -101,7 +101,7 @@ export function Balancete() {
           ) : (
             <table className="w-full min-w-[900px] text-sm">
               <thead>
-                <tr className="border-b border-slate-200 text-left text-[11px] uppercase tracking-wide text-slate-400">
+                <tr className="border-b border-slate-200 text-left text-[0.6875rem] uppercase tracking-wide text-slate-400">
                   <th className="py-2 font-semibold">Conta</th>
                   <th className="py-2 font-semibold">Natureza</th>
                   <th className="py-2 text-right font-semibold">Saldo anterior</th>
@@ -115,9 +115,9 @@ export function Balancete() {
                   <tr key={l.codigo}
                     className={`border-b border-slate-50 ${l.analitica ? 'text-slate-600' : 'bg-slate-50/70 font-semibold text-slate-800'}`}>
                     <td className="py-1.5 pr-3" style={{ paddingLeft: `${4 + l.profundidade * 16}px` }}>
-                      <span className="mr-2 font-mono text-[11px] text-slate-400">{l.codigo}</span>
+                      <span className="mr-2 font-mono text-[0.6875rem] text-slate-400">{l.codigo}</span>
                       {l.nome}
-                      {l.foraDoPlano && <span className="ml-1 text-[11px] text-amber-600">(fora do plano)</span>}
+                      {l.foraDoPlano && <span className="ml-1 text-[0.6875rem] text-amber-600">(fora do plano)</span>}
                     </td>
                     <td className="py-1.5 text-xs text-slate-500">{metaNatureza(l.natureza)?.rotulo}</td>
                     <td className="tnum py-1.5 text-right">{saldoTexto(l.saldoAnterior)}</td>
@@ -142,7 +142,7 @@ export function Balancete() {
         </CardContent>
       </Card>
 
-      <p className="text-[11px] leading-relaxed text-slate-400">
+      <p className="text-[0.6875rem] leading-relaxed text-slate-400">
         Como as partidas são montadas: o título a receber debita Contas a Receber (1.1.2) e credita a conta de
         receita; o título a pagar debita a conta de custo/despesa (ou de balanço, como imobilizado) e credita
         Fornecedores a Pagar (2.1.1.01); o pagamento movimenta a conta da própria conta bancária em Disponibilidades (1.1.1, dentro do grupo da

@@ -130,6 +130,42 @@ body {
   font-weight: 500;
 }
 
+/* ---------------------------------------------------------------------------
+   ESCALA PARA DESKTOP (31/10/2026)
+
+   Pedido do usuario: no PC sobra espaco e a letra e pequena demais. O sistema
+   foi desenhado no celular e depois esticado — e o miolo do problema eram as
+   ~900 classes `text-[11px]`, `text-[12px]`... que ficavam FIXAS em pixel,
+   iguais em qualquer monitor. Elas viraram `text-[0.6875rem]` etc. (rem), e
+   aqui a escala sobe em telas grandes, em UM lugar so:
+
+     1) a raiz cresce com a largura da janela (tudo que e rem acompanha:
+        texto, espacamento, a largura dos cartoes e a barra lateral);
+     2) o PISO de leitura: abaixo de 1024px nada muda (celular e tablet seguem
+        como estavam); de 1024px para cima, o texto miudo sobe um degrau —
+        o que era 10-10,5px passa a 12px, 11-11,5px a 13px, 12-12,5px a 14px.
+
+   So `screen`: o PDF e a impressao (termos, proposta) continuam do tamanho de
+   papel. Para voltar ao tamanho antigo, apague este bloco inteiro.
+   --------------------------------------------------------------------------- */
+@media screen and (min-width: 1280px) {
+  html { font-size: 106.25%; } /* 17px */
+}
+@media screen and (min-width: 1536px) {
+  html { font-size: 112.5%; } /* 18px */
+}
+@media screen and (min-width: 1920px) {
+  html { font-size: 125%; } /* 20px */
+}
+@media screen and (min-width: 1024px) {
+  [class~='text-[0.5625rem]'], [class~='text-[0.5938rem]'],
+  [class~='text-[0.625rem]'], [class~='text-[0.6562rem]'], [class~='text-[0.6563rem]'] { font-size: 0.75rem; line-height: 1.1rem; }
+  [class~='text-[0.6875rem]'], [class~='text-[0.7188rem]'] { font-size: 0.8125rem; line-height: 1.15rem; }
+  [class~='text-[0.75rem]'], [class~='text-[0.7812rem]'] { font-size: 0.875rem; line-height: 1.3rem; }
+  [class~='text-[0.8125rem]'], [class~='text-[0.8438rem]'] { font-size: 0.9375rem; line-height: 1.4rem; }
+  [class~='text-[0.875rem]'] { font-size: 1rem; line-height: 1.45rem; }
+}
+
 /* Titulos em Montserrat (peso da marca); texto corrido em Barlow; placa,
    chassi e protocolo em IBM Plex Mono (.placa / .codigo). */
 h1, h2, h3 {

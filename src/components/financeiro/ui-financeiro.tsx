@@ -54,7 +54,7 @@ export function Indicador({
   return (
     <div className="rounded-xl border border-slate-200 bg-superficie p-4">
       <div className="flex items-start justify-between gap-2">
-        <p className="text-[13px] font-medium text-slate-500">{titulo}</p>
+        <p className="text-[0.8125rem] font-medium text-slate-500">{titulo}</p>
         {Icon && (
           <Icon className={`h-[18px] w-[18px] shrink-0 ${TOM_ICONE[tom]}`} strokeWidth={1.75} aria-hidden />
         )}
@@ -62,15 +62,15 @@ export function Indicador({
       {carregando ? (
         <div className="mt-3 h-7 w-28 animate-pulse rounded bg-slate-100" />
       ) : (
-        <p className={`tnum mt-2 font-display text-[24px] font-semibold leading-none ${TOM_VALOR[tom]}`}>
+        <p className={`tnum mt-2 font-display text-[1.5rem] font-semibold leading-none ${TOM_VALOR[tom]}`}>
           {formato === 'moeda' && (
-            <span className="mr-1 text-[13px] font-semibold text-slate-400">R$</span>
+            <span className="mr-1 text-[0.8125rem] font-semibold text-slate-400">R$</span>
           )}
           {formato === 'numero'
             ? Math.round(Number(valor ?? 0)).toLocaleString('pt-BR')
             : formatarMoedaBR(valor ?? 0)}
           {formato === 'percentual' && (
-            <span className="ml-0.5 text-[13px] font-semibold text-slate-400">%</span>
+            <span className="ml-0.5 text-[0.8125rem] font-semibold text-slate-400">%</span>
           )}
         </p>
       )}
@@ -94,7 +94,7 @@ export const SITUACAO: Record<SituacaoTitulo, { rotulo: string; classe: string }
 export function Selo({ situacao, detalhe }: { situacao: SituacaoTitulo; detalhe?: string }) {
   const s = SITUACAO[situacao];
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset ${s.classe}`}>
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[0.6875rem] font-medium ring-1 ring-inset ${s.classe}`}>
       {s.rotulo}
       {detalhe && <span className="tnum opacity-70">· {detalhe}</span>}
     </span>
@@ -169,7 +169,7 @@ export function FiltroPeriodo({
       </div>
       <div className="flex items-end gap-2">
         <label className="block">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">De</span>
+          <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">De</span>
           <input
             type="date"
             value={periodo.inicio}
@@ -178,7 +178,7 @@ export function FiltroPeriodo({
           />
         </label>
         <label className="block">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Até</span>
+          <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">Até</span>
           <input
             type="date"
             value={periodo.fim}

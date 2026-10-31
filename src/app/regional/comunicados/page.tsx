@@ -72,7 +72,7 @@ export default function ComunicadosRegionalPage() {
                            : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
             <a.icon className="h-4 w-4" /> {a.label}
             {!!a.contador && (
-              <span className="rounded-full bg-amber-100 px-1.5 text-[10px] font-semibold text-amber-700">
+              <span className="rounded-full bg-amber-100 px-1.5 text-[0.625rem] font-semibold text-amber-700">
                 {a.contador}
               </span>
             )}
@@ -96,15 +96,15 @@ export default function ComunicadosRegionalPage() {
               <article key={m.id}
                 className={`rounded-xl border p-4 ${m.pendente_ciencia ? 'border-amber-200 bg-amber-50/40' : 'border-slate-200 bg-superficie'}`}>
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${cat.cor}`}>{cat.rotulo}</span>
-                  <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${pri.cor}`}>{pri.rotulo}</span>
+                  <span className={`rounded px-1.5 py-0.5 text-[0.625rem] font-medium ${cat.cor}`}>{cat.rotulo}</span>
+                  <span className={`rounded px-1.5 py-0.5 text-[0.625rem] font-medium ${pri.cor}`}>{pri.rotulo}</span>
                   {m.exige_leitura && (
-                    <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
+                    <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[0.625rem] font-medium text-amber-800">
                       ciência obrigatória
                     </span>
                   )}
                   {resumoRespostas(m.respostas, m.respostas_nao_lidas) && (
-                    <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                    <span className={`rounded px-1.5 py-0.5 text-[0.625rem] font-medium ${
                       m.respostas_nao_lidas > 0
                         ? 'bg-amber-100 text-amber-800'
                         : 'bg-slate-100 text-slate-600'}`}>
@@ -114,13 +114,13 @@ export default function ComunicadosRegionalPage() {
                 </div>
                 <h2 className="mt-1.5 text-sm font-semibold text-slate-800">{m.titulo}</h2>
                 <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{m.mensagem}</p>
-                <p className="mt-2 text-[11px] text-slate-400">
+                <p className="mt-2 text-[0.6875rem] text-slate-400">
                   {m.autor} · {formatDate(m.publicado_em)}
                   {m.expira_em ? ` · vale até ${formatDate(m.expira_em)}` : ''}
                   {m.lido_em ? ' · ciência dada' : ''}
                 </p>
                 <div className="mt-3 border-t border-slate-100 pt-3">
-                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                  <p className="mb-2 text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-400">
                     Responder a quem enviou
                   </p>
                   <ConversaMemo memoId={m.id} modo="minha" compacta />
@@ -168,18 +168,18 @@ export default function ComunicadosRegionalPage() {
                   <tr key={m.id} className={`border-b border-slate-50 last:border-0 ${m.publicado ? '' : 'opacity-60'}`}>
                     <td className="px-4 py-2">
                       <span className="flex flex-wrap items-center gap-1.5">
-                        <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${cat.cor}`}>{cat.rotulo}</span>
+                        <span className={`rounded px-1.5 py-0.5 text-[0.625rem] font-medium ${cat.cor}`}>{cat.rotulo}</span>
                         {m.exige_leitura && (
-                          <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+                          <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[0.625rem] font-medium text-amber-700">
                             ciência
                           </span>
                         )}
                         {!m.publicado && (
-                          <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">arquivado</span>
+                          <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[0.625rem] text-slate-500">arquivado</span>
                         )}
                       </span>
                       <span className="mt-1 block font-medium text-slate-800">{m.titulo}</span>
-                      <span className="block max-w-md truncate text-[11px] text-slate-400">{m.mensagem}</span>
+                      <span className="block max-w-md truncate text-[0.6875rem] text-slate-400">{m.mensagem}</span>
                     </td>
                     <td className="px-4 py-2 text-slate-600">
                       {paraDiretoria ? (
@@ -191,11 +191,11 @@ export default function ComunicadosRegionalPage() {
                           <Users className="h-3.5 w-3.5 text-cyan-600" /> {m.regional ?? 'Todas as unidades'}
                         </span>
                       )}
-                      <span className="block text-[11px] text-slate-400">
+                      <span className="block text-[0.6875rem] text-slate-400">
                         {m.papeis?.length ? m.papeis.map(papelMemoRotulo).join(', ') : 'Todos os papéis'}
                       </span>
                       {m.destinatarios === 0 && (
-                        <span className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-rose-600">
+                        <span className="mt-0.5 flex items-center gap-1 text-[0.6875rem] font-medium text-rose-600">
                           <AlertTriangle className="h-3 w-3" /> nenhum usuário ativo neste endereço
                         </span>
                       )}
@@ -207,7 +207,7 @@ export default function ComunicadosRegionalPage() {
                       </span>
                       <button
                         onClick={() => setConversa(conversa === m.id ? null : m.id)}
-                        className={`mt-1 flex items-center gap-1.5 rounded-lg px-1.5 py-0.5 text-[11px] transition ${
+                        className={`mt-1 flex items-center gap-1.5 rounded-lg px-1.5 py-0.5 text-[0.6875rem] transition ${
                           m.respostas_nao_lidas > 0
                             ? 'bg-amber-50 font-medium text-amber-800 hover:bg-amber-100'
                             : 'text-slate-500 hover:bg-slate-50'}`}

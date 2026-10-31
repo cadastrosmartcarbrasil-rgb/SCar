@@ -89,7 +89,7 @@ export function KanbanVendas({ busca, consultorId }: { busca?: string; consultor
                   <p className="text-sm font-semibold text-slate-800">{coluna.titulo}</p>
                   <span className="rounded-full bg-superficie px-2 py-0.5 text-xs text-slate-500">{itens.length}</span>
                 </div>
-                <p className="text-[11px] text-slate-400">{coluna.descricao}</p>
+                <p className="text-[0.6875rem] text-slate-400">{coluna.descricao}</p>
                 {total > 0 && (
                   <p className="tnum mt-0.5 text-xs font-medium text-slate-600">{formatCurrency(total)}/mes</p>
                 )}
@@ -128,11 +128,11 @@ export function KanbanVendas({ busca, consultorId }: { busca?: string; consultor
                           <Link href={`/vendas/${l.id}`} className="block truncate text-sm font-medium text-slate-900 hover:text-brand-700">
                             {l.nome}
                           </Link>
-                          <p className="mt-0.5 flex items-center gap-1 text-[11px] text-slate-500">
+                          <p className="mt-0.5 flex items-center gap-1 text-[0.6875rem] text-slate-500">
                             <Phone className="h-3 w-3" /> {l.celular}
                           </p>
                           {(l.marca || l.modelo) && (
-                            <p className="flex items-center gap-1 truncate text-[11px] text-slate-500">
+                            <p className="flex items-center gap-1 truncate text-[0.6875rem] text-slate-500">
                               <Car className="h-3 w-3" /> {[l.marca, l.modelo].filter(Boolean).join(' ')}
                               {l.placa ? ` · ${l.placa}` : ''}
                             </p>
@@ -145,7 +145,7 @@ export function KanbanVendas({ busca, consultorId }: { busca?: string; consultor
                           )}
                           <div className="mt-1 flex flex-wrap items-center gap-1">
                             {Number(l.desconto_percentual ?? 0) > 0 && (
-                              <span className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] ${
+                              <span className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[0.625rem] ${
                                 l.desconto_aprovado ? 'bg-violet-50 text-violet-700' : 'bg-emerald-50 text-emerald-700'
                               }`}>
                                 <Percent className="h-2.5 w-2.5" />
@@ -154,17 +154,17 @@ export function KanbanVendas({ busca, consultorId }: { busca?: string; consultor
                               </span>
                             )}
                             {l.status !== colunaDoLead(l.status) && (
-                              <span className={`rounded px-1.5 py-0.5 text-[10px] ${STATUS_LEAD[l.status].cor}`}>
+                              <span className={`rounded px-1.5 py-0.5 text-[0.625rem] ${STATUS_LEAD[l.status].cor}`}>
                                 {STATUS_LEAD[l.status].curto}
                               </span>
                             )}
-                            {l.consultor && <span className="text-[10px] text-slate-400">{l.consultor}</span>}
+                            {l.consultor && <span className="text-[0.625rem] text-slate-400">{l.consultor}</span>}
                           </div>
 
                           {/* Tempo do lead: retorno combinado e ha quanto esta parado */}
                           <div className="mt-1 flex flex-wrap items-center gap-1">
                             {agenda !== 'SEM_AGENDA' && (
-                              <span className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium ${SELO_AGENDA[agenda].cor}`}>
+                              <span className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[0.625rem] font-medium ${SELO_AGENDA[agenda].cor}`}>
                                 <AlarmClock className="h-2.5 w-2.5" />
                                 {rotuloRetorno(l.proximo_contato_em)}
                               </span>
@@ -174,7 +174,7 @@ export function KanbanVendas({ busca, consultorId }: { busca?: string; consultor
                                 title={esfriando
                                   ? `Sem contato há ${l.dias_parado} dias — a unidade devolve ao pool com ${l.limite_sem_contato}`
                                   : undefined}
-                                className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] ${
+                                className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[0.625rem] ${
                                   esfriando ? 'bg-rose-50 font-medium text-rose-700' : 'text-slate-400'
                                 }`}
                               >

@@ -109,7 +109,7 @@ function ItemDaCobertura({ i }: { i: ItemCobertura }) {
           <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
           {i.nome}
           {i.origem === 'AVULSO' && (
-            <span className="rounded bg-cyan-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-cyan-800">opcional</span>
+            <span className="rounded bg-cyan-100 px-1.5 py-0.5 text-[0.625rem] font-semibold uppercase text-cyan-800">opcional</span>
           )}
         </span>
         {i.origem === 'AVULSO' && <span className="tnum text-xs text-slate-500">+ {formatCurrency(Number(i.valor))}/mes</span>}
@@ -119,11 +119,11 @@ function ItemDaCobertura({ i }: { i: ItemCobertura }) {
         <p className="ml-5 mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
           <span className="tnum">{limite}</span>
           {i.elegivel ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[0.6875rem] font-semibold text-emerald-700">
               <CheckCircle2 className="h-3 w-3" /> DISPONÍVEL
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-700">
+            <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[0.6875rem] font-semibold text-rose-700">
               <XCircle className="h-3 w-3" /> LIMITE ATINGIDO{i.ultimo_uso ? ` · último uso ${formatDate(i.ultimo_uso)}` : ''}
             </span>
           )}

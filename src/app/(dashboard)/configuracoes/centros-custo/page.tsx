@@ -84,7 +84,7 @@ export default function CentrosCustoPage() {
                     <span className="inline-flex items-center gap-1.5">
                       {c.nome}
                       {sistema && (
-                        <span title="Usado pela Assistência 24h" className="inline-flex items-center gap-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-500">
+                        <span title="Usado pela Assistência 24h" className="inline-flex items-center gap-1 rounded bg-slate-100 px-1.5 py-0.5 text-[0.625rem] font-semibold uppercase text-slate-500">
                           <Lock className="h-3 w-3" /> sistema
                         </span>
                       )}

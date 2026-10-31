@@ -58,7 +58,7 @@ export function SeloPrazo({ prazo, compacto = false }: { prazo: EventoPrazo; com
     <span
       title={`${e.rotulo} — ${textoDoPrazo(prazo)}`}
       className={cn(
-        'inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-semibold',
+        'inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[0.6875rem] font-semibold',
         e.selo,
         prazo.nivel === 'VENCIDO' && 'animate-pulse',
       )}
@@ -99,7 +99,7 @@ export function BarraPrazo({ prazo, fina = false }: { prazo: EventoPrazo; fina?:
           ))}
       </div>
       {!fina && (
-        <div className="relative mt-1 h-3 text-[10px] text-slate-500">
+        <div className="relative mt-1 h-3 text-[0.625rem] text-slate-500">
           {[...MARCAS_BARRA, 90].map((m) => (
             <span key={m} className="tnum absolute -translate-x-1/2" style={{ left: pct(m) }}>
               {m}
@@ -155,14 +155,14 @@ export function CartaoPrazoEvento({ eventoId, onVerDocumentos }: { eventoId: str
               {docCompleta ? (
                 <>
                   Completa em {formatDate(prazo.documentacao_completa_em)}
-                  <span className="block text-[11px] font-normal text-slate-500">
+                  <span className="block text-[0.6875rem] font-normal text-slate-500">
                     {prazo.documentacao_origem === 'MANUAL' ? 'marcada a mão' : 'pela entrega do último documento'}
                   </span>
                 </>
               ) : (
                 <>
                   Pendente
-                  <span className="block text-[11px] font-normal text-slate-500">
+                  <span className="block text-[0.6875rem] font-normal text-slate-500">
                     {prazo.docs_pendentes} de {prazo.docs_obrigatorios} obrigatório(s) faltando
                   </span>
                 </>
@@ -395,14 +395,14 @@ export function DocumentosEvento({ eventoId }: { eventoId: string }) {
             <div className="min-w-0">
               <p className="flex flex-wrap items-center gap-2 font-medium text-slate-800">
                 {d.nome}
-                <span className={cn('rounded border px-1.5 py-0.5 text-[10px] font-semibold', SELO_DOC[d.situacao])}>{d.situacao}</span>
+                <span className={cn('rounded border px-1.5 py-0.5 text-[0.625rem] font-semibold', SELO_DOC[d.situacao])}>{d.situacao}</span>
                 {d.obrigatorio ? (
-                  <span className="text-[10px] font-semibold uppercase text-slate-500">obrigatorio</span>
+                  <span className="text-[0.625rem] font-semibold uppercase text-slate-500">obrigatorio</span>
                 ) : (
-                  <span className="text-[10px] uppercase text-slate-400">opcional</span>
+                  <span className="text-[0.625rem] uppercase text-slate-400">opcional</span>
                 )}
                 {d.complementar && (
-                  <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800">complementar</span>
+                  <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[0.625rem] font-semibold text-amber-800">complementar</span>
                 )}
               </p>
               <p className="text-xs text-slate-500">
@@ -503,7 +503,7 @@ export function DocumentosEvento({ eventoId }: { eventoId: string }) {
               />
               <p className="text-sm font-medium text-slate-800">{ROTULO_TRILHA[h.tipo] ?? h.tipo}</p>
               {h.detalhe && <p className="text-xs text-slate-600">{h.detalhe}</p>}
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[0.6875rem] text-slate-400">
                 {new Date(h.created_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
                 {h.usuarios?.nome ? ` · ${h.usuarios.nome}` : ''}
               </p>

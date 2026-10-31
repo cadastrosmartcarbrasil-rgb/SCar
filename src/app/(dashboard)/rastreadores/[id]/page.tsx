@@ -148,7 +148,7 @@ export default function FichaRastreadorPage() {
                 {e.regional_nova && <span className="text-slate-500"> · {e.regional_anterior} → {e.regional_nova}</span>}
               </p>
               {e.descricao && <p className="text-xs text-slate-500">{e.descricao}</p>}
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[0.6875rem] text-slate-400">
                 {formatDate(e.created_at)} {e.autor ? `· ${e.autor}` : ''}
               </p>
             </li>
@@ -165,7 +165,7 @@ export default function FichaRastreadorPage() {
 function Dado({ rotulo, valor }: { rotulo: string; valor?: string | null }) {
   return (
     <div>
-      <p className="text-[11px] uppercase text-slate-400">{rotulo}</p>
+      <p className="text-[0.6875rem] uppercase text-slate-400">{rotulo}</p>
       <p className="text-sm font-medium text-slate-700">{valor || '—'}</p>
     </div>
   );

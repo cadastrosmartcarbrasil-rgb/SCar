@@ -76,11 +76,11 @@ export function FluxoEvolutivo() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-superficie p-3">
         <label className="block">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">De</span>
+          <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">De</span>
           <input type="date" value={inicio} onChange={(e) => setInicio(e.target.value)} className={`${SELECT_CLS} w-40`} />
         </label>
         <label className="block">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Até</span>
+          <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">Até</span>
           <input type="date" value={fim} onChange={(e) => setFim(e.target.value)} className={`${SELECT_CLS} w-40`} />
         </label>
         <div className="flex flex-wrap gap-1.5 pb-1">
@@ -177,7 +177,7 @@ export function FluxoEvolutivo() {
         </CardContent>
       </Card>
 
-      <p className="text-[11px] leading-relaxed text-slate-400">
+      <p className="text-[0.6875rem] leading-relaxed text-slate-400">
         O tipo de cada conta (conta corrente, aplicação, dinheiro ou outros) é escolhido em Configurações → Contas
         Bancárias; cada conta aparece abaixo do seu tipo e tem a sua própria conta em Disponibilidades (1.1.1). O saldo de implantação da conta é o do fim do dia informado e passa a contar no dia seguinte.
       </p>

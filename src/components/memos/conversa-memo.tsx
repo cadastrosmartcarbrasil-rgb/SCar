@@ -63,12 +63,12 @@ export function ConversaMemo({
                 <span className="flex items-center justify-between gap-2">
                   <span className="truncate text-sm font-medium text-slate-800">{c.pessoa}</span>
                   {c.nao_lidas > 0 && (
-                    <span className="shrink-0 rounded-full bg-amber-100 px-1.5 text-[10px] font-semibold text-amber-700">
+                    <span className="shrink-0 rounded-full bg-amber-100 px-1.5 text-[0.625rem] font-semibold text-amber-700">
                       {c.nao_lidas}
                     </span>
                   )}
                 </span>
-                <span className="block truncate text-[11px] text-slate-400">
+                <span className="block truncate text-[0.6875rem] text-slate-400">
                   {c.unidade ?? 'Matriz'} · {c.mensagens} msg
                 </span>
               </button>
@@ -133,7 +133,7 @@ function Thread({
               }`}
             >
               <p className="whitespace-pre-wrap text-sm leading-relaxed">{m.mensagem}</p>
-              <p className={`mt-0.5 text-[10px] ${m.minha ? 'text-white/70' : 'text-slate-400'}`}>
+              <p className={`mt-0.5 text-[0.625rem] ${m.minha ? 'text-white/70' : 'text-slate-400'}`}>
                 {m.autor} · {formatDate(m.created_at)}
               </p>
             </div>

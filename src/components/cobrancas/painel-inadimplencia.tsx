@@ -69,17 +69,17 @@ function BarraFiltros({
       </div>
       <div className="flex items-end gap-2">
         <label className="block">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Vencimento de</span>
+          <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">Vencimento de</span>
           <input type="date" value={periodo.inicio} onChange={(e) => onPeriodo({ ...periodo, inicio: e.target.value })} className={campo} />
         </label>
         <label className="block">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Até</span>
+          <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">Até</span>
           <input type="date" value={periodo.fim} onChange={(e) => onPeriodo({ ...periodo, fim: e.target.value })} className={campo} />
         </label>
       </div>
       {unidadeFixa ? (
         <div className="block min-w-[190px]">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Regional</span>
+          <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">Regional</span>
           <p className="mt-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-sm font-medium text-slate-700">{unidadeFixa}</p>
         </div>
       ) : (
@@ -174,12 +174,12 @@ function ModalParametros({ open, onClose }: { open: boolean; onClose: () => void
 // ---------------------------------------------------------------------------
 function Delta({ atual, base, chave }: { atual: number | null; base: number | null; chave: ChaveTaxa }) {
   const c = compararTaxa(atual, base);
-  if (c.pp === null) return <span className="text-[11px] text-slate-400">sem base</span>;
+  if (c.pp === null) return <span className="text-[0.6875rem] text-slate-400">sem base</span>;
   const dir = direcaoVariacao(c.pp / 100, SUBIR_E_BOM[chave]);
   const cls = dir === 'boa' ? 'text-emerald-600' : dir === 'ruim' ? 'text-rose-600' : 'text-slate-400';
   const Icon = c.pp === 0 ? Minus : c.pp > 0 ? TrendingUp : TrendingDown;
   return (
-    <span className={`inline-flex items-center gap-1 text-[11px] font-semibold ${cls}`}>
+    <span className={`inline-flex items-center gap-1 text-[0.6875rem] font-semibold ${cls}`}>
       <Icon className="h-3 w-3" />
       {textoPp(c.pp)}
       {c.relativa !== null && c.pp !== 0 && <span className="font-normal text-slate-400">({c.relativa > 0 ? '+' : ''}{formatPercent(c.relativa)})</span>}
@@ -195,8 +195,8 @@ function TabelaComparativos({ atual, refs, mesCheio }: {
   const linhas = Object.keys(ROTULO_TAXA) as ChaveTaxa[];
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[640px] text-[12.5px]">
-        <thead className="text-left text-[11px] uppercase tracking-wide text-slate-500">
+      <table className="w-full min-w-[640px] text-[0.7812rem]">
+        <thead className="text-left text-[0.6875rem] uppercase tracking-wide text-slate-500">
           <tr>
             <th className="py-2 pr-3">Indicador</th>
             <th className="py-2 pr-3 text-right">{rotuloRecorte('atual', mesCheio)}</th>
@@ -218,7 +218,7 @@ function TabelaComparativos({ atual, refs, mesCheio }: {
           ))}
         </tbody>
       </table>
-      <p className="mt-2 text-[11px] text-slate-400">
+      <p className="mt-2 text-[0.6875rem] text-slate-400">
         A seta mostra a diferença em <b>pontos percentuais</b> e, entre parênteses, a <b>variação relativa</b>
         (6% → 8% = +2,0 p.p. e +33,3%). Verde e melhora, vermelho e piora.
       </p>
@@ -413,7 +413,7 @@ export function PainelInadimplencia({ unidade }: { unidade?: { id: string; nome:
                 {f.texto}
               </p>
             ))}
-            <p className="pt-1 text-[11px] text-slate-400">
+            <p className="pt-1 text-[0.6875rem] text-slate-400">
               Cada frase sai dos números acima. Situação de hoje: um período passado mostra o que dele continua em aberto agora.
             </p>
           </CardContent>
@@ -466,8 +466,8 @@ export function PainelInadimplencia({ unidade }: { unidade?: { id: string; nome:
         <CardContent>
           <ErroLeitura q={qReg} />
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-[12.5px]">
-              <thead className="text-left text-[11px] uppercase tracking-wide text-slate-500">
+            <table className="w-full min-w-[720px] text-[0.7812rem]">
+              <thead className="text-left text-[0.6875rem] uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="py-2 pr-3">Regional</th>
                   <th className="py-2 pr-3 text-right">Emitido</th>
@@ -505,7 +505,7 @@ export function PainelInadimplencia({ unidade }: { unidade?: { id: string; nome:
               </tbody>
             </table>
           </div>
-          <p className="mt-2 text-[11px] text-slate-400">
+          <p className="mt-2 text-[0.6875rem] text-slate-400">
             Média = inadimplência financeira de todas as regionais que você enxerga ({pct(nacional)}).
             Clique numa regional para filtrar o painel.
           </p>

@@ -139,14 +139,14 @@ export function FilaCobranca({ unidade }: { unidade?: { id: string; nome: string
         <TileCobranca titulo="Promessas cumpridas" icon={BadgeCheck} tom="green" carregando={promessas.isLoading}
           valor={taxa === null ? '—' : formatPercent(taxa)}
           detalhe={p ? `${p.cumpridas} de ${Number(p.cumpridas) + Number(p.quebradas)} vencidas · 30 dias` : 'últimos 30 dias'}
-          rodape={p ? <span className="text-[11px] text-slate-500">{formatCurrency(Number(p.valor_recuperado))} recuperados</span> : null} />
+          rodape={p ? <span className="text-[0.6875rem] text-slate-500">{formatCurrency(Number(p.valor_recuperado))} recuperados</span> : null} />
       </div>
       <ErroLeitura q={resumo} />
 
       <div className="flex flex-wrap items-end gap-x-5 gap-y-3 rounded-2xl border border-slate-200/80 bg-superficie p-4">
         {unidade ? (
           <div className="block min-w-[170px]">
-            <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Unidade</span>
+            <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">Unidade</span>
             <p className="mt-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-sm font-medium text-slate-700">
               {unidade.nome}
             </p>
@@ -155,7 +155,7 @@ export function FilaCobranca({ unidade }: { unidade?: { id: string; nome: string
           <FiltroUnidadeCobranca valor={regionalId} onChange={setRegionalId} />
         )}
         <label className="block min-w-[170px]">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Situação</span>
+          <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">Situação</span>
           <select value={situacao ?? ''} onChange={(e) => setSituacao((e.target.value || null) as SituacaoFila | null)}
             className="mt-1 block w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm">
             <option value="">Todas</option>
@@ -164,7 +164,7 @@ export function FilaCobranca({ unidade }: { unidade?: { id: string; nome: string
           </select>
         </label>
         <label className="block min-w-[170px]">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Atraso</span>
+          <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">Atraso</span>
           <select value={faixa ?? ''} onChange={(e) => setFaixa((e.target.value || null) as Faixa | null)}
             className="mt-1 block w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm">
             <option value="">Todas as faixas</option>
@@ -174,7 +174,7 @@ export function FilaCobranca({ unidade }: { unidade?: { id: string; nome: string
           </select>
         </label>
         <label className="block min-w-[240px] flex-1">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Buscar</span>
+          <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">Buscar</span>
           <div className="relative mt-1">
             <Search className="pointer-events-none absolute left-2.5 top-2 h-4 w-4 text-slate-400" />
             <input value={digitado} onChange={(e) => setDigitado(e.target.value)} placeholder="nome, CPF, telefone ou placa"
@@ -203,8 +203,8 @@ export function FilaCobranca({ unidade }: { unidade?: { id: string; nome: string
           <Vazio icon={BadgeCheck} titulo="Ninguém na fila" descricao="Nenhum associado ativo com boleto vencido neste filtro." />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-[13px]">
-              <thead className="bg-slate-50 text-left text-[11px] uppercase tracking-wide text-slate-500">
+            <table className="w-full text-[0.8125rem]">
+              <thead className="bg-slate-50 text-left text-[0.6875rem] uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="px-4 py-2">Associado</th>
                   <th className="px-3 py-2">Situação</th>
@@ -230,19 +230,19 @@ export function FilaCobranca({ unidade }: { unidade?: { id: string; nome: string
                     <tr key={l.cliente_id} onClick={() => setAberta(l)} className="cursor-pointer hover:bg-cyan-50/40">
                       <td className="px-4 py-2">
                         <p className="font-medium text-slate-900">{l.associado}</p>
-                        <p className="text-[11.5px] text-slate-500">{l.placas ?? '—'} · {l.regional}</p>
+                        <p className="text-[0.7188rem] text-slate-500">{l.placas ?? '—'} · {l.regional}</p>
                       </td>
                       <td className="px-3 py-2">
-                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${SELO[s] ?? ''}`}>
+                        <span className={`rounded-full px-2 py-0.5 text-[0.6875rem] font-medium ${SELO[s] ?? ''}`}>
                           {SITUACOES_FILA[s]?.rotulo ?? s}
                         </span>
                       </td>
                       <td className="tnum px-3 py-2 text-right">
                         {formatCurrency(Number(l.valor_vencido))}
-                        <p className="text-[11px] text-slate-400">{l.boletos_vencidos} boleto(s)</p>
+                        <p className="text-[0.6875rem] text-slate-400">{l.boletos_vencidos} boleto(s)</p>
                       </td>
                       <td className="tnum px-3 py-2 text-right">{l.dias_atraso}d</td>
-                      <td className="px-3 py-2 text-[12px]">
+                      <td className="px-3 py-2 text-[0.75rem]">
                         {l.ultimo_contato_em ? (
                           <>
                             <p>{formatDate(l.ultimo_contato_em)} · {CANAIS[l.ultimo_canal as Canal] ?? l.ultimo_canal}</p>
@@ -250,7 +250,7 @@ export function FilaCobranca({ unidade }: { unidade?: { id: string; nome: string
                           </>
                         ) : <span className="text-slate-400">nunca</span>}
                       </td>
-                      <td className="px-3 py-2 text-[12px]">
+                      <td className="px-3 py-2 text-[0.75rem]">
                         {l.acordo_id ? (
                           <p>{l.acordo_tipo === 'ACORDO' ? 'Acordo' : 'Promessa'}
                             {l.proxima_parcela_em && ` · ${formatDate(l.proxima_parcela_em)} ${formatCurrency(Number(l.proxima_parcela_valor))}`}</p>

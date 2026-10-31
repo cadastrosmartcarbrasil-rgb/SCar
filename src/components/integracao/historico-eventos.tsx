@@ -88,9 +88,9 @@ export function HistoricoEventos() {
 function Numero({ rotulo, valor, detalhe }: { rotulo: string; valor: string; detalhe?: string }) {
   return (
     <div className="rounded-xl border border-slate-200 px-3 py-2.5">
-      <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{rotulo}</p>
+      <p className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">{rotulo}</p>
       <p className="tnum mt-1 text-sm font-semibold text-slate-900">{valor}</p>
-      {detalhe && <p className="mt-0.5 text-[11px] text-slate-500">{detalhe}</p>}
+      {detalhe && <p className="mt-0.5 text-[0.6875rem] text-slate-500">{detalhe}</p>}
     </div>
   );
 }

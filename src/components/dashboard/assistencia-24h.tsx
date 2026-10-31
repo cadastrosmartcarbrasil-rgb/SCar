@@ -72,7 +72,7 @@ function Tile({
   return (
     <div className="rounded-2xl border border-slate-200/80 bg-superficie p-4 shadow-[0_1px_2px_rgba(20,33,61,0.04),0_10px_26px_-16px_rgba(20,33,61,0.18)]">
       <div className="flex items-start justify-between gap-2">
-        <p className="text-[11.5px] font-semibold uppercase leading-tight tracking-wide text-slate-500">{titulo}</p>
+        <p className="text-[0.7188rem] font-semibold uppercase leading-tight tracking-wide text-slate-500">{titulo}</p>
         <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-[10px] ${chip}`}>
           <Icon className="h-4 w-4" strokeWidth={2} />
         </span>
@@ -80,9 +80,9 @@ function Tile({
       {carregando ? (
         <div className="mt-3 h-7 w-24 animate-pulse rounded bg-slate-100" />
       ) : (
-        <p className="tnum mt-2.5 text-[23px] font-bold leading-none text-slate-900">{valor}</p>
+        <p className="tnum mt-2.5 text-[1.4375rem] font-bold leading-none text-slate-900">{valor}</p>
       )}
-      {detalhe && <p className="mt-2 text-[11.5px] leading-tight text-slate-500">{detalhe}</p>}
+      {detalhe && <p className="mt-2 text-[0.7188rem] leading-tight text-slate-500">{detalhe}</p>}
     </div>
   );
 }
@@ -91,7 +91,7 @@ function Tile({
 function Tendencia({ fracao }: { fracao: number | null }) {
   if (fracao === null || fracao === 0) {
     return (
-      <span className="inline-flex items-center gap-1 text-[11.5px] font-medium text-slate-400">
+      <span className="inline-flex items-center gap-1 text-[0.7188rem] font-medium text-slate-400">
         <Minus className="h-3.5 w-3.5" /> estável
       </span>
     );
@@ -99,7 +99,7 @@ function Tendencia({ fracao }: { fracao: number | null }) {
   const subiu = fracao > 0;
   const Icon = subiu ? TrendingUp : TrendingDown;
   return (
-    <span className={`inline-flex items-center gap-1 text-[11.5px] font-semibold ${subiu ? 'text-rose-600' : 'text-emerald-600'}`}>
+    <span className={`inline-flex items-center gap-1 text-[0.7188rem] font-semibold ${subiu ? 'text-rose-600' : 'text-emerald-600'}`}>
       <Icon className="h-3.5 w-3.5" /> {formatPercent(Math.abs(fracao))} vs mês anterior
     </span>
   );
@@ -130,7 +130,7 @@ function FrotaSituacao({ regionalId }: { regionalId: string | null }) {
               {grupos.filter((g) => g.quantidade > 0).map((g) => (
                 <div
                   key={g.grupo}
-                  className="grid place-items-center text-[11px] font-bold text-white"
+                  className="grid place-items-center text-[0.6875rem] font-bold text-white"
                   style={{ width: `${Math.max(g.fracao * 100, 4)}%`, background: COR_SITUACAO[g.grupo] }}
                   title={`${ROTULO_SITUACAO[g.grupo]}: ${inteiro.format(g.quantidade)}`}
                 >
@@ -140,7 +140,7 @@ function FrotaSituacao({ regionalId }: { regionalId: string | null }) {
             </div>
             <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5">
               {grupos.map((g) => (
-                <li key={g.grupo} className="flex items-center gap-1.5 text-[12.5px]">
+                <li key={g.grupo} className="flex items-center gap-1.5 text-[0.7812rem]">
                   <span className="h-2.5 w-2.5 rounded-sm" style={{ background: COR_SITUACAO[g.grupo] }} />
                   <span className="text-slate-500">{ROTULO_SITUACAO[g.grupo]}</span>
                   <b className="tnum text-slate-800">{inteiro.format(g.quantidade)}</b>
@@ -224,7 +224,7 @@ function GraficoServicos({ periodo, regionalId }: { periodo: Periodo; regionalId
               </ResponsiveContainer>
             </div>
             {noTeto.length > 0 && (
-              <p className="mt-2 flex items-start gap-1.5 text-[11.5px] leading-tight text-rose-600">
+              <p className="mt-2 flex items-start gap-1.5 text-[0.7188rem] leading-tight text-rose-600">
                 <ShieldAlert className="mt-px h-3.5 w-3.5 shrink-0" />
                 <span>
                   Em vermelho, serviço com veículo no teto do limite contratado:{' '}
@@ -252,7 +252,7 @@ function GraficoPracas({ periodo, regionalId }: { periodo: Periodo; regionalId: 
       <CardHeader className="flex-row flex-wrap items-center justify-between gap-x-3">
         <div>
           <CardTitle>Onde acontece — top praças</CardTitle>
-          <p className="mt-0.5 text-[11.5px] text-slate-400">
+          <p className="mt-0.5 text-[0.7188rem] text-slate-400">
             A barra e a TAXA sobre a frota local (acionamentos / veículos da praça), não o volume.
           </p>
         </div>
@@ -283,8 +283,8 @@ function GraficoPracas({ periodo, regionalId }: { periodo: Periodo; regionalId: 
             {linhas.map((l) => (
               <li key={`${l.cidade}-${l.uf}`} className="py-2.5">
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="truncate text-[13px] font-medium text-slate-700">{l.rotulo}</span>
-                  <span className="tnum shrink-0 text-[12.5px] text-slate-500">
+                  <span className="truncate text-[0.8125rem] font-medium text-slate-700">{l.rotulo}</span>
+                  <span className="tnum shrink-0 text-[0.7812rem] text-slate-500">
                     <b className="text-slate-800">{inteiro.format(Number(l.acionamentos))}</b> acion. · {formatCurrency(Number(l.custo))}
                   </span>
                 </div>
@@ -298,7 +298,7 @@ function GraficoPracas({ periodo, regionalId }: { periodo: Periodo; regionalId: 
                       }}
                     />
                   </div>
-                  <span className="tnum w-[136px] shrink-0 text-right text-[11px] text-slate-400">
+                  <span className="tnum w-[136px] shrink-0 text-right text-[0.6875rem] text-slate-400">
                     {Number(l.veiculos) > 0
                       ? `${formatPercent(l.taxa)} de ${inteiro.format(Number(l.veiculos))} veic.`
                       : 'frota não mapeada'}
@@ -333,7 +333,7 @@ function SerieMensal({ regionalId }: { regionalId: string | null }) {
       <CardHeader className="flex-row flex-wrap items-center justify-between gap-x-3">
         <div>
           <CardTitle>Custo da assistência — 12 meses</CardTitle>
-          <p className="mt-0.5 text-[11.5px] text-slate-400">
+          <p className="mt-0.5 text-[0.7188rem] text-slate-400">
             O valor da OS que virou título no Contas a Pagar. O volume aparece no tooltip.
           </p>
         </div>
@@ -388,7 +388,7 @@ function Reincidencia({ periodo, regionalId }: { periodo: Periodo; regionalId: s
       <CardHeader className="flex-row flex-wrap items-center justify-between gap-x-3">
         <div>
           <CardTitle>Reincidência — quem mais aciona</CardTitle>
-          <p className="mt-0.5 text-[11.5px] text-slate-400">Veículos ordenados por acionamentos no período.</p>
+          <p className="mt-0.5 text-[0.7188rem] text-slate-400">Veículos ordenados por acionamentos no período.</p>
         </div>
         {(data?.length ?? 0) > 0 && (
           <button
@@ -414,7 +414,7 @@ function Reincidencia({ periodo, regionalId }: { periodo: Periodo; regionalId: s
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-y border-slate-100 text-left text-[11px] uppercase tracking-wide text-slate-400">
+                <tr className="border-y border-slate-100 text-left text-[0.6875rem] uppercase tracking-wide text-slate-400">
                   <th className="px-5 py-2">Veiculo</th>
                   <th className="px-2 py-2">Associado</th>
                   <th className="px-2 py-2 text-right">Acion.</th>
@@ -469,7 +469,7 @@ export function AssistenciaPainel() {
     <div className="space-y-5">
       <FiltroPeriodo periodo={periodo} onChange={setPeriodo}>
         <label className="block">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Unidade</span>
+          <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">Unidade</span>
           <select
             value={regionalId ?? ''}
             onChange={(e) => setRegionalId(e.target.value || null)}

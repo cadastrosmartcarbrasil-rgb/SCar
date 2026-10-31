@@ -158,7 +158,7 @@ function NovoContato({ linha }: { linha: CobrancaFilaLinha }) {
             <FormField label="Próxima ação">
               <Input value={acao} onChange={(e) => setAcao(e.target.value)} placeholder="ex.: ligar após o dia 15" />
             </FormField>
-            <p className="text-[11px] text-slate-500 sm:col-span-2">
+            <p className="text-[0.6875rem] text-slate-500 sm:col-span-2">
               Sem data, o associado volta para a fila em 2 dias.
             </p>
           </>
@@ -205,7 +205,7 @@ function NovoContato({ linha }: { linha: CobrancaFilaLinha }) {
               <Plus className="h-3.5 w-3.5" /> parcela
             </button>
           )}
-          <p className="mt-2 text-[11px] text-slate-500">
+          <p className="mt-2 text-[0.6875rem] text-slate-500">
             A promessa é sobre a dívida que já existe — nenhum boleto novo é emitido. Ela conta como
             cumprida quando os boletos vencidos são pagos até a data; passados 3 dias sem pagamento
             (prazo de baixa do banco), conta como quebrada e o associado volta ao topo da fila.
@@ -265,13 +265,13 @@ function Acordos({ clienteId }: { clienteId: string }) {
             {a.cancelado_em && <p className="mt-1 text-slate-500">Cancelado em {formatDateTime(a.cancelado_em)}: {a.motivo_cancelamento}</p>}
             {a.status === 'EM_ANDAMENTO' && (
               <button type="button" onClick={() => setBoletos(true)}
-                className="mr-3 mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-cyan-700 hover:underline">
+                className="mr-3 mt-2 inline-flex items-center gap-1 text-[0.6875rem] font-medium text-cyan-700 hover:underline">
                 <Repeat2 className="h-3 w-3" /> gerar os boletos do acordo
               </button>
             )}
             {a.status === 'EM_ANDAMENTO' || a.status === 'QUEBRADO' ? (
               <button type="button" onClick={() => setCancelando(a)}
-                className="mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-rose-600 hover:underline">
+                className="mt-2 inline-flex items-center gap-1 text-[0.6875rem] font-medium text-rose-600 hover:underline">
                 <Ban className="h-3 w-3" /> cancelar
               </button>
             ) : null}
@@ -334,7 +334,7 @@ function Boletos({ clienteId }: { clienteId: string }) {
       <ErroLeitura q={q} />
       <div className="mt-2 max-h-64 overflow-auto">
         <table className="w-full text-xs">
-          <thead className="sticky top-0 bg-superficie text-left text-[10.5px] uppercase tracking-wide text-slate-400">
+          <thead className="sticky top-0 bg-superficie text-left text-[0.6562rem] uppercase tracking-wide text-slate-400">
             <tr><th className="py-1">Vencimento</th><th>Placa</th><th className="text-right">Valor</th><th className="pl-3">Situação</th></tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -365,7 +365,7 @@ function Historico({ clienteId }: { clienteId: string }) {
   return (
     <section className="rounded-xl border border-slate-200 p-4">
       <h3 className="text-sm font-semibold text-slate-800">Histórico de contatos</h3>
-      <p className="text-[11px] text-slate-400">Não se edita nem se apaga — quem errou registra outro contato corrigindo.</p>
+      <p className="text-[0.6875rem] text-slate-400">Não se edita nem se apaga — quem errou registra outro contato corrigindo.</p>
       <ErroLeitura q={q} />
       {!q.isLoading && lista.length === 0 && <p className="mt-2 text-xs text-slate-400">Nenhum contato ainda.</p>}
       <ol className="mt-2 max-h-80 space-y-2 overflow-auto">
@@ -385,7 +385,7 @@ function Historico({ clienteId }: { clienteId: string }) {
                 Retorno: {c.proxima_acao_em ? formatDate(c.proxima_acao_em) : '—'}{c.proxima_acao ? ` · ${c.proxima_acao}` : ''}
               </p>
             )}
-            <p className="tnum text-[10.5px] text-slate-400">
+            <p className="tnum text-[0.6562rem] text-slate-400">
               na hora: {c.boletos_vencidos} boleto(s) · {formatCurrency(Number(c.valor_vencido))} · {c.dias_atraso} dias
             </p>
           </li>

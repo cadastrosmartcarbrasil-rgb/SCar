@@ -34,7 +34,7 @@ const CLASSE_SITUACAO: Record<string, string> = {
 function SeloSituacao({ situacao }: { situacao: string }) {
   const rotulo = SITUACOES_REGIONAIS.find((s) => s.chave === situacao)?.rotulo ?? situacao;
   return (
-    <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset ${
+    <span className={`inline-flex rounded-full px-2 py-0.5 text-[0.6875rem] font-medium ring-1 ring-inset ${
       CLASSE_SITUACAO[situacao] ?? CLASSE_SITUACAO.aberto}`}>
       {rotulo}
     </span>
@@ -120,7 +120,7 @@ export function FinanceiroRegional({ regionalId }: { regionalId: string | null }
             <div className="-mx-4 overflow-x-auto sm:mx-0">
               <table className="w-full min-w-[720px] text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 text-left text-[11.5px] font-semibold uppercase tracking-wide text-slate-500">
+                  <tr className="border-b border-slate-200 text-left text-[0.7188rem] font-semibold uppercase tracking-wide text-slate-500">
                     <th className="px-3 py-2">Vencimento</th>
                     <th className="px-3 py-2">Lançamento</th>
                     <th className="px-3 py-2">Favorecido</th>
@@ -141,11 +141,11 @@ export function FinanceiroRegional({ regionalId }: { regionalId: string | null }
                         </td>
                         <td className="px-3 py-2">
                           <span className="font-medium text-slate-800">{t.descricao}</span>
-                          <span className={`ml-2 text-[11px] font-semibold ${receita ? 'text-emerald-600' : 'text-rose-600'}`}>
+                          <span className={`ml-2 text-[0.6875rem] font-semibold ${receita ? 'text-emerald-600' : 'text-rose-600'}`}>
                             {receita ? 'a receber' : 'a pagar'}
                           </span>
                           {t.observacoes && (
-                            <p className="mt-0.5 text-[11px] text-slate-400">{t.observacoes}</p>
+                            <p className="mt-0.5 text-[0.6875rem] text-slate-400">{t.observacoes}</p>
                           )}
                         </td>
                         <td className="px-3 py-2 text-slate-600">{t.favorecido ?? '—'}</td>
@@ -162,14 +162,14 @@ export function FinanceiroRegional({ regionalId }: { regionalId: string | null }
                             <>
                               <button
                                 onClick={() => setBaixando(t)}
-                                className="rounded-lg px-2 py-1 text-[12px] font-semibold text-brand-700 hover:bg-brand-50"
+                                className="rounded-lg px-2 py-1 text-[0.75rem] font-semibold text-brand-700 hover:bg-brand-50"
                               >
                                 {receita ? 'Recebi' : 'Paguei'}
                               </button>
                               {Number(t.valor_pago) === 0 && (
                                 <button
                                   onClick={() => setCancelando(t)}
-                                  className="ml-1 rounded-lg px-2 py-1 text-[12px] text-slate-400 hover:bg-slate-100 hover:text-rose-600"
+                                  className="ml-1 rounded-lg px-2 py-1 text-[0.75rem] text-slate-400 hover:bg-slate-100 hover:text-rose-600"
                                 >
                                   Cancelar
                                 </button>
@@ -182,7 +182,7 @@ export function FinanceiroRegional({ regionalId }: { regionalId: string | null }
                   })}
                 </tbody>
                 <tfoot>
-                  <tr className="border-t border-slate-200 text-[12px] font-semibold text-slate-600">
+                  <tr className="border-t border-slate-200 text-[0.75rem] font-semibold text-slate-600">
                     <td className="px-3 py-2" colSpan={4}>Em aberto nesta lista</td>
                     <td className="tnum px-3 py-2 text-right">
                       <span className="text-emerald-700">{formatCurrency(emTela.receber)}</span>
@@ -256,13 +256,13 @@ function ModalLancamento({ regionalId, onClose }: { regionalId: string | null; o
                   ? 'border-cyan-400 bg-cyan-50/60 ring-1 ring-cyan-300'
                   : 'border-slate-200 hover:border-slate-300'}`}
             >
-              <span className="flex items-center gap-1.5 text-[13px] font-semibold text-slate-800">
+              <span className="flex items-center gap-1.5 text-[0.8125rem] font-semibold text-slate-800">
                 {m.tipo === 'RECEITA'
                   ? <ArrowDownCircle className="h-4 w-4 text-emerald-600" />
                   : <ArrowUpCircle className="h-4 w-4 text-rose-600" />}
                 {m.rotulo}
               </span>
-              <span className="mt-1 block text-[11px] leading-relaxed text-slate-500">{m.ajuda}</span>
+              <span className="mt-1 block text-[0.6875rem] leading-relaxed text-slate-500">{m.ajuda}</span>
             </button>
           ))}
         </div>
@@ -296,7 +296,7 @@ function ModalLancamento({ regionalId, onClose }: { regionalId: string | null; o
           <Textarea rows={2} value={observacoes} onChange={(e) => setObservacoes(e.target.value)} />
         </FormField>
 
-        <p className="rounded-lg bg-slate-50 px-3 py-2 text-[11px] leading-relaxed text-slate-500">
+        <p className="rounded-lg bg-slate-50 px-3 py-2 text-[0.6875rem] leading-relaxed text-slate-500">
           Classificação contábil: <b>{mov?.categoria} · {mov?.categoriaNome}</b>. A unidade não escolhe
           plano de contas — a estrutura contábil é da matriz e chega pronta aqui.
         </p>
@@ -345,8 +345,8 @@ function ModalBaixa({ titulo, onClose }: { titulo: TituloRegionalRow; onClose: (
       subtitulo={titulo.descricao}>
       <form onSubmit={submit} className="space-y-3">
         <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2.5">
-          <span className="text-[12px] text-slate-500">Saldo em aberto</span>
-          <span className="tnum text-[15px] font-bold text-slate-900">{formatCurrency(saldo)}</span>
+          <span className="text-[0.75rem] text-slate-500">Saldo em aberto</span>
+          <span className="tnum text-[0.9375rem] font-bold text-slate-900">{formatCurrency(saldo)}</span>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
@@ -370,7 +370,7 @@ function ModalBaixa({ titulo, onClose }: { titulo: TituloRegionalRow; onClose: (
         </FormField>
 
         {parcial && (
-          <p className="flex items-start gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-[11.5px] text-amber-800">
+          <p className="flex items-start gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-[0.7188rem] text-amber-800">
             <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" />
             Baixa parcial: restam {formatCurrency(saldo - (valor ?? 0))} em aberto.
             {' '}
@@ -408,7 +408,7 @@ function ModalCancelar({ titulo, onClose }: { titulo: TituloRegionalRow; onClose
   return (
     <Modal open onClose={onClose} title="Cancelar lançamento" subtitulo={titulo.descricao} tamanho="md">
       <form onSubmit={submit} className="space-y-3">
-        <p className="text-[12px] leading-relaxed text-slate-500">
+        <p className="text-[0.75rem] leading-relaxed text-slate-500">
           O lançamento não é apagado: ele fica no histórico com a situação <b>cancelado</b> e o motivo.
         </p>
         <FormField label="Motivo">

@@ -105,7 +105,7 @@ export function TabelaEventos({ eventos, mostrarPlaca = true }: { eventos: Event
               <tr key={`${e.origem}-${e.id}`} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/60">
                 <td className="px-4 py-2.5 font-mono text-xs text-slate-500">
                   {e.numero_protocolo ?? '—'}
-                  {mutual && <span className="ml-1.5 rounded bg-violet-50 px-1.5 py-0.5 font-sans text-[10px] font-semibold text-violet-700">Mutual</span>}
+                  {mutual && <span className="ml-1.5 rounded bg-violet-50 px-1.5 py-0.5 font-sans text-[0.625rem] font-semibold text-violet-700">Mutual</span>}
                 </td>
                 {mostrarPlaca && (
                   <td className="px-4 py-2.5">
@@ -118,7 +118,7 @@ export function TabelaEventos({ eventos, mostrarPlaca = true }: { eventos: Event
                 )}
                 <td className="px-4 py-2.5 text-slate-600">
                   {e.tipo ?? '—'}
-                  {e.envolvimento && <span className="block text-[11px] text-slate-400">{e.envolvimento}</span>}
+                  {e.envolvimento && <span className="block text-[0.6875rem] text-slate-400">{e.envolvimento}</span>}
                 </td>
                 <td className="tnum px-4 py-2.5 text-slate-600">{e.data_ocorrencia ? formatDate(e.data_ocorrencia) : '—'}</td>
                 <td className="px-4 py-2.5">
@@ -134,7 +134,7 @@ export function TabelaEventos({ eventos, mostrarPlaca = true }: { eventos: Event
                 </td>
                 <td className="px-4 py-2.5 text-right">
                   {mutual ? (
-                    <span className="text-[11px] text-slate-400">só consulta</span>
+                    <span className="text-[0.6875rem] text-slate-400">só consulta</span>
                   ) : (
                     <Link href={`/eventos/${e.id}`} className="inline-flex items-center gap-1 text-xs font-medium text-cyan-700 hover:text-cyan-800">
                       <Settings2 className="h-3.5 w-3.5" /> Gerenciar

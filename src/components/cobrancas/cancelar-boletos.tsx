@@ -54,7 +54,7 @@ export function ModalCancelarBoletos({
                 <tr key={t.id} className="border-b border-slate-100 last:border-0">
                   <td className="px-3 py-1.5">
                     Vence {formatDate(t.data_vencimento)}{t.placa ? ` · ${t.placa}` : ''}
-                    {t.origem === 'MUTUAL' && <span className="ml-1 rounded bg-brand-50 px-1.5 text-[11px] text-brand-600">Mutual</span>}
+                    {t.origem === 'MUTUAL' && <span className="ml-1 rounded bg-brand-50 px-1.5 text-[0.6875rem] text-brand-600">Mutual</span>}
                   </td>
                   <td className="tnum px-3 py-1.5 text-right font-medium">{formatCurrency(Number(t.valor))}</td>
                 </tr>
@@ -71,7 +71,7 @@ export function ModalCancelarBoletos({
           <textarea rows={3} value={motivo} autoFocus onChange={(e) => setMotivo(e.target.value)}
             placeholder="Ex.: boleto emitido em duplicidade; valor errado; associado cancelou o contrato..."
             className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
-          <span className="text-[11px] text-slate-400">
+          <span className="text-[0.6875rem] text-slate-400">
             Fica gravado com o seu nome e a data. Mínimo de {MOTIVO_CANCELAMENTO_MINIMO} caracteres.
           </span>
         </label>

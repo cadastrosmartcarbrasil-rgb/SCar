@@ -56,13 +56,13 @@ export function BotoesHotlink({ codigo, compacto }: { codigo: string | null; com
     <div className={`flex gap-2 ${compacto ? '' : 'flex-col sm:flex-row'}`}>
       <button
         onClick={compartilhar}
-        className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-cyan-500 px-3 py-2 text-[12px] font-semibold text-navy transition hover:bg-cyan-400"
+        className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-cyan-500 px-3 py-2 text-[0.75rem] font-semibold text-navy transition hover:bg-cyan-400"
       >
         <Share2 className="h-3.5 w-3.5" /> Compartilhar meu link
       </button>
       <button
         onClick={copiar}
-        className="flex items-center justify-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-[12px] font-semibold text-slate-600 transition hover:bg-slate-50"
+        className="flex items-center justify-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-[0.75rem] font-semibold text-slate-600 transition hover:bg-slate-50"
       >
         <Copy className="h-3.5 w-3.5" /> Copiar
       </button>
@@ -110,13 +110,13 @@ export function ShellVendedor({ nome, unidade, codigo, logoUrl, papelStaff, chil
       <div className="flex items-center justify-between border-b border-slate-200 bg-superficie px-4 py-3 md:hidden">
         <div className="min-w-0">
           <p className="truncate text-sm font-bold text-brand-700">{nome}</p>
-          <p className="truncate text-[11px] text-slate-400">{unidade ?? 'Smart Car Brasil'}</p>
+          <p className="truncate text-[0.6875rem] text-slate-400">{unidade ?? 'Smart Car Brasil'}</p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
         <ThemeToggle />
         <button
           onClick={sair}
-          className="flex shrink-0 items-center gap-1 rounded-lg px-2 py-1.5 text-[12px] font-semibold text-slate-500 hover:bg-slate-100 hover:text-rose-600"
+          className="flex shrink-0 items-center gap-1 rounded-lg px-2 py-1.5 text-[0.75rem] font-semibold text-slate-500 hover:bg-slate-100 hover:text-rose-600"
         >
           <LogOut className="h-4 w-4" /> Sair
         </button>
@@ -127,20 +127,20 @@ export function ShellVendedor({ nome, unidade, codigo, logoUrl, papelStaff, chil
       <aside className="cockpit hidden w-60 shrink-0 md:sticky md:top-0 md:block md:h-screen md:overflow-y-auto">
         <div className="cockpit-stripe px-4 py-5">
           <LogoNaCabine url={logoUrl} />
-          <p className="mt-2.5 text-center text-[11px] font-medium uppercase tracking-wide text-cyan-300">
+          <p className="mt-2.5 text-center text-[0.6875rem] font-medium uppercase tracking-wide text-cyan-300">
             Portal do Vendedor
           </p>
         </div>
 
         <div className="mx-3 mb-3 rounded-xl bg-white/5 px-3 py-2.5">
-          <p className="truncate text-[13px] font-semibold text-white">{nome}</p>
-          <p className="truncate text-[11px] text-white/50">{unidade ?? 'Smart Car Brasil'}</p>
+          <p className="truncate text-[0.8125rem] font-semibold text-white">{nome}</p>
+          <p className="truncate text-[0.6875rem] text-white/50">{unidade ?? 'Smart Car Brasil'}</p>
           {codigo && (
-            <p className="mt-1 font-mono text-[11px] tracking-wide text-cyan-300">/v/{codigo}</p>
+            <p className="mt-1 font-mono text-[0.6875rem] tracking-wide text-cyan-300">/v/{codigo}</p>
           )}
           <button
             onClick={sair}
-            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-white/15 px-2 py-1.5 text-[11px] font-semibold text-white/80 transition hover:border-rose-400/40 hover:bg-rose-500/15 hover:text-white"
+            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-white/15 px-2 py-1.5 text-[0.6875rem] font-semibold text-white/80 transition hover:border-rose-400/40 hover:bg-rose-500/15 hover:text-white"
           >
             <LogOut className="h-3 w-3" /> Sair da conta
           </button>
@@ -151,7 +151,7 @@ export function ShellVendedor({ nome, unidade, codigo, logoUrl, papelStaff, chil
             <Link
               key={i.href}
               href={i.href}
-              className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition ${
+              className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[0.8125rem] transition ${
                 ativo(i.href)
                   ? 'bg-white/10 font-semibold text-white shadow-[inset_2px_0_0_0_#0BACE2]'
                   : 'text-white/70 hover:bg-white/5 hover:text-white'
@@ -167,7 +167,7 @@ export function ShellVendedor({ nome, unidade, codigo, logoUrl, papelStaff, chil
           {outraCasa && (
             <Link
               href={outraCasa.href}
-              className="mt-2 flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-white/50 transition hover:bg-white/5 hover:text-white"
+              className="mt-2 flex items-center gap-2.5 rounded-lg px-3 py-2 text-[0.8125rem] text-white/50 transition hover:bg-white/5 hover:text-white"
             >
               <Building2 className="h-4 w-4" /> {outraCasa.label}
             </Link>
@@ -185,7 +185,7 @@ export function ShellVendedor({ nome, unidade, codigo, logoUrl, papelStaff, chil
           <Link
             key={i.href}
             href={i.href}
-            className={`flex flex-col items-center gap-0.5 py-2.5 text-[10.5px] font-medium transition ${
+            className={`flex flex-col items-center gap-0.5 py-2.5 text-[0.6562rem] font-medium transition ${
               ativo(i.href) ? 'text-cyan-600' : 'text-slate-400'
             }`}
           >

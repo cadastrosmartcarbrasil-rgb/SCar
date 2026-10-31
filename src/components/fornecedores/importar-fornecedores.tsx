@@ -139,7 +139,7 @@ export function ImportarFornecedores({ aberto, onClose }: { aberto: boolean; onC
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-sm font-medium text-slate-700">{arquivo ? `Arquivo: ${arquivo}` : '1. Escolha a planilha'}</p>
-              <p className="mt-0.5 text-[11px] text-slate-500">
+              <p className="mt-0.5 text-[0.6875rem] text-slate-500">
                 .xlsx ou .csv · só a <b>RAZAO SOCIAL</b> é obrigatória · o <b>CNPJ/CPF</b> é o que evita duplicar
                 (sem ele, o sistema compara pelo nome).
               </p>
@@ -171,7 +171,7 @@ export function ImportarFornecedores({ aberto, onClose }: { aberto: boolean; onC
         )}
 
         {avisos.length > 0 && (
-          <p className="flex items-start gap-1.5 rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-[11px] text-slate-600">
+          <p className="flex items-start gap-1.5 rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-[0.6875rem] text-slate-600">
             <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" /><span>{avisos.join(' ')}</span>
           </p>
         )}
@@ -186,12 +186,12 @@ export function ImportarFornecedores({ aberto, onClose }: { aberto: boolean; onC
               <Cartao rotulo="Ficam de fora" valor={previa.bloqueados} tom="vermelho" />
             </div>
 
-            <label className="mt-3 flex items-start gap-2 rounded-lg border border-slate-200 bg-slate-50/70 p-2.5 text-[13px] text-slate-700">
+            <label className="mt-3 flex items-start gap-2 rounded-lg border border-slate-200 bg-slate-50/70 p-2.5 text-[0.8125rem] text-slate-700">
               <input type="checkbox" checked={completar} onChange={(e) => setCompletar(e.target.checked)}
                 className="mt-0.5 h-4 w-4 rounded border-slate-300" />
               <span>
                 Completar os <b>campos vazios</b> dos já cadastrados
-                <span className="block text-[11px] leading-relaxed text-slate-500">
+                <span className="block text-[0.6875rem] leading-relaxed text-slate-500">
                   Nada do cadastro existente é apagado ou trocado: só o que está em branco recebe o valor da
                   planilha, e as marcas (24h, rastreadora) só são acrescentadas. Desmarcado, os já cadastrados
                   ficam como estão.
@@ -204,14 +204,14 @@ export function ImportarFornecedores({ aberto, onClose }: { aberto: boolean; onC
                 const n = previa.linhas.filter((l) => l.situacao === a.id).length;
                 return (
                   <button key={a.id} type="button" onClick={() => setAba(a.id)}
-                    className={`border-b-2 px-3 py-1.5 text-[13px] ${aba === a.id ? 'border-brand-600 font-medium text-brand-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+                    className={`border-b-2 px-3 py-1.5 text-[0.8125rem] ${aba === a.id ? 'border-brand-600 font-medium text-brand-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
                     {a.rotulo} <span className="tnum text-slate-400">({n})</span>
                   </button>
                 );
               })}
             </div>
             <div className="max-h-72 overflow-y-auto">
-              <table className="w-full text-[12px]">
+              <table className="w-full text-[0.75rem]">
                 <tbody>
                   {daAba.length === 0 && (
                     <tr><td className="px-2 py-4 text-center text-slate-400">Nenhuma linha.</td></tr>
@@ -259,9 +259,9 @@ function LinhaPrevia({ l, completar }: { l: LinhaPreviaFornecedor; completar: bo
       <td className="w-12 px-2 py-1.5 text-slate-400">L{l.linha}</td>
       <td className="px-2 py-1.5">
         <p className="font-medium text-slate-800">{l.nome_fantasia || l.razao_social}</p>
-        {l.nome_fantasia && <p className="text-[11px] text-slate-500">{l.razao_social}</p>}
+        {l.nome_fantasia && <p className="text-[0.6875rem] text-slate-500">{l.razao_social}</p>}
         {l.avisos.length > 0 && (
-          <p className="mt-0.5 flex items-start gap-1 text-[11px] text-amber-700">
+          <p className="mt-0.5 flex items-start gap-1 text-[0.6875rem] text-amber-700">
             <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />{l.avisos.join(' · ')}
           </p>
         )}
@@ -269,7 +269,7 @@ function LinhaPrevia({ l, completar }: { l: LinhaPreviaFornecedor; completar: bo
       <td className="whitespace-nowrap px-2 py-1.5 font-mono text-slate-600">
         {l.documento ? formatarDocumento(l.documento, l.tipo_pessoa) : '—'}
       </td>
-      <td className="px-2 py-1.5 text-[11px]">
+      <td className="px-2 py-1.5 text-[0.6875rem]">
         {l.situacao === 'BLOQUEADO' && <span className="text-rose-700">{l.motivo}</span>}
         {l.situacao === 'NOVO' && (
           <span className="text-emerald-700">
@@ -301,7 +301,7 @@ function Cartao({ rotulo, valor, tom }: { rotulo: string; valor: number; tom: ke
   return (
     <div className={`rounded-lg border p-2 text-center ${TONS[tom]}`}>
       <p className="tnum text-xl font-bold leading-none">{valor}</p>
-      <p className="mt-1 text-[11px] font-medium">{rotulo}</p>
+      <p className="mt-1 text-[0.6875rem] font-medium">{rotulo}</p>
     </div>
   );
 }

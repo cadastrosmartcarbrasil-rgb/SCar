@@ -88,16 +88,16 @@ export function FluxoDiario() {
           })}
         </div>
         <label className="block">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">De</span>
+          <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">De</span>
           <input type="date" value={inicio} onChange={(e) => setInicio(e.target.value)} className="tnum mt-1 block rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm" />
         </label>
         <label className="block">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Até</span>
+          <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">Até</span>
           <input type="date" value={fim} onChange={(e) => setFim(e.target.value)} className="tnum mt-1 block rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm" />
         </label>
         <SeletorConta value={conta} onChange={setConta} className="min-w-[200px]" />
         <label className="block">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Vencido e não pago</span>
+          <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">Vencido e não pago</span>
           <select className={SELECT_CLS} value={vencidos} onChange={(e) => setVencidos(e.target.value as typeof vencidos)}>
             <option value="saidas">Contar só os pagamentos atrasados (prudente)</option>
             <option value="tudo">Contar pagamentos e recebimentos atrasados</option>
@@ -172,21 +172,21 @@ export function FluxoDiario() {
                 <tr key={d.dia} className={d.situacao === 'hoje' ? 'bg-cyan-50/60' : d.situacao === 'passado' ? 'text-slate-600' : ''}>
                   <td className="whitespace-nowrap px-3 py-2">
                     <span className="tnum">{dataBR(d.dia)}</span> <span className="text-xs text-slate-400">{semana(d.dia)}</span>
-                    <p className="text-[11px] text-slate-400">{d.situacao === 'passado' ? 'realizado' : d.situacao === 'hoje' ? 'hoje (realizado + previsto)' : 'a realizar'}</p>
+                    <p className="text-[0.6875rem] text-slate-400">{d.situacao === 'passado' ? 'realizado' : d.situacao === 'hoje' ? 'hoje (realizado + previsto)' : 'a realizar'}</p>
                   </td>
                   <td className="px-3 py-2 text-right">
                     {d.entradas ? <Dinheiro v={d.entradas} /> : <span className="text-slate-300">—</span>}
                     {d.situacao !== 'passado' && comBoletos && d.previsto_boletos > 0 && (
-                      <p className="text-[11px] text-slate-400">{formatCurrency(d.previsto_boletos)} de boletos</p>
+                      <p className="text-[0.6875rem] text-slate-400">{formatCurrency(d.previsto_boletos)} de boletos</p>
                     )}
                   </td>
                   <td className="px-3 py-2 text-right">
                     {d.saidas ? <Dinheiro v={-d.saidas} /> : <span className="text-slate-300">—</span>}
                     {d.situacao !== 'passado' && d.qtd_previsto_saida > 0 && (
-                      <p className="text-[11px] text-slate-400">{d.qtd_previsto_saida} pagamento(s)</p>
+                      <p className="text-[0.6875rem] text-slate-400">{d.qtd_previsto_saida} pagamento(s)</p>
                     )}
                     {d.situacao === 'hoje' && vencidos !== 'nenhum' && d.vencido_saida > 0 && (
-                      <p className="text-[11px] text-rose-600">{formatCurrency(d.vencido_saida)} vencido</p>
+                      <p className="text-[0.6875rem] text-rose-600">{formatCurrency(d.vencido_saida)} vencido</p>
                     )}
                   </td>
                   <td className="px-3 py-2 text-right"><Dinheiro v={d.resultado} sinal /></td>
@@ -216,7 +216,7 @@ function Carga({ d }: { d: ReturnType<typeof projetarFluxo>[number] }) {
         <div className="bg-emerald-500" style={{ width: `${pe}%` }} />
         <div className="bg-rose-500" style={{ width: `${100 - pe}%` }} />
       </div>
-      <p className={`mt-1 text-[11px] font-medium ${cor}`}>{rotulo} · {pe}% recebe / {100 - pe}% paga</p>
+      <p className={`mt-1 text-[0.6875rem] font-medium ${cor}`}>{rotulo} · {pe}% recebe / {100 - pe}% paga</p>
     </div>
   );
 }

@@ -69,7 +69,7 @@ export default function ComissoesRegionalPage() {
 
       <FiltroPeriodo periodo={periodo} onChange={setPeriodo}>
         <label className="block">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Situação</span>
+          <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">Situação</span>
           <Select className="mt-1 w-40 py-1.5" value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="">Todas</option>
             <option value="pendente">Pendente</option>
@@ -91,7 +91,7 @@ export default function ComissoesRegionalPage() {
           ) : (
             <table className="w-full min-w-[700px] text-sm">
               <thead>
-                <tr className="border-b border-slate-200 text-left text-[11px] uppercase tracking-wide text-slate-400">
+                <tr className="border-b border-slate-200 text-left text-[0.6875rem] uppercase tracking-wide text-slate-400">
                   <th className="py-2.5 font-semibold">Data</th>
                   <th className="py-2.5 font-semibold">Vendedor</th>
                   <th className="py-2.5 font-semibold">Veiculo</th>
@@ -108,7 +108,7 @@ export default function ComissoesRegionalPage() {
                     <td className="py-2.5 font-medium text-slate-800">{c.vendedor_nome}</td>
                     <td className="py-2.5 font-mono text-xs text-slate-500">{c.placa ?? '—'}</td>
                     <td className="py-2.5">
-                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                      <span className={`rounded-full px-2 py-0.5 text-[0.6875rem] font-medium ${
                         c.is_adesao ? 'bg-cyan-50 text-cyan-700' : 'bg-slate-100 text-slate-600'
                       }`}>
                         {c.is_adesao ? 'Adesão' : 'Recorrente'}
@@ -116,7 +116,7 @@ export default function ComissoesRegionalPage() {
                     </td>
                     <td className="tnum py-2.5 text-right font-semibold text-slate-800">{formatCurrency(c.valor_comissao)}</td>
                     <td className="py-2.5">
-                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset ${
+                      <span className={`rounded-full px-2 py-0.5 text-[0.6875rem] font-medium ring-1 ring-inset ${
                         c.status_pagamento === 'pago'
                           ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
                           : 'bg-amber-50 text-amber-700 ring-amber-200'
@@ -129,7 +129,7 @@ export default function ComissoesRegionalPage() {
                         <button
                           onClick={() => repassarComissao(c.id, c.vendedor_nome)}
                           disabled={repassar.isPending}
-                          className="rounded-lg px-2 py-1 text-[12px] font-semibold text-brand-700 hover:bg-brand-50 disabled:opacity-50"
+                          className="rounded-lg px-2 py-1 text-[0.75rem] font-semibold text-brand-700 hover:bg-brand-50 disabled:opacity-50"
                         >
                           Repassar
                         </button>

@@ -506,7 +506,7 @@ function VeiculosConteudo() {
                       {identificacaoVeiculo(v.placa, v.chassi)}
                     </Link>
                     {placaPendente(v.placa) && (
-                      <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 font-sans text-[10px] font-semibold uppercase text-amber-800">
+                      <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 font-sans text-[0.625rem] font-semibold uppercase text-amber-800">
                         placa pendente
                       </span>
                     )}
@@ -526,14 +526,14 @@ function VeiculosConteudo() {
                   <td className="px-4 py-2">
                     <span className={`rounded px-2 py-0.5 text-xs ${meta.cor}`}>{meta.l}</span>
                     {aviso && (
-                      <span className="mt-0.5 block text-[11px] text-rose-600">{aviso}</span>
+                      <span className="mt-0.5 block text-[0.6875rem] text-rose-600">{aviso}</span>
                     )}
                     {/* 0082: o veiculo esta ATIVO e nao tem boleto nosso. Sem este
                         selo, "cade a cobranca?" vira chamado — o veiculo parece
                         normal em tudo o mais. */}
                     {v.cobranca_externa && (
                       <span
-                        className="mt-0.5 block text-[11px] text-slate-500"
+                        className="mt-0.5 block text-[0.6875rem] text-slate-500"
                         title="A mensalidade deste veículo é cobrada no sistema anterior. Ele mantém todos os benefícios."
                       >
                         cobrança externa
@@ -634,7 +634,7 @@ function VeiculosConteudo() {
             const a = primeiraAtivacao(form.data_ativacao);
             return (
               <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
-                <span className="text-[11px] uppercase text-slate-400">Primeira ativação: </span>
+                <span className="text-[0.6875rem] uppercase text-slate-400">Primeira ativação: </span>
                 {a ? (
                   <>
                     <span className="tnum font-medium text-slate-800">{a.data}</span>
@@ -809,7 +809,7 @@ function VeiculosConteudo() {
                     <label key={p.id} className="flex items-center gap-2 text-sm text-slate-500">
                       <input type="checkbox" checked disabled className="h-4 w-4 rounded border-slate-300" />
                       {p.nome}
-                      <span className="rounded-full bg-cyan-50 px-1.5 py-px text-[10px] font-bold uppercase text-cyan-700 ring-1 ring-inset ring-cyan-200">
+                      <span className="rounded-full bg-cyan-50 px-1.5 py-px text-[0.625rem] font-bold uppercase text-cyan-700 ring-1 ring-inset ring-cyan-200">
                         no plano
                       </span>
                     </label>
@@ -849,7 +849,7 @@ function VeiculosConteudo() {
                     />
                     {p.nome}
                     {p.foraDoTipo && (
-                      <span className="rounded bg-amber-100 px-1.5 py-px text-[10px] uppercase text-amber-800">
+                      <span className="rounded bg-amber-100 px-1.5 py-px text-[0.625rem] uppercase text-amber-800">
                         não atende este tipo — não é cobrado
                       </span>
                     )}

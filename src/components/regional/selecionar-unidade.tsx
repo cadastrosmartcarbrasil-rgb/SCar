@@ -54,7 +54,7 @@ export function SelecionarUnidade({
       <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-superficie p-6 shadow-[0_20px_60px_-30px_rgba(20,33,61,0.35)]">
         <div className="flex flex-col items-center text-center">
           <LogoSmartCar url={logoUrl} className="h-12" />
-          <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-700">
+          <p className="mt-3 text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-cyan-700">
             Acesso as Regionais
           </p>
           <h1 className="mt-3 text-xl font-bold uppercase tracking-tight text-slate-900">
@@ -90,7 +90,7 @@ export function SelecionarUnidade({
                   <span className="flex items-center gap-2">
                     <span className="truncate text-sm font-bold uppercase text-slate-900">{u.nome}</span>
                     {u.matriz && (
-                      <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">
+                      <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[0.625rem] font-semibold text-slate-500">
                         MATRIZ
                       </span>
                     )}

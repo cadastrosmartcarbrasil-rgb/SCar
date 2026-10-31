@@ -98,7 +98,7 @@ function LinhaCor({ cor }: { cor: CorListada }) {
         {cor.apelidos.map((a) => (
           <span
             key={a}
-            className="flex items-center gap-1 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600"
+            className="flex items-center gap-1 rounded bg-slate-100 px-1.5 py-0.5 text-[0.6875rem] text-slate-600"
           >
             {a}
             <button
@@ -122,7 +122,7 @@ function LinhaCor({ cor }: { cor: CorListada }) {
               }
             }}
             placeholder="+ apelido"
-            className="h-7 w-32 text-[11px]"
+            className="h-7 w-32 text-[0.6875rem]"
           />
         </span>
       </div>

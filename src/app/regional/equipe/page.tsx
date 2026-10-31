@@ -163,7 +163,7 @@ export default function EquipeRegionalPage() {
           ) : (
             <table className="w-full min-w-[840px] text-sm">
               <thead>
-                <tr className="border-b border-slate-200 text-left text-[11px] uppercase tracking-wide text-slate-400">
+                <tr className="border-b border-slate-200 text-left text-[0.6875rem] uppercase tracking-wide text-slate-400">
                   <th className="py-2.5 font-semibold">Vendedor</th>
                   <th className="py-2.5 text-right font-semibold">Leads</th>
                   <th className="py-2.5 text-right font-semibold">Convertidos</th>
@@ -180,24 +180,24 @@ export default function EquipeRegionalPage() {
                       <span className="flex items-center gap-1.5 font-semibold text-slate-800">
                         {v.nome}
                         {!v.ativo && (
-                          <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                          <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[0.625rem] font-bold uppercase tracking-wide text-slate-500">
                             inativo
                           </span>
                         )}
                       </span>
-                      <span className="block text-[11px] text-slate-400">
+                      <span className="block text-[0.6875rem] text-slate-400">
                         <span className="font-mono">{v.codigo}</span> · entrada {pct(v.taxa_adesao)} · recorrência {pct(v.taxa_recorrente)}
                       </span>
                     </td>
                     <td className="tnum py-2.5 text-right text-slate-700">
                       {v.leads}
                       {v.leads_hotlink > 0 && (
-                        <span className="ml-1 text-[11px] text-cyan-600">({v.leads_hotlink} link)</span>
+                        <span className="ml-1 text-[0.6875rem] text-cyan-600">({v.leads_hotlink} link)</span>
                       )}
                     </td>
                     <td className="tnum py-2.5 text-right font-medium text-slate-800">{v.convertidos}</td>
                     <td className="py-2.5 text-right">
-                      <span className={`tnum rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                      <span className={`tnum rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold ${
                         v.leads === 0 ? 'bg-slate-100 text-slate-400'
                         : v.taxa_conversao >= 30 ? 'bg-emerald-50 text-emerald-700'
                         : v.taxa_conversao >= 15 ? 'bg-amber-50 text-amber-700'
@@ -271,7 +271,7 @@ export default function EquipeRegionalPage() {
         </CardContent>
       </Card>
 
-      <p className="text-[11px] leading-relaxed text-slate-400">
+      <p className="text-[0.6875rem] leading-relaxed text-slate-400">
         A unidade <b>cadastra</b>, <b>ativa</b> e <b>inativa</b> a própria equipe. Inativar não apaga
         nada — o vendedor sai do hotlink e do rodízio, e o que ele já trouxe continua no histórico.
         <b> Excluir o cadastro é só a matriz</b> (Configurações &rarr; Vendedores).

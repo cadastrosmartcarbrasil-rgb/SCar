@@ -86,7 +86,7 @@ export function AnexosAcionamento({ acionamentoId }: { acionamentoId: string }) 
         <Paperclip className="h-4 w-4 text-brand-700" />
         <h3 className="text-sm font-semibold text-slate-900">Fotos e documentos</h3>
         {lista.length > 0 && (
-          <span className="tnum rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">
+          <span className="tnum rounded-full bg-slate-100 px-2 py-0.5 text-[0.6875rem] font-medium text-slate-500">
             {lista.length}
           </span>
         )}
@@ -98,7 +98,7 @@ export function AnexosAcionamento({ acionamentoId }: { acionamentoId: string }) 
           {TIPOS.map((t) => (
             <button
               key={t.valor} type="button" onClick={() => setTipo(t.valor)}
-              className={`rounded-lg px-2.5 py-1.5 text-[12px] font-medium transition ${
+              className={`rounded-lg px-2.5 py-1.5 text-[0.75rem] font-medium transition ${
                 tipo === t.valor ? 'bg-acao text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
@@ -119,10 +119,10 @@ export function AnexosAcionamento({ acionamentoId }: { acionamentoId: string }) 
           {enviar.isPending
             ? <Loader2 className="h-6 w-6 animate-spin text-cyan-600" />
             : <Upload className="h-6 w-6 text-slate-400" />}
-          <span className="text-[13px] font-medium text-slate-600">
+          <span className="text-[0.8125rem] font-medium text-slate-600">
             Anexar {ROTULO_TIPO[tipo].toLowerCase()}
           </span>
-          <span className="text-[11px] text-slate-400">
+          <span className="text-[0.6875rem] text-slate-400">
             Imagem ou PDF · a foto é reduzida automaticamente (até {LADO_MAXIMO}px) antes de subir
           </span>
         </button>
@@ -156,16 +156,16 @@ export function AnexosAcionamento({ acionamentoId }: { acionamentoId: string }) 
                           : <ImgIcon className="h-5 w-5" />}
                       </span>
                     )}
-                    <span className="absolute inset-x-0 bottom-0 hidden items-center justify-center gap-0.5 bg-black/55 py-0.5 text-[9.5px] font-semibold text-white group-hover:flex">
+                    <span className="absolute inset-x-0 bottom-0 hidden items-center justify-center gap-0.5 bg-black/55 py-0.5 text-[0.5938rem] font-semibold text-white group-hover:flex">
                       <ZoomIn className="h-2.5 w-2.5" /> ampliar
                     </span>
                   </button>
                   <div className="flex items-start justify-between gap-1 px-2 py-1.5">
                     <div className="min-w-0">
-                      <p className="truncate text-[11.5px] font-medium text-slate-700">
+                      <p className="truncate text-[0.7188rem] font-medium text-slate-700">
                         {ROTULO_TIPO[a.tipo] ?? a.tipo}
                       </p>
-                      <p className="tnum truncate text-[10.5px] text-slate-400">
+                      <p className="tnum truncate text-[0.6562rem] text-slate-400">
                         {formatDateTime(a.created_at)}
                         {a.tamanho_bytes != null && ` · ${tamanhoLegivel(a.tamanho_bytes)}`}
                         {quebrou && <span className="font-semibold text-rose-600"> · não carregou</span>}
@@ -192,15 +192,15 @@ export function AnexosAcionamento({ acionamentoId }: { acionamentoId: string }) 
               <li key={a.id} className="flex items-center gap-2 px-3 py-2">
                 <FileText className="h-4 w-4 shrink-0 text-slate-400" />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[12.5px] text-slate-700">{a.descricao ?? a.url}</p>
-                  <p className="tnum text-[10.5px] text-slate-400">
+                  <p className="truncate text-[0.7812rem] text-slate-700">{a.descricao ?? a.url}</p>
+                  <p className="tnum text-[0.6562rem] text-slate-400">
                     {ROTULO_TIPO[a.tipo] ?? a.tipo} · {formatDateTime(a.created_at)}
                     {a.tamanho_bytes != null && ` · ${tamanhoLegivel(a.tamanho_bytes)}`}
                   </p>
                 </div>
                 <button
                   type="button" onClick={() => abrir(a.url)}
-                  className="shrink-0 rounded-lg bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-600 hover:bg-slate-200"
+                  className="shrink-0 rounded-lg bg-slate-100 px-2 py-1 text-[0.6875rem] font-medium text-slate-600 hover:bg-slate-200"
                 >
                   <ExternalLink className="mr-1 inline h-3 w-3" /> Abrir
                 </button>
@@ -217,7 +217,7 @@ export function AnexosAcionamento({ acionamentoId }: { acionamentoId: string }) 
         )}
 
         {!isLoading && lista.length === 0 && (
-          <p className="text-center text-[11.5px] text-slate-400">
+          <p className="text-center text-[0.7188rem] text-slate-400">
             Nenhum anexo ainda. A foto do veículo antes do atendimento e a melhor defesa contra
             contestação de avaria.
           </p>

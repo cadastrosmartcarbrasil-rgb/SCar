@@ -118,11 +118,11 @@ export function ContatosLead({ lead, historico }: { lead: LeadsRow; historico: L
         <h2 className="flex items-center gap-1.5 text-sm font-semibold text-slate-800">
           <CalendarClock className="h-4 w-4 text-cyan-600" /> Contatos e agenda
         </h2>
-        <span className="text-[11px] text-slate-400">{rotuloParado(parado)}</span>
+        <span className="text-[0.6875rem] text-slate-400">{rotuloParado(parado)}</span>
       </header>
 
       {/* Compromisso vigente */}
-      <div className={`mt-3 flex flex-wrap items-center gap-2 rounded-xl px-3 py-2 text-[12px] ${
+      <div className={`mt-3 flex flex-wrap items-center gap-2 rounded-xl px-3 py-2 text-[0.75rem] ${
         situacao === 'ATRASADO' ? 'bg-rose-50 text-rose-800'
           : situacao === 'SEM_AGENDA' ? 'bg-slate-50 text-slate-500' : 'bg-cyan-50 text-cyan-900'
       }`}>
@@ -131,14 +131,14 @@ export function ContatosLead({ lead, historico }: { lead: LeadsRow; historico: L
           <span>Sem retorno marcado — combine um abaixo para o lead não esfriar.</span>
         ) : (
           <>
-            <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${SELO_AGENDA[situacao].cor}`}>
+            <span className={`rounded px-1.5 py-0.5 text-[0.625rem] font-semibold ${SELO_AGENDA[situacao].cor}`}>
               {SELO_AGENDA[situacao].curto}
             </span>
             <span className="font-medium">Retorno {rotuloRetorno(lead.proximo_contato_em)}</span>
             {lead.proximo_contato_nota && <span className="text-slate-500">— {lead.proximo_contato_nota}</span>}
             <button
               type="button" onClick={tirarDaAgenda} disabled={registrar.isPending}
-              className="ml-auto inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 underline"
+              className="ml-auto inline-flex items-center gap-1 text-[0.6875rem] font-medium text-slate-500 underline"
             >
               <CircleSlash className="h-3 w-3" /> Tirar da agenda
             </button>
@@ -154,7 +154,7 @@ export function ContatosLead({ lead, historico }: { lead: LeadsRow; historico: L
             return (
               <button
                 key={t} type="button" onClick={() => setTipo(t)}
-                className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[12px] font-medium transition ${
+                className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[0.75rem] font-medium transition ${
                   tipo === t ? 'bg-acao text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
@@ -181,14 +181,14 @@ export function ContatosLead({ lead, historico }: { lead: LeadsRow; historico: L
         </div>
 
         <div className="rounded-xl border border-slate-200 p-3">
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+          <p className="mb-2 text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-400">
             Próximo retorno {resultado === 'AGENDOU' && <span className="text-rose-500">*</span>}
           </p>
           <div className="flex flex-wrap gap-1.5">
             {ATALHOS_RETORNO.map((a) => (
               <button
                 key={a.rotulo} type="button" onClick={() => setRetorno(sugestaoRetorno(a.dias))}
-                className="rounded-full bg-slate-100 px-2.5 py-1 text-[11.5px] font-medium text-slate-600 transition hover:bg-slate-200"
+                className="rounded-full bg-slate-100 px-2.5 py-1 text-[0.7188rem] font-medium text-slate-600 transition hover:bg-slate-200"
               >
                 {a.rotulo}
               </button>
@@ -196,7 +196,7 @@ export function ContatosLead({ lead, historico }: { lead: LeadsRow; historico: L
             {retorno && (
               <button
                 type="button" onClick={() => { setRetorno(''); setNotaRetorno(''); }}
-                className="rounded-full px-2 py-1 text-[11.5px] text-slate-400 underline"
+                className="rounded-full px-2 py-1 text-[0.7188rem] text-slate-400 underline"
               >
                 limpar
               </button>
@@ -232,16 +232,16 @@ export function ContatosLead({ lead, historico }: { lead: LeadsRow; historico: L
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="text-[12.5px] font-medium text-slate-700">{e.titulo}</span>
+                    <span className="text-[0.7812rem] font-medium text-slate-700">{e.titulo}</span>
                     {e.selo && (
-                      <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${e.selo.cor}`}>{e.selo.label}</span>
+                      <span className={`rounded px-1.5 py-0.5 text-[0.625rem] font-medium ${e.selo.cor}`}>{e.selo.label}</span>
                     )}
-                    <span className="text-[11px] text-slate-400">{formatDateTime(e.quando)}</span>
-                    {e.autor && <span className="text-[11px] text-slate-400">· {e.autor}</span>}
+                    <span className="text-[0.6875rem] text-slate-400">{formatDateTime(e.quando)}</span>
+                    {e.autor && <span className="text-[0.6875rem] text-slate-400">· {e.autor}</span>}
                   </div>
-                  {e.texto && <p className="text-[12px] leading-snug text-slate-500">{e.texto}</p>}
+                  {e.texto && <p className="text-[0.75rem] leading-snug text-slate-500">{e.texto}</p>}
                   {e.retorno && (
-                    <p className="text-[11px] text-cyan-700">retorno combinado: {formatDateTime(e.retorno)}</p>
+                    <p className="text-[0.6875rem] text-cyan-700">retorno combinado: {formatDateTime(e.retorno)}</p>
                   )}
                 </div>
               </li>

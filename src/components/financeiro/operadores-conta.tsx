@@ -35,7 +35,7 @@ export function NomesOperadores({ contaId }: { contaId: string }) {
   if (!ids.length) return null;
   const nomes = ids.map((id) => (usuarios ?? []).find((u) => u.id === id)?.nome ?? '—');
   return (
-    <p className="mt-0.5 flex items-center gap-1 text-[11px] text-slate-500">
+    <p className="mt-0.5 flex items-center gap-1 text-[0.6875rem] text-slate-500">
       <Users className="h-3 w-3" /> Operada por {nomes.join(', ')}
     </p>
   );

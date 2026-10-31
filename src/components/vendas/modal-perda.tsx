@@ -50,7 +50,7 @@ export function ModalPerda({ lead, onClose, onPerdido }: {
           {MOTIVOS.map((m) => (
             <button
               key={m} type="button" onClick={() => setMotivo(m)}
-              className={`rounded-full px-2.5 py-1 text-[11.5px] font-medium transition ${
+              className={`rounded-full px-2.5 py-1 text-[0.7188rem] font-medium transition ${
                 motivo === m ? 'bg-acao text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >

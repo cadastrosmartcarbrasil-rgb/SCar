@@ -82,11 +82,11 @@ const CLASSE_DIRECAO: Record<Direcao, string> = {
 function Tendencia({ fracao, subirEBom }: { fracao: number | null; subirEBom: boolean }) {
   const direcao = direcaoVariacao(fracao, subirEBom);
   if (fracao === null) {
-    return <span className="text-[11.5px] text-slate-400">sem base de comparação</span>;
+    return <span className="text-[0.7188rem] text-slate-400">sem base de comparação</span>;
   }
   const Icon = fracao === 0 ? Minus : fracao > 0 ? TrendingUp : TrendingDown;
   return (
-    <span className={`inline-flex items-center gap-1 text-[11.5px] font-semibold ${CLASSE_DIRECAO[direcao]}`}>
+    <span className={`inline-flex items-center gap-1 text-[0.7188rem] font-semibold ${CLASSE_DIRECAO[direcao]}`}>
       <Icon className="h-3.5 w-3.5" />
       {fracao === 0 ? 'estavel' : `${formatPercent(Math.abs(fracao))} vs período anterior`}
     </span>
@@ -102,7 +102,7 @@ function Tile({
   return (
     <div className="rounded-2xl border border-slate-200/80 bg-superficie p-4 shadow-[0_1px_2px_rgba(20,33,61,0.04),0_10px_26px_-16px_rgba(20,33,61,0.18)]">
       <div className="flex items-start justify-between gap-2">
-        <p className="text-[11.5px] font-semibold uppercase leading-tight tracking-wide text-slate-500">{titulo}</p>
+        <p className="text-[0.7188rem] font-semibold uppercase leading-tight tracking-wide text-slate-500">{titulo}</p>
         <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-[10px] ${CHIP[tom]}`}>
           <Icon className="h-4 w-4" strokeWidth={2} />
         </span>
@@ -110,9 +110,9 @@ function Tile({
       {carregando ? (
         <div className="mt-3 h-7 w-24 animate-pulse rounded bg-slate-100" />
       ) : (
-        <p className="tnum mt-2.5 text-[23px] font-bold leading-none text-slate-900">{valor}</p>
+        <p className="tnum mt-2.5 text-[1.4375rem] font-bold leading-none text-slate-900">{valor}</p>
       )}
-      {detalhe && <p className="mt-2 text-[11.5px] leading-tight text-slate-500">{detalhe}</p>}
+      {detalhe && <p className="mt-2 text-[0.7188rem] leading-tight text-slate-500">{detalhe}</p>}
       {rodape && <div className="mt-1.5">{rodape}</div>}
     </div>
   );
@@ -120,7 +120,7 @@ function Tile({
 
 function SeloRisco({ risco }: { risco: RiscoRegional }) {
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset ${CLASSE_RISCO[risco]}`}>
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[0.6875rem] font-medium ring-1 ring-inset ${CLASSE_RISCO[risco]}`}>
       <span className="h-1.5 w-1.5 rounded-full" style={{ background: COR_RISCO[risco] }} />
       {ROTULO_RISCO[risco]}
     </span>
@@ -162,7 +162,7 @@ function BarraFiltros({
 
       <div className="flex items-end gap-2">
         <label className="block">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">De</span>
+          <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">De</span>
           <input
             type="date"
             value={periodo.inicio}
@@ -171,7 +171,7 @@ function BarraFiltros({
           />
         </label>
         <label className="block">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Até</span>
+          <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">Até</span>
           <input
             type="date"
             value={periodo.fim}
@@ -182,7 +182,7 @@ function BarraFiltros({
       </div>
 
       <label className="block min-w-[190px]">
-        <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Regional</span>
+        <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">Regional</span>
         <select
           value={regionalId ?? ''}
           onChange={(e) => onRegional(e.target.value || null)}
@@ -247,7 +247,7 @@ function ModalContas({ open, onClose }: { open: boolean; onClose: () => void }) 
       tamanho="lg"
     >
       <div className="space-y-4">
-        <p className="flex items-start gap-2 rounded-xl bg-slate-50 p-3 text-[12.5px] leading-relaxed text-slate-600">
+        <p className="flex items-start gap-2 rounded-xl bg-slate-50 p-3 text-[0.7812rem] leading-relaxed text-slate-600">
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
           O recorte vale para <b>todo mundo</b> — ele muda o número que a diretoria lê, então fica no
           cadastro da empresa, não no navegador de cada um. Deixar em branco significa
@@ -256,7 +256,7 @@ function ModalContas({ open, onClose }: { open: boolean; onClose: () => void }) 
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="block">
-            <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Conta inicial</span>
+            <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">Conta inicial</span>
             <input
               list="contas-plano-painel"
               value={vDe}
@@ -266,7 +266,7 @@ function ModalContas({ open, onClose }: { open: boolean; onClose: () => void }) 
             />
           </label>
           <label className="block">
-            <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Conta final</span>
+            <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">Conta final</span>
             <input
               list="contas-plano-painel"
               value={vAte}
@@ -283,14 +283,14 @@ function ModalContas({ open, onClose }: { open: boolean; onClose: () => void }) 
         </datalist>
 
         {(problema || erro) && (
-          <p className="rounded-lg bg-rose-50 px-3 py-2 text-[12.5px] font-medium text-rose-700">
+          <p className="rounded-lg bg-rose-50 px-3 py-2 text-[0.7812rem] font-medium text-rose-700">
             {erro ?? problema}
           </p>
         )}
 
         <div className="max-h-52 overflow-y-auto rounded-xl border border-slate-200">
-          <table className="w-full text-left text-[12.5px]">
-            <thead className="sticky top-0 bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
+          <table className="w-full text-left text-[0.7812rem]">
+            <thead className="sticky top-0 bg-slate-50 text-[0.6875rem] uppercase tracking-wide text-slate-500">
               <tr><th className="px-3 py-2">Conta</th><th className="px-3 py-2">Nome</th><th className="px-3 py-2">Grupo</th></tr>
             </thead>
             <tbody>
@@ -353,7 +353,7 @@ function Indicadores({ periodo, regionalId }: { periodo: PeriodoPainel; regional
   return (
     <>
       <section>
-        <h2 className="mb-2.5 text-[12px] font-bold uppercase tracking-[0.14em] text-slate-500">
+        <h2 className="mb-2.5 text-[0.75rem] font-bold uppercase tracking-[0.14em] text-slate-500">
           Frota / itens protegidos
         </h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -395,7 +395,7 @@ function Indicadores({ periodo, regionalId }: { periodo: PeriodoPainel; regional
       </section>
 
       <section>
-        <h2 className="mb-2.5 text-[12px] font-bold uppercase tracking-[0.14em] text-slate-500">
+        <h2 className="mb-2.5 text-[0.75rem] font-bold uppercase tracking-[0.14em] text-slate-500">
           Financeiro
         </h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
@@ -494,7 +494,7 @@ function GraficosEvolucao({ periodo, regionalId }: { periodo: PeriodoPainel; reg
       <Card className="min-w-0">
         <CardHeader className="flex-row flex-wrap items-center justify-between gap-x-3">
           <CardTitle>Frota no período</CardTitle>
-          <span className="text-[11px] uppercase tracking-wide text-slate-400">{escala}</span>
+          <span className="text-[0.6875rem] uppercase tracking-wide text-slate-400">{escala}</span>
         </CardHeader>
         <CardContent>
           <div className="h-72 w-full min-w-0 text-slate-500">
@@ -525,7 +525,7 @@ function GraficosEvolucao({ periodo, regionalId }: { periodo: PeriodoPainel; reg
               </AreaChart>
             </ResponsiveContainer>
           </div>
-          <p className="mt-2 text-[11.5px] leading-relaxed text-slate-500">
+          <p className="mt-2 text-[0.7188rem] leading-relaxed text-slate-500">
             Ativos e inadimplentes são o <b>retrato no fim</b> de cada ponto; eventos são os
             <b> abertos</b> naquele intervalo (eixo da direita).
           </p>
@@ -558,7 +558,7 @@ function GraficosEvolucao({ periodo, regionalId }: { periodo: PeriodoPainel; reg
               </ComposedChart>
             </ResponsiveContainer>
           </div>
-          <p className="mt-2 text-[11.5px] leading-relaxed text-slate-500">
+          <p className="mt-2 text-[0.7188rem] leading-relaxed text-slate-500">
             O gasto e o que <b>saiu do caixa</b> com evento e assistência 24h, não estimativa: e o
             título do Contas a Pagar com baixa registrada.
           </p>
@@ -628,7 +628,7 @@ function Comparativo({ periodo, regionalId }: { periodo: PeriodoPainel; regional
       <Card className="min-w-0">
         <CardHeader className="flex-row flex-wrap items-center justify-between gap-x-3">
           <CardTitle>Desempenho por regional</CardTitle>
-          <span className="text-[11px] uppercase tracking-wide text-slate-400">
+          <span className="text-[0.6875rem] uppercase tracking-wide text-slate-400">
             barra = carteira ativa · cor = risco da unidade
           </span>
         </CardHeader>
@@ -651,13 +651,13 @@ function Comparativo({ periodo, regionalId }: { periodo: PeriodoPainel; regional
           </div>
           <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5">
             {(['critico', 'atencao', 'saudavel', 'sem_dados'] as RiscoRegional[]).map((k) => (
-              <li key={k} className="flex items-center gap-1.5 text-[12.5px]">
+              <li key={k} className="flex items-center gap-1.5 text-[0.7812rem]">
                 <span className="h-2.5 w-2.5 rounded-sm" style={{ background: COR_RISCO[k] }} />
                 <span className="text-slate-500">{ROTULO_RISCO[k]}</span>
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-[11.5px] leading-relaxed text-slate-500">
+          <p className="mt-2 text-[0.7188rem] leading-relaxed text-slate-500">
             Risco e a <b>pior</b> das duas réguas: sinistralidade acima de 100% (gasta mais com
             evento do que arrecada) ou inadimplência acima de 25% da carteira.
           </p>
@@ -677,8 +677,8 @@ function Comparativo({ periodo, regionalId }: { periodo: PeriodoPainel; regional
         </CardHeader>
         <CardContent className="px-0">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[860px] text-left text-[13px]">
-              <thead className="border-b border-slate-200 text-[11px] uppercase tracking-wide text-slate-500">
+            <table className="w-full min-w-[860px] text-left text-[0.8125rem]">
+              <thead className="border-b border-slate-200 text-[0.6875rem] uppercase tracking-wide text-slate-500">
                 <tr>
                   {COLUNAS.map((c) => (
                     <th
@@ -700,7 +700,7 @@ function Comparativo({ periodo, regionalId }: { periodo: PeriodoPainel; regional
               <tbody>
                 {linhas.map((l) => <LinhaRegional key={l.regional_id} l={l} destacada={l.regional_id === regionalId} />)}
               </tbody>
-              <tfoot className="border-t-2 border-slate-200 bg-slate-50/60 text-[12.5px] font-semibold text-slate-700">
+              <tfoot className="border-t-2 border-slate-200 bg-slate-50/60 text-[0.7812rem] font-semibold text-slate-700">
                 <tr>
                   <td className="px-4 py-2.5">{inteiro.format(totais.unidades)} unidade(s)</td>
                   <td className="tnum px-4 py-2.5 text-right">{inteiro.format(totais.ativos)}</td>
@@ -729,12 +729,12 @@ function LinhaRegional({ l, destacada }: { l: RegionaisPainelLinha; destacada: b
           <SeloRisco risco={risco} />
           {/* Unidade inativada (0067) segue na tabela: ela operou no periodo. */}
           {!l.ativa && (
-            <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-500">
+            <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[0.625rem] font-semibold uppercase text-slate-500">
               Inativa
             </span>
           )}
         </div>
-        <span className="mt-0.5 block text-[11.5px] uppercase text-slate-400">
+        <span className="mt-0.5 block text-[0.7188rem] uppercase text-slate-400">
           {[l.cidade, l.uf].filter(Boolean).join(' — ') || 'Local não informado'}
           {' · '}
           <span className="text-emerald-600">+{inteiro.format(l.veiculos_novos)}</span>
@@ -749,14 +749,14 @@ function LinhaRegional({ l, destacada }: { l: RegionaisPainelLinha; destacada: b
         <span className={l.inadimplencia >= 0.15 ? 'font-semibold text-rose-600' : 'text-slate-600'}>
           {formatPercent(l.inadimplencia)}
         </span>
-        <span className="block text-[11px] text-slate-400">{inteiro.format(l.veiculos_inadimplentes)} veic.</span>
+        <span className="block text-[0.6875rem] text-slate-400">{inteiro.format(l.veiculos_inadimplentes)} veic.</span>
       </td>
       <td className="tnum px-4 py-2.5 text-right text-slate-600">{inteiro.format(l.sinistros)}</td>
       <td className="tnum px-4 py-2.5 text-right">
         <span className={l.resultado < 0 ? 'font-semibold text-rose-600' : 'text-slate-800'}>
           {formatCurrency(l.resultado)}
         </span>
-        <span className="block text-[11px] text-slate-400">
+        <span className="block text-[0.6875rem] text-slate-400">
           {formatCurrency(l.recebido)} − {formatCurrency(l.gasto_eventos)}
         </span>
       </td>
@@ -769,7 +769,7 @@ function LinhaRegional({ l, destacada }: { l: RegionaisPainelLinha; destacada: b
       <td className="px-4 py-2.5 text-right">
         <Link
           href="/regional"
-          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[12px] font-medium text-slate-600 transition hover:border-cyan-400 hover:text-cyan-700"
+          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[0.75rem] font-medium text-slate-600 transition hover:border-cyan-400 hover:text-cyan-700"
         >
           Abrir portal <ArrowRight className="h-3.5 w-3.5" />
         </Link>

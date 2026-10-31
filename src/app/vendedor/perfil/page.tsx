@@ -61,7 +61,7 @@ export default function PerfilVendedorPage() {
             <UserRound className="h-4 w-4 text-slate-400" /> Identificação
           </CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-3 text-[13px] sm:grid-cols-2">
+        <CardContent className="grid gap-3 text-[0.8125rem] sm:grid-cols-2">
           <Campo rotulo="Nome" valor={p?.nome} />
           <Campo rotulo="Franquia" valor={p?.regional_nome} />
           <Campo rotulo="E-mail" valor={p?.email} />
@@ -81,7 +81,7 @@ export default function PerfilVendedorPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <p className="font-mono text-[13px] text-brand-700">
+          <p className="font-mono text-[0.8125rem] text-brand-700">
             {p?.codigo ? `/v/${p.codigo}` : 'código ainda não gerado'}
           </p>
           <BotoesHotlink codigo={p?.codigo ?? null} />
@@ -137,7 +137,7 @@ export default function PerfilVendedorPage() {
             Definidos pela sua franquia. Para alterar, fale com o gestor da unidade.
           </p>
         </CardHeader>
-        <CardContent className="grid gap-3 text-[13px] sm:grid-cols-2">
+        <CardContent className="grid gap-3 text-[0.8125rem] sm:grid-cols-2">
           <Campo rotulo="Comissão de adesão" valor={percent(p?.taxa_adesao)} />
           <Campo rotulo="Comissão recorrente" valor={percent(p?.taxa_recorrente)} />
           <Campo
@@ -154,7 +154,7 @@ export default function PerfilVendedorPage() {
       {p?.contrato_url && (
         <Card>
           <CardContent className="flex items-center justify-between gap-3 p-4">
-            <div className="flex items-center gap-2 text-[13px] text-slate-700">
+            <div className="flex items-center gap-2 text-[0.8125rem] text-slate-700">
               <FileText className="h-4 w-4 text-slate-400" />
               Contrato de parceria
             </div>
@@ -162,7 +162,7 @@ export default function PerfilVendedorPage() {
               href={p.contrato_url}
               target="_blank"
               rel="noreferrer"
-              className="rounded-lg border border-slate-300 px-3 py-1.5 text-[12px] font-semibold text-slate-600 hover:bg-slate-50"
+              className="rounded-lg border border-slate-300 px-3 py-1.5 text-[0.75rem] font-semibold text-slate-600 hover:bg-slate-50"
             >
               Abrir
             </a>
@@ -176,7 +176,7 @@ export default function PerfilVendedorPage() {
 function Campo({ rotulo, valor }: { rotulo: string; valor?: string | null }) {
   return (
     <div>
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{rotulo}</p>
+      <p className="text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-400">{rotulo}</p>
       <p className="mt-0.5 text-slate-800">{valor || '—'}</p>
     </div>
   );

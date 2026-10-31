@@ -256,7 +256,7 @@ function Opcoes({ label, valor, opcoes, onChange }: {
 function SimNao({ label, valor, onChange }: { label: string; valor?: boolean; onChange: (v: boolean) => void }) {
   return (
     <div>
-      <p className="text-[13px] font-medium text-slate-600">{label}</p>
+      <p className="text-[0.8125rem] font-medium text-slate-600">{label}</p>
       <div className="mt-1 flex gap-2">
         {[true, false].map((v) => (
           <button key={String(v)} type="button" onClick={() => onChange(v)}

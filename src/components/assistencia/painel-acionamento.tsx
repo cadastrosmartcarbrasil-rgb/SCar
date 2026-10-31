@@ -176,13 +176,13 @@ export function PainelAcionamento({ placaInicial }: { placaInicial?: string | nu
                         {s.cobra_km_excedente ? ` + ${formatCurrency(Number(s.valor_km_excedente))}/km após ${s.km_franquia}km` : ''}
                       </span>
                       {e && (
-                        <span className={`mt-1 inline-block rounded px-1.5 py-0.5 text-[11px] ${esgotado ? 'bg-rose-50 text-rose-700' : e.computa_limite ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
+                        <span className={`mt-1 inline-block rounded px-1.5 py-0.5 text-[0.6875rem] ${esgotado ? 'bg-rose-50 text-rose-700' : e.computa_limite ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
                           {rotuloLimite(e)}
                           {e.ultimo_uso ? ` · último ${formatDate(e.ultimo_uso)}` : ''}
                         </span>
                       )}
                       {e && rotuloNegados(e) && (
-                        <span className="ml-1 mt-1 inline-block rounded bg-rose-50 px-1.5 py-0.5 text-[11px] text-rose-700">
+                        <span className="ml-1 mt-1 inline-block rounded bg-rose-50 px-1.5 py-0.5 text-[0.6875rem] text-rose-700">
                           {rotuloNegados(e)}
                         </span>
                       )}
@@ -206,7 +206,7 @@ export function PainelAcionamento({ placaInicial }: { placaInicial?: string | nu
                     <span className="flex items-center gap-2">
                       <span className="font-mono text-xs text-slate-400">{h.codigo_os ?? h.protocolo}</span>
                       <span className="text-slate-700">{h.servico}</span>
-                      {h.computa_limite && h.status !== 'NEGADO' && <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[11px] text-amber-700">conta no limite</span>}
+                      {h.computa_limite && h.status !== 'NEGADO' && <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[0.6875rem] text-amber-700">conta no limite</span>}
                       {h.status === 'NEGADO' && (
                         <span className="text-xs text-rose-700">
                           {rotuloMotivoNegativa(h.negado_motivo)}{h.negado_observacao ? ` — ${h.negado_observacao}` : ''}
@@ -690,7 +690,7 @@ export function OrdemServico({ acionamentoId, onVoltar }: { acionamentoId: strin
                   <span className="flex items-center gap-2">
                     <Truck className="h-4 w-4 text-slate-400" />
                     <span className="font-medium text-slate-700">{c.fornecedores?.razao_social}</span>
-                    {c.escolhida && <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[11px] text-emerald-700">escolhido</span>}
+                    {c.escolhida && <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[0.6875rem] text-emerald-700">escolhido</span>}
                   </span>
                   <span className="flex items-center gap-3">
                     <span className="tnum text-slate-700">{formatCurrency(Number(c.valor))}</span>
@@ -907,16 +907,16 @@ function CardTrajeto({ acionamento, servico, editavel }: {
         <MapaRota origem={coordenadaDe(origem)} destino={coordenadaDe(destino)} altura={220} />
         <div className="space-y-2 text-sm">
           <div>
-            <p className="text-[11px] uppercase tracking-wide text-slate-400">Origem (resgate)</p>
+            <p className="text-[0.6875rem] uppercase tracking-wide text-slate-400">Origem (resgate)</p>
             <p className="font-medium text-slate-700">{enderecoLinha(origem) || '—'}</p>
             {origem.referencia && <p className="text-xs text-slate-500">Ref.: {origem.referencia}</p>}
           </div>
           <div>
-            <p className="text-[11px] uppercase tracking-wide text-slate-400">Destino</p>
+            <p className="text-[0.6875rem] uppercase tracking-wide text-slate-400">Destino</p>
             <p className="font-medium text-slate-700">{enderecoLinha(destino) || '—'}</p>
           </div>
           <div>
-            <p className="text-[11px] uppercase tracking-wide text-slate-400">Distância autorizada</p>
+            <p className="text-[0.6875rem] uppercase tracking-wide text-slate-400">Distância autorizada</p>
             <p className="tnum text-lg font-semibold text-slate-900">
               {rotuloRota(km, acionamento.duracao_minutos)}
             </p>
@@ -1235,7 +1235,7 @@ function CampoAgendamento({ agendar, valor, onAgendar, onValor }: {
           <Input type="datetime-local" value={valor} onChange={(e) => onValor(e.target.value)} className="w-56" />
         )}
       </div>
-      {agendar && <p className="mt-1 text-[11px] text-slate-500">Horário de Brasília. Sai no voucher do prestador.</p>}
+      {agendar && <p className="mt-1 text-[0.6875rem] text-slate-500">Horário de Brasília. Sai no voucher do prestador.</p>}
     </div>
   );
 }

@@ -55,24 +55,24 @@ export default async function HotlinkPage({ params }: { params: { codigo: string
         />
         <div className="relative mx-auto grid max-w-5xl gap-8 px-4 pb-24 pt-10 lg:grid-cols-[1fr_400px] lg:pb-28">
           <div className="text-white">
-            <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-cyan-400">
+            <p className="text-[0.6875rem] font-bold uppercase tracking-[0.25em] text-cyan-400">
               {ehVendedor ? 'Atendimento personalizado' : 'Cotação online'}
             </p>
-            <h1 className="mt-3 text-[30px] font-light uppercase leading-[1.15] tracking-tight sm:text-[38px]">
+            <h1 className="mt-3 text-[1.875rem] font-light uppercase leading-[1.15] tracking-tight sm:text-[2.375rem]">
               Seu veículo protegido<br />
               <span className="font-bold">com quem cuida de verdade</span>
             </h1>
-            <p className="mt-4 max-w-md text-[14px] leading-relaxed text-white/70">
+            <p className="mt-4 max-w-md text-[0.875rem] leading-relaxed text-white/70">
               Faça sua cotação em menos de um minuto. Sem burocracia, sem análise de perfil
               e com assistência 24 horas em todo o Brasil.
             </p>
 
             {ehVendedor && (
               <div className="mt-6 inline-flex items-center gap-2.5 rounded-full bg-white/10 py-2 pl-2 pr-4 ring-1 ring-white/15">
-                <span className="grid h-8 w-8 place-items-center rounded-full bg-cyan-500 text-[13px] font-bold text-navy">
+                <span className="grid h-8 w-8 place-items-center rounded-full bg-cyan-500 text-[0.8125rem] font-bold text-navy">
                   {destino.nome.slice(0, 1).toUpperCase()}
                 </span>
-                <span className="text-[12.5px] text-white/80">
+                <span className="text-[0.7812rem] text-white/80">
                   Atendimento com <b className="text-white">{destino.nome}</b>
                 </span>
               </div>
@@ -83,8 +83,8 @@ export default async function HotlinkPage({ params }: { params: { codigo: string
                 <li key={b.titulo} className="flex gap-2.5">
                   <b.icone className="mt-0.5 h-4.5 w-4.5 shrink-0 text-cyan-400" />
                   <div>
-                    <p className="text-[13px] font-semibold text-white">{b.titulo}</p>
-                    <p className="text-[11.5px] leading-relaxed text-white/55">{b.texto}</p>
+                    <p className="text-[0.8125rem] font-semibold text-white">{b.titulo}</p>
+                    <p className="text-[0.7188rem] leading-relaxed text-white/55">{b.texto}</p>
                   </div>
                 </li>
               ))}
@@ -111,8 +111,8 @@ export default async function HotlinkPage({ params }: { params: { codigo: string
           ].map(([titulo, texto]) => (
             <div key={titulo} className="rounded-2xl border border-slate-200 bg-superficie p-4">
               <BadgeCheck className="h-5 w-5 text-cyan-600" />
-              <p className="mt-2 text-[13.5px] font-bold text-brand-800">{titulo}</p>
-              <p className="mt-1 text-[12px] leading-relaxed text-slate-500">{texto}</p>
+              <p className="mt-2 text-[0.8438rem] font-bold text-brand-800">{titulo}</p>
+              <p className="mt-1 text-[0.75rem] leading-relaxed text-slate-500">{texto}</p>
             </div>
           ))}
         </div>

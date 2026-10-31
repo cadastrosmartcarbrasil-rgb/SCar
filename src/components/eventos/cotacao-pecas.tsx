@@ -188,7 +188,7 @@ export function CotacaoPecas({
               fornecedor, o evento e a classificação preenchidos — você confere, ajusta o vencimento e grava.
             </p>
             {!perguntar.fornecedor_id && (
-              <p className="rounded-lg bg-amber-50 px-3 py-2 text-[12px] text-amber-800">
+              <p className="rounded-lg bg-amber-50 px-3 py-2 text-[0.75rem] text-amber-800">
                 Esta cotação não tem fornecedor cadastrado. Escolha (ou cadastre) o fornecedor no lançamento — conta a
                 pagar do evento exige favorecido.
               </p>
@@ -266,7 +266,7 @@ function CotacaoCard({
 
       {trata && !cotacao.fornecedor_id && cotacao.status !== 'REJEITADA' && (
         <div className="mb-2 max-w-md">
-          <p className="mb-1 text-[11px] text-amber-700">Sem fornecedor cadastrado — vincule para lançar no contas a pagar:</p>
+          <p className="mb-1 text-[0.6875rem] text-amber-700">Sem fornecedor cadastrado — vincule para lançar no contas a pagar:</p>
           <SeletorFornecedor value={null} onChange={onFornecedor} nomeSugerido={cotacao.fornecedor_nome} />
         </div>
       )}

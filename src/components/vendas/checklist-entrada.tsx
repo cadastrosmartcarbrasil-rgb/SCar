@@ -46,7 +46,7 @@ export function ChecklistEntrada({ itens, colunas = 2 }: {
           />
         </div>
         {!completo && (
-          <p className="mt-2 text-[11.5px] leading-relaxed text-slate-500">
+          <p className="mt-2 text-[0.7188rem] leading-relaxed text-slate-500">
             O veículo só entra na base com a ficha inteira. A Auditoria não consegue autorizar antes
             disso — a trava e no banco, não só na tela.
           </p>
@@ -57,16 +57,16 @@ export function ChecklistEntrada({ itens, colunas = 2 }: {
         {grupos.map((g) => (
           <div key={g.grupo} className="rounded-2xl border border-slate-200/80 bg-superficie p-3">
             <div className="mb-2 flex items-center justify-between">
-              <span className={`rounded-lg px-2 py-0.5 text-[11px] font-semibold ${ICONE_GRUPO[g.grupo] ?? 'bg-slate-100 text-slate-600'}`}>
+              <span className={`rounded-lg px-2 py-0.5 text-[0.6875rem] font-semibold ${ICONE_GRUPO[g.grupo] ?? 'bg-slate-100 text-slate-600'}`}>
                 {g.grupo}
               </span>
-              <span className={`tnum text-[11px] font-medium ${g.completo ? 'text-emerald-600' : 'text-slate-400'}`}>
+              <span className={`tnum text-[0.6875rem] font-medium ${g.completo ? 'text-emerald-600' : 'text-slate-400'}`}>
                 {g.concluidos}/{g.total}
               </span>
             </div>
             <ul className="space-y-1">
               {g.itens.map((i) => (
-                <li key={i.item} className="flex items-start gap-1.5 text-[11.5px] leading-snug">
+                <li key={i.item} className="flex items-start gap-1.5 text-[0.7188rem] leading-snug">
                   {i.ok
                     ? <Check className="mt-px h-3.5 w-3.5 shrink-0 text-emerald-600" />
                     : <CircleAlert className="mt-px h-3.5 w-3.5 shrink-0 text-amber-500" />}

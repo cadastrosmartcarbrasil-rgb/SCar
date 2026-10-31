@@ -99,7 +99,7 @@ export default function VistoriaFotosPage() {
                 <td className="tnum px-4 py-2 text-slate-500">{p.ordem}</td>
                 <td className="px-4 py-2 font-medium text-slate-800">
                   <span className="inline-flex items-center gap-2"><Camera className="h-4 w-4 text-cyan-600" /> {p.nome}</span>
-                  <span className="block font-mono text-[11px] text-slate-400">{p.codigo}</span>
+                  <span className="block font-mono text-[0.6875rem] text-slate-400">{p.codigo}</span>
                 </td>
                 <td className="max-w-md px-4 py-2 text-slate-500">{p.instrucao ?? '—'}</td>
                 <td className="px-4 py-2 text-slate-600">{nomeTipo(p.tipo_veiculo_id)}</td>
@@ -150,7 +150,7 @@ export default function VistoriaFotosPage() {
             </label>
           </div>
           {ed?.id && (
-            <p className="text-[11.5px] text-slate-500">
+            <p className="text-[0.7188rem] text-slate-500">
               O código <span className="font-mono">{ed.codigo}</span> não muda: ele liga as fotos já enviadas a esta pose.
               Para tirar a foto da vistoria, desmarque <b>Ativa</b>.
             </p>

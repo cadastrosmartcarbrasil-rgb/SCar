@@ -169,7 +169,7 @@ export function ContasFinanceiro({
       {/* Filtros */}
       <FiltroPeriodo periodo={periodo} onChange={setPeriodo}>
         <label className="block">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Filtrar pela data de</span>
+          <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">Filtrar pela data de</span>
           <Select className="mt-1 w-40 py-1.5" value={campoData} onChange={(e) => setCampoData(e.target.value as FiltroLancamentos['campoData'])}>
             {CAMPOS_DATA.map((c) => <option key={c.valor} value={c.valor}>{c.rotulo}</option>)}
           </Select>
@@ -253,7 +253,7 @@ export function ContasFinanceiro({
       <div className="overflow-x-auto rounded-2xl border border-slate-200/80 bg-superficie shadow-[0_1px_2px_rgba(20,33,61,0.04)]">
         <table className="w-full min-w-[1000px] text-sm">
           <thead>
-            <tr className="border-b border-slate-200 text-left text-[11px] uppercase tracking-wide text-slate-400">
+            <tr className="border-b border-slate-200 text-left text-[0.6875rem] uppercase tracking-wide text-slate-400">
               <th className="px-4 py-2.5 font-semibold">Título</th>
               <th className="px-4 py-2.5 font-semibold">Favorecido / Pagador</th>
               <th className="px-4 py-2.5 font-semibold">Classificação</th>
@@ -284,7 +284,7 @@ export function ContasFinanceiro({
                       <span className={`h-6 w-1 shrink-0 rounded-full ${l.tipo === 'RECEITA' ? 'bg-emerald-400' : 'bg-rose-400'}`} />
                       <div>
                         <p className="font-medium text-slate-800">{l.descricao}</p>
-                        <p className="text-[11px] text-slate-400">
+                        <p className="text-[0.6875rem] text-slate-400">
                           {l.tipo === 'RECEITA' ? 'A receber' : 'A pagar'}
                           {l.numero_documento && ` · doc. ${l.numero_documento}`}
                           {l.parcela_total > 1 && ` · parcela ${l.parcela_numero}/${l.parcela_total}`}
@@ -299,7 +299,7 @@ export function ContasFinanceiro({
                       return (
                         <>
                           {f.nome || <span className="text-amber-600">sem favorecido</span>}
-                          {f.detalhe && <span className="block text-[11px] text-slate-400">{f.detalhe}</span>}
+                          {f.detalhe && <span className="block text-[0.6875rem] text-slate-400">{f.detalhe}</span>}
                         </>
                       );
                     })()}
@@ -310,14 +310,14 @@ export function ContasFinanceiro({
                         <span className="font-mono text-slate-400">{l.categorias_dre.codigo_estruturado}</span> {l.categorias_dre.nome}
                       </p>
                     ) : (
-                      <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[11px] text-amber-700">Sem categoria</span>
+                      <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[0.6875rem] text-amber-700">Sem categoria</span>
                     )}
-                    {l.centros_custo?.nome && <p className="text-[11px] text-slate-400">{l.centros_custo.nome}</p>}
+                    {l.centros_custo?.nome && <p className="text-[0.6875rem] text-slate-400">{l.centros_custo.nome}</p>}
                   </td>
                   <td className="tnum px-4 py-2.5 text-slate-600">
                     {formatDate(l.data_vencimento)}
                     {l.competencia !== l.data_vencimento && (
-                      <p className="text-[11px] text-slate-400">comp. {formatDate(l.competencia)}</p>
+                      <p className="text-[0.6875rem] text-slate-400">comp. {formatDate(l.competencia)}</p>
                     )}
                   </td>
                   <td className="tnum px-4 py-2.5 text-right font-medium text-slate-800">{formatCurrency(l.valor_original)}</td>

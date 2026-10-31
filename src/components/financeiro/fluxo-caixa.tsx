@@ -164,7 +164,7 @@ function TabelaAging({ titulo, linhas }: { titulo: string; linhas: { faixa: stri
   return (
     <div>
       <div className="mb-1.5 flex items-baseline justify-between">
-        <p className="text-[11.5px] font-semibold uppercase tracking-wide text-slate-500">{titulo}</p>
+        <p className="text-[0.7188rem] font-semibold uppercase tracking-wide text-slate-500">{titulo}</p>
         <p className="tnum text-sm font-bold text-slate-800">{formatCurrency(total)}</p>
       </div>
       <ResponsiveContainer width="100%" height={110}>

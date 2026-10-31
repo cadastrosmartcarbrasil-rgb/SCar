@@ -128,7 +128,7 @@ function ExtratoTabela({ conta, periodo }: { conta: string | null; periodo: Peri
       <CardHeader className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-wrap items-end gap-3">
           <label className="block">
-            <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Conferência</span>
+            <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">Conferência</span>
             <select className={SELECT_CLS} value={conciliacao} onChange={(e) => setConciliacao(e.target.value as typeof conciliacao)}>
               <option value="">Todos</option>
               <option value="CONCILIADO">Conciliados</option>
@@ -136,14 +136,14 @@ function ExtratoTabela({ conta, periodo }: { conta: string | null; periodo: Peri
             </select>
           </label>
           <label className="block">
-            <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Centro de custo</span>
+            <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">Centro de custo</span>
             <select className={SELECT_CLS} value={centro} onChange={(e) => setCentro(e.target.value)}>
               <option value="">Todos</option>
               {(centros ?? []).map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
             </select>
           </label>
           <label className="block">
-            <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Plano de contas</span>
+            <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">Plano de contas</span>
             <select className={SELECT_CLS} value={categoria} onChange={(e) => setCategoria(e.target.value)}>
               <option value="">Todos</option>
               {ordenarPlano(plano ?? []).filter(ehAnalitica).map((c) => <option key={c.id} value={c.id}>{c.codigo_estruturado} {c.nome}</option>)}
@@ -242,7 +242,7 @@ function ExtratoTabela({ conta, periodo }: { conta: string | null; periodo: Peri
 
 function LinhaExtrato({ l, conta, membro }: { l: ExtratoContaRow; conta: string | null; membro?: boolean }) {
   return (
-    <tr className={membro ? 'bg-slate-50/70 text-[13px]' : undefined}>
+    <tr className={membro ? 'bg-slate-50/70 text-[0.8125rem]' : undefined}>
       <td className="tnum whitespace-nowrap px-3 py-2">{membro ? '' : dataBR(l.data)}</td>
       {!conta && <td className="px-3 py-2 text-xs text-slate-600">{membro ? '' : l.conta}</td>}
       <td className={`px-3 py-2 ${membro ? 'pl-9' : ''}`}>

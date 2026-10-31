@@ -230,7 +230,7 @@ function Simulador() {
                               unidade sobre a tabela. O selo evita que alguem o
                               procure em Configuracoes -> Produtos. */}
                           {i.categoria === 'ADICIONAL_REGIONAL' && (
-                            <span className="ml-1 rounded bg-cyan-50 px-1 py-0.5 text-[10px] font-medium text-cyan-700">
+                            <span className="ml-1 rounded bg-cyan-50 px-1 py-0.5 text-[0.625rem] font-medium text-cyan-700">
                               regional
                             </span>
                           )}

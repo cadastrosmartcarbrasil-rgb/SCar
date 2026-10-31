@@ -26,10 +26,10 @@ export default function PortalVeiculosPage() {
   return (
     <div className="space-y-4">
       <header>
-        <h1 className="text-[22px] font-bold tracking-tight text-brand-800">
+        <h1 className="text-[1.375rem] font-bold tracking-tight text-brand-800">
           Olá, {perfil?.nome?.split(' ')[0] ?? 'associado'}
         </h1>
-        <p className="mt-0.5 text-[13px] text-slate-500">
+        <p className="mt-0.5 text-[0.8125rem] text-slate-500">
           {perfil?.associado_desde
             ? `Associado desde ${formatDate(perfil.associado_desde)}.`
             : 'Bem-vindo a sua área.'}
@@ -46,10 +46,10 @@ export default function PortalVeiculosPage() {
                 {fin.em_dia ? <CheckCircle2 className="h-5 w-5" /> : <AlertTriangle className="h-5 w-5" />}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-[14px] font-bold text-brand-800">
+                <p className="text-[0.875rem] font-bold text-brand-800">
                   {fin.em_dia ? 'Você está em dia' : `${fin.qtd_vencidos} boleto(s) em atraso`}
                 </p>
-                <p className="text-[12px] text-slate-500">
+                <p className="text-[0.75rem] text-slate-500">
                   {fin.em_dia
                     ? fin.proximo_vencimento
                       ? `Próximo vencimento em ${formatDate(fin.proximo_vencimento)} · ${formatCurrency(fin.proximo_valor ?? 0)}`
@@ -64,7 +64,7 @@ export default function PortalVeiculosPage() {
       )}
 
       <div>
-        <h2 className="mb-2 flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-wide text-slate-500">
+        <h2 className="mb-2 flex items-center gap-1.5 text-[0.75rem] font-bold uppercase tracking-wide text-slate-500">
           <Car className="h-3.5 w-3.5" /> Veículos protegidos
         </h2>
 
@@ -76,7 +76,7 @@ export default function PortalVeiculosPage() {
           <Card>
             <CardContent className="p-6 text-center">
               <ShieldCheck className="mx-auto h-8 w-8 text-slate-300" />
-              <p className="mt-2 text-[13px] text-slate-500">
+              <p className="mt-2 text-[0.8125rem] text-slate-500">
                 Nenhum veículo na sua proteção ainda.
               </p>
             </CardContent>
@@ -87,30 +87,30 @@ export default function PortalVeiculosPage() {
               <li key={v.id} className="rounded-2xl border border-slate-200/80 bg-superficie p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="font-mono text-[17px] font-bold uppercase tracking-wider text-brand-800">
+                    <p className="font-mono text-[1.0625rem] font-bold uppercase tracking-wider text-brand-800">
                       {identificacaoVeiculo(v.placa)}
                     </p>
-                    <p className="text-[13px] text-slate-600">
+                    <p className="text-[0.8125rem] text-slate-600">
                       {[v.marca, v.modelo].filter(Boolean).join(' ') || 'Veiculo'}
                       {v.ano_modelo ? ` · ${v.ano_modelo}` : ''}
                     </p>
                     {v.plano_nome && (
-                      <p className="mt-0.5 text-[11.5px] text-slate-400">{v.plano_nome}</p>
+                      <p className="mt-0.5 text-[0.7188rem] text-slate-400">{v.plano_nome}</p>
                     )}
                     {v.data_ativacao && (
-                      <p className="mt-0.5 text-[11.5px] text-slate-400">
+                      <p className="mt-0.5 text-[0.7188rem] text-slate-400">
                         Protegido desde {formatDate(v.data_ativacao)}
                       </p>
                     )}
                   </div>
-                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset ${
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-[0.6875rem] font-medium ring-1 ring-inset ${
                     COR_STATUS[v.status] ?? COR_STATUS.inativo}`}>
                     {STATUS_VEICULO_LABEL[v.status as keyof typeof STATUS_VEICULO_LABEL] ?? v.status}
                   </span>
                 </div>
 
                 {(v.mensalidade || v.dia_vencimento) && (
-                  <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 border-t border-slate-100 pt-2.5 text-[12px]">
+                  <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 border-t border-slate-100 pt-2.5 text-[0.75rem]">
                     {v.mensalidade ? (
                       <span className="text-slate-500">
                         Mensalidade <b className="tnum text-slate-800">{formatCurrency(v.mensalidade)}</b>

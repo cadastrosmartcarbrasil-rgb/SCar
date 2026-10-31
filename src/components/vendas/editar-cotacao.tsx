@@ -231,9 +231,9 @@ export function EditarCotacao({
                 <li key={`${i.produto_id ?? i.nome}-${idx}`} className="flex items-center justify-between gap-2 text-slate-600">
                   <span className="flex min-w-0 items-center gap-2">
                     <span className="truncate">{i.nome}</span>
-                    {i.obrigatorio && <span className="rounded bg-slate-100 px-1.5 py-px text-[10px] uppercase text-slate-500">base</span>}
-                    {doPlano && <span className="rounded-full bg-cyan-50 px-1.5 py-px text-[10px] font-bold uppercase text-cyan-700 ring-1 ring-inset ring-cyan-200">no plano</span>}
-                    {avulso && <span className="rounded bg-amber-50 px-1.5 py-px text-[10px] uppercase text-amber-700">opcional</span>}
+                    {i.obrigatorio && <span className="rounded bg-slate-100 px-1.5 py-px text-[0.625rem] uppercase text-slate-500">base</span>}
+                    {doPlano && <span className="rounded-full bg-cyan-50 px-1.5 py-px text-[0.625rem] font-bold uppercase text-cyan-700 ring-1 ring-inset ring-cyan-200">no plano</span>}
+                    {avulso && <span className="rounded bg-amber-50 px-1.5 py-px text-[0.625rem] uppercase text-amber-700">opcional</span>}
                   </span>
                   <span className="tnum shrink-0 text-right text-slate-700">
                     {i.valor_tabela != null && Number(i.valor_tabela) > Number(i.valor) && (
@@ -281,7 +281,7 @@ export function EditarCotacao({
                 />
                 <span className="min-w-0 flex-1">{p.nome}</span>
                 {p.foraDoTipo ? (
-                  <span className="rounded bg-amber-100 px-1.5 py-px text-[10px] uppercase text-amber-800">
+                  <span className="rounded bg-amber-100 px-1.5 py-px text-[0.625rem] uppercase text-amber-800">
                     não atende este tipo — não é cobrado
                   </span>
                 ) : precoOpcional[p.id] != null && (

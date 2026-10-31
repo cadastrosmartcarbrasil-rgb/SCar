@@ -161,7 +161,7 @@ export function ImportarVendedores({ aberto, onClose }: { aberto: boolean; onClo
               <p className="text-sm font-medium text-slate-700">
                 {arquivo ? `Arquivo: ${arquivo}` : '1. Escolha a planilha'}
               </p>
-              <p className="mt-0.5 text-[11px] text-slate-500">
+              <p className="mt-0.5 text-[0.6875rem] text-slate-500">
                 .xlsx ou .csv · a ordem das colunas não importa e o nome casa sem acento.
                 Obrigatórias: <b>NOME</b> e <b>REGIONAL</b>.
               </p>
@@ -204,7 +204,7 @@ export function ImportarVendedores({ aberto, onClose }: { aberto: boolean; onClo
         )}
 
         {avisos.length > 0 && (
-          <p className="flex items-start gap-1.5 rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-[11px] text-slate-600">
+          <p className="flex items-start gap-1.5 rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-[0.6875rem] text-slate-600">
             <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
             <span>{avisos.join(' ')}</span>
           </p>
@@ -214,7 +214,7 @@ export function ImportarVendedores({ aberto, onClose }: { aberto: boolean; onClo
         {grupos.length > 0 && (
           <div className="rounded-xl border border-slate-200 p-3">
             <p className="text-sm font-medium text-slate-700">2. A que unidade cada grupo pertence</p>
-            <p className="mb-2.5 mt-0.5 text-[11px] leading-relaxed text-slate-500">
+            <p className="mb-2.5 mt-0.5 text-[0.6875rem] leading-relaxed text-slate-500">
               São <b>{grupos.length}</b> nomes distintos em {linhas.length} linhas — {grupos.length} decisões,
               não {linhas.length}. As cidades de cada grupo aparecem ao lado porque grupo espalhado por
               muitas cidades costuma não ser uma unidade. <b>Nome sem unidade escolhida não entra</b> —
@@ -229,14 +229,14 @@ export function ImportarVendedores({ aberto, onClose }: { aberto: boolean; onClo
                     escolhido ? 'border-slate-200' : 'border-amber-300 bg-amber-50/60'
                   }`}>
                     <div className="min-w-0">
-                      <p className="flex items-center gap-1.5 truncate text-[13px] font-medium text-slate-800">
+                      <p className="flex items-center gap-1.5 truncate text-[0.8125rem] font-medium text-slate-800">
                         <Building2 className="h-3.5 w-3.5 shrink-0 text-slate-400" />
                         {g.texto}
-                        <span className="tnum shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600">
+                        <span className="tnum shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[0.625rem] text-slate-600">
                           {g.quantidade}
                         </span>
                       </p>
-                      <p className="mt-0.5 truncate text-[11px] text-slate-500">
+                      <p className="mt-0.5 truncate text-[0.6875rem] text-slate-500">
                         {g.cidades.length} cidade(s): {g.cidades.slice(0, 4).join(' · ')}
                         {g.cidades.length > 4 && ` … +${g.cidades.length - 4}`}
                       </p>
@@ -257,7 +257,7 @@ export function ImportarVendedores({ aberto, onClose }: { aberto: boolean; onClo
               })}
             </div>
             {pendentes.length > 0 && (
-              <p className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-amber-700">
+              <p className="mt-2 flex items-center gap-1.5 text-[0.6875rem] font-medium text-amber-700">
                 <AlertTriangle className="h-3.5 w-3.5" />
                 {pendentes.reduce((a, g) => a + g.quantidade, 0)} linha(s) ficam de fora
                 enquanto {pendentes.length} nome(s) não tiverem unidade.
@@ -278,7 +278,7 @@ export function ImportarVendedores({ aberto, onClose }: { aberto: boolean; onClo
             </div>
 
             <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50/70 p-2.5">
-              <label className="flex items-start gap-2 text-[13px] text-slate-700">
+              <label className="flex items-start gap-2 text-[0.8125rem] text-slate-700">
                 <input
                   type="checkbox"
                   checked={respeitarStatus}
@@ -287,7 +287,7 @@ export function ImportarVendedores({ aberto, onClose }: { aberto: boolean; onClo
                 />
                 <span>
                   Respeitar a coluna <b>Status</b> da planilha
-                  <span className="block text-[11px] leading-relaxed text-slate-500">
+                  <span className="block text-[0.6875rem] leading-relaxed text-slate-500">
                     Desmarcado (recomendado), <b>todos entram inativos</b> e você ativa quem vende de
                     fato. Marcado, <b>{previa.ativosNaOrigem}</b> entram ativos — com hotlink captando
                     lead e comissão a conferir, um por um.
@@ -296,7 +296,7 @@ export function ImportarVendedores({ aberto, onClose }: { aberto: boolean; onClo
               </label>
             </div>
 
-            <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
+            <p className="mt-2 text-[0.6875rem] leading-relaxed text-slate-500">
               A comissão entra <b>zerada</b> quando a planilha não traz — zero não paga ninguém por
               engano. Nenhum <b>acesso ao portal</b> é criado.
             </p>
@@ -306,13 +306,13 @@ export function ImportarVendedores({ aberto, onClose }: { aberto: boolean; onClo
                 <button
                   type="button"
                   onClick={() => setVerBloqueados((v) => !v)}
-                  className="text-[12px] font-medium text-rose-700 underline underline-offset-2"
+                  className="text-[0.75rem] font-medium text-rose-700 underline underline-offset-2"
                 >
                   {verBloqueados ? 'Esconder' : 'Ver'} as {previa.bloqueados} linhas que ficam de fora
                 </button>
                 {verBloqueados && (
                   <div className="mt-1.5 max-h-56 overflow-y-auto rounded-lg border border-slate-200">
-                    <table className="w-full text-[12px]">
+                    <table className="w-full text-[0.75rem]">
                       <tbody>
                         {previa.linhas.filter((l) => l.situacao === 'BLOQUEADO').map((l) => (
                           <tr key={l.linha} className="border-b border-slate-50 last:border-0">
@@ -356,7 +356,7 @@ function Cartao({ rotulo, valor, tom }: { rotulo: string; valor: number; tom: ke
   return (
     <div className={`rounded-lg border p-2 text-center ${TONS[tom]}`}>
       <p className="tnum text-xl font-bold leading-none">{valor}</p>
-      <p className="mt-1 text-[11px] font-medium">{rotulo}</p>
+      <p className="mt-1 text-[0.6875rem] font-medium">{rotulo}</p>
     </div>
   );
 }

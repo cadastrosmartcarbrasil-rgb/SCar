@@ -73,7 +73,7 @@ export default function ComissoesVendedorPage() {
             <div className="-mx-4 overflow-x-auto sm:mx-0">
               <table className="w-full min-w-[600px] text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 text-left text-[11px] uppercase tracking-wide text-slate-400">
+                  <tr className="border-b border-slate-200 text-left text-[0.6875rem] uppercase tracking-wide text-slate-400">
                     <th className="py-2.5 font-semibold">Data</th>
                     <th className="py-2.5 font-semibold">Associado</th>
                     <th className="py-2.5 font-semibold">Placa</th>
@@ -89,7 +89,7 @@ export default function ComissoesVendedorPage() {
                       <td className="py-2.5 font-medium text-slate-800">{c.associado ?? '—'}</td>
                       <td className="py-2.5 font-mono text-xs uppercase text-slate-500">{c.placa ?? '—'}</td>
                       <td className="py-2.5">
-                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                        <span className={`rounded-full px-2 py-0.5 text-[0.6875rem] font-medium ${
                           c.is_adesao ? 'bg-cyan-50 text-cyan-700' : 'bg-slate-100 text-slate-600'
                         }`}>
                           {c.is_adesao ? 'Adesão' : 'Recorrente'}
@@ -99,7 +99,7 @@ export default function ComissoesVendedorPage() {
                         {formatCurrency(c.valor_comissao)}
                       </td>
                       <td className="py-2.5">
-                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset ${
+                        <span className={`rounded-full px-2 py-0.5 text-[0.6875rem] font-medium ring-1 ring-inset ${
                           c.status_pagamento === 'pago'
                             ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
                             : 'bg-amber-50 text-amber-700 ring-amber-200'
@@ -116,7 +116,7 @@ export default function ComissoesVendedorPage() {
         </CardContent>
       </Card>
 
-      <p className="rounded-xl border border-slate-200 bg-superficie px-3 py-2.5 text-[11.5px] leading-relaxed text-slate-500">
+      <p className="rounded-xl border border-slate-200 bg-superficie px-3 py-2.5 text-[0.7188rem] leading-relaxed text-slate-500">
         A adesão recebida por você <b>na hora</b> fica integralmente com você e não passa pelo
         financeiro da empresa — por isso ela não aparece neste extrato. O que está aqui é o que a
         empresa recebeu (boleto, PIX ou cartão) e vai repassar a você.

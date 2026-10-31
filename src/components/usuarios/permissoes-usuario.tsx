@@ -35,7 +35,7 @@ export function SeloExtras({ extras }: { extras?: ExtraUsuario[] }) {
   if (!n) return null;
   return (
     <span title="Permissões concedidas a esta pessoa além do papel"
-      className="ml-1 rounded bg-cyan-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-cyan-800">
+      className="ml-1 rounded bg-cyan-100 px-1.5 py-0.5 text-[0.625rem] font-semibold uppercase text-cyan-800">
       +{n} extra{n > 1 ? 's' : ''}
     </span>
   );
@@ -118,7 +118,7 @@ export function ModalPermissoesExtras({ usuario, onClose }: { usuario: UsuarioLi
         className={cn('inline-flex h-6 w-6 items-center justify-center rounded border transition',
           on ? (venc ? 'border-amber-500 bg-amber-400 text-white' : 'border-cyan-600 bg-cyan-600 text-white')
             : 'border-slate-300 bg-superficie hover:border-cyan-500')}>
-        {on && <span className="text-[11px] font-bold">+</span>}
+        {on && <span className="text-[0.6875rem] font-bold">+</span>}
       </button>
     );
   };
@@ -140,14 +140,14 @@ export function ModalPermissoesExtras({ usuario, onClose }: { usuario: UsuarioLi
             </FormField>
             <FormField label="Válido até (opcional)">
               <Input type="date" value={validade} min={hoje} onChange={(e) => setValidade(e.target.value)} />
-              <p className="mt-1 text-[11px] text-slate-500">Vale para o que você marcar agora. Vencido, deixa de valer sozinho.</p>
+              <p className="mt-1 text-[0.6875rem] text-slate-500">Vale para o que você marcar agora. Vencido, deixa de valer sozinho.</p>
             </FormField>
           </div>
 
           <div className="overflow-x-auto rounded-xl border border-slate-200">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-slate-50 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                <tr className="bg-slate-50 text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-500">
                   <th className="sticky left-0 bg-slate-50 px-3 py-2 text-left">Módulo</th>
                   {ACOES.map((a) => <th key={a} className="px-2 py-2 text-center">{ROTULO_ACAO[a]}</th>)}
                 </tr>
@@ -170,7 +170,7 @@ export function ModalPermissoesExtras({ usuario, onClose }: { usuario: UsuarioLi
           </div>
 
           <div>
-            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Alçadas especiais</p>
+            <p className="mb-1.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-500">Alçadas especiais</p>
             <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3">
               {ALCADAS.map((al) => (
                 <div key={al.chave} className="flex items-start gap-2 text-xs text-slate-600">
@@ -183,10 +183,10 @@ export function ModalPermissoesExtras({ usuario, onClose }: { usuario: UsuarioLi
 
           {gravados.length > 0 && (
             <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
-              <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Extras gravados</p>
+              <p className="mb-1.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-500">Extras gravados</p>
               <ul className="space-y-1">
                 {gravados.map((e) => (
-                  <li key={e.chave} className="text-[12px] text-slate-600">
+                  <li key={e.chave} className="text-[0.75rem] text-slate-600">
                     <b className="font-medium text-slate-700">{rotuloDaChave(e.chave)}</b>
                     {e.expira_em
                       ? <> · até {dataBR(e.expira_em)}{!extraVigente(e.expira_em, hoje) && <span className="text-amber-700"> (vencido)</span>}</>
@@ -286,7 +286,7 @@ export function ModalCopiarPerfil({ destino, usuarios, regionalNome, onClose }: 
             className="mt-0.5 h-4 w-4 rounded border-slate-300" />
           <span>
             Copiar também a unidade
-            <span className="block text-[11px] text-slate-500">
+            <span className="block text-[0.6875rem] text-slate-500">
               Desmarcado, {destino.nome} continua em {regionalNome(destino.regional_id)}.
             </span>
           </span>
@@ -297,7 +297,7 @@ export function ModalCopiarPerfil({ destino, usuarios, regionalNome, onClose }: 
         </FormField>
 
         {origem && resumo && (
-          <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-[12.5px] text-slate-600">
+          <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-[0.7812rem] text-slate-600">
             <p>
               <b className="text-slate-700">Papel:</b>{' '}
               {resumo.trocaPapel

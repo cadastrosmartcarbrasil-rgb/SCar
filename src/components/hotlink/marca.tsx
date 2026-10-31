@@ -50,7 +50,7 @@ export function CabecalhoMarca({ logoUrl, subtitulo }: {
         <LogoSmartCar url={logoUrl} className="h-16 w-auto object-contain sm:h-20" />
       </div>
       <div className="bg-faixa">
-        <p className="mx-auto max-w-5xl px-4 py-2.5 text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-white/90">
+        <p className="mx-auto max-w-5xl px-4 py-2.5 text-center text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-white/90">
           {subtitulo ?? 'Proteção Veicular'}
         </p>
       </div>
@@ -74,10 +74,10 @@ export function LogoNaCabine({ url }: { url?: string | null }) {
 export function RodapeMarca() {
   return (
     <footer className="mt-10 bg-brand-800 py-6 text-center">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-400">
+      <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-cyan-400">
         Smart Car Brasil
       </p>
-      <p className="mt-1 text-[11px] text-white/50">
+      <p className="mt-1 text-[0.6875rem] text-white/50">
         Associação de proteção veicular · smartcarbrasil.com.br
       </p>
     </footer>

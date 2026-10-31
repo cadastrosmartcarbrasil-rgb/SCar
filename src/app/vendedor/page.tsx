@@ -44,13 +44,13 @@ export default function PainelVendedorPage() {
       <Card>
         <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <p className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wide text-slate-500">
+            <p className="flex items-center gap-1.5 text-[0.75rem] font-semibold uppercase tracking-wide text-slate-500">
               <Link2 className="h-3.5 w-3.5" /> Meu link de vendas
             </p>
-            <p className="mt-1 truncate font-mono text-[13px] text-brand-700">
+            <p className="mt-1 truncate font-mono text-[0.8125rem] text-brand-700">
               {p?.codigo ? `/v/${p.codigo}` : 'código ainda não gerado'}
             </p>
-            <p className="mt-0.5 text-[11px] text-slate-400">
+            <p className="mt-0.5 text-[0.6875rem] text-slate-400">
               Quem preencher por este link vira um lead já vinculado a você.
             </p>
           </div>
@@ -106,18 +106,18 @@ export default function PainelVendedorPage() {
                   return (
                     <li key={l.id} className="flex items-center justify-between gap-3 py-2.5">
                       <div className="min-w-0">
-                        <p className="truncate text-[13px] font-medium text-slate-800">{l.nome}</p>
-                        <p className="truncate text-[11px] text-slate-400">
+                        <p className="truncate text-[0.8125rem] font-medium text-slate-800">{l.nome}</p>
+                        <p className="truncate text-[0.6875rem] text-slate-400">
                           {l.celular}
                           {l.placa && <span className="ml-1.5 font-mono uppercase">{l.placa}</span>}
                           {l.origem_hotlink && <span className="ml-1.5 text-cyan-600">via meu link</span>}
                         </p>
                       </div>
                       <div className="shrink-0 text-right">
-                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset ${selo.classe}`}>
+                        <span className={`rounded-full px-2 py-0.5 text-[0.6875rem] font-medium ring-1 ring-inset ${selo.classe}`}>
                           {selo.rotulo}
                         </span>
-                        <p className="tnum mt-0.5 text-[10.5px] text-slate-400">{formatDate(l.created_at)}</p>
+                        <p className="tnum mt-0.5 text-[0.6562rem] text-slate-400">{formatDate(l.created_at)}</p>
                       </div>
                     </li>
                   );
@@ -126,7 +126,7 @@ export default function PainelVendedorPage() {
             )}
             <Link
               href="/vendedor/leads"
-              className="mt-3 inline-block text-[12px] font-semibold text-brand-700 hover:underline"
+              className="mt-3 inline-block text-[0.75rem] font-semibold text-brand-700 hover:underline"
             >
               Ver todos os meus leads &rarr;
             </Link>
@@ -139,28 +139,28 @@ export default function PainelVendedorPage() {
               <CalendarClock className="h-4 w-4 text-slate-400" /> Meu pagamento
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 text-[12.5px] text-slate-600">
+          <CardContent className="space-y-3 text-[0.7812rem] text-slate-600">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Adesão</p>
+              <p className="text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-400">Adesão</p>
               <p className="mt-0.5">{percent(p?.taxa_adesao)} da adesão</p>
               {p?.dia_entrada && (
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[0.6875rem] text-slate-400">
                   Pago toda {rotuloDiaSemana(p.dia_entrada)}
                   {proximoSemanal && ` · próximo em ${formatDate(proximoSemanal.toISOString())}`}
                 </p>
               )}
             </div>
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Recorrência</p>
+              <p className="text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-400">Recorrência</p>
               <p className="mt-0.5">{percent(p?.taxa_recorrente)} da mensalidade</p>
               {p?.dia_recorrencia && (
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[0.6875rem] text-slate-400">
                   Pago todo dia {p.dia_recorrencia}
                   {proximoMensal && ` · próximo em ${formatDate(proximoMensal.toISOString())}`}
                 </p>
               )}
             </div>
-            <p className="rounded-lg bg-slate-50 px-3 py-2 text-[11px] leading-relaxed text-slate-500">
+            <p className="rounded-lg bg-slate-50 px-3 py-2 text-[0.6875rem] leading-relaxed text-slate-500">
               A adesão recebida por você na hora fica integralmente com você e não entra neste
               extrato. O que aparece aqui é o que passa pelo financeiro da empresa.
             </p>

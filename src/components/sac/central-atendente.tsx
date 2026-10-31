@@ -73,18 +73,18 @@ function MeusProtocolos({ usuarioId }: { usuarioId?: string | null }) {
             <span className="min-w-0">
               <span className="flex flex-wrap items-center gap-1.5">
                 <span className="font-mono text-xs font-semibold text-slate-700">{p.protocolo}</span>
-                <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                <span className={`rounded px-1.5 py-0.5 text-[0.625rem] font-medium ${
                   p.prioridade === 'URGENTE' || p.prioridade === 'ALTA'
                     ? 'bg-rose-50 text-rose-700' : 'bg-slate-100 text-slate-600'}`}>
                   {p.prioridade}
                 </span>
-                <span className={`rounded px-1.5 py-0.5 text-[10px] ${
+                <span className={`rounded px-1.5 py-0.5 text-[0.625rem] ${
                   STATUS_ATENDIMENTO_LABEL[p.status]?.cor ?? 'bg-slate-100 text-slate-600'}`}>
                   {STATUS_ATENDIMENTO_LABEL[p.status]?.label ?? p.status}
                 </span>
               </span>
               <span className="mt-0.5 block truncate text-sm text-slate-700">{p.assunto}</span>
-              <span className="block truncate text-[11px] text-slate-400">
+              <span className="block truncate text-[0.6875rem] text-slate-400">
                 {p.associado}{p.placa ? ` · ${p.placa}` : ''}
               </span>
             </span>
@@ -113,7 +113,7 @@ function PareceresPendentes() {
         <p className="flex items-center gap-2 text-sm font-semibold text-slate-800">
           <Gavel className="h-4 w-4 text-amber-600" /> Esperando o seu parecer
         </p>
-        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[0.6875rem] font-semibold text-amber-800">
           {lista.length}
         </span>
       </header>
@@ -129,10 +129,10 @@ function PareceresPendentes() {
               <span className="min-w-0">
                 <span className="flex flex-wrap items-center gap-1.5">
                   <span className="font-mono text-xs font-semibold text-slate-700">{p.protocolo}</span>
-                  <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${sit.cor}`}>{sit.rotulo}</span>
+                  <span className={`rounded px-1.5 py-0.5 text-[0.625rem] font-medium ${sit.cor}`}>{sit.rotulo}</span>
                 </span>
                 <span className="mt-0.5 block truncate text-sm text-slate-700">{p.pergunta}</span>
-                <span className="block truncate text-[11px] text-slate-500">
+                <span className="block truncate text-[0.6875rem] text-slate-500">
                   {p.pedido_por} · {p.associado}{p.placa ? ` · ${p.placa}` : ''}
                 </span>
               </span>
@@ -160,7 +160,7 @@ function MuralDaGestao() {
           <Megaphone className="h-4 w-4 text-cyan-600" /> Mural da gestão
         </p>
         {pendentes > 0 && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[0.6875rem] font-semibold text-amber-700">
             <BellRing className="h-3 w-3" /> {pendentes} aguardando ciência
           </span>
         )}
@@ -184,22 +184,22 @@ function MuralDaGestao() {
                 className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left">
                 <span className="min-w-0">
                   <span className="flex flex-wrap items-center gap-1.5">
-                    <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${cat.cor}`}>{cat.rotulo}</span>
+                    <span className={`rounded px-1.5 py-0.5 text-[0.625rem] font-medium ${cat.cor}`}>{cat.rotulo}</span>
                     {m.prioridade !== 'BAIXA' && (
-                      <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${pri.cor}`}>{pri.rotulo}</span>
+                      <span className={`rounded px-1.5 py-0.5 text-[0.625rem] font-medium ${pri.cor}`}>{pri.rotulo}</span>
                     )}
                     {m.meu && (
-                      <span className="rounded bg-cyan-50 px-1.5 py-0.5 text-[10px] font-medium text-cyan-700">
+                      <span className="rounded bg-cyan-50 px-1.5 py-0.5 text-[0.625rem] font-medium text-cyan-700">
                         você publicou
                       </span>
                     )}
                     {(m.regional || m.papeis?.length) && (
-                      <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600">
+                      <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[0.625rem] text-slate-600">
                         {destinoDoMemo(m.regional, m.papeis)}
                       </span>
                     )}
                     {resumoRespostas(m.respostas, m.respostas_nao_lidas) && (
-                      <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                      <span className={`rounded px-1.5 py-0.5 text-[0.625rem] font-medium ${
                         m.respostas_nao_lidas > 0
                           ? 'bg-amber-100 text-amber-800'
                           : 'bg-slate-100 text-slate-600'}`}>
@@ -208,7 +208,7 @@ function MuralDaGestao() {
                     )}
                   </span>
                   <span className="mt-1 block text-sm font-semibold text-slate-800">{m.titulo}</span>
-                  <span className="mt-0.5 block text-[11px] text-slate-400">
+                  <span className="mt-0.5 block text-[0.6875rem] text-slate-400">
                     {/* no proprio comunicado, o que interessa e para QUEM ele foi */}
                     {m.meu ? `Para ${destinoDoMemo(m.regional, m.papeis)}` : m.autor}
                     {' · '}{formatDate(m.publicado_em)}
@@ -225,12 +225,12 @@ function MuralDaGestao() {
                     {m.mensagem}
                   </p>
                   {m.expira_em && (
-                    <p className="mt-1 text-[11px] text-slate-400">Vale até {formatDate(m.expira_em)}.</p>
+                    <p className="mt-1 text-[0.6875rem] text-slate-400">Vale até {formatDate(m.expira_em)}.</p>
                   )}
                   {/* Responder por aqui: sem isso a devolutiva sai do sistema e
                       vai para o WhatsApp, onde ninguem mais acha. */}
                   <div className="mt-3 border-t border-slate-100 pt-3">
-                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                    <p className="mb-2 text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-400">
                       {m.meu ? 'Respostas que você recebeu' : 'Sua conversa sobre este comunicado'}
                     </p>
                     <ConversaMemo memoId={m.id} modo={m.meu ? 'autor' : 'minha'} compacta />
@@ -251,7 +251,7 @@ function MuralDaGestao() {
                     {marcar.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                     Marcar como lido
                   </button>
-                  <span className="ml-2 text-[11px] text-slate-500">Leitura obrigatória.</span>
+                  <span className="ml-2 text-[0.6875rem] text-slate-500">Leitura obrigatória.</span>
                 </div>
               )}
             </article>
@@ -301,11 +301,11 @@ function QuadroAlertas() {
                 <span className="flex items-center gap-1.5">
                   <LifeBuoy className="h-3.5 w-3.5 text-amber-500" />
                   <span className="font-mono text-xs font-semibold text-slate-700">{a.protocolo}</span>
-                  <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+                  <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[0.625rem] font-medium text-amber-700">
                     {a.status}
                   </span>
                 </span>
-                <span className="mt-0.5 block truncate text-[11px] text-slate-500">
+                <span className="mt-0.5 block truncate text-[0.6875rem] text-slate-500">
                   {veiculo?.placa ?? 'sem placa'} · {cliente?.nome_razao_social ?? ''}
                 </span>
               </span>
@@ -324,7 +324,7 @@ function Numero({ titulo, valor, href, tom }: {
   const cor = tom === 'rose' ? 'text-rose-600' : tom === 'amber' ? 'text-amber-600' : 'text-slate-800';
   return (
     <Link href={href} className="px-4 py-3 transition hover:bg-slate-50">
-      <p className="text-[10.5px] uppercase tracking-wide text-slate-400">{titulo}</p>
+      <p className="text-[0.6562rem] uppercase tracking-wide text-slate-400">{titulo}</p>
       <p className={`tnum mt-0.5 text-xl font-bold ${cor}`}>{valor}</p>
     </Link>
   );

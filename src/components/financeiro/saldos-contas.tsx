@@ -65,7 +65,7 @@ export function SaldosContas({ onAbrirExtrato, matriz = true }: { onAbrirExtrato
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <label className="block">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Saldo no fim do dia</span>
+          <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">Saldo no fim do dia</span>
           <input type="date" value={dataSaldo} max={hoje} onChange={(e) => setDataSaldo(e.target.value || hoje)}
             className="tnum mt-1 block rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm" />
         </label>
@@ -153,7 +153,7 @@ function LinhaConta({ s, onConfigurar, onExtrato }: { s: SaldoContaRow; onConfig
       </td>
       <td className="px-4 py-2.5 text-right">
         <Dinheiro v={s.saldo_inicial} />
-        <p className="text-[11px] text-slate-400">{s.saldo_inicial_em ? `em ${dataBR(s.saldo_inicial_em)}` : 'sem data'}</p>
+        <p className="text-[0.6875rem] text-slate-400">{s.saldo_inicial_em ? `em ${dataBR(s.saldo_inicial_em)}` : 'sem data'}</p>
       </td>
       <td className="px-4 py-2.5 text-right"><Dinheiro v={s.entradas} /></td>
       <td className="px-4 py-2.5 text-right"><Dinheiro v={-Number(s.saidas)} /></td>
@@ -162,7 +162,7 @@ function LinhaConta({ s, onConfigurar, onExtrato }: { s: SaldoContaRow; onConfig
         {s.extrato_saldo === null ? <span className="text-xs text-slate-400">sem OFX</span> : (
           <>
             <Dinheiro v={s.extrato_saldo} />
-            <p className={`text-[11px] ${diverge ? 'font-semibold text-rose-700' : 'text-emerald-700'}`}>
+            <p className={`text-[0.6875rem] ${diverge ? 'font-semibold text-rose-700' : 'text-emerald-700'}`}>
               {diverge ? `diferença ${Number(s.extrato_diferenca).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'bate'} · {dataBR(s.extrato_saldo_em)}
             </p>
           </>

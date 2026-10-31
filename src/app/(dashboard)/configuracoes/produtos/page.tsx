@@ -109,7 +109,7 @@ export default function ProdutosPage() {
                 </td>
                 <td className="px-4 py-2 text-slate-600">
                   {p.categoria}
-                  {p.rastreador_avulso && <span className="ml-1 rounded bg-cyan-50 px-1 text-[10px] uppercase text-cyan-700">opcional</span>}
+                  {p.rastreador_avulso && <span className="ml-1 rounded bg-cyan-50 px-1 text-[0.625rem] uppercase text-cyan-700">opcional</span>}
                 </td>
                 <td className="px-4 py-2 text-xs text-slate-600">
                   {rotuloTiposDoProduto(p.id, tiposPorProduto, nomeDoTipo)}

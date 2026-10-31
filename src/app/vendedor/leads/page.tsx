@@ -49,7 +49,7 @@ export default function LeadsVendedorPage() {
           <button
             key={f.chave || 'todos'}
             onClick={() => setEtapa(f.chave)}
-            className={`rounded-full px-3 py-1.5 text-[12px] font-semibold transition ${
+            className={`rounded-full px-3 py-1.5 text-[0.75rem] font-semibold transition ${
               etapa === f.chave
                 ? 'bg-acao text-white'
                 : 'bg-superficie text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50'
@@ -98,28 +98,28 @@ export default function LeadsVendedorPage() {
               <li key={l.id} className="rounded-2xl border border-slate-200/80 bg-superficie p-3.5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="truncate text-[14px] font-semibold text-slate-900">{l.nome}</p>
-                    <p className="mt-0.5 text-[12px] text-slate-500">
+                    <p className="truncate text-[0.875rem] font-semibold text-slate-900">{l.nome}</p>
+                    <p className="mt-0.5 text-[0.75rem] text-slate-500">
                       {l.celular}
                       {l.placa && <span className="ml-2 font-mono uppercase text-slate-600">{l.placa}</span>}
                     </p>
                     {(l.marca || l.modelo) && (
-                      <p className="text-[11.5px] text-slate-400">
+                      <p className="text-[0.7188rem] text-slate-400">
                         {[l.marca, l.modelo].filter(Boolean).join(' ')}
                         {l.valor_fipe ? ` · FIPE ${formatCurrency(l.valor_fipe)}` : ''}
                       </p>
                     )}
                     {l.status === 'PERDIDO' && l.perdido_motivo && (
-                      <p className="mt-1 text-[11.5px] text-rose-600">Motivo: {l.perdido_motivo}</p>
+                      <p className="mt-1 text-[0.7188rem] text-rose-600">Motivo: {l.perdido_motivo}</p>
                     )}
                   </div>
                   <div className="shrink-0 text-right">
-                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset ${selo.classe}`}>
+                    <span className={`rounded-full px-2 py-0.5 text-[0.6875rem] font-medium ring-1 ring-inset ${selo.classe}`}>
                       {selo.rotulo}
                     </span>
-                    <p className="tnum mt-1 text-[10.5px] text-slate-400">{formatDate(l.created_at)}</p>
+                    <p className="tnum mt-1 text-[0.6562rem] text-slate-400">{formatDate(l.created_at)}</p>
                     {l.origem_hotlink && (
-                      <p className="text-[10.5px] font-medium text-cyan-600">pelo meu link</p>
+                      <p className="text-[0.6562rem] font-medium text-cyan-600">pelo meu link</p>
                     )}
                   </div>
                 </div>
@@ -129,19 +129,19 @@ export default function LeadsVendedorPage() {
                     href={`https://wa.me/55${fone}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-1.5 text-[12px] font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-1.5 text-[0.75rem] font-semibold text-emerald-700 transition hover:bg-emerald-100"
                   >
                     <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
                   </a>
                   <a
                     href={`tel:+55${fone}`}
-                    className="flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-[12px] font-semibold text-slate-600 transition hover:bg-slate-50"
+                    className="flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-[0.75rem] font-semibold text-slate-600 transition hover:bg-slate-50"
                   >
                     <Phone className="h-3.5 w-3.5" /> Ligar
                   </a>
                   <Link
                     href={`/vendedor/leads/${l.id}`}
-                    className="flex items-center justify-center gap-1 rounded-lg bg-acao px-3 py-1.5 text-[12px] font-semibold text-white transition hover:bg-acao-escura"
+                    className="flex items-center justify-center gap-1 rounded-lg bg-acao px-3 py-1.5 text-[0.75rem] font-semibold text-white transition hover:bg-acao-escura"
                   >
                     Abrir <ChevronRight className="h-3.5 w-3.5" />
                   </Link>

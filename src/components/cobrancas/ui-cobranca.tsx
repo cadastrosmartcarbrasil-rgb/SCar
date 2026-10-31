@@ -34,7 +34,7 @@ const CLASSE_SEMAFORO: Record<Semaforo, string> = {
 
 export function SeloSemaforo({ s }: { s: Semaforo }) {
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset ${CLASSE_SEMAFORO[s]}`}>
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[0.6875rem] font-medium ring-1 ring-inset ${CLASSE_SEMAFORO[s]}`}>
       <span className="h-1.5 w-1.5 rounded-full" style={{ background: COR_SEMAFORO[s] }} />
       {ROTULO_SEMAFORO[s]}
     </span>
@@ -64,7 +64,7 @@ export function TileCobranca({
   const corpo = (
     <>
       <div className="flex items-start justify-between gap-2">
-        <p className="text-[11.5px] font-semibold uppercase leading-tight tracking-wide text-slate-500">{titulo}</p>
+        <p className="text-[0.7188rem] font-semibold uppercase leading-tight tracking-wide text-slate-500">{titulo}</p>
         <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-[10px] ${CHIP[tom]}`}>
           <Icon className="h-4 w-4" strokeWidth={2} />
         </span>
@@ -72,11 +72,11 @@ export function TileCobranca({
       {carregando ? (
         <div className="mt-3 h-7 w-24 animate-pulse rounded bg-slate-100" />
       ) : (
-        <p className="tnum mt-2.5 text-[23px] font-bold leading-none text-slate-900">{valor}</p>
+        <p className="tnum mt-2.5 text-[1.4375rem] font-bold leading-none text-slate-900">{valor}</p>
       )}
-      {detalhe && <div className="mt-2 text-[11.5px] leading-tight text-slate-500">{detalhe}</div>}
+      {detalhe && <div className="mt-2 text-[0.7188rem] leading-tight text-slate-500">{detalhe}</div>}
       {rodape && <div className="mt-1.5">{rodape}</div>}
-      {onAbrir && <p className="mt-2 text-[11px] font-medium text-cyan-600">{rotuloAcao}</p>}
+      {onAbrir && <p className="mt-2 text-[0.6875rem] font-medium text-cyan-600">{rotuloAcao}</p>}
     </>
   );
   const classe = 'rounded-2xl border border-slate-200/80 bg-superficie p-4 text-left shadow-[0_1px_2px_rgba(20,33,61,0.04),0_10px_26px_-16px_rgba(20,33,61,0.18)]';
@@ -106,7 +106,7 @@ export function FiltroUnidadeCobranca({
 
   return (
     <label className="block min-w-[190px]">
-      <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Regional</span>
+      <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">Regional</span>
       <select
         value={valor ?? ''}
         onChange={(e) => onChange(e.target.value || null)}
@@ -187,8 +187,8 @@ export function ModalBoletos({ filtro, onClose }: { filtro: FiltroListaBoletos |
         <Vazio icon={Search} titulo="Nenhum boleto" descricao="Nada compõe este número no filtro atual." />
       ) : (
         <div className="max-h-[60vh] overflow-auto rounded-xl border border-slate-200">
-          <table className="w-full text-[12.5px]">
-            <thead className="sticky top-0 bg-slate-50 text-left text-[11px] uppercase tracking-wide text-slate-500">
+          <table className="w-full text-[0.7812rem]">
+            <thead className="sticky top-0 bg-slate-50 text-left text-[0.6875rem] uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-3 py-2">Associado</th>
                 <th className="px-3 py-2">Placa</th>
@@ -204,18 +204,18 @@ export function ModalBoletos({ filtro, onClose }: { filtro: FiltroListaBoletos |
                 <tr key={l.boleto_id} className="border-t border-slate-100">
                   <td className="px-3 py-1.5">
                     <p className="font-medium text-slate-800">{l.associado}</p>
-                    <p className="tnum text-[11px] text-slate-400">{l.cpf_cnpj} · {l.origem === 'MUTUAL' ? 'histórico Mutual' : 'SCar'}</p>
+                    <p className="tnum text-[0.6875rem] text-slate-400">{l.cpf_cnpj} · {l.origem === 'MUTUAL' ? 'histórico Mutual' : 'SCar'}</p>
                   </td>
                   <td className="px-3 py-1.5 text-slate-600">{l.placa ?? '—'}</td>
                   <td className="px-3 py-1.5 text-slate-600">{l.regional}</td>
                   <td className="tnum px-3 py-1.5 text-slate-600">{formatDate(l.vencimento)} <span className="text-slate-400">· c{l.ciclo}</span></td>
                   <td className="tnum px-3 py-1.5 text-right text-slate-800">{formatCurrency(Number(l.valor))}</td>
                   <td className="px-3 py-1.5">
-                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${CLASSE_SITUACAO[l.situacao] ?? ''}`}>
+                    <span className={`rounded-full px-2 py-0.5 text-[0.6875rem] font-medium ${CLASSE_SITUACAO[l.situacao] ?? ''}`}>
                       {ROTULO_SITUACAO[l.situacao as SituacaoBoleto] ?? l.situacao}
                     </span>
-                    {l.em_serasa && <span className="ml-1 text-[10.5px] font-semibold text-rose-600">SERASA</span>}
-                    {l.data_pagamento && <span className="ml-1 text-[11px] text-slate-400">pago {formatDate(l.data_pagamento)}</span>}
+                    {l.em_serasa && <span className="ml-1 text-[0.6562rem] font-semibold text-rose-600">SERASA</span>}
+                    {l.data_pagamento && <span className="ml-1 text-[0.6875rem] text-slate-400">pago {formatDate(l.data_pagamento)}</span>}
                   </td>
                   <td className="tnum px-3 py-1.5 text-right text-slate-600">{l.dias_atraso > 0 ? `${l.dias_atraso} d` : '—'}</td>
                 </tr>

@@ -57,17 +57,17 @@ export function AceitePresencial({ lead, cotacao, onClose }: {
   return (
     <Modal open onClose={onClose} title="Colher aceite do cliente">
       <form onSubmit={gravar} className="space-y-3">
-        <div className="rounded-xl bg-brand-50 px-3.5 py-3 text-[12.5px] text-brand-900">
+        <div className="rounded-xl bg-brand-50 px-3.5 py-3 text-[0.7812rem] text-brand-900">
           <p className="flex items-center justify-between">
             <span>Mensalidade</span>
-            <b className="tnum text-[15px] text-brand-700">{formatCurrency(mensalidade)}</b>
+            <b className="tnum text-[0.9375rem] text-brand-700">{formatCurrency(mensalidade)}</b>
           </p>
           {adesao > 0 && (
             <p className="mt-0.5 flex items-center justify-between text-slate-600">
               <span>Adesão (única)</span> <b className="tnum">{formatCurrency(adesao)}</b>
             </p>
           )}
-          <p className="mt-1.5 text-[11.5px] leading-snug text-slate-600">
+          <p className="mt-1.5 text-[0.7188rem] leading-snug text-slate-600">
             Leia os valores e o que está incluso para o cliente antes de registrar. O aceite fica
             gravado com data, hora e o seu usuário.
           </p>
@@ -76,7 +76,7 @@ export function AceitePresencial({ lead, cotacao, onClose }: {
         <FormField label="Nome completo de quem contrata">
           <Input value={nome} onChange={(e) => setNome(e.target.value)} autoFocus />
           {nome.trim() !== '' && !nomeCompleto && (
-            <p className="mt-0.5 text-[11px] text-rose-500">Nome e sobrenome.</p>
+            <p className="mt-0.5 text-[0.6875rem] text-rose-500">Nome e sobrenome.</p>
           )}
         </FormField>
 
@@ -87,11 +87,11 @@ export function AceitePresencial({ lead, cotacao, onClose }: {
             inputMode="numeric"
           />
           {documento.length >= 11 && !docValido && (
-            <p className="mt-0.5 text-[11px] text-rose-500">CPF/CNPJ inválido.</p>
+            <p className="mt-0.5 text-[0.6875rem] text-rose-500">CPF/CNPJ inválido.</p>
           )}
         </FormField>
 
-        <label className="flex items-start gap-2 rounded-xl border border-slate-200 p-3 text-[12px] text-slate-600">
+        <label className="flex items-start gap-2 rounded-xl border border-slate-200 p-3 text-[0.75rem] text-slate-600">
           <input
             type="checkbox" checked={confirmado} onChange={(e) => setConfirmado(e.target.checked)}
             className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300"
@@ -102,7 +102,7 @@ export function AceitePresencial({ lead, cotacao, onClose }: {
           </span>
         </label>
 
-        <p className="text-[11px] leading-snug text-slate-400">
+        <p className="text-[0.6875rem] leading-snug text-slate-400">
           Se o cliente preferir aceitar pelo próprio celular, envie o link da proposta pelo
           WhatsApp — o aceite dele entra como &quot;pelo cliente&quot;, com IP e dispositivo.
         </p>

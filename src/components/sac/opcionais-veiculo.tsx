@@ -126,12 +126,12 @@ export function ModalOpcionaisVeiculo({ veiculo, planoNome, onClose }: {
                     />
                     {p.nome}
                     {p.foraDoTipo && (
-                      <span className="rounded bg-amber-100 px-1.5 py-px text-[10px] uppercase text-amber-800">
+                      <span className="rounded bg-amber-100 px-1.5 py-px text-[0.625rem] uppercase text-amber-800">
                         não atende este tipo — não é cobrado
                       </span>
                     )}
                     {!p.status && (
-                      <span className="rounded bg-slate-100 px-1.5 py-px text-[10px] uppercase text-slate-500">fora de venda</span>
+                      <span className="rounded bg-slate-100 px-1.5 py-px text-[0.625rem] uppercase text-slate-500">fora de venda</span>
                     )}
                   </span>
                   <span className="tnum text-xs text-slate-500">

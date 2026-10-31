@@ -49,8 +49,8 @@ export function UnidadesSupervisor({ usuarioId, papel }: { usuarioId: string; pa
 
   return (
     <div className="rounded-xl border border-cyan-200 bg-cyan-50/40 p-3">
-      <p className="text-[11.5px] font-semibold uppercase tracking-wide text-slate-500">{supervisor ? 'Unidades do supervisor' : eventos ? 'Unidades de atuação (eventos)' : 'Unidades de atuação'}</p>
-      <p className="mb-2 mt-0.5 text-[11.5px] leading-relaxed text-slate-500">
+      <p className="text-[0.7188rem] font-semibold uppercase tracking-wide text-slate-500">{supervisor ? 'Unidades do supervisor' : eventos ? 'Unidades de atuação (eventos)' : 'Unidades de atuação'}</p>
+      <p className="mb-2 mt-0.5 text-[0.7188rem] leading-relaxed text-slate-500">
         {supervisor
           ? 'O supervisor enxerga o cadastro e a cobrança dessas unidades (painel, calendário e comparativos).'
           : eventos
@@ -69,7 +69,7 @@ export function UnidadesSupervisor({ usuarioId, papel }: { usuarioId: string; pa
             <input type="checkbox" className="h-4 w-4 rounded border-slate-300"
               checked={marcadas.includes(r.id)}
               onChange={(e) => setMarcadas(e.target.checked ? [...marcadas, r.id] : marcadas.filter((x) => x !== r.id))} />
-            {r.nome}{!r.ativo && <span className="text-[11px] text-slate-400">(inativa)</span>}
+            {r.nome}{!r.ativo && <span className="text-[0.6875rem] text-slate-400">(inativa)</span>}
           </label>
         ))}
       </div>

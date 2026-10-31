@@ -41,7 +41,7 @@ export default function LeadVendedorPage({ params }: { params: Promise<{ id: str
         <Link href="/vendedor/leads" className="inline-flex items-center gap-1 text-sm text-slate-500">
           <ArrowLeft className="h-4 w-4" /> Meus leads
         </Link>
-        <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[12.5px] text-amber-900">
+        <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[0.7812rem] text-amber-900">
           Este lead não está na sua carteira.
         </p>
       </div>
@@ -74,7 +74,7 @@ export default function LeadVendedorPage({ params }: { params: Promise<{ id: str
             {lead.email && <span className="ml-2">{lead.email}</span>}
           </p>
         </div>
-        <span className={`rounded-full px-2.5 py-1 text-[12px] font-medium ring-1 ring-inset ${selo.classe}`}>
+        <span className={`rounded-full px-2.5 py-1 text-[0.75rem] font-medium ring-1 ring-inset ${selo.classe}`}>
           {selo.rotulo}
         </span>
       </header>
@@ -82,13 +82,13 @@ export default function LeadVendedorPage({ params }: { params: Promise<{ id: str
       <div className="flex gap-2">
         <a
           href={`https://wa.me/55${fone}`} target="_blank" rel="noreferrer"
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-[12.5px] font-semibold text-emerald-700 transition hover:bg-emerald-100"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-[0.7812rem] font-semibold text-emerald-700 transition hover:bg-emerald-100"
         >
           <MessageCircle className="h-4 w-4" /> WhatsApp
         </a>
         <a
           href={`tel:+55${fone}`}
-          className="flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-[12.5px] font-semibold text-slate-600 transition hover:bg-slate-50"
+          className="flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-[0.7812rem] font-semibold text-slate-600 transition hover:bg-slate-50"
         >
           <Phone className="h-4 w-4" /> Ligar
         </a>
@@ -96,7 +96,7 @@ export default function LeadVendedorPage({ params }: { params: Promise<{ id: str
 
       <Card>
         <CardHeader><CardTitle>Veículo cotado</CardTitle></CardHeader>
-        <CardContent className="grid gap-3 text-[13px] sm:grid-cols-2">
+        <CardContent className="grid gap-3 text-[0.8125rem] sm:grid-cols-2">
           <Campo rotulo="Placa" valor={lead.placa} mono />
           <Campo rotulo="Marca / modelo" valor={[lead.marca, lead.modelo].filter(Boolean).join(' ')} />
           <Campo rotulo="Ano" valor={lead.ano_modelo ? String(lead.ano_modelo) : null} />
@@ -108,8 +108,8 @@ export default function LeadVendedorPage({ params }: { params: Promise<{ id: str
 
       {lead.aceite_em && (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-          <p className="text-[13px] font-bold text-emerald-800">Cliente aceitou a proposta</p>
-          <p className="mt-1 text-[12px] leading-relaxed text-emerald-900/80">
+          <p className="text-[0.8125rem] font-bold text-emerald-800">Cliente aceitou a proposta</p>
+          <p className="mt-1 text-[0.75rem] leading-relaxed text-emerald-900/80">
             {lead.aceite_nome} aceitou em {formatDate(lead.aceite_em)}. A venda está com o back-office,
             que completa a ficha e a vistoria e manda para a Auditoria.
           </p>
@@ -118,8 +118,8 @@ export default function LeadVendedorPage({ params }: { params: Promise<{ id: str
 
       {podeAprovar && (
         <div className="rounded-2xl border border-teal-200 bg-teal-50 p-4">
-          <p className="text-[13px] font-bold text-teal-900">Cliente fechou?</p>
-          <p className="mt-1 text-[12px] leading-relaxed text-teal-900/80">
+          <p className="text-[0.8125rem] font-bold text-teal-900">Cliente fechou?</p>
+          <p className="mt-1 text-[0.75rem] leading-relaxed text-teal-900/80">
             Marque a cotação como aprovada: a venda passa ao back-office, que manda o link da
             vistoria e completa a ficha. Preencha antes os dados do associado abaixo.
           </p>
@@ -148,13 +148,13 @@ export default function LeadVendedorPage({ params }: { params: Promise<{ id: str
             {(cotacoes ?? []).slice(0, 1).map((c) => (
               <div key={c.id} className="space-y-3">
                 <div className="flex items-baseline justify-between gap-3 rounded-xl bg-brand-50 px-3 py-2.5">
-                  <span className="text-[12px] text-slate-500">Mensalidade</span>
-                  <span className="tnum text-[17px] font-bold text-brand-700">
+                  <span className="text-[0.75rem] text-slate-500">Mensalidade</span>
+                  <span className="tnum text-[1.0625rem] font-bold text-brand-700">
                     {formatCurrency(Number(c.total_com_desconto ?? c.total_mensalidade))}
                   </span>
                 </div>
                 {Number(c.valor_assistencia_profissional) > 0 && (
-                  <p className="-mt-1.5 text-[11.5px] text-slate-500">
+                  <p className="-mt-1.5 text-[0.7188rem] text-slate-500">
                     Inclui {formatCurrency(Number(c.valor_assistencia_profissional))} de Assistência Profissional (o cliente não vê).
                   </p>
                 )}
@@ -164,7 +164,7 @@ export default function LeadVendedorPage({ params }: { params: Promise<{ id: str
                 {!lead.aceite_em && podeEditarCotacao(lead.status) && (
                   <button
                     type="button" onClick={() => setColhendoAceite(c)}
-                    className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-300 px-3 py-2 text-[12px] font-semibold text-slate-600 transition hover:bg-slate-50"
+                    className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-300 px-3 py-2 text-[0.75rem] font-semibold text-slate-600 transition hover:bg-slate-50"
                   >
                     <Handshake className="h-3.5 w-3.5" /> Cliente aqui comigo: colher aceite
                   </button>
@@ -189,7 +189,7 @@ export default function LeadVendedorPage({ params }: { params: Promise<{ id: str
         <CardContent className="space-y-3">
           {!vistoriaAberta && !fechado ? (
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-center">
-              <p className="text-[12.5px] text-slate-500">
+              <p className="text-[0.7812rem] text-slate-500">
                 Fez a venda? Abra a vistoria e tire as fotos com o cliente ainda ao lado do carro.
               </p>
               <Button className="mt-3" onClick={() => setVistoriaAberta(true)}>
@@ -212,7 +212,7 @@ export default function LeadVendedorPage({ params }: { params: Promise<{ id: str
           </p>
         </CardHeader>
         <CardContent>
-          <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-[12.5px] font-semibold text-slate-600 transition hover:bg-slate-50">
+          <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-[0.7812rem] font-semibold text-slate-600 transition hover:bg-slate-50">
             {uploadCrlv.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
             {lead.crlv_url ? 'Substituir CRLV' : 'Enviar CRLV'}
             <input
@@ -242,7 +242,7 @@ export default function LeadVendedorPage({ params }: { params: Promise<{ id: str
 function Campo({ rotulo, valor, mono }: { rotulo: string; valor?: string | null; mono?: boolean }) {
   return (
     <div>
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{rotulo}</p>
+      <p className="text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-400">{rotulo}</p>
       <p className={`mt-0.5 text-slate-800 ${mono ? 'font-mono uppercase' : ''}`}>{valor || '—'}</p>
     </div>
   );

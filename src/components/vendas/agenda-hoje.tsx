@@ -29,7 +29,7 @@ export function AgendaHoje() {
         <h2 className="flex items-center gap-1.5 text-sm font-semibold text-slate-800">
           <AlarmClock className="h-4 w-4 text-cyan-600" /> Contatos de hoje
         </h2>
-        <div className="flex items-center gap-1.5 text-[11px]">
+        <div className="flex items-center gap-1.5 text-[0.6875rem]">
           {atrasados > 0 && (
             <span className="rounded-full bg-rose-100 px-2 py-0.5 font-semibold text-rose-700">
               {atrasados} atrasado{atrasados > 1 ? 's' : ''}
@@ -51,16 +51,16 @@ export function AgendaHoje() {
             <li key={l.id} className="flex items-center gap-2 py-2">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <Link href={`/vendas/${l.id}`} className="truncate text-[13px] font-medium text-slate-900 hover:text-brand-700">
+                  <Link href={`/vendas/${l.id}`} className="truncate text-[0.8125rem] font-medium text-slate-900 hover:text-brand-700">
                     {l.nome}
                   </Link>
                   {situacao !== 'SEM_AGENDA' && (
-                    <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${SELO_AGENDA[situacao].cor}`}>
+                    <span className={`shrink-0 rounded px-1.5 py-0.5 text-[0.625rem] font-medium ${SELO_AGENDA[situacao].cor}`}>
                       {rotuloRetorno(l.proximo_contato_em)}
                     </span>
                   )}
                 </div>
-                <p className="truncate text-[11.5px] text-slate-500">
+                <p className="truncate text-[0.7188rem] text-slate-500">
                   {l.proximo_contato_nota
                     ?? [l.marca, l.modelo].filter(Boolean).join(' ')
                     ?? l.celular}

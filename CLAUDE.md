@@ -6382,3 +6382,17 @@ no fim — o runner procura por "PASSARAM") e rode `npm run schema`.
   estão no repositório. Se algo falhar, conserte o script — não crie um caminho paralelo.
 - **Antes de responder "não dá"** sobre acesso a repo/arquivo, confira o branch: o
   deploy e o trabalho vivem em `claude/claude-md-opcao-x-98kfj5`.
+
+## ESCALA PARA DESKTOP E COTAÇÃO DE APRESENTAÇÃO (31/10/2026, só visual — sem migration)
+Pedido do usuário: no PC sobrava espaço, a letra era pequena e a tela de cotação era estreita e sem presença.
+- **Causa da letra pequena:** ~900 classes `text-[11px]`/`text-[12px]`… em PIXEL (130 arquivos), iguais em qualquer monitor. Viraram
+  `text-[0.6875rem]` etc. (rem). **Classe nova de texto: use `text-xs`/`text-sm`/rem, nunca `text-[Npx]`.**
+- **`globals.css` (bloco "ESCALA PARA DESKTOP")**, um lugar só: raiz 17px ≥1280, 18px ≥1536, 20px ≥1920 (só `screen`; PDF/impressão
+  intactos) e, de 1024px para cima, o texto miúdo sobe um degrau (10→12px, 11→13px, 12→14px, 13→15px). Abaixo de 1024px nada mudou.
+  Para desfazer: apagar o bloco.
+- **Cotação (`/vendas/novo` e `/vendedor/leads/novo`, mesmo `<NovoLeadCotacao>`):** largura até 1500px, 2 colunas no PC (veículo e
+  dados do lead à esquerda, planos à direita; no celular segue 1-2-3), barra de ação que acompanha a rolagem. Planos num painel
+  **escuro nos dois temas** (`bg-faixa`) com `<CartaoDoPlano>` (`src/components/vendas/cartao-plano.tsx`): ícone, nome, preço grande,
+  botão, itens ao selecionar. Botão **"Apresentar ao cliente"** esconde o formulário e a barra (nada interno aparece: Assistência
+  Profissional continua só no formulário). Lógica de preço/preferencial/valor oculto **não mudou**.
+- `/vendas/[id]` passou de `max-w-5xl` para `max-w-7xl`.

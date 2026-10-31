@@ -26,7 +26,7 @@ export function CampoAssistenciaProfissional({ regras, valor, onChange }: {
       </label>
       <div className="mt-1.5 grid gap-2 sm:grid-cols-[180px_1fr] sm:items-center">
         <MoneyInput value={valor} onChange={onChange} placeholder="0,00" />
-        <p className="text-[11.5px] leading-snug text-slate-500">
+        <p className="text-[0.7188rem] leading-snug text-slate-500">
           Entre {formatCurrency(regras?.minimo ?? 1)} e {formatCurrency(regras?.maximo ?? 40)}
           {regras?.regional_nome ? ` (${regras.regional_nome})` : ''}. Entra no total da mensalidade e fica fora do desconto.{' '}
           {regras?.paga
@@ -35,7 +35,7 @@ export function CampoAssistenciaProfissional({ regras, valor, onChange }: {
           <b>O cliente não vê esta linha.</b>
         </p>
       </div>
-      {erro && <p className="mt-1 text-[11.5px] text-rose-600">{erro}</p>}
+      {erro && <p className="mt-1 text-[0.7188rem] text-rose-600">{erro}</p>}
     </div>
   );
 }

@@ -91,7 +91,7 @@ export function HistoricoEventosLista() {
 
       <div className="flex flex-wrap items-end gap-3">
         <label className="block min-w-[220px] flex-1">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Buscar</span>
+          <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">Buscar</span>
           <div className="relative mt-1">
             <Search className="pointer-events-none absolute left-2.5 top-2 h-4 w-4 text-slate-400" />
             <input
@@ -103,7 +103,7 @@ export function HistoricoEventosLista() {
           </div>
         </label>
         <label className="block">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Tipo</span>
+          <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">Tipo</span>
           <select
             value={f.tipo ?? ''}
             onChange={(e) => muda({ tipo: e.target.value || null })}
@@ -114,7 +114,7 @@ export function HistoricoEventosLista() {
           </select>
         </label>
         <label className="block">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Kanban</span>
+          <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">Kanban</span>
           <select
             value={f.noKanban === null ? '' : f.noKanban ? 'sim' : 'nao'}
             onChange={(e) => muda({ noKanban: e.target.value === '' ? null : e.target.value === 'sim' })}
@@ -126,12 +126,12 @@ export function HistoricoEventosLista() {
           </select>
         </label>
         <label className="block">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">De</span>
+          <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">De</span>
           <input type="date" value={f.de ?? ''} onChange={(e) => muda({ de: e.target.value || null })}
             className="mt-1 block rounded-lg border border-slate-300 bg-superficie px-2.5 py-1.5 text-sm" />
         </label>
         <label className="block">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Até</span>
+          <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">Até</span>
           <input type="date" value={f.ate ?? ''} onChange={(e) => muda({ ate: e.target.value || null })}
             className="mt-1 block rounded-lg border border-slate-300 bg-superficie px-2.5 py-1.5 text-sm" />
         </label>
@@ -195,15 +195,15 @@ export function HistoricoEventosLista() {
                   <td className="tnum px-4 py-2.5 text-slate-600">{e.data_evento ? formatDate(e.data_evento) : '—'}</td>
                   <td className="px-4 py-2.5">
                     <Link href={`/associados/${e.cliente_id}`} className="font-medium text-slate-800 hover:text-cyan-700">{e.associado}</Link>
-                    {e.unidade && <span className="block text-[11px] text-slate-400">{e.unidade}</span>}
+                    {e.unidade && <span className="block text-[0.6875rem] text-slate-400">{e.unidade}</span>}
                   </td>
                   <td className="px-4 py-2.5">
                     {e.placa ? <span className="rounded bg-slate-100 px-2 py-0.5 font-mono text-xs font-semibold text-slate-700">{e.placa}</span> : '—'}
-                    {!e.veiculo_id && e.placa && <span className="block text-[11px] text-slate-400">fora da base</span>}
+                    {!e.veiculo_id && e.placa && <span className="block text-[0.6875rem] text-slate-400">fora da base</span>}
                   </td>
                   <td className="px-4 py-2.5 text-slate-600">
                     {rotuloTipos(e.tipos)}
-                    {env && <span className="block text-[11px] text-slate-400">{env}</span>}
+                    {env && <span className="block text-[0.6875rem] text-slate-400">{env}</span>}
                   </td>
                   <td className="tnum px-4 py-2.5 text-right text-slate-600">{Number(e.valor_total ?? 0) !== 0 ? formatCurrency(Number(e.valor_total)) : '—'}</td>
                   <td className="px-4 py-2.5 text-xs text-slate-500">

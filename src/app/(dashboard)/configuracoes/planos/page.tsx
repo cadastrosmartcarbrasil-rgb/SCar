@@ -216,7 +216,7 @@ export default function PlanosPage() {
             <div>
               <div className="mb-1 flex items-end justify-between gap-2">
                 <p className="text-sm font-medium text-slate-600">Opcionais do plano</p>
-                <p className="text-[11px] text-slate-400"><b>Incluso</b> = faz parte do plano · <b>Pré-marcado</b> = já vem marcado, o cliente pode tirar ou trocar</p>
+                <p className="text-[0.6875rem] text-slate-400"><b>Incluso</b> = faz parte do plano · <b>Pré-marcado</b> = já vem marcado, o cliente pode tirar ou trocar</p>
               </div>
               <div className="max-h-64 space-y-1 overflow-y-auto rounded-lg border border-slate-200 p-2">
                 {opcionais.length === 0 && <p className="p-2 text-xs text-slate-400">Nenhum opcional cadastrado em Produtos.</p>}
@@ -224,9 +224,9 @@ export default function PlanosPage() {
                   <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded px-2 py-1 text-sm hover:bg-slate-50">
                     <span className="flex min-w-0 items-center gap-2 text-slate-700">
                       {p.nome}
-                      <span className="rounded bg-slate-100 px-1.5 text-[10px] uppercase text-slate-500">{p.categoria}</span>
+                      <span className="rounded bg-slate-100 px-1.5 text-[0.625rem] uppercase text-slate-500">{p.categoria}</span>
                       {tiposPorProduto?.[p.id]?.length ? (
-                        <span className="text-[11px] text-slate-500">só {rotuloTiposDoProduto(p.id, tiposPorProduto, nomeDoTipo)}</span>
+                        <span className="text-[0.6875rem] text-slate-500">só {rotuloTiposDoProduto(p.id, tiposPorProduto, nomeDoTipo)}</span>
                       ) : null}
                     </span>
                     <span className="flex items-center gap-3">
@@ -352,11 +352,11 @@ function PlanoCard({ plano, onEdit, onDelete }: { plano: PlanosProtecaoRow; onEd
         <div className="flex items-center gap-2">
           <Layers className="h-4 w-4 text-brand-500" />
           <h3 className="font-semibold text-slate-800">{plano.nome}</h3>
-          {plano.preferencial && <span className="rounded bg-cyan-500 px-1.5 py-0.5 text-[10px] font-bold uppercase text-white">preferencial</span>}
-          {!plano.ativo && <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] uppercase text-slate-500">inativo</span>}
-          {plano.sem_casco && <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] uppercase text-amber-800">sem casco</span>}
+          {plano.preferencial && <span className="rounded bg-cyan-500 px-1.5 py-0.5 text-[0.625rem] font-bold uppercase text-white">preferencial</span>}
+          {!plano.ativo && <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[0.625rem] uppercase text-slate-500">inativo</span>}
+          {plano.sem_casco && <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[0.625rem] uppercase text-amber-800">sem casco</span>}
           {selosDoPlano(plano).map((s) => (
-            <span key={s} className="rounded bg-cyan-50 px-1.5 py-0.5 text-[10px] uppercase text-cyan-700">{s}</span>
+            <span key={s} className="rounded bg-cyan-50 px-1.5 py-0.5 text-[0.625rem] uppercase text-cyan-700">{s}</span>
           ))}
         </div>
         <div className="flex gap-1">
@@ -366,18 +366,18 @@ function PlanoCard({ plano, onEdit, onDelete }: { plano: PlanosProtecaoRow; onEd
       </div>
       {plano.descricao_comercial && <p className="mt-1 text-xs text-slate-500">{plano.descricao_comercial}</p>}
       {tiposDoPlano.length ? (
-        <p className="mt-2 text-[11px] text-slate-500">
+        <p className="mt-2 text-[0.6875rem] text-slate-500">
           Para: <b>{tiposDoPlano.join(', ')}</b>
         </p>
       ) : (
-        <p className="mt-2 rounded bg-amber-50 px-2 py-1 text-[11px] text-amber-800">
+        <p className="mt-2 rounded bg-amber-50 px-2 py-1 text-[0.6875rem] text-amber-800">
           Oferecido para <b>todos os tipos</b> de veículo. Edite e marque <b>Oferecido para</b> para
           o plano não aparecer na cotação de carro, moto e pesado ao mesmo tempo.
         </p>
       )}
       {premarcados.length > 0 && (
         <div className="mt-2">
-          <p className="text-[10px] font-medium uppercase text-slate-400">Pré-marcados (removíveis)</p>
+          <p className="text-[0.625rem] font-medium uppercase text-slate-400">Pré-marcados (removíveis)</p>
           <ul className="mt-1 flex flex-wrap gap-1">
             {premarcados.map((n) => (
               <li key={n} className="rounded bg-cyan-50 px-2 py-0.5 text-xs text-cyan-700">{n}</li>
@@ -386,7 +386,7 @@ function PlanoCard({ plano, onEdit, onDelete }: { plano: PlanosProtecaoRow; onEd
         </div>
       )}
       <div className="mt-3">
-        <p className="text-[10px] font-medium uppercase text-slate-400">Opcionais</p>
+        <p className="text-[0.625rem] font-medium uppercase text-slate-400">Opcionais</p>
         {nomes.length === 0 ? (
           <p className="text-xs text-slate-400">{plano.sem_casco ? 'Somente cotação base, sem o casco.' : 'Somente cotação base.'}</p>
         ) : (

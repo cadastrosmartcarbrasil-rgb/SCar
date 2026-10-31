@@ -203,7 +203,7 @@ export function FaturasCompetencia() {
             <span className="text-xs font-medium text-slate-600">Motivo do cancelamento *</span>
             <textarea rows={3} value={motivo} autoFocus onChange={(e) => setMotivo(e.target.value)}
               className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
-            <span className="text-[11px] text-slate-400">Mínimo de {MOTIVO_CANCELAMENTO_MINIMO} caracteres.</span>
+            <span className="text-[0.6875rem] text-slate-400">Mínimo de {MOTIVO_CANCELAMENTO_MINIMO} caracteres.</span>
           </label>
           {cancelar.error && <p className="text-xs text-rose-600">{cancelar.error.message}</p>}
           <div className="flex justify-end gap-2 border-t border-slate-100 pt-3">

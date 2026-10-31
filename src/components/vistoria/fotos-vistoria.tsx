@@ -82,13 +82,13 @@ export function FotosVistoria({ leadId, somenteLeitura, celular, nome }: {
       <div className={`rounded-xl border px-3 py-2.5 ${
         progresso.completa ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
         <div className="flex items-center justify-between gap-2">
-          <p className={`text-[12.5px] font-semibold ${
+          <p className={`text-[0.7812rem] font-semibold ${
             progresso.completa ? 'text-emerald-800' : 'text-amber-900'}`}>
             {progresso.completa
               ? 'Vistoria completa'
               : `${progresso.obrigatoriasFeitas} de ${progresso.obrigatorias} fotos obrigatórias`}
           </p>
-          <span className={`tnum text-[12px] font-bold ${
+          <span className={`tnum text-[0.75rem] font-bold ${
             progresso.completa ? 'text-emerald-700' : 'text-amber-700'}`}>
             {progresso.percentual}%
           </span>
@@ -101,7 +101,7 @@ export function FotosVistoria({ leadId, somenteLeitura, celular, nome }: {
           />
         </div>
         {!progresso.completa && proxima && (
-          <p className="mt-1.5 text-[11px] text-amber-800">
+          <p className="mt-1.5 text-[0.6875rem] text-amber-800">
             Próxima: <b>{proxima.nome}</b>
           </p>
         )}
@@ -114,7 +114,7 @@ export function FotosVistoria({ leadId, somenteLeitura, celular, nome }: {
       )}
 
       {!somenteLeitura && (
-        <p className="text-[11px] leading-snug text-slate-400">
+        <p className="text-[0.6875rem] leading-snug text-slate-400">
           Pode fotografar direto do celular: a imagem é reduzida automaticamente
           (até {LADO_MAXIMO}px, em JPEG) antes de subir, então não precisa se preocupar com o
           tamanho do arquivo.
@@ -204,7 +204,7 @@ function ItemPose({ pose, url, carregandoUrl, enviando, somenteLeitura, onEnviar
                   : <Camera className="h-4 w-4" />}
               </span>
             )}
-            <span className="absolute inset-x-0 bottom-0 hidden items-center justify-center gap-0.5 bg-black/55 py-0.5 text-[9.5px] font-semibold text-white group-hover:flex">
+            <span className="absolute inset-x-0 bottom-0 hidden items-center justify-center gap-0.5 bg-black/55 py-0.5 text-[0.5938rem] font-semibold text-white group-hover:flex">
               <ZoomIn className="h-2.5 w-2.5" /> ampliar
             </span>
           </button>
@@ -215,29 +215,29 @@ function ItemPose({ pose, url, carregandoUrl, enviando, somenteLeitura, onEnviar
         )}
 
         <div className="min-w-0 flex-1">
-          <p className="flex flex-wrap items-center gap-1.5 text-[13.5px] font-semibold text-slate-800">
+          <p className="flex flex-wrap items-center gap-1.5 text-[0.8438rem] font-semibold text-slate-800">
             {pose.enviada && <Check className="h-4 w-4 shrink-0 text-emerald-600" strokeWidth={2.5} />}
             {pose.nome}
             {pose.obrigatorio
-              ? <span className="rounded-full bg-rose-50 px-1.5 py-px text-[10px] font-bold uppercase text-rose-600 ring-1 ring-inset ring-rose-200">obrigatória</span>
-              : <span className="rounded-full bg-slate-100 px-1.5 py-px text-[10px] font-medium uppercase text-slate-500">opcional</span>}
+              ? <span className="rounded-full bg-rose-50 px-1.5 py-px text-[0.625rem] font-bold uppercase text-rose-600 ring-1 ring-inset ring-rose-200">obrigatória</span>
+              : <span className="rounded-full bg-slate-100 px-1.5 py-px text-[0.625rem] font-medium uppercase text-slate-500">opcional</span>}
             {/* 0076 — a ORIGEM importa para quem audita: foto de quem COMPRA o
                 carro se confere diferente da foto de quem o VENDE. */}
             {pose.enviado_pelo_cliente && (
-              <span className="rounded-full bg-cyan-50 px-1.5 py-px text-[10px] font-bold uppercase text-cyan-700 ring-1 ring-inset ring-cyan-200">
+              <span className="rounded-full bg-cyan-50 px-1.5 py-px text-[0.625rem] font-bold uppercase text-cyan-700 ring-1 ring-inset ring-cyan-200">
                 do cliente
               </span>
             )}
           </p>
 
           {pose.enviada ? (
-            <p className="tnum mt-0.5 text-[11px] text-slate-500">
+            <p className="tnum mt-0.5 text-[0.6875rem] text-slate-500">
               {pose.enviada_em ? `enviada em ${formatDateTime(pose.enviada_em)}` : 'enviada'}
               {pose.tamanho_bytes != null && ` · ${tamanhoLegivel(pose.tamanho_bytes)}`}
               {quebrou && <span className="font-semibold text-rose-600"> · não consegui carregar a imagem</span>}
             </p>
           ) : pose.instrucao ? (
-            <p className="mt-0.5 flex items-start gap-1 text-[11.5px] leading-relaxed text-slate-500">
+            <p className="mt-0.5 flex items-start gap-1 text-[0.7188rem] leading-relaxed text-slate-500">
               <Info className="mt-px h-3 w-3 shrink-0 text-slate-400" />
               {pose.instrucao}
             </p>
@@ -257,7 +257,7 @@ function ItemPose({ pose, url, carregandoUrl, enviando, somenteLeitura, onEnviar
                 type="button"
                 onClick={() => input.current?.click()}
                 disabled={enviando}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-acao px-3 py-1.5 text-[12px] font-semibold text-white transition hover:bg-acao-escura disabled:opacity-60"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-acao px-3 py-1.5 text-[0.75rem] font-semibold text-white transition hover:bg-acao-escura disabled:opacity-60"
               >
                 {enviando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
                 {enviando ? 'Enviando...' : pose.enviada ? 'Refazer' : 'Tirar foto'}

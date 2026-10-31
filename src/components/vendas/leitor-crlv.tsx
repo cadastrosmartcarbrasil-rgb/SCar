@@ -118,7 +118,7 @@ export function LeitorCrlv({
 
   return (
     <div className="space-y-3">
-      <p className="flex items-start gap-1.5 rounded-lg bg-slate-50 px-3 py-2 text-[11.5px] leading-relaxed text-slate-600">
+      <p className="flex items-start gap-1.5 rounded-lg bg-slate-50 px-3 py-2 text-[0.7188rem] leading-relaxed text-slate-600">
         <Info className="mt-px h-3.5 w-3.5 shrink-0 text-slate-400" />
         O QR do CRLV-e aponta para a validação no gov.br — ele comprova o documento e costuma
         trazer <b>placa, Renavam e chassi</b>. Marca, modelo e ano continuam vindo da consulta da
@@ -140,7 +140,7 @@ export function LeitorCrlv({
           >
             <X className="h-4 w-4" />
           </button>
-          <p className="absolute inset-x-0 bottom-0 bg-black/60 py-1.5 text-center text-[11px] text-white">
+          <p className="absolute inset-x-0 bottom-0 bg-black/60 py-1.5 text-center text-[0.6875rem] text-white">
             Aponte para o QR Code do CRLV
           </p>
         </div>
@@ -164,13 +164,13 @@ export function LeitorCrlv({
           <p className="flex items-center gap-1.5 text-xs font-semibold text-emerald-800">
             <CheckCircle2 className="h-3.5 w-3.5" /> CRLV registrado
           </p>
-          <dl className="mt-1.5 grid grid-cols-3 gap-2 text-[11.5px]">
+          <dl className="mt-1.5 grid grid-cols-3 gap-2 text-[0.7188rem]">
             <Campo rotulo="Placa" valor={resultado.placa} />
             <Campo rotulo="Renavam" valor={resultado.renavam} />
             <Campo rotulo="Chassi" valor={resultado.chassi} />
           </dl>
           {!qrTrouxeDados(resultado) && (
-            <p className="mt-1.5 flex items-center gap-1 text-[11px] text-emerald-700">
+            <p className="mt-1.5 flex items-center gap-1 text-[0.6875rem] text-emerald-700">
               <QrCode className="h-3 w-3" />
               Este QR só traz o link de validação — preencha os campos do veículo manualmente.
             </p>
@@ -184,7 +184,7 @@ export function LeitorCrlv({
 function Campo({ rotulo, valor }: { rotulo: string; valor: string | null }) {
   return (
     <div>
-      <dt className="text-[10.5px] uppercase tracking-wide text-emerald-700/70">{rotulo}</dt>
+      <dt className="text-[0.6562rem] uppercase tracking-wide text-emerald-700/70">{rotulo}</dt>
       <dd className="tnum font-medium text-emerald-900">{valor ?? '—'}</dd>
     </div>
   );

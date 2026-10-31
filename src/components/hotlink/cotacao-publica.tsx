@@ -194,7 +194,7 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
         <div className="px-6 py-10 text-center">
           <CheckCircle2 className="mx-auto h-14 w-14 text-emerald-500" />
           <h2 className="mt-3 text-xl font-semibold text-brand-800">Proposta aceita!</h2>
-          <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
+          <p className="mt-1 text-[0.8125rem] leading-relaxed text-slate-500">
             Recebemos o seu aceite. {contratado.vistoria
               ? <>Falta só <b>fotografar o seu carro</b> — leva uns 3 minutos, aqui mesmo.</>
               : <>{vendedor ?? 'Seu consultor'} vai confirmar os últimos detalhes e combinar a <b>vistoria do veículo</b>.</>}
@@ -213,7 +213,7 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
           {contratado.vistoria && (
             <a
               href={`/vistoria/${contratado.vistoria}`}
-              className="mx-auto mt-5 flex max-w-xs items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-[14px] font-bold text-white transition hover:bg-emerald-400"
+              className="mx-auto mt-5 flex max-w-xs items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-[0.875rem] font-bold text-white transition hover:bg-emerald-400"
             >
               <Camera className="h-4 w-4" /> Fotografar o meu carro agora
             </a>
@@ -232,7 +232,7 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
           {/* Nao prometemos envio automatico: nao ha rotina que mande este link
               sozinho. O que existe e o vendedor reemitir pela ficha. */}
           {contratado.vistoria && (
-            <p className="mt-3 text-[11.5px] leading-relaxed text-slate-400">
+            <p className="mt-3 text-[0.7188rem] leading-relaxed text-slate-400">
               O link das fotos vale por 7 dias. Se sair agora, peça ao seu consultor que
               reenvie.
             </p>
@@ -251,11 +251,11 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
           <h2 className="mt-3 text-xl font-semibold text-brand-800">
             Você já tem uma proposta aceita
           </h2>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-slate-500">
+          <p className="mt-1.5 text-[0.8125rem] leading-relaxed text-slate-500">
             Encontramos um atendimento seu com a proposta <b>já aceita</b>. Não precisa cotar de
             novo — {vendedor ?? 'seu consultor'} está com ele e vai dar sequência.
           </p>
-          <p className="mt-4 text-[12px] leading-relaxed text-slate-400">
+          <p className="mt-4 text-[0.75rem] leading-relaxed text-slate-400">
             Se você quer mudar o plano ou cotar <b>outro veículo</b>, fale com{' '}
             {vendedor ?? 'seu consultor'}: a alteração é feita no atendimento que já existe, para a
             sua proposta não ficar com dois valores diferentes.
@@ -270,13 +270,13 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
       <Passos atual={etapa} />
 
       {avisoCaptura && (
-        <p className="mx-6 mt-4 flex items-start gap-1.5 rounded-lg bg-cyan-50 px-3 py-2 text-[12px] leading-relaxed text-cyan-900">
+        <p className="mx-6 mt-4 flex items-start gap-1.5 rounded-lg bg-cyan-50 px-3 py-2 text-[0.75rem] leading-relaxed text-cyan-900">
           <BadgeCheck className="mt-px h-3.5 w-3.5 shrink-0" />
           {avisoCaptura}
         </p>
       )}
       {erro && (
-        <p className="mx-6 mt-4 rounded-lg bg-rose-50 px-3 py-2 text-[12.5px] text-rose-700">{erro}</p>
+        <p className="mx-6 mt-4 rounded-lg bg-rose-50 px-3 py-2 text-[0.7812rem] text-rose-700">{erro}</p>
       )}
 
       {/* -------------------------------------------------------- contato */}
@@ -320,7 +320,7 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
                   if (placaCompleta(p)) identificar(p, token);
                 }}
                 placeholder="ABC1D23"
-                className="w-full rounded-xl border border-slate-300 px-3 py-3 text-center font-mono text-[20px] font-bold uppercase tracking-[0.2em] text-brand-800 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
+                className="w-full rounded-xl border border-slate-300 px-3 py-3 text-center font-mono text-[1.25rem] font-bold uppercase tracking-[0.2em] text-brand-800 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
               />
               {identificando && (
                 <Loader2 className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 animate-spin text-cyan-600" />
@@ -331,14 +331,14 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
           {/* Achou: mostra o veiculo identificado e o valor. */}
           {veiculo && (
             <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
-              <p className="flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-wide text-emerald-700">
+              <p className="flex items-center gap-1.5 text-[0.75rem] font-bold uppercase tracking-wide text-emerald-700">
                 <BadgeCheck className="h-3.5 w-3.5" /> Veículo identificado
               </p>
-              <p className="mt-1 text-[15px] font-bold text-brand-800">
+              <p className="mt-1 text-[0.9375rem] font-bold text-brand-800">
                 {[veiculo.marca, veiculo.modelo].filter(Boolean).join(' ') || 'Veiculo'}
                 {veiculo.ano ? <span className="font-normal text-slate-500"> · {veiculo.ano}</span> : null}
               </p>
-              <p className="text-[12px] text-slate-600">
+              <p className="text-[0.75rem] text-slate-600">
                 Valor de referência (FIPE): <b className="tnum">{dinheiro(veiculo.valor_fipe)}</b>
               </p>
             </div>
@@ -347,7 +347,7 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
           {/* Nao achou: nao e erro — o visitante informa o valor de mercado. */}
           {buscou && !veiculo && (
             <>
-              <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[12px] leading-relaxed text-amber-900">
+              <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[0.75rem] leading-relaxed text-amber-900">
                 Não localizamos esta placa na tabela FIPE. Informe o valor de mercado do veículo
                 que a gente cota do mesmo jeito.
               </p>
@@ -366,7 +366,7 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
                 {tipos.map((t) => (
                   <button
                     key={t.id} type="button" onClick={() => setTipoVeiculoId(t.id)}
-                    className={`rounded-xl border px-3 py-2.5 text-[12.5px] font-semibold transition ${
+                    className={`rounded-xl border px-3 py-2.5 text-[0.7812rem] font-semibold transition ${
                       tipoVeiculoId === t.id
                         ? 'border-cyan-500 bg-cyan-50 text-brand-800 ring-1 ring-cyan-400'
                         : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}
@@ -379,7 +379,7 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
           )}
 
           {!buscou && !identificando && (
-            <p className="pt-1 text-center text-[12px] text-slate-400">
+            <p className="pt-1 text-center text-[0.75rem] text-slate-400">
               Assim que a placa estiver completa, buscamos os dados automaticamente.
             </p>
           )}
@@ -411,28 +411,28 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="flex items-center gap-1.5 text-[15px] font-bold text-brand-800">
+                      <p className="flex items-center gap-1.5 text-[0.9375rem] font-bold text-brand-800">
                         {p.nome}
                         {p.preferencial && (
-                          <span className="rounded-full bg-cyan-100 px-1.5 py-0.5 text-[9.5px] font-bold uppercase text-cyan-800">
+                          <span className="rounded-full bg-cyan-100 px-1.5 py-0.5 text-[0.5938rem] font-bold uppercase text-cyan-800">
                             recomendado
                           </span>
                         )}
                       </p>
                       {p.descricao && (
-                        <p className="mt-0.5 text-[11.5px] leading-relaxed text-slate-500">{p.descricao}</p>
+                        <p className="mt-0.5 text-[0.7188rem] leading-relaxed text-slate-500">{p.descricao}</p>
                       )}
                     </div>
                     <div className="shrink-0 text-right">
                       {mostraValor ? (
                         <>
-                          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">por mês</p>
-                          <p className="tnum text-[20px] font-bold leading-tight text-brand-700">
+                          <p className="text-[0.625rem] font-semibold uppercase tracking-wide text-slate-400">por mês</p>
+                          <p className="tnum text-[1.25rem] font-bold leading-tight text-brand-700">
                             {dinheiro(p.mensalidade)}
                           </p>
                         </>
                       ) : (
-                        <p className="rounded-lg border border-slate-200 px-2 py-1 text-[11px] font-semibold text-cyan-700">
+                        <p className="rounded-lg border border-slate-200 px-2 py-1 text-[0.6875rem] font-semibold text-cyan-700">
                           Toque para ver o valor
                         </p>
                       )}
@@ -441,7 +441,7 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
                   {ativo && p.itens.length > 0 && (
                     <ul className="mt-3 grid gap-1 border-t border-cyan-200/70 pt-3 sm:grid-cols-2">
                       {p.itens.map((i) => (
-                        <li key={i.nome} className="flex items-center gap-1.5 text-[11.5px] text-slate-600">
+                        <li key={i.nome} className="flex items-center gap-1.5 text-[0.7188rem] text-slate-600">
                           <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-cyan-600" />
                           {i.nome}
                         </li>
@@ -449,7 +449,7 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
                     </ul>
                   )}
                   {ativo && (p.adesao > 0 || p.participacao > 0 || (p.desconto_base ?? 0) > 0) && (
-                    <p className="mt-2 text-[11px] text-slate-500">
+                    <p className="mt-2 text-[0.6875rem] text-slate-500">
                       {(p.desconto_base ?? 0) > 0 && <>Desconto do plano já aplicado: <b>{dinheiro(p.desconto_base ?? 0)}</b>. </>}
                       {p.adesao > 0 && <>Adesão única de <b>{dinheiro(p.adesao)}</b>. </>}
                       {p.participacao > 0 && <>Participação no evento: <b>{dinheiro(p.participacao)}</b>.</>}
@@ -462,7 +462,7 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
 
           <button
             type="button" onClick={() => setEtapa('aceite')} disabled={!planoId}
-            className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-xl bg-acao px-4 py-3 text-[14px] font-semibold text-white transition hover:bg-acao-escura disabled:opacity-50"
+            className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-xl bg-acao px-4 py-3 text-[0.875rem] font-semibold text-white transition hover:bg-acao-escura disabled:opacity-50"
           >
             Contratar {planoEscolhido?.nome} <ChevronRight className="h-4 w-4" />
           </button>
@@ -499,7 +499,7 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
               ].map((o) => (
                 <button
                   key={o.v} type="button" onClick={() => setAceite({ ...aceite, por: o.v })}
-                  className={`rounded-xl border px-3 py-2.5 text-[12.5px] font-semibold transition ${
+                  className={`rounded-xl border px-3 py-2.5 text-[0.7812rem] font-semibold transition ${
                     aceite.por === o.v
                       ? 'border-cyan-500 bg-cyan-50 text-brand-800 ring-1 ring-cyan-400'
                       : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}
@@ -516,7 +516,7 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
               onChange={(e) => setAceite({ ...aceite, marcado: e.target.checked })}
               className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300"
             />
-            <span className="text-[11.5px] leading-relaxed text-slate-600">
+            <span className="text-[0.7188rem] leading-relaxed text-slate-600">
               Declaro que as informações acima são verdadeiras e aceito contratar o
               <b> {planoEscolhido.nome}</b> nas condições apresentadas. Entendo que a adesão passa por
               <b> análise e vistoria do veículo</b>, e que as mensalidades começam após a aprovação.
@@ -528,7 +528,7 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
           </Botao>
           <button
             type="button" onClick={() => setEtapa('planos')}
-            className="w-full py-1 text-[12px] font-medium text-slate-500 hover:text-slate-700"
+            className="w-full py-1 text-[0.75rem] font-medium text-slate-500 hover:text-slate-700"
           >
             Voltar aos planos
           </button>
@@ -559,7 +559,7 @@ function Passos({ atual }: { atual: string }) {
       {ORDEM_ETAPAS.filter((e) => e !== 'fim').map((e, idx) => (
         <div
           key={e}
-          className={`flex-1 border-b-2 px-2 py-2.5 text-center text-[10.5px] font-bold uppercase tracking-wide transition ${
+          className={`flex-1 border-b-2 px-2 py-2.5 text-center text-[0.6562rem] font-bold uppercase tracking-wide transition ${
             idx === i ? 'border-cyan-500 text-brand-700'
             : idx < i ? 'border-cyan-200 text-slate-400'
             : 'border-transparent text-slate-300'}`}
@@ -576,17 +576,17 @@ function Titulo({ icone: Icone, texto, ajuda }: {
 }) {
   return (
     <div className="pb-1">
-      <h2 className="flex items-center gap-2 text-[17px] font-bold text-brand-800">
+      <h2 className="flex items-center gap-2 text-[1.0625rem] font-bold text-brand-800">
         <Icone className="h-5 w-5 text-cyan-600" /> {texto}
       </h2>
-      {ajuda && <p className="mt-0.5 text-[12px] leading-relaxed text-slate-500">{ajuda}</p>}
+      {ajuda && <p className="mt-0.5 text-[0.75rem] leading-relaxed text-slate-500">{ajuda}</p>}
     </div>
   );
 }
 
 function Rotulo({ children }: { children: React.ReactNode }) {
   return (
-    <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{children}</span>
+    <span className="text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-500">{children}</span>
   );
 }
 
@@ -600,14 +600,14 @@ function Campo({ rotulo, valor, onChange, type = 'text', inputMode, mono, autoFo
       <Rotulo>{rotulo}</Rotulo>
       <div className="relative mt-1">
         {prefixo && (
-          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] font-semibold text-slate-400">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[0.8125rem] font-semibold text-slate-400">
             {prefixo}
           </span>
         )}
         <input
           type={type} value={valor} inputMode={inputMode} autoFocus={autoFocus}
           onChange={(e) => onChange(e.target.value)}
-          className={`w-full rounded-xl border border-slate-300 px-3 py-2.5 text-[14px] text-slate-800 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 ${
+          className={`w-full rounded-xl border border-slate-300 px-3 py-2.5 text-[0.875rem] text-slate-800 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 ${
             mono ? 'font-mono uppercase tracking-wide' : ''} ${prefixo ? 'pl-10' : ''}`}
         />
       </div>
@@ -621,7 +621,7 @@ function Botao({ children, carregando, disabled }: {
   return (
     <button
       type="submit" disabled={carregando || disabled}
-      className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-acao px-4 py-3 text-[14px] font-semibold text-white transition hover:bg-acao-escura disabled:opacity-50"
+      className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-acao px-4 py-3 text-[0.875rem] font-semibold text-white transition hover:bg-acao-escura disabled:opacity-50"
     >
       {carregando && <Loader2 className="h-4 w-4 animate-spin" />}
       {children}
@@ -632,8 +632,8 @@ function Botao({ children, carregando, disabled }: {
 function Linha({ rotulo, valor, destaque }: { rotulo: string; valor: string; destaque?: boolean }) {
   return (
     <div className="flex items-baseline justify-between gap-3 py-0.5">
-      <span className="text-[12px] text-slate-500">{rotulo}</span>
-      <span className={`tnum font-semibold ${destaque ? 'text-[15px] text-brand-700' : 'text-[13px] text-slate-700'}`}>
+      <span className="text-[0.75rem] text-slate-500">{rotulo}</span>
+      <span className={`tnum font-semibold ${destaque ? 'text-[0.9375rem] text-brand-700' : 'text-[0.8125rem] text-slate-700'}`}>
         {valor}
       </span>
     </div>
@@ -672,14 +672,14 @@ export function LinkDaProposta({ token, compacto, celular, nome }: {
         href={`/cotacao/${token}`}
         target="_blank"
         rel="noreferrer"
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-500 px-4 py-3 text-[14px] font-bold text-navy transition hover:bg-cyan-400"
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-500 px-4 py-3 text-[0.875rem] font-bold text-navy transition hover:bg-cyan-400"
       >
         <FileText className="h-4 w-4" /> Ver minha proposta
       </a>
       <div className="flex gap-2">
         <button
           type="button" onClick={copiar}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-300 px-3 py-2 text-[12px] font-semibold text-slate-600 transition hover:bg-slate-50"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-300 px-3 py-2 text-[0.75rem] font-semibold text-slate-600 transition hover:bg-slate-50"
         >
           <Copy className="h-3.5 w-3.5" /> {copiado ? 'Link copiado!' : 'Copiar link'}
         </button>
@@ -689,7 +689,7 @@ export function LinkDaProposta({ token, compacto, celular, nome }: {
             : `https://wa.me/?text=${encodeURIComponent(`Minha proposta Smart Car Brasil: ${url}`)}`}
           target="_blank"
           rel="noreferrer"
-          className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[12px] font-semibold text-emerald-700 transition hover:bg-emerald-100"
+          className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[0.75rem] font-semibold text-emerald-700 transition hover:bg-emerald-100"
         >
           <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
         </a>

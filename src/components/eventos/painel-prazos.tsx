@@ -79,7 +79,7 @@ export function PainelPrazos() {
                 ativo ? 'ring-2 ring-cyan-500' : 'hover:brightness-95',
               )}
             >
-              <p className="text-[11px] font-semibold uppercase tracking-wide">{e.rotulo}</p>
+              <p className="text-[0.6875rem] font-semibold uppercase tracking-wide">{e.rotulo}</p>
               <p className="tnum mt-1 text-2xl font-bold">{contagem[n]}</p>
             </button>
           );
@@ -180,7 +180,7 @@ export function PainelPrazos() {
                   <Link href={`/eventos/${p.evento_id}`} className="font-mono text-brand-600 hover:underline">
                     {p.numero_protocolo}
                   </Link>
-                  <p className="text-[11px] text-slate-500">{p.status}</p>
+                  <p className="text-[0.6875rem] text-slate-500">{p.status}</p>
                 </td>
                 <td className="px-3 py-2">
                   <p className="truncate text-slate-800">{p.cliente_nome}</p>
@@ -207,7 +207,7 @@ export function PainelPrazos() {
                       <BarraPrazo prazo={p} fina />
                     </div>
                   )}
-                  <p className="mt-1 text-[11px] text-slate-500">{textoDoPrazo(p)}</p>
+                  <p className="mt-1 text-[0.6875rem] text-slate-500">{textoDoPrazo(p)}</p>
                 </td>
                 <td className={cn('tnum px-3 py-2', (p.nivel === 'VENCIDO' || p.nivel === 'CRITICO') && 'font-semibold text-rose-700')}>
                   {p.limite_prazo ? formatDate(p.limite_prazo) : '—'}
@@ -222,7 +222,7 @@ export function PainelPrazos() {
           </tbody>
         </table>
       </div>
-      <p className="text-[11px] text-slate-400">
+      <p className="text-[0.6875rem] text-slate-400">
         Ordem: {ORDEM_NIVEL.slice(0, 7).map((n) => estiloDoNivel(n).rotulo).join(' › ')}. Os dias são contados no dia de São
         Paulo; os alertas são gravados pela rotina diária.
       </p>

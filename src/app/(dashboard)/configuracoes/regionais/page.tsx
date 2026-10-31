@@ -171,7 +171,7 @@ export default function RegionaisPage() {
                       <Building2 className={`h-4 w-4 ${r.ativo ? 'text-brand-500' : 'text-slate-400'}`} />
                       <span className={r.ativo ? '' : 'text-slate-500'}>{r.nome}</span>
                       {!r.ativo && (
-                        <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-600">
+                        <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[0.625rem] font-semibold uppercase text-slate-600">
                           Inativa
                         </span>
                       )}
@@ -208,7 +208,7 @@ export default function RegionaisPage() {
                       {Number(bruta?.percentual_maximo_desconto_venda ?? 0).toFixed(2).replace('.', ',')}%
                     </span>
                     {bruta && (
-                      <span className="mt-1 block text-[11px] text-slate-500"
+                      <span className="mt-1 block text-[0.6875rem] text-slate-500"
                         title={bruta.paga_assistencia_profissional ? 'Repassa a Assistência ao consultor no lugar da comissão' : 'Assistência entra na base da comissão'}>
                         Assist. prof. {formatCurrency(Number(bruta.assistencia_profissional_min))}–{formatCurrency(Number(bruta.assistencia_profissional_max))}
                         {bruta.paga_assistencia_profissional ? ' · repassa' : ''}
@@ -340,7 +340,7 @@ export default function RegionaisPage() {
 
           {/* Endereco completo, com busca por CEP (mesmo padrao do fornecedor). */}
           <div className="rounded-xl border border-slate-200 p-3">
-            <p className="mb-2 text-[11.5px] font-semibold uppercase tracking-wide text-slate-500">
+            <p className="mb-2 text-[0.7188rem] font-semibold uppercase tracking-wide text-slate-500">
               Endereço
             </p>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -401,10 +401,10 @@ export default function RegionaisPage() {
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
-            <p className="text-[11.5px] font-semibold uppercase tracking-wide text-slate-500">
+            <p className="text-[0.7188rem] font-semibold uppercase tracking-wide text-slate-500">
               Comissão da franquia
             </p>
-            <p className="mb-2 mt-0.5 text-[11.5px] leading-relaxed text-slate-500">
+            <p className="mb-2 mt-0.5 text-[0.7188rem] leading-relaxed text-slate-500">
               Quanto esta regional recebe da associação. E o <b>teto</b> do que ela pode ceder aos
               seus vendedores — nenhum vendedor pode ter percentual maior que este.
             </p>
@@ -444,7 +444,7 @@ export default function RegionaisPage() {
 
           {/* Assistencia Profissional (0158) — valor do consultor embutido na mensalidade. */}
           <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
-            <h4 className="mb-1 text-[11.5px] font-bold uppercase tracking-wide text-slate-600">
+            <h4 className="mb-1 text-[0.7188rem] font-bold uppercase tracking-wide text-slate-600">
               Assistência Profissional
             </h4>
             <label className="flex items-start gap-2 text-sm text-slate-700">
@@ -482,7 +482,7 @@ export default function RegionaisPage() {
 
           {/* Regras de atribuicao do lead (0041) — sao da franquia, nao do codigo. */}
           <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
-            <h4 className="mb-2.5 text-[11.5px] font-bold uppercase tracking-wide text-slate-600">
+            <h4 className="mb-2.5 text-[0.7188rem] font-bold uppercase tracking-wide text-slate-600">
               Atribuição de leads
             </h4>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -492,7 +492,7 @@ export default function RegionaisPage() {
                   value={editando?.dias_protecao_lead ?? 30}
                   onChange={(e) => setEditando((p) => ({ ...p, dias_protecao_lead: Number(e.target.value || 0) }))}
                 />
-                <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+                <p className="mt-1 text-[0.6875rem] leading-relaxed text-slate-500">
                   Enquanto durar, o lead e de quem captou primeiro: um clique em outro hotlink não
                   troca o dono, só registra a nova passagem. <b>0 desliga</b> (o último clique leva).
                 </p>
@@ -503,7 +503,7 @@ export default function RegionaisPage() {
                   value={editando?.dias_sem_contato_lead ?? 7}
                   onChange={(e) => setEditando((p) => ({ ...p, dias_sem_contato_lead: Number(e.target.value || 0) }))}
                 />
-                <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+                <p className="mt-1 text-[0.6875rem] leading-relaxed text-slate-500">
                   Lead sem interação volta para a unidade redistribuir. <b>0 = nunca volta.</b>
                 </p>
               </FormField>
@@ -516,7 +516,7 @@ export default function RegionaisPage() {
                 <option value="MANUAL">Manual — o gestor distribui</option>
                 <option value="RODIZIO">Rodízio — vai para o próximo da fila</option>
               </Select>
-              <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+              <p className="mt-1 text-[0.6875rem] leading-relaxed text-slate-500">
                 Vale para o lead que entra sem vendedor (devolvido ao pool ou cadastrado pela
                 unidade). O lead do hotlink do vendedor sempre fica com ele. No rodízio entra quem
                 está há mais tempo sem receber lead.
@@ -536,7 +536,7 @@ export default function RegionaisPage() {
                 </option>
               ))}
             </Select>
-            <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+            <p className="mt-1 text-[0.6875rem] leading-relaxed text-slate-500">
               Quem responde pela franquia. O <b>link de vendas e do vendedor</b>, não da unidade —
               cadastre o responsável também como vendedor em Configurações &rarr; Vendedores para
               ele ter o hotlink próprio.

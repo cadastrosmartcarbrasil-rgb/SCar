@@ -187,7 +187,7 @@ export function KanbanBoard() {
 
               {items.length > 0 && atual !== null && (
                 <div className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between gap-2 text-[11px] text-slate-500">
+                  <div className="flex items-center justify-between gap-2 text-[0.6875rem] text-slate-500">
                     <span className="truncate">
                       {tituloFiltro ? `${tituloFiltro} · ${cards.length}` : `Todos · ${cards.length}`}
                     </span>
@@ -217,7 +217,7 @@ export function KanbanBoard() {
                       <p className="flex items-center justify-between gap-2 text-xs font-mono text-brand-600">
                         {evento.numero_protocolo}
                         {veioDoMutual(evento.descricao) && (
-                          <span className="rounded bg-violet-100 px-1.5 py-0.5 font-sans text-[10px] font-semibold uppercase text-violet-700">Mutual</span>
+                          <span className="rounded bg-violet-100 px-1.5 py-0.5 font-sans text-[0.625rem] font-semibold uppercase text-violet-700">Mutual</span>
                         )}
                       </p>
                       <p className="mt-1 text-sm font-medium text-slate-800">
@@ -227,7 +227,7 @@ export function KanbanBoard() {
                       </p>
                       <p className="truncate text-xs text-slate-500">{evento.clientes?.nome_razao_social}</p>
                       {comunicacoes?.get(evento.id) && (
-                        <p className="mt-1 text-[11px] text-slate-500">
+                        <p className="mt-1 text-[0.6875rem] text-slate-500">
                           Comunicações {comunicacoes.get(evento.id)!.respondidas}/{comunicacoes.get(evento.id)!.total}
                         </p>
                       )}
@@ -236,7 +236,7 @@ export function KanbanBoard() {
                           <SeloPrazo prazo={prazoPorId.get(evento.id)!} compacto />
                         </div>
                       )}
-                      <p className="mt-2 flex justify-between gap-2 text-[11px] text-slate-400">
+                      <p className="mt-2 flex justify-between gap-2 text-[0.6875rem] text-slate-400">
                         <span>Ocorrência: {formatDate(evento.data_ocorrencia)}</span>
                         {!tituloFiltro && <span className="truncate">{evento.regionais?.nome ?? 'Matriz'}</span>}
                       </p>

@@ -58,14 +58,14 @@ export function PagamentosModal({ lancamento, onClose }: { lancamento: Lancament
       ) : (
         <div className="space-y-3">
           {doBanco && (
-            <p className="flex items-start gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-[11.5px] text-amber-800">
+            <p className="flex items-start gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-[0.7188rem] text-amber-800">
               <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" />
               Pagamento confirmado pelo banco (Sicredi): o dinheiro entrou na conta, então não se estorna por aqui.
             </p>
           )}
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-200 text-left text-[11px] uppercase tracking-wide text-slate-400">
+              <tr className="border-b border-slate-200 text-left text-[0.6875rem] uppercase tracking-wide text-slate-400">
                 <th className="py-2">Data</th>
                 <th className="py-2">Conta</th>
                 <th className="py-2">Encargos</th>
@@ -104,7 +104,7 @@ export function PagamentosModal({ lancamento, onClose }: { lancamento: Lancament
               <p className="text-sm font-medium text-rose-800">
                 Estornar o pagamento de {formatCurrency((baixas ?? []).find((b) => b.id === estornando)?.valor_pago)}?
               </p>
-              <p className="text-[11.5px] text-rose-700">
+              <p className="text-[0.7188rem] text-rose-700">
                 O valor volta a ficar em aberto no título e sai do saldo da conta. A trilha guarda quem estornou e por quê.
               </p>
               <FormField label="Motivo do estorno *">
@@ -120,7 +120,7 @@ export function PagamentosModal({ lancamento, onClose }: { lancamento: Lancament
             </div>
           )}
           {!podeEstornar && (
-            <p className="text-[11.5px] text-slate-400">
+            <p className="text-[0.7188rem] text-slate-400">
               Estornar pagamento é da permissão Financeiro &gt; Estornar (admin, financeiro ou extra liberado).
             </p>
           )}
@@ -153,7 +153,7 @@ export function ExcluirLancamentoModal({ lancamento, onClose }: { lancamento: La
   return (
     <Modal open onClose={onClose} title="Excluir lançamento" subtitulo={lancamento.descricao}>
       <div className="space-y-3">
-        <p className="flex items-start gap-1.5 rounded-lg bg-rose-50 px-3 py-2 text-[12px] text-rose-800">
+        <p className="flex items-start gap-1.5 rounded-lg bg-rose-50 px-3 py-2 text-[0.75rem] text-rose-800">
           <Trash2 className="mt-px h-3.5 w-3.5 shrink-0" />
           O título de {formatCurrency(lancamento.valor_original)} (venc. {formatDate(lancamento.data_vencimento)}) sai do
           contas a {lancamento.tipo === 'RECEITA' ? 'receber' : 'pagar'}, do DRE e do fluxo de caixa, junto com os anexos.

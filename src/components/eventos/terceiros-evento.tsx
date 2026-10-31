@@ -34,7 +34,7 @@ export function VinculoTerceiro({
 
 export function StatusTerceiroBadge({ status }: { status: StatusTerceiro }) {
   const s = STATUS_TERCEIRO[status];
-  return <span className={`rounded-md border px-2 py-0.5 text-[11px] font-medium ${s.cor}`}>{s.label}</span>;
+  return <span className={`rounded-md border px-2 py-0.5 text-[0.6875rem] font-medium ${s.cor}`}>{s.label}</span>;
 }
 
 /** Aviso usado no topo do protocolo enquanto faltar cadastro de terceiro. */

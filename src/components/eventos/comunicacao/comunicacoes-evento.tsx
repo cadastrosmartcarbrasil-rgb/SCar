@@ -236,7 +236,7 @@ function Versoes({ c }: { c: ComunicacaoCompleta }) {
           </div>
         ))}
       </div>
-      <p className="mt-2 break-all font-mono text-[10px] text-slate-400">SHA-256 {v.hash_conteudo}</p>
+      <p className="mt-2 break-all font-mono text-[0.625rem] text-slate-400">SHA-256 {v.hash_conteudo}</p>
     </div>
   );
 }
@@ -255,7 +255,7 @@ function AnexosDoEnvolvido({ c, eventoId }: { c: ComunicacaoCompleta; eventoId: 
               onClick={async () => { try { window.open(await url.mutateAsync(a.arquivo_url), '_blank', 'noopener'); } catch (e) { toast.error((e as Error).message); } }}>
               {a.pose ?? a.tipo_documento} · {a.nome_original ?? 'arquivo'}
             </button>
-            <span className="flex shrink-0 items-center gap-2 text-[10px] text-slate-400">
+            <span className="flex shrink-0 items-center gap-2 text-[0.625rem] text-slate-400">
               {a.enviado_pelo_envolvido ? 'do envolvido' : 'da equipe'}
               {!a.enviado_pelo_envolvido && !['ENVIADO', 'CONFERIDO'].includes(c.status) && (
                 <button className="text-rose-600" onClick={() => remover.mutate({ id: a.id, arquivo_url: a.arquivo_url })}>remover</button>

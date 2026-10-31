@@ -46,7 +46,7 @@ function Secao({ icone: Icone, titulo, descricao, children }: {
         </span>
         <div>
           <h3 className="text-sm font-semibold text-slate-800">{titulo}</h3>
-          {descricao && <p className="text-[11.5px] leading-snug text-slate-500">{descricao}</p>}
+          {descricao && <p className="text-[0.7188rem] leading-snug text-slate-500">{descricao}</p>}
         </div>
       </header>
       <div className="space-y-3">{children}</div>
@@ -221,20 +221,20 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
         ------------------------------------------------------------------- */}
         <div className="sticky top-0 z-20 -mx-1 rounded-2xl border border-slate-200/80 bg-superficie/95 px-3 py-2.5 backdrop-blur">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="flex items-center gap-1.5 text-[13px] font-semibold text-slate-800">
+            <p className="flex items-center gap-1.5 text-[0.8125rem] font-semibold text-slate-800">
               <ShieldCheck className={`h-4 w-4 ${completo ? 'text-emerald-600' : 'text-amber-500'}`} />
               {completo
                 ? 'Ficha completa — pronta para a Auditoria'
                 : `Faltam ${progresso.total - progresso.concluidos} itens para entrar na base`}
             </p>
             <div className="flex items-center gap-2">
-              <span className="tnum text-[11.5px] font-semibold text-slate-500">
+              <span className="tnum text-[0.7188rem] font-semibold text-slate-500">
                 {progresso.concluidos}/{progresso.total}
               </span>
               <button
                 type="button"
                 onClick={() => setChecklistAberto((v) => !v)}
-                className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-[11.5px] font-medium text-slate-600 lg:hidden"
+                className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-[0.7188rem] font-medium text-slate-600 lg:hidden"
               >
                 Checklist
                 <ChevronDown className={`h-3.5 w-3.5 transition ${checklistAberto ? 'rotate-180' : ''}`} />
@@ -256,12 +256,12 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
               return (
                 <button
                   key={a.id} type="button" onClick={() => setAba(a.id)}
-                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12.5px] font-semibold transition ${
+                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-[0.7812rem] font-semibold transition ${
                     ativa ? 'bg-acao text-white' : 'text-slate-500 hover:bg-slate-100'}`}
                 >
                   {a.titulo}
                   {pendentes > 0 && (
-                    <span className={`tnum grid h-4 min-w-4 place-items-center rounded-full px-1 text-[10px] font-bold ${
+                    <span className={`tnum grid h-4 min-w-4 place-items-center rounded-full px-1 text-[0.625rem] font-bold ${
                       ativa ? 'bg-white/25 text-white' : 'bg-amber-100 text-amber-800'}`}>
                       {pendentes}
                     </span>
@@ -274,7 +274,7 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
           {!completo && faltamAgora && faltamAgora !== aba && (
             <button
               type="button" onClick={() => setAba(faltamAgora)}
-              className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium text-amber-700 underline"
+              className="mt-1.5 inline-flex items-center gap-1 text-[0.6875rem] font-medium text-amber-700 underline"
             >
               <CircleAlert className="h-3 w-3" />
               Há pendência em &quot;{ABAS_FECHAMENTO.find((a) => a.id === faltamAgora)?.titulo}&quot;
@@ -316,7 +316,7 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
           </div>
 
           {form.cliente_existente_id && (
-            <p className="rounded-lg bg-cyan-50 px-3 py-1.5 text-[11.5px] text-cyan-800">
+            <p className="rounded-lg bg-cyan-50 px-3 py-1.5 text-[0.7188rem] text-cyan-800">
               Associado já existe na base — a ficha será atualizada, não duplicada.
             </p>
           )}
@@ -417,7 +417,7 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
           {/* A CONFERENCIA. Divergencia nao se resolve sozinha: cada linha e uma
               decisao de quem esta com o documento na mao. */}
           {conferencia && conferencia.divergencias.length > 0 && (
-            <div className="rounded-xl bg-amber-50 px-3 py-2.5 text-[12.5px] ring-1 ring-inset ring-amber-200">
+            <div className="rounded-xl bg-amber-50 px-3 py-2.5 text-[0.7812rem] ring-1 ring-inset ring-amber-200">
               <p className="flex items-center gap-1.5 font-semibold text-amber-900">
                 <CircleAlert className="h-4 w-4 shrink-0" />
                 A ficha diverge do documento
@@ -432,20 +432,20 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
                     <button
                       type="button"
                       onClick={() => usarDoDocumento(d)}
-                      className="rounded-md bg-amber-200/70 px-2 py-0.5 text-[11.5px] font-semibold hover:bg-amber-200"
+                      className="rounded-md bg-amber-200/70 px-2 py-0.5 text-[0.7188rem] font-semibold hover:bg-amber-200"
                     >
                       usar o do documento
                     </button>
                   </li>
                 ))}
               </ul>
-              <p className="mt-1.5 text-[11px] text-amber-900/70">
+              <p className="mt-1.5 text-[0.6875rem] text-amber-900/70">
                 Nada foi alterado nesses campos — a escolha e sua.
               </p>
             </div>
           )}
           {conferencia && conferencia.divergencias.length === 0 && (
-            <p className="flex items-center gap-1.5 text-[12px] text-emerald-700">
+            <p className="flex items-center gap-1.5 text-[0.75rem] text-emerald-700">
               <ShieldCheck className="h-3.5 w-3.5 shrink-0" /> Conferido com o documento da placa.
             </p>
           )}
@@ -529,7 +529,7 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
                   ? <b className="tnum">{formatCurrency(adesaoTabela)}</b>
                   : <span className="text-amber-700">Gere a cotação: a adesão sai da tabela</span>}
               </div>
-              <p className="mt-1 text-[11px] text-slate-500">
+              <p className="mt-1 text-[0.6875rem] text-slate-500">
                 Vem da cotação aceita. Desconto só pela alçada, na cotação.
               </p>
             </FormField>
@@ -543,7 +543,7 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
             </FormField>
           </div>
 
-          <div className={`rounded-xl border px-3 py-2.5 text-[11.5px] leading-relaxed ${
+          <div className={`rounded-xl border px-3 py-2.5 text-[0.7188rem] leading-relaxed ${
             rateio.entraNoCaixa ? 'border-cyan-200 bg-cyan-50 text-cyan-900' : 'border-slate-200 bg-slate-50 text-slate-700'
           }`}>
             <p className="font-semibold">{rateio.resumo}</p>

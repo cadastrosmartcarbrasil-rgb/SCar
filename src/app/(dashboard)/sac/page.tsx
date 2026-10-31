@@ -90,8 +90,8 @@ export default function SacPage() {
                 <button onClick={() => abrirHit(h)} className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-slate-50">
                   {h.veiculo_id ? <Car className="h-4 w-4 text-cyan-500" /> : <User className="h-4 w-4 text-slate-400" />}
                   <span className="flex-1"><b className="text-slate-800">{h.nome}</b> <span className="text-slate-400">· {h.cpf_cnpj}</span></span>
-                  {h.via && <span className="rounded bg-cyan-50 px-2 py-0.5 text-[11px] text-cyan-700">{h.via}</span>}
-                  {h.veiculo_id && <span className="text-[11px] font-medium text-cyan-700">Atender →</span>}
+                  {h.via && <span className="rounded bg-cyan-50 px-2 py-0.5 text-[0.6875rem] text-cyan-700">{h.via}</span>}
+                  {h.veiculo_id && <span className="text-[0.6875rem] font-medium text-cyan-700">Atender →</span>}
                 </button>
               </li>
             ))}
@@ -135,7 +135,7 @@ export default function SacPage() {
                 className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm transition ${aba === id ? 'border-brand-600 font-medium text-brand-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
                 <Icon className="h-4 w-4" /> {label}
                 {n !== null && (
-                  <span className={`tnum rounded-full px-1.5 text-[11px] ${aba === id ? 'bg-brand-50 text-brand-700' : 'bg-slate-100 text-slate-500'}`}>{n}</span>
+                  <span className={`tnum rounded-full px-1.5 text-[0.6875rem] ${aba === id ? 'bg-brand-50 text-brand-700' : 'bg-slate-100 text-slate-500'}`}>{n}</span>
                 )}
               </button>
             ))}
@@ -188,7 +188,7 @@ function AlertasBanner({ alertas }: { alertas: Visao360['alertas'] }) {
       <ul className="mt-2 space-y-1">
         {alertas.map((a) => (
           <li key={a.id} className="flex flex-wrap items-center gap-2 text-sm text-amber-800">
-            <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${a.severidade === 'ALTA' ? 'bg-rose-200 text-rose-800' : a.severidade === 'BAIXA' ? 'bg-slate-200 text-slate-700' : 'bg-amber-200 text-amber-900'}`}>{a.severidade}</span>
+            <span className={`rounded px-1.5 py-0.5 text-[0.625rem] font-bold ${a.severidade === 'ALTA' ? 'bg-rose-200 text-rose-800' : a.severidade === 'BAIXA' ? 'bg-slate-200 text-slate-700' : 'bg-amber-200 text-amber-900'}`}>{a.severidade}</span>
             <b>{a.nome}</b>
             {a.placa && <span className="font-mono text-xs text-amber-700">· {a.placa}</span>}
             {a.mensagem && <span className="text-amber-700">— {a.mensagem}</span>}
@@ -264,7 +264,7 @@ function ModalProtocoloAssociado({ associado, onClose }: { associado: ClientesRo
     <Modal open onClose={onClose} title="Abrir protocolo do associado" tamanho="lg">
       <form onSubmit={enviar} className="space-y-3">
         <div className="rounded-lg bg-slate-50 p-3 text-sm">
-          <p className="text-[11px] font-semibold uppercase text-slate-400">Associado</p>
+          <p className="text-[0.6875rem] font-semibold uppercase text-slate-400">Associado</p>
           <p className="mt-0.5 font-medium text-slate-700">{associado.nome_razao_social}</p>
           <p className="text-xs text-slate-400">
             {associado.cpf_cnpj} · protocolo sem veículo vinculado (assunto geral)
@@ -328,17 +328,17 @@ function ListaVeiculos({ v360, onSelect }: { v360: Visao360; onSelect: (id: stri
                   <td className="px-4 py-2.5 text-slate-700">
                     <span>{[v.marca, v.modelo].filter(Boolean).join(' ') || '—'}</span>
                     {v.eventos_qtd > 0 && (
-                      <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700">
+                      <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[0.625rem] font-semibold text-rose-700">
                         <AlertTriangle className="h-3 w-3" /> {v.eventos_qtd > 1 ? `${v.eventos_qtd} eventos` : 'Evento'}
                       </span>
                     )}
                     {v.tem_assistencia && (
-                      <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-cyan-50 px-2 py-0.5 text-[10px] font-semibold text-cyan-700">
+                      <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-cyan-50 px-2 py-0.5 text-[0.625rem] font-semibold text-cyan-700">
                         <LifeBuoy className="h-3 w-3" /> Assist 24h
                       </span>
                     )}
                     {v.alertas_qtd > 0 && (
-                      <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                      <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[0.625rem] font-semibold text-amber-700">
                         <Bell className="h-3 w-3" /> {v.alertas_qtd} alerta{v.alertas_qtd > 1 ? 's' : ''}
                       </span>
                     )}
@@ -469,7 +469,7 @@ function AtendimentoVeiculo({ clienteId, associado, veiculoId, podeTrocar, onTro
                       <span className="flex items-center gap-2">
                         <span className="font-mono text-xs text-slate-400">{h.codigo_os ?? h.protocolo}</span>
                         <b className="text-slate-700">{h.servico}</b>
-                        {h.computa_limite && <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[11px] text-amber-700">conta no limite</span>}
+                        {h.computa_limite && <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[0.6875rem] text-amber-700">conta no limite</span>}
                       </span>
                       <span className="flex items-center gap-2 text-xs text-slate-400">
                         {h.prestador ?? ''}
@@ -531,9 +531,9 @@ function VeiculoDetalheCard({ clienteId, veiculo }: { clienteId: string; veiculo
   };
   const dado = (label: string, valor?: string | number | null, sub?: string | null) => (
     <div>
-      <p className="text-[11px] uppercase text-slate-400">{label}</p>
+      <p className="text-[0.6875rem] uppercase text-slate-400">{label}</p>
       <p className="text-sm font-medium text-slate-700">{valor || '—'}</p>
-      {sub && <p className="text-[11px] text-slate-500">{sub}</p>}
+      {sub && <p className="text-[0.6875rem] text-slate-500">{sub}</p>}
     </div>
   );
   const ativacao = primeiraAtivacao(veiculo.data_ativacao);
@@ -544,7 +544,7 @@ function VeiculoDetalheCard({ clienteId, veiculo }: { clienteId: string; veiculo
           <div className="flex items-center gap-2">
             <span className="rounded-md bg-acao px-2.5 py-1 font-mono text-sm font-bold text-white">{identificacaoVeiculo(veiculo.placa, veiculo.chassi)}</span>
             <span className="text-base font-semibold text-slate-800">{[veiculo.marca, veiculo.modelo].filter(Boolean).join(' ')}</span>
-            <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${veiculo.status === 'ativo' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>{veiculo.status}</span>
+            <span className={`rounded-full px-2 py-0.5 text-[0.6875rem] font-medium ${veiculo.status === 'ativo' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>{veiculo.status}</span>
           </div>
           <div className="inline-flex rounded-lg border border-slate-200 p-0.5 text-xs font-medium">
             <button onClick={() => setModo('AGRUPADO_ASSOCIADO')} className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 transition ${veiculo.tipo_faturamento === 'AGRUPADO_ASSOCIADO' ? 'bg-acao text-white' : 'text-slate-500 hover:bg-slate-50'}`}>
@@ -628,7 +628,7 @@ function FichaExtras({ veiculoId }: { veiculoId: string }) {
             {contratos!.map((c) => (
               <li key={c.id} className="flex items-center justify-between text-sm">
                 <span className="text-slate-600">{formatDate(c.created_at)}</span>
-                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">{c.status}</span>
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[0.6875rem] font-medium text-slate-600">{c.status}</span>
               </li>
             ))}
           </ul>
@@ -645,7 +645,7 @@ function FichaExtras({ veiculoId }: { veiculoId: string }) {
             {vistorias!.map((vi) => (
               <li key={vi.id} className="flex items-center justify-between text-sm">
                 <span className="text-slate-600">{vi.tipo || 'Vistoria'} · {vi.data_vistoria ? formatDate(vi.data_vistoria) : formatDate(vi.created_at)}</span>
-                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">{vi.status}</span>
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[0.6875rem] font-medium text-slate-600">{vi.status}</span>
               </li>
             ))}
           </ul>
@@ -709,7 +709,7 @@ function ServicoModal({ servico, veiculo, clienteId, onClose }: {
     <Modal open onClose={onClose} title={servico.titulo} tamanho="lg">
       <form onSubmit={enviar} className="space-y-3">
         <div className="rounded-lg bg-slate-50 p-3 text-sm">
-          <p className="text-[11px] font-semibold uppercase text-slate-400">Veículo do atendimento</p>
+          <p className="text-[0.6875rem] font-semibold uppercase text-slate-400">Veículo do atendimento</p>
           <p className="mt-0.5 font-medium text-slate-700">
             <span className="font-mono">{identificacaoVeiculo(veiculo.placa, veiculo.chassi)}</span> · {[veiculo.marca, veiculo.modelo].filter(Boolean).join(' ')} {veiculo.ano_modelo ?? ''}
           </p>

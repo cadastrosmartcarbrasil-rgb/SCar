@@ -69,7 +69,7 @@ export function RevistoriaPublica({
             ? <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-500" />
             : <TriangleAlert className="mx-auto h-12 w-12 text-amber-500" />}
           <h2 className="mt-3 text-lg font-semibold text-slate-800">{m.titulo}</h2>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-slate-500">{m.texto}</p>
+          <p className="mt-1.5 text-[0.8125rem] leading-relaxed text-slate-500">{m.texto}</p>
         </div>
       </Pagina>
     );
@@ -131,29 +131,29 @@ export function RevistoriaPublica({
         <h1 className="text-lg font-semibold text-slate-800">
           {primeiro ? `${primeiro.charAt(0)}${primeiro.slice(1).toLowerCase()}, ` : ''}vamos liberar o seu boleto
         </h1>
-        <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
+        <p className="mt-1 text-[0.8125rem] leading-relaxed text-slate-500">
           Como o boleto venceu há alguns dias, precisamos ver o veículo antes de emitir o novo: uma foto da frente,
           uma da traseira e um vídeo de até {VIDEO_REVISTORIA_SEGUNDOS} segundos dando a volta no carro.
         </p>
-        <p className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-[12.5px] text-slate-600">
+        <p className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-[0.7812rem] text-slate-600">
           <span className="font-mono font-semibold tracking-wider">{veiculo}</span>
           {sessao.modelo && <> · {sessao.marca} {sessao.modelo}</>}
         </p>
 
         {sessao.motivo_reprovacao && (
-          <p className="mt-3 flex items-start gap-2 rounded-xl bg-amber-50 px-3.5 py-3 text-[12.5px] leading-relaxed text-amber-900">
+          <p className="mt-3 flex items-start gap-2 rounded-xl bg-amber-50 px-3.5 py-3 text-[0.7812rem] leading-relaxed text-amber-900">
             <TriangleAlert className="mt-px h-4 w-4 shrink-0" />
             <span><b>Precisamos que refaça:</b> {sessao.motivo_reprovacao}</span>
           </p>
         )}
 
         <div className="mt-4">
-          <div className="flex items-center justify-between text-[12px] font-medium">
+          <div className="flex items-center justify-between text-[0.75rem] font-medium">
             <span className={progresso.completa ? 'text-emerald-600' : 'text-slate-600'}>
               {progresso.completa ? 'Tudo pronto para enviar!' : `${progresso.feitos} de ${progresso.obrigatorios}`}
             </span>
             {sessao.expira_em && (
-              <span className="flex items-center gap-1 text-[11.5px] text-slate-400">
+              <span className="flex items-center gap-1 text-[0.7188rem] text-slate-400">
                 <Clock className="h-3 w-3" /> até {formatDate(sessao.expira_em)}
               </span>
             )}
@@ -187,10 +187,10 @@ export function RevistoriaPublica({
                   : item.enviado ? <CheckCircle2 className="h-5 w-5" /> : <Camera className="h-5 w-5" />}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-[13.5px] font-semibold text-slate-800">{item.nome}</span>
-                {item.instrucao && <span className="mt-0.5 block text-[12px] leading-snug text-slate-500">{item.instrucao}</span>}
+                <span className="block text-[0.8438rem] font-semibold text-slate-800">{item.nome}</span>
+                {item.instrucao && <span className="mt-0.5 block text-[0.75rem] leading-snug text-slate-500">{item.instrucao}</span>}
                 {item.enviado && (
-                  <span className="mt-0.5 block text-[11.5px] font-medium text-emerald-700">Recebida · toque para trocar</span>
+                  <span className="mt-0.5 block text-[0.7188rem] font-medium text-emerald-700">Recebida · toque para trocar</span>
                 )}
               </span>
               <input
@@ -206,13 +206,13 @@ export function RevistoriaPublica({
         type="button"
         onClick={concluir}
         disabled={!progresso.completa || concluindo || enviando !== null}
-        className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-acao px-4 py-3.5 text-[14px] font-semibold text-white transition hover:bg-acao-escura disabled:opacity-40"
+        className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-acao px-4 py-3.5 text-[0.875rem] font-semibold text-white transition hover:bg-acao-escura disabled:opacity-40"
       >
         {concluindo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
         Enviar para análise
       </button>
 
-      <p className="mt-4 flex items-start gap-1.5 px-1 text-[11.5px] leading-relaxed text-slate-400">
+      <p className="mt-4 flex items-start gap-1.5 px-1 text-[0.7188rem] leading-relaxed text-slate-400">
         <ShieldCheck className="mt-px h-3.5 w-3.5 shrink-0" />
         As fotos e o vídeo são usados só para conferir o estado do seu veículo.
       </p>
@@ -335,10 +335,10 @@ function CartaoVideo({
           {enviando ? <Loader2 className="h-5 w-5 animate-spin" /> : item.enviado ? <CheckCircle2 className="h-5 w-5" /> : <Video className="h-5 w-5" />}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-[13.5px] font-semibold text-slate-800">{item.nome}</span>
-          {item.instrucao && <span className="mt-0.5 block text-[12px] leading-snug text-slate-500">{item.instrucao}</span>}
+          <span className="block text-[0.8438rem] font-semibold text-slate-800">{item.nome}</span>
+          {item.instrucao && <span className="mt-0.5 block text-[0.75rem] leading-snug text-slate-500">{item.instrucao}</span>}
           {item.enviado && (
-            <span className="mt-0.5 block text-[11.5px] font-medium text-emerald-700">
+            <span className="mt-0.5 block text-[0.7188rem] font-medium text-emerald-700">
               Recebido{item.duracao_segundos ? ` · ${formatarSegundos(Number(item.duracao_segundos))}` : ''} · grave de novo se quiser trocar
             </span>
           )}
@@ -381,7 +381,7 @@ function CartaoVideo({
           </>
         )}
         {semGravador && (
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-acao px-3.5 py-2.5 text-[13px] font-semibold text-white">
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-acao px-3.5 py-2.5 text-[0.8125rem] font-semibold text-white">
             <Video className="h-4 w-4" /> Gravar com a câmera do celular
             <input
               type="file" accept="video/*" capture="environment" className="hidden" disabled={ocupado}
@@ -391,7 +391,7 @@ function CartaoVideo({
         )}
       </div>
       {semGravador && (
-        <p className="mt-2 text-[11.5px] text-slate-500">
+        <p className="mt-2 text-[0.7188rem] text-slate-500">
           Grave no máximo {VIDEO_REVISTORIA_SEGUNDOS} segundos. Se o celular gravar em qualidade muito alta, o envio pode demorar.
         </p>
       )}
@@ -405,7 +405,7 @@ function Botao({ children, onClick, disabled, icone, secundario }: {
   return (
     <button
       type="button" onClick={onClick} disabled={disabled}
-      className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-[13px] font-semibold transition disabled:opacity-40 ${
+      className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-[0.8125rem] font-semibold transition disabled:opacity-40 ${
         secundario ? 'border border-slate-300 text-slate-700' : 'bg-acao text-white hover:bg-acao-escura'}`}
     >
       {icone}{children}

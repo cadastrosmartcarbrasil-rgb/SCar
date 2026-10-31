@@ -100,7 +100,7 @@ export function HistoricoFornecedor({
           <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-superficie">
             <table className="w-full min-w-[960px] text-sm">
               <thead>
-                <tr className="border-b border-slate-200 text-left text-[11px] uppercase tracking-wide text-slate-400">
+                <tr className="border-b border-slate-200 text-left text-[0.6875rem] uppercase tracking-wide text-slate-400">
                   <th className="px-4 py-2.5 font-semibold">Título</th>
                   <th className="px-4 py-2.5 font-semibold">Origem</th>
                   <th className="px-4 py-2.5 font-semibold">Vencimento</th>
@@ -156,7 +156,7 @@ function LinhaHistorico({ l, onAbrir }: { l: LancamentoHistoricoFornecedor; onAb
           <span className={`mt-0.5 h-6 w-1 shrink-0 rounded-full ${l.tipo === 'RECEITA' ? 'bg-emerald-400' : 'bg-rose-400'}`} />
           <div>
             <p className="font-medium text-slate-800">{l.descricao}</p>
-            <p className="text-[11px] text-slate-400">
+            <p className="text-[0.6875rem] text-slate-400">
               {l.tipo === 'RECEITA' ? 'A receber' : 'A pagar'}
               {l.numero_documento && ` · doc. ${l.numero_documento}`}
               {l.parcela_total > 1 && ` · parcela ${l.parcela_numero}/${l.parcela_total}`}
@@ -166,10 +166,10 @@ function LinhaHistorico({ l, onAbrir }: { l: LancamentoHistoricoFornecedor; onAb
         </div>
       </td>
       <td className="px-4 py-2.5">
-        <span className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-medium ${selo.classe}`}>
+        <span className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[0.6875rem] font-medium ${selo.classe}`}>
           <selo.icon className="h-3 w-3" /> {origem.rotulo}
         </span>
-        {origem.referencia && <span className="block font-mono text-[11px] text-slate-400">{origem.referencia}</span>}
+        {origem.referencia && <span className="block font-mono text-[0.6875rem] text-slate-400">{origem.referencia}</span>}
       </td>
       <td className="tnum px-4 py-2.5 text-slate-600">{formatDate(l.data_vencimento)}</td>
       <td className="tnum px-4 py-2.5 text-right font-medium text-slate-800">{formatCurrency(l.valor_original)}</td>

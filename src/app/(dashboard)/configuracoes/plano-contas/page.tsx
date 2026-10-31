@@ -159,7 +159,7 @@ export default function PlanoContasPage() {
                       <span className="font-mono text-xs text-slate-500">{c.codigo_estruturado}</span>
                       <span className={sintetica ? 'font-semibold text-slate-800' : 'text-slate-700'}>{c.nome}</span>
                       {c.codigo_anterior && (
-                        <span className="text-[11px] text-slate-400" title="Código no plano anterior">
+                        <span className="text-[0.6875rem] text-slate-400" title="Código no plano anterior">
                           (antes {c.codigo_anterior})
                         </span>
                       )}
@@ -168,7 +168,7 @@ export default function PlanoContasPage() {
                   <td className="px-3 py-1.5 text-xs">
                     {sintetica ? <span className="text-slate-500">Sintética</span> : <span className="text-slate-700">Analítica</span>}
                     {c.automatica && (
-                      <span className="ml-1.5 inline-flex items-center gap-0.5 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-500"
+                      <span className="ml-1.5 inline-flex items-center gap-0.5 rounded bg-slate-100 px-1.5 py-0.5 text-[0.6875rem] text-slate-500"
                         title="Alimentada pelo sistema (saldos, a receber, a pagar): não recebe lançamento direto">
                         <Lock className="h-3 w-3" /> automática
                       </span>

@@ -250,17 +250,17 @@ function ItemParecer({
     <li className={`rounded-lg border p-2.5 ${parecer.respondido ? 'border-slate-200' : 'border-amber-200 bg-amber-50/40'}`}>
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="text-sm font-medium text-slate-800">{parecer.para ?? 'Sem destinatário'}</span>
-        <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${sit.cor}`}>{sit.rotulo}</span>
+        <span className={`rounded px-1.5 py-0.5 text-[0.625rem] font-medium ${sit.cor}`}>{sit.rotulo}</span>
       </div>
       <p className="mt-1 text-xs text-slate-600">{parecer.pergunta}</p>
-      <p className="text-[11px] text-slate-400">
+      <p className="text-[0.6875rem] text-slate-400">
         Pedido por {parecer.pedido_por} · {formatDate(parecer.pedido_em)}
       </p>
 
       {parecer.respondido ? (
         <div className="mt-2 rounded-lg bg-fundo p-2">
           <p className="whitespace-pre-wrap text-sm text-slate-800">{parecer.parecer}</p>
-          <p className="mt-0.5 flex items-center gap-1 text-[11px] text-slate-400">
+          <p className="mt-0.5 flex items-center gap-1 text-[0.6875rem] text-slate-400">
             <Check className="h-3 w-3" /> {parecer.respondido_por}
             {parecer.respondido_em ? ` · ${formatDate(parecer.respondido_em)}` : ''}
           </p>
@@ -290,7 +290,7 @@ function ItemParecer({
           </Button>
         </div>
       ) : (
-        <p className="mt-1 flex items-center gap-1 text-[11px] text-slate-400">
+        <p className="mt-1 flex items-center gap-1 text-[0.6875rem] text-slate-400">
           <Clock className="h-3 w-3" /> Aguardando a análise dessa pessoa.
         </p>
       )}

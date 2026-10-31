@@ -66,7 +66,7 @@ export function AlertasVeiculo({ veiculoId, titulo = 'Alertas / pendencias' }: {
         <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
           <Bell className="h-4 w-4 text-amber-500" /> {titulo}
           {ativos.length > 0 && (
-            <span className="tnum rounded-full bg-amber-100 px-2 text-[11px] font-bold text-amber-900">{ativos.length}</span>
+            <span className="tnum rounded-full bg-amber-100 px-2 text-[0.6875rem] font-bold text-amber-900">{ativos.length}</span>
           )}
         </p>
         <div className="flex items-center gap-2">
@@ -90,16 +90,16 @@ export function AlertasVeiculo({ veiculoId, titulo = 'Alertas / pendencias' }: {
             <li key={a.id} className="flex flex-wrap items-start justify-between gap-2 rounded-lg bg-amber-50/60 p-2.5">
               <div className="min-w-0">
                 <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-slate-800">
-                  <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${COR_SEVERIDADE[a.severidade]}`}>{a.severidade}</span>
+                  <span className={`rounded px-1.5 py-0.5 text-[0.625rem] font-bold ${COR_SEVERIDADE[a.severidade]}`}>{a.severidade}</span>
                   {a.nome}
                   {!a.tipo_ativo && (
-                    <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600" title="Tipo desativado no catálogo de alertas">
+                    <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[0.625rem] font-semibold text-slate-600" title="Tipo desativado no catálogo de alertas">
                       tipo desativado
                     </span>
                   )}
                 </p>
                 {a.mensagem && <p className="text-xs text-slate-600">{a.mensagem}</p>}
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[0.6875rem] text-slate-400">
                   Aberto em {formatDate(a.created_at)}{a.criado_por ? ` por ${a.criado_por}` : ''}
                 </p>
               </div>
@@ -123,7 +123,7 @@ export function AlertasVeiculo({ veiculoId, titulo = 'Alertas / pendencias' }: {
         </ul>
       )}
 
-      <p className="mt-2 text-[11px] text-slate-400">
+      <p className="mt-2 text-[0.6875rem] text-slate-400">
         Alertas ativos aparecem no card do SAC ao localizar o associado.
       </p>
 

@@ -73,7 +73,7 @@ export default function CotasParticipacaoPage() {
 
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-y border-slate-100 text-left text-[11px] uppercase text-slate-400">
+            <tr className="border-y border-slate-100 text-left text-[0.6875rem] uppercase text-slate-400">
               <th className="px-4 py-1.5">Código</th>
               <th className="px-2 py-1.5">% da FIPE</th>
               <th className="px-2 py-1.5">Descrição</th>

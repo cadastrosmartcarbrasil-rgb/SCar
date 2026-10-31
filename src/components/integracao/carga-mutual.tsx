@@ -152,7 +152,7 @@ export function CargaMutual() {
         <div className="space-y-3">
           {gruposCategoria.map((g) => (
             <div key={g.tipo}>
-              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+              <p className="mb-1 text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-500">
                 {g.tipo} <span className="tnum font-normal">· {g.faturaveis} faturáveis</span>
               </p>
               <div className="space-y-1.5">
@@ -163,7 +163,7 @@ export function CargaMutual() {
                       <span className="min-w-[14rem] text-slate-800">
                         {c.categoria_nome ?? `(categoria ${c.categoria_id})`}
                         {cota && (
-                          <span className="ml-1 rounded bg-slate-100 px-1 text-[11px] text-slate-600 tnum">
+                          <span className="ml-1 rounded bg-slate-100 px-1 text-[0.6875rem] text-slate-600 tnum">
                             {cota.especial ? 'ESP ' : ''}{cota.codigo}
                           </span>
                         )}
@@ -458,7 +458,7 @@ export function CargaMutual() {
                         {d.valor}
                       </td>
                       <td className="py-1.5">
-                        <span className={`rounded px-1.5 py-0.5 text-[11px] ring-1 ${TOM[d.severidade]}`}>
+                        <span className={`rounded px-1.5 py-0.5 text-[0.6875rem] ring-1 ${TOM[d.severidade]}`}>
                           {d.severidade}
                         </span>
                       </td>
@@ -583,9 +583,9 @@ function Indicador({ rotulo, valor, nota, alerta }: {
 }) {
   return (
     <div className={`rounded-xl border p-3 ${alerta ? 'border-amber-200 bg-amber-50/60' : 'border-slate-200/80'}`}>
-      <p className="text-[11px] uppercase tracking-wide text-slate-500">{rotulo}</p>
+      <p className="text-[0.6875rem] uppercase tracking-wide text-slate-500">{rotulo}</p>
       <p className="tnum text-2xl font-semibold text-slate-900">{valor}</p>
-      {nota && <p className="text-[11px] text-slate-500">{nota}</p>}
+      {nota && <p className="text-[0.6875rem] text-slate-500">{nota}</p>}
     </div>
   );
 }
@@ -802,7 +802,7 @@ function VendedoresDosVeiculos({ unidade, nomeUnidade }: { unidade: string; nome
               ['Sem vendedor', t.semVendedor],
             ].map(([rotulo, valor]) => (
               <div key={rotulo as string} className="rounded-lg bg-fundo p-2">
-                <p className="text-[11px] text-slate-500">{rotulo}</p>
+                <p className="text-[0.6875rem] text-slate-500">{rotulo}</p>
                 <p className="tnum text-lg font-semibold text-slate-900">{valor}</p>
               </div>
             ))}
@@ -910,7 +910,7 @@ function AssistenciaProfissionalMigrados({ unidade, nomeUnidade }: { unidade: st
               ['Sem valor conhecido', t.semValor],
             ].map(([rotulo, valor]) => (
               <div key={rotulo as string} className="rounded-lg bg-fundo p-2">
-                <p className="text-[11px] text-slate-500">{rotulo}</p>
+                <p className="text-[0.6875rem] text-slate-500">{rotulo}</p>
                 <p className="tnum text-lg font-semibold text-slate-900">{valor}</p>
               </div>
             ))}

@@ -130,7 +130,7 @@ export function ModalMemo({
                 <Users className="mt-0.5 h-4 w-4 text-cyan-600" />
                 <span>
                   <span className="block text-sm font-semibold text-slate-800">Minha equipe</span>
-                  <span className="block text-[11px] text-slate-500">Quem trabalha nesta unidade</span>
+                  <span className="block text-[0.6875rem] text-slate-500">Quem trabalha nesta unidade</span>
                 </span>
               </button>
               <button type="button" onClick={() => escolherDestino('DIRETORIA')}
@@ -139,7 +139,7 @@ export function ModalMemo({
                 <Building2 className="mt-0.5 h-4 w-4 text-brand-600" />
                 <span>
                   <span className="block text-sm font-semibold text-slate-800">Diretoria / administração</span>
-                  <span className="block text-[11px] text-slate-500">A matriz (admin e financeiro)</span>
+                  <span className="block text-[0.6875rem] text-slate-500">A matriz (admin e financeiro)</span>
                 </span>
               </button>
             </div>

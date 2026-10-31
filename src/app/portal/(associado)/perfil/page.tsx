@@ -61,13 +61,13 @@ export default function PortalPerfilPage() {
     );
   }
 
-  if (isLoading) return <p className="text-[13px] text-slate-400">Carregando…</p>;
+  if (isLoading) return <p className="text-[0.8125rem] text-slate-400">Carregando…</p>;
 
   return (
     <div className="space-y-4">
       <header>
-        <h1 className="text-[22px] font-bold tracking-tight text-brand-800">Meu perfil</h1>
-        <p className="mt-0.5 text-[13px] text-slate-500">
+        <h1 className="text-[1.375rem] font-bold tracking-tight text-brand-800">Meu perfil</h1>
+        <p className="mt-0.5 text-[0.8125rem] text-slate-500">
           Mantenha seu contato atualizado — e por ele que falamos com você.
         </p>
       </header>
@@ -81,7 +81,7 @@ export default function PortalPerfilPage() {
             Nome e documento são do seu cadastro na associação. Para corrigir, fale com o atendimento.
           </p>
         </CardHeader>
-        <CardContent className="grid gap-3 text-[13px] sm:grid-cols-2">
+        <CardContent className="grid gap-3 text-[0.8125rem] sm:grid-cols-2">
           <Campo rotulo="Nome" valor={p?.nome} />
           <Campo
             rotulo="CPF / CNPJ"
@@ -139,7 +139,7 @@ export default function PortalPerfilPage() {
             <div className="flex justify-end">
               <button
                 type="submit" disabled={salvar.isPending}
-                className="flex items-center gap-1.5 rounded-xl bg-acao px-4 py-2.5 text-[13px] font-semibold text-white transition hover:bg-acao-escura disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-xl bg-acao px-4 py-2.5 text-[0.8125rem] font-semibold text-white transition hover:bg-acao-escura disabled:opacity-50"
               >
                 {salvar.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                 Salvar
@@ -199,7 +199,7 @@ function TrocarSenha() {
         <button
           type="submit"
           disabled={enviando || senha.length < 8 || senha !== confirmacao}
-          className="flex items-center gap-1.5 rounded-xl border border-slate-300 px-4 py-2.5 text-[13px] font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+          className="flex items-center gap-1.5 rounded-xl border border-slate-300 px-4 py-2.5 text-[0.8125rem] font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
         >
           {enviando && <Loader2 className="h-4 w-4 animate-spin" />}
           Trocar senha
@@ -212,7 +212,7 @@ function TrocarSenha() {
 function Campo({ rotulo, valor }: { rotulo: string; valor?: string | null }) {
   return (
     <div>
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{rotulo}</p>
+      <p className="text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-400">{rotulo}</p>
       <p className="mt-0.5 text-slate-800">{valor || '—'}</p>
     </div>
   );
@@ -229,7 +229,7 @@ function Entrada({ rotulo, valor, onChange, type = 'text', inputMode, className,
   const preenchimento = autoComplete ?? (type === 'password' ? 'new-password' : undefined);
   return (
     <label className={`block ${className ?? ''}`}>
-      <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{rotulo}</span>
+      <span className="text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-500">{rotulo}</span>
       <div className="relative mt-1">
         <input
           type={type} value={valor} inputMode={inputMode} maxLength={maxLength}
@@ -238,10 +238,10 @@ function Entrada({ rotulo, valor, onChange, type = 'text', inputMode, className,
           // e-mail e senha preservados. Aqui a decisao usa o proprio rotulo,
           // porque este campo do portal nao tem `name`.
           onChange={(e) => onChange(valorComCaixaPadrao(e.target.value, type, rotulo))}
-          className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-[14px] outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
+          className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-[0.875rem] outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
         />
         {sufixo && (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-slate-400">{sufixo}</span>
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[0.75rem] text-slate-400">{sufixo}</span>
         )}
       </div>
     </label>

@@ -299,11 +299,11 @@ export default function UsuariosPage() {
                     <UserCog className={`h-4 w-4 ${u.ativo ? 'text-brand-500' : 'text-slate-400'}`} />
                     <span className={u.ativo ? '' : 'text-slate-500'}>{u.nome}</span>
                     {u.id === perfil?.id && (
-                      <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">você</span>
+                      <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[0.625rem] text-slate-500">você</span>
                     )}
                     {u.vendedor_ativo && (
                       <span title={`Também e vendedor (hotlink /v/${u.vendedor_codigo ?? ''})`}
-                        className="inline-flex items-center gap-0.5 rounded bg-cyan-50 px-1.5 py-0.5 text-[10px] font-semibold text-cyan-700">
+                        className="inline-flex items-center gap-0.5 rounded bg-cyan-50 px-1.5 py-0.5 text-[0.625rem] font-semibold text-cyan-700">
                         <Link2 className="h-3 w-3" /> vendedor
                       </span>
                     )}
@@ -344,7 +344,7 @@ export default function UsuariosPage() {
                       ? `${u.unidades_atuacao} ${u.unidades_atuacao === 1 ? 'unidade' : 'unidades'} de atuação`
                       : 'Global')}
                   {u.regional_nome && u.unidades_atuacao > 0 && usaUnidadesDeSupervisor(u.papel) && (
-                    <span className="block text-[11px] text-slate-500">+ {u.unidades_atuacao} de atuação</span>
+                    <span className="block text-[0.6875rem] text-slate-500">+ {u.unidades_atuacao} de atuação</span>
                   )}
                 </td>
                 <td className="px-4 py-2 text-slate-600">
@@ -363,7 +363,7 @@ export default function UsuariosPage() {
                       onChange={(e) => alternarAtivo(u, e.target.checked)}
                       className="h-4 w-4 rounded border-slate-300" />
                     {!u.ativo && (
-                      <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-600">
+                      <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[0.625rem] font-semibold uppercase text-slate-600">
                         sem acesso
                       </span>
                     )}
@@ -435,10 +435,10 @@ export default function UsuariosPage() {
           </FormField>
 
           <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
-            <p className="text-[11.5px] font-semibold uppercase tracking-wide text-slate-500">
+            <p className="text-[0.7188rem] font-semibold uppercase tracking-wide text-slate-500">
               Função e permissão
             </p>
-            <p className="mb-2 mt-0.5 text-[11.5px] leading-relaxed text-slate-500">
+            <p className="mb-2 mt-0.5 text-[0.7188rem] leading-relaxed text-slate-500">
               <b>Cargo</b> e a função na empresa (aparece nas telas de equipe). <b>Papel</b> e o que
               o sistema deixa fazer — são coisas diferentes de propósito.
             </p>
@@ -467,20 +467,20 @@ export default function UsuariosPage() {
             </div>
             <div className="mt-2"><ResumoDoPapel papel={chaveDoUsuario(form)} /></div>
             {usaUnidadesDeSupervisor(form.papel) && (
-              <p className="mt-1.5 text-[11px] text-cyan-700">
+              <p className="mt-1.5 text-[0.6875rem] text-cyan-700">
                 Depois de criar, abra a edição do usuário para marcar as <b>unidades de atuação</b> —
                 quem atende várias unidades (ou todas) vê os associados e veículos delas.
               </p>
             )}
             {semUnidadeVisivel(form.papel, form.regional_id) && (
-              <p className="mt-1.5 text-[11px] text-amber-700">
+              <p className="mt-1.5 text-[0.6875rem] text-amber-700">
                 Sem unidade, este perfil <b>não vê nenhum veículo, associado nem evento</b> — o perfil
                 libera as telas, mas os registros vem da unidade. &quot;Global&quot; só vale para
                 Administrador e Financeiro. Escolha a unidade ou marque as unidades de atuação.
               </p>
             )}
             {exigeUnidade(form.papel) && !form.regional_id && (
-              <p className="mt-1.5 text-[11px] text-amber-700">
+              <p className="mt-1.5 text-[0.6875rem] text-amber-700">
                 O <b>gestor regional</b> só funciona com uma unidade escolhida — e ela que define o
                 portal da franquia e o que ele enxerga.
               </p>
@@ -554,21 +554,21 @@ export default function UsuariosPage() {
             <ResumoDoPapel papel={chaveDoUsuario(edicao)} />
             {semUnidadeVisivel(edicao.papel, edicao.regional_id,
               usuarios?.find((x) => x.id === edicao.id)?.unidades_atuacao ?? 0) && (
-              <p className="mt-1.5 text-[11px] text-amber-700">
+              <p className="mt-1.5 text-[0.6875rem] text-amber-700">
                 Sem unidade, este perfil <b>não vê nenhum veículo, associado nem evento</b> — o perfil
                 libera as telas, mas os registros vem da unidade. &quot;Global&quot; só vale para
                 Administrador e Financeiro. Escolha a unidade ou marque as unidades de atuação.
               </p>
             )}
             {exigeUnidade(edicao.papel) && !edicao.regional_id && (
-              <p className="text-[11px] text-amber-700">
+              <p className="text-[0.6875rem] text-amber-700">
                 O <b>gestor regional</b> só funciona com uma unidade escolhida.
               </p>
             )}
             {usaUnidadesDeSupervisor(edicao.papel) && <UnidadesSupervisor usuarioId={edicao.id} papel={edicao.papel} />}
 
             <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
-              <p className="mb-2 text-[11.5px] font-semibold uppercase tracking-wide text-slate-500">
+              <p className="mb-2 text-[0.7188rem] font-semibold uppercase tracking-wide text-slate-500">
                 Período e acesso
               </p>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -579,7 +579,7 @@ export default function UsuariosPage() {
                 <FormField label="Data de desligamento">
                   <Input type="date" value={edicao.data_desligamento}
                     onChange={(e) => setEdicao({ ...edicao, data_desligamento: e.target.value })} />
-                  <p className="mt-1 text-[11px] text-slate-500">
+                  <p className="mt-1 text-[0.6875rem] text-slate-500">
                     Preenchida sozinha ao desativar e limpa ao reativar.
                   </p>
                 </FormField>
@@ -589,7 +589,7 @@ export default function UsuariosPage() {
                   onChange={(e) => setEdicao({ ...edicao, ativo: e.target.checked })} />
                 <span>
                   Acesso ativo
-                  <span className="block text-[11px] leading-relaxed text-slate-500">
+                  <span className="block text-[0.6875rem] leading-relaxed text-slate-500">
                     Desmarcar <b>corta o acesso na hora</b>: a pessoa deixa de entrar e de ser
                     reconhecida como equipe pela segurança do banco. O histórico fica intacto.
                   </span>

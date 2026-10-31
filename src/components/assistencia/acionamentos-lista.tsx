@@ -79,7 +79,7 @@ export function AcionamentosLista() {
                 <td className="px-4 py-2 text-slate-500">
                   {formatDate(a.created_at)}
                   {a.agendado_para && (
-                    <span className="block text-[11px] text-amber-700">agendado {rotuloAgendamento(a.agendado_para)}</span>
+                    <span className="block text-[0.6875rem] text-amber-700">agendado {rotuloAgendamento(a.agendado_para)}</span>
                   )}
                 </td>
                 <td className="tnum px-4 py-2 text-right">{formatCurrency(Number(a.valor_total))}</td>
@@ -88,10 +88,10 @@ export function AcionamentosLista() {
                     {STATUS_ACIONAMENTO_LABEL[a.status].label}
                   </span>
                   {a.liberado_por && (
-                    <span className="ml-1 rounded bg-amber-50 px-1.5 py-0.5 text-[11px] text-amber-700">liberado</span>
+                    <span className="ml-1 rounded bg-amber-50 px-1.5 py-0.5 text-[0.6875rem] text-amber-700">liberado</span>
                   )}
                   {a.status === 'NEGADO' && a.negado_motivo && (
-                    <span className="block text-[11px] text-rose-700">{rotuloMotivoNegativa(a.negado_motivo)}</span>
+                    <span className="block text-[0.6875rem] text-rose-700">{rotuloMotivoNegativa(a.negado_motivo)}</span>
                   )}
                 </td>
               </tr>

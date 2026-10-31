@@ -164,13 +164,13 @@ function MarcosPrazoConfig() {
               />
               <span className="text-sm text-slate-600">dias</span>
             </span>
-            <span className="mt-1 block text-[11px] text-slate-500">{c.ajuda}</span>
+            <span className="mt-1 block text-[0.6875rem] text-slate-500">{c.ajuda}</span>
           </label>
         ))}
         <div className="rounded-lg border-l-4 border-rose-700 bg-fundo p-3">
           <span className="block text-xs font-semibold uppercase text-slate-600">Vencido</span>
           <span className="mt-1 block text-sm font-medium text-slate-800">acima de {PRAZO_REGULATORIO_DIAS} dias</span>
-          <span className="mt-1 block text-[11px] text-slate-500">fixo pela norma; e-mail para a diretoria</span>
+          <span className="mt-1 block text-[0.6875rem] text-slate-500">fixo pela norma; e-mail para a diretoria</span>
         </div>
       </div>
       {erro && <p className="text-sm text-rose-600">{erro}</p>}

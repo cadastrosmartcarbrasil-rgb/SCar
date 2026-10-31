@@ -82,7 +82,7 @@ export function PainelRastreadores() {
         <Indicador titulo="Em estoque" valor={resumo?.estoque ?? 0} onClick={() => aplicar({ status: 'DISPONIVEL' })} />
         <Link href="/rastreadores/divergencias"
           className="rounded-xl border border-rose-200 bg-superficie p-3 transition hover:border-rose-300">
-          <p className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-slate-400">
+          <p className="flex items-center gap-1.5 text-[0.6875rem] uppercase tracking-wide text-slate-400">
             <CircleAlert className="h-4 w-4 text-rose-500" /> Divergências
           </p>
           <p className="mt-1 flex items-center gap-1 text-sm font-semibold text-rose-700">
@@ -97,7 +97,7 @@ export function PainelRastreadores() {
           <button key={s.status} onClick={() => aplicar({ status: s.status })}
             className={`rounded-lg border border-slate-200 bg-superficie p-2.5 text-left transition hover:border-cyan-300 ${
               f.status === s.status ? 'ring-2 ring-cyan-400' : ''}`}>
-            <span className={`inline-block rounded px-1.5 py-0.5 text-[11px] font-medium ${s.cor}`}>
+            <span className={`inline-block rounded px-1.5 py-0.5 text-[0.6875rem] font-medium ${s.cor}`}>
               {s.numero} - {s.rotulo}
             </span>
             <p className="mt-1 text-lg font-semibold tabular-nums text-slate-800">{porStatus.get(s.status) ?? 0}</p>
@@ -151,7 +151,7 @@ export function PainelRastreadores() {
                 <tr key={r.id} className="border-b border-slate-50 last:border-0 hover:bg-cyan-50/40">
                   <td className="px-4 py-2 font-mono font-medium text-slate-800">
                     <Link href={`/rastreadores/${r.id}`} className="hover:underline">{r.imei}</Link>
-                    {r.linha && <span className="block text-[11px] font-sans text-slate-400">{formatarChip(r.linha)}</span>}
+                    {r.linha && <span className="block text-[0.6875rem] font-sans text-slate-400">{formatarChip(r.linha)}</span>}
                   </td>
                   <td className="px-4 py-2">
                     <span className={`rounded px-2 py-0.5 text-xs font-medium ${meta.cor}`}>{r.status_numero} - {meta.rotulo}</span>
@@ -160,7 +160,7 @@ export function PainelRastreadores() {
                     {r.placa ? (
                       <>
                         <span className="font-mono font-medium text-slate-800">{r.placa}</span>
-                        <span className="block text-[11px] text-slate-400">{r.associado ?? ''}</span>
+                        <span className="block text-[0.6875rem] text-slate-400">{r.associado ?? ''}</span>
                       </>
                     ) : <span className="text-slate-400">—</span>}
                   </td>
@@ -168,7 +168,7 @@ export function PainelRastreadores() {
                   <td className="px-4 py-2 text-slate-600">{r.plataforma ?? '—'}</td>
                   <td className="px-4 py-2">
                     <span className="tabular-nums text-slate-600">{r.dias_no_status} d</span>
-                    {alerta && <span className="block text-[11px] text-amber-600">{alerta.mensagem}</span>}
+                    {alerta && <span className="block text-[0.6875rem] text-amber-600">{alerta.mensagem}</span>}
                   </td>
                 </tr>
               );
@@ -272,7 +272,7 @@ function Indicador({ titulo, valor, icone, onClick }: {
 }) {
   const conteudo = (
     <>
-      <p className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-slate-400">{icone} {titulo}</p>
+      <p className="flex items-center gap-1.5 text-[0.6875rem] uppercase tracking-wide text-slate-400">{icone} {titulo}</p>
       <p className="mt-1 text-2xl font-semibold tabular-nums text-slate-900">{valor}</p>
     </>
   );

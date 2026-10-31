@@ -96,9 +96,9 @@ export function HistoricoBoletos() {
 function Numero({ rotulo, valor, detalhe, alerta }: { rotulo: string; valor: string; detalhe?: string; alerta?: boolean }) {
   return (
     <div className={`rounded-xl border px-3 py-2.5 ${alerta ? 'border-amber-300 bg-amber-50/60' : 'border-slate-200'}`}>
-      <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{rotulo}</p>
+      <p className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">{rotulo}</p>
       <p className="tnum mt-1 text-sm font-semibold text-slate-900">{valor}</p>
-      {detalhe && <p className="mt-0.5 text-[11px] text-slate-500">{detalhe}</p>}
+      {detalhe && <p className="mt-0.5 text-[0.6875rem] text-slate-500">{detalhe}</p>}
     </div>
   );
 }

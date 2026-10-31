@@ -133,7 +133,7 @@ export function TrajetoAcionamento({
           <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
             <MapPin className={`h-4 w-4 ${qual === 'origem' ? 'text-rose-500' : 'text-brand-600'}`} /> {titulo}
           </p>
-          {localizado && <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">GPS ok</span>}
+          {localizado && <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[0.6875rem] font-semibold text-emerald-700">GPS ok</span>}
         </div>
         <div className="grid gap-2 p-3 sm:grid-cols-6">
           <FormField label="CEP" className="sm:col-span-2">
@@ -170,7 +170,7 @@ export function TrajetoAcionamento({
             </Button>
           </div>
           {(e.lat || e.lng) && (
-            <p className="tnum sm:col-span-6 text-[11px] text-slate-400">
+            <p className="tnum sm:col-span-6 text-[0.6875rem] text-slate-400">
               Coordenadas: {e.lat}, {e.lng}
             </p>
           )}
@@ -192,7 +192,7 @@ export function TrajetoAcionamento({
 
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-superficie px-3 py-2">
             <div>
-              <p className="text-[11px] uppercase tracking-wide text-slate-400">Distância da rota</p>
+              <p className="text-[0.6875rem] uppercase tracking-wide text-slate-400">Distância da rota</p>
               <p className="tnum text-lg font-semibold text-slate-800">
                 {rota ? rotuloRota(rota.distancia_km, rota.duracao_min) : '—'}
               </p>

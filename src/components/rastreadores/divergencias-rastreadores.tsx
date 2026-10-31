@@ -64,7 +64,7 @@ export function DivergenciasRastreadores() {
           <button key={s} onClick={() => setSeveridade(severidade === s ? '' : s)}
             className={`rounded-xl border bg-superficie p-3 text-left transition ${
               severidade === s ? 'border-cyan-400 ring-2 ring-cyan-200' : 'border-slate-200 hover:border-cyan-300'}`}>
-            <p className="text-[11px] uppercase tracking-wide text-slate-400">Severidade {s}</p>
+            <p className="text-[0.6875rem] uppercase tracking-wide text-slate-400">Severidade {s}</p>
             <p className="mt-1 text-2xl font-semibold tabular-nums text-slate-900">{porSeveridade[s]}</p>
           </button>
         ))}
@@ -113,7 +113,7 @@ export function DivergenciasRastreadores() {
                 </td>
                 <td className="px-4 py-2">
                   {l.placa ? <span className="font-mono font-medium text-slate-800">{l.placa}</span> : '—'}
-                  {l.associado && <span className="block text-[11px] text-slate-400">{l.associado}</span>}
+                  {l.associado && <span className="block text-[0.6875rem] text-slate-400">{l.associado}</span>}
                 </td>
                 <td className="px-4 py-2 text-slate-600">{l.descricao}</td>
                 <td className="px-4 py-2 text-right">

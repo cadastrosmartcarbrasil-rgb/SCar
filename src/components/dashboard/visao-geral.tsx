@@ -70,7 +70,7 @@ function Tile({
   const corpo = (
     <>
       <div className="flex items-start justify-between gap-2">
-        <p className="text-[11.5px] font-semibold uppercase leading-tight tracking-wide text-slate-500">{titulo}</p>
+        <p className="text-[0.7188rem] font-semibold uppercase leading-tight tracking-wide text-slate-500">{titulo}</p>
         <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-[10px] ${chip}`}>
           <Icon className="h-4 w-4" strokeWidth={2} />
         </span>
@@ -79,11 +79,11 @@ function Tile({
         <div className="mt-3 h-7 w-24 animate-pulse rounded bg-slate-100" />
       ) : (
         <div className="mt-2.5 flex flex-wrap items-baseline gap-x-2">
-          <p className="tnum text-[23px] font-bold leading-none text-slate-900">{valor}</p>
+          <p className="tnum text-[1.4375rem] font-bold leading-none text-slate-900">{valor}</p>
           {tendencia}
         </div>
       )}
-      {detalhe && <div className="mt-2 text-[11.5px] leading-snug text-slate-500">{detalhe}</div>}
+      {detalhe && <div className="mt-2 text-[0.7188rem] leading-snug text-slate-500">{detalhe}</div>}
     </>
   );
   const classe =
@@ -98,11 +98,11 @@ function Tile({
 /** Seta de tendencia; `subirEBom` diz para que lado e boa noticia. */
 function Tendencia({ fracao, subirEBom, rotulo }: { fracao: number | null; subirEBom: boolean; rotulo?: string }) {
   if (fracao === null) {
-    return <span className="text-[11px] text-slate-400">sem base de comparação</span>;
+    return <span className="text-[0.6875rem] text-slate-400">sem base de comparação</span>;
   }
   if (fracao === 0) {
     return (
-      <span className="inline-flex items-center gap-0.5 text-[11.5px] font-medium text-slate-400">
+      <span className="inline-flex items-center gap-0.5 text-[0.7188rem] font-medium text-slate-400">
         <Minus className="h-3.5 w-3.5" /> estável
       </span>
     );
@@ -111,7 +111,7 @@ function Tendencia({ fracao, subirEBom, rotulo }: { fracao: number | null; subir
   const bom = subiu === subirEBom;
   const Icon = subiu ? TrendingUp : TrendingDown;
   return (
-    <span className={`inline-flex items-center gap-0.5 text-[11.5px] font-semibold ${bom ? 'text-emerald-600' : 'text-rose-600'}`}>
+    <span className={`inline-flex items-center gap-0.5 text-[0.7188rem] font-semibold ${bom ? 'text-emerald-600' : 'text-rose-600'}`}>
       <Icon className="h-3.5 w-3.5" />
       {subiu ? '+' : ''}{formatPercent(fracao)}
       {rotulo && <span className="font-normal text-slate-400"> {rotulo}</span>}
@@ -129,7 +129,7 @@ function Secao({ titulo, icon: Icon, children, acao }: {
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wide text-slate-600">
+        <h2 className="flex items-center gap-2 text-[0.8125rem] font-semibold uppercase tracking-wide text-slate-600">
           <Icon className="h-4 w-4 text-cyan-600" /> {titulo}
         </h2>
         {acao}
@@ -180,7 +180,7 @@ function Rosca({
         <div className="pointer-events-none absolute inset-0 grid place-items-center text-center">
           <div>
             <p className="tnum text-xl font-bold text-slate-900">{inteiro.format(total)}</p>
-            <p className="text-[11px] text-slate-500">{unidade}</p>
+            <p className="text-[0.6875rem] text-slate-500">{unidade}</p>
           </div>
         </div>
       </div>
@@ -426,7 +426,7 @@ function Evolucao({
           </CardContent>
         </Card>
       </div>
-      <p className="flex items-start gap-1.5 text-[11.5px] text-slate-400">
+      <p className="flex items-start gap-1.5 text-[0.7188rem] text-slate-400">
         <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
         A carteira migrada traz a data de ativação original. Os encerrados antes da migração não foram trazidos,
         então as saídas desse período aparecem zeradas; vendas feitas no sistema anterior depois da última captura
@@ -562,7 +562,7 @@ function EventosBloco({ d, escuro }: { d: PainelVisaoGeral; escuro: boolean }) {
           </CardContent>
         </Card>
       </div>
-      <p className="flex items-start gap-1.5 text-[11.5px] text-slate-400">
+      <p className="flex items-start gap-1.5 text-[0.7188rem] text-slate-400">
         <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
         {temHistorico
           ? <>Os eventos somam o SCar e o <b>histórico do Mutual</b> ({inteiro.format(n(h?.total))} eventos dos associados carregados).
@@ -599,9 +599,9 @@ function ComercialFinanceiro({
         <Card>
           <CardContent className="space-y-4 py-4">
             <div className="grid grid-cols-3 gap-3 text-center">
-              <div><p className="tnum text-xl font-bold text-slate-900">{inteiro.format(n(d.vendas.em_aberto))}</p><p className="text-[11px] text-slate-500">leads em aberto</p></div>
-              <div><p className="tnum text-xl font-bold text-slate-900">{inteiro.format(n(d.vendas.novos_mes))}</p><p className="text-[11px] text-slate-500">novos no mês</p></div>
-              <div><p className="tnum text-xl font-bold text-emerald-600">{inteiro.format(n(d.vendas.convertidos_mes))}</p><p className="text-[11px] text-slate-500">convertidos no mês</p></div>
+              <div><p className="tnum text-xl font-bold text-slate-900">{inteiro.format(n(d.vendas.em_aberto))}</p><p className="text-[0.6875rem] text-slate-500">leads em aberto</p></div>
+              <div><p className="tnum text-xl font-bold text-slate-900">{inteiro.format(n(d.vendas.novos_mes))}</p><p className="text-[0.6875rem] text-slate-500">novos no mês</p></div>
+              <div><p className="tnum text-xl font-bold text-emerald-600">{inteiro.format(n(d.vendas.convertidos_mes))}</p><p className="text-[0.6875rem] text-slate-500">convertidos no mês</p></div>
             </div>
             <ul className="space-y-1.5">
               {funil.map((e) => (
@@ -659,7 +659,7 @@ function ComercialFinanceiro({
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="mt-2 grid gap-1 text-center text-[11px]" style={{ gridTemplateColumns: `repeat(${serie.length}, minmax(0, 1fr))` }}>
+                <div className="mt-2 grid gap-1 text-center text-[0.6875rem]" style={{ gridTemplateColumns: `repeat(${serie.length}, minmax(0, 1fr))` }}>
                   {serie.map((m, i) => (
                     <div key={m.rotulo}>
                       <p className="text-slate-400">{i === serie.length - 1 ? 'em curso' : 'inadimpl.'}</p>
@@ -699,7 +699,7 @@ export function VisaoGeral() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         {global ? (
           <label className="block">
-            <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Unidade</span>
+            <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">Unidade</span>
             <select
               value={regionalId ?? ''}
               onChange={(e) => setRegionalId(e.target.value || null)}
@@ -714,7 +714,7 @@ export function VisaoGeral() {
           <span />
         )}
         {d?.gerado_em && (
-          <p className="text-[11px] text-slate-400">
+          <p className="text-[0.6875rem] text-slate-400">
             Atualizado as {new Date(d.gerado_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
           </p>
         )}

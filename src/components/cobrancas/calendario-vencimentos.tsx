@@ -31,7 +31,7 @@ function LinhaCiclo({ rotulo, valor, onAbrir, cls = 'text-slate-800' }: {
 }) {
   return (
     <button type="button" onClick={onAbrir} disabled={!valor}
-      className="flex w-full items-center justify-between rounded-md px-2 py-1 text-left text-[12.5px] hover:bg-slate-50 disabled:cursor-default disabled:hover:bg-transparent">
+      className="flex w-full items-center justify-between rounded-md px-2 py-1 text-left text-[0.7812rem] hover:bg-slate-50 disabled:cursor-default disabled:hover:bg-transparent">
       <span className="text-slate-500">{rotulo}</span>
       <span className={`tnum font-medium ${cls}`}>{formatCurrency(valor)}</span>
     </button>
@@ -128,14 +128,14 @@ export function CalendarioVencimentos() {
               <div className="p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Ciclo</p>
+                    <p className="text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-400">Ciclo</p>
                     <p className="text-2xl font-bold leading-none text-slate-900">Dia {c.ciclo}</p>
                     <p className="tnum mt-1 text-xs text-slate-500">
                       {formatDate(c.data_ciclo)}{ehHoje && <b className="ml-1 text-cyan-600">· hoje</b>}
                     </p>
                   </div>
                   <div className="text-right">
-                    {futuro ? <span className="text-[11px] text-slate-400">ainda não venceu</span> : <SeloSemaforo s={s} />}
+                    {futuro ? <span className="text-[0.6875rem] text-slate-400">ainda não venceu</span> : <SeloSemaforo s={s} />}
                     <p className="tnum mt-1 text-xs text-slate-500">{inteiro.format(num(c.boletos))} boletos · {inteiro.format(num(c.clientes))} assoc.</p>
                   </div>
                 </div>
@@ -149,15 +149,15 @@ export function CalendarioVencimentos() {
                 <div className="mt-3 grid grid-cols-3 gap-2 border-t border-slate-100 pt-3 text-center">
                   <div>
                     <p className="tnum text-sm font-semibold text-slate-900">{pct(t.inadimplencia)}</p>
-                    <p className="text-[10.5px] text-slate-400">inadimplencia</p>
+                    <p className="text-[0.6562rem] text-slate-400">inadimplencia</p>
                   </div>
                   <div>
                     <p className="tnum text-sm font-semibold text-slate-900">{pct(t.recebimento)}</p>
-                    <p className="text-[10.5px] text-slate-400">recebido</p>
+                    <p className="text-[0.6562rem] text-slate-400">recebido</p>
                   </div>
                   <div>
                     <p className="tnum text-sm font-semibold text-slate-900">{pct(t.recuperacao)}</p>
-                    <p className="text-[10.5px] text-slate-400">recuperação</p>
+                    <p className="text-[0.6562rem] text-slate-400">recuperação</p>
                   </div>
                 </div>
               </div>
@@ -165,7 +165,7 @@ export function CalendarioVencimentos() {
           );
         })}
       </div>
-      <p className="text-[11px] text-slate-400">
+      <p className="text-[0.6875rem] text-slate-400">
         O ciclo vem do dia de vencimento ORIGINAL do boleto. Vencimento em fim de semana ou feriado só conta como
         vencido depois do próximo dia útil; no mês sem dia 30, o ciclo 30 vence no último dia.
         Inadimplência = vencido sem pagamento ÷ o que já venceu no ciclo.

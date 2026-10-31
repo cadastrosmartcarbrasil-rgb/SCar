@@ -102,10 +102,10 @@ function Wordmark() {
         </svg>
       </span>
       <span className="leading-none">
-        <span className="font-display text-[15px] font-extrabold tracking-tight text-white">
+        <span className="font-display text-[0.9375rem] font-extrabold tracking-tight text-white">
           SMART<span className="text-cyan-400">CAR</span>BRASIL
         </span>
-        <span className="mt-1 block text-[10px] font-medium text-white/60">
+        <span className="mt-1 block text-[0.625rem] font-medium text-white/60">
           Proteção veicular
         </span>
       </span>
@@ -129,7 +129,7 @@ function NavLink({ item, pathname, onNav, sub, compacto }: {
       aria-current={active ? 'page' : undefined}
       className={cn(
         'flex items-center rounded-lg transition-colors',
-        compacto ? 'h-10 justify-center' : sub ? 'gap-3 py-2 pl-3 pr-3 text-[13px]' : 'gap-3 px-3 py-2.5 text-[13.5px]',
+        compacto ? 'h-10 justify-center' : sub ? 'gap-3 py-2 pl-3 pr-3 text-[0.8125rem]' : 'gap-3 px-3 py-2.5 text-[0.8438rem]',
         active
           ? 'bg-cyan-500 font-semibold text-navy'
           : 'font-medium text-white/80 hover:bg-white/10 hover:text-white',
@@ -155,7 +155,7 @@ function ContadorMenu({ tipo, ponto }: { tipo: NonNullable<Item['contador']>; po
     return <span title={titulo} className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-navy" />;
   }
   return (
-    <span title={titulo} className="tnum min-w-[1.25rem] rounded-full bg-rose-600 px-1.5 text-center text-[11px] font-bold leading-5 text-white">
+    <span title={titulo} className="tnum min-w-[1.25rem] rounded-full bg-rose-600 px-1.5 text-center text-[0.6875rem] font-bold leading-5 text-white">
       {n > 99 ? '99+' : n}
     </span>
   );
@@ -188,7 +188,7 @@ function NavGrupo({ grupo, pathname, onNav, compacto }: {
         onClick={() => setAberto(!mostrar)}
         aria-expanded={mostrar}
         className={cn(
-          'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13.5px] transition-colors',
+          'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[0.8438rem] transition-colors',
           dentro ? 'font-semibold text-white' : 'font-medium text-white/80 hover:bg-white/10 hover:text-white',
         )}
       >

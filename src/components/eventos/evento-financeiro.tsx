@@ -118,7 +118,7 @@ export function EventoFinanceiro({
                   <tr key={l.id} className="border-b border-slate-50">
                     <td className="tnum py-2">{formatDate(l.data_vencimento)}</td>
                     <td className="py-2">
-                      <span className={`mr-1.5 rounded px-1.5 py-0.5 text-[10px] ${l.tipo === 'RECEITA' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                      <span className={`mr-1.5 rounded px-1.5 py-0.5 text-[0.625rem] ${l.tipo === 'RECEITA' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
                         {l.tipo === 'RECEITA' ? 'Receber' : 'Pagar'}
                       </span>
                       {l.descricao}
@@ -205,7 +205,7 @@ function Favorecido({ l }: { l: LancamentoComRel }) {
     return (
       <>
         {l.fornecedores ? rotuloFornecedor(l.fornecedores) : null}
-        {l.evento_terceiros && <span className="block text-[11px] text-slate-400">ref. terceiro {l.evento_terceiros.codigo}</span>}
+        {l.evento_terceiros && <span className="block text-[0.6875rem] text-slate-400">ref. terceiro {l.evento_terceiros.codigo}</span>}
       </>
     );
   }
@@ -213,7 +213,7 @@ function Favorecido({ l }: { l: LancamentoComRel }) {
     return (
       <>
         {l.evento_terceiros?.nome}
-        <span className="block text-[11px] text-slate-400">terceiro {l.evento_terceiros?.codigo}</span>
+        <span className="block text-[0.6875rem] text-slate-400">terceiro {l.evento_terceiros?.codigo}</span>
       </>
     );
   }
@@ -221,7 +221,7 @@ function Favorecido({ l }: { l: LancamentoComRel }) {
     return (
       <>
         {l.clientes?.nome_razao_social}
-        <span className="block text-[11px] text-slate-400">indenização ao associado</span>
+        <span className="block text-[0.6875rem] text-slate-400">indenização ao associado</span>
       </>
     );
   }
@@ -233,7 +233,7 @@ function Box({ titulo, valor, cor, detalhe }: { titulo: string; valor: number; c
     <div className="rounded-lg border border-slate-200 bg-superficie p-3">
       <p className="text-xs text-slate-500">{titulo}</p>
       <p className={`tnum mt-1 text-lg font-semibold ${cor}`}>{formatCurrency(valor)}</p>
-      {detalhe && <p className="tnum text-[11px] text-slate-400">{detalhe}</p>}
+      {detalhe && <p className="tnum text-[0.6875rem] text-slate-400">{detalhe}</p>}
     </div>
   );
 }

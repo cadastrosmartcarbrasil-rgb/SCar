@@ -87,7 +87,7 @@ export default function LeadDetailPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4 pb-10">
+    <div className="mx-auto max-w-7xl space-y-4 pb-10">
       <Link href="/vendas" className="inline-flex items-center gap-1 text-sm text-slate-500">
         <ArrowLeft className="h-4 w-4" /> Voltar
       </Link>
@@ -125,7 +125,7 @@ export default function LeadDetailPage() {
             return (
               <li key={s} className="flex flex-1 flex-col items-center gap-1 text-center">
                 <span className={`h-2.5 w-2.5 rounded-full ${done ? 'bg-acao' : 'bg-slate-200'}`} />
-                <span className={`text-[9px] leading-tight ${done ? 'text-brand-700' : 'text-slate-400'}`}>{STATUS_LEAD[s].curto}</span>
+                <span className={`text-[0.5625rem] leading-tight ${done ? 'text-brand-700' : 'text-slate-400'}`}>{STATUS_LEAD[s].curto}</span>
               </li>
             );
           })}
@@ -140,7 +140,7 @@ export default function LeadDetailPage() {
           aceite.divergente || aceite.semVinculo
             ? 'border-amber-300 bg-amber-50'
             : 'border-emerald-200 bg-emerald-50'}`}>
-          <p className={`flex items-center gap-1.5 text-[13px] font-bold ${
+          <p className={`flex items-center gap-1.5 text-[0.8125rem] font-bold ${
             aceite.divergente || aceite.semVinculo ? 'text-amber-900' : 'text-emerald-800'}`}>
             {aceite.divergente || aceite.semVinculo
               ? <TriangleAlert className="h-4 w-4" />
@@ -152,7 +152,7 @@ export default function LeadDetailPage() {
                 : 'Proposta aceita pelo cliente'}
           </p>
 
-          <p className={`mt-1 text-[12px] leading-relaxed ${
+          <p className={`mt-1 text-[0.75rem] leading-relaxed ${
             aceite.divergente || aceite.semVinculo ? 'text-amber-900/80' : 'text-emerald-900/80'}`}>
             {lead.aceite_nome} ({lead.aceite_documento}) aceitou em{' '}
             {formatDate(lead.aceite_em)}
@@ -164,7 +164,7 @@ export default function LeadDetailPage() {
           </p>
 
           {aceite.divergente && (
-            <p className="mt-2 rounded-lg bg-amber-100/70 px-3 py-2 text-[12px] leading-relaxed text-amber-900">
+            <p className="mt-2 rounded-lg bg-amber-100/70 px-3 py-2 text-[0.75rem] leading-relaxed text-amber-900">
               Depois do aceite {aceite.posteriores.length === 1 ? 'entrou' : 'entraram'}{' '}
               <b>{aceite.posteriores.length}</b>{' '}
               {aceite.posteriores.length === 1 ? 'cotação nova' : 'cotações novas'}
@@ -176,13 +176,13 @@ export default function LeadDetailPage() {
           )}
 
           {aceite.semVinculo && (
-            <p className="mt-2 rounded-lg bg-amber-100/70 px-3 py-2 text-[12px] leading-relaxed text-amber-900">
+            <p className="mt-2 rounded-lg bg-amber-100/70 px-3 py-2 text-[0.75rem] leading-relaxed text-amber-900">
               O registro do aceite não aponta para nenhuma cotação desta lista. Confirme com o
               cliente o valor combinado antes de mandar para a Auditoria.
             </p>
           )}
 
-          <p className={`mt-1.5 text-[11.5px] ${
+          <p className={`mt-1.5 text-[0.7188rem] ${
             aceite.divergente || aceite.semVinculo ? 'text-amber-900/70' : 'text-emerald-900/70'}`}>
             O back-office ajusta, completa a ficha abaixo e manda para a Auditoria.
           </p>
@@ -191,8 +191,8 @@ export default function LeadDetailPage() {
 
       {/* 0161: o back-office assume em Aguardando vistoria */}
       {lead.status === 'AGUARDANDO_VISTORIA' && (
-        <div className="rounded-2xl border border-teal-200 bg-teal-50 p-4 text-[12.5px] leading-relaxed text-teal-900">
-          <p className="text-[13px] font-bold">Com o back-office</p>
+        <div className="rounded-2xl border border-teal-200 bg-teal-50 p-4 text-[0.7812rem] leading-relaxed text-teal-900">
+          <p className="text-[0.8125rem] font-bold">Com o back-office</p>
           <p className="mt-1">
             Mande o link da vistoria (aba <b>Documentos e fotos</b>), complete a ficha e envie para a
             Auditoria.{' '}
@@ -236,7 +236,7 @@ export default function LeadDetailPage() {
           {podeAuditar ? (
             <div className="mt-3 space-y-2">
               {faltando.length > 0 && (
-                <p className="rounded-lg bg-superficie/70 px-3 py-2 text-[11.5px] leading-relaxed text-amber-900">
+                <p className="rounded-lg bg-superficie/70 px-3 py-2 text-[0.7188rem] leading-relaxed text-amber-900">
                   <b>Faltam {faltando.length} item(ns)</b> para o veículo poder entrar na base:{' '}
                   {faltando.slice(0, 6).join(', ')}
                   {faltando.length > 6 && ` e mais ${faltando.length - 6}`}.
@@ -259,7 +259,7 @@ export default function LeadDetailPage() {
                   </FormField>
                 )}
               </div>
-              <p className="text-[11.5px] text-amber-800">
+              <p className="text-[0.7188rem] text-amber-800">
                 Adesão de <b className="tnum">{formatCurrency(Number(lead.adesao_valor ?? 0))}</b> pela tabela (cotação aceita)
                 {adesaoPelaSmartCar ? ' — o boleto (com PIX) é emitido pela Smart Car junto com o carnê.' : ', recebida pelo consultor (sem boleto).'}
                 {' '}A cobertura começa <b>24 horas</b> depois da autorização; o 1º boleto do carnê cobra só os
@@ -342,7 +342,7 @@ export default function LeadDetailPage() {
                         </span>
                       )}
                     </span>
-                    <span className="text-[10px] uppercase text-slate-400">{c.modo_envio === 'CONSOLIDADA' ? 'Consolidada' : 'Detalhada'}</span>
+                    <span className="text-[0.625rem] uppercase text-slate-400">{c.modo_envio === 'CONSOLIDADA' ? 'Consolidada' : 'Detalhada'}</span>
                   </div>
                   {Number(c.valor_assistencia_profissional) > 0 && (
                     <p className="mt-0.5 text-xs text-slate-500">

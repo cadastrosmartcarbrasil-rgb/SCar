@@ -65,7 +65,7 @@ export function Modal({
       >
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3.5">
           <div>
-            <h2 className="font-display text-[15px] font-semibold text-slate-900">{title}</h2>
+            <h2 className="font-display text-[0.9375rem] font-semibold text-slate-900">{title}</h2>
             {subtitulo && <p className="mt-0.5 text-xs text-slate-500">{subtitulo}</p>}
           </div>
           <button type="button" onClick={onClose} aria-label="Fechar" className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600">

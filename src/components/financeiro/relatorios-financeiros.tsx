@@ -65,21 +65,21 @@ export function RelatoriosFinanceiros() {
         {tipo !== 'fluxo' && (
           <>
             <label className="block">
-              <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Centro de custo</span>
+              <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">Centro de custo</span>
               <select className={SELECT_CLS} value={centro} onChange={(e) => setCentro(e.target.value)}>
                 <option value="">Todos</option>
                 {(centros ?? []).map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
               </select>
             </label>
             <label className="block">
-              <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Plano de contas</span>
+              <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">Plano de contas</span>
               <select className={SELECT_CLS} value={categoria} onChange={(e) => setCategoria(e.target.value)}>
                 <option value="">Todos</option>
                 {ordenarPlano(plano ?? []).filter(ehAnalitica).map((c) => <option key={c.id} value={c.id}>{c.codigo_estruturado} {c.nome}</option>)}
               </select>
             </label>
             <label className="block">
-              <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Status</span>
+              <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">Status</span>
               <select className={SELECT_CLS} value={status} onChange={(e) => setStatus(e.target.value as Status)}>
                 <option value="">Todos</option>
                 {statusValido.includes('PAGO') && <option value="PAGO">Pago (realizado)</option>}

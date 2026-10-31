@@ -135,21 +135,21 @@ function Conteudo() {
                 <td className="px-4 py-2">
                   <div className="flex flex-wrap gap-1">
                     {f.prestador_assistencia && (
-                      <span className="inline-flex items-center gap-1 rounded bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+                      <span className="inline-flex items-center gap-1 rounded bg-amber-50 px-2 py-0.5 text-[0.6875rem] font-medium text-amber-700">
                         <LifeBuoy className="h-3 w-3" /> 24h
                       </span>
                     )}
                     {f.empresa_rastreamento && (
-                      <span className="inline-flex items-center gap-1 rounded bg-cyan-50 px-2 py-0.5 text-[11px] font-medium text-cyan-700">
+                      <span className="inline-flex items-center gap-1 rounded bg-cyan-50 px-2 py-0.5 text-[0.6875rem] font-medium text-cyan-700">
                         <Satellite className="h-3 w-3" /> Rastreadora
                       </span>
                     )}
                     {!f.prestador_assistencia && !f.empresa_rastreamento && (
-                      <span className="rounded bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">Peças / serviços</span>
+                      <span className="rounded bg-slate-100 px-2 py-0.5 text-[0.6875rem] text-slate-600">Peças / serviços</span>
                     )}
                   </div>
                   {f.empresa_rastreamento && Number(f.custo_mensal_equipamento ?? 0) > 0 && (
-                    <span className="block text-[11px] text-slate-400">
+                    <span className="block text-[0.6875rem] text-slate-400">
                       {formatCurrency(Number(f.custo_mensal_equipamento))} por equipamento/mes
                     </span>
                   )}
@@ -160,7 +160,7 @@ function Conteudo() {
                 <td className="px-4 py-2 text-slate-600">
                   {[f.contato, f.telefone ? formatarTelefone(f.telefone) : null].filter(Boolean).join(' · ')
                     || f.email || '—'}
-                  {f.cobertura && <span className="block text-[11px] text-slate-400">{f.cobertura}</span>}
+                  {f.cobertura && <span className="block text-[0.6875rem] text-slate-400">{f.cobertura}</span>}
                 </td>
                 <td className="px-4 py-2">
                   {f.ativo ? <span className="text-emerald-600">Sim</span> : <span className="text-slate-400">Nao</span>}

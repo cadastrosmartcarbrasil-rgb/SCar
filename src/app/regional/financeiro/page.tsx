@@ -21,7 +21,7 @@ export default function FinanceiroRegionalPage() {
         </p>
       </header>
 
-      <p className="flex items-start gap-1.5 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2.5 text-[11.5px] leading-relaxed text-cyan-900">
+      <p className="flex items-start gap-1.5 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2.5 text-[0.7188rem] leading-relaxed text-cyan-900">
         <Info className="mt-px h-3.5 w-3.5 shrink-0" />
         Este financeiro trata <b>só comissão</b> — o que a matriz repassa à sua unidade e o que a sua
         unidade repassa aos vendedores. Plano de contas, centro de custo e contas bancárias são da

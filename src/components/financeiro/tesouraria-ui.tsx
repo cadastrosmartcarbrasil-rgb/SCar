@@ -38,7 +38,7 @@ export function SeletorConta({
   const contas = (todas ?? []).filter((c) => !minhas || minhas.includes(c.id));
   return (
     <label className={`block ${className}`}>
-      <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Conta</span>
+      <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">Conta</span>
       <select
         value={value ?? ''}
         onChange={(e) => onChange(e.target.value || null)}

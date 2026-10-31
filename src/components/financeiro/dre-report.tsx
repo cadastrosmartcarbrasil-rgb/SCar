@@ -91,13 +91,13 @@ export function DreReport({ regionalId }: { regionalId?: string | null }) {
     <div className="space-y-5">
       <FiltroPeriodo periodo={periodo} onChange={setPeriodo}>
         <label className="block">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Regime contábil</span>
+          <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">Regime contábil</span>
           <Select className="mt-1 w-52 py-1.5" value={regime} onChange={(e) => setRegime(e.target.value as RegimeDre)}>
             {REGIMES.map((r) => <option key={r.valor} value={r.valor}>{r.rotulo}</option>)}
           </Select>
         </label>
         <label className="block">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Centro de custo</span>
+          <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">Centro de custo</span>
           <Select className="mt-1 w-48 py-1.5" value={centroCustoId} onChange={(e) => setCentroCustoId(e.target.value)}>
             <option value="">Consolidado</option>
             {(centros ?? []).map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
@@ -194,7 +194,7 @@ export function DreReport({ regionalId }: { regionalId?: string | null }) {
           ) : (
             <table className="w-full min-w-[680px] text-sm">
               <thead>
-                <tr className="border-b border-slate-200 text-left text-[11px] uppercase tracking-wide text-slate-400">
+                <tr className="border-b border-slate-200 text-left text-[0.6875rem] uppercase tracking-wide text-slate-400">
                   <th className="py-2 font-semibold">Estrutura da DRE</th>
                   <th className="py-2 font-semibold">Conta</th>
                   <th className="py-2 text-right font-semibold">Valor (R$)</th>
@@ -218,7 +218,7 @@ export function DreReport({ regionalId }: { regionalId?: string | null }) {
                       <td className="py-1.5 pr-3" style={{ paddingLeft: `${4 + l.nivel * 18}px` }}>
                         {l.tipo === 'grupo' || l.tipo === 'conta' ? `• ${l.rotulo}` : l.rotulo}
                       </td>
-                      <td className="py-1.5 font-mono text-[11px] text-slate-400">{l.codigo ?? (destaque ? 'Subtotal' : '')}</td>
+                      <td className="py-1.5 font-mono text-[0.6875rem] text-slate-400">{l.codigo ?? (destaque ? 'Subtotal' : '')}</td>
                       <td className={`tnum py-1.5 text-right ${l.tipo === 'resultado' ? (l.valor >= 0 ? 'text-emerald-700' : 'text-rose-700') : ''}`}>
                         {formatCurrency(l.valor)}
                       </td>
@@ -242,7 +242,7 @@ export function DreReport({ regionalId }: { regionalId?: string | null }) {
         </CardContent>
       </Card>
 
-      <p className="text-[11px] leading-relaxed text-slate-400">
+      <p className="text-[0.6875rem] leading-relaxed text-slate-400">
         % = participação sobre a receita operacional bruta do período. Custos, deduções e despesas aparecem
         negativos. Contas de balanço (imobilizado, empréstimos, capital) não entram na DRE — aparecem no
         Balancete. Lançamento sem conta aparece como &quot;não classificado&quot; (3.1.1.99 / 4.2.1.99).

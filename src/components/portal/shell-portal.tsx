@@ -42,13 +42,13 @@ export function ShellPortal({ nome, logoUrl, children }: {
           <LogoSmartCar url={logoUrl} className="h-11 w-auto object-contain" />
           <div className="flex items-center gap-3">
             <ThemeToggle />
-            <span className="hidden text-right text-[12px] leading-tight text-slate-500 sm:block">
+            <span className="hidden text-right text-[0.75rem] leading-tight text-slate-500 sm:block">
               <span className="block font-semibold text-slate-800">{nome}</span>
               Área do associado
             </span>
             <button
               onClick={sair}
-              className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-rose-600"
+              className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[0.75rem] font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-rose-600"
             >
               <LogOut className="h-4 w-4" /> Sair
             </button>
@@ -62,7 +62,7 @@ export function ShellPortal({ nome, logoUrl, children }: {
               <Link
                 key={i.href}
                 href={i.href}
-                className={`flex items-center gap-1.5 border-b-2 px-4 py-3 text-[13px] font-semibold transition ${
+                className={`flex items-center gap-1.5 border-b-2 px-4 py-3 text-[0.8125rem] font-semibold transition ${
                   ativo(i.href)
                     ? 'border-cyan-400 text-white'
                     : 'border-transparent text-white/60 hover:text-white'
@@ -85,7 +85,7 @@ export function ShellPortal({ nome, logoUrl, children }: {
           <Link
             key={i.href}
             href={i.href}
-            className={`flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition ${
+            className={`flex flex-col items-center gap-0.5 py-2.5 text-[0.625rem] font-medium transition ${
               ativo(i.href) ? 'text-cyan-600' : 'text-slate-400'
             }`}
           >

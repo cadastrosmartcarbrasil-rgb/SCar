@@ -60,22 +60,22 @@ export function TrocaSenhaObrigatoria({ nome, logoUrl }: {
             <ShieldCheck className="h-6 w-6" />
           </span>
           <h1 className="mt-3 text-xl font-bold text-brand-800">Crie a sua senha</h1>
-          <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
+          <p className="mt-1 text-[0.8125rem] leading-relaxed text-slate-500">
             Olá, {nome.split(' ')[0]}. Você entrou com o seu CPF como senha — e ele não protege a
             sua conta. Escolha uma senha sua antes de continuar.
           </p>
 
           <form onSubmit={enviar} className="mt-5 space-y-3">
             <label className="block">
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+              <span className="text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-500">
                 Nova senha
               </span>
               <input
                 type="password" value={senha} autoFocus autoComplete="new-password"
                 onChange={(e) => setSenha(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-[14px] outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
+                className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-[0.875rem] outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
               />
-              <span className={`mt-1 block text-[11px] ${curta || soNumeros ? 'text-amber-700' : 'text-slate-400'}`}>
+              <span className={`mt-1 block text-[0.6875rem] ${curta || soNumeros ? 'text-amber-700' : 'text-slate-400'}`}>
                 {soNumeros
                   ? 'Use letras também — só números e fácil de adivinhar.'
                   : 'Pelo menos 8 caracteres, com letras e números.'}
@@ -83,26 +83,26 @@ export function TrocaSenhaObrigatoria({ nome, logoUrl }: {
             </label>
 
             <label className="block">
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+              <span className="text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-500">
                 Repita a senha
               </span>
               <input
                 type="password" value={confirmacao} autoComplete="new-password"
                 onChange={(e) => setConfirmacao(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-[14px] outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
+                className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-[0.875rem] outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
               />
               {naoConfere && (
-                <span className="mt-1 block text-[11px] text-rose-600">As senhas não conferem.</span>
+                <span className="mt-1 block text-[0.6875rem] text-rose-600">As senhas não conferem.</span>
               )}
             </label>
 
             {erro && (
-              <p className="rounded-lg bg-rose-50 px-3 py-2 text-[12.5px] text-rose-700">{erro}</p>
+              <p className="rounded-lg bg-rose-50 px-3 py-2 text-[0.7812rem] text-rose-700">{erro}</p>
             )}
 
             <button
               type="submit" disabled={!podeEnviar || enviando}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-acao px-4 py-3 text-[14px] font-semibold text-white transition hover:bg-acao-escura disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-acao px-4 py-3 text-[0.875rem] font-semibold text-white transition hover:bg-acao-escura disabled:opacity-50"
             >
               {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
               Salvar e entrar

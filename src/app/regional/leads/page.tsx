@@ -86,7 +86,7 @@ export default function LeadsRegionalPage() {
         </CardHeader>
         <CardContent>
           {(pool ?? []).length === 0 ? (
-            <p className="py-2 text-center text-[12.5px] text-slate-400">
+            <p className="py-2 text-center text-[0.7812rem] text-slate-400">
               Nenhum lead esperando distribuição.
             </p>
           ) : (
@@ -94,15 +94,15 @@ export default function LeadsRegionalPage() {
               {(pool ?? []).map((l) => (
                 <li key={l.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
                   <div className="min-w-0">
-                    <p className="truncate text-[13px] font-medium text-slate-800">
+                    <p className="truncate text-[0.8125rem] font-medium text-slate-800">
                       {l.nome}
                       {l.carteira && (
-                        <span className="ml-2 rounded-full bg-violet-50 px-2 py-0.5 text-[10.5px] font-semibold text-violet-700 ring-1 ring-inset ring-violet-200">
+                        <span className="ml-2 rounded-full bg-violet-50 px-2 py-0.5 text-[0.6562rem] font-semibold text-violet-700 ring-1 ring-inset ring-violet-200">
                           já é associado
                         </span>
                       )}
                     </p>
-                    <p className="truncate text-[11px] text-slate-400">
+                    <p className="truncate text-[0.6875rem] text-slate-400">
                       {l.celular}
                       {l.placa && <span className="ml-1.5 font-mono uppercase">{l.placa}</span>}
                       {l.origem_hotlink && <span className="ml-1.5 text-cyan-600">via /v/{l.origem_hotlink}</span>}
@@ -156,7 +156,7 @@ export default function LeadsRegionalPage() {
           ) : (
             <table className="w-full min-w-[820px] text-sm">
               <thead>
-                <tr className="border-b border-slate-200 text-left text-[11px] uppercase tracking-wide text-slate-400">
+                <tr className="border-b border-slate-200 text-left text-[0.6875rem] uppercase tracking-wide text-slate-400">
                   <th className="py-2.5 font-semibold">Lead</th>
                   <th className="py-2.5 font-semibold">Vendedor</th>
                   <th className="py-2.5 font-semibold">Origem</th>
@@ -170,23 +170,23 @@ export default function LeadsRegionalPage() {
                   <tr key={l.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/60">
                     <td className="py-2.5">
                       <span className="block font-medium text-slate-800">{l.nome}</span>
-                      <span className="block text-[11px] text-slate-400">
+                      <span className="block text-[0.6875rem] text-slate-400">
                         {l.celular}{l.placa && ` · ${l.placa}`}
                       </span>
                     </td>
                     <td className="py-2.5 text-slate-600">{l.vendedor_nome ?? <span className="text-slate-300">—</span>}</td>
                     <td className="py-2.5">
                       {l.origem_hotlink ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-cyan-50 px-2 py-0.5 text-[11px] font-medium text-cyan-700 ring-1 ring-inset ring-cyan-200">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-cyan-50 px-2 py-0.5 text-[0.6875rem] font-medium text-cyan-700 ring-1 ring-inset ring-cyan-200">
                           <Link2 className="h-3 w-3" /> {l.origem_hotlink}
                         </span>
                       ) : (
-                        <span className="text-[11px] text-slate-400">cadastro interno</span>
+                        <span className="text-[0.6875rem] text-slate-400">cadastro interno</span>
                       )}
                     </td>
                     <td className="tnum py-2.5 text-slate-600">{formatDate(l.created_at)}</td>
                     <td className="py-2.5">
-                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset ${COR_STATUS[l.status] ?? 'bg-slate-100 text-slate-500 ring-slate-200'}`}>
+                      <span className={`rounded-full px-2 py-0.5 text-[0.6875rem] font-medium ring-1 ring-inset ${COR_STATUS[l.status] ?? 'bg-slate-100 text-slate-500 ring-slate-200'}`}>
                         {l.status.replace(/_/g, ' ')}
                       </span>
                     </td>

@@ -58,8 +58,8 @@ export function VisorImagens({ imagens, id, onTrocar, onFechar, onAbrirOriginal 
     >
       <header className="flex items-start justify-between gap-3 text-white" onClick={(e) => e.stopPropagation()}>
         <div className="min-w-0">
-          <p className="text-[14px] font-semibold">{atual.titulo}</p>
-          <p className="tnum text-[11.5px] text-white/70">
+          <p className="text-[0.875rem] font-semibold">{atual.titulo}</p>
+          <p className="tnum text-[0.7188rem] text-white/70">
             {atual.legenda}
             {atual.legenda ? ' · ' : ''}{i + 1} de {imagens.length}
           </p>
@@ -68,7 +68,7 @@ export function VisorImagens({ imagens, id, onTrocar, onFechar, onAbrirOriginal 
           {atual.original && onAbrirOriginal && (
             <button
               type="button" onClick={() => onAbrirOriginal(atual.original as string)}
-              className="inline-flex items-center gap-1 rounded-lg bg-white/10 px-2.5 py-1.5 text-[11.5px] font-semibold text-white hover:bg-white/20"
+              className="inline-flex items-center gap-1 rounded-lg bg-white/10 px-2.5 py-1.5 text-[0.7188rem] font-semibold text-white hover:bg-white/20"
             >
               <ExternalLink className="h-3.5 w-3.5" /> Abrir original
             </button>

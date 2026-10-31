@@ -59,7 +59,7 @@ export function LinkDaVistoria({ leadId, celular, nome, compacto }: {
         type="button"
         onClick={gerarLink}
         disabled={gerar.isPending}
-        className={`flex items-center justify-center gap-2 rounded-xl border border-cyan-200 bg-cyan-50 px-3.5 py-2.5 text-[12.5px] font-semibold text-cyan-800 transition hover:bg-cyan-100 disabled:opacity-60 ${
+        className={`flex items-center justify-center gap-2 rounded-xl border border-cyan-200 bg-cyan-50 px-3.5 py-2.5 text-[0.7812rem] font-semibold text-cyan-800 transition hover:bg-cyan-100 disabled:opacity-60 ${
           compacto ? '' : 'w-full'
         }`}
       >
@@ -73,14 +73,14 @@ export function LinkDaVistoria({ leadId, celular, nome, compacto }: {
 
   return (
     <div className="rounded-xl border border-cyan-200 bg-cyan-50/60 p-3">
-      <p className="flex items-center gap-1.5 text-[12.5px] font-semibold text-cyan-900">
+      <p className="flex items-center gap-1.5 text-[0.7812rem] font-semibold text-cyan-900">
         <Link2 className="h-3.5 w-3.5" /> O cliente fotografa pelo celular dele
       </p>
-      <p className="mt-1 break-all font-mono text-[11px] text-slate-500">{link.url}</p>
+      <p className="mt-1 break-all font-mono text-[0.6875rem] text-slate-500">{link.url}</p>
       <div className="mt-2.5 flex flex-wrap gap-2">
         <button
           type="button" onClick={copiar}
-          className="flex items-center gap-1.5 rounded-lg border border-slate-300 bg-superficie px-3 py-1.5 text-[12px] font-semibold text-slate-600 transition hover:bg-slate-50"
+          className="flex items-center gap-1.5 rounded-lg border border-slate-300 bg-superficie px-3 py-1.5 text-[0.75rem] font-semibold text-slate-600 transition hover:bg-slate-50"
         >
           {copiado ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
           {copiado ? 'Copiado!' : 'Copiar'}
@@ -88,18 +88,18 @@ export function LinkDaVistoria({ leadId, celular, nome, compacto }: {
         <a
           href={linkWhatsApp(mensagemDaVistoria(link.url, nome, link.expiraEm), celular)}
           target="_blank" rel="noreferrer"
-          className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[12px] font-semibold text-emerald-700 transition hover:bg-emerald-100"
+          className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[0.75rem] font-semibold text-emerald-700 transition hover:bg-emerald-100"
         >
           <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
         </a>
         <a
           href={link.url} target="_blank" rel="noreferrer"
-          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-semibold text-slate-500 transition hover:text-slate-700"
+          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[0.75rem] font-semibold text-slate-500 transition hover:text-slate-700"
         >
           Abrir
         </a>
       </div>
-      <p className="mt-2 text-[11px] text-slate-500">
+      <p className="mt-2 text-[0.6875rem] text-slate-500">
         Vale até {formatDate(link.expiraEm)}. Depois disso é só gerar outro aqui.
       </p>
     </div>

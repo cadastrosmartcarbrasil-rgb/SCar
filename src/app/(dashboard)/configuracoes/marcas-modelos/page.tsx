@@ -31,7 +31,7 @@ function StatusBadge({ status }: { status: StatusCadastro }) {
         ? 'bg-amber-50 text-amber-700'
         : 'bg-rose-50 text-rose-700';
   const label = STATUS.find((s) => s.value === status)?.label ?? status;
-  return <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${cls}`}>{label}</span>;
+  return <span className={`rounded px-1.5 py-0.5 text-[0.6875rem] font-medium ${cls}`}>{label}</span>;
 }
 
 export default function MarcasModelosPage() {
@@ -258,7 +258,7 @@ export default function MarcasModelosPage() {
               <div className="max-h-96 overflow-y-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-y border-slate-100 text-left text-[11px] uppercase text-slate-400">
+                    <tr className="border-y border-slate-100 text-left text-[0.6875rem] uppercase text-slate-400">
                       <th className="px-3 py-1.5">Modelo</th>
                       <th className="px-2 py-1.5">Tipo</th>
                       <th className="px-2 py-1.5">Cota</th>
@@ -353,7 +353,7 @@ function MarcaItem({
         <select
           value={marca.status}
           onChange={(e) => onSalvar(e.target.value as StatusCadastro)}
-          className="rounded border border-slate-200 bg-superficie px-1 py-0.5 text-[11px]"
+          className="rounded border border-slate-200 bg-superficie px-1 py-0.5 text-[0.6875rem]"
         >
           {STATUS.map((s) => (
             <option key={s.value} value={s.value}>
@@ -397,7 +397,7 @@ function ModeloRow({
         <td className="px-2 py-1.5 text-slate-500">{modelo.tipo_veiculo ?? '-'}</td>
         <td className="px-2 py-1.5">
           {cotaLabel ? (
-            <span className="rounded bg-indigo-50 px-1.5 py-0.5 text-[11px] font-medium text-indigo-700">
+            <span className="rounded bg-indigo-50 px-1.5 py-0.5 text-[0.6875rem] font-medium text-indigo-700">
               {cotaLabel}
             </span>
           ) : (
@@ -432,7 +432,7 @@ function ModeloRow({
           className="w-28 rounded border border-slate-300 px-1.5 py-1 text-xs"
         />
       </td>
-      <td className="px-2 py-1.5 text-[11px] text-slate-400">
+      <td className="px-2 py-1.5 text-[0.6875rem] text-slate-400">
         {cotaLabel ?? 'auto'}
       </td>
       <td className="px-2 py-1.5">

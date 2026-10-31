@@ -32,7 +32,7 @@ type Form = Partial<LancamentosFinanceirosRow>;
 function Secao({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
     <section className="space-y-3">
-      <h4 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+      <h4 className="flex items-center gap-2 text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-400">
         <span className="h-px flex-1 bg-slate-200" aria-hidden />
         {titulo}
         <span className="h-px flex-1 bg-slate-200" aria-hidden />
@@ -248,7 +248,7 @@ export function LancamentoModal({
 
           {form.evento_id && evento && (
             <div className="space-y-2 rounded-xl border border-cyan-200 bg-cyan-50/50 p-3">
-              <p className="text-[11.5px] font-semibold uppercase tracking-wide text-cyan-800">
+              <p className="text-[0.7188rem] font-semibold uppercase tracking-wide text-cyan-800">
                 Evento {evento.protocolo ?? ''}
               </p>
               {podeIndenizarAssociado && (
@@ -261,7 +261,7 @@ export function LancamentoModal({
                   />
                   <span>
                     <span className="font-medium text-slate-800">Indenização ao associado (o próprio beneficiário)</span>
-                    <span className="block text-[11.5px] text-slate-500">
+                    <span className="block text-[0.7188rem] text-slate-500">
                       Paga a {evento.associado?.nome} pelo evento {evento.protocolo ?? ''}. O nome e o número do evento
                       aparecem na lista do financeiro.
                     </span>
@@ -282,7 +282,7 @@ export function LancamentoModal({
               </FormField>
               )}
               {!receita && !form.fornecedor_id && !form.evento_terceiro_id && !indenizaAssociado && (
-                <p className="flex items-start gap-1.5 text-[11.5px] leading-relaxed text-rose-700">
+                <p className="flex items-start gap-1.5 text-[0.7188rem] leading-relaxed text-rose-700">
                   <ShieldAlert className="mt-px h-3.5 w-3.5 shrink-0" />
                   Conta a pagar do evento exige favorecido: escolha o fornecedor, o terceiro ou marque a indenização ao associado.
                 </p>
@@ -311,7 +311,7 @@ export function LancamentoModal({
             </FormField>
           </div>
           {!form.categoria_dre_id && (
-            <p className="flex items-start gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-[11.5px] leading-relaxed text-amber-800">
+            <p className="flex items-start gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-[0.7188rem] leading-relaxed text-amber-800">
               <Info className="mt-px h-3.5 w-3.5 shrink-0" />
               Sem categoria o valor aparece no DRE como &quot;não classificado&quot;. Classifique para o relatório ficha gerencial.
             </p>
@@ -357,7 +357,7 @@ export function LancamentoModal({
           {salvoId ? (
             <>
               {recemCriado && (
-                <p className="flex items-start gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-[11.5px] leading-relaxed text-emerald-800">
+                <p className="flex items-start gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-[0.7188rem] leading-relaxed text-emerald-800">
                   <CheckCircle2 className="mt-px h-3.5 w-3.5 shrink-0" />
                   Lançamento gravado. Anexe os documentos e clique em Concluir — ou feche, os anexos
                   podem ser adicionados depois pela edição do título.
@@ -366,7 +366,7 @@ export function LancamentoModal({
               <AnexosLancamento lancamentoId={salvoId} />
             </>
           ) : (
-            <p className="flex items-start gap-1.5 rounded-lg bg-slate-50 px-3 py-2.5 text-[11.5px] leading-relaxed text-slate-500">
+            <p className="flex items-start gap-1.5 rounded-lg bg-slate-50 px-3 py-2.5 text-[0.7188rem] leading-relaxed text-slate-500">
               <Paperclip className="mt-px h-3.5 w-3.5 shrink-0" />
               Disponível depois de gravar o lançamento — o arquivo precisa de um título existente
               para ficar vinculado, e assim um cadastro abandonado não deixa arquivo solto no banco.
@@ -406,7 +406,7 @@ export function LancamentoModal({
 
             {previa.length > 1 && (
               <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
-                <p className="mb-2 flex items-center gap-1.5 text-[11.5px] font-semibold uppercase tracking-wide text-slate-500">
+                <p className="mb-2 flex items-center gap-1.5 text-[0.7188rem] font-semibold uppercase tracking-wide text-slate-500">
                   <Layers className="h-3.5 w-3.5" /> Prévia · {previa.length} títulos · total {formatCurrency(totalGerado)}
                 </p>
                 <div className="max-h-36 overflow-y-auto">

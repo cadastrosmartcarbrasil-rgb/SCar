@@ -49,29 +49,29 @@ export default function ComunicadosPage() {
                 <tr key={m.id} className={`border-b border-slate-50 last:border-0 ${m.publicado ? '' : 'opacity-60'}`}>
                   <td className="px-4 py-2">
                     <span className="flex flex-wrap items-center gap-1.5">
-                      <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${cat.cor}`}>{cat.rotulo}</span>
-                      <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${pri.cor}`}>{pri.rotulo}</span>
+                      <span className={`rounded px-1.5 py-0.5 text-[0.625rem] font-medium ${cat.cor}`}>{cat.rotulo}</span>
+                      <span className={`rounded px-1.5 py-0.5 text-[0.625rem] font-medium ${pri.cor}`}>{pri.rotulo}</span>
                       {m.exige_leitura && (
-                        <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+                        <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[0.625rem] font-medium text-amber-700">
                           ciência obrigatória
                         </span>
                       )}
                       {!m.publicado && (
-                        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">arquivado</span>
+                        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[0.625rem] text-slate-500">arquivado</span>
                       )}
                     </span>
                     <span className="mt-1 block font-medium text-slate-800">{m.titulo}</span>
-                    <span className="block max-w-xl truncate text-[11px] text-slate-400">{m.mensagem}</span>
+                    <span className="block max-w-xl truncate text-[0.6875rem] text-slate-400">{m.mensagem}</span>
                   </td>
                   <td className="px-4 py-2 text-slate-600">
                     {m.regional ?? 'Todas as unidades'}
-                    <span className="block text-[11px] text-slate-400">
+                    <span className="block text-[0.6875rem] text-slate-400">
                       {m.papeis?.length ? m.papeis.map(papelMemoRotulo).join(', ') : 'Todos os papéis'}
                     </span>
                     {/* endereço sem ninguem ativo: o comunicado nao chega a tela de
                         pessoa alguma, e isso precisa aparecer aqui e nao virar duvida */}
                     {m.destinatarios === 0 && (
-                      <span className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-rose-600">
+                      <span className="mt-0.5 flex items-center gap-1 text-[0.6875rem] font-medium text-rose-600">
                         <AlertTriangle className="h-3 w-3" /> nenhum usuário ativo neste endereço
                       </span>
                     )}
@@ -101,7 +101,7 @@ export default function ComunicadosPage() {
                   </td>
                   <td className="px-4 py-2 text-slate-600">
                     {formatDate(m.publicado_em)}
-                    {m.expira_em && <span className="block text-[11px] text-slate-400">até {formatDate(m.expira_em)}</span>}
+                    {m.expira_em && <span className="block text-[0.6875rem] text-slate-400">até {formatDate(m.expira_em)}</span>}
                   </td>
                   <td className="px-4 py-2">
                     <div className="flex justify-end gap-1">

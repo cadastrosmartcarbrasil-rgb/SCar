@@ -99,7 +99,7 @@ export function AnexosLancamento({ lancamentoId }: { lancamentoId: string }) {
             <p className="text-xs font-medium text-slate-600">
               Arraste os arquivos aqui ou <span className="text-cyan-700 underline">selecione do computador</span>
             </p>
-            <p className="text-[11px] text-slate-400">Nota fiscal, boleto, contrato ou comprovante · PDF, imagem, XML ou planilha · até 10 MB</p>
+            <p className="text-[0.6875rem] text-slate-400">Nota fiscal, boleto, contrato ou comprovante · PDF, imagem, XML ou planilha · até 10 MB</p>
           </>
         )}
       </div>
@@ -113,7 +113,7 @@ export function AnexosLancamento({ lancamentoId }: { lancamentoId: string }) {
               <FileText className="h-4 w-4 shrink-0 text-slate-400" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-xs font-medium text-slate-700">{a.nome_arquivo}</p>
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[0.6875rem] text-slate-400">
                   {formatDate(a.created_at)}
                   {a.tamanho_bytes ? ` · ${tamanhoLegivel(a.tamanho_bytes)}` : ''}
                 </p>
@@ -148,7 +148,7 @@ export function AnexosLancamento({ lancamentoId }: { lancamentoId: string }) {
       )}
 
       {!isLoading && (anexos ?? []).length === 0 && (
-        <p className="flex items-center gap-1.5 text-[11px] text-slate-400">
+        <p className="flex items-center gap-1.5 text-[0.6875rem] text-slate-400">
           <Paperclip className="h-3 w-3" /> Nenhum arquivo anexado a este título.
         </p>
       )}

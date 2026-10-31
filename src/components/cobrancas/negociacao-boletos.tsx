@@ -134,7 +134,7 @@ export function ModalNegociarBoletos({
               <li key={s.id} className="flex justify-between tnum">
                 <span className="text-slate-700">
                   Vence {formatDate(s.data_vencimento)}{s.placa ? ` · ${s.placa}` : ''}
-                  {s.origem === 'MUTUAL' && <span className="ml-1 rounded bg-brand-50 px-1.5 text-[11px] text-brand-600">Mutual</span>}
+                  {s.origem === 'MUTUAL' && <span className="ml-1 rounded bg-brand-50 px-1.5 text-[0.6875rem] text-brand-600">Mutual</span>}
                   {s.status === 'vencido' && <span className="ml-1 text-xs text-rose-600">{s.dias_atraso}d em atraso</span>}
                 </span>
                 <span>{formatCurrency(Number(s.valor))}</span>
@@ -311,7 +311,7 @@ function LinhaBoletoNovo({ b, varios }: { b: BoletoRenegociacao; varios: boolean
     <li className="flex flex-wrap items-center justify-between gap-2 text-sm">
       <span className="tnum text-slate-700">
         {varios ? `${b.parcela}a · ` : ''}vence {formatDate(b.vencimento)} · <b>{formatCurrency(Number(b.valor))}</b>
-        <span className={`ml-2 rounded px-1.5 text-[11px] ${b.status === 'pago' ? 'bg-emerald-50 text-emerald-700' : b.status === 'vencido' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'}`}>{b.status}</span>
+        <span className={`ml-2 rounded px-1.5 text-[0.6875rem] ${b.status === 'pago' ? 'bg-emerald-50 text-emerald-700' : b.status === 'vencido' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'}`}>{b.status}</span>
       </span>
       {b.status !== 'pago' && (
         <span className="flex flex-wrap gap-1">

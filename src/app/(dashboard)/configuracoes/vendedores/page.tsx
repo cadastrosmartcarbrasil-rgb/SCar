@@ -85,7 +85,7 @@ export default function VendedoresPage() {
       <div className="overflow-x-auto rounded-2xl border border-slate-200/80 bg-superficie">
         <table className="w-full min-w-[900px] text-sm">
           <thead>
-            <tr className="border-b border-slate-200 text-left text-[11px] uppercase tracking-wide text-slate-400">
+            <tr className="border-b border-slate-200 text-left text-[0.6875rem] uppercase tracking-wide text-slate-400">
               <th className="px-4 py-2.5 font-semibold">Nome</th>
               <th className="px-4 py-2.5 font-semibold">Código</th>
               <th className="px-4 py-2.5 font-semibold">Franquia</th>
@@ -106,7 +106,7 @@ export default function VendedoresPage() {
                     <BadgeDollarSign className="h-4 w-4 shrink-0 text-brand-500" />
                     <span>
                       <span className="block font-semibold text-slate-800">{v.nome}</span>
-                      <span className="block text-[11px] text-slate-400">
+                      <span className="block text-[0.6875rem] text-slate-400">
                         {v.email ?? 'sem e-mail'}
                         {v.telefone && ` · ${v.telefone}`}
                       </span>
@@ -118,7 +118,7 @@ export default function VendedoresPage() {
                 <td className="tnum px-4 py-2.5 text-right font-semibold text-amber-700">{pct(v.taxa_comissao_adesao)}</td>
                 <td className="tnum px-4 py-2.5 text-right font-semibold text-emerald-700">{pct(v.taxa_comissao_recorrente)}</td>
                 <td className="px-4 py-2.5">
-                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset ${
+                  <span className={`rounded-full px-2 py-0.5 text-[0.6875rem] font-medium ring-1 ring-inset ${
                     v.ativo ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-slate-100 text-slate-500 ring-slate-200'
                   }`}>
                     {v.ativo ? 'Ativo' : 'Inativo'}
@@ -245,9 +245,9 @@ function ModalFicha({ vendedor, onClose, onEditar }: {
 function Indicador({ rotulo, valor, nota }: { rotulo: string; valor: string; nota?: string }) {
   return (
     <div className="rounded-xl border border-slate-200 px-3 py-2">
-      <p className="text-[10.5px] font-semibold uppercase tracking-wide text-slate-500">{rotulo}</p>
+      <p className="text-[0.6562rem] font-semibold uppercase tracking-wide text-slate-500">{rotulo}</p>
       <p className="tnum mt-0.5 text-lg font-bold text-slate-800">{valor}</p>
-      {nota && <p className="text-[11px] text-slate-400">{nota}</p>}
+      {nota && <p className="text-[0.6875rem] text-slate-400">{nota}</p>}
     </div>
   );
 }
@@ -300,12 +300,12 @@ function ModalBoasVindas({ vendedor, onClose }: { vendedor: VendedorLista; onClo
             onChange={(e) => setContrato(e.target.files?.[0] ?? null)}
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-slate-100 file:px-2 file:py-1 file:text-xs"
           />
-          <p className="mt-1 text-[11px] text-slate-400">
+          <p className="mt-1 text-[0.6875rem] text-slate-400">
             Recomendado: o contrato para assinatura digital. Max. ~5 MB. Opcional — da para enviar sem anexo.
           </p>
         </FormField>
 
-        <p className="rounded-lg bg-cyan-50 px-3 py-2 text-[11.5px] leading-relaxed text-cyan-900">
+        <p className="rounded-lg bg-cyan-50 px-3 py-2 text-[0.7188rem] leading-relaxed text-cyan-900">
           <KeyRound className="mr-1 inline h-3.5 w-3.5" />
           O e-mail leva o código do vendedor e o <b>hotlink de vendas</b>: toda cotação aberta por
           esse link já entra vinculada a ele.
