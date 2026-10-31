@@ -7,7 +7,7 @@
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
-  CheckCircle2, Copy, FileText, Loader2, Mail, MessageCircle, RefreshCw, Repeat2, TriangleAlert,
+  CheckCircle2, Copy, FileText, Loader2, Mail, MessageCircle, Printer, RefreshCw, Repeat2, TriangleAlert,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
@@ -24,6 +24,7 @@ import {
 } from '@/lib/renegociacao';
 import { linkWhatsAppAssociado } from '@/lib/protocolos';
 import { addDias } from '@/lib/financeiro';
+import { urlDoCarne } from '@/lib/carne-impressao';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { BoletoRenegociacao, RenegociacaoCliente, TituloCliente } from '@/lib/database.types';
 import { RevistoriaNecessaria, useBloqueioRevistoria } from '@/components/revistoria/revistoria-necessaria';
@@ -227,14 +228,18 @@ export function ModalNegociarBoletos({
   );
 }
 
-export function ResultadoEmissao({ clienteId, renegociacaoId, onClose }: { clienteId: string; renegociacaoId: string; onClose: () => void }) {
+export function ResultadoEmissao({ clienteId, renegociacaoId, onClose, formato }: {
+  clienteId: string; renegociacaoId: string; onClose: () => void;
+  /** Boleto avulso: o formato de impressao escolhido na emissao (vem em destaque). */
+  formato?: FormatoImpressao;
+}) {
   const q = useRenegociacoes(clienteId);
   const r = (q.data ?? []).find((x) => x.id === renegociacaoId);
   if (q.isLoading) return <p className="text-sm text-slate-400">Carregando...</p>;
   if (!r) return <p className="text-sm text-slate-500">Emitido. Atualize a tela para ver os boletos.</p>;
   return (
     <div className="space-y-3">
-      <CartaoRenegociacao clienteId={clienteId} r={r} destaque />
+      <CartaoRenegociacao clienteId={clienteId} r={r} destaque formato={formato} />
       <div className="flex justify-end"><Button variant="secondary" onClick={onClose}>Fechar</Button></div>
     </div>
   );
@@ -262,7 +267,31 @@ export function BoletosNegociados({ clienteId }: { clienteId: string }) {
   );
 }
 
-function CartaoRenegociacao({ clienteId, r, destaque }: { clienteId: string; r: RenegociacaoCliente; destaque?: boolean }) {
+export type FormatoImpressao = 'boleto' | 'carne';
+
+/** Imprimir os boletos emitidos: o PDF do banco (um por boleto) ou o carne Smart Car (3 por folha). */
+function ImpressaoBoletos({ boletos, formato }: { boletos: BoletoRenegociacao[]; formato?: FormatoImpressao }) {
+  const comLinha = boletos.filter((b) => b.linha_digitavel && b.status !== 'pago' && b.status !== 'cancelado');
+  if (comLinha.length === 0) return null;
+  const carne = urlDoCarne(comLinha.map((b) => b.id));
+  const destaque = 'inline-flex items-center gap-1 rounded-lg bg-acao px-3 py-1.5 text-xs font-semibold text-white hover:bg-acao-escura';
+  const discreto = 'inline-flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-1.5 text-xs text-slate-700';
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-2">
+      <a href={carne} target="_blank" rel="noreferrer" className={formato === 'carne' ? destaque : discreto}>
+        <Printer className="h-3.5 w-3.5" /> Imprimir no padrão carnê
+      </a>
+      {comLinha.length === 1 && (
+        <a href={`/api/v1/cobrancas/boleto?titulo_id=${comLinha[0].id}`} target="_blank" rel="noreferrer"
+          className={formato === 'boleto' ? destaque : discreto}>
+          <FileText className="h-3.5 w-3.5" /> Imprimir boleto (PDF do banco)
+        </a>
+      )}
+    </div>
+  );
+}
+
+function CartaoRenegociacao({ clienteId, r, destaque, formato }: { clienteId: string; r: RenegociacaoCliente; destaque?: boolean; formato?: FormatoImpressao }) {
   const baixar = useBaixarOriginais();
   const pend = baixasPendentes(r.origens);
   const abertos = r.boletos.filter((b) => b.status !== 'cancelado');
@@ -281,6 +310,7 @@ function CartaoRenegociacao({ clienteId, r, destaque }: { clienteId: string; r: 
       <ul className="mt-2 space-y-1.5">
         {abertos.map((b) => <LinhaBoletoNovo key={b.id} b={b} varios={abertos.length > 1} />)}
       </ul>
+      <ImpressaoBoletos boletos={abertos} formato={formato} />
       <EnvioBoletos clienteId={clienteId} boletos={abertos.filter((b) => b.status !== 'pago')} substitui={r.origens.length > 0} />
       {pend > 0 && (
         <div className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">

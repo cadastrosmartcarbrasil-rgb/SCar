@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   codigoDeBarrasDaLinha, codigoDeBarrasValido, dadosSicrediDoCodigo, htmlDoCarne, linhaFormatada,
-  modulosI25, referenciaDoVencimento, rotularParcelas, svgCodigoDeBarras, type CabecalhoCarne, type FichaCarne,
+  modulosI25, referenciaDoVencimento, referenteDoBoleto, svgCodigoDeBarras, type CabecalhoCarne, type FichaCarne,
 } from './carne-impressao';
 
 // Boleto real do carne (LELIS JOSE DE SA, QCW8B48, venc. 10/06/2026, R$ 338,00).
@@ -50,17 +50,22 @@ describe('intercalado 2 de 5', () => {
   });
 });
 
-describe('parcelas e referencia', () => {
-  it('numera so as mensalidades; adesao primeiro', () => {
-    const r = rotularParcelas([
-      { vencimento: '2026-08-10', tipo: 'MENSALIDADE' as const },
-      { vencimento: '2026-07-10', tipo: 'MENSALIDADE' as const },
-      { vencimento: '2026-06-01', tipo: 'ADESAO' as const },
-    ]);
-    expect(r.map((x) => x.parcela)).toEqual(['Adesão', '1/2', '2/2']);
+describe('referente a (nao parcela)', () => {
+  it('mensalidade pelo mes de referencia', () => {
+    expect(referenteDoBoleto({ tipo: 'MENSALIDADE', competencias: ['2026-05-01'] })).toBe('Mensalidade 05/2026');
+    expect(referenteDoBoleto({ tipo: 'MENSALIDADE', competencias: ['2026-06-01', '2025-12-01', '2026-06-01'] }))
+      .toBe('Mensalidade 12/2025, 06/2026');
+    expect(referenteDoBoleto({ tipo: 'MENSALIDADE' })).toBe('Mensalidade');
+  });
+  it('o tipo escolhido no avulso, adesao, acordo e pro-rata', () => {
+    expect(referenteDoBoleto({ tipo: 'AVULSO', nomeAvulso: 'Re-vistoria' })).toBe('Re-vistoria');
+    expect(referenteDoBoleto({ tipo: 'AVULSO' })).toBe('Boleto avulso');
+    expect(referenteDoBoleto({ tipo: 'ADESAO' })).toBe('Adesão');
+    expect(referenteDoBoleto({ tipo: 'ACORDO', competencias: ['2026-08-01'] })).toBe('Acordo — mensalidades 08/2026');
+    expect(referenteDoBoleto({ tipo: 'PRO_RATA' })).toBe('Pró-rata');
   });
   it('referencia mes/ano', () => {
-    expect(referenciaDoVencimento('2026-05-01')).toBe('5/2026');
+    expect(referenciaDoVencimento('2026-05-01')).toBe('05/2026');
     expect(referenciaDoVencimento(null)).toBeNull();
   });
 });
@@ -73,7 +78,7 @@ describe('documento', () => {
   };
   const f = (i: number, linha = LINHA): FichaCarne => ({
     titulo_id: `t${i}`, vencimento: '2026-06-10', valor: 338, linha_digitavel: linha, nosso_numero: null,
-    numero_documento: 'ABC', data_documento: '2025-11-11', parcela: `${i}/7`, referencia: '5/2026', pix_qr_svg: null, placa: 'QCW8B48',
+    numero_documento: 'ABC', data_documento: '2025-11-11', referente: `Mensalidade 0${i}/2026`, referencia: '05/2026', pix_qr_svg: null, placa: 'QCW8B48',
   });
   it('3 fichas por folha', () => {
     const { html, impressas } = htmlDoCarne([1, 2, 3, 4, 5, 6, 7].map((i) => f(i)), cab);
@@ -82,6 +87,8 @@ describe('documento', () => {
     expect(html).toContain('0810/02723');
     expect(html).toContain('600344888');
     expect(html).toContain('23.427.787/0001-78');
+    expect(html).toContain('Mensalidade 01/2026');
+    expect(html).not.toContain('Parcela');
   });
   it('ficha com linha invalida fica de fora', () => {
     const { impressas } = htmlDoCarne([f(1), f(2, '123')], cab);
@@ -100,5 +107,14 @@ describe('boletos que entram no carne', () => {
     ]);
     expect(r.map((x) => x.id)).toEqual(['a', 'b']);
     expect(urlDoCarne(['a', 'b'])).toBe('/api/v1/cobrancas/carne?ids=a,b');
+  });
+});
+
+describe('placas do boleto', () => {
+  it('junta sem repetir e mostra o 0 km pelo chassi', async () => {
+    const { placasDoBoleto } = await import('./carne-impressao');
+    expect(placasDoBoleto([{ placa: 'QCW8B48' }, { placa: 'ABC1D23' }, { placa: 'QCW8B48' }])).toBe('QCW8B48, ABC1D23');
+    expect(placasDoBoleto([{ placa: null, chassi: '9C6SG5920R0028234' }])).toBe('0 KM · CHASSI …028234');
+    expect(placasDoBoleto([])).toBeNull();
   });
 });

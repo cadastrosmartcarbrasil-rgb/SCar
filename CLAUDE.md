@@ -3819,7 +3819,11 @@ Proteção do Casco, não tem terceiros nem vidros, e a participação é o DOBR
 Pedido do usuário: o carnê no padrão que a Smart Car já usa (modelo Sicredi do Mutual), 3 por folha A4 para economizar papel.
 - **Rota `GET /api/v1/cobrancas/carne?ids=<titulo>,...`** (até 24; quem tem o associado em `cobranca_pode_cliente`,
   como o PDF da 2ª via): só título do SCar em aberto e com linha digitável; PDF pelo Chromium (`gerarPdf`, sem rodapé).
-- **Layout** (`htmlDoCarne`, `src/lib/carne-impressao.ts`, testado): canhoto à esquerda (parcela k/N, vencimento,
+- **NÃO é "parcela k/N" (decisão do usuário, 31/10):** o canhoto diz **"Referente a: Mensalidade MM/AAAA"** (a competência
+  da fatura; 2ª via = os meses dos originais), ou o que foi escolhido na emissão — o TIPO do boleto avulso, Adesão, Acordo,
+  Pró-rata (`referenteDoBoleto`). No avulso, o modal tem **Impressão: Boleto (PDF do banco) / Carnê (padrão Smart Car)** e o
+  cartão do boleto emitido traz os dois botões, com o escolhido em destaque (`ImpressaoBoletos`, também na 2ª via/negociação).
+- **Layout** (`htmlDoCarne`, `src/lib/carne-impressao.ts`, testado): canhoto à esquerda (referente a, vencimento,
   agência/cedente, nº documento = `seuNumero`, nosso número, valor, pagador, placa) + ficha de compensação (SICREDI 748,
   linha digitável, campos, instruções, QR do PIX do `pix_copia_cola`, pagador com Ref. da competência da fatura) +
   CÓDIGO DE BARRAS Intercalado 2 de 5 em SVG, montado da LINHA DIGITÁVEL (`codigoDeBarrasDaLinha`, DV conferido;
@@ -3827,6 +3831,9 @@ Pedido do usuário: o carnê no padrão que a Smart Car já usa (modelo Sicredi 
   (`dadosSicrediDoCodigo`: coop 0810 / benef. 02723). Conferido com o boleto real da imagem e decodificado por leitor.
 - **Onde:** botão *Imprimir carnê* do carnê emitido (`ModalCarne`) e *Imprimir carnê (N)* no Histórico Financeiro
   (SAC e fichas) com os boletos do SCar a vencer (`boletosParaCarne`). Boleto do Mutual não entra (PDF do banco, um a um).
+- **Placas e logo (31/10, pedido do usuário):** o boleto mostra TODAS as placas que ele cobra (canhoto "Veículos" e linha
+  no bloco do pagador) — fatura AGRUPADA não tem `veiculo_id` no título, então saem dos `fatura_itens`; 0 km pelo chassi
+  (`placasDoBoleto`). Logo = `empresa.logo_url`; se não carregar, a oficial embutida `public/logo-smartcar-oficial.png`.
 - **Texto das instruções:** sem "não receber após N dias" (o cadastro no Sicredi não define isso hoje); manda ao portal e
   ao contato da Empresa.
 

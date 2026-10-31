@@ -1,3 +1,4 @@
+import { identificacaoVeiculo } from './placa';
 // ---------------------------------------------------------------------------
 // CARNE IMPRESSO (31/10/2026) — 3 boletos por folha A4, no padrao dos carnes
 // da Smart Car (canhoto a esquerda, ficha de compensacao a direita, codigo de
@@ -111,10 +112,10 @@ export interface FichaCarne {
   nosso_numero: string | null;
   numero_documento: string;    // impresso (o seuNumero do Sicredi)
   data_documento: string;      // YYYY-MM-DD
-  parcela: string;             // "3/6", "Adesão", "Avulso"
-  referencia: string | null;   // "5/2026"
+  referente: string;           // "Mensalidade 05/2026", "Adesão", o tipo do avulso
+  referencia: string | null;   // "05/2026" (o mes da mensalidade, no bloco do pagador)
   pix_qr_svg: string | null;   // o QR do PIX ja em SVG
-  placa: string | null;
+  placa: string | null;         // uma ou mais placas, ja juntas ("ABC1D23, XYZ9K88")
 }
 
 export interface CabecalhoCarne {
@@ -130,25 +131,29 @@ export interface CabecalhoCarne {
   };
 }
 
-/** Parcelas k/N das mensalidades (por vencimento); adesao e avulso tem rotulo proprio. */
-export function rotularParcelas<T extends { vencimento: string; tipo: 'MENSALIDADE' | 'ADESAO' | 'AVULSO' }>(
-  itens: T[],
-): (T & { parcela: string })[] {
-  const ordem = [...itens].sort((a, b) =>
-    a.tipo === b.tipo ? a.vencimento.localeCompare(b.vencimento) : a.tipo === 'ADESAO' ? -1 : b.tipo === 'ADESAO' ? 1
-      : a.tipo === 'MENSALIDADE' ? -1 : 1);
-  const mens = ordem.filter((i) => i.tipo === 'MENSALIDADE');
-  return ordem.map((i) => ({
-    ...i,
-    parcela: i.tipo === 'ADESAO' ? 'Adesão' : i.tipo === 'AVULSO' ? 'Avulso'
-      : `${mens.indexOf(i) + 1}/${mens.length}`,
-  }));
-}
-
-/** "2026-06-10" -> "6/2026" (a referencia da mensalidade). */
+/** "2026-06-01" -> "06/2026" (o mes de referencia da mensalidade). */
 export function referenciaDoVencimento(competencia: string | null | undefined): string | null {
   if (!competencia || !/^\d{4}-\d{2}/.test(competencia)) return null;
-  return `${Number(competencia.slice(5, 7))}/${competencia.slice(0, 4)}`;
+  return `${competencia.slice(5, 7)}/${competencia.slice(0, 4)}`;
+}
+
+/**
+ * O que o boleto cobra, como a Smart Car fala (pedido do usuario, 31/10/2026):
+ * nao "parcela k/N", e sim "Mensalidade referente ao mes" — ou o que foi
+ * escolhido na emissao (o tipo do boleto avulso), adesao, acordo, pro-rata.
+ */
+export type TipoCobrancaCarne = 'MENSALIDADE' | 'ADESAO' | 'AVULSO' | 'ACORDO' | 'PRO_RATA';
+export function referenteDoBoleto(i: { tipo: TipoCobrancaCarne; competencias?: (string | null)[]; nomeAvulso?: string | null }): string {
+  const meses = Array.from(new Set((i.competencias ?? []).map(referenciaDoVencimento).filter((m): m is string => !!m)))
+    .sort((x, y) => (x.slice(3) + x.slice(0, 2)).localeCompare(y.slice(3) + y.slice(0, 2)));
+  const ref = meses.length ? ` ${meses.join(', ')}` : '';
+  switch (i.tipo) {
+    case 'ADESAO': return 'Adesão';
+    case 'AVULSO': return (i.nomeAvulso ?? '').trim() || 'Boleto avulso';
+    case 'ACORDO': return `Acordo${ref ? ` — mensalidades${ref}` : ''}`;
+    case 'PRO_RATA': return 'Pró-rata';
+    default: return `Mensalidade${ref}`;
+  }
 }
 
 /** Quantas fichas cabem por folha A4. */
@@ -187,7 +192,7 @@ export function htmlDaFicha(f: FichaCarne, cab: CabecalhoCarne): string | null {
     <td class="canhoto">
       <div class="logo">${logo}</div>
       <table>
-        <tr>${campo('Parcela', `Parcela: ${esc(f.parcela)}`)}</tr>
+        <tr><td class="c"><div class="r">Referente a</div><div class="v ref">${esc(f.referente)}</div></td></tr>
         <tr>${campo('Vencimento', venc)}</tr>
         <tr>${campo('Agência/Código Cedente', agencia)}</tr>
         <tr>${campo('Número Documento', esc(f.numero_documento))}</tr>
@@ -197,7 +202,7 @@ export function htmlDaFicha(f: FichaCarne, cab: CabecalhoCarne): string | null {
         <tr>${campo('(+) Mora / Multa', '&nbsp;')}</tr>
         <tr>${campo('(=) Valor cobrado', '&nbsp;')}</tr>
         <tr>${campo('Pagador', esc(pag.nome))}</tr>
-        <tr>${campo('Veículo', esc(f.placa ?? ''))}</tr>
+        <tr><td class="c"><div class="r">${f.placa && f.placa.includes(',') ? 'Veículos' : 'Veículo'}</div><div class="v placas">${esc(f.placa ?? '')}</div></td></tr>
       </table>
     </td>`;
 
@@ -238,6 +243,7 @@ export function htmlDaFicha(f: FichaCarne, cab: CabecalhoCarne): string | null {
           <div><b>Nome: ${esc(pag.nome)}${docPag ? ` - CPF/CNPJ: ${docPag}` : ''} - Venc.: ${venc}${f.referencia ? ` - Ref.: ${esc(f.referencia)}` : ''}</b></div>
           ${pag.endereco ? `<div><b>${esc(pag.endereco)}</b></div>` : ''}
           ${pag.cep_cidade ? `<div><b>${esc(pag.cep_cidade)}</b></div>` : ''}
+          ${f.placa ? `<div><b>${f.placa.includes(',') ? 'Veículos' : 'Veículo'}: ${esc(f.placa)}</b></div>` : ''}
         </td></tr>
       </table>
       <table class="rod"><tr>
@@ -261,8 +267,10 @@ body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: #000; }
 .canhoto { width: 47mm; vertical-align: top; border-right: 1px dashed #777; padding-right: 2mm; }
 .canhoto table { width: 100%; border-collapse: collapse; }
 .canhoto .c { border-bottom: 0.3mm solid #000; }
-.logo { height: 9mm; display: flex; align-items: center; }
-.logo img { max-height: 8.5mm; max-width: 44mm; }
+.logo { height: 12mm; display: flex; align-items: center; }
+.logo img { max-height: 11.5mm; max-width: 44mm; }
+.placas { white-space: normal; font-size: 6.5pt; }
+.ref { white-space: normal; font-size: 7.5pt; }
 .corpo { vertical-align: top; padding-left: 2mm; }
 .cab { width: 100%; border-collapse: collapse; border-bottom: 0.5mm solid #000; height: 9mm; }
 .cab td { font-weight: bold; vertical-align: bottom; padding: 0 2mm 1mm; }
@@ -285,7 +293,8 @@ body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: #000; }
 .lado table { width: 100%; border-collapse: collapse; }
 .lado .c { border-bottom: 0.3mm solid #000; height: 4.6mm; }
 .lado tr:last-child .c { border-bottom: 0; }
-.pagador { padding: 0.8mm 1.5mm; font-size: 7pt; height: 11mm; }
+.pagador { padding: 0.6mm 1.5mm; font-size: 7pt; height: 11mm; }
+.pagador div { line-height: 1.25 !important; }
 .pagador .r { float: left; width: 16mm; font-style: normal; font-weight: bold; font-size: 7pt; }
 .pagador div { margin-left: 17mm; line-height: 1.35; }
 .rod { width: 100%; border-collapse: collapse; }
@@ -317,6 +326,12 @@ export function boletosParaCarne<T extends { id: string; origem?: 'SCAR' | 'MUTU
   return titulos
     .filter((t) => (t.origem ?? 'SCAR') === 'SCAR' && t.status === 'aberto' && !!t.linha_digitavel)
     .sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento));
+}
+
+/** As placas do boleto, sem repetir; 0 km aparece pelo chassi. */
+export function placasDoBoleto(veiculos: { placa: string | null; chassi?: string | null }[]): string | null {
+  const l = Array.from(new Set(veiculos.map((v) => identificacaoVeiculo(v.placa, v.chassi))));
+  return l.length ? l.join(', ') : null;
 }
 
 /** O endereco do PDF do carne (a rota aceita ate 24 boletos). */

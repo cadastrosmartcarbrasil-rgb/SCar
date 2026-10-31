@@ -14,7 +14,7 @@ import { useEmitirBoletoAvulso, useTiposBoletoAvulso } from '@/hooks/use-renegoc
 import { observacaoDoAvulso, validarBoletoAvulso } from '@/lib/boleto-avulso';
 import { addDias } from '@/lib/financeiro';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { ResultadoEmissao } from './negociacao-boletos';
+import { ResultadoEmissao, type FormatoImpressao } from './negociacao-boletos';
 
 function hojeSP(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
@@ -39,6 +39,7 @@ export function ModalBoletoAvulso({
   const [valor, setValor] = useState<number | null>(null);
   const [vencimento, setVencimento] = useState(addDias(hoje, 2));
   const [descricao, setDescricao] = useState('');
+  const [formato, setFormato] = useState<FormatoImpressao>('boleto');
   const [resultado, setResultado] = useState<string | null>(null);
 
   const tipo = ativos.find((t) => t.id === tipoId) ?? null;
@@ -48,7 +49,7 @@ export function ModalBoletoAvulso({
   if (resultado) {
     return (
       <Modal open onClose={onClose} title="Boleto avulso emitido" tamanho="lg">
-        <ResultadoEmissao clienteId={clienteId} renegociacaoId={resultado} onClose={onClose} />
+        <ResultadoEmissao clienteId={clienteId} renegociacaoId={resultado} onClose={onClose} formato={formato} />
       </Modal>
     );
   }
@@ -98,6 +99,12 @@ export function ModalBoletoAvulso({
           <FormField label="Vencimento">
             <Input type="date" value={vencimento} min={hoje} max={addDias(hoje, 90)}
               onChange={(e) => setVencimento(e.target.value)} required />
+          </FormField>
+          <FormField label="Impressão">
+            <Select value={formato} onChange={(e) => setFormato(e.target.value as FormatoImpressao)}>
+              <option value="boleto">Boleto (PDF do banco)</option>
+              <option value="carne">Carnê (padrão Smart Car)</option>
+            </Select>
           </FormField>
           <div className="sm:col-span-2">
             <FormField label="Descrição (opcional, sai no boleto e no histórico)">
