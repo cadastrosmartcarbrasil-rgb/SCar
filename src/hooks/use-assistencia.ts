@@ -1,8 +1,12 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { lerTodas } from '@/lib/paginacao';
+import { TAMANHO_PAGINA_CADASTRO } from '@/lib/busca-cadastro';
+import { semAcento } from '@/lib/crm';
+import { limitesDoDia, placaParaFiltro, trechoDeBusca, type FiltrosConsulta } from '@/lib/acionamentos-consulta';
+import type { MembroEquipe } from '@/hooks/use-config';
 import { comprimirImagem, validarArquivo } from '@/lib/imagem';
 import type {
   AcionamentoAnexosRow,
@@ -564,6 +568,128 @@ export function useAcionamentos(filtro?: { status?: StatusAcionamento | null; bu
           (a.veiculos?.placa ?? '').toLowerCase().includes(busca) ||
           (a.clientes?.nome_razao_social ?? '').toLowerCase().includes(busca),
       );
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Consulta de acionamentos (tela "Consultar"): filtro por coluna e pagina NO
+// BANCO. `useAcionamentos` acima baixa 200 linhas e filtra na tela — serve ao
+// dashboard, mas numa consulta o filtro tem de alcancar o historico inteiro.
+// ---------------------------------------------------------------------------
+export interface AcionamentoConsulta extends AcionamentoComRel {
+  regionais?: { nome: string } | null;
+}
+
+/** Id que nao existe: "filtro ligado e sem ninguem que case" = lista vazia. */
+const ID_INEXISTENTE = '00000000-0000-0000-0000-000000000000';
+
+interface ContextoConsulta {
+  meuId: string | null;
+  /** Equipe ativa (nomes dos atendentes). `undefined` enquanto carrega. */
+  equipe: MembroEquipe[] | undefined;
+}
+
+/** Ids da equipe cujo NOME casa com o que foi digitado no filtro "Atendente". */
+function idsDosAtendentes(termo: string, equipe: MembroEquipe[] | undefined): string[] {
+  const t = semAcento(trechoDeBusca(termo));
+  if (!t) return [];
+  return (equipe ?? []).filter((m) => semAcento(m.nome).includes(t)).map((m) => m.id);
+}
+
+function consultaAcionamentos(
+  supabase: ReturnType<typeof createClient>,
+  f: FiltrosConsulta,
+  ctx: ContextoConsulta,
+  contar: boolean,
+) {
+  // `!inner` so quando a coluna esta filtrada: ele descarta as linhas sem
+  // casamento. Sem filtro, o embed fica opcional e nenhum acionamento some.
+  const sel = [
+    '*',
+    `servicos_assistencia${f.servico.trim() ? '!inner' : ''}(descricao)`,
+    `veiculos${f.placa.trim() ? '!inner' : ''}(placa, modelo)`,
+    `clientes${f.beneficiario.trim() ? '!inner' : ''}(nome_razao_social)`,
+    `regionais${f.regional.trim() ? '!inner' : ''}(nome)`,
+    'fornecedores(razao_social, whatsapp, email)',
+  ].join(', ');
+
+  let q = supabase
+    .from('acionamentos_assistencia')
+    .select(sel, { count: contar ? 'exact' : undefined });
+
+  const placa = placaParaFiltro(f.placa);
+  if (placa) q = q.ilike('veiculos.placa', `%${placa}%`);
+  const beneficiario = trechoDeBusca(f.beneficiario);
+  if (beneficiario) q = q.ilike('clientes.nome_razao_social', `%${beneficiario}%`);
+  const servico = trechoDeBusca(f.servico);
+  if (servico) q = q.ilike('servicos_assistencia.descricao', `%${servico}%`);
+  const regional = trechoDeBusca(f.regional);
+  if (regional) q = q.ilike('regionais.nome', `%${regional}%`);
+  const protocolo = trechoDeBusca(f.protocolo);
+  if (protocolo) q = q.or(`protocolo.ilike.*${protocolo}*,codigo_os.ilike.*${protocolo}*`);
+
+  if (f.atendente.trim()) {
+    const ids = idsDosAtendentes(f.atendente, ctx.equipe);
+    q = q.in('aberto_por', ids.length ? ids : [ID_INEXISTENTE]);
+  }
+  if (f.meus) q = q.eq('aberto_por', ctx.meuId ?? ID_INEXISTENTE);
+  if (f.agendados) q = q.not('agendado_para', 'is', null);
+  if (f.status) q = q.eq('status', f.status);
+
+  const dia = limitesDoDia(f.dia);
+  if (dia) q = q.gte('created_at', dia.de).lt('created_at', dia.ate);
+
+  // Ordenacao TOTAL (desempate por id): sem ela o banco repete ou pula linhas
+  // entre uma pagina e outra.
+  return q.order('created_at', { ascending: false }).order('id', { ascending: false });
+}
+
+export function useAcionamentosConsulta(f: FiltrosConsulta, pagina: number, ctx: ContextoConsulta) {
+  const supabase = createClient();
+  // O filtro de atendente precisa da equipe; o "meus", do usuario logado.
+  const pronto = (!f.atendente.trim() || !!ctx.equipe) && (!f.meus || !!ctx.meuId);
+  const atendentes = idsDosAtendentes(f.atendente, ctx.equipe).join(',');
+  return useQuery<{ linhas: AcionamentoConsulta[]; total: number }>({
+    queryKey: ['assistencia', 'acionamentos', 'consulta', f, pagina, ctx.meuId, atendentes],
+    enabled: pronto,
+    placeholderData: keepPreviousData,
+    queryFn: async () => {
+      const de = pagina * TAMANHO_PAGINA_CADASTRO;
+      const { data, error, count } = await consultaAcionamentos(supabase, f, ctx, true).range(
+        de,
+        de + TAMANHO_PAGINA_CADASTRO - 1,
+      );
+      if (error) throw error;
+      return { linhas: (data ?? []) as unknown as AcionamentoConsulta[], total: count ?? 0 };
+    },
+  });
+}
+
+const LIMITE_EXPORTACAO_PAGINAS = 10; // 10 x 1.000 = 10.000 acionamentos
+
+/** Todos os acionamentos do filtro atual (para a planilha), de 1.000 em 1.000. */
+export function useExportarAcionamentos() {
+  const supabase = createClient();
+  return useMutation<AcionamentoConsulta[], Error, { filtros: FiltrosConsulta; ctx: ContextoConsulta }>({
+    mutationFn: async ({ filtros, ctx }) => {
+      try {
+        const todas = await lerTodas<AcionamentoConsulta>(
+          (de, ate) =>
+            consultaAcionamentos(supabase, filtros, ctx, false).range(de, ate) as unknown as PromiseLike<{
+              data: AcionamentoConsulta[] | null;
+              error: unknown;
+            }>,
+          1000,
+          LIMITE_EXPORTACAO_PAGINAS,
+        );
+        return todas;
+      } catch (e) {
+        if (e instanceof Error && e.message.includes('limite de páginas')) {
+          throw new Error('Mais de 10.000 acionamentos nesse filtro. Refine os filtros para exportar.');
+        }
+        throw e;
+      }
     },
   });
 }

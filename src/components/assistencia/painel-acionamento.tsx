@@ -1430,7 +1430,7 @@ function ModalNegarPedido({
 // ---------------------------------------------------------------------------
 // 0134: exclusao do acionamento lancado por engano (fica a trilha)
 // ---------------------------------------------------------------------------
-function ModalExcluirAcionamento({
+export function ModalExcluirAcionamento({
   protocolo, concluida, temTitulo, voucherEnviado, carregando, onClose, onConfirmar,
 }: {
   protocolo: string | null;

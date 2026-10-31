@@ -66,7 +66,7 @@ function Conteudo() {
       </div>
 
       {aba === 'painel' && <PainelAcionamento placaInicial={placa} />}
-      {aba === 'acionamentos' && <AcionamentosLista />}
+      {aba === 'acionamentos' && <AcionamentosLista onNovo={() => setAba('painel')} />}
       {aba === 'servicos' && <Servicos24h />}
       {aba === 'prestadores' && <Prestadores24h />}
     </div>
