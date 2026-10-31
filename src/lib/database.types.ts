@@ -4992,6 +4992,11 @@ export type Database = {
         Args: { p_cursor?: string | null; p_lote?: number; p_confirmar?: boolean };
         Returns: CobrancaImportacaoBloco[];
       };
+      mutual_baixar_por_substituto: {
+        Args: { p_confirmar?: boolean };
+        Returns: { boleto_id: string; cliente: string; competencia: string | null; valor: number;
+                   pago_em: string; tipo_substituto: string; acao: string }[];
+      };
       intervalo_contas_painel: {
         Args: Record<string, never>;
         Returns: IntervaloContasPainel[];

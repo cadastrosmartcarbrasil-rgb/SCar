@@ -224,6 +224,18 @@ export async function POST(request: Request) {
     });
   }
 
+  // ------------------------- mensalidade paga por outro tipo de boleto (0167)
+  // O Mutual emite revistoria/cancelamento no lugar da mensalidade vencida; pago
+  // com o mesmo valor, a mensalidade original fica paga (e o nao identificado
+  // do banco, se houver, vira a mensalidade).
+  {
+    const { data, error } = await supabase.rpc('mutual_baixar_por_substituto', { p_confirmar: true });
+    passos.push(error
+      ? { etapa: 'mensalidade paga por substituto', ok: false, detalhe: error.message }
+      : { etapa: 'mensalidade paga por substituto', ok: true,
+          detalhe: `${(data ?? []).length} mensalidade(s) baixada(s)/convertida(s)` });
+  }
+
   const ok = passos.every((p) => p.ok);
   return NextResponse.json({
     ok,
