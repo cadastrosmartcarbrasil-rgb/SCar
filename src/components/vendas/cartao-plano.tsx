@@ -68,7 +68,7 @@ export function CartaoDoPlano({ plano, ativo, mostraValor, selo, onEscolher }: {
             <p className="font-display text-xl font-bold leading-tight text-white">{plano.nome}</p>
             {selo && (
               <span className="inline-flex items-center gap-1 rounded-full bg-cyan-400/20 px-2.5 py-0.5 text-xs font-bold text-cyan-200 ring-1 ring-cyan-300/40">
-                <Sparkles className="h-3 w-3" /> {selo === 'preferencial' ? 'Preferencial' : 'Sugerido'}
+                <Sparkles className="h-3 w-3" /> {selo === 'preferencial' ? 'Recomendado' : 'Sugerido'}
               </span>
             )}
           </div>
