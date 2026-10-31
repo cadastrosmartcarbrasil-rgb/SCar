@@ -31,7 +31,7 @@ export type EndpointDoc = {
   notas?: string[];
 };
 
-export const VERSAO_DOC = '1.1.0';
+export const VERSAO_DOC = '1.2.0';
 
 // ------------------------------------------------------------------ exemplos
 const VEICULO_EXEMPLO = {
@@ -185,6 +185,49 @@ export const ENDPOINTS_API: EndpointDoc[] = [
     notas: ['`status_numero` é o número que a equipe usa: 1 Disponível (estoque) · 2 Ativo/instalado · 3 Inadimplente · 4 Inativo (pedir devolução) · 5 A devolver · 6 Cobrar rastreador · 7 Boleto gerado · 8 Pendência de dados · 9 Manutenção · 10 Duplicado · 11 Baixado.'],
   },
   {
+    id: 'rastreadores-cadastrar',
+    metodo: 'POST',
+    caminho: '/rastreadores',
+    titulo: 'Cadastrar equipamentos e instalar nos veículos',
+    descricao:
+      'A plataforma cadastra os seus equipamentos no SCar pelo IMEI e, informando o veículo (placa, chassi ou veiculo_id), ' +
+      'registra a instalação. Até 500 itens por chamada. Reenviar o mesmo IMEI é seguro: completa os dados e não duplica. ' +
+      'É a primeira chamada a fazer: sem o equipamento cadastrado, a comunicação volta NAO_ENCONTRADO.',
+    escopo: 'rastreadores:escrever',
+    parametros: [],
+    corpo: {
+      equipamentos: [
+        {
+          imei: '860000000000001',
+          numero_serie: 'NT-000123',
+          iccid: '89550000000000000001',
+          linha: '65999998888',
+          operadora: 'VIVO',
+          modelo: 'NT-40',
+          fabricante: 'NEW TRACKER',
+          placa: 'ABC1D23',
+          data_instalacao: '2026-10-30T10:00:00-03:00',
+        },
+        { imei: '860000000000002', numero_serie: 'NT-000124' },
+      ],
+    },
+    resposta: {
+      resumo: { CRIADO_INSTALADO: 1, CRIADO: 1 },
+      resultados: [
+        { imei: '860000000000001', resultado: 'CRIADO_INSTALADO', motivo: null, rastreador_id: '9c8b7a6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d', veiculo_id: '6f1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d', placa: 'ABC1D23', situacao_rastreamento: 'ATIVO' },
+        { imei: '860000000000002', resultado: 'CRIADO', motivo: null, rastreador_id: '1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d', veiculo_id: null, placa: null, situacao_rastreamento: null },
+      ],
+    },
+    erros: ['CORPO_INVALIDO', 'SEM_ESCOPO', 'CHAVE_SEM_RASTREADORA'],
+    notas: [
+      'Obrigatório por item: `imei` (14 a 17 dígitos). Para instalar, informe UM de: `placa`, `chassi` ou `veiculo_id` (o `id` de GET /veiculos). Sem veículo, o equipamento entra em estoque.',
+      'O equipamento é registrado em nome da rastreadora ligada à chave. IMEI já cadastrado por outra rastreadora volta OUTRA_PLATAFORMA e não é alterado.',
+      'Se o veículo já tiver outro equipamento SEU ativo, ele volta ao estoque (troca de aparelho). Se for de outra rastreadora, a instalação é RECUSADA. Equipamento ativo em outro veículo é movido.',
+      'Resultado por item: CRIADO · CRIADO_INSTALADO · ATUALIZADO · INSTALADO · JA_INSTALADO · VEICULO_NAO_ENCONTRADO (equipamento fica em estoque) · OUTRA_PLATAFORMA · RECUSADO (veja `motivo`) · INVALIDO · ERRO. Um item ruim não derruba o lote.',
+      'Desinstalar e baixar equipamento continuam com a equipe da Smart Car.',
+    ],
+  },
+  {
     id: 'rastreadores-comunicacao',
     metodo: 'POST',
     caminho: '/rastreadores/comunicacao',
@@ -231,7 +274,8 @@ export const ERROS_API: { codigo: string; http: number; significado: string; oQu
   { codigo: 'SEM_ESCOPO', http: 403, significado: 'A chave não tem permissão para esta rota.', oQueFazer: 'Pedir o escopo à Smart Car.' },
   { codigo: 'LIMITE', http: 429, significado: 'Mais de 120 requisições por minuto na mesma chave.', oQueFazer: 'Esperar os segundos informados; usar `limite=500` para paginar com menos chamadas.' },
   { codigo: 'PARAMETRO_INVALIDO', http: 400, significado: 'Data, cursor ou situação em formato errado.', oQueFazer: 'Conferir o parâmetro citado na mensagem.' },
-  { codigo: 'CORPO_INVALIDO', http: 400, significado: 'Corpo do POST fora do formato (ou mais de 500 itens).', oQueFazer: 'Enviar `{ "comunicacoes": [ ... ] }` com até 500 itens.' },
+  { codigo: 'CORPO_INVALIDO', http: 400, significado: 'Corpo do POST fora do formato (ou mais de 500 itens).', oQueFazer: 'Enviar `{ "equipamentos": [ ... ] }` ou `{ "comunicacoes": [ ... ] }` com até 500 itens.' },
+  { codigo: 'CHAVE_SEM_RASTREADORA', http: 403, significado: 'A chave não está ligada a uma rastreadora, então não pode cadastrar equipamento.', oQueFazer: 'Pedir à Smart Car para vincular a chave à rastreadora.' },
   { codigo: 'NAO_ENCONTRADO', http: 404, significado: 'Veículo não encontrado (ou fora das unidades desta chave).', oQueFazer: 'Conferir placa/chassi.' },
   { codigo: 'ERRO_CONSULTA', http: 400, significado: 'O SCar recusou a consulta.', oQueFazer: 'Ler a mensagem; se persistir, falar com a Smart Car.' },
   { codigo: 'ERRO_GRAVACAO', http: 400, significado: 'O SCar recusou a gravação.', oQueFazer: 'Ler a mensagem; se persistir, falar com a Smart Car.' },
@@ -247,10 +291,11 @@ export const SITUACOES_DOC: { codigo: string; status: string; acao: string }[] =
 export const PASSOS_INTEGRACAO: string[] = [
   'Receber da Smart Car a chave (`scar_…`) e, se for o caso, informar o IP fixo de saída do servidor.',
   'Chamar `GET /status` para conferir a chave e os escopos.',
+  'Cadastrar o parque: `POST /rastreadores` com os equipamentos (IMEI) e o veículo de cada um (placa ou chassi), em lotes de até 500. Repetir sempre que instalar ou trocar um aparelho.',
   'Carga inicial: `GET /veiculos?limite=500` e repetir com `cursor=<proximo_cursor>` até ele vir `null`. Ligar cada veículo ao equipamento pelo IMEI (`rastreador.imei`), pela placa ou pelo chassi.',
   'Guardar o maior `alterado_em` recebido.',
   'De tempos em tempos (sugestão: a cada 15 a 60 minutos), chamar `GET /veiculos?atualizados_desde=<maior alterado_em>` com a mesma paginação e aplicar as mudanças — principalmente `situacao_rastreamento`.',
-  'Opcional: enviar `POST /rastreadores/comunicacao` com a última comunicação de cada IMEI (em lotes de até 500).',
+  'Enviar `POST /rastreadores/comunicacao` com a última comunicação de cada IMEI (em lotes de até 500).',
 ];
 
 // ------------------------------------------------------------------ helpers

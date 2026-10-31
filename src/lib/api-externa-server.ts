@@ -35,7 +35,7 @@ export function erroApi(status: number, codigo: string, erro: string, extra?: Re
 /** Mensagem do banco sem detalhe tecnico (as nossas regras passam). */
 export function mensagemDoBanco(e: { message?: string } | null | undefined): string {
   const m = e?.message ?? '';
-  if (/integracao inativa|escopo|no maximo|envie uma lista/i.test(m)) return m;
+  if (/integracao inativa|escopo|no maximo|envie uma lista|rastreadora/i.test(m)) return m;
   return 'Falha ao consultar o SCar';
 }
 

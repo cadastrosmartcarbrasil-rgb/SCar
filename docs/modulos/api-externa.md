@@ -24,6 +24,7 @@ de cada IMEI.
 | `GET /veiculos` | `veiculos:ler` | Lista paginada (`limite` ≤ 500, `cursor`), `atualizados_desde`, `placa`, `chassi`, `imei`, `situacao` |
 | `GET /veiculos/{placa\|chassi\|id}` | `veiculos:ler` | Um veículo |
 | `GET /rastreadores` | `rastreadores:ler` | Parque por IMEI (`atualizados_desde`, `cursor`, `imei`) |
+| `POST /rastreadores` | `rastreadores:escrever` | **(0165)** Cadastra até 500 equipamentos por IMEI e instala no veículo (`placa`/`chassi`/`veiculo_id`); exige chave ligada a uma rastreadora |
 | `POST /rastreadores/comunicacao` | `rastreadores:escrever` | Até 500 `{imei, comunicado_em, latitude?, longitude?, velocidade?, ignicao?, endereco?}` |
 
 `associados:ler` acrescenta nome, CPF/CNPJ, telefone, celular e e-mail do associado no
@@ -63,9 +64,19 @@ a ficha do veículo a cada update do rastreador).
 - Trilha de toda requisição em `api_requisicoes` (rota, status, IP, duração, registros, código do erro).
 - `/api/externa` está em `PUBLIC_PATHS` do middleware: autentica por chave, nunca por sessão.
 
+## Cadastro do parque pela API (0165)
+
+Motivo (31/10/2026): a New Tracker conectou e só leu veículos; a tela de Rastreadores seguia vazia
+porque o parque estava vazio e a comunicação só aceita IMEI já cadastrado. `api_cadastrar_rastreadores`:
+re-executável por IMEI; equipamento nasce da rastreadora da chave; com veículo instala (ATIVO, espelho
+na ficha); troca de aparelho da mesma rastreadora devolve o antigo ao estoque; equipamento de outra
+rastreadora no veículo = RECUSADO; status fora de DISPONIVEL/ATIVO = RECUSADO; sem a trava de 35 dias de
+atraso (é fato consumado na rua). Item ruim não derruba o lote (subtransação por item). Histórico do
+equipamento mostra "API <nome da chave>".
+
 ## Não feito (próximas fases)
 
 - **Webhook de saída** (o SCar avisar a plataforma quando um veículo muda de situação) —
   hoje a plataforma puxa com `atualizados_desde`.
-- Instalar/desinstalar equipamento pela API (hoje só pela tela do módulo de Rastreadores).
+- Desinstalar/baixar equipamento pela API (instalar já existe, 0165).
 - Limpeza da trilha `api_requisicoes` (cresce sem teto; agendar apagar o que tem +90 dias).

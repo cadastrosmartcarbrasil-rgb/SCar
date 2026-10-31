@@ -67,8 +67,9 @@ describe('saidas da documentacao', () => {
     expect(c.item).toHaveLength(ENDPOINTS_API.length);
     expect(c.auth.bearer[0].value).toBe('{{chave}}');
     expect(c.variable.find((v) => v.key === 'base_url')?.value).toBe(`${ORIGEM}/api/externa/v1`);
-    const post = c.item.find((i) => i.request.method === 'POST');
-    expect(post?.request.body?.raw).toContain('comunicacoes');
+    const corpos = c.item.filter((i) => i.request.method === 'POST').map((i) => i.request.body?.raw ?? '');
+    expect(corpos.some((b) => b.includes('comunicacoes'))).toBe(true);
+    expect(corpos.some((b) => b.includes('equipamentos'))).toBe(true);
   });
 
   it('o curl do POST leva o corpo e o content-type', () => {

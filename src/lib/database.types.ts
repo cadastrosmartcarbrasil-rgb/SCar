@@ -4709,6 +4709,13 @@ export type Database = {
         };
         Returns: ApiRastreador[];
       };
+      api_cadastrar_rastreadores: {
+        Args: { p_integracao_id: string; p_itens: Json };
+        Returns: {
+          imei: string | null; resultado: string; motivo: string | null; rastreador_id: string | null;
+          veiculo_id: string | null; placa: string | null; situacao_rastreamento: string | null;
+        }[];
+      };
       api_registrar_comunicacoes: {
         Args: { p_integracao_id: string; p_itens: Json };
         Returns: { imei: string; resultado: string; situacao_rastreamento: string | null }[];

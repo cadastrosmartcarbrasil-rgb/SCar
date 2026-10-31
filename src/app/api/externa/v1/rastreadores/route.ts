@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
 import { erroApi, mensagemDoBanco, rotaApi } from '@/lib/api-externa-server';
 import { decodificarCursor, lerDataHora, limitePagina, proximoCursor } from '@/lib/api-externa';
+import type { Json } from '@/lib/database.types';
 
 // GET /api/externa/v1/rastreadores — o parque de equipamentos. A chave ligada a
 // uma rastreadora (fornecedor) ve so os equipamentos dela.
 //   ?atualizados_desde= ?cursor= ?limite= ?imei=
+// POST /api/externa/v1/rastreadores — a rastreadora CADASTRA os equipamentos e,
+// com placa/chassi/veiculo_id, registra a instalacao (0165). Ate 500 por chamada:
+//   { "equipamentos": [ { "imei": "860...", "placa": "ABC1D23", ... } ] }
 export const dynamic = 'force-dynamic';
 
 export const GET = rotaApi('rastreadores:ler', async (request, { integracao, supabase, registros }) => {
@@ -55,4 +59,28 @@ export const GET = rotaApi('rastreadores:ler', async (request, { integracao, sup
     quantidade: linhas.length,
     proximo_cursor: proximoCursor(linhas, limite, (r) => ({ em: r.alterado_em, id: r.rastreador_id })),
   });
+});
+
+export const POST = rotaApi('rastreadores:escrever', async (request, { integracao, supabase, registros }) => {
+  if (!integracao.fornecedor_id) {
+    return erroApi(403, 'CHAVE_SEM_RASTREADORA', 'A chave não está ligada a uma rastreadora. Peça à Smart Car para vincular.');
+  }
+  const corpo = (await request.json().catch(() => null)) as { equipamentos?: unknown } | unknown[] | null;
+  const itens = Array.isArray(corpo) ? corpo : (corpo as { equipamentos?: unknown } | null)?.equipamentos;
+  if (!Array.isArray(itens) || itens.length === 0) {
+    return erroApi(400, 'CORPO_INVALIDO', 'Envie { "equipamentos": [ { "imei", "placa" ou "chassi", ... } ] }.');
+  }
+  if (itens.length > 500) return erroApi(400, 'CORPO_INVALIDO', 'No máximo 500 equipamentos por chamada.');
+
+  const { data, error } = await supabase.rpc('api_cadastrar_rastreadores', {
+    p_integracao_id: integracao.id,
+    p_itens: itens as Json,
+  });
+  if (error) return erroApi(400, 'ERRO_GRAVACAO', mensagemDoBanco(error));
+
+  const resultados = data ?? [];
+  const resumo: Record<string, number> = {};
+  for (const r of resultados) resumo[r.resultado] = (resumo[r.resultado] ?? 0) + 1;
+  registros(resultados.filter((r) => !['INVALIDO', 'OUTRA_PLATAFORMA', 'ERRO'].includes(r.resultado)).length);
+  return NextResponse.json({ resumo, resultados });
 });

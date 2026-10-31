@@ -82,6 +82,17 @@ export function especificacaoApiExterna(servidor: string) {
           parameters: [...paginacao, { name: 'imei', in: 'query', schema: str }],
           responses: { 200: { description: 'Página de rastreadores', content: { 'application/json': { schema: ref('PaginaRastreadores') } } }, ...erros },
         },
+        post: {
+          summary: 'Cadastra equipamentos e instala nos veículos',
+          description:
+            'Escopo `rastreadores:escrever`. Até 500 por chamada. Cria (ou completa) o equipamento pelo IMEI, ' +
+            'em nome da rastreadora da chave, e, com placa, chassi ou veiculo_id, instala no veículo. Reenviar é seguro.',
+          requestBody: {
+            required: true,
+            content: { 'application/json': { schema: { type: 'object', required: ['equipamentos'], properties: { equipamentos: { type: 'array', maxItems: 500, items: ref('Equipamento') } } } } },
+          },
+          responses: { 200: { description: 'Resultado por IMEI', content: { 'application/json': { schema: ref('ResultadoCadastro') } } }, ...erros },
+        },
       },
       '/rastreadores/comunicacao': {
         post: {
@@ -157,6 +168,36 @@ export function especificacaoApiExterna(servidor: string) {
         PaginaRastreadores: {
           type: 'object',
           properties: { dados: { type: 'array', items: ref('Rastreador') }, quantidade: { type: 'integer' }, proximo_cursor: strN },
+        },
+        Equipamento: {
+          type: 'object',
+          required: ['imei'],
+          properties: {
+            imei: { type: 'string', description: '14 a 17 dígitos.' },
+            numero_serie: str, iccid: str, linha: str, operadora: str, modelo: str, fabricante: str,
+            placa: { type: 'string', description: 'Veículo onde está instalado (ou chassi, ou veiculo_id).' },
+            chassi: str, veiculo_id: str,
+            data_instalacao: { type: 'string', format: 'date-time' },
+            observacoes: str,
+          },
+        },
+        ResultadoCadastro: {
+          type: 'object',
+          properties: {
+            resumo: { type: 'object', additionalProperties: { type: 'integer' } },
+            resultados: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  imei: strN,
+                  resultado: { type: 'string', enum: ['CRIADO', 'CRIADO_INSTALADO', 'ATUALIZADO', 'INSTALADO', 'JA_INSTALADO', 'VEICULO_NAO_ENCONTRADO', 'OUTRA_PLATAFORMA', 'RECUSADO', 'INVALIDO', 'ERRO'] },
+                  motivo: strN, rastreador_id: strN, veiculo_id: strN, placa: strN,
+                  situacao_rastreamento: { type: 'string', nullable: true, enum: ['ATIVO', 'SUSPENSO', 'ENCERRADO', null] },
+                },
+              },
+            },
+          },
         },
         Comunicacao: {
           type: 'object',
