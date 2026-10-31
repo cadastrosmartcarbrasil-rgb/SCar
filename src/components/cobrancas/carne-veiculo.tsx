@@ -14,6 +14,7 @@ import {
   MESES_CARNE_MAX, MESES_CARNE_PADRAO, mensagemDoCarne, resumoDoCarne, type BoletoDoCarne,
 } from '@/lib/carne';
 import { linkWhatsAppAssociado } from '@/lib/protocolos';
+import { urlDoCarne } from '@/lib/carne-impressao';
 import { mensagemBoasVindasWhatsApp } from '@/lib/boas-vindas';
 import { formatCurrency, formatDate } from '@/lib/utils';
 
@@ -178,25 +179,11 @@ function CarneEmitido({ veiculo, boletos, onTentarDeNovo, tentando, onClose, boa
     }
   }
 
+  // 31/10/2026: o carne sai no padrao Smart Car — 3 boletos por folha A4,
+  // com codigo de barras e QR do PIX (PDF gerado no servidor).
   function imprimir() {
-    const esc = (t: string | null | undefined) =>
-      (t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
-    const w = window.open('', '_blank');
-    if (!w) return;
-    const blocos = boletos.filter((b) => b.linha_digitavel).map((b) => `
-      <div class="b"><div class="t">${b.adesao ? 'TAXA DE ADESÃO' : 'MENSALIDADE'} · ${esc(veiculo.placa)}</div>
-      <div class="r"><span>Vencimento <b>${formatDate(b.vencimento)}</b></span><span>Valor <b>${formatCurrency(b.valor)}</b></span></div>
-      <div class="l">${esc(b.linha_digitavel)}</div>
-      ${b.pix_copia_cola ? `<div class="p">PIX copia e cola: ${esc(b.pix_copia_cola)}</div>` : ''}</div>`).join('');
-    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Carnê ${esc(veiculo.placa)}</title>
-      <style>body{font-family:Arial,sans-serif;margin:24px;color:#111}h1{font-size:16px}
-      .b{border:1px dashed #555;padding:10px 12px;margin:0 0 10px;page-break-inside:avoid}
-      .t{font-weight:bold;font-size:12px}.r{display:flex;gap:24px;font-size:12px;margin:6px 0}
-      .l{font-family:monospace;font-size:13px;letter-spacing:.5px}.p{font-family:monospace;font-size:9px;word-break:break-all;margin-top:6px;color:#444}</style>
-      </head><body><h1>${esc(veiculo.nome)} — ${esc(veiculo.placa)}</h1>${blocos}</body></html>`);
-    w.document.close();
-    w.focus();
-    w.print();
+    const ids = boletos.filter((b) => b.linha_digitavel && !b.erro).map((b) => b.titulo_id);
+    if (ids.length) window.open(urlDoCarne(ids), '_blank', 'noopener');
   }
 
   return (

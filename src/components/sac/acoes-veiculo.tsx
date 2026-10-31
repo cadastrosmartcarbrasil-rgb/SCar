@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import {
-  Wallet, MessageCircle, Mail, Pencil, Barcode, QrCode, Copy, Repeat2, Loader2, Calculator, Ban,
+  Wallet, MessageCircle, Mail, Pencil, Barcode, QrCode, Copy, Repeat2, Loader2, Calculator, Ban, Printer,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
@@ -19,6 +19,7 @@ import {
   valorAjustado, validarAjuste,
 } from '@/lib/protocolos';
 import { editavelNoScar } from '@/lib/historico-financeiro';
+import { boletosParaCarne, urlDoCarne } from '@/lib/carne-impressao';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { ClientesRow, TituloCliente } from '@/lib/database.types';
 
@@ -78,6 +79,8 @@ export function HistoricoFinanceiroLista({
   const selecionados = negociaveis.filter((t) => marcados.has(t.id));
   const selecaoNegociavel = selecionados.length > 0 && selecionados.every((t) => !motivoNaoNegociavel(t));
   const selecaoCancelavel = selecionados.length > 0 && selecionados.every(cancelavel);
+  // Carne impresso (3 por folha): os boletos do SCar a vencer, ja registrados.
+  const doCarne = boletosParaCarne(titulos ?? []);
   const alternar = (id: string) => setMarcados((m) => {
     const n = new Set(m); if (n.has(id)) n.delete(id); else n.add(id); return n;
   });
@@ -90,11 +93,20 @@ export function HistoricoFinanceiroLista({
         <p className="text-sm text-slate-400">Nenhum boleto encontrado — nem no SCar, nem no histórico do Mutual.</p>
       )}
       <BoletosNegociados clienteId={clienteId} />
-      {veiculoId && podeCobranca && (
-        <div className="mb-2 flex justify-end">
-          <Button variant="secondary" className="px-2.5 py-1 text-xs" onClick={() => setProRata(true)}>
-            <Calculator className="h-3.5 w-3.5" /> Boleto pró-rata
-          </Button>
+      {((veiculoId && podeCobranca) || doCarne.length > 0) && (
+        <div className="mb-2 flex justify-end gap-2">
+          {doCarne.length > 0 && (
+            <Button variant="secondary" className="px-2.5 py-1 text-xs"
+              title="Os boletos a vencer do SCar, 3 por folha A4, com código de barras e PIX"
+              onClick={() => window.open(urlDoCarne(doCarne.map((t) => t.id)), '_blank', 'noopener')}>
+              <Printer className="h-3.5 w-3.5" /> Imprimir carnê ({doCarne.length})
+            </Button>
+          )}
+          {veiculoId && podeCobranca && (
+            <Button variant="secondary" className="px-2.5 py-1 text-xs" onClick={() => setProRata(true)}>
+              <Calculator className="h-3.5 w-3.5" /> Boleto pró-rata
+            </Button>
+          )}
         </div>
       )}
       {negociaveis.length > 0 && (
