@@ -847,6 +847,25 @@ pagamento**; **linha digitável no corpo**; provedor **Resend**; fuso **São Pau
   `provedor.ts` (interface `EmailProvider` + `ResendProvider`; trocar por SES = um adaptador), `servidor.ts` (token, Svix).
 - **Não feito:** WhatsApp/SMS (falta a API oficial); os outros e-mails do sistema (2ª via, boas-vindas, voucher) ainda não
   consultam a supressão; retenção/anonimização da fila.
+## PLATAFORMA DA NEW TRACKER (Fleet Hub 360) — o SCar BUSCA os dados (02/11/2026, sem migration)
+Pedido do usuário: integrar com o painel de rastreadores pela documentação https://newtrackernatal.com/api-docs.html
+(lida em 02/11; domínio liberado na rede da sessão). A New Tracker roda no **Fleet Hub 360**.
+- **Por que buscar em vez de esperar:** em 7 dias a chave "NEWTRACKER OFICIAL" só LEU `/veiculos` (357 GETs) e nunca
+  usou `POST /rastreadores` nem `/rastreadores/comunicacao` — parque com 0 equipamentos e 0 comunicações.
+- **API deles:** `GET {base}/api-externa?recurso=...`, base `https://bgixdmhmaheznzqjljhk.supabase.co/functions/v1`,
+  chave `fh_live_...` em `x-api-key`, só leitura, `pagina`/`limite` (máx. 500)/`atualizado_desde`, envelope
+  `{success, recurso, pagina, limite, total, dados}`, erros `INVALID_API_KEY`/`FORBIDDEN_SCOPE`/`TENANT_SUSPENSO`.
+  Recursos usados: `equipamentos`, `chips`, `veiculos`, `posicoes`. A chave só vê a empresa DONA dela: gerada na conta
+  da New Tracker devolve a frota inteira deles — só gravar o que casar com a nossa base. Comandos (bloqueio) e histórico
+  de rota exigem JWT de usuário deles: fora.
+- **Fase 1 (feita):** env `NEWTRACKER_API_KEY` (+ `NEWTRACKER_API_BASE` opcional) no `.env` do VPS e no compose;
+  rota `/api/v1/newtracker` (só admin, NADA grava) e o cartão **Plataforma da New Tracker** em Configurações → API e
+  Integrações (`TesteNewTracker`): testar conexão e ver amostra por recurso com a tabela de campos
+  (`camposDaAmostra`). Lógica pura em `src/lib/newtracker.ts` (testada).
+- **Próximo (depois de ver o payload real e guardá-lo em `newtracker.test.ts`):** sincronia de equipamentos/chips/
+  veículos → parque (reusar a regra da 0165), posições → `ultima_comunicacao`/`ultima_posicao`, divergência **sem sinal
+  há mais de 3 dias** (`DIAS_SEM_SINAL`, decisão do usuário), rotina no VPS (posições 15 min, equipamentos diário) e
+  botão "Sincronizar agora". **Ocorrências de roubo/furto: depois** (decisão do usuário).
 
 ## API EXTERNA (0151) — integração com outros sistemas (a 1ª: a rastreadora)
 Pedido do usuário (25/10/2026): "criar a API do software para integrar com outros sistemas; a primeira será com um

@@ -18,6 +18,7 @@ import {
 } from '@/lib/api-externa';
 import { cn, formatDateTime } from '@/lib/utils';
 import type { ApiIntegracaoLista } from '@/lib/database.types';
+import { TesteNewTracker } from '@/components/rastreadores/teste-newtracker';
 
 // Configuracoes -> API e Integracoes (0151). So o admin (a aba nao entra na
 // grade de permissoes). Cada sistema externo ganha a sua chave, com escopos,
@@ -201,6 +202,8 @@ export default function ApiIntegracoesPage() {
           );
         })}
       </div>
+
+      <TesteNewTracker />
 
       <details className="rounded-2xl border border-slate-200 bg-superficie p-4 text-sm">
         <summary className="cursor-pointer font-medium text-slate-700">Como o sistema parceiro usa a API</summary>

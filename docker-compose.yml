@@ -52,6 +52,9 @@ services:
       # Da LEITURA DA BASE INTEIRA de associados: nunca vai ao navegador.
       MUTUAL_API_TOKEN: ${MUTUAL_API_TOKEN:-}
       MUTUAL_API_BASE: ${MUTUAL_API_BASE:-}
+      # Plataforma da NEW TRACKER (Fleet Hub 360) - chave fh_live_ so no servidor.
+      NEWTRACKER_API_KEY: ${NEWTRACKER_API_KEY:-}
+      NEWTRACKER_API_BASE: ${NEWTRACKER_API_BASE:-}
       # Sicredi API Cobranca (boleto + PIX). Valores so no .env do VPS.
       SICREDI_AMBIENTE: ${SICREDI_AMBIENTE:-sandbox}
       SICREDI_API_KEY: ${SICREDI_API_KEY:-}
