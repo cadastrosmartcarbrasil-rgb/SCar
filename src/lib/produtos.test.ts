@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  situacaoRastreador,
+  situacaoRastreador, alteracoesRegraRastreador,
   produtoAtendeTipo, produtosParaTipo, rotuloTiposDoProduto, regraRastreadorCobra, semRastreadorDaRegra, opcionaisOferecidos, coberturasDoVeiculo,
   type TiposPorProduto,
 } from './produtos';
@@ -135,5 +135,31 @@ describe('coberturasDoVeiculo', () => {
     ]);
     expect(r.plano.map((i) => i.nome)).toEqual(['Casco', 'Vidros']);
     expect(r.opcionais.map((i) => i.nome)).toEqual(['Vida']);
+  });
+});
+
+describe('alteracoesRegraRastreador (painel por regional, 0173)', () => {
+  const matriz = { exige: true, limite: 15999.99, valor: 35 };
+  const linhas = [
+    { regional_id: 'sp', regional_nome: 'SP', personalizada: false, ...matriz },
+    { regional_id: 'rp', regional_nome: 'RP', personalizada: true, exige: true, limite: 9999.99, valor: 40 },
+  ];
+  it('sem rascunho, nada a gravar', () => {
+    expect(alteracoesRegraRastreador(linhas, {}, matriz)).toEqual([]);
+  });
+  it('rascunho igual ao gravado nao conta', () => {
+    expect(alteracoesRegraRastreador(linhas, { sp: { ...matriz } }, matriz)).toEqual([]);
+  });
+  it('unidade que muda o limite vira regra propria', () => {
+    const r = alteracoesRegraRastreador(linhas, { sp: { exige: true, limite: 12000, valor: 35 } }, matriz);
+    expect(r).toEqual([{ regional_id: 'sp', nome: 'SP', regra: { exige: true, limite: 12000, valor: 35 } }]);
+  });
+  it('regra propria que volta a ficar igual a matriz e removida', () => {
+    const r = alteracoesRegraRastreador(linhas, { rp: { ...matriz } }, matriz);
+    expect(r).toEqual([{ regional_id: 'rp', nome: 'RP', regra: null }]);
+  });
+  it('desobrigar grava exige = false', () => {
+    const r = alteracoesRegraRastreador(linhas, { sp: { exige: false, limite: 15999.99, valor: 35 } }, matriz);
+    expect(r[0].regra?.exige).toBe(false);
   });
 });

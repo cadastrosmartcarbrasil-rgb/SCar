@@ -160,3 +160,31 @@ export function coberturasDoVeiculo<O extends { origem: 'PLANO' | 'AVULSO'; cate
     opcionais: itens.filter((i) => i.origem === 'AVULSO'),
   };
 }
+
+// ---------------------------------------------------------------------------
+// 0173 — o que o painel "Rastreador por regional" grava. O rascunho só vira
+// alteração quando difere do que está no banco; igual à matriz = voltar à
+// matriz (apagar a regra própria), ou nada se a unidade já segue a matriz.
+// ---------------------------------------------------------------------------
+export type RascunhoRegra = { exige: boolean; limite: number; valor: number };
+
+export function alteracoesRegraRastreador(
+  linhas: { regional_id: string; regional_nome: string; personalizada: boolean; exige: boolean; limite: number; valor: number }[],
+  rascunho: Record<string, RascunhoRegra>,
+  matriz: RascunhoRegra,
+): { regional_id: string; nome: string; regra: RascunhoRegra | null }[] {
+  const igual = (a: RascunhoRegra, b: RascunhoRegra) =>
+    a.exige === b.exige && Number(a.limite) === Number(b.limite) && Number(a.valor) === Number(b.valor);
+  const out: { regional_id: string; nome: string; regra: RascunhoRegra | null }[] = [];
+  for (const l of linhas) {
+    const r = rascunho[l.regional_id];
+    if (!r) continue;
+    if (igual(r, { exige: l.exige, limite: l.limite, valor: l.valor })) continue;
+    if (igual(r, matriz)) {
+      if (l.personalizada) out.push({ regional_id: l.regional_id, nome: l.regional_nome, regra: null });
+      continue;
+    }
+    out.push({ regional_id: l.regional_id, nome: l.regional_nome, regra: r });
+  }
+  return out;
+}

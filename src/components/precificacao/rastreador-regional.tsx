@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Save, Satellite, Info, Undo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,100 +8,73 @@ import { MoneyInput } from '@/components/ui/field';
 import { useRegrasRastreadorDoTipo, useSalvarRegraRastreadorRegional } from '@/hooks/use-regra-rastreador';
 import { usePode } from '@/hooks/use-permissoes';
 import { formatCurrency } from '@/lib/utils';
+import { alteracoesRegraRastreador, type RascunhoRegra } from '@/lib/produtos';
 import type { RegraRastreadorLinha } from '@/lib/database.types';
 
 /**
  * REGRA DO RASTREADOR POR REGIONAL (0173) — ao lado da regra da matriz, na aba
- * Tabela de Precos. Uma linha por unidade, para o tipo escolhido. A unidade sem
- * regra propria segue a da matriz; "Personalizar" grava as tres variaveis
- * (inclusive "nao exige") so para ela.
+ * Tabela de Precos. Uma linha por unidade, para o tipo escolhido.
+ *
+ * O que se digita fica num RASCUNHO do painel (nao na linha), e so sai dele
+ * quando e gravado: recarregar a grade (o "Salvar" da tabela de faixas faz
+ * isso) nao apaga mais o que foi digitado. O botao do proprio painel grava
+ * todas as unidades alteradas de uma vez. (02/11/2026: o usuario editava aqui e
+ * clicava no "Salvar" da tabela, que nao grava este painel.)
  */
-function Linha({ linha, tipoVeiculoId, matriz, podeEditar }: {
-  linha: RegraRastreadorLinha; tipoVeiculoId: string; podeEditar: boolean;
-  matriz: { exige: boolean; limite: number; valor: number };
-}) {
-  const [exige, setExige] = useState(linha.exige);
-  const [limite, setLimite] = useState<number | null>(linha.limite);
-  const [valor, setValor] = useState<number | null>(linha.valor);
-  const salvar = useSalvarRegraRastreadorRegional();
-  useEffect(() => { setExige(linha.exige); setLimite(linha.limite); setValor(linha.valor); }, [linha]);
-
-  const sujo = exige !== linha.exige || (limite ?? 0) !== linha.limite || (valor ?? 0) !== linha.valor;
-  const igualMatriz = exige === matriz.exige && (limite ?? 0) === matriz.limite && (valor ?? 0) === matriz.valor;
-
-  function gravar() {
-    salvar.mutate(
-      {
-        regionalId: linha.regional_id, tipoVeiculoId,
-        regra: igualMatriz ? null : { exige, limite: limite ?? 0, valor: valor ?? 0 },
-      },
-      {
-        onSuccess: () => toast.success(igualMatriz
-          ? `${linha.regional_nome} segue a regra da matriz.`
-          : `${linha.regional_nome}: regra do rastreador salva.`),
-        onError: (e) => toast.error(e.message),
-      },
-    );
-  }
-
-  return (
-    <tr className="border-b border-slate-100 last:border-0">
-      <td className="px-2 py-2">
-        <span className="font-medium text-slate-700">{linha.regional_nome}</span>
-        {!linha.regional_ativa && <span className="ml-1 text-xs text-slate-400">(inativa)</span>}
-        <div className="text-xs">
-          {linha.personalizada
-            ? <span className="text-cyan-700">Regra própria</span>
-            : <span className="text-slate-400">Segue a matriz</span>}
-        </div>
-      </td>
-      <td className="px-2 py-2">
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={exige} disabled={!podeEditar}
-            onChange={(e) => setExige(e.target.checked)} className="h-4 w-4 rounded border-slate-300" />
-          {exige ? 'Exige' : 'Não exige'}
-        </label>
-      </td>
-      <td className="px-2 py-2">
-        <MoneyInput value={limite} onChange={setLimite} disabled={!podeEditar || !exige} className="w-36" />
-      </td>
-      <td className="px-2 py-2">
-        <MoneyInput value={valor} onChange={setValor} disabled={!podeEditar || !exige} className="w-28" />
-      </td>
-      <td className="px-2 py-2">
-        {podeEditar && (
-          <div className="flex gap-1">
-            <Button type="button" variant="secondary" disabled={!sujo || salvar.isPending} onClick={gravar}
-              title="Salvar a regra desta unidade">
-              <Save className="h-4 w-4" />
-            </Button>
-            {linha.personalizada && (
-              <Button type="button" variant="secondary" disabled={salvar.isPending} title="Voltar à regra da matriz"
-                onClick={() => salvar.mutate(
-                  { regionalId: linha.regional_id, tipoVeiculoId, regra: null },
-                  {
-                    onSuccess: () => toast.success(`${linha.regional_nome} voltou à regra da matriz.`),
-                    onError: (e) => toast.error(e.message),
-                  },
-                )}>
-                <Undo2 className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-        )}
-      </td>
-    </tr>
-  );
-}
-
 export function RastreadorRegional({ tipoVeiculoId, matriz }: {
   tipoVeiculoId: string;
   matriz: { exige: boolean; limite: number; valor: number };
 }) {
   const { data, isLoading, error } = useRegrasRastreadorDoTipo(tipoVeiculoId);
   const podeEditar = usePode('precificacao.editar');
-  const linhas = data ?? [];
+  const salvar = useSalvarRegraRastreadorRegional();
+  const [rascunho, setRascunho] = useState<Record<string, RascunhoRegra>>({});
+  const [gravando, setGravando] = useState(false);
+
+  const linhas = useMemo(() => data ?? [], [data]);
   const proprias = linhas.filter((l) => l.personalizada).length;
+  const alteracoes = useMemo(
+    () => alteracoesRegraRastreador(linhas, rascunho, matriz),
+    [linhas, rascunho, matriz],
+  );
+
+  const valorDe = (l: RegraRastreadorLinha): RascunhoRegra =>
+    rascunho[l.regional_id] ?? { exige: l.exige, limite: l.limite, valor: l.valor };
+  const mudar = (l: RegraRastreadorLinha, patch: Partial<RascunhoRegra>) =>
+    setRascunho((r) => ({ ...r, [l.regional_id]: { ...valorDe(l), ...patch } }));
+
+  async function gravarTudo() {
+    if (alteracoes.length === 0) return;
+    setGravando(true);
+    const falhas: string[] = [];
+    for (const a of alteracoes) {
+      try {
+        await salvar.mutateAsync({ regionalId: a.regional_id, tipoVeiculoId, regra: a.regra });
+      } catch (e) {
+        falhas.push(`${a.nome}: ${(e as Error).message}`);
+      }
+    }
+    setGravando(false);
+    if (falhas.length) {
+      toast.error(`Não gravou: ${falhas.join(' · ')}`);
+      return;
+    }
+    setRascunho({});
+    toast.success(`Regra do rastreador gravada em ${alteracoes.length} unidade(s).`);
+  }
+
+  function voltarMatriz(l: RegraRastreadorLinha) {
+    salvar.mutate(
+      { regionalId: l.regional_id, tipoVeiculoId, regra: null },
+      {
+        onSuccess: () => {
+          setRascunho((r) => { const n = { ...r }; delete n[l.regional_id]; return n; });
+          toast.success(`${l.regional_nome} voltou à regra da matriz.`);
+        },
+        onError: (e) => toast.error(e.message),
+      },
+    );
+  }
 
   return (
     <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
@@ -121,7 +94,7 @@ export function RastreadorRegional({ tipoVeiculoId, matriz }: {
           Cada unidade pode ter o próprio limite de FIPE, valor da mensalidade do rastreador ou não exigir.
           Acima do limite o rastreador já entra nos <strong>produtos contratados</strong> da cotação; abaixo
           (ou sem exigência) ele é oferecido como <strong>opcional</strong>. Deixar igual à matriz = seguir a matriz.
-          Veículo que já está na base não muda de mensalidade.
+          <strong> Grave pelo botão deste painel</strong> — o “Salvar” da tabela de faixas não grava esta parte.
         </span>
       </p>
 
@@ -142,14 +115,71 @@ export function RastreadorRegional({ tipoVeiculoId, matriz }: {
               </tr>
             </thead>
             <tbody>
-              {linhas.map((l) => (
-                <Linha key={l.regional_id} linha={l} tipoVeiculoId={tipoVeiculoId} matriz={matriz} podeEditar={podeEditar} />
-              ))}
+              {linhas.map((l) => {
+                const v = valorDe(l);
+                const pendente = alteracoes.some((a) => a.regional_id === l.regional_id);
+                return (
+                  <tr key={l.regional_id} className={`border-b border-slate-100 last:border-0 ${pendente ? 'bg-amber-50' : ''}`}>
+                    <td className="px-2 py-2">
+                      <span className="font-medium text-slate-700">{l.regional_nome}</span>
+                      {!l.regional_ativa && <span className="ml-1 text-xs text-slate-400">(inativa)</span>}
+                      <div className="text-xs">
+                        {pendente
+                          ? <span className="font-medium text-amber-700">Alterado — falta gravar</span>
+                          : l.personalizada
+                            ? <span className="text-cyan-700">Regra própria</span>
+                            : <span className="text-slate-400">Segue a matriz</span>}
+                      </div>
+                    </td>
+                    <td className="px-2 py-2">
+                      <label className="flex items-center gap-2 text-sm">
+                        <input type="checkbox" checked={v.exige} disabled={!podeEditar}
+                          onChange={(e) => mudar(l, { exige: e.target.checked })} className="h-4 w-4 rounded border-slate-300" />
+                        {v.exige ? 'Exige' : 'Não exige'}
+                      </label>
+                    </td>
+                    <td className="px-2 py-2">
+                      <MoneyInput value={v.limite} onChange={(x) => mudar(l, { limite: x ?? 0 })}
+                        disabled={!podeEditar || !v.exige} className="w-36" />
+                    </td>
+                    <td className="px-2 py-2">
+                      <MoneyInput value={v.valor} onChange={(x) => mudar(l, { valor: x ?? 0 })}
+                        disabled={!podeEditar || !v.exige} className="w-28" />
+                    </td>
+                    <td className="px-2 py-2">
+                      {podeEditar && l.personalizada && (
+                        <Button type="button" variant="secondary" disabled={salvar.isPending || gravando}
+                          title="Voltar à regra da matriz" onClick={() => voltarMatriz(l)}>
+                          <Undo2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
               {linhas.length === 0 && (
                 <tr><td colSpan={5} className="px-2 py-3 text-sm text-slate-400">Nenhuma unidade cadastrada.</td></tr>
               )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {podeEditar && (
+        <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
+          {alteracoes.length > 0 && (
+            <>
+              <span className="text-xs font-medium text-amber-700">
+                {alteracoes.length} unidade(s) alterada(s) ainda não gravada(s)
+              </span>
+              <Button type="button" variant="secondary" disabled={gravando} onClick={() => setRascunho({})}>
+                Descartar
+              </Button>
+            </>
+          )}
+          <Button type="button" disabled={alteracoes.length === 0 || gravando} onClick={gravarTudo}>
+            <Save className="h-4 w-4" /> {gravando ? 'Gravando...' : 'Gravar regras das unidades'}
+          </Button>
         </div>
       )}
     </div>
