@@ -792,6 +792,10 @@ pagamento**; **linha digitável no corpo**; provedor **Resend**; fuso **São Pau
   a palavra "cartão" fica (haverá cartão); `bloqueado` saiu de `PALAVRAS_PROIBIDAS`. Vitest transforma JSX pelo `oxc` no
   `vitest.config.ts` (o tsconfig é `preserve`). Boas-vindas e aniversário ainda NÃO estão ligados; o subdomínio de
   relacionamento `relacionamento.appsmartcar.com.br` foi criado pelo usuário (para o aniversário).
+- **Link público dos documentos (02/11/2026):** `GET /documentos/<modelo_id>` (no `PUBLIC_PATHS`) entrega o PDF da versão
+  publicada ATUAL de um termo GERAL, ativo e visível no portal — link fixo para e-mail/WhatsApp. O `?modelo=` de
+  `/api/v1/termos/pdf` é o RASCUNHO e só abre para a equipe: nunca mandar esse link a associado. Os ids citados pelos
+  e-mails ficam em `DOCUMENTOS` (`templates/config.ts`): Manual da Assistência 24h, PSM (regimento) e Termo de Rastreadores.
 - **"Esqueci minha senha" do portal (02/11/2026):** `/portal/recuperar` → `POST /api/portal/recuperar` (resposta sempre
   igual; 3/doc e 10/IP em 30 min) manda ao `clientes.email` (o e-mail do Auth é interno) o template `recuperarSenha` com
   link `/portal/nova-senha?token_hash=…` (`generateLink` recovery; cria o usuário de Auth com senha aleatória se o associado

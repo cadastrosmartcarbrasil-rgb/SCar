@@ -109,6 +109,10 @@ describe('modelos (templates React Email)', () => {
       }
     }
     expect(an.html).toContain('https://x/pref/tok');
+    expect(bv.html).not.toContain('bit.ly');
+    for (const id of ['4b172d0e-82c7-4a75-8c4d-9d987bbc17c5', '1372b1ea-c24b-4bf2-97b4-cd986b663c2e', '9cfd3515-edb8-4e4c-aa56-f6943a6f9a80']) {
+      expect(bv.html).toContain(`https://appsmartcar.com.br/documentos/${id}`);
+    }
   });
 });
 

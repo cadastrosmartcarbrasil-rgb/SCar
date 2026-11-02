@@ -50,10 +50,10 @@ export interface Links {
   portalFaturasUrl: string;
   appAndroidUrl: string;
   appIosUrl: string;
-  /** Documentos do associado (e-mail de boas-vindas). */
-  assistencia24hUrl: string;
+  /** Documentos do associado (e-mail de boas-vindas): /documentos/<id> do proprio sistema. */
   manualAssistenciaUrl: string;
   regimentoUrl: string;
+  rastreadoresUrl: string;
 }
 
 const env = (k: string) => (typeof process !== 'undefined' ? process.env[k] : undefined);
@@ -90,6 +90,13 @@ export const EMPRESA_PADRAO: Empresa = {
 
 const appUrl = env('APP_URL_PORTAL') ?? 'https://appsmartcar.com.br';
 
+/** Modelos de termo (escopo GERAL) que os e-mails citam — ids de termos_modelos em producao. */
+export const DOCUMENTOS = {
+  manualAssistencia: '4b172d0e-82c7-4a75-8c4d-9d987bbc17c5', // MANUAL DA ASSISTENCIA 24 HORAS
+  regimento: '1372b1ea-c24b-4bf2-97b4-cd986b663c2e', // PSM - PROGRAMA DE SOCORRO MUTUO
+  rastreadores: '9cfd3515-edb8-4e4c-aa56-f6943a6f9a80', // TERMO DE RASTREADORES
+} as const;
+
 /**
  * Portal do associado = o do SCar (appsmartcar.com.br). Os apps de loja ainda são os
  * do sistema anterior: troque por variável de ambiente quando o app novo existir.
@@ -104,9 +111,9 @@ export const LINKS_PADRAO: Links = {
   appIosUrl:
     env('APP_IOS_URL') ??
     'https://apps.apple.com/br/app/smart-car-brasil-associado/id6747453510',
-  // ATENÇÃO: hoje são links curtos (bit.ly). Encurtadores costumam ser penalizados por filtros
-  // de spam — substitua por links diretos em domínio da Smart Car assim que possível.
-  assistencia24hUrl: env('DOC_ASSISTENCIA_URL') ?? 'https://bit.ly/3Fo1NJo',
-  manualAssistenciaUrl: env('DOC_MANUAL_URL') ?? 'https://bit.ly/3ZBMSWy',
-  regimentoUrl: env('DOC_REGIMENTO_URL') ?? 'http://bit.ly/4f8q5Z0',
+  // Documentos GERAIS publicados em Configuracoes -> Termos, pelo link publico e fixo
+  // /documentos/<modelo_id> (sempre a versao publicada atual). Nada de encurtador.
+  manualAssistenciaUrl: env('DOC_MANUAL_URL') ?? `${appUrl}/documentos/${DOCUMENTOS.manualAssistencia}`,
+  regimentoUrl: env('DOC_REGIMENTO_URL') ?? `${appUrl}/documentos/${DOCUMENTOS.regimento}`,
+  rastreadoresUrl: env('DOC_RASTREADORES_URL') ?? `${appUrl}/documentos/${DOCUMENTOS.rastreadores}`,
 };

@@ -84,19 +84,19 @@ export default function BoasVindas(p: BoasVindasProps) {
       <LinksUteis
         docs={[
           {
-            titulo: 'Assistência 24 horas',
-            descricao: 'Saiba como acionar o atendimento a qualquer hora.',
-            href: links.assistencia24hUrl,
-          },
-          {
-            titulo: 'Manual do associado',
-            descricao: 'Serviços de assistência 24 horas, passo a passo.',
+            titulo: 'Manual da Assistência 24 horas',
+            descricao: 'Como acionar a assistência e os serviços, passo a passo.',
             href: links.manualAssistenciaUrl,
           },
           {
-            titulo: 'Regimento interno',
+            titulo: 'Regimento interno (PSM)',
             descricao: 'Regras e direitos do associado Smart Car Brasil.',
             href: links.regimentoUrl,
+          },
+          {
+            titulo: 'Termo de rastreadores',
+            descricao: 'Regras do equipamento de rastreamento.',
+            href: links.rastreadoresUrl,
           },
         ]}
       />
