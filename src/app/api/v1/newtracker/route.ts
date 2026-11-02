@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import {
-  BASE_NEWTRACKER, RECURSOS_NEWTRACKER, cabecalhoNewTracker, camposDaAmostra, ehRecursoNewTracker,
+  RECURSOS_NEWTRACKER, cabecalhoNewTracker, camposDaAmostra, ehRecursoNewTracker,
   lerPaginaNewTracker, mensagemErroNewTracker, urlNewTracker, type RecursoNewTracker,
   ROTULO_SITUACAO_IMPORTACAO, contarSituacoes, type LinhaPrevia,
 } from '@/lib/newtracker';
-import { importarNewTracker, integracaoNewTracker, montarPreviaNewTracker } from '@/lib/newtracker-server';
+import { baseNewTracker, contasConfiguradas, importarNewTracker, integracaoNewTracker, montarPreviaNewTracker } from '@/lib/newtracker-server';
 
 // POST /api/v1/newtracker
 // Proxy server-side da API da plataforma da NEW TRACKER (Fleet Hub 360), no molde
@@ -23,6 +23,7 @@ const LIMITE_AMOSTRA = 20;
 
 interface Body {
   acao?: 'amostra' | 'previa' | 'importar';
+  conta?: string;
   recurso?: string;
   limite?: number;
 }
@@ -56,11 +57,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Somente o administrador pode testar a integração da New Tracker' }, { status: 403 });
   }
 
-  const chave = process.env.NEWTRACKER_API_KEY?.trim();
-  const base = (process.env.NEWTRACKER_API_BASE?.trim() || BASE_NEWTRACKER).replace(/\/+$/, '');
-  if (!chave) return NextResponse.json({ configured: false });
+  const contas = contasConfiguradas();
+  const base = baseNewTracker();
+  if (contas.length === 0) return NextResponse.json({ configured: false });
+  const nomesContas = contas.map((c) => c.nome);
 
   const body = (await request.json().catch(() => ({}))) as Body;
+  const conta = contas.find((c) => c.nome === body.conta) ?? contas[0];
+  const chave = conta.chave;
 
   // --- previa / importar: le TUDO da New Tracker e casa com a nossa frota ---
   if (body.acao === 'previa' || body.acao === 'importar') {
@@ -78,7 +82,7 @@ export async function POST(request: Request) {
       }
       const base = {
         configured: true, ok: true, acao: body.acao, integracao: integ.nome,
-        lidos: previa.lidos, contagem,
+        contas: nomesContas, lidos: previa.lidos, por_conta: previa.por_conta, contagem,
         rotulos: ROTULO_SITUACAO_IMPORTACAO,
         a_instalar: instalar.length - ja_instalados - outra_plataforma,
         ja_instalados, outra_plataforma,
@@ -124,7 +128,7 @@ export async function POST(request: Request) {
 
     if (!res.ok) {
       return NextResponse.json({
-        configured: true, ok: false, http: res.status, recurso, ms,
+        configured: true, ok: false, http: res.status, recurso, ms, conta: conta.nome, contas: nomesContas,
         erro: mensagemErroNewTracker(res.status, corpo),
         bruto: corpo ?? texto.slice(0, 300),
       });
@@ -136,6 +140,8 @@ export async function POST(request: Request) {
       ok: true,
       http: res.status,
       recurso,
+      conta: conta.nome,
+      contas: nomesContas,
       rotulo: RECURSOS_NEWTRACKER[recurso],
       ms,
       total: pagina.total,

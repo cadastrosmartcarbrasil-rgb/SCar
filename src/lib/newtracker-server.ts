@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { lerTodas } from '@/lib/paginacao';
 import type { Json } from '@/lib/database.types';
 import {
-  BASE_NEWTRACKER, LIMITE_MAXIMO, cabecalhoNewTracker, casarComBase, emBlocos, itemParaCadastro,
+  BASE_NEWTRACKER, LIMITE_MAXIMO, cabecalhoNewTracker, casarComBase, contasNewTracker, emBlocos, itemParaCadastro,
   itemParaComunicacao, lerPaginaNewTracker, mensagemErroNewTracker, montarItensNewTracker, temMaisPaginas,
   urlNewTracker, type LinhaPrevia, type Linha, type RecursoNewTracker, type VeiculoSCar,
 } from '@/lib/newtracker';
@@ -16,11 +16,13 @@ import {
 const PAGINAS_MAX = 100; // 100 x 500 = 50 mil linhas por recurso
 const BLOCO_GRAVACAO = 200;
 
-export function configNewTracker(): { chave: string; base: string } | null {
-  const chave = process.env.NEWTRACKER_API_KEY?.trim();
-  if (!chave) return null;
-  const base = (process.env.NEWTRACKER_API_BASE?.trim() || BASE_NEWTRACKER).replace(/\/+$/, '');
-  return { chave, base };
+export function baseNewTracker(): string {
+  return (process.env.NEWTRACKER_API_BASE?.trim() || BASE_NEWTRACKER).replace(/\/+$/, '');
+}
+
+/** Todas as contas configuradas (uma chave por conta/regional da New Tracker). */
+export function contasConfiguradas() {
+  return contasNewTracker(process.env.NEWTRACKER_API_KEY, process.env.NEWTRACKER_API_KEYS);
 }
 
 /** Le TODAS as paginas de um recurso. */
@@ -85,23 +87,36 @@ async function nossosVeiculos(): Promise<VeiculoSCar[]> {
   );
 }
 
+type Lidos = { equipamentos: number; chips: number; veiculos: number; posicoes: number };
+
 export interface PreviaNewTracker {
-  lidos: { equipamentos: number; chips: number; veiculos: number; posicoes: number };
+  lidos: Lidos;
+  /** o que veio de cada conta */
+  por_conta: ({ conta: string } & Lidos)[];
   linhas: LinhaPrevia[];
   /** IMEIs ja no parque: de quem sao e como estao */
   no_parque: Map<string, { fornecedor_id: string | null; status: string; veiculo_id: string | null }>;
 }
 
 export async function montarPreviaNewTracker(): Promise<PreviaNewTracker> {
-  const cfg = configNewTracker();
-  if (!cfg) throw new Error('NEWTRACKER_API_KEY não configurada no servidor');
-  const [equipamentos, chips, veiculos, posicoes, nossos] = await Promise.all([
-    lerRecursoNewTracker(cfg, 'equipamentos'),
-    lerRecursoNewTracker(cfg, 'chips'),
-    lerRecursoNewTracker(cfg, 'veiculos'),
-    lerRecursoNewTracker(cfg, 'posicoes'),
-    nossosVeiculos(),
-  ]);
+  const contas = contasConfiguradas();
+  if (contas.length === 0) throw new Error('NEWTRACKER_API_KEY não configurada no servidor');
+  const base = baseNewTracker();
+  const lerConta = async (c: { nome: string; chave: string }) => {
+    const cfg = { chave: c.chave, base };
+    const [equipamentos, chips, veiculos, posicoes] = await Promise.all([
+      lerRecursoNewTracker(cfg, 'equipamentos'),
+      lerRecursoNewTracker(cfg, 'chips'),
+      lerRecursoNewTracker(cfg, 'veiculos'),
+      lerRecursoNewTracker(cfg, 'posicoes'),
+    ]).catch((e) => { throw new Error(`Conta ${c.nome}: ${e instanceof Error ? e.message : String(e)}`); });
+    return { conta: c.nome, equipamentos, chips, veiculos, posicoes };
+  };
+  const [lidasContas, nossos] = await Promise.all([Promise.all(contas.map(lerConta)), nossosVeiculos()]);
+  const equipamentos = lidasContas.flatMap((c) => c.equipamentos);
+  const chips = lidasContas.flatMap((c) => c.chips);
+  const veiculos = lidasContas.flatMap((c) => c.veiculos);
+  const posicoes = lidasContas.flatMap((c) => c.posicoes);
   const linhas = casarComBase(montarItensNewTracker({ equipamentos, chips, veiculos, posicoes }), nossos);
 
   const admin = createAdminClient();
@@ -115,6 +130,10 @@ export async function montarPreviaNewTracker(): Promise<PreviaNewTracker> {
 
   return {
     lidos: { equipamentos: equipamentos.length, chips: chips.length, veiculos: veiculos.length, posicoes: posicoes.length },
+    por_conta: lidasContas.map((c) => ({
+      conta: c.conta, equipamentos: c.equipamentos.length, chips: c.chips.length,
+      veiculos: c.veiculos.length, posicoes: c.posicoes.length,
+    })),
     linhas,
     no_parque,
   };

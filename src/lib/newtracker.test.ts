@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  BASE_NEWTRACKER, camposDaAmostra, casarComBase, chassiValido, contarSituacoes, ehRecursoNewTracker, emBlocos,
+  BASE_NEWTRACKER, camposDaAmostra, casarComBase, chassiValido, contarSituacoes, contasNewTracker, ehRecursoNewTracker, emBlocos,
   imeiNewTracker, itemParaCadastro, itemParaComunicacao, lerPaginaNewTracker, montarItensNewTracker, placaValida,
   mensagemErroNewTracker, semSinal, temMaisPaginas, urlNewTracker,
 } from './newtracker';
@@ -181,5 +181,20 @@ describe('itens para as RPCs', () => {
     expect(placaValida('abc-1d23')).toBe('ABC1D23');
     expect(chassiValido('9BWAG5R11TP071881')).toBe('9BWAG5R11TP071881');
     expect(emBlocos([1, 2, 3], 2)).toEqual([[1, 2], [3]]);
+  });
+});
+
+describe('contasNewTracker', () => {
+  it('le a principal e as demais, com ou sem nome, sem repetir chave', () => {
+    expect(contasNewTracker('fh_live_a', 'ribeirao=fh_live_b; NATAL=fh_live_c,fh_live_a\nfh_live_d')).toEqual([
+      { nome: 'PRINCIPAL', chave: 'fh_live_a' },
+      { nome: 'RIBEIRAO', chave: 'fh_live_b' },
+      { nome: 'NATAL', chave: 'fh_live_c' },
+      { nome: 'CONTA 4', chave: 'fh_live_d' },
+    ]);
+  });
+  it('sem nada configurado: nenhuma conta', () => {
+    expect(contasNewTracker(undefined, '')).toEqual([]);
+    expect(contasNewTracker('  ', null)).toEqual([]);
   });
 });

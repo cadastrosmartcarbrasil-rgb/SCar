@@ -24,6 +24,8 @@ interface Resposta {
   erro?: string;
   bruto?: unknown;
   error?: string;
+  conta?: string;
+  contas?: string[];
 }
 
 const RECURSOS = Object.entries(RECURSOS_NEWTRACKER) as [RecursoNewTracker, string][];
@@ -41,6 +43,7 @@ interface RespostaImportacao {
   configured: boolean; ok: boolean; acao?: 'previa' | 'importar'; erro?: string; error?: string;
   integracao?: string;
   lidos?: { equipamentos: number; chips: number; veiculos: number; posicoes: number };
+  por_conta?: { conta: string; equipamentos: number; chips: number; veiculos: number; posicoes: number }[];
   contagem?: Record<Situacao, number>;
   rotulos?: Record<Situacao, string>;
   a_instalar?: number; ja_instalados?: number; outra_plataforma?: number; com_posicao?: number;
@@ -140,6 +143,16 @@ function ImportarEquipamentos() {
             {fmt(resp.lidos?.veiculos)} veículos · {fmt(resp.lidos?.posicoes)} posições. Gravação em nome da chave
             “{resp.integracao}”.
           </p>
+          {(resp.por_conta?.length ?? 0) > 1 && (
+            <ul className="text-xs text-slate-500">
+              {resp.por_conta!.map((c) => (
+                <li key={c.conta}>
+                  Conta {c.conta}: {fmt(c.equipamentos)} equipamentos · {fmt(c.chips)} chips · {fmt(c.veiculos)} veículos ·{' '}
+                  {fmt(c.posicoes)} posições
+                </li>
+              ))}
+            </ul>
+          )}
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {(Object.keys(c) as Situacao[]).map((s) => (
               <button
@@ -235,6 +248,8 @@ function ImportarEquipamentos() {
 export function TesteNewTracker() {
   const [carregando, setCarregando] = useState<RecursoNewTracker | null>(null);
   const [resp, setResp] = useState<Resposta | null>(null);
+  const [conta, setConta] = useState<string | null>(null);
+  const contas = resp?.contas ?? [];
 
   async function testar(recurso: RecursoNewTracker) {
     setCarregando(recurso);
@@ -242,7 +257,7 @@ export function TesteNewTracker() {
       const r = await fetch('/api/v1/newtracker', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recurso, limite: 5 }),
+        body: JSON.stringify({ recurso, limite: 5, conta }),
       });
       const j = (await r.json()) as Resposta;
       if (!r.ok && j.error) toast.error(j.error);
@@ -269,6 +284,19 @@ export function TesteNewTracker() {
         Testa a chave da New Tracker e mostra uma amostra do que a API deles devolve. Nada é gravado no SCar:
         a sincronização do parque de rastreadores será ligada depois de conferirmos os dados reais.
       </p>
+
+      {contas.length > 1 && (
+        <label className="mt-3 flex items-center gap-2 text-sm text-slate-600">
+          Conta da New Tracker:
+          <select
+            className="rounded-lg border border-slate-300 px-2 py-1 text-sm"
+            value={conta ?? resp?.conta ?? contas[0]}
+            onChange={(e) => setConta(e.target.value)}
+          >
+            {contas.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </label>
+      )}
 
       <div className="mt-3 flex flex-wrap gap-2">
         {RECURSOS.map(([r, rotulo]) => (
@@ -299,7 +327,7 @@ export function TesteNewTracker() {
         <div className="mt-3 space-y-3">
           <p className="flex flex-wrap items-center gap-2 text-sm text-emerald-700">
             <CheckCircle2 className="h-4 w-4" />
-            {RECURSOS_NEWTRACKER[resp.recurso ?? 'status']} · HTTP {resp.http} · {resp.ms} ms
+            {RECURSOS_NEWTRACKER[resp.recurso ?? 'status']}{contas.length > 1 && resp.conta ? ` · conta ${resp.conta}` : ''} · HTTP {resp.http} · {resp.ms} ms
             {resp.total != null && <span className="text-slate-600">· {resp.total.toLocaleString('pt-BR')} registros no total</span>}
           </p>
 

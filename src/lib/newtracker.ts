@@ -448,3 +448,37 @@ export function emBlocos<T>(lista: T[], tamanho: number): T[][] {
   for (let i = 0; i < lista.length; i += tamanho) r.push(lista.slice(i, i + tamanho));
   return r;
 }
+
+// ---------------------------------------------------------------------------
+// VARIAS CONTAS (02/11/2026): a New Tracker separa as regionais em contas
+// (empresas) diferentes no Fleet Hub, e cada chave so ve a empresa dona dela.
+// .env do VPS:
+//   NEWTRACKER_API_KEY=fh_live_...                        (a primeira conta)
+//   NEWTRACKER_API_KEYS=RIBEIRAO=fh_live_...;NATAL=fh_live_...   (as demais)
+// Separador ";" ou "," ou quebra de linha; o nome antes do "=" e opcional.
+// ---------------------------------------------------------------------------
+
+export interface ContaNewTracker {
+  nome: string;
+  chave: string;
+}
+
+export function contasNewTracker(principal?: string | null, outras?: string | null): ContaNewTracker[] {
+  const contas: ContaNewTracker[] = [];
+  const vistas = new Set<string>();
+  const add = (nome: string, chave: string) => {
+    const c = chave.trim().replace(/^["']|["']$/g, '');
+    if (!c || vistas.has(c)) return;
+    vistas.add(c);
+    contas.push({ nome: nome.trim().toUpperCase() || `CONTA ${contas.length + 1}`, chave: c });
+  };
+  if (principal?.trim()) add('PRINCIPAL', principal);
+  for (const parte of (outras ?? '').split(/[;,\n]+/)) {
+    const t = parte.trim();
+    if (!t) continue;
+    const i = t.indexOf('=');
+    if (i > 0 && !t.slice(0, i).includes('fh_')) add(t.slice(0, i), t.slice(i + 1));
+    else add('', t);
+  }
+  return contas;
+}

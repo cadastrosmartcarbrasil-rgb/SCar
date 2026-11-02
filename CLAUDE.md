@@ -877,6 +877,13 @@ Pedido do usuário: integrar com o painel de rastreadores pela documentação ht
   fornecedor NEW TRACKER com `rastreadores:escrever`; `NEWTRACKER_INTEGRACAO_ID` força uma). Decisão: entram só os
   equipamentos instalados em veículos da Smart Car; sem posição, fora da base ou estoque deles ficam de fora (contados).
   Re-executável. `data_instalacao` = momento da importação (a New Tracker não informa).
+- **✅ 1ª importação (02/11/2026):** 362 equipamentos lidos → **215 instalados** (210 MATRIZ, 5 SP1; 187 com chip; 13 sem
+  sinal +3 dias), 75 sem posição, 72 em veículos que não são da Smart Car. A chave vê UMA conta (Cuiabá/MT): as unidades
+  RP/SP1/Natal (1.237/867/450 veículos na base) não estão nela.
+- **Várias contas:** a New Tracker separa regionais em contas (empresas) no Fleet Hub, e a chave só vê a dona. O SCar
+  lê todas: `NEWTRACKER_API_KEY` (a principal) + `NEWTRACKER_API_KEYS=RIBEIRAO=fh_live_...;NATAL=fh_live_...`
+  (`contasNewTracker`, testada; env também no compose). A prévia soma as contas e mostra o que veio de cada uma; o teste
+  de amostra ganha seletor de conta. A gravação segue em nome da MESMA chave SCar (NEWTRACKER OFICIAL).
 - **Próximo:** rotina no VPS (posições 15 min, equipamentos diário), divergência **sem sinal há mais de 3 dias**
   (`DIAS_SEM_SINAL`, decisão do usuário). **Ocorrências de roubo/furto: depois** (decisão do usuário).
 
