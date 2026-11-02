@@ -1,30 +1,36 @@
 import * as React from 'react';
 import { Button } from '@react-email/components';
 import { Layout } from './components/Layout';
-import { Assinatura, Paragrafo, Titulo } from './components/Blocos';
+import { Assinatura, Titulo } from './components/Blocos';
 import { COR, FONTE, LINKS_PADRAO } from './config';
 import { primeiroNome } from './formatadores';
+import { aplicarCampos, textosEfetivos } from '../modelos';
+import { ParagrafosRicos } from './components/Texto';
 import type { RecuperarSenhaProps } from './tipos';
 
-export const assunto = () => 'Crie uma nova senha do portal — Smart Car Brasil';
+function textos(p: RecuperarSenhaProps) {
+  const t = textosEfetivos('recuperar_senha', p.textos);
+  const v = { nome: primeiroNome(p.nome ?? ''), validade: `${p.validadeMinutos ?? 60} minutos` };
+  return (k: string) => aplicarCampos(t[k] ?? '', v);
+}
+
+export const assunto = (p: RecuperarSenhaProps) => textos(p)('assunto');
 
 /** E-mail de servico: o link de uso unico para o associado criar uma nova senha do portal. */
 export default function RecuperarSenha(p: RecuperarSenhaProps) {
   const links = { ...LINKS_PADRAO, ...p.links };
+  const t = textos(p);
   return (
     <Layout
-      preview="Use o botão para criar uma nova senha do portal do associado."
+      preview={t('previa')}
       rotulo="Acesso ao portal"
       tom="info"
       rodape="servico"
       logoUrl={links.logoUrl}
       empresa={p.empresa}
     >
-      <Titulo>Crie uma nova senha</Titulo>
-      <Paragrafo>
-        Olá, <strong>{primeiroNome(p.nome)}</strong>. Recebemos um pedido para criar uma nova senha do
-        portal do associado. Toque no botão abaixo e escolha a sua senha.
-      </Paragrafo>
+      <Titulo>{t('titulo')}</Titulo>
+      <ParagrafosRicos texto={t('corpo')} />
       <Button
         href={p.link}
         className="btn-solid"
@@ -42,14 +48,9 @@ export default function RecuperarSenha(p: RecuperarSenhaProps) {
       >
         Criar nova senha
       </Button>
-      <Paragrafo style={{ marginTop: 18, fontSize: 14, lineHeight: '22px' }}>
-        O link vale por {p.validadeMinutos ?? 60} minutos e só pode ser usado uma vez. Seu login continua
-        sendo o seu <strong>CPF/CNPJ (somente números)</strong>.
-      </Paragrafo>
-      <Paragrafo style={{ fontSize: 14, lineHeight: '22px' }}>
-        Não foi você que pediu? Pode ignorar este e-mail: a sua senha atual continua valendo.
-      </Paragrafo>
-      <Assinatura frase="Atenciosamente, equipe Smart Car Brasil." />
+      <ParagrafosRicos texto={t('aviso')} style={{ marginTop: 18, fontSize: 14, lineHeight: '22px' }} />
+      <ParagrafosRicos texto={t('ignorar')} style={{ fontSize: 14, lineHeight: '22px' }} />
+      <Assinatura frase={t('assinatura')} />
     </Layout>
   );
 }

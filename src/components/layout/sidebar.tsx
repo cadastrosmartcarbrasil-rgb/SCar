@@ -34,6 +34,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Mail,
+  FileText,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
@@ -75,6 +76,7 @@ export const GESTAO: Entrada[] = [
       { href: '/cobrancas/boletos', label: 'Boletos e Remessas', icon: Receipt },
     ],
   },
+  { href: '/comunicacao/modelos', label: 'Modelos de Mensagens', icon: FileText },
   { href: '/precificacao', label: 'Precificação', icon: Calculator },
   { href: '/fornecedores', label: 'Fornecedores', icon: Store },
   { href: '/financeiro', label: 'Financeiro / DRE', icon: DollarSign },

@@ -13,10 +13,10 @@ describe('grade modulo x acao (0111)', () => {
     for (const m of MODULOS) for (const a of m.acoes) expect(ACOES).toContain(a);
   });
 
-  it('157 celulas editaveis (as mesmas de permissao_celula_valida) + 3 alcadas', () => {
+  it('159 celulas editaveis (as mesmas de permissao_celula_valida) + 3 alcadas', () => {
     const editaveis = MODULOS.filter((m) => !m.fixo).flatMap((m) => m.acoes);
     // 89 ate a 0140 + DRE (ver, exportar) + 16 abas de Configuracoes x (ver, editar) — 0141
-    expect(editaveis.length).toBe(157);
+    expect(editaveis.length).toBe(159);
     expect(ALCADAS.length).toBe(3);
   });
 

@@ -5,6 +5,7 @@ import {
   veiculoDoAviso, type Rodape, type TemplateEmail,
 } from './cobranca';
 import { renderizarAviso } from './render-email';
+import { textosGravadosEmail } from './modelos-server';
 import { provedorDeEmail, type EmailProvider } from './provedor';
 import { expiracaoDoLink, tokenDoBoleto } from './servidor';
 
@@ -73,6 +74,7 @@ export async function rodarRotinaEmail(
     return out;
   }
   const rodape = await rodapeDaEmpresa(admin);
+  const textos = await textosGravadosEmail(admin);
   const { data: regua } = await admin.from('email_regua').select('codigo, offset_dias');
   const offsets = new Map((regua ?? []).map((r) => [r.codigo, r.offset_dias]));
   const intervalo = Math.ceil(1000 / Math.max(0.1, Number(cfg.limite_por_segundo)));
@@ -128,7 +130,7 @@ export async function rodarRotinaEmail(
         offsetDias: offsets.get(item.regua_codigo) ?? 0,
         veiculo: item.titulo_id ? veiculoDoTitulo.get(item.titulo_id)?.rotulo ?? null : null,
         temRastreador: item.titulo_id ? veiculoDoTitulo.get(item.titulo_id)?.rastreador : undefined,
-      }, rodape, { origem, hoje });
+      }, rodape, { origem, hoje, textos });
 
       const res = await provedor.enviar({
         de, para: item.destinatario, assunto: r.assunto, html: r.html, texto: r.texto,

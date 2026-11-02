@@ -9,6 +9,7 @@ import { provedorDeEmail } from '@/lib/comunicacao/provedor';
 import { emails } from '@/lib/comunicacao/templates';
 import { empresaDoRodape, linksDaOrigem } from '@/lib/comunicacao/render-email';
 import { origemPublica, rodapeDaEmpresa } from '@/lib/comunicacao/despacho-server';
+import { textosGravadosEmail } from '@/lib/comunicacao/modelos-server';
 
 /**
  * "Esqueci minha senha" do Portal do Associado.
@@ -108,6 +109,7 @@ export async function POST(request: Request) {
     link: url,
     empresa: empresaDoRodape(rodape),
     links: linksDaOrigem(origem),
+    textos: (await textosGravadosEmail(admin)).recuperar_senha,
   });
   const res = await provedor.enviar({
     de: remetenteServico(), para: destino, assunto: msg.assunto, html: msg.html, texto: msg.texto,

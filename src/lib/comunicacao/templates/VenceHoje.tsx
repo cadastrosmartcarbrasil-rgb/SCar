@@ -1,29 +1,39 @@
 import * as React from 'react';
 import { Layout } from './components/Layout';
-import { AppAcesso, Assinatura, FaleConosco, FormasPagamento, Paragrafo, Resumo, Titulo } from './components/Blocos';
+import { AppAcesso, Assinatura, FaleConosco, FormasPagamento, Resumo, Titulo } from './components/Blocos';
 import { LINKS_PADRAO } from './config';
 import { formatarData, formatarMoeda, primeiroNome } from './formatadores';
+import { aplicarCampos, textosEfetivos } from '../modelos';
+import { ParagrafosRicos } from './components/Texto';
 import type { VenceHojeProps } from './tipos';
 
-export const assunto = () => 'Sua contribuição vence hoje — Smart Car Brasil';
+function textos(p: VenceHojeProps) {
+  const t = textosEfetivos('vence_hoje', p.textos);
+  const v = {
+    nome: primeiroNome(p.nome ?? ''),
+    valor: formatarMoeda(p.valor),
+    vencimento: formatarData(p.vencimento),
+    veiculo: p.veiculo ?? '',
+  };
+  return (k: string) => aplicarCampos(t[k] ?? '', v);
+}
+
+export const assunto = (p: VenceHojeProps) => textos(p)('assunto');
 
 export default function VenceHoje(p: VenceHojeProps) {
   const links = { ...LINKS_PADRAO, ...p.links };
+  const t = textos(p);
 
   return (
     <Layout
-      preview={`Hoje é o dia do vencimento: ${formatarMoeda(p.valor)}. Pague em instantes pelo Pix, boleto ou cartão.`}
+      preview={t('previa')}
       rotulo="Vence hoje"
       tom="hoje"
       logoUrl={links.logoUrl}
       empresa={p.empresa}
     >
-      <Titulo>Sua contribuição vence hoje</Titulo>
-      <Paragrafo>
-        Olá, <strong>{primeiroNome(p.nome)}</strong>! Hoje é o dia do vencimento da contribuição da proteção
-        do seu veículo. Pagando pelo Pix, a confirmação costuma ser imediata — mas você pode escolher
-        a forma que for melhor para você.
-      </Paragrafo>
+      <Titulo>{t('titulo')}</Titulo>
+      <ParagrafosRicos texto={t('corpo')} />
 
       <Resumo
         barra="#F59E0B"
@@ -36,8 +46,8 @@ export default function VenceHoje(p: VenceHojeProps) {
 
       <FormasPagamento pagamento={p.pagamento} />
       <AppAcesso links={links} />
-      <FaleConosco empresa={{ ...p.empresa }} texto="Precisa de ajuda para pagar?" />
-      <Assinatura />
+      <FaleConosco empresa={{ ...p.empresa }} texto={t('ajuda')} />
+      <Assinatura frase={t('assinatura')} />
     </Layout>
   );
 }

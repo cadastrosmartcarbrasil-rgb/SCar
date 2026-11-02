@@ -41,12 +41,12 @@ async function montar(el: React.ReactElement, assunto: string): Promise<EmailRen
 export const emails = {
   lembrete: (p: LembreteVencimentoProps) =>
     montar(React.createElement(LembreteVencimento, p), assuntoLembrete(p)),
-  venceHoje: (p: VenceHojeProps) => montar(React.createElement(VenceHoje, p), assuntoHoje()),
-  atraso: (p: AtrasoProps) => montar(React.createElement(Atraso, p), assuntoAtraso()),
+  venceHoje: (p: VenceHojeProps) => montar(React.createElement(VenceHoje, p), assuntoHoje(p)),
+  atraso: (p: AtrasoProps) => montar(React.createElement(Atraso, p), assuntoAtraso(p)),
   boasVindas: (p: BoasVindasProps) =>
     montar(React.createElement(BoasVindas, p), assuntoBoasVindas(p)),
   aniversario: (p: AniversarioProps) =>
     montar(React.createElement(Aniversario, p), assuntoAniversario(p)),
   recuperarSenha: (p: RecuperarSenhaProps) =>
-    montar(React.createElement(RecuperarSenha, p), assuntoRecuperarSenha()),
+    montar(React.createElement(RecuperarSenha, p), assuntoRecuperarSenha(p)),
 };

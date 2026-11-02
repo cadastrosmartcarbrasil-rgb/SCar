@@ -4063,6 +4063,26 @@ export type EmailEventosRow = {
   ocorrido_em: string | null;
   recebido_em: string;
 };
+// 0170 — modelos de comunicacao editaveis
+export type ComunicacaoModelosRow = {
+  canal: string;
+  codigo: string;
+  textos: Record<string, string>;
+  versao: number;
+  atualizado_por: string | null;
+  atualizado_em: string;
+};
+export type ComunicacaoModeloVersoesRow = {
+  id: number;
+  canal: string;
+  codigo: string;
+  versao: number;
+  textos: Record<string, string>;
+  motivo: string | null;
+  criado_por: string | null;
+  criado_em: string;
+};
+
 export type EmailSupressoesRow = {
   id: string;
   email: string;
@@ -4366,6 +4386,8 @@ export type Database = {
       email_outbox: TableDef<EmailOutboxRow, [Rel<'titulo_id', 'titulos_financeiros'>, Rel<'cliente_id', 'clientes'>]>;
       email_eventos: TableDef<EmailEventosRow>;
       email_supressoes: TableDef<EmailSupressoesRow>;
+      comunicacao_modelos: TableDef<ComunicacaoModelosRow, [Rel<'atualizado_por', 'usuarios'>]>;
+      comunicacao_modelo_versoes: TableDef<ComunicacaoModeloVersoesRow, [Rel<'criado_por', 'usuarios'>]>;
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -5257,6 +5279,11 @@ export type Database = {
       minhas_permissoes: { Args: Record<string, never>; Returns: string[] };
       // 0169 — a celula cobranca_emails.<ver|editar> da grade (perfil ou extra; admin sempre).
       pode_emails_cobranca: { Args: { p_acao?: string }; Returns: boolean };
+      pode_modelos_comunicacao: { Args: { p_acao?: string }; Returns: boolean };
+      salvar_modelo_comunicacao: {
+        Args: { p_canal: string; p_codigo: string; p_textos: Record<string, string>; p_motivo?: string | null };
+        Returns: number;
+      };
       publicar_versao_termo: { Args: { p_modelo_id: string; p_observacao?: string | null }; Returns: TermoVersaoRow };
       anexar_pdf_versao_termo: { Args: { p_versao_id: string; p_path: string; p_sha256: string }; Returns: undefined };
       definir_pdf_termo_modelo: {

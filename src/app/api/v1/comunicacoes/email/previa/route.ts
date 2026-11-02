@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { exemploAviso, somarDias, type TemplateEmail } from '@/lib/comunicacao/cobranca';
 import { renderizarAviso } from '@/lib/comunicacao/render-email';
 import { origemPublica, rodapeDaEmpresa } from '@/lib/comunicacao/despacho-server';
+import { textosGravadosEmail } from '@/lib/comunicacao/modelos-server';
 
 // GET /api/v1/comunicacoes/email/previa?template=&offset_dias= — o aviso com DADOS DE
 // EXEMPLO e o rodape real da empresa, pelo mesmo template do envio (admin/financeiro).
@@ -29,6 +30,7 @@ export async function GET(request: Request) {
   const exemplo = exemploAviso(template, offset, '#');
   const r = await renderizarAviso(template, exemplo, rodape, {
     origem: origemPublica(request), hoje: somarDias(exemplo.vencimento!, offset),
+    textos: await textosGravadosEmail(createAdminClient()),
   });
   return NextResponse.json({ assunto: r.assunto, html: r.html });
 }

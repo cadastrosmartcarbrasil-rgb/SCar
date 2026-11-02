@@ -15,20 +15,27 @@ import {
 } from './components/Blocos';
 import { COR, EMPRESA_PADRAO, FONTE, LINKS_PADRAO } from './config';
 import { primeiroNome } from './formatadores';
+import { aplicarCampos, textosEfetivos } from '../modelos';
+import { ParagrafosRicos } from './components/Texto';
 import type { BoasVindasProps } from './tipos';
 
-export const assunto = ({ nome }: Pick<BoasVindasProps, 'nome'>) =>
-  `Bem-vindo(a) à Smart Car Brasil, ${primeiroNome(nome)}!`;
+function textos(p: BoasVindasProps) {
+  const t = textosEfetivos('boas_vindas', p.textos);
+  const v = { nome: primeiroNome(p.nome ?? ''), modelo: p.modelo ?? '', placa: (p.placa ?? '').toUpperCase() };
+  return (k: string) => aplicarCampos(t[k] ?? '', v);
+}
+
+export const assunto = (p: BoasVindasProps) => textos(p)('assunto');
 
 /** E-mail de adesão concluída: não leva valores nem links de pagamento. */
 export default function BoasVindas(p: BoasVindasProps) {
   const links = { ...LINKS_PADRAO, ...p.links };
   const empresa = { ...EMPRESA_PADRAO, ...p.empresa };
-  const nome = primeiroNome(p.nome);
+  const t = textos(p);
 
   return (
     <Layout
-      preview={`${nome}, seu veículo ${p.modelo} já está protegido. Veja seus produtos, documentos e como acessar o portal.`}
+      preview={t('previa')}
       rotulo="Boas-vindas"
       tom="festa"
       rodape="servico"
@@ -51,18 +58,14 @@ export default function BoasVindas(p: BoasVindasProps) {
                   color: COR.marinho,
                 }}
               >
-                Bem-vindo(a), {nome}!
+                {t('titulo')}
               </Text>
             </td>
           </tr>
         </tbody>
       </table>
 
-      <Paragrafo>
-        A <strong>Smart Car Brasil</strong> tem o prazer de receber você e o parabeniza pela decisão de fazer
-        parte da nossa proteção veicular. A partir de agora, o seu veículo já está usufruindo dos nossos serviços
-        de proteção.
-      </Paragrafo>
+      <ParagrafosRicos texto={t('corpo')} />
 
       <Resumo
         barra={COR.smart}
@@ -131,11 +134,9 @@ export default function BoasVindas(p: BoasVindasProps) {
       <AppAcesso links={links} />
 
       <Contatos canais={empresa.canais ?? []} />
-      <Paragrafo style={{ marginTop: 14, fontSize: 14, lineHeight: '22px' }}>
-        Qualquer dúvida, é só chamar a nossa assistente virtual Smart Car.
-      </Paragrafo>
+      <ParagrafosRicos texto={t('final')} style={{ marginTop: 14, fontSize: 14, lineHeight: '22px' }} />
 
-      <Assinatura frase="Atenciosamente, equipe Smart Car Brasil." />
+      <Assinatura frase={t('assinatura')} />
     </Layout>
   );
 }

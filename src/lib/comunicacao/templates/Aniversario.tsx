@@ -1,13 +1,20 @@
 import * as React from 'react';
 import { Text } from '@react-email/components';
 import { Layout } from './components/Layout';
-import { Assinatura, FaleConosco, Paragrafo } from './components/Blocos';
+import { Assinatura, FaleConosco } from './components/Blocos';
 import { COR, FONTE, LINKS_PADRAO } from './config';
 import { primeiroNome } from './formatadores';
+import { aplicarCampos, textosEfetivos } from '../modelos';
+import { ParagrafosRicos } from './components/Texto';
 import type { AniversarioProps } from './tipos';
 
-export const assunto = ({ nome }: Pick<AniversarioProps, 'nome'>) =>
-  `Feliz aniversário, ${primeiroNome(nome)}! 🎉`;
+function textos(p: AniversarioProps) {
+  const t = textosEfetivos('aniversario', p.textos);
+  const v = { nome: primeiroNome(p.nome ?? '') };
+  return (k: string) => aplicarCampos(t[k] ?? '', v);
+}
+
+export const assunto = (p: AniversarioProps) => textos(p)('assunto');
 
 /**
  * E-mail de RELACIONAMENTO (não é cobrança).
@@ -17,11 +24,11 @@ export const assunto = ({ nome }: Pick<AniversarioProps, 'nome'>) =>
  */
 export default function Aniversario(p: AniversarioProps) {
   const links = { ...LINKS_PADRAO, ...p.links };
-  const nome = primeiroNome(p.nome);
+  const t = textos(p);
 
   return (
     <Layout
-      preview={`${nome}, hoje o dia é seu! A família Smart Car Brasil deseja um feliz aniversário.`}
+      preview={t('previa')}
       rotulo="Feliz aniversário"
       tom="festa"
       rodape="relacionamento"
@@ -49,24 +56,17 @@ export default function Aniversario(p: AniversarioProps) {
                   color: COR.marinho,
                 }}
               >
-                Parabéns, {nome}!
+                {t('titulo')}
               </Text>
             </td>
           </tr>
         </tbody>
       </table>
 
-      <Paragrafo>
-        Hoje o dia é seu, e a família <strong>Smart Car Brasil</strong> não poderia deixar de celebrar
-        com você. Desejamos um aniversário cheio de alegria, saúde e boas estradas pela frente.
-      </Paragrafo>
-      <Paragrafo>
-        Obrigado por confiar a proteção do seu veículo a nós. Cuidar de quem faz parte da nossa
-        associação é o que nos move todos os dias.
-      </Paragrafo>
+      <ParagrafosRicos texto={t('corpo')} />
 
-      <FaleConosco empresa={{ ...p.empresa }} texto="Quer deixar um recado ou falar com a nossa equipe?" />
-      <Assinatura frase="Um abraço de toda a equipe Smart Car Brasil. 💙" />
+      <FaleConosco empresa={{ ...p.empresa }} texto={t('ajuda')} />
+      <Assinatura frase={t('assinatura')} />
     </Layout>
   );
 }

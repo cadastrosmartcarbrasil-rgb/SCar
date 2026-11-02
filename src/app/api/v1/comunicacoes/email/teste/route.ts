@@ -6,6 +6,7 @@ import { emailValido, exemploAviso, normalizarEmail, somarDias, type TemplateEma
 import { renderizarAviso } from '@/lib/comunicacao/render-email';
 import { provedorDeEmail } from '@/lib/comunicacao/provedor';
 import { origemPublica, rodapeDaEmpresa } from '@/lib/comunicacao/despacho-server';
+import { textosGravadosEmail } from '@/lib/comunicacao/modelos-server';
 
 // POST /api/v1/comunicacoes/email/teste — envia um aviso com DADOS DE EXEMPLO
 // para o e-mail informado (admin/financeiro). Nao passa pela fila; respeita a
@@ -40,6 +41,7 @@ export async function POST(request: Request) {
   const exemplo = exemploAviso(template, offset);
   const r = await renderizarAviso(template, exemplo, rodape, {
     origem: origemPublica(request), hoje: somarDias(exemplo.vencimento!, offset),
+    textos: await textosGravadosEmail(createAdminClient()),
   });
   const res = await provedor.enviar({
     de: remetenteCobranca(), para: email, assunto: `[TESTE] ${r.assunto}`, html: r.html, texto: r.texto,

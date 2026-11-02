@@ -1,34 +1,40 @@
 import * as React from 'react';
 import { Layout } from './components/Layout';
-import { AppAcesso, Assinatura, FaleConosco, FormasPagamento, Paragrafo, Resumo, Titulo } from './components/Blocos';
+import { AppAcesso, Assinatura, FaleConosco, FormasPagamento, Resumo, Titulo } from './components/Blocos';
 import { COR, LINKS_PADRAO } from './config';
 import { formatarData, formatarMoeda, pluralDias, primeiroNome } from './formatadores';
+import { aplicarCampos, textosEfetivos } from '../modelos';
+import { ParagrafosRicos } from './components/Texto';
 import type { LembreteVencimentoProps } from './tipos';
 
-export const assunto = ({ diasParaVencer }: Pick<LembreteVencimentoProps, 'diasParaVencer'>) =>
-  diasParaVencer === 1
-    ? 'Lembrete: sua contribuição vence amanhã'
-    : `Lembrete: sua contribuição vence em ${pluralDias(diasParaVencer)}`;
+function textos(p: LembreteVencimentoProps) {
+  const t = textosEfetivos('lembrete', p.textos);
+  const v = {
+    nome: primeiroNome(p.nome ?? ''),
+    valor: formatarMoeda(p.valor),
+    vencimento: formatarData(p.vencimento),
+    veiculo: p.veiculo ?? '',
+    quando: p.diasParaVencer === 1 ? 'amanhã' : `em ${pluralDias(p.diasParaVencer)}`,
+  };
+  return (k: string) => aplicarCampos(t[k] ?? '', v);
+}
+
+export const assunto = (p: LembreteVencimentoProps) => textos(p)('assunto');
 
 export default function LembreteVencimento(p: LembreteVencimentoProps) {
   const links = { ...LINKS_PADRAO, ...p.links };
-  const titulo =
-    p.diasParaVencer === 1 ? 'Sua contribuição vence amanhã' : `Sua contribuição vence em ${pluralDias(p.diasParaVencer)}`;
+  const t = textos(p);
 
   return (
     <Layout
-      preview={`${titulo} — ${formatarMoeda(p.valor)} em ${formatarData(p.vencimento)}. Veja como pagar.`}
+      preview={t('previa')}
       rotulo="Lembrete de vencimento"
       tom="info"
       logoUrl={links.logoUrl}
       empresa={p.empresa}
     >
-      <Titulo>{titulo}</Titulo>
-      <Paragrafo>
-        Olá, <strong>{primeiroNome(p.nome)}</strong>! Passando para lembrar que a contribuição da proteção
-        do seu veículo está chegando ao vencimento. Para manter tudo em dia, é só escolher uma das
-        formas de pagamento abaixo.
-      </Paragrafo>
+      <Titulo>{t('titulo')}</Titulo>
+      <ParagrafosRicos texto={t('corpo')} />
 
       <Resumo
         barra={COR.smart}
@@ -41,8 +47,8 @@ export default function LembreteVencimento(p: LembreteVencimentoProps) {
 
       <FormasPagamento pagamento={p.pagamento} />
       <AppAcesso links={links} />
-      <FaleConosco empresa={{ ...p.empresa }} texto="Alguma dúvida sobre o seu boleto?" />
-      <Assinatura />
+      <FaleConosco empresa={{ ...p.empresa }} texto={t('ajuda')} />
+      <Assinatura frase={t('assinatura')} />
     </Layout>
   );
 }

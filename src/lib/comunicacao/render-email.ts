@@ -11,7 +11,8 @@
  */
 import { emails, type EmailRenderizado } from './templates';
 import type { Empresa, Links } from './templates/config';
-import { diasEntre, formatarCnpj, hojeSp, type DadosAviso, type Rodape, type TemplateEmail } from './cobranca';
+import type { CodigoModeloEmail, TextosModelo } from './modelos';
+import { diasEntre, exemploAviso, formatarCnpj, hojeSp, somarDias, type DadosAviso, type Rodape, type TemplateEmail } from './cobranca';
 
 function linkWhatsapp(numero: string | null): string | undefined {
   let d = (numero ?? '').replace(/\D/g, '');
@@ -46,7 +47,7 @@ export async function renderizarAviso(
   template: TemplateEmail,
   d: DadosAviso,
   r: Rodape,
-  opts: { origem?: string | null; hoje?: string } = {},
+  opts: { origem?: string | null; hoje?: string; textos?: Partial<Record<CodigoModeloEmail, TextosModelo>> } = {},
 ): Promise<EmailRenderizado> {
   const vencimento = d.vencimento?.slice(0, 10) ?? '';
   const hoje = opts.hoje ?? hojeSp();
@@ -64,10 +65,45 @@ export async function renderizarAviso(
     empresa: empresaDoRodape(r),
     links: linksDaOrigem(opts.origem),
   };
-  if (template === 'vence_hoje') return emails.venceHoje(base);
+  if (template === 'vence_hoje') return emails.venceHoje({ ...base, textos: opts.textos?.vence_hoje });
   if (template === 'atraso') {
-    return emails.atraso({ ...base, diasAtraso: Math.max(1, relativo), temRastreador: d.temRastreador ? true : undefined });
+    return emails.atraso({
+      ...base, diasAtraso: Math.max(1, relativo), temRastreador: d.temRastreador ? true : undefined,
+      textos: opts.textos?.atraso,
+    });
   }
   const faltam = -relativo > 0 ? -relativo : Math.max(1, -d.offsetDias);
-  return emails.lembrete({ ...base, diasParaVencer: faltam });
+  return emails.lembrete({ ...base, diasParaVencer: faltam, textos: opts.textos?.lembrete });
+}
+
+/**
+ * Pre-visualizacao de um modelo (0170) com DADOS DE EXEMPLO e os textos da tela,
+ * ainda nao gravados. Cobranca usa o mesmo caminho do envio (renderizarAviso).
+ */
+export async function renderizarModeloExemplo(
+  codigo: CodigoModeloEmail,
+  textos: TextosModelo,
+  r: Rodape,
+  origem?: string | null,
+): Promise<EmailRenderizado> {
+  const empresa = empresaDoRodape(r);
+  const links = linksDaOrigem(origem);
+  if (codigo === 'lembrete' || codigo === 'vence_hoje' || codigo === 'atraso') {
+    const template: TemplateEmail = codigo === 'lembrete' ? 'aviso_vencimento' : codigo;
+    const offset = codigo === 'lembrete' ? -5 : codigo === 'atraso' ? 7 : 0;
+    const ex = exemploAviso(template, offset, '#');
+    return renderizarAviso(template, { ...ex, temRastreador: codigo === 'atraso' ? true : undefined }, r, {
+      origem, hoje: somarDias(ex.vencimento!, offset), textos: { [codigo]: textos },
+    });
+  }
+  if (codigo === 'boas_vindas') {
+    return emails.boasVindas({
+      nome: 'MARIA DA SILVA', modelo: 'Fiat Argo', placa: 'ABC1D23',
+      planos: ['Plano Essencial - Veículos', 'Assistência 24 horas'], textos, empresa, links,
+    });
+  }
+  if (codigo === 'aniversario') {
+    return emails.aniversario({ nome: 'MARIA DA SILVA', linkDescadastro: '#', textos, empresa, links });
+  }
+  return emails.recuperarSenha({ nome: 'MARIA DA SILVA', link: '#', textos, empresa, links });
 }

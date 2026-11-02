@@ -1,5 +1,6 @@
 import type { Empresa, Links } from './config';
 import type { Pagamento } from './components/Blocos';
+import type { TextosModelo } from '../modelos';
 
 /** Campos comuns a todos os e-mails de cobrança. */
 export interface CobrancaBase {
@@ -12,6 +13,8 @@ export interface CobrancaBase {
   /** Data de vencimento 'YYYY-MM-DD'. */
   vencimento: string;
   pagamento: Pagamento;
+  /** Textos editados na tela (0170); o que faltar cai no original. */
+  textos?: TextosModelo;
   empresa?: Partial<Empresa>;
   links?: Partial<Links>;
 }
@@ -42,6 +45,7 @@ export interface AniversarioProps {
   nome: string;
   /** Link de descadastro de mensagens de relacionamento (obrigatório). */
   linkDescadastro: string;
+  textos?: TextosModelo;
   empresa?: Partial<Empresa>;
   links?: Partial<Links>;
 }
@@ -59,6 +63,7 @@ export interface BoasVindasProps {
   linkDefinirSenha?: string;
   /** Mostra o aviso "verifique o lixo eletrônico" sobre os documentos da adesão. Padrão: true. */
   documentosEnviados?: boolean;
+  textos?: TextosModelo;
   empresa?: Partial<Empresa>;
   links?: Partial<Links>;
 }
@@ -68,6 +73,7 @@ export interface RecuperarSenhaProps {
   /** Link de uso unico para criar a nova senha (nunca gravado em log). */
   link: string;
   validadeMinutos?: number;
+  textos?: TextosModelo;
   empresa?: Partial<Empresa>;
   links?: Partial<Links>;
 }
