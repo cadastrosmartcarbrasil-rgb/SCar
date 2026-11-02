@@ -142,11 +142,21 @@ export async function montarPreviaNewTracker(): Promise<PreviaNewTracker> {
 export interface ResultadoImportacao {
   cadastro: Record<string, number>;
   comunicacao: Record<string, number>;
+  /** 0174: o status do parque depois da sincronia com o veiculo e a cobranca */
+  status: { inativados: number; inadimplentes: number; reativados: number } | null;
   problemas: { imei: string; resultado: string; motivo: string | null }[];
 }
 
-/** Grava os INSTALAR no parque e, depois, a ultima posicao de cada um. */
-export async function importarNewTracker(linhas: LinhaPrevia[]): Promise<ResultadoImportacao> {
+/**
+ * Grava os INSTALAR no parque e, depois, a ultima posicao de cada um. O equipamento
+ * que o SCar ja pos em 3/4 no MESMO veiculo nao e reinstalado (o status e do SCar:
+ * a cobranca e o cadastro decidem); so a posicao e atualizada. No fim, a sincronia
+ * do parque (0174) acerta o status de todos.
+ */
+export async function importarNewTracker(
+  linhas: LinhaPrevia[],
+  noParque?: PreviaNewTracker['no_parque'],
+): Promise<ResultadoImportacao> {
   const integ = await integracaoNewTracker();
   const admin = createAdminClient();
   const cadastro: Record<string, number> = {};
@@ -154,7 +164,13 @@ export async function importarNewTracker(linhas: LinhaPrevia[]): Promise<Resulta
   const problemas: ResultadoImportacao['problemas'] = [];
 
   const instalar = linhas.filter((l) => l.situacao === 'INSTALAR');
-  for (const bloco of emBlocos(instalar.map(itemParaCadastro), BLOCO_GRAVACAO)) {
+  const statusDoScar = (l: LinhaPrevia) => {
+    const p = noParque?.get(l.item.imei);
+    return !!p && p.veiculo_id === l.veiculo?.id && ['INADIMPLENTE', 'INATIVO'].includes(p.status);
+  };
+  const mantidos = instalar.filter(statusDoScar).length;
+  if (mantidos > 0) cadastro.STATUS_DO_SCAR_MANTIDO = mantidos;
+  for (const bloco of emBlocos(instalar.filter((l) => !statusDoScar(l)).map(itemParaCadastro), BLOCO_GRAVACAO)) {
     const { data, error } = await admin.rpc('api_cadastrar_rastreadores', {
       p_integracao_id: integ.id, p_itens: bloco as unknown as Json,
     });
@@ -178,5 +194,9 @@ export async function importarNewTracker(linhas: LinhaPrevia[]): Promise<Resulta
     for (const r of data ?? []) comunicacao[r.resultado] = (comunicacao[r.resultado] ?? 0) + 1;
   }
 
-  return { cadastro, comunicacao, problemas };
+  const { data: st, error: eSt } = await admin.rpc('sincronizar_status_rastreadores', {});
+  if (eSt) console.error('[newtracker] sincronia do status', eSt.message);
+  const status = eSt ? null : ((st ?? [])[0] ?? null);
+
+  return { cadastro, comunicacao, status, problemas };
 }

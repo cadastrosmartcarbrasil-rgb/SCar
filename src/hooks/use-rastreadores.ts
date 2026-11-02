@@ -218,21 +218,22 @@ export const useCobrarRastreador = () => useAcaoRastreador<{
 }>('cobrar_rastreador');
 
 /**
- * 0053: passa o financeiro no parque — marca 3-Inadimplente quem estourou o
- * prazo e devolve para 2-Ativo quem pagou. Devolve quantos mudaram de lado.
+ * 0174: reconcilia o parque com o veiculo e a cobranca (as duas fontes) —
+ * fora da base -> 4-Inativo, vencido no prazo do bloqueio da regua -> 3-Inadimplente,
+ * regularizou -> 2-Ativo. Sem `dias`, vale o prazo de Configuracoes -> Empresa.
  */
 export function useSincronizarInadimplencia() {
   const supabase = createClient();
   const qc = useQueryClient();
-  return useMutation<{ marcados: number; regularizados: number }, Error, { dias?: number; regionalId?: string }>({
+  return useMutation<{ inativados: number; inadimplentes: number; reativados: number }, Error, { dias?: number; regionalId?: string }>({
     mutationFn: async ({ dias, regionalId }) => {
-      const { data, error } = await supabase.rpc('sincronizar_rastreadores_inadimplencia', {
-        p_dias: dias ?? 35,
+      const { data, error } = await supabase.rpc('sincronizar_status_rastreadores', {
         p_regional_id: regionalId || null,
+        p_dias: dias ?? null,
       });
       if (error) throw error;
       const linha = (data ?? [])[0];
-      return { marcados: linha?.marcados ?? 0, regularizados: linha?.regularizados ?? 0 };
+      return { inativados: linha?.inativados ?? 0, inadimplentes: linha?.inadimplentes ?? 0, reativados: linha?.reativados ?? 0 };
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['rastreadores'] });

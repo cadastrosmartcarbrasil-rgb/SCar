@@ -99,7 +99,7 @@ export async function POST(request: Request) {
           },
         });
       }
-      const resultado = await importarNewTracker(previa.linhas);
+      const resultado = await importarNewTracker(previa.linhas, previa.no_parque);
       console.log(`[newtracker] importacao por ${user.id}: ${JSON.stringify(resultado.cadastro)} / ${JSON.stringify(resultado.comunicacao)}`);
       return NextResponse.json({ ...base, resultado });
     } catch (e) {

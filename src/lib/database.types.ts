@@ -4535,6 +4535,10 @@ export type Database = {
         Args: { p_dias?: number; p_regional_id?: string | null };
         Returns: { marcados: number; regularizados: number }[];
       };
+      sincronizar_status_rastreadores: {
+        Args: { p_regional_id?: string | null; p_dias?: number | null };
+        Returns: { inativados: number; inadimplentes: number; reativados: number }[];
+      };
       cobrar_rastreador: {
         Args: { p_rastreador_id: string; p_valor: number; p_vencimento?: string | null; p_observacao?: string | null };
         Returns: TitulosFinanceirosRow;

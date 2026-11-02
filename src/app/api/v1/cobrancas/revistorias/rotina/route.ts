@@ -46,6 +46,11 @@ export async function POST(request: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   const r = (data ?? [])[0] ?? { canceladas: 0, expiradas: 0 };
 
+  // 0174: o parque de rastreadores segue o veiculo e a cobranca (mesma regua)
+  const { data: parque, error: e3 } = await supabase.rpc('sincronizar_status_rastreadores', {});
+  const p = (parque ?? [])[0] ?? { inativados: 0, inadimplentes: 0, reativados: 0 };
+  if (e3) console.error('[rotina] rastreadores', e3.message);
+
   const { data: aPedir, error: e2 } = await supabase.rpc('revistorias_a_solicitar', { p_limite: 5000 });
 
   return NextResponse.json({
@@ -56,6 +61,7 @@ export async function POST(request: Request) {
       canceladas: r.canceladas,
       expiradas: r.expiradas,
       a_solicitar: e2 ? null : (aPedir ?? []).length,
+      rastreadores: e3 ? { erro: e3.message } : p,
     },
   });
 }

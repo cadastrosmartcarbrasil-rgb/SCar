@@ -50,6 +50,7 @@ interface RespostaImportacao {
   exemplos?: Record<Situacao, LinhaResumo[]>;
   resultado?: {
     cadastro: Record<string, number>; comunicacao: Record<string, number>;
+    status?: { inativados: number; inadimplentes: number; reativados: number } | null;
     problemas: { imei: string; resultado: string; motivo: string | null }[];
   };
 }
@@ -58,6 +59,7 @@ const ROTULO_RESULTADO: Record<string, string> = {
   CRIADO_INSTALADO: 'Cadastrados e instalados',
   INSTALADO: 'Instalados (já existiam no parque)',
   JA_INSTALADO: 'Já estavam instalados',
+  STATUS_DO_SCAR_MANTIDO: 'Já instalados em 3 - Inadimplente ou 4 - Inativo (status do SCar mantido)',
   CRIADO: 'Cadastrados em estoque',
   ATUALIZADO: 'Atualizados',
   VEICULO_NAO_ENCONTRADO: 'Veículo não encontrado',
@@ -181,6 +183,12 @@ function ImportarEquipamentos() {
                 {Object.entries(resp.resultado.comunicacao).map(([k, n]) => (
                   <li key={'c' + k}>Posição — {ROTULO_RESULTADO[k] ?? k}: {fmt(n)}</li>
                 ))}
+                {resp.resultado.status && (
+                  <li>
+                    Status do parque atualizado: {fmt(resp.resultado.status.inadimplentes)} para 3 - Inadimplente ·{' '}
+                    {fmt(resp.resultado.status.inativados)} para 4 - Inativo · {fmt(resp.resultado.status.reativados)} de volta a 2 - Ativo
+                  </li>
+                )}
               </ul>
               {resp.resultado.problemas.length > 0 && (
                 <div className="mt-2 text-rose-700">

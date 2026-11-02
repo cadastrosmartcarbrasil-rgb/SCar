@@ -29,7 +29,7 @@ export function DivergenciasRastreadores() {
       { regionalId: regionalId || undefined },
       {
         onSuccess: (r) => toast.success(
-          `${r.marcados} equipamento(s) marcados como inadimplentes · ${r.regularizados} devolvidos para ativo`,
+          `${r.inadimplentes} para inadimplente · ${r.inativados} para inativo (recolher) · ${r.reativados} devolvidos para ativo`,
         ),
         onError: (e) => toast.error(e.message),
       },
@@ -82,7 +82,7 @@ export function DivergenciasRastreadores() {
         <Button variant="secondary" onClick={exportar}><Download className="h-4 w-4" /> CSV</Button>
         <Button onClick={aplicarInadimplencia} disabled={sincronizar.isPending}>
           {sincronizar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-          Aplicar inadimplência
+          Atualizar status do parque
         </Button>
       </div>
 
@@ -144,9 +144,10 @@ export function DivergenciasRastreadores() {
       </div>
       <p className="text-xs text-slate-400">
         As correções acontecem na ficha do equipamento ou do veículo — nada é corrigido em massa.
-        A exceção e <strong>Aplicar inadimplência</strong>, que só espelha o financeiro no status do
-        equipamento (3 - Inadimplente para quem passou de 35 dias de atraso; 2 - Ativo de volta para
-        quem pagou) e registra o motivo no histórico de cada aparelho.
+        A exceção é <strong>Atualizar status do parque</strong>, que espelha o veículo e a cobrança no status do
+        equipamento (4 - Inativo quando o veículo sai da base; 3 - Inadimplente com boleto vencido no prazo de
+        bloqueio da régua, em Configurações → Empresa; 2 - Ativo de volta para quem pagou) e registra o motivo no
+        histórico de cada aparelho. Roda sozinha todo dia às 06:15.
       </p>
     </div>
   );
