@@ -41,6 +41,25 @@ export function lerTokenDoBoleto(
 }
 
 // ---------------------------------------------------------------------------
+// Descadastro dos comunicados informativos: /descadastro/<email-base64url>.<assinatura>
+// Nao expira (o link fica no e-mail para sempre); so o e-mail que recebeu se descadastra.
+// ---------------------------------------------------------------------------
+export function tokenDescadastro(email: string, segredo: string): string {
+  const e = Buffer.from(email.trim().toLowerCase(), 'utf8').toString('base64url');
+  return `${e}.${assinar(segredo, `descadastro:${e}`)}`;
+}
+
+export function lerTokenDescadastro(token: string, segredo: string): string | null {
+  const [e, sig] = (token ?? '').split('.');
+  if (!e || !sig || !segredo) return null;
+  const esperado = Buffer.from(assinar(segredo, `descadastro:${e}`));
+  const recebido = Buffer.from(sig);
+  if (esperado.length !== recebido.length || !timingSafeEqual(esperado, recebido)) return null;
+  const email = Buffer.from(e, 'base64url').toString('utf8');
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null;
+}
+
+// ---------------------------------------------------------------------------
 // Webhook do Resend (assinatura no padrao Svix)
 // ---------------------------------------------------------------------------
 export function assinaturaResendConfere(

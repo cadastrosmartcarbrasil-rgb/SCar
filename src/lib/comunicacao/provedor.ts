@@ -13,6 +13,8 @@ export type MensagemEmail = {
   /** Chave de idempotencia (o id do item da fila): o provedor nao manda duas vezes. */
   chave?: string;
   tags?: Record<string, string>;
+  /** Cabecalhos extras (ex.: List-Unsubscribe do comunicado informativo). */
+  cabecalhos?: Record<string, string>;
 };
 
 export type ResultadoEnvio =
@@ -48,6 +50,7 @@ export class ResendProvider implements EmailProvider {
           html: m.html,
           text: m.texto,
           reply_to: m.responderPara || undefined,
+          headers: m.cabecalhos && Object.keys(m.cabecalhos).length ? m.cabecalhos : undefined,
           tags: m.tags
             ? Object.entries(m.tags).map(([name, value]) => ({ name, value: value.replace(/[^A-Za-z0-9_-]/g, '_') }))
             : undefined,

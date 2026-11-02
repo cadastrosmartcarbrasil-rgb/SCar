@@ -124,16 +124,22 @@ export function emailValido(e: string | null | undefined): boolean {
 }
 
 export function decidirEnvio(
-  item: { destinatario: string; titulo_status: string | null; linha_digitavel: string | null },
+  item: { destinatario: string; titulo_status: string | null; linha_digitavel: string | null; comunicado_id?: string | null },
   cfg: ConfigEnvio,
 ): Decisao {
+  if (item.comunicado_id) return decidirModo(item.destinatario, cfg);
   if (item.titulo_status === 'pago') return { acao: 'cancelar', motivo: 'boleto pago' };
   if (item.titulo_status === 'cancelado') return { acao: 'cancelar', motivo: 'boleto cancelado' };
   if (!item.linha_digitavel) return { acao: 'cancelar', motivo: 'boleto sem linha digitavel' };
-  if (!emailValido(item.destinatario)) return { acao: 'cancelar', motivo: 'e-mail invalido' };
+  return decidirModo(item.destinatario, cfg);
+}
+
+/** E-mail valido e, no modo teste, so a lista de teste (vale para cobranca e comunicado). */
+function decidirModo(destinatario: string, cfg: ConfigEnvio): Decisao {
+  if (!emailValido(destinatario)) return { acao: 'cancelar', motivo: 'e-mail invalido' };
   if (cfg.modo !== 'live') {
     const lista = cfg.allowlist.map(normalizarEmail);
-    if (!lista.includes(normalizarEmail(item.destinatario))) {
+    if (!lista.includes(normalizarEmail(destinatario))) {
       return { acao: 'cancelar', motivo: 'modo sandbox: destinatario fora da lista de teste' };
     }
   }

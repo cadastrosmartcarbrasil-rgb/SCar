@@ -5,11 +5,13 @@ import VenceHoje, { assunto as assuntoHoje } from './VenceHoje';
 import Atraso, { assunto as assuntoAtraso } from './Atraso';
 import Aniversario, { assunto as assuntoAniversario } from './Aniversario';
 import BoasVindas, { assunto as assuntoBoasVindas } from './BoasVindas';
+import Comunicado, { assunto as assuntoComunicado } from './Comunicado';
 import RecuperarSenha, { assunto as assuntoRecuperarSenha } from './RecuperarSenha';
 import type {
   AniversarioProps,
   AtrasoProps,
   BoasVindasProps,
+  ComunicadoProps,
   LembreteVencimentoProps,
   RecuperarSenhaProps,
   VenceHojeProps,
@@ -47,6 +49,7 @@ export const emails = {
     montar(React.createElement(BoasVindas, p), assuntoBoasVindas(p)),
   aniversario: (p: AniversarioProps) =>
     montar(React.createElement(Aniversario, p), assuntoAniversario(p)),
+  comunicado: (p: ComunicadoProps) => montar(React.createElement(Comunicado, p), assuntoComunicado(p)),
   recuperarSenha: (p: RecuperarSenhaProps) =>
     montar(React.createElement(RecuperarSenha, p), assuntoRecuperarSenha(p)),
 };

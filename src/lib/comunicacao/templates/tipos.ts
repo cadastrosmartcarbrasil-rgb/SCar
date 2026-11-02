@@ -77,3 +77,18 @@ export interface RecuperarSenhaProps {
   empresa?: Partial<Empresa>;
   links?: Partial<Links>;
 }
+
+export interface ComunicadoProps {
+  nome: string;
+  finalidade: 'INFORMATIVO' | 'SERVICO';
+  assunto: string;
+  titulo: string;
+  previa?: string | null;
+  corpo: string;
+  botaoTexto?: string | null;
+  botaoUrl?: string | null;
+  /** Obrigatorio no INFORMATIVO (o rodape mostra "nao quero receber"). */
+  linkDescadastro?: string;
+  empresa?: Partial<Empresa>;
+  links?: Partial<Links>;
+}

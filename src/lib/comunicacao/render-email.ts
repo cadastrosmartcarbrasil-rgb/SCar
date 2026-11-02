@@ -107,3 +107,32 @@ export async function renderizarModeloExemplo(
   }
   return emails.recuperarSenha({ nome: 'MARIA DA SILVA', link: '#', textos, empresa, links });
 }
+
+export type ComunicadoGravado = {
+  finalidade: 'INFORMATIVO' | 'SERVICO';
+  assunto: string;
+  titulo: string;
+  previa: string | null;
+  corpo: string;
+  botao_texto: string | null;
+  botao_url: string | null;
+};
+
+/** Comunicado (0171) para um associado; informativo exige o link de descadastro. */
+export function renderizarComunicado(
+  c: ComunicadoGravado, nome: string, r: Rodape, origem?: string | null, linkDescadastro?: string,
+): Promise<EmailRenderizado> {
+  return emails.comunicado({
+    nome,
+    finalidade: c.finalidade,
+    assunto: c.assunto,
+    titulo: c.titulo,
+    previa: c.previa,
+    corpo: c.corpo,
+    botaoTexto: c.botao_texto,
+    botaoUrl: c.botao_url,
+    linkDescadastro,
+    empresa: empresaDoRodape(r),
+    links: linksDaOrigem(origem),
+  });
+}

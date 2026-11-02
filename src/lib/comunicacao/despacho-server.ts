@@ -1,13 +1,13 @@
 import { createAdminClient } from '@/lib/supabase/admin';
-import { remetenteCobranca } from '@/lib/email';
+import { remetenteCobranca, remetenteRelacionamento, remetenteServico } from '@/lib/email';
 import {
   RAZAO_SOCIAL_PADRAO, TENTATIVAS_MAXIMAS, decidirEnvio, erroTransitorio, hojeSp, proximaTentativa,
   veiculoDoAviso, type Rodape, type TemplateEmail,
 } from './cobranca';
-import { renderizarAviso } from './render-email';
+import { renderizarAviso, renderizarComunicado, type ComunicadoGravado } from './render-email';
 import { textosGravadosEmail } from './modelos-server';
 import { provedorDeEmail, type EmailProvider } from './provedor';
-import { expiracaoDoLink, tokenDoBoleto } from './servidor';
+import { expiracaoDoLink, tokenDescadastro, tokenDoBoleto } from './servidor';
 
 type Admin = ReturnType<typeof createAdminClient>;
 
@@ -29,6 +29,15 @@ export function linkDoBoleto(origem: string, tituloId: string, vencimento: strin
   const segredo = (process.env.EMAIL_LINK_SECRET ?? '').trim();
   if (!segredo || segredo.length < 16 || !vencimento) return null;
   return `${origem.replace(/\/$/, '')}/b/${tokenDoBoleto(tituloId, expiracaoDoLink(vencimento), segredo)}`;
+}
+
+/** Links de descadastro (pagina e one-click). Sem EMAIL_LINK_SECRET nao ha link — o informativo nao sai. */
+export function linksDescadastro(origem: string, email: string): { pagina: string; umClique: string } | null {
+  const segredo = (process.env.EMAIL_LINK_SECRET ?? '').trim();
+  if (!segredo || segredo.length < 16) return null;
+  const t = tokenDescadastro(email, segredo);
+  const o = origem.replace(/\/$/, '');
+  return { pagina: `${o}/descadastro/${t}`, umClique: `${o}/api/descadastro/${t}` };
 }
 
 const dormir = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -75,6 +84,7 @@ export async function rodarRotinaEmail(
   }
   const rodape = await rodapeDaEmpresa(admin);
   const textos = await textosGravadosEmail(admin);
+  const comunicados = new Map<string, ComunicadoGravado | null>();
   const { data: regua } = await admin.from('email_regua').select('codigo, offset_dias');
   const offsets = new Map((regua ?? []).map((r) => [r.codigo, r.offset_dias]));
   const intervalo = Math.ceil(1000 / Math.max(0.1, Number(cfg.limite_por_segundo)));
@@ -120,22 +130,65 @@ export async function rodarRotinaEmail(
         out.cancelados++;
         continue;
       }
-      const r = await renderizarAviso(item.template as TemplateEmail, {
-        nome: item.cliente_nome,
-        valor: item.valor == null ? null : Number(item.valor),
-        vencimento: item.data_vencimento,
-        linhaDigitavel: item.linha_digitavel,
-        pixCopiaCola: item.pix_copia_cola,
-        linkBoleto: item.titulo_id ? linkDoBoleto(origem, item.titulo_id, item.data_vencimento) : null,
-        offsetDias: offsets.get(item.regua_codigo) ?? 0,
-        veiculo: item.titulo_id ? veiculoDoTitulo.get(item.titulo_id)?.rotulo ?? null : null,
-        temRastreador: item.titulo_id ? veiculoDoTitulo.get(item.titulo_id)?.rastreador : undefined,
-      }, rodape, { origem, hoje, textos });
+      let r: Awaited<ReturnType<typeof renderizarAviso>>;
+      let remetente = de;
+      let fluxo = 'cobranca';
+      let cabecalhos: Record<string, string> | undefined;
+      if (item.comunicado_id) {
+        if (!comunicados.has(item.comunicado_id)) {
+          const { data: c } = await admin.from('comunicados_email')
+            .select('finalidade, assunto, titulo, previa, corpo, botao_texto, botao_url, situacao')
+            .eq('id', item.comunicado_id).maybeSingle();
+          comunicados.set(item.comunicado_id, c && c.situacao === 'ENVIADO' ? (c as ComunicadoGravado) : null);
+        }
+        const c = comunicados.get(item.comunicado_id);
+        if (!c) {
+          await admin.rpc('concluir_envio_email', { p_id: item.id, p_status: 'cancelado', p_erro: 'comunicado cancelado' });
+          out.cancelados++;
+          continue;
+        }
+        let linkPagina: string | undefined;
+        if (c.finalidade === 'INFORMATIVO') {
+          const { data: desc } = await admin.rpc('email_descadastrado', { p_email: item.destinatario });
+          if (desc) {
+            await admin.rpc('concluir_envio_email', { p_id: item.id, p_status: 'cancelado', p_erro: 'descadastrado' });
+            out.cancelados++;
+            continue;
+          }
+          const l = linksDescadastro(origem, item.destinatario);
+          if (!l) {
+            await admin.rpc('concluir_envio_email', { p_id: item.id, p_status: 'falhou', p_erro: 'EMAIL_LINK_SECRET ausente: sem link de descadastro' });
+            out.falhas++;
+            continue;
+          }
+          linkPagina = l.pagina;
+          cabecalhos = { 'List-Unsubscribe': `<${l.umClique}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' };
+          remetente = remetenteRelacionamento();
+          fluxo = 'relacionamento';
+        } else {
+          remetente = remetenteServico();
+          fluxo = 'servico';
+        }
+        r = await renderizarComunicado(c, item.cliente_nome ?? '', rodape, origem, linkPagina);
+      } else {
+        r = await renderizarAviso(item.template as TemplateEmail, {
+          nome: item.cliente_nome,
+          valor: item.valor == null ? null : Number(item.valor),
+          vencimento: item.data_vencimento,
+          linhaDigitavel: item.linha_digitavel,
+          pixCopiaCola: item.pix_copia_cola,
+          linkBoleto: item.titulo_id ? linkDoBoleto(origem, item.titulo_id, item.data_vencimento) : null,
+          offsetDias: offsets.get(item.regua_codigo) ?? 0,
+          veiculo: item.titulo_id ? veiculoDoTitulo.get(item.titulo_id)?.rotulo ?? null : null,
+          temRastreador: item.titulo_id ? veiculoDoTitulo.get(item.titulo_id)?.rastreador : undefined,
+        }, rodape, { origem, hoje, textos });
+
+      }
 
       const res = await provedor.enviar({
-        de, para: item.destinatario, assunto: r.assunto, html: r.html, texto: r.texto,
+        de: remetente, para: item.destinatario, assunto: r.assunto, html: r.html, texto: r.texto,
         responderPara: cfg.reply_to || rodape.email, chave: item.id,
-        tags: { aviso: item.regua_codigo, fluxo: 'cobranca' },
+        tags: { aviso: item.regua_codigo, fluxo }, cabecalhos,
       });
       if (res.ok) {
         await admin.rpc('concluir_envio_email', { p_id: item.id, p_status: 'enviado', p_message_id: res.messageId, p_assunto: r.assunto });

@@ -42,3 +42,14 @@ export const REMETENTE_SERVICO_PADRAO = `Smart Car Brasil <nao-responda@${DOMINI
 export function remetenteServico(env: Record<string, string | undefined> = process.env): string {
   return preenchida(env.EMAIL_SERVICO_FROM) ?? REMETENTE_SERVICO_PADRAO;
 }
+
+/**
+ * Remetente dos comunicados de RELACIONAMENTO/aviso (0171): subdominio proprio, para a
+ * reputacao da cobranca nao pagar por envio em massa. EMAIL_RELACIONAMENTO_FROM manda.
+ * O subdominio precisa estar VERIFICADO no Resend, senao o envio e recusado.
+ */
+export const DOMINIO_RELACIONAMENTO = `relacionamento.${DOMINIO_EMAIL}`;
+export const REMETENTE_RELACIONAMENTO_PADRAO = `Smart Car Brasil <contato@${DOMINIO_RELACIONAMENTO}>`;
+export function remetenteRelacionamento(env: Record<string, string | undefined> = process.env): string {
+  return preenchida(env.EMAIL_RELACIONAMENTO_FROM) ?? REMETENTE_RELACIONAMENTO_PADRAO;
+}

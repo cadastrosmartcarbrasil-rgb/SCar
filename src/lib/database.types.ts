@@ -4032,6 +4032,7 @@ export type EmailReguaRow = {
 };
 export type EmailOutboxRow = {
   id: string;
+  comunicado_id: string | null;
   titulo_id: string | null;
   cliente_id: string | null;
   regua_codigo: string;
@@ -4063,6 +4064,43 @@ export type EmailEventosRow = {
   ocorrido_em: string | null;
   recebido_em: string;
 };
+// 0171 — comunicados por e-mail
+export type ComunicadosEmailRow = {
+  id: string;
+  nome_interno: string;
+  finalidade: 'INFORMATIVO' | 'SERVICO';
+  assunto: string;
+  titulo: string;
+  previa: string | null;
+  corpo: string;
+  botao_texto: string | null;
+  botao_url: string | null;
+  filtros: Record<string, unknown>;
+  situacao: 'RASCUNHO' | 'ENVIADO' | 'CANCELADO';
+  total_enfileirado: number | null;
+  criado_por: string | null;
+  criado_em: string;
+  atualizado_em: string;
+  enviado_por: string | null;
+  enviado_em: string | null;
+  cancelado_por: string | null;
+  cancelado_em: string | null;
+};
+export type EmailDescadastrosRow = {
+  id: string;
+  email: string;
+  origem: string | null;
+  criado_em: string;
+  ativo: boolean;
+  liberado_em: string | null;
+  liberado_por: string | null;
+};
+export type ComunicadoListaItem = {
+  id: string; nome_interno: string; finalidade: string; assunto: string; situacao: string;
+  criado_em: string; enviado_em: string | null; criado_por_nome: string | null; total: number | null;
+  pendentes: number; enviados: number; entregues: number; falhas: number; cancelados: number;
+};
+
 // 0170 — modelos de comunicacao editaveis
 export type ComunicacaoModelosRow = {
   canal: string;
@@ -4110,6 +4148,7 @@ export type EmailLoteItem = {
   linha_digitavel: string | null;
   pix_copia_cola: string | null;
   titulo_status: string | null;
+  comunicado_id: string | null;
 };
 
 type TableDef<R, Rels extends readonly unknown[] = []> = {
@@ -4386,6 +4425,8 @@ export type Database = {
       email_outbox: TableDef<EmailOutboxRow, [Rel<'titulo_id', 'titulos_financeiros'>, Rel<'cliente_id', 'clientes'>]>;
       email_eventos: TableDef<EmailEventosRow>;
       email_supressoes: TableDef<EmailSupressoesRow>;
+      comunicados_email: TableDef<ComunicadosEmailRow, [Rel<'criado_por', 'usuarios'>]>;
+      email_descadastros: TableDef<EmailDescadastrosRow>;
       comunicacao_modelos: TableDef<ComunicacaoModelosRow, [Rel<'atualizado_por', 'usuarios'>]>;
       comunicacao_modelo_versoes: TableDef<ComunicacaoModeloVersoesRow, [Rel<'criado_por', 'usuarios'>]>;
     };
@@ -5280,6 +5321,14 @@ export type Database = {
       // 0169 — a celula cobranca_emails.<ver|editar> da grade (perfil ou extra; admin sempre).
       pode_emails_cobranca: { Args: { p_acao?: string }; Returns: boolean };
       pode_modelos_comunicacao: { Args: { p_acao?: string }; Returns: boolean };
+      pode_comunicados: { Args: { p_acao?: string }; Returns: boolean };
+      email_descadastrado: { Args: { p_email: string }; Returns: boolean };
+      registrar_descadastro_email: { Args: { p_email: string; p_origem?: string | null }; Returns: undefined };
+      comunicado_previa_publico: { Args: { p_filtros: Record<string, unknown>; p_finalidade?: string }; Returns: Record<string, unknown> };
+      salvar_comunicado_email: { Args: { p_id: string | null; p_dados: Record<string, unknown> }; Returns: string };
+      enviar_comunicado_email: { Args: { p_id: string }; Returns: number };
+      cancelar_comunicado_email: { Args: { p_id: string }; Returns: number };
+      comunicados_email_listar: { Args: Record<string, never>; Returns: ComunicadoListaItem[] };
       salvar_modelo_comunicacao: {
         Args: { p_canal: string; p_codigo: string; p_textos: Record<string, string>; p_motivo?: string | null };
         Returns: number;
