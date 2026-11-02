@@ -813,8 +813,8 @@ software de rastreador, que fará o cruzamento das informações". **Leia `docs/
 
 ### Estado de validação (fim da fase)
 - **Migrations `0001`..`0168`** + `schema.sql` consolidado aplicam limpos no harness local.
-- **143 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 1360 testes**, `npx tsc --noEmit` limpo e build OK.
+- **145 suites** em `supabase/tests/*.test.sql` — todas passando.
+- **Vitest: 1394 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Os portais e páginas públicas
