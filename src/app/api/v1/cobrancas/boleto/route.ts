@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { textosGravadosWhatsApp } from '@/lib/comunicacao/modelos-server';
 import { getPaymentGateway, SicrediGateway, type GatewayConfig } from '@/lib/pagamentos';
 import { remetenteEmail } from '@/lib/email';
 import { mensagemDoBoleto } from '@/lib/renegociacao';
@@ -117,7 +118,7 @@ export async function POST(request: Request) {
       linha_digitavel: t.linha_digitavel,
       pix_copia_cola: t.pix_copia_cola,
     }));
-  const texto = mensagemDoBoleto({ nome: cli?.nome_razao_social ?? '', boletos });
+  const texto = mensagemDoBoleto({ nome: cli?.nome_razao_social ?? '', boletos, textos: (await textosGravadosWhatsApp(createAdminClient())).boleto });
 
   if (!process.env.RESEND_API_KEY) {
     return NextResponse.json({ enviado: false, texto, aviso: 'RESEND_API_KEY não configurada: copie o texto e envie manualmente.' });

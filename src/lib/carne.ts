@@ -6,6 +6,8 @@
 import { calcularVencimento } from './cobranca';
 import { somarDias } from './pro-rata';
 import { formatCurrency, formatDate } from './utils';
+import { parteWhatsApp, saudacao } from './comunicacao/modelos-whatsapp';
+import type { TextosModelo } from './comunicacao/modelos';
 
 /** O carne vai de 1 a 12 meses (o banco recusa fora disso). */
 export const MESES_CARNE_MAX = 12;
@@ -89,17 +91,18 @@ export function resumoDoCarne(boletos: BoletoDoCarne[]) {
 }
 
 /** A mensagem do WhatsApp com todos os boletos (linha digitavel de cada um). */
-export function mensagemDoCarne(nome: string, placa: string | null, boletos: BoletoDoCarne[]): string {
+export function mensagemDoCarne(nome: string, placa: string | null, boletos: BoletoDoCarne[], textos?: TextosModelo | null): string {
   const ordem = [...boletos].sort((a, b) =>
     a.adesao === b.adesao ? a.vencimento.localeCompare(b.vencimento) : a.adesao ? -1 : 1);
   const linhas = ordem
     .filter((b) => b.linha_digitavel)
     .map((b) => `${b.adesao ? 'Adesão' : 'Mensalidade'} · vence ${formatDate(b.vencimento)} · ${formatCurrency(b.valor)}\n${b.linha_digitavel}`);
   const primeiroNome = (nome || '').trim().split(/\s+/)[0] ?? '';
+  const v = { saudacao: saudacao(nome, 'Olá!'), nome: primeiroNome, veiculo: placa ? `(${placa})` : '' };
   return [
-    `Olá${primeiroNome ? `, ${primeiroNome}` : ''}! Seguem os boletos da sua proteção veicular${placa ? ` (${placa})` : ''}:`,
+    parteWhatsApp('carne', 'abertura', v, textos),
     '',
     ...linhas.flatMap((l) => [l, '']),
-    'Todos também podem ser pagos por PIX (o código está no boleto).',
+    parteWhatsApp('carne', 'fecho', v, textos),
   ].join('\n');
 }

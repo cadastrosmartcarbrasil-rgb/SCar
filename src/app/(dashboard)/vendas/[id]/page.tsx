@@ -30,8 +30,10 @@ import { linkWhatsApp, mensagemDaProposta } from '@/lib/venda-publica';
 import { useChecklistLead } from '@/hooks/use-vendas';
 import { pendencias, situacaoDoAceite, valorDaCotacao } from '@/lib/vendas';
 import { usePode } from '@/hooks/use-permissoes';
+import { useTextosWhatsApp } from '@/hooks/use-textos-whatsapp';
 
 export default function LeadDetailPage() {
+  const tw = useTextosWhatsApp();
   const { id } = useParams<{ id: string }>();
   const { data: lead, isLoading } = useLead(id);
   const { data: cotacoes } = useCotacoes(id);
@@ -376,7 +378,7 @@ export default function LeadDetailPage() {
                     </a>
                     {/* Mandar a proposta direto para o celular do lead */}
                     <a
-                      href={linkWhatsApp(mensagemDaProposta(link, lead.nome), lead.celular)}
+                      href={linkWhatsApp(mensagemDaProposta(link, lead.nome, tw.proposta), lead.celular)}
                       target="_blank" rel="noreferrer"
                       className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100"
                     >

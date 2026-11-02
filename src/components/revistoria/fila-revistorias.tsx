@@ -26,6 +26,7 @@ import { identificacaoVeiculo } from '@/lib/placa';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { RevistoriaLinha, RevistoriaMidia } from '@/lib/database.types';
 import { ModalBoletoAposRevistoria } from '@/components/revistoria/boleto-apos-revistoria';
+import { useTextosWhatsApp } from '@/hooks/use-textos-whatsapp';
 
 type Aba = 'EM_ANALISE' | 'AGUARDANDO' | 'A_PEDIR' | 'LIBERADAS' | 'TODAS';
 
@@ -189,10 +190,11 @@ function LinhaFila({ r, onAbrir }: { r: RevistoriaLinha; onAbrir: () => void }) 
 }
 
 function BotoesLink({ r }: { r: RevistoriaLinha }) {
+  const tw = useTextosWhatsApp();
   const link = linkDaRevistoria(r.token);
   const texto = mensagemRevistoria({
     nome: r.associado, placa: identificacaoVeiculo(r.placa, r.chassi), link, expiraEm: r.token_expira_em,
-    motivo: r.motivo_reprovacao,
+    motivo: r.motivo_reprovacao, textos: r.motivo_reprovacao ? tw.revistoria_refazer : tw.revistoria,
   });
   const whats = linkWhatsAppAssociado(r.celular, texto);
   return (
@@ -212,6 +214,7 @@ function BotoesLink({ r }: { r: RevistoriaLinha }) {
 }
 
 function TabelaAPedir({ q }: { q: ReturnType<typeof useRevistoriasASolicitar> }) {
+  const tw = useTextosWhatsApp();
   const solicitar = useSolicitarRevistoria();
   const podePedir = usePode('revistoria.criar');
   const [gerados, setGerados] = useState<Record<string, { token: string; expira: string }>>({});
@@ -240,7 +243,7 @@ function TabelaAPedir({ q }: { q: ReturnType<typeof useRevistoriasASolicitar> })
                 const g = gerados[l.veiculo_id];
                 const veiculo = identificacaoVeiculo(l.placa, l.chassi);
                 const link = g ? linkDaRevistoria(g.token) : null;
-                const texto = link ? mensagemRevistoria({ nome: l.associado, placa: veiculo, link, expiraEm: g?.expira }) : '';
+                const texto = link ? mensagemRevistoria({ nome: l.associado, placa: veiculo, link, expiraEm: g?.expira, textos: tw.revistoria }) : '';
                 const whats = link ? linkWhatsAppAssociado(l.celular, texto) : null;
                 return (
                   <tr key={l.veiculo_id} className="border-t border-slate-100">

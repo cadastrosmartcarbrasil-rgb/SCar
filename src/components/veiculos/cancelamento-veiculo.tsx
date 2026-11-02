@@ -26,6 +26,7 @@ import { mensagemDoBoleto } from '@/lib/renegociacao';
 import { linkWhatsAppAssociado } from '@/lib/protocolos';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { ProRataVeiculo } from '@/lib/database.types';
+import { useTextosWhatsApp } from '@/hooks/use-textos-whatsapp';
 
 function hojeSP(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
@@ -278,6 +279,7 @@ function ResultadoDoCancelamento({ r, veiculoId, clienteId, retentar, onNovo, on
   onNovo: (r: ResultadoCancelamento) => void;
   onClose: () => void;
 }) {
+  const tw = useTextosWhatsApp();
   const cancelar = useCancelarVeiculo();
   const contato = useContatoAssociado(clienteId);
   const c = r.cobranca;
@@ -286,6 +288,7 @@ function ResultadoDoCancelamento({ r, veiculoId, clienteId, retentar, onNovo, on
     nome: contato.data?.nome_razao_social ?? '', substitui: false,
     boletos: [{ parcela: 1, vencimento: titulo.data_vencimento, valor: Number(titulo.valor),
       linha_digitavel: titulo.linha_digitavel, pix_copia_cola: titulo.pix_copia_cola }],
+    textos: tw.boleto,
   }) : null;
 
   async function tentarDeNovo() {

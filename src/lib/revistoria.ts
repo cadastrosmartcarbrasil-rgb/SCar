@@ -6,6 +6,8 @@
 // em `cobranca_renegociacao_origens`); aqui ficam o que a tela mostra e decide.
 
 import type { RevistoriaItemPublico, SituacaoRevistoria } from '@/lib/database.types';
+import { parteWhatsApp, saudacao } from './comunicacao/modelos-whatsapp';
+import type { TextosModelo } from './comunicacao/modelos';
 
 export const DIAS_REVISTORIA_PADRAO = 5;
 /** Duracao maxima do video (decisao do usuario). O banco aceita ate +2 s de folga. */
@@ -85,19 +87,21 @@ export function extensaoDoVideo(mime: string): string {
 /** O convite: diz o que fazer, por que, e ate quando vale (sem prazo o associado deixa para depois). */
 export function mensagemRevistoria(p: {
   nome?: string | null; placa?: string | null; link: string; expiraEm?: string | null; motivo?: string | null;
+  textos?: TextosModelo | null;
 }): string {
-  const primeiro = (p.nome ?? '').trim().split(/\s+/)[0];
-  const ola = primeiro ? `Olá, ${primeiro.charAt(0)}${primeiro.slice(1).toLowerCase()}! ` : 'Olá! ';
-  const placa = p.placa ? ` do veículo ${p.placa}` : '';
   const d = p.expiraEm ? new Date(p.expiraEm) : null;
-  const prazo = d && !Number.isNaN(d.getTime()) ? ` O link vale até ${d.toLocaleDateString('pt-BR')}.` : '';
-  if (p.motivo) {
-    return `${ola}Precisamos que refaça a revistoria${placa}: ${p.motivo} `
-      + `Use o mesmo link: ${p.link}${prazo}`;
-  }
-  return `${ola}Para emitirmos o seu novo boleto${placa}, precisamos de uma revistoria rápida: `
-    + `uma foto da frente, uma da traseira e um vídeo de até ${VIDEO_REVISTORIA_SEGUNDOS} segundos dando a volta no carro. `
-    + `É pelo celular e leva uns 2 minutos: ${p.link}${prazo} Assim que aprovarmos, enviamos o boleto.`;
+  const valores = {
+    saudacao: saudacao(p.nome, 'Olá!', true),
+    nome: saudacao(p.nome, '', true).replace(/^Olá, |!$/g, ''),
+    veiculo: p.placa ? `do veículo ${p.placa}` : '',
+    link: p.link,
+    prazo: d && !Number.isNaN(d.getTime()) ? `O link vale até ${d.toLocaleDateString('pt-BR')}.` : '',
+    segundos: VIDEO_REVISTORIA_SEGUNDOS,
+    motivo: p.motivo ?? '',
+  };
+  return p.motivo
+    ? parteWhatsApp('revistoria_refazer', 'texto', valores, p.textos)
+    : parteWhatsApp('revistoria', 'texto', valores, p.textos);
 }
 
 /** Resumo do que a 2a via destes boletos exige (o painel do modal de negociacao). */

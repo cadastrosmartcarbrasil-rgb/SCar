@@ -19,6 +19,7 @@ import { ROTULO_SITUACAO, type SituacaoBoleto } from '@/lib/cobranca-painel';
 import { linkWhatsAppAssociado } from '@/lib/protocolos';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 import type { CobrancaAcordoSituacao, CobrancaFilaLinha } from '@/lib/database.types';
+import { useTextosWhatsApp } from '@/hooks/use-textos-whatsapp';
 
 const hoje = () => new Date().toLocaleDateString('sv-SE'); // aaaa-mm-dd no fuso local
 
@@ -64,10 +65,11 @@ export function FichaCobranca({ linha, onClose }: { linha: CobrancaFilaLinha | n
 }
 
 function Cabecalho({ linha }: { linha: CobrancaFilaLinha }) {
+  const tw = useTextosWhatsApp();
   const fone = linha.celular || linha.telefone;
   const zap = linkWhatsAppAssociado(fone, mensagemCobranca({
     associado: linha.associado, boletos: Number(linha.boletos_vencidos),
-    valor: Number(linha.valor_vencido), placas: linha.placas,
+    valor: Number(linha.valor_vencido), placas: linha.placas, textos: tw.cobranca,
   }));
   return (
     <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl bg-slate-50 px-4 py-3 text-sm">

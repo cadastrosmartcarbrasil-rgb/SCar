@@ -8,6 +8,8 @@
  * Vocabulario de tela: evento, envolvido, participacao. Nunca "sinistro,
  * seguro, apolice, indenizacao, franquia" — ha teste varrendo os textos daqui.
  */
+import { parteWhatsApp, saudacao } from './comunicacao/modelos-whatsapp';
+import type { TextosModelo } from './comunicacao/modelos';
 
 export type PapelComunicacao =
   | 'associado' | 'condutor_associado' | 'terceiro_condutor'
@@ -214,13 +216,20 @@ export function linkComunicacao(origem: string, token: string): string {
 }
 
 /** Mensagem do WhatsApp. Ao terceiro, nada de associado nem de valores. */
-export function mensagemComunicacao(p: { papel: string; nome?: string | null; protocolo?: string | null; link: string }): string {
-  const ola = p.nome ? `Olá, ${p.nome.split(' ')[0]}!` : 'Olá!';
-  const proto = p.protocolo ? ` (protocolo ${p.protocolo})` : '';
-  const pedido = ehTerceiro(p.papel) || p.papel === 'testemunha' || p.papel === 'passageiro_vitima'
-    ? `A Smart Car Brasil esta registrando um evento de transito${proto} em que você esteve envolvido(a). Pedimos que conte o que aconteceu e, se puder, envie fotos por este link:`
-    : `Recebemos a comunicação do evento com o seu veículo${proto}. Para agilizar, conte o que aconteceu e envie as fotos por este link:`;
-  return `${ola} ${pedido}\n${p.link}\nLeva poucos minutos e você pode parar e continuar depois. Comunique o quanto antes.`;
+export function mensagemComunicacao(p: {
+  papel: string; nome?: string | null; protocolo?: string | null; link: string;
+  textos?: { evento_associado?: TextosModelo; evento_terceiro?: TextosModelo } | null;
+}): string {
+  const fora = ehTerceiro(p.papel) || p.papel === 'testemunha' || p.papel === 'passageiro_vitima';
+  const valores = {
+    saudacao: saudacao(p.nome, 'Olá!'),
+    nome: (p.nome ?? '').split(' ')[0] ?? '',
+    protocolo: p.protocolo ? `(protocolo ${p.protocolo})` : '',
+    link: p.link,
+  };
+  return fora
+    ? parteWhatsApp('evento_terceiro', 'texto', valores, p.textos?.evento_terceiro)
+    : parteWhatsApp('evento_associado', 'texto', valores, p.textos?.evento_associado);
 }
 
 export const TEXTOS = {

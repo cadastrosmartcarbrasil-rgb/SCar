@@ -18,6 +18,7 @@ import { linkWhatsAppAssociado } from '@/lib/protocolos';
 import { identificacaoVeiculo } from '@/lib/placa';
 import { formatDate } from '@/lib/utils';
 import type { RevistoriaExigida } from '@/lib/database.types';
+import { useTextosWhatsApp } from '@/hooks/use-textos-whatsapp';
 
 /** Devolve o estado para o modal decidir se libera o botao de emitir. */
 export function useBloqueioRevistoria(clienteId: string, origens: { origem: string; id: string }[]) {
@@ -62,6 +63,7 @@ function LinhaVeiculo({ l, nome, celular, acaoLiberada }: {
   l: RevistoriaExigida; nome?: string | null; celular?: string | null;
   acaoLiberada?: (l: RevistoriaExigida) => ReactNode;
 }) {
+  const tw = useTextosWhatsApp();
   const solicitar = useSolicitarRevistoria();
   const dispensar = useDispensarRevistoria();
   const podePedir = usePode('revistoria.criar');
@@ -74,6 +76,7 @@ function LinhaVeiculo({ l, nome, celular, acaoLiberada }: {
   const link = l.token ? linkDaRevistoria(l.token) : null;
   const texto = link ? mensagemRevistoria({
     nome, placa: veiculo, link, expiraEm: l.token_expira_em, motivo: l.motivo_reprovacao,
+    textos: l.motivo_reprovacao ? tw.revistoria_refazer : tw.revistoria,
   }) : '';
   const whats = link ? linkWhatsAppAssociado(celular, texto) : null;
 

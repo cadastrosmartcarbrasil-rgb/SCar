@@ -7,6 +7,8 @@
 // ---------------------------------------------------------------------------
 import { gerarParcelas } from './financeiro';
 import { formatCurrency, formatDate } from './utils';
+import { parteWhatsApp, saudacao } from './comunicacao/modelos-whatsapp';
+import type { TextosModelo } from './comunicacao/modelos';
 
 export interface BoletoNegociavel {
   id: string;
@@ -120,14 +122,13 @@ export function mensagemDoBoleto(args: {
   /** false = 2a via do MESMO boleto (nada foi substituido). */
   substitui?: boolean;
   boletos: { parcela: number; vencimento: string; valor: number; linha_digitavel: string | null; pix_copia_cola: string | null }[];
+  textos?: TextosModelo | null;
 }): string {
   const primeiro = (args.nome || '').trim().split(/\s+/)[0] ?? '';
   const nome = primeiro ? primeiro.charAt(0) + primeiro.slice(1).toLowerCase() : '';
   const varios = args.boletos.length > 1;
-  const linhas = [
-    `Olá${nome ? `, ${nome}` : ''}! Segue ${varios ? 'os boletos do seu acordo' : 'o seu boleto'} da Smart Car Brasil.`,
-    '',
-  ];
+  const v = { saudacao: nome ? `Olá, ${nome}!` : 'Olá!', nome, o_que: varios ? 'os boletos do seu acordo' : 'o seu boleto' };
+  const linhas = [parteWhatsApp('boleto', 'abertura', v, args.textos), ''];
   for (const b of args.boletos) {
     linhas.push(
       `${varios ? `Parcela ${b.parcela} — ` : ''}Vencimento ${formatDate(b.vencimento)} · ${formatCurrency(Number(b.valor))}`,
@@ -136,13 +137,8 @@ export function mensagemDoBoleto(args: {
     if (b.pix_copia_cola) linhas.push(`PIX copia e cola: ${b.pix_copia_cola}`);
     linhas.push('');
   }
-  if (args.substitui !== false) {
-    linhas.push(varios
-      ? 'Os boletos anteriores foram substituidos por estes: pague somente os desta mensagem.'
-      : 'O boleto anterior foi substituido por este: pague somente este.');
-  } else {
-    linhas.push('Qualquer duvida, fale com a nossa central.');
-  }
+  const fecho = args.substitui === false ? 'fecho_mesmo' : varios ? 'fecho_substitui_varios' : 'fecho_substitui';
+  linhas.push(parteWhatsApp('boleto', fecho, v, args.textos));
   return linhas.join('\n');
 }
 

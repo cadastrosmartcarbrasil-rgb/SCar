@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { textosGravadosWhatsApp } from '@/lib/comunicacao/modelos-server';
 import { getPaymentGateway, SicrediGateway, type GatewayConfig } from '@/lib/pagamentos';
 import { remetenteEmail } from '@/lib/email';
 import { mensagemBoasVindasWhatsApp, textoBoasVindasEmail, type BoletoBoasVindas } from '@/lib/boas-vindas';
@@ -58,7 +59,7 @@ export async function POST(request: Request) {
     })),
   };
   const texto = textoBoasVindasEmail(dados);
-  const whatsapp = mensagemBoasVindasWhatsApp(dados);
+  const whatsapp = mensagemBoasVindasWhatsApp(dados, (await textosGravadosWhatsApp(createAdminClient())).boas_vindas);
 
   if (body.enviar === false) return NextResponse.json({ enviado: false, texto, whatsapp });
   if (!process.env.RESEND_API_KEY) {

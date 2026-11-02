@@ -12,3 +12,15 @@ export async function textosGravadosEmail(
   }
   return Object.fromEntries((data ?? []).map((m) => [m.codigo, m.textos ?? {}]));
 }
+
+/** Os textos gravados dos modelos de WhatsApp (0172); falhar a leitura = textos originais. */
+export async function textosGravadosWhatsApp(
+  admin: ReturnType<typeof createAdminClient>,
+): Promise<Record<string, TextosModelo>> {
+  const { data, error } = await admin.rpc('modelos_whatsapp');
+  if (error) {
+    console.error('[modelos] leitura dos textos de WhatsApp falhou; seguem os originais:', error.message);
+    return {};
+  }
+  return Object.fromEntries((data ?? []).map((m) => [m.codigo, m.textos ?? {}]));
+}

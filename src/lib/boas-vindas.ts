@@ -7,6 +7,8 @@
 // na entrada, 0044) e o que ele encontra la (veiculos, boletos e documentos).
 // ---------------------------------------------------------------------------
 import { formatCurrency, formatDate } from './utils';
+import { parteWhatsApp, saudacao } from './comunicacao/modelos-whatsapp';
+import type { TextosModelo } from './comunicacao/modelos';
 
 export interface BoletoBoasVindas {
   vencimento: string;
@@ -83,16 +85,17 @@ export function textoBoasVindasEmail(d: DadosBoasVindas): string {
 }
 
 /** A mensagem de boas-vindas do WhatsApp (curta: os boletos vão por linha). */
-export function mensagemBoasVindasWhatsApp(d: DadosBoasVindas): string {
+export function mensagemBoasVindasWhatsApp(d: DadosBoasVindas, textos?: TextosModelo | null): string {
   const nome = primeiroNome(d.nome);
   const cobertura = quandoCobertura(d.coberturaDesde);
   const linhas: string[] = [
-    `Olá${nome ? `, ${nome}` : ''}! Seja bem-vindo(a) à Smart Car Brasil 🚗`,
-    `A proteção do seu veículo${d.placa ? ` ${d.placa}` : ''} está ativa`
-      + (cobertura ? ` — a cobertura começa em ${cobertura}.` : '.'),
-    '',
-    `Portal do associado: ${d.portalUrl}`,
-    'Login e senha do primeiro acesso: o seu CPF (só os números). Lá estão seus boletos, a 2ª via e os documentos.',
+    parteWhatsApp('boas_vindas', 'texto', {
+      saudacao: nome ? `Olá, ${nome}!` : 'Olá!',
+      nome,
+      placa: d.placa ?? '',
+      cobertura: cobertura ? `A cobertura começa em ${cobertura}.` : '',
+      portal: d.portalUrl,
+    }, textos),
   ];
   const bol = (d.boletos ?? []).filter((b) => b.linha_digitavel);
   if (bol.length > 0) linhas.push('', 'Seus boletos:', '', ...blocoBoletos(bol));

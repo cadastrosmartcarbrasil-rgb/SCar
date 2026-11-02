@@ -1,3 +1,5 @@
+import { parteWhatsApp, saudacao } from './comunicacao/modelos-whatsapp';
+import type { TextosModelo } from './comunicacao/modelos';
 // ---------------------------------------------------------------------------
 // Cobranca, Fase 2 (0098) — a FILA, os CONTATOS e as PROMESSAS.
 //
@@ -209,15 +211,16 @@ export function mensagemCobranca(d: {
   valor: number;
   placas?: string | null;
   empresa?: string | null;
+  textos?: TextosModelo | null;
 }): string {
   const nome = d.associado.split(' ')[0] ?? d.associado;
   const primeiro = nome.charAt(0) + nome.slice(1).toLowerCase();
-  const valor = d.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  const qtd = d.boletos === 1 ? '1 mensalidade em aberto' : `${d.boletos} mensalidades em aberto`;
-  const veic = d.placas ? ` do veículo ${d.placas}` : '';
-  return (
-    `Olá, ${primeiro}! Aqui é da ${d.empresa ?? 'Smart Car Brasil'}. ` +
-    `Identificamos ${qtd}${veic}, no total de ${valor}. ` +
-    'Podemos ajudar a regularizar? Mantendo em dia, sua proteção e a assistência 24h continuam ativas.'
-  );
+  return parteWhatsApp('cobranca', 'texto', {
+    saudacao: `Olá, ${primeiro}!`,
+    nome: primeiro,
+    empresa: d.empresa ?? 'Smart Car Brasil',
+    quantidade: d.boletos === 1 ? '1 mensalidade em aberto' : `${d.boletos} mensalidades em aberto`,
+    veiculo: d.placas ? `do veículo ${d.placas}` : '',
+    valor: d.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+  }, d.textos);
 }

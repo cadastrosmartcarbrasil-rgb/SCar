@@ -1,5 +1,7 @@
 // Regras/rotulos da Central de Protocolos e dos disparos rapidos do SAC
 // (WhatsApp/e-mail), em TypeScript puro — cobertos por testes.
+import { parteWhatsApp, saudacao } from './comunicacao/modelos-whatsapp';
+import type { TextosModelo } from './comunicacao/modelos';
 import type {
   PrioridadeAtendimento,
   StatusAtendimento,
@@ -86,15 +88,13 @@ export interface DadosMensagem {
 }
 
 /** Texto padrao de abordagem do SAC (WhatsApp). */
-export function mensagemPadrao(d: DadosMensagem): string {
-  const empresa = d.empresa ?? 'Smart Car Brasil';
-  const primeiro = (d.associado ?? '').trim().split(/\s+/)[0] || 'associado';
-  const veiculo = d.placa ? ` referente ao veículo ${d.placa}` : '';
-  return [
-    `Olá, ${primeiro}! Aqui e ${d.atendente ?? 'a equipe'} da ${empresa}.`,
-    `Estamos entrando em contato${veiculo}.`,
-    'Podemos falar agora?',
-  ].join(' ');
+export function mensagemPadrao(d: DadosMensagem, textos?: TextosModelo | null): string {
+  return parteWhatsApp('sac_contato', 'texto', {
+    nome: (d.associado ?? '').trim().split(/\s+/)[0] || 'associado',
+    empresa: d.empresa ?? 'Smart Car Brasil',
+    atendente: d.atendente ?? 'a equipe',
+    veiculo: d.placa ? `referente ao veículo ${d.placa}` : '',
+  }, textos);
 }
 
 /** Assunto sugerido para o e-mail rapido. */

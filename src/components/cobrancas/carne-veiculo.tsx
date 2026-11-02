@@ -17,6 +17,7 @@ import { linkWhatsAppAssociado } from '@/lib/protocolos';
 import { urlDoCarne } from '@/lib/carne-impressao';
 import { mensagemBoasVindasWhatsApp } from '@/lib/boas-vindas';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import { useTextosWhatsApp } from '@/hooks/use-textos-whatsapp';
 
 export function useEmitirCarne() {
   const qc = useQueryClient();
@@ -133,11 +134,12 @@ function CarneEmitido({ veiculo, boletos, onTentarDeNovo, tentando, onClose, boa
   onClose: () => void;
   boasVindas?: boolean;
 }) {
+  const tw = useTextosWhatsApp();
   const r = resumoDoCarne(boletos);
   const portalUrl = typeof window !== 'undefined' ? `${window.location.origin}/portal/login` : '/portal/login';
   const wa = linkWhatsAppAssociado(veiculo.celular, boasVindas
-    ? mensagemBoasVindasWhatsApp({ nome: veiculo.nome, placa: veiculo.placa, portalUrl, boletos })
-    : mensagemDoCarne(veiculo.nome, veiculo.placa, boletos));
+    ? mensagemBoasVindasWhatsApp({ nome: veiculo.nome, placa: veiculo.placa, portalUrl, boletos }, tw.boas_vindas)
+    : mensagemDoCarne(veiculo.nome, veiculo.placa, boletos, tw.carne));
   const [enviando, setEnviando] = useState(false);
 
   async function boasVindasPorEmail() {

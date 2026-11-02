@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import {
   Wallet, MessageCircle, Mail, Pencil, Barcode, QrCode, Copy, Repeat2, Loader2, Calculator, Ban, Printer,
@@ -22,6 +22,7 @@ import { editavelNoScar } from '@/lib/historico-financeiro';
 import { boletosParaCarne, urlDoCarne } from '@/lib/carne-impressao';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { ClientesRow, TituloCliente } from '@/lib/database.types';
+import { useTextosWhatsApp } from '@/hooks/use-textos-whatsapp';
 
 const STATUS_COR: Record<string, string> = {
   aberto: 'bg-amber-50 text-amber-700',
@@ -61,6 +62,7 @@ export function HistoricoFinanceiroLista({
   limite?: number;
   alturaMaxima?: boolean;
 }) {
+  const tw = useTextosWhatsApp();
   const { data: titulos, isLoading, error } = useTitulosCliente(clienteId, veiculoId ?? null, limite);
   const [editando, setEditando] = useState<TituloCliente | null>(null);
   const contato = useContatoAssociado(clienteId);
@@ -208,7 +210,7 @@ export function HistoricoFinanceiroLista({
                 <a href={linkWhatsAppAssociado(contato.data?.celular ?? contato.data?.telefone, mensagemDoBoleto({
                     nome: contato.data?.nome_razao_social ?? '', substitui: false,
                     boletos: [{ parcela: 1, vencimento: t.data_vencimento, valor: Number(t.valor),
-                      linha_digitavel: t.linha_digitavel, pix_copia_cola: t.pix_copia_cola }] })) ?? undefined}
+                      linha_digitavel: t.linha_digitavel, pix_copia_cola: t.pix_copia_cola }], textos: tw.boleto })) ?? undefined}
                   target="_blank" rel="noreferrer"
                   className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2 py-1 text-xs text-emerald-700">
                   <MessageCircle className="h-3.5 w-3.5" /> Enviar 2a via
@@ -363,7 +365,14 @@ export function ModalWhatsApp({
   placa?: string | null;
   onClose: () => void;
 }) {
+  const tw = useTextosWhatsApp();
   const [texto, setTexto] = useState(mensagemPadrao({ associado: associado.nome_razao_social, placa }));
+  const [editado, setEditado] = useState(false);
+  // o texto editado chega depois da 1a pintura: troca enquanto a pessoa nao mexeu
+  useEffect(() => {
+    if (!editado) setTexto(mensagemPadrao({ associado: associado.nome_razao_social, placa }, tw.sac_contato));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tw.sac_contato]);
   const telefone = associado.celular ?? associado.telefone;
   const link = linkWhatsAppAssociado(telefone, texto);
 
@@ -375,7 +384,7 @@ export function ModalWhatsApp({
           {telefone ? ` · ${telefone}` : ''}
         </p>
         <FormField label="Mensagem">
-          <Textarea rows={4} value={texto} onChange={(e) => setTexto(e.target.value)} />
+          <Textarea rows={4} value={texto} onChange={(e) => { setTexto(e.target.value); setEditado(true); }} />
         </FormField>
         {!link && (
           <p className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800">

@@ -5329,6 +5329,7 @@ export type Database = {
       enviar_comunicado_email: { Args: { p_id: string }; Returns: number };
       cancelar_comunicado_email: { Args: { p_id: string }; Returns: number };
       comunicados_email_listar: { Args: Record<string, never>; Returns: ComunicadoListaItem[] };
+      modelos_whatsapp: { Args: Record<string, never>; Returns: { codigo: string; textos: Record<string, string> | null }[] };
       salvar_modelo_comunicacao: {
         Args: { p_canal: string; p_codigo: string; p_textos: Record<string, string>; p_motivo?: string | null };
         Returns: number;

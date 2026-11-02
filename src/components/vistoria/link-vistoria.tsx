@@ -6,6 +6,7 @@ import { Check, Copy, Link2, Loader2, MessageCircle, Smartphone } from 'lucide-r
 import { useGerarLinkVistoria } from '@/hooks/use-vendas';
 import { linkWhatsApp, mensagemDaVistoria } from '@/lib/venda-publica';
 import { formatDate } from '@/lib/utils';
+import { useTextosWhatsApp } from '@/hooks/use-textos-whatsapp';
 
 /**
  * "Mande o cliente fotografar o carro dele" (0076).
@@ -25,6 +26,7 @@ export function LinkDaVistoria({ leadId, celular, nome, compacto }: {
   nome?: string | null;
   compacto?: boolean;
 }) {
+  const tw = useTextosWhatsApp();
   const gerar = useGerarLinkVistoria();
   const [link, setLink] = useState<{ url: string; expiraEm: string } | null>(null);
   const [copiado, setCopiado] = useState(false);
@@ -86,7 +88,7 @@ export function LinkDaVistoria({ leadId, celular, nome, compacto }: {
           {copiado ? 'Copiado!' : 'Copiar'}
         </button>
         <a
-          href={linkWhatsApp(mensagemDaVistoria(link.url, nome, link.expiraEm), celular)}
+          href={linkWhatsApp(mensagemDaVistoria(link.url, nome, link.expiraEm, tw.vistoria), celular)}
           target="_blank" rel="noreferrer"
           className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[0.75rem] font-semibold text-emerald-700 transition hover:bg-emerald-100"
         >

@@ -3,6 +3,8 @@
  * Espelho leve do que a tela e as rotas `/api/v1/hotlink/*` fazem.
  */
 import { validarDocumento } from '@/lib/documento';
+import { parteWhatsApp, saudacao } from './comunicacao/modelos-whatsapp';
+import type { TextosModelo } from './comunicacao/modelos';
 
 export const ORDEM_ETAPAS = ['contato', 'veiculo', 'planos', 'aceite', 'fim'] as const;
 export type EtapaVenda = (typeof ORDEM_ETAPAS)[number];
@@ -133,10 +135,9 @@ export function numeroWhatsApp(celular?: string | null): string | null {
   return `55${semDdi}`;
 }
 
-export function mensagemDaProposta(url: string, nome?: string | null): string {
-  const primeiro = (nome ?? '').trim().split(/\s+/)[0];
-  const ola = primeiro ? `Olá, ${primeiro}! ` : '';
-  return `${ola}Segue a sua proposta da Smart Car Brasil: ${url}`;
+export function mensagemDaProposta(url: string, nome?: string | null, textos?: TextosModelo | null): string {
+  const primeiro = (nome ?? '').trim().split(/\s+/)[0] ?? '';
+  return parteWhatsApp('proposta', 'texto', { saudacao: saudacao(nome), nome: primeiro, link: url }, textos);
 }
 
 /**
@@ -145,16 +146,14 @@ export function mensagemDaProposta(url: string, nome?: string | null): string {
  * prazo, o cliente guarda "para depois" e descobre vencido.
  */
 export function mensagemDaVistoria(
-  url: string, nome?: string | null, expiraEm?: string | Date | null,
+  url: string, nome?: string | null, expiraEm?: string | Date | null, textos?: TextosModelo | null,
 ): string {
-  const primeiro = (nome ?? '').trim().split(/\s+/)[0];
-  const ola = primeiro ? `Olá, ${primeiro}! ` : '';
+  const primeiro = (nome ?? '').trim().split(/\s+/)[0] ?? '';
   const d = expiraEm ? new Date(expiraEm) : null;
   const prazo = d && !Number.isNaN(d.getTime())
-    ? ` O link vale até ${d.toLocaleDateString('pt-BR')}.`
+    ? `O link vale até ${d.toLocaleDateString('pt-BR')}.`
     : '';
-  return `${ola}Para concluir a sua proteção, faltam as fotos do veículo. `
-    + `E pelo celular mesmo e leva uns 3 minutos: ${url}${prazo}`;
+  return parteWhatsApp('vistoria', 'texto', { saudacao: saudacao(nome), nome: primeiro, link: url, prazo }, textos);
 }
 
 export function linkWhatsApp(texto: string, celular?: string | null): string {

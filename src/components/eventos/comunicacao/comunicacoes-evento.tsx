@@ -23,6 +23,7 @@ import {
 } from '@/lib/comunicacao-evento';
 import { cn, formatDateTime } from '@/lib/utils';
 import { FormularioComunicacao } from './formulario-comunicacao';
+import { useTextosWhatsApp } from '@/hooks/use-textos-whatsapp';
 
 /**
  * Aba "Comunicacoes" da ficha do evento (0129): quem precisa comunicar, o link
@@ -31,6 +32,7 @@ import { FormularioComunicacao } from './formulario-comunicacao';
  * nao consegue usar o celular.
  */
 export function ComunicacoesEvento({ eventoId, protocolo }: { eventoId: string; protocolo: string | null }) {
+  const tw = useTextosWhatsApp();
   const { data: lista, isLoading } = useComunicacoesEvento(eventoId);
   const acao = useAcaoComunicacao(eventoId);
   const podeTratar = usePode('eventos.editar');
@@ -53,7 +55,7 @@ export function ComunicacoesEvento({ eventoId, protocolo }: { eventoId: string; 
   }
 
   function whatsapp(c: ComunicacaoCompleta) {
-    const texto = mensagemComunicacao({ papel: c.papel, nome: c.nome, protocolo, link: link(c) });
+    const texto = mensagemComunicacao({ papel: c.papel, nome: c.nome, protocolo, link: link(c), textos: tw });
     const url = linkWhatsApp(c.telefone, texto) ?? `https://wa.me/?text=${encodeURIComponent(texto)}`;
     window.open(url, '_blank', 'noopener');
     void acao.mutateAsync({ tipo: 'envio', id: c.id, canal: 'WHATSAPP' }).catch(() => undefined);
@@ -61,7 +63,7 @@ export function ComunicacoesEvento({ eventoId, protocolo }: { eventoId: string; 
 
   async function copiar(c: ComunicacaoCompleta) {
     try {
-      await navigator.clipboard.writeText(mensagemComunicacao({ papel: c.papel, nome: c.nome, protocolo, link: link(c) }));
+      await navigator.clipboard.writeText(mensagemComunicacao({ papel: c.papel, nome: c.nome, protocolo, link: link(c), textos: tw }));
       toast.success('Mensagem com o link copiada');
       void acao.mutateAsync({ tipo: 'envio', id: c.id, canal: 'COPIADO' }).catch(() => undefined);
     } catch { toast.error('Não consegui copiar'); }

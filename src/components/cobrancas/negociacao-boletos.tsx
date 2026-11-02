@@ -28,6 +28,7 @@ import { urlDoCarne } from '@/lib/carne-impressao';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { BoletoRenegociacao, RenegociacaoCliente, TituloCliente } from '@/lib/database.types';
 import { RevistoriaNecessaria, useBloqueioRevistoria } from '@/components/revistoria/revistoria-necessaria';
+import { useTextosWhatsApp } from '@/hooks/use-textos-whatsapp';
 
 function hojeSP(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
@@ -371,10 +372,11 @@ function LinhaBoletoNovo({ b, varios }: { b: BoletoRenegociacao; varios: boolean
 
 /** Envio na hora: WhatsApp (texto com linha + PIX) e e-mail (com o PDF). */
 export function EnvioBoletos({ clienteId, boletos, substitui = true }: { clienteId: string; boletos: BoletoRenegociacao[]; substitui?: boolean }) {
+  const tw = useTextosWhatsApp();
   const contato = useContatoAssociado(clienteId);
   const email = useEnviarBoletoEmail();
   if (boletos.length === 0) return null;
-  const texto = mensagemDoBoleto({ nome: contato.data?.nome_razao_social ?? '', boletos, substitui });
+  const texto = mensagemDoBoleto({ nome: contato.data?.nome_razao_social ?? '', boletos, substitui, textos: tw.boleto });
   const zap = linkWhatsAppAssociado(contato.data?.celular ?? contato.data?.telefone, texto);
   return (
     <div className="mt-2 flex flex-wrap gap-2 border-t border-slate-100 pt-2">
