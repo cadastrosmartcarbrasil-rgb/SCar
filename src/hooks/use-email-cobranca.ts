@@ -140,3 +140,17 @@ export function useEnviarTesteEmail() {
     mutationFn: (v: { email: string; template: string; offset_dias: number }) => postar('/api/v1/comunicacoes/email/teste', v),
   });
 }
+
+/** Pre-visualizacao pelo MESMO template do envio (renderizado no servidor). */
+export function usePreviaEmail(template: string, offsetDias: number) {
+  return useQuery({
+    queryKey: ['email-cobranca', 'previa', template, offsetDias],
+    queryFn: async () => {
+      const res = await fetch(`/api/v1/comunicacoes/email/previa?template=${encodeURIComponent(template)}&offset_dias=${offsetDias}`);
+      const j = (await res.json().catch(() => ({}))) as { assunto?: string; html?: string; error?: string };
+      if (!res.ok) throw new Error(j.error ?? `HTTP ${res.status}`);
+      return { assunto: j.assunto ?? '', html: j.html ?? '' };
+    },
+    staleTime: 5 * 60_000,
+  });
+}

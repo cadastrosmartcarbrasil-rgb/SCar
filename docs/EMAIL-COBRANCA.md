@@ -95,6 +95,17 @@ O painel fica vermelho com devolução > 2% ou spam > 0,05%.
 3. Liberar da supressão só quem foi corrigido (o painel pede o motivo).
 4. Retomar.
 
+## Templates (React Email, 02/11/2026)
+- Arquivos em `src/lib/comunicacao/templates/` (vindos do Cowork; design e textos não se alteram sem aprovação) e logo em
+  `public/email/logo-smartcar-negativa.png` (servida pelo próprio sistema, sem login).
+- Os 3 de cobrança já estão no envio, no "Enviar teste" e na pré-visualização do painel. Boas-vindas e aniversário estão no
+  repositório mas ainda não são enviados.
+- Variáveis opcionais (sem elas vale o padrão do sistema): `EMAIL_LOGO_URL`, `PORTAL_LOGIN_URL`, `PORTAL_FATURAS_URL`,
+  `APP_ANDROID_URL`, `APP_IOS_URL`, `DOC_ASSISTENCIA_URL`, `DOC_MANUAL_URL`, `DOC_REGIMENTO_URL`.
+- Pendências de conteúdo: o aviso do rastreador no atraso está desligado até a diretoria confirmar a regra; os botões
+  Android/iPhone ainda apontam para o app do sistema anterior; o texto manda usar "recuperação de senha", que o portal
+  ainda não tem; os documentos da boas-vindas estão em bit.ly (trocar por link direto).
+
 ## Não feito (próximos passos)
 - WhatsApp e SMS: a fila tem os estados e a régua para reaproveitar; falta o provedor (API oficial do WhatsApp).
 - Os outros e-mails do sistema (2ª via, boas-vindas, voucher) ainda não consultam a lista de supressão.

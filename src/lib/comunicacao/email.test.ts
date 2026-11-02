@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { createHmac } from 'node:crypto';
 import {
-  PALAVRAS_PROIBIDAS, decidirEnvio, emailValido, erroTransitorio, exemploAviso, proximaTentativa,
-  renderizarAviso, taxasDoPainel, type Rodape,
+  PALAVRAS_PROIBIDAS, decidirEnvio, diasEntre, emailValido, erroTransitorio, exemploAviso, hojeSp,
+  proximaTentativa, somarDias, taxasDoPainel, veiculoDoAviso, type Rodape, type TemplateEmail,
 } from './cobranca';
+import { renderizarAviso } from './render-email';
+import { emails } from './templates';
 import { ResendProvider } from './provedor';
 import { assinaturaResendConfere, eventoDoResend, expiracaoDoLink, lerTokenDoBoleto, tokenDoBoleto } from './servidor';
 
@@ -15,40 +17,92 @@ const rodape: Rodape = {
   site: null,
 };
 
-describe('modelos', () => {
-  it('assunto por aviso', () => {
-    expect(renderizarAviso('aviso_vencimento', exemploAviso('aviso_vencimento', -5), rodape).assunto)
-      .toBe('Seu boleto Smart Car Brasil vence em 5 dias (16/11)');
-    expect(renderizarAviso('aviso_vencimento', exemploAviso('aviso_vencimento', -1), rodape).assunto)
-      .toBe('Seu boleto Smart Car Brasil vence amanhã (16/11)');
-    expect(renderizarAviso('vence_hoje', exemploAviso('vence_hoje', 0), rodape).assunto).toContain('vence hoje');
-    expect(renderizarAviso('atraso', exemploAviso('atraso', 2), rodape).assunto).toBe('Boleto Smart Car Brasil de 16/11 em aberto');
+describe('modelos (templates React Email)', () => {
+  const r = (t: TemplateEmail, offset: number, link: string | null = null) => {
+    const ex = exemploAviso(t, offset, link);
+    return renderizarAviso(t, ex, rodape, { origem: 'https://appsmartcar.com.br', hoje: somarDias(ex.vencimento!, offset) });
+  };
+  const TODOS = [['aviso_vencimento', -5], ['aviso_vencimento', -1], ['vence_hoje', 0], ['atraso', 2], ['atraso', 7]] as const;
+
+  it('assunto por aviso', async () => {
+    expect((await r('aviso_vencimento', -5)).assunto).toBe('Lembrete: sua contribuição vence em 5 dias');
+    expect((await r('aviso_vencimento', -1)).assunto).toBe('Lembrete: sua contribuição vence amanhã');
+    expect((await r('vence_hoje', 0)).assunto).toContain('vence hoje');
+    expect((await r('atraso', 2)).assunto).toBe('Sua contribuição está em aberto — Smart Car Brasil');
   });
 
-  it('corpo traz linha digitavel, PIX, valor e rodape com CNPJ', () => {
-    const r = renderizarAviso('atraso', exemploAviso('atraso', 7, 'https://x/b/tok'), rodape);
-    for (const parte of [r.html, r.texto]) {
+  it('corpo traz linha digitavel, PIX, valor, link do boleto, rodape e logo', async () => {
+    const e = await r('atraso', 7, 'https://x/b/tok');
+    for (const parte of [e.html, e.texto]) {
       expect(parte).toContain('74891.12345');
       expect(parte).toContain('BR.GOV.BCB.PIX');
       expect(parte).toContain('R$');
       expect(parte).toContain('11.222.333/0001-81');
-      expect(parte).toContain('e-mail automático');
       expect(parte).toContain('https://x/b/tok');
+      expect(parte).toContain('7 dias');
     }
-    expect(r.texto).toMatch(/^Olá, Maria\./);
+    expect(e.html).toContain('https://appsmartcar.com.br/email/logo-smartcar-negativa.png');
+    expect(e.html).toContain('https://appsmartcar.com.br/portal/login');
+    expect(e.html).toContain('https://wa.me/5565999990000');
+    expect(e.html).not.toContain('mutualignit');
   });
 
-  it('nenhum aviso usa tom de ameaca', () => {
-    for (const [t, o] of [['aviso_vencimento', -5], ['aviso_vencimento', -1], ['vence_hoje', 0], ['atraso', 2], ['atraso', 7]] as const) {
-      const r = renderizarAviso(t, exemploAviso(t, o), rodape);
-      const tudo = `${r.assunto} ${r.texto}`.toLowerCase();
-      for (const p of PALAVRAS_PROIBIDAS) expect(tudo).not.toContain(p);
+  it('html sem lixo de renderizacao e com texto simples', async () => {
+    for (const [t, o] of TODOS) {
+      const e = await r(t, o);
+      for (const lixo of ['undefined', '>null<', '[object']) expect(e.html).not.toContain(lixo);
+      expect(e.texto.length).toBeGreaterThan(200);
     }
   });
 
-  it('escapa HTML do nome', () => {
-    const d = { ...exemploAviso('vence_hoje', 0), nome: '<script>x' };
-    expect(renderizarAviso('vence_hoje', d, rodape).html).not.toContain('<script>');
+  it('nenhum aviso usa tom de ameaca nem vocabulario de seguradora', async () => {
+    const seguradora = ['seguro', 'segurado', 'apólice', 'prêmio', 'sinistro', 'indenização', 'franquia', 'corretor'];
+    for (const [t, o] of TODOS) {
+      const e = await r(t, o);
+      const tudo = `${e.assunto} ${e.texto}`.toLowerCase();
+      for (const p of [...PALAVRAS_PROIBIDAS, ...seguradora]) expect(tudo).not.toContain(p);
+    }
+  });
+
+  it('a cobranca nao mostra a placa inteira', async () => {
+    const ex = { ...exemploAviso('atraso', 2), veiculo: veiculoDoAviso('ARGO DRIVE 1.0', 'ABC1D23') };
+    const e = await renderizarAviso('atraso', ex, rodape, { hoje: somarDias(ex.vencimento!, 2) });
+    expect(e.html).toContain('placa final 23');
+    expect(e.html).not.toContain('ABC1D23');
+  });
+
+  it('escapa HTML do nome', async () => {
+    const ex = { ...exemploAviso('vence_hoje', 0), nome: '<script>x' };
+    expect((await renderizarAviso('vence_hoje', ex, rodape, { hoje: ex.vencimento! })).html).not.toContain('<script>');
+  });
+
+  it('boas-vindas e aniversario renderizam sem vocabulario de seguradora', async () => {
+    const bv = await emails.boasVindas({ nome: 'MARIA DA SILVA', modelo: 'Fiat Argo', placa: 'abc1d23', planos: ['Proteção do casco'] });
+    const an = await emails.aniversario({ nome: 'MARIA DA SILVA', linkDescadastro: 'https://x/pref/tok' });
+    for (const e of [bv, an]) {
+      const tudo = `${e.assunto} ${e.texto}`.toLowerCase();
+      for (const p of ['seguro', 'segurado', 'apólice', 'prêmio', 'sinistro', 'indenização', 'franquia', 'corretor', 'senha:']) {
+        expect(tudo).not.toContain(p);
+      }
+    }
+    expect(an.html).toContain('https://x/pref/tok');
+  });
+});
+
+describe('dados do aviso', () => {
+  it('veiculo: modelo + final da placa', () => {
+    expect(veiculoDoAviso('ONIX LT 1.0', 'ABC-1D23')).toBe('Onix Lt 1.0 · placa final 23');
+    expect(veiculoDoAviso('NMAX 160', null)).toBe('Nmax 160');
+    expect(veiculoDoAviso(null, null)).toBeNull();
+  });
+  it('dias e hoje em Sao Paulo, inclusive na virada do dia', () => {
+    expect(diasEntre('2026-11-16', '2026-11-18')).toBe(2);
+    expect(diasEntre('2026-11-16', '2026-11-11')).toBe(-5);
+    expect(diasEntre('2026-02-27', '2026-03-01')).toBe(2);
+    // 02:30 UTC de 17/11 = 23:30 de 16/11 em Sao Paulo
+    expect(hojeSp(new Date('2026-11-17T02:30:00Z'))).toBe('2026-11-16');
+    expect(hojeSp(new Date('2026-11-17T03:30:00Z'))).toBe('2026-11-17');
+    expect(somarDias('2026-12-30', 3)).toBe('2027-01-02');
   });
 });
 

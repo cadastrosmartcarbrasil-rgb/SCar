@@ -1,9 +1,10 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { remetenteCobranca } from '@/lib/email';
 import {
-  RAZAO_SOCIAL_PADRAO, TENTATIVAS_MAXIMAS, decidirEnvio, erroTransitorio, proximaTentativa,
-  renderizarAviso, type Rodape, type TemplateEmail,
+  RAZAO_SOCIAL_PADRAO, TENTATIVAS_MAXIMAS, decidirEnvio, erroTransitorio, hojeSp, proximaTentativa,
+  veiculoDoAviso, type Rodape, type TemplateEmail,
 } from './cobranca';
+import { renderizarAviso } from './render-email';
 import { provedorDeEmail, type EmailProvider } from './provedor';
 import { expiracaoDoLink, tokenDoBoleto } from './servidor';
 
@@ -82,6 +83,18 @@ export async function rodarRotinaEmail(
     if (error) throw new Error(`reservar: ${error.message}`);
     if (!lote || lote.length === 0) break;
 
+    // o veiculo do boleto (modelo + final da placa); fatura agrupada nao tem
+    const titulos = lote.map((i) => i.titulo_id).filter((x): x is string => !!x);
+    const veiculoDoTitulo = new Map<string, string | null>();
+    if (titulos.length) {
+      const { data: tv } = await admin.from('titulos_financeiros')
+        .select('id, veiculos(modelo, placa)').in('id', titulos);
+      for (const t of (tv ?? []) as { id: string; veiculos: { modelo: string | null; placa: string | null } | null }[]) {
+        veiculoDoTitulo.set(t.id, t.veiculos ? veiculoDoAviso(t.veiculos.modelo, t.veiculos.placa) : null);
+      }
+    }
+    const hoje = hojeSp();
+
     for (const item of lote) {
       if (Date.now() - inicio >= orcamento) {
         // sem tempo: devolve para a fila (a proxima rodada pega)
@@ -100,7 +113,7 @@ export async function rodarRotinaEmail(
         out.cancelados++;
         continue;
       }
-      const r = renderizarAviso(item.template as TemplateEmail, {
+      const r = await renderizarAviso(item.template as TemplateEmail, {
         nome: item.cliente_nome,
         valor: item.valor == null ? null : Number(item.valor),
         vencimento: item.data_vencimento,
@@ -108,12 +121,13 @@ export async function rodarRotinaEmail(
         pixCopiaCola: item.pix_copia_cola,
         linkBoleto: item.titulo_id ? linkDoBoleto(origem, item.titulo_id, item.data_vencimento) : null,
         offsetDias: offsets.get(item.regua_codigo) ?? 0,
-      }, rodape);
+        veiculo: item.titulo_id ? veiculoDoTitulo.get(item.titulo_id) ?? null : null,
+      }, rodape, { origem, hoje });
 
       const res = await provedor.enviar({
         de, para: item.destinatario, assunto: r.assunto, html: r.html, texto: r.texto,
         responderPara: cfg.reply_to || rodape.email, chave: item.id,
-        tags: { aviso: item.regua_codigo },
+        tags: { aviso: item.regua_codigo, fluxo: 'cobranca' },
       });
       if (res.ok) {
         await admin.rpc('concluir_envio_email', { p_id: item.id, p_status: 'enviado', p_message_id: res.messageId, p_assunto: r.assunto });

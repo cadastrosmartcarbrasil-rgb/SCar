@@ -1,6 +1,6 @@
 /**
- * E-mails de cobranca (0168) — regras PURAS: modelos, decisao de envio e backoff.
- * Sem dependencia de servidor (a tela usa os modelos para a pre-visualizacao).
+ * E-mails de cobranca (0168) — regras PURAS: dados do aviso, decisao de envio e backoff.
+ * O visual sai dos templates React Email (./templates, renderizados em ./render-email).
  *
  * Decisoes do usuario (02/11/2026): so boletos do SCar; regua D-5, D-1, D0, D+2
  * e D+7; sem confirmacao de pagamento; linha digitavel no corpo.
@@ -16,8 +16,10 @@ export type DadosAviso = {
   linhaDigitavel: string | null;
   pixCopiaCola: string | null;
   linkBoleto: string | null;
-  /** dias em relacao ao vencimento (negativo = antes) */
+  /** dias em relacao ao vencimento (negativo = antes) — reserva quando nao ha "hoje" */
   offsetDias: number;
+  /** "Modelo · placa final 23" — nunca a placa inteira na cobranca */
+  veiculo?: string | null;
 };
 
 export type Rodape = {
@@ -36,18 +38,10 @@ export const PALAVRAS_PROIBIDAS = [
   'judicial', 'processo', 'cancelamento imediato', 'bloqueado',
 ];
 
-function esc(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
 export function dataBr(iso: string | null): string {
   if (!iso) return '';
   const [a, m, d] = iso.slice(0, 10).split('-');
   return `${d}/${m}/${a}`;
-}
-
-function dataCurta(iso: string | null): string {
-  return dataBr(iso).slice(0, 5);
 }
 
 export function valorBr(v: number | null): string {
@@ -67,101 +61,31 @@ export function formatarCnpj(c: string | null): string | null {
   return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
 }
 
-export function assuntoDoAviso(template: TemplateEmail, d: DadosAviso): string {
-  const venc = dataCurta(d.vencimento);
-  if (template === 'vence_hoje') return `Seu boleto Smart Car Brasil vence hoje (${venc})`;
-  if (template === 'atraso') return `Boleto Smart Car Brasil de ${venc} em aberto`;
-  if (d.offsetDias === -1) return `Seu boleto Smart Car Brasil vence amanhã (${venc})`;
-  return `Seu boleto Smart Car Brasil vence em ${Math.abs(d.offsetDias)} dias (${venc})`;
+/** "ONIX LT 1.0" + "ABC1D23" -> "Onix Lt 1.0 · placa final 23". Sem placa (0 km): so o modelo. */
+export function veiculoDoAviso(modelo: string | null | undefined, placa: string | null | undefined): string | null {
+  const m = (modelo ?? '').trim().replace(/\s+/g, ' ');
+  const p = (placa ?? '').replace(/[^A-Za-z0-9]/g, '');
+  const nome = m ? m.toLocaleLowerCase('pt-BR').replace(/(^|\s)(\p{L})/gu, (_x, a: string, b: string) => a + b.toLocaleUpperCase('pt-BR')) : '';
+  if (!nome) return p.length >= 2 ? `Placa final ${p.slice(-2).toUpperCase()}` : null;
+  return p.length >= 2 ? `${nome} · placa final ${p.slice(-2).toUpperCase()}` : nome;
 }
 
-function frases(template: TemplateEmail, d: DadosAviso): string[] {
-  const venc = dataBr(d.vencimento);
-  const valor = valorBr(d.valor);
-  if (template === 'vence_hoje') {
-    return [
-      `Lembramos que o boleto da sua proteção veicular, no valor de ${valor}, vence hoje (${venc}).`,
-      'Se já fez o pagamento, pode desconsiderar esta mensagem.',
-    ];
-  }
-  if (template === 'atraso') {
-    return [
-      `Até o momento não identificamos o pagamento do boleto da sua proteção veicular, no valor de ${valor}, com vencimento em ${venc}.`,
-      'Se já pagou, desconsidere esta mensagem: a confirmação do banco pode levar até 2 dias úteis.',
-      'Mantenha a mensalidade em dia para seguir com todos os benefícios da sua proteção. Se precisar de ajuda com o pagamento, fale com o nosso atendimento.',
-    ];
-  }
-  const quando = d.offsetDias === -1 ? 'vence amanhã' : `vence em ${Math.abs(d.offsetDias)} dias`;
-  return [
-    `O boleto da sua proteção veicular, no valor de ${valor}, ${quando} (${venc}).`,
-    'Você pode pagar pela linha digitável ou pelo PIX abaixo.',
-  ];
+/** Hoje (AAAA-MM-DD) em Sao Paulo — mesmo fuso da fila (data_sp). */
+export function hojeSp(agora: Date = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(agora);
 }
 
-function contato(r: Rodape): string[] {
-  const l: string[] = [];
-  if (r.whatsapp) l.push(`WhatsApp ${r.whatsapp}`);
-  if (r.email) l.push(r.email);
-  return l;
+/** Dias de `de` ate `ate` (datas AAAA-MM-DD, sem fuso). */
+export function diasEntre(de: string, ate: string): number {
+  const ms = Date.UTC(+ate.slice(0, 4), +ate.slice(5, 7) - 1, +ate.slice(8, 10))
+    - Date.UTC(+de.slice(0, 4), +de.slice(5, 7) - 1, +de.slice(8, 10));
+  return Math.round(ms / 86_400_000);
 }
 
-export function textoDoAviso(template: TemplateEmail, d: DadosAviso, r: Rodape): string {
-  const nome = primeiroNome(d.nome);
-  const linhas: string[] = [nome ? `Olá, ${nome}.` : 'Olá.', '', ...frases(template, d), ''];
-  if (d.linhaDigitavel) linhas.push('Linha digitável:', d.linhaDigitavel, '');
-  if (d.pixCopiaCola) linhas.push('PIX copia e cola:', d.pixCopiaCola, '');
-  if (d.linkBoleto) linhas.push(`Ver o boleto (PDF): ${d.linkBoleto}`, '');
-  linhas.push('—', r.razaoSocial);
-  if (r.cnpj) linhas.push(`CNPJ ${formatarCnpj(r.cnpj)}`);
-  const c = contato(r);
-  if (c.length) linhas.push(`Atendimento: ${c.join(' · ')}`);
-  linhas.push('Este é um e-mail automático. Para falar conosco, use os canais de atendimento acima.');
-  return linhas.join('\n');
-}
-
-const NAVY = '#1E2B4D';
-const CIANO = '#139AD6';
-
-function blocoCodigo(titulo: string, valor: string): string {
-  return `<p style="margin:16px 0 4px;font-size:13px;color:#38455C">${esc(titulo)}</p>
-<div style="font-family:Consolas,Menlo,monospace;font-size:14px;line-height:1.5;background:#F2F5FA;border:1px solid #D5DDEA;border-radius:6px;padding:10px 12px;word-break:break-all;color:${NAVY}">${esc(valor)}</div>`;
-}
-
-export function htmlDoAviso(template: TemplateEmail, d: DadosAviso, r: Rodape): string {
-  const nome = primeiroNome(d.nome);
-  const paragrafos = frases(template, d)
-    .map((f) => `<p style="margin:0 0 12px;font-size:15px;line-height:1.55;color:#0F1B33">${esc(f)}</p>`)
-    .join('');
-  const resumo = `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:8px 0 4px;border-collapse:collapse">
-<tr><td style="padding:6px 0;font-size:13px;color:#38455C">Vencimento</td><td style="padding:6px 0;font-size:15px;color:${NAVY};text-align:right;font-weight:600">${esc(dataBr(d.vencimento))}</td></tr>
-<tr><td style="padding:6px 0;font-size:13px;color:#38455C;border-top:1px solid #E5EAF2">Valor</td><td style="padding:6px 0;font-size:15px;color:${NAVY};text-align:right;font-weight:600;border-top:1px solid #E5EAF2">${esc(valorBr(d.valor))}</td></tr>
-</table>`;
-  const botao = d.linkBoleto
-    ? `<p style="margin:20px 0 4px"><a href="${esc(d.linkBoleto)}" style="display:inline-block;background:${NAVY};color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;padding:12px 20px;border-radius:6px">Ver o boleto (PDF)</a></p>`
-    : '';
-  const c = contato(r);
-  return `<!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(assuntoDoAviso(template, d))}</title></head>
-<body style="margin:0;padding:0;background:#EEF2F8;font-family:Arial,Helvetica,sans-serif">
-<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;background:#EEF2F8"><tr><td style="padding:24px 12px">
-<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #D5DDEA;border-radius:10px">
-<tr><td style="background:${NAVY};border-radius:10px 10px 0 0;padding:16px 24px;font-size:18px;font-weight:700;color:#ffffff;letter-spacing:0.5px">SMART<span style="color:${CIANO}">CAR</span> BRASIL</td></tr>
-<tr><td style="padding:24px">
-<p style="margin:0 0 12px;font-size:15px;color:#0F1B33">${esc(nome ? `Olá, ${nome}.` : 'Olá.')}</p>
-${paragrafos}
-${resumo}
-${d.linhaDigitavel ? blocoCodigo('Linha digitável', d.linhaDigitavel) : ''}
-${d.pixCopiaCola ? blocoCodigo('PIX copia e cola', d.pixCopiaCola) : ''}
-${botao}
-</td></tr>
-<tr><td style="padding:16px 24px;border-top:1px solid #E5EAF2;font-size:12px;line-height:1.5;color:#525E70">
-${esc(r.razaoSocial)}${r.cnpj ? ` · CNPJ ${esc(formatarCnpj(r.cnpj) ?? '')}` : ''}<br>
-${c.length ? `Atendimento: ${esc(c.join(' · '))}<br>` : ''}Este é um e-mail automático. Para falar conosco, use os canais de atendimento acima.
-</td></tr></table></td></tr></table></body></html>`;
-}
-
-export function renderizarAviso(template: TemplateEmail, d: DadosAviso, r: Rodape) {
-  return { assunto: assuntoDoAviso(template, d), html: htmlDoAviso(template, d, r), texto: textoDoAviso(template, d, r) };
+/** AAAA-MM-DD + n dias. */
+export function somarDias(iso: string, n: number): string {
+  const d = new Date(Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10) + n));
+  return d.toISOString().slice(0, 10);
 }
 
 /** Dados de exemplo para a pre-visualizacao e o envio de teste. */
@@ -174,6 +98,7 @@ export function exemploAviso(template: TemplateEmail, offsetDias: number, linkBo
     pixCopiaCola: '00020126580014BR.GOV.BCB.PIX0136exemplo-de-pix-copia-e-cola5204000053039865406189.905802BR',
     linkBoleto,
     offsetDias,
+    veiculo: 'Fiat Argo · placa final 23',
   };
 }
 

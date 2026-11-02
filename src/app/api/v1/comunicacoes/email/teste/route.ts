@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { remetenteCobranca } from '@/lib/email';
-import { emailValido, exemploAviso, normalizarEmail, renderizarAviso, type TemplateEmail } from '@/lib/comunicacao/cobranca';
+import { emailValido, exemploAviso, normalizarEmail, somarDias, type TemplateEmail } from '@/lib/comunicacao/cobranca';
+import { renderizarAviso } from '@/lib/comunicacao/render-email';
 import { provedorDeEmail } from '@/lib/comunicacao/provedor';
-import { rodapeDaEmpresa } from '@/lib/comunicacao/despacho-server';
+import { origemPublica, rodapeDaEmpresa } from '@/lib/comunicacao/despacho-server';
 
 // POST /api/v1/comunicacoes/email/teste — envia um aviso com DADOS DE EXEMPLO
 // para o e-mail informado (admin/financeiro). Nao passa pela fila; respeita a
@@ -34,10 +35,14 @@ export async function POST(request: Request) {
   const { data: cfg } = await admin.from('email_config').select('reply_to').eq('id', true).maybeSingle();
 
   const rodape = await rodapeDaEmpresa(admin);
-  const r = renderizarAviso(template, exemploAviso(template, Number(body.offset_dias ?? -5)), rodape);
+  const offset = Number(body.offset_dias ?? -5);
+  const exemplo = exemploAviso(template, offset);
+  const r = await renderizarAviso(template, exemplo, rodape, {
+    origem: origemPublica(request), hoje: somarDias(exemplo.vencimento!, offset),
+  });
   const res = await provedor.enviar({
     de: remetenteCobranca(), para: email, assunto: `[TESTE] ${r.assunto}`, html: r.html, texto: r.texto,
-    responderPara: cfg?.reply_to || rodape.email, tags: { aviso: 'teste' },
+    responderPara: cfg?.reply_to || rodape.email, tags: { aviso: 'teste', fluxo: 'cobranca' },
   });
   if (!res.ok) return NextResponse.json({ error: res.erro }, { status: 502 });
   return NextResponse.json({ ok: true, message_id: res.messageId });

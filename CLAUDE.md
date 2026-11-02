@@ -783,7 +783,13 @@ pagamento**; **linha digitável no corpo**; provedor **Resend**; fuso **São Pau
 - **Painel:** Cobrança → **E-mails de Cobrança** (`/cobrancas/emails`, dados só para admin/financeiro pela RLS): pausa, modo,
   lista de teste, janela, taxa, KPIs com alerta (devolução > 2%, spam > 0,05%), régua, fila (reenviar/cancelar), supressões,
   pré-visualização e envio de teste.
-- **Regras puras:** `src/lib/comunicacao/cobranca.ts` (modelos — testado contra tom de ameaça —, decisão de envio, backoff),
+- **Templates (02/11/2026, do Cowork):** React Email em `src/lib/comunicacao/templates/` (lembrete, vence hoje, atraso,
+  boas-vindas, aniversário; modo escuro) + logo em `public/email/`. `render-email.ts` (`renderizarAviso`, async) liga os 3 de
+  cobrança à rotina, ao teste e à prévia do painel (`GET /api/v1/comunicacoes/email/previa`, renderiza no servidor). Placa só
+  "placa final NN"; dias contados em São Paulo no envio; portal/logo pela origem do sistema; WhatsApp do rodapé = Empresa.
+  **Rastreador (`temRastreador: false`) não é citado** até a diretoria confirmar o bloqueio do sinal. Vitest transforma JSX
+  pelo `oxc` no `vitest.config.ts` (o tsconfig é `preserve`). Boas-vindas e aniversário ainda NÃO estão ligados.
+- **Regras puras:** `src/lib/comunicacao/cobranca.ts` (dados do aviso — testado contra tom de ameaça —, decisão de envio, backoff),
   `provedor.ts` (interface `EmailProvider` + `ResendProvider`; trocar por SES = um adaptador), `servidor.ts` (token, Svix).
 - **Não feito:** WhatsApp/SMS (falta a API oficial); os outros e-mails do sistema (2ª via, boas-vindas, voucher) ainda não
   consultam a supressão; retenção/anonimização da fila.

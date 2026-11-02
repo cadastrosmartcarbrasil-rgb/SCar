@@ -8,10 +8,10 @@ import { Input, Select, Textarea, FormField } from '@/components/ui/field';
 import {
   useCancelarEmail, useEmailConfig, useEmailFila, useEmailRegua, useEmailResumo, useEmailSupressoes,
   useEnviarTesteEmail, useLiberarSupressao, useReenviarEmail, useRodarRotinaEmail, useSalvarEmailConfig,
-  useSalvarRegua, useSuprimirEmail, type FiltroFila,
+  useSalvarRegua, useSuprimirEmail, usePreviaEmail, type FiltroFila,
 } from '@/hooks/use-email-cobranca';
 import {
-  RAZAO_SOCIAL_PADRAO, ROTULO_SITUACAO_EMAIL, exemploAviso, renderizarAviso, taxasDoPainel,
+  ROTULO_SITUACAO_EMAIL, taxasDoPainel,
   type SituacaoEmail, type TemplateEmail,
 } from '@/lib/comunicacao/cobranca';
 import { formatDate } from '@/lib/utils';
@@ -370,9 +370,7 @@ function Previa() {
   const [email, setEmail] = useState('');
   const teste = useEnviarTesteEmail();
   const m = MODELOS.find((x) => x.valor === modelo) ?? MODELOS[0];
-  const r = renderizarAviso(m.template, exemploAviso(m.template, m.offset, '#'), {
-    razaoSocial: RAZAO_SOCIAL_PADRAO, cnpj: null, whatsapp: '(00) 00000-0000', email: 'financeiro@exemplo.com.br', site: null,
-  });
+  const previa = usePreviaEmail(m.template, m.offset);
   return (
     <Bloco titulo="Pré-visualização e envio de teste">
       <div className="mb-3 grid gap-2 sm:grid-cols-3">
@@ -385,9 +383,17 @@ function Previa() {
           { onSuccess: () => toast.success('Teste enviado'), onError: (e) => toast.error(e.message) },
         )}><Send className="h-4 w-4" /> Enviar teste</Button>
       </div>
-      <p className="mb-2 flex items-center gap-1.5 text-sm text-slate-700"><Mail className="h-4 w-4" /> <strong>Assunto:</strong> {r.assunto}</p>
-      <iframe title="Pré-visualização do e-mail" srcDoc={r.html} className="h-[640px] w-full rounded-xl border border-slate-200 bg-white" sandbox="" />
-      <p className="mt-2 text-xs text-slate-500">Dados de exemplo. No envio real, o rodapé usa a razão social, o CNPJ e os contatos de Configurações → Empresa.</p>
+      {previa.isError ? (
+        <p className="text-sm text-rose-700">Não foi possível montar a pré-visualização: {(previa.error as Error).message}</p>
+      ) : !previa.data ? (
+        <p className="text-sm text-slate-500">Montando a pré-visualização…</p>
+      ) : (
+        <>
+          <p className="mb-2 flex items-center gap-1.5 text-sm text-slate-700"><Mail className="h-4 w-4" /> <strong>Assunto:</strong> {previa.data.assunto}</p>
+          <iframe title="Pré-visualização do e-mail" srcDoc={previa.data.html} className="h-[720px] w-full rounded-xl border border-slate-200 bg-white" sandbox="" />
+        </>
+      )}
+      <p className="mt-2 text-xs text-slate-500">Associado, valor e boleto são de exemplo; o rodapé já é o de Configurações → Empresa. É o mesmo modelo do envio real.</p>
     </Bloco>
   );
 }
