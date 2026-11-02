@@ -847,6 +847,7 @@ pagamento**; **linha digitável no corpo**; provedor **Resend**; fuso **São Pau
   `provedor.ts` (interface `EmailProvider` + `ResendProvider`; trocar por SES = um adaptador), `servidor.ts` (token, Svix).
 - **Não feito:** WhatsApp/SMS (falta a API oficial); os outros e-mails do sistema (2ª via, boas-vindas, voucher) ainda não
   consultam a supressão; retenção/anonimização da fila.
+
 ## PLATAFORMA DA NEW TRACKER (Fleet Hub 360) — o SCar BUSCA os dados (02/11/2026, sem migration)
 Pedido do usuário: integrar com o painel de rastreadores pela documentação https://newtrackernatal.com/api-docs.html
 (lida em 02/11; domínio liberado na rede da sessão). A New Tracker roda no **Fleet Hub 360**.
