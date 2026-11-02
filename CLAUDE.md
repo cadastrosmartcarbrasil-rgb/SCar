@@ -863,10 +863,22 @@ Pedido do usuário: integrar com o painel de rastreadores pela documentação ht
   rota `/api/v1/newtracker` (só admin, NADA grava) e o cartão **Plataforma da New Tracker** em Configurações → API e
   Integrações (`TesteNewTracker`): testar conexão e ver amostra por recurso com a tabela de campos
   (`camposDaAmostra`). Lógica pura em `src/lib/newtracker.ts` (testada).
-- **Próximo (depois de ver o payload real e guardá-lo em `newtracker.test.ts`):** sincronia de equipamentos/chips/
-  veículos → parque (reusar a regra da 0165), posições → `ultima_comunicacao`/`ultima_posicao`, divergência **sem sinal
-  há mais de 3 dias** (`DIAS_SEM_SINAL`, decisão do usuário), rotina no VPS (posições 15 min, equipamentos diário) e
-  botão "Sincronizar agora". **Ocorrências de roubo/furto: depois** (decisão do usuário).
+- **Chave no VPS e conexão testada (02/11/2026).** Gotcha: a linha do `.env` tem de ser `NEWTRACKER_API_KEY=fh_live_...`
+  (o usuário colou só o valor e o contêiner leu vazio); conferir com
+  `docker compose exec -T app sh -c 'echo ${#NEWTRACKER_API_KEY}'` (só o tamanho).
+- **Formato REAL (amostras de 02/11, guardadas em `newtracker.test.ts`):** equipamento NÃO traz veículo; chip liga ao
+  equipamento pelo `equipamento_id` (id interno deles, `imei` vem vazio); veículo traz placa/chassi mas `imei` VAZIO; a
+  ÚNICA ponte é **posições** (`veiculo_id` + `imei`). 0 km vem com o começo do chassi no campo placa ("9BWAG5R1") — por
+  isso o casamento é CHASSI primeiro, depois placa válida. As 5 placas da amostra são todas da MATRIZ.
+- **Importação (02/11/2026, sem migration):** botão **Ver prévia** / **Importar** no mesmo cartão. `/api/v1/newtracker`
+  `acao: previa|importar` lê os 4 recursos inteiros (500 por página), casa com `veiculos` (`montarItensNewTracker`,
+  `casarComBase`) e grava pelas MESMAS RPCs da API externa — `api_cadastrar_rastreadores` (0165) e
+  `api_registrar_comunicacoes` (0151) — em nome da chave "NEWTRACKER OFICIAL" (`integracaoNewTracker`: a ativa ligada ao
+  fornecedor NEW TRACKER com `rastreadores:escrever`; `NEWTRACKER_INTEGRACAO_ID` força uma). Decisão: entram só os
+  equipamentos instalados em veículos da Smart Car; sem posição, fora da base ou estoque deles ficam de fora (contados).
+  Re-executável. `data_instalacao` = momento da importação (a New Tracker não informa).
+- **Próximo:** rotina no VPS (posições 15 min, equipamentos diário), divergência **sem sinal há mais de 3 dias**
+  (`DIAS_SEM_SINAL`, decisão do usuário). **Ocorrências de roubo/furto: depois** (decisão do usuário).
 
 ## API EXTERNA (0151) — integração com outros sistemas (a 1ª: a rastreadora)
 Pedido do usuário (25/10/2026): "criar a API do software para integrar com outros sistemas; a primeira será com um

@@ -180,3 +180,271 @@ export function semSinal(ultima: string | Date | null | undefined, agora: Date =
   if (Number.isNaN(t)) return true;
   return agora.getTime() - t > dias * 86_400_000;
 }
+
+// ---------------------------------------------------------------------------
+// IMPORTACAO (02/11/2026) — formato conferido nas amostras reais:
+//   equipamentos: { id, imei, numero_serie, modelo, tipo, status, estoque_tipo }
+//     -> NAO diz o veiculo;
+//   chips:        { id, iccid, numero_linha, operadora, imei (vazio), equipamento_id }
+//     -> liga ao equipamento pelo ID interno da New Tracker;
+//   veiculos:     { id, placa, chassi, imei (vazio), modelo, status, cliente_id }
+//     -> 0 km vem com o comeco do chassi no campo placa ("9BWAG5R1");
+//   posicoes:     { veiculo_id, imei, latitude, longitude, speed, ignition,
+//                   online, address, device_time }
+//     -> a UNICA ponte equipamento <-> veiculo.
+// Decisao do usuario: entra no parque so o equipamento INSTALADO em veiculo da
+// Smart Car (a chave ve a frota inteira da New Tracker).
+// ---------------------------------------------------------------------------
+
+export type Linha = Record<string, unknown>;
+
+function texto(v: unknown): string | null {
+  if (v == null) return null;
+  const t = String(v).trim();
+  return t === '' ? null : t;
+}
+
+/** Placa/chassi como o banco grava: so letras e numeros, caixa alta. */
+export function identificadorVeiculo(v: unknown): string | null {
+  const t = texto(v);
+  if (!t) return null;
+  const s = t.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  return s === '' ? null : s;
+}
+
+/** Placa valida (antiga ou Mercosul). "9BWAG5R1" (comeco de chassi) nao e placa. */
+export function placaValida(v: unknown): string | null {
+  const p = identificadorVeiculo(v);
+  return p && /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/.test(p) ? p : null;
+}
+
+/** Chassi plausivel: 17 caracteres, sem I/O/Q. */
+export function chassiValido(v: unknown): string | null {
+  const c = identificadorVeiculo(v);
+  return c && /^[A-HJ-NPR-Z0-9]{17}$/.test(c) ? c : null;
+}
+
+export interface PosicaoNT {
+  comunicado_em: string;
+  latitude: number | null;
+  longitude: number | null;
+  velocidade: number | null;
+  ignicao: boolean | null;
+  online: boolean | null;
+  endereco: string | null;
+}
+
+export interface ItemNewTracker {
+  imei: string;
+  modelo: string | null;
+  numero_serie: string | null;
+  iccid: string | null;
+  linha: string | null;
+  operadora: string | null;
+  /** o veiculo NA NEW TRACKER (pela posicao) */
+  veiculo_nt: { id: string; placa: string | null; chassi: string | null; descricao: string | null } | null;
+  posicao: PosicaoNT | null;
+}
+
+function numero(v: unknown): number | null {
+  if (typeof v === 'number' && Number.isFinite(v)) return v;
+  if (typeof v === 'string' && v.trim() !== '' && Number.isFinite(Number(v))) return Number(v);
+  return null;
+}
+
+function booleano(v: unknown): boolean | null {
+  return typeof v === 'boolean' ? v : null;
+}
+
+function data(v: unknown): string | null {
+  const t = texto(v);
+  if (!t) return null;
+  return Number.isNaN(Date.parse(t)) ? null : t;
+}
+
+/**
+ * Junta os quatro recursos num item por IMEI. Equipamento sem posicao fica sem
+ * veiculo (a importacao o deixa de fora); IMEI que so aparece na posicao entra
+ * tambem (o equipamento pode nao estar na pagina lida, ou ser de outra lista).
+ * Se o mesmo IMEI tem varias posicoes, vale a mais recente.
+ */
+export function montarItensNewTracker(fontes: {
+  equipamentos: Linha[];
+  chips: Linha[];
+  veiculos: Linha[];
+  posicoes: Linha[];
+}): ItemNewTracker[] {
+  const chipPorEquip = new Map<string, Linha>();
+  for (const c of fontes.chips) {
+    const eid = texto(c.equipamento_id);
+    if (eid && !chipPorEquip.has(eid)) chipPorEquip.set(eid, c);
+  }
+  const veiculoPorId = new Map<string, Linha>();
+  for (const v of fontes.veiculos) {
+    const id = texto(v.id);
+    if (id) veiculoPorId.set(id, v);
+  }
+  const posPorImei = new Map<string, Linha>();
+  for (const p of fontes.posicoes) {
+    const imei = imeiNewTracker(p.imei);
+    if (!imei) continue;
+    const atual = posPorImei.get(imei);
+    const t = Date.parse(String(p.device_time ?? '')) || 0;
+    const ta = atual ? Date.parse(String(atual.device_time ?? '')) || 0 : -1;
+    if (!atual || t > ta) posPorImei.set(imei, p);
+  }
+
+  const itens = new Map<string, ItemNewTracker>();
+  const montar = (imei: string, eq: Linha | null) => {
+    const chip = eq ? chipPorEquip.get(String(eq.id ?? '')) : undefined;
+    const pos = posPorImei.get(imei) ?? null;
+    const vid = pos ? texto(pos.veiculo_id) : null;
+    const ve = vid ? veiculoPorId.get(vid) : undefined;
+    const iccid = texto(chip?.iccid)?.replace(/\D/g, '') ?? null;
+    const comunicado = pos ? data(pos.device_time) ?? data(pos.updated_at) : null;
+    itens.set(imei, {
+      imei,
+      modelo: texto(eq?.modelo),
+      numero_serie: texto(eq?.numero_serie),
+      iccid: iccid && /^[0-9]{8,22}$/.test(iccid) ? iccid : null,
+      linha: texto(chip?.numero_linha)?.replace(/\D/g, '') || null,
+      operadora: texto(chip?.operadora),
+      veiculo_nt: vid
+        ? {
+            id: vid,
+            placa: ve ? identificadorVeiculo(ve.placa) : null,
+            chassi: ve ? identificadorVeiculo(ve.chassi) : null,
+            descricao: ve ? [texto(ve.marca), texto(ve.modelo)].filter(Boolean).join(' ') || null : null,
+          }
+        : null,
+      posicao:
+        pos && comunicado
+          ? {
+              comunicado_em: comunicado,
+              latitude: numero(pos.latitude),
+              longitude: numero(pos.longitude),
+              velocidade: numero(pos.speed),
+              ignicao: booleano(pos.ignition),
+              online: booleano(pos.online),
+              endereco: texto(pos.address),
+            }
+          : null,
+    });
+  };
+
+  for (const eq of fontes.equipamentos) {
+    const imei = imeiNewTracker(eq.imei);
+    if (imei && !itens.has(imei)) montar(imei, eq);
+  }
+  for (const imei of Array.from(posPorImei.keys())) {
+    if (!itens.has(imei)) montar(imei, null);
+  }
+  return Array.from(itens.values());
+}
+
+/** O nosso veiculo, como a importacao precisa dele. */
+export interface VeiculoSCar {
+  id: string;
+  placa: string | null;
+  chassi: string | null;
+  status: string;
+}
+
+export type SituacaoImportacao =
+  | 'INSTALAR'            // veiculo da Smart Car achado
+  | 'SEM_POSICAO'         // equipamento sem posicao: nao se sabe o veiculo
+  | 'VEICULO_SEM_CADASTRO'// posicao aponta veiculo que nao veio em `veiculos`
+  | 'FORA_DA_BASE';       // veiculo da New Tracker que nao e da Smart Car
+
+export interface LinhaPrevia {
+  item: ItemNewTracker;
+  situacao: SituacaoImportacao;
+  veiculo: VeiculoSCar | null;
+  casou_por: 'CHASSI' | 'PLACA' | null;
+}
+
+const VIVO = ['ativo', 'em_evento', 'vistoria_pendente', 'inadimplente', 'suspenso'];
+
+function melhor(a: VeiculoSCar | undefined, b: VeiculoSCar): VeiculoSCar {
+  if (!a) return b;
+  const va = VIVO.includes(a.status), vb = VIVO.includes(b.status);
+  return vb && !va ? b : a;
+}
+
+/**
+ * Casa cada item com o nosso veiculo: CHASSI primeiro (o 0 km da New Tracker
+ * vem com o comeco do chassi no campo placa), depois PLACA valida. Entre dois
+ * veiculos com o mesmo identificador, vence o que esta na base.
+ */
+export function casarComBase(itens: ItemNewTracker[], nossos: VeiculoSCar[]): LinhaPrevia[] {
+  const porChassi = new Map<string, VeiculoSCar>();
+  const porPlaca = new Map<string, VeiculoSCar>();
+  for (const v of nossos) {
+    if (v.status === 'excluido') continue;
+    const c = identificadorVeiculo(v.chassi);
+    const p = identificadorVeiculo(v.placa);
+    if (c) porChassi.set(c, melhor(porChassi.get(c), v));
+    if (p) porPlaca.set(p, melhor(porPlaca.get(p), v));
+  }
+  return itens.map((item) => {
+    if (!item.veiculo_nt) return { item, situacao: 'SEM_POSICAO', veiculo: null, casou_por: null };
+    const { chassi, placa } = item.veiculo_nt;
+    if (!chassi && !placa) return { item, situacao: 'VEICULO_SEM_CADASTRO', veiculo: null, casou_por: null };
+    const c = chassiValido(chassi);
+    const porC = c ? porChassi.get(c) : undefined;
+    if (porC) return { item, situacao: 'INSTALAR', veiculo: porC, casou_por: 'CHASSI' };
+    const p = placaValida(placa);
+    const porP = p ? porPlaca.get(p) : undefined;
+    if (porP) return { item, situacao: 'INSTALAR', veiculo: porP, casou_por: 'PLACA' };
+    return { item, situacao: 'FORA_DA_BASE', veiculo: null, casou_por: null };
+  });
+}
+
+export const ROTULO_SITUACAO_IMPORTACAO: Record<SituacaoImportacao, string> = {
+  INSTALAR: 'Instalado em veículo da Smart Car',
+  SEM_POSICAO: 'Sem posição na New Tracker (não se sabe o veículo)',
+  VEICULO_SEM_CADASTRO: 'Posição aponta veículo sem placa/chassi na New Tracker',
+  FORA_DA_BASE: 'Veículo não é da Smart Car',
+};
+
+export function contarSituacoes(linhas: LinhaPrevia[]): Record<SituacaoImportacao, number> {
+  const r: Record<SituacaoImportacao, number> = { INSTALAR: 0, SEM_POSICAO: 0, VEICULO_SEM_CADASTRO: 0, FORA_DA_BASE: 0 };
+  for (const l of linhas) r[l.situacao] += 1;
+  return r;
+}
+
+/** O item no formato de `api_cadastrar_rastreadores` (0165). */
+export function itemParaCadastro(l: LinhaPrevia): Record<string, unknown> {
+  return {
+    imei: l.item.imei,
+    modelo: l.item.modelo,
+    numero_serie: l.item.numero_serie,
+    iccid: l.item.iccid,
+    linha: l.item.linha,
+    operadora: l.item.operadora,
+    veiculo_id: l.veiculo?.id ?? null,
+    observacoes: 'Importado da plataforma New Tracker',
+  };
+}
+
+/** A posicao no formato de `api_registrar_comunicacoes` (0151). */
+export function itemParaComunicacao(item: ItemNewTracker): Record<string, unknown> | null {
+  if (!item.posicao) return null;
+  const p = item.posicao;
+  return {
+    imei: item.imei,
+    comunicado_em: p.comunicado_em,
+    latitude: p.latitude,
+    longitude: p.longitude,
+    velocidade: p.velocidade == null ? null : Math.max(0, p.velocidade),
+    ignicao: p.ignicao,
+    endereco: p.endereco,
+  };
+}
+
+/** Divide em blocos (as RPCs aceitam ate 500; usamos menos para caber no tempo). */
+export function emBlocos<T>(lista: T[], tamanho: number): T[][] {
+  const r: T[][] = [];
+  for (let i = 0; i < lista.length; i += tamanho) r.push(lista.slice(i, i + tamanho));
+  return r;
+}
