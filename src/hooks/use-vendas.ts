@@ -153,7 +153,17 @@ export function useSaveLead() {
         if (error) throw error;
         return data;
       }
-      const payload = { ...campos, consultor_id: campos.consultor_id ?? user?.id ?? null, created_by: user?.id ?? null };
+      // 0173 — sem unidade informada, o lead nasce na unidade de quem cadastra
+      // (a mesma pela qual a captura cotou: regra do rastreador e adicional).
+      let regionalId = campos.regional_id;
+      if (regionalId === undefined) {
+        const { data: reg } = await supabase.rpc('regional_de_quem_cota');
+        regionalId = (reg as string | null) ?? null;
+      }
+      const payload = {
+        ...campos, regional_id: regionalId ?? null,
+        consultor_id: campos.consultor_id ?? user?.id ?? null, created_by: user?.id ?? null,
+      };
       const { data, error } = await supabase.from('leads').insert(payload).select('*').single();
       if (error) throw error;
       return data;
@@ -849,9 +859,12 @@ export function useCotacaoComparativa(entrada: {
   sugestoes?: Record<string, string[]>;
   /** 0162 — plano -> tipos (sem entrada = todos). */
   tiposPorPlano?: Record<string, string[]>;
+  /** 0173 — a unidade que precifica (regra do rastreador e adicional). null = matriz. */
+  regionalId?: string | null;
 }) {
   const supabase = createClient();
   const { fipe, tipoVeiculoId, cotaId } = entrada;
+  const regionalId = entrada.regionalId ?? null;
   const avulsos = [...(entrada.avulsos ?? [])].sort();
   const escolha = entrada.escolha ?? '';
   const sugestoes = entrada.sugestoes ?? {};
@@ -860,7 +873,7 @@ export function useCotacaoComparativa(entrada: {
 
   return useQuery<PlanoComparado[]>({
     queryKey: ['vendas', 'comparativo', fipe ?? 0, tipoVeiculoId ?? '', cotaId ?? '', escolha, avulsos.join(','),
-      JSON.stringify(sugestoes), JSON.stringify(tiposPorPlano)],
+      JSON.stringify(sugestoes), JSON.stringify(tiposPorPlano), regionalId ?? ''],
     enabled: pronto,
     placeholderData: (anterior) => anterior,
     queryFn: async () => {
@@ -898,6 +911,7 @@ export function useCotacaoComparativa(entrada: {
           p_tipo_veiculo_id: tipoVeiculoId as string,
           p_plano_id: o.id,
           p_avulsos_ids: cobrados,
+          p_regional_id: regionalId,
         });
         if (error) return null;
         const c = data as unknown as CotacaoPlano;

@@ -10,6 +10,7 @@ import {
   useSalvarRegraRastreador,
 } from '@/hooks/use-precificacao';
 import { AdicionalRiscoRegional } from './adicional-risco';
+import { RastreadorRegional } from './rastreador-regional';
 import { produtoAtendeTipo } from '@/lib/produtos';
 import { ForaDoTipo } from './importar-tabela';
 
@@ -210,9 +211,21 @@ export function TabelaPrecosEditor() {
             </Button>
           </div>
           <p className="mt-2 text-xs text-slate-400">
-            Acima do limite FIPE, o rastreador entra automaticamente na cotação base. Abaixo, e isento (R$ 0).
+            Regra da MATRIZ: acima do limite FIPE, o rastreador entra automaticamente na cotação base; abaixo, fica como opcional. A unidade com regra própria (abaixo) usa a dela.
           </p>
         </div>
+      )}
+
+      {/* 0173 — a mesma regra, por unidade: limite/valor/exigencia proprios. */}
+      {tipoId && tipoSel && (
+        <RastreadorRegional
+          tipoVeiculoId={tipoId}
+          matriz={{
+            exige: tipoSel.exige_rastreador,
+            limite: Number(tipoSel.valor_limite_isencao ?? 0),
+            valor: Number(tipoSel.valor_mensalidade_rastreador ?? 0),
+          }}
+        />
       )}
 
       {/* O adicional de risco e da MESMA natureza da regra acima: uma regra que

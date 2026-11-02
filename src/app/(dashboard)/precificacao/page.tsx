@@ -9,6 +9,7 @@ import { FormField, Input, Select } from '@/components/ui/field';
 import { useTiposVeiculo, useProdutos, useSimularPreco, useCotasParticipacao, usePlanos, useTiposPorProduto, useTiposPorPlano, type ResultadoSimulacao } from '@/hooks/use-precificacao';
 import { planoAtendeTipo } from '@/lib/planos-oferta';
 import { produtosParaTipo, regraRastreadorCobra, semRastreadorDaRegra } from '@/lib/produtos';
+import { useRegraRastreador } from '@/hooks/use-regra-rastreador';
 import { TabelaPrecosEditor } from '@/components/precificacao/tabela-precos-editor';
 import { ImportarTabela } from '@/components/precificacao/importar-tabela';
 import { formatCurrency } from '@/lib/utils';
@@ -61,14 +62,16 @@ function Simulador() {
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [resultado, setResultado] = useState<ResultadoSimulacao | null>(null);
 
+  // 0173 — a regra do rastreador da unidade escolhida (ou da matriz).
+  const { data: regraRastreador } = useRegraRastreador(tipoVeiculoId || null, regionalId || null);
   // So o que atende o tipo escolhido (0089) — e o que o motor vai cobrar.
   const doTipo = useMemo(
     () => semRastreadorDaRegra(
       produtosParaTipo((produtos ?? []).filter((p) => p.status), tipoVeiculoId, tiposPorProduto),
       // O rastreador opcional so abaixo do minimo do tipo (0090).
-      regraRastreadorCobra((tipos ?? []).find((t) => t.id === tipoVeiculoId), Number(fipe) || null),
+      regraRastreadorCobra(regraRastreador, Number(fipe) || null),
     ),
-    [produtos, tipoVeiculoId, tiposPorProduto, tipos, fipe],
+    [produtos, tipoVeiculoId, tiposPorProduto, regraRastreador, fipe],
   );
   const opcionais = useMemo(() => doTipo.filter((p) => !p.obrigatorio), [doTipo]);
   const obrigatorios = useMemo(() => doTipo.filter((p) => p.obrigatorio), [doTipo]);

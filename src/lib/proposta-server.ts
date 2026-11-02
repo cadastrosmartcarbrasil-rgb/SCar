@@ -17,11 +17,11 @@ export async function carregarProposta(token: string, origem: string): Promise<{
   const admin = createAdminClient();
   const { data: cot } = await admin.from('cotacoes')
     .select('id, lead_id, token, created_at, enviada_em, modo_envio, fipe, itens, total_mensalidade, total_com_desconto, '
-      + 'valor_assistencia_profissional, taxa_adesao, adesao_com_desconto, participacao, plano_id, cota_participacao_id, tipo_veiculo_id')
+      + 'valor_assistencia_profissional, taxa_adesao, adesao_com_desconto, participacao, plano_id, cota_participacao_id, tipo_veiculo_id, regional_id')
     .eq('token', token).maybeSingle();
   if (!cot) return null;
   const c = cot as unknown as FontesProposta['cotacao'] & {
-    id: string; lead_id: string; plano_id: string | null; cota_participacao_id: string | null; tipo_veiculo_id: string | null;
+    id: string; lead_id: string; plano_id: string | null; cota_participacao_id: string | null; tipo_veiculo_id: string | null; regional_id: string | null;
   };
 
   // Duas consultas em vez de embed: ha duas FKs entre cotacoes e leads (0042).
@@ -40,6 +40,12 @@ export async function carregarProposta(token: string, origem: string): Promise<{
         .eq('id', c.tipo_veiculo_id).maybeSingle()
       : null,
   ]);
+
+  // 0173 — a regra do rastreador da unidade que precificou a cotacao (ou da matriz).
+  const { data: regra } = c.tipo_veiculo_id
+    ? await admin.rpc('regra_rastreador', { p_tipo_veiculo_id: c.tipo_veiculo_id, p_regional_id: c.regional_id ?? null })
+    : { data: null };
+  const r0 = regra?.[0];
 
   const ids = (c.itens ?? []).map((i) => i.produto_id).filter((x): x is string => !!x);
   const { data: produtos } = ids.length
@@ -64,7 +70,13 @@ export async function carregarProposta(token: string, origem: string): Promise<{
     ultimaCotacaoId: ultima?.id ?? null,
     plano: plano?.data ?? null,
     cotaPercentual: cota?.data?.percentual != null ? Number(cota.data.percentual) : null,
-    tipo: tipo?.data ? { ...tipo.data, valor_limite_isencao: Number(tipo.data.valor_limite_isencao) } : null,
+    tipo: tipo?.data
+      ? {
+          ...tipo.data,
+          exige_rastreador: r0 ? !!r0.exige : tipo.data.exige_rastreador,
+          valor_limite_isencao: Number(r0 ? r0.limite : tipo.data.valor_limite_isencao),
+        }
+      : null,
     produtos: produtos ?? [],
     consultor,
     empresa: empresa ?? null,

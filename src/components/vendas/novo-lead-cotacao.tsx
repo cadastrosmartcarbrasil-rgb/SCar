@@ -17,7 +17,8 @@ import {
   useModeloDoCatalogo,
 } from '@/hooks/use-precificacao';
 import { alternarOpcional, planoInicial, sugestoesDoPlano, valorVisivel } from '@/lib/planos-oferta';
-import { produtosParaTipo, regraRastreadorCobra, semRastreadorDaRegra } from '@/lib/produtos';
+import { produtosParaTipo, regraRastreadorCobra, semRastreadorDaRegra, situacaoRastreador } from '@/lib/produtos';
+import { useRegionalDeQuemCota, useRegraRastreador } from '@/hooks/use-regra-rastreador';
 import {
   useAvisoDeCaptura, useCotacaoComparativa, useProdutosDoPlano, useRegrasAssistenciaProfissional,
   useSalvarCotacao, useSaveLead, type PlanoComparado,
@@ -118,13 +119,19 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
   }, [catalogo.data, catalogo.isFetching]);
   // So o que atende o tipo do veiculo (0089): sem parabrisa para moto. O motor
   // ignora o resto de qualquer jeito; aqui e para a tela nao oferecer.
+  // 0173 — a regra do rastreador e a da UNIDADE de quem cota (a mesma que o
+  // lead recebe), ou a da matriz. E ela que decide se o rastreador ja vem nos
+  // contratados (obrigatorio) ou e oferecido como opcional.
+  const { data: regionalCota } = useRegionalDeQuemCota();
+  const { data: regraRastreador } = useRegraRastreador(tipoVeiculoId || null, regionalCota ?? null);
+  const rastreador = situacaoRastreador(regraRastreador, valorFipe);
   const opcionais = useMemo(
-    // ...e o rastreador opcional so abaixo do minimo do tipo (0090).
+    // ...e o rastreador opcional so abaixo do minimo (0090/0173).
     () => semRastreadorDaRegra(
       produtosParaTipo((produtos ?? []).filter((p) => !p.obrigatorio && p.status), tipoVeiculoId, tiposPorProduto),
-      regraRastreadorCobra((tipos ?? []).find((t) => t.id === tipoVeiculoId), valorFipe),
+      regraRastreadorCobra(regraRastreador, valorFipe),
     ),
-    [produtos, tipoVeiculoId, tiposPorProduto, tipos, valorFipe],
+    [produtos, tipoVeiculoId, tiposPorProduto, regraRastreador, valorFipe],
   );
 
   // 0162 — os pre-marcados de cada plano, so do que esta sendo oferecido aqui.
@@ -140,7 +147,7 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
   // Um preco por plano, recalculado sozinho a cada mudanca de veiculo/opcional.
   const comparativo = useCotacaoComparativa({
     fipe: valorFipe, tipoVeiculoId, cotaId: cotaId || null, avulsos: [...selecionados],
-    escolha, sugestoes, tiposPorPlano,
+    escolha, sugestoes, tiposPorPlano, regionalId: regionalCota ?? null,
   });
   const planos = useMemo(() => comparativo.data ?? [], [comparativo.data]);
   const escolhido = planos.find((p) => chaveDoPlano(p) === escolha) ?? null;
@@ -481,6 +488,12 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
                   )}
                 </div>
                 <div className="flex flex-wrap gap-2.5">
+                  {rastreador === 'OBRIGATORIO' && (
+                    <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm text-white/75 ring-1 ring-white/15">
+                      <Check className="h-4 w-4 text-cyan-300" /> Rastreador
+                      <span className="text-xs font-bold text-cyan-200">obrigatório · já incluso</span>
+                    </span>
+                  )}
                   {inclusos.map((p) => (
                     <span key={p.id} className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm text-white/75 ring-1 ring-white/15">
                       <Check className="h-4 w-4 text-cyan-300" /> {p.nome}
@@ -509,6 +522,12 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
                     <span className="text-sm text-white/60">Nenhum adicional cadastrado.</span>
                   )}
                 </div>
+                {rastreador === 'OPCIONAL' && regraRastreador && !apresentando && (
+                  <p className="text-xs text-white/50">
+                    Rastreador opcional: veículo até {formatCurrency(regraRastreador.valor_limite_isencao)} de FIPE
+                    {regraRastreador.origem === 'REGIONAL' ? ' (regra da unidade)' : ''} não é obrigado a ter — marque se o associado quiser.
+                  </p>
+                )}
                 {preMarcados.size > 0 && !apresentando && (
                   <p className="text-xs text-white/50">
                     Os sugeridos já vêm marcados no preço. Desmarque ou troque (ex.: marcar o parabrisa troca o vidros completo) para chegar ao valor.

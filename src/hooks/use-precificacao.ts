@@ -334,7 +334,11 @@ export function useSalvarRegraRastreador() {
         .eq('id', tipoVeiculoId);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['precificacao', 'tipos-veiculo'] }),
+    // A regra efetiva (0173) e as cotacoes em cache dependem dela.
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['precificacao'] });
+      qc.invalidateQueries({ queryKey: ['vendas'] });
+    },
   });
 }
 

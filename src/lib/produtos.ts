@@ -71,6 +71,38 @@ export function regraRastreadorCobra(
 }
 
 /**
+ * A regra do rastreador que vale para o tipo NA UNIDADE (0173): a da unidade
+ * quando ela tem uma, senao a da matriz. Mesmo formato de `tipos_veiculo`, para
+ * `regraRastreadorCobra` servir as duas.
+ */
+export type RegraRastreador = {
+  exige_rastreador: boolean;
+  valor_limite_isencao: number;
+  valor_mensalidade_rastreador: number;
+  origem: 'REGIONAL' | 'MATRIZ';
+};
+
+/**
+ * Como o rastreador aparece na cotacao:
+ *  - OBRIGATORIO: a regra cobra; ele ja esta na lista dos contratados (linha
+ *    "Rastreador" do motor) e o opcional NAO e oferecido;
+ *  - OPCIONAL: o tipo exige, mas a FIPE esta abaixo do limite — o associado
+ *    pode contratar a parte;
+ *  - NAO_EXIGIDO: o tipo (ou a unidade) nao exige; o opcional segue disponivel.
+ *  - null: tipo/FIPE ainda nao conhecidos.
+ */
+export type SituacaoRastreador = 'OBRIGATORIO' | 'OPCIONAL' | 'NAO_EXIGIDO';
+
+export function situacaoRastreador(
+  regra: Pick<RegraRastreador, 'exige_rastreador' | 'valor_limite_isencao'> | null | undefined,
+  fipe: number | null | undefined,
+): SituacaoRastreador | null {
+  if (!regra || !fipe) return null;
+  if (!regra.exige_rastreador) return 'NAO_EXIGIDO';
+  return regraRastreadorCobra(regra, fipe) ? 'OBRIGATORIO' : 'OPCIONAL';
+}
+
+/**
  * Tira da lista o rastreador OPCIONAL (0090) quando a regra do tipo ja cobra —
  * oferecer seria vender o mesmo equipamento duas vezes. O que ja esta gravado
  * fica (`manter`), e o motor ignora de qualquer jeito.

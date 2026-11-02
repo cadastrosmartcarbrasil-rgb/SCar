@@ -126,14 +126,17 @@ export function useCalcularMensalidadeVeiculo() {
     fipe: number; tipoVeiculoId: string | null; planoId: string | null; opcionaisIds: string[];
     /** 0158 — somado ao motor: a Assistencia Profissional do veiculo. */
     acrescimo?: number;
+    /** 0173 — a unidade do veiculo: so a regra do rastreador dela entra (o adicional fica de fora, como antes). */
+    regionalId?: string | null;
   }>({
-    mutationFn: async ({ fipe, tipoVeiculoId, planoId, opcionaisIds, acrescimo }) => {
+    mutationFn: async ({ fipe, tipoVeiculoId, planoId, opcionaisIds, acrescimo, regionalId }) => {
       if (!tipoVeiculoId) throw new Error('Selecione a categoria de risco (tipo de veículo)');
       const { data, error } = await supabase.rpc('cotar_plano', {
         p_fipe: fipe, p_tipo_veiculo_id: tipoVeiculoId, p_plano_id: planoId ?? null, p_avulsos_ids: opcionaisIds,
+        p_regional_id: regionalId ?? null,
       });
       if (error) throw error;
-      const motor = Number((data as unknown as CotacaoPlano)?.valor_total_mensalidade ?? 0);
+      const motor = semAdicional(data as unknown as CotacaoPlano);
       return Math.round((motor + Number(acrescimo ?? 0)) * 100) / 100;
     },
   });
@@ -203,25 +206,39 @@ export function useSalvarOpcionaisVeiculo() {
   });
 }
 
+/**
+ * O total do motor SEM o adicional de risco da unidade: a ficha do veiculo
+ * passa a unidade so para a regra do rastreador dela (0173); o adicional e o
+ * CARIMBADO na entrada (0081), nao o cadastro de hoje.
+ */
+function semAdicional(c: CotacaoPlano | null | undefined): number {
+  return Number(c?.valor_total_mensalidade ?? 0) - Number(c?.adicional_regional ?? 0);
+}
+
 /** Mensalidade que o motor calcula para plano + avulsos (leitura, sem gravar). */
 export function useMensalidadeCalculada(args: {
   fipe: number | null; tipoVeiculoId: string | null; planoId: string | null; avulsos: string[]; ativo?: boolean;
   /** 0158 — a Assistencia Profissional do veiculo, somada ao motor. */
   acrescimo?: number;
+  /** 0173 — a unidade do veiculo (regra do rastreador dela). */
+  regionalId?: string | null;
 }) {
   const supabase = createClient();
   const chave = [...args.avulsos].sort().join(',');
   return useQuery<number | null>({
-    queryKey: ['ficha', 'mensalidade-calculada', args.fipe, args.tipoVeiculoId, args.planoId, chave, args.acrescimo ?? 0],
+    queryKey: ['ficha', 'mensalidade-calculada', args.fipe, args.tipoVeiculoId, args.planoId, chave, args.acrescimo ?? 0,
+      args.regionalId ?? ''],
     enabled: (args.ativo ?? true) && !!args.tipoVeiculoId,
     queryFn: async () => {
       const { data, error } = await supabase.rpc('cotar_plano', {
         p_fipe: args.fipe ?? 0, p_tipo_veiculo_id: args.tipoVeiculoId as string,
         p_plano_id: args.planoId ?? null, p_avulsos_ids: args.avulsos,
+        p_regional_id: args.regionalId ?? null,
       });
       if (error) throw error;
-      const v = (data as unknown as CotacaoPlano)?.valor_total_mensalidade;
-      return v == null ? null : Math.round((Number(v) + Number(args.acrescimo ?? 0)) * 100) / 100;
+      const c = data as unknown as CotacaoPlano | null;
+      if (c?.valor_total_mensalidade == null) return null;
+      return Math.round((semAdicional(c) + Number(args.acrescimo ?? 0)) * 100) / 100;
     },
   });
 }

@@ -7,10 +7,11 @@ import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { FormField, Input, Select, MoneyInput, PercentInput } from '@/components/ui/field';
 import {
-  usePlanos, useProdutos, useProdutosPorPlano, useTiposPorProduto, useTiposVeiculo, useTiposPorPlano, useSugestoesPorPlano,
+  usePlanos, useProdutos, useProdutosPorPlano, useTiposPorProduto, useTiposPorPlano, useSugestoesPorPlano,
 } from '@/hooks/use-precificacao';
 import { alternarOpcional, planosDoTipo, sugestoesDoPlano } from '@/lib/planos-oferta';
 import { produtosParaTipo, regraRastreadorCobra, semRastreadorDaRegra } from '@/lib/produtos';
+import { useRegraRastreador } from '@/hooks/use-regra-rastreador';
 import {
   useAtualizarCotacao, useProdutosObrigatorios, useSimularDesconto, useAprovarDesconto,
   useRegrasAssistenciaProfissional, useCotacaoAoVivo,
@@ -36,7 +37,6 @@ export function EditarCotacao({
   const { data: produtos } = useProdutos();
   const { data: produtosPorPlano } = useProdutosPorPlano();
   const { data: tiposPorProduto } = useTiposPorProduto();
-  const { data: tiposVeiculo } = useTiposVeiculo();
   const { data: tiposPorPlano } = useTiposPorPlano();
   const { data: sugestoesPorPlano } = useSugestoesPorPlano();
   const atualizar = useAtualizarCotacao();
@@ -63,17 +63,19 @@ export function EditarCotacao({
   // Opcionais disponiveis = produtos ativos que NAO sao obrigatorios do pacote.
   // So o que atende o tipo do veiculo (0089). O que ja esta na cotacao e nao
   // atende fica na lista, marcado, para nao sumir calado.
+  // 0173 — a regra do rastreador da unidade que precificou a cotacao.
+  const { data: regraRastreador } = useRegraRastreador(cotacao.tipo_veiculo_id, cotacao.regional_id ?? null);
   const disponiveis = useMemo(
     () => semRastreadorDaRegra(
       produtosParaTipo(
         (produtos ?? []).filter((p) => p.status && !idsObrigatorios.includes(p.id)),
         cotacao.tipo_veiculo_id, tiposPorProduto, opcionais,
       ),
-      // O rastreador opcional so abaixo do minimo do tipo (0090).
-      regraRastreadorCobra((tiposVeiculo ?? []).find((t) => t.id === cotacao.tipo_veiculo_id), fipe),
+      // O rastreador opcional so abaixo do minimo (0090), pela regra da unidade (0173).
+      regraRastreadorCobra(regraRastreador, fipe),
       opcionais,
     ),
-    [produtos, idsObrigatorios, cotacao.tipo_veiculo_id, tiposPorProduto, opcionais, tiposVeiculo, fipe],
+    [produtos, idsObrigatorios, cotacao.tipo_veiculo_id, tiposPorProduto, opcionais, regraRastreador, fipe],
   );
 
   // O combo tambem carrega OPCIONAIS (plano_produtos). Eles nao sao

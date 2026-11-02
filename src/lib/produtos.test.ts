@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  situacaoRastreador,
   produtoAtendeTipo, produtosParaTipo, rotuloTiposDoProduto, regraRastreadorCobra, semRastreadorDaRegra, opcionaisOferecidos, coberturasDoVeiculo,
   type TiposPorProduto,
 } from './produtos';
@@ -75,6 +76,24 @@ describe('rastreador opcional x regra do tipo (0090)', () => {
   });
   it('o que ja esta gravado continua na lista', () => {
     expect(semRastreadorDaRegra(lista, true, ['rast']).map((p) => p.id)).toEqual(['rast', 'rastreamento', 'app']);
+  });
+});
+
+describe('situacaoRastreador (0173 — regra da unidade ou da matriz)', () => {
+  const moto = { exige_rastreador: true, valor_limite_isencao: 15999.99 };
+  it('acima do limite e OBRIGATORIO, abaixo OPCIONAL', () => {
+    expect(situacaoRastreador(moto, 20000)).toBe('OBRIGATORIO');
+    expect(situacaoRastreador(moto, 12000)).toBe('OPCIONAL');
+  });
+  it('unidade que baixa o limite torna obrigatorio o que na matriz era opcional', () => {
+    expect(situacaoRastreador({ exige_rastreador: true, valor_limite_isencao: 9999.99 }, 12000)).toBe('OBRIGATORIO');
+  });
+  it('unidade que desobriga: NAO_EXIGIDO mesmo acima do limite', () => {
+    expect(situacaoRastreador({ exige_rastreador: false, valor_limite_isencao: 15999.99 }, 90000)).toBe('NAO_EXIGIDO');
+  });
+  it('sem regra ou sem FIPE nao decide', () => {
+    expect(situacaoRastreador(null, 20000)).toBeNull();
+    expect(situacaoRastreador(moto, null)).toBeNull();
   });
 });
 

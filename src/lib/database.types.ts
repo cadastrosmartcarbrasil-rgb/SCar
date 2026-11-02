@@ -1123,6 +1123,19 @@ export type AdicionalRiscoLinha = {
   veiculos: number;
 };
 
+/** 0173 — a regra do rastreador da unidade (ou da matriz) para um tipo. */
+export type RegraRastreadorLinha = {
+  regional_id: string;
+  regional_nome: string;
+  regional_ativa: boolean;
+  personalizada: boolean;
+  exige: boolean;
+  limite: number;
+  valor: number;
+  observacao: string | null;
+  atualizado_em: string | null;
+};
+
 /** 0081 — vendeu uma unidade, o associado e de outra. */
 export type DivergenciaRegionalPreco = {
   regional_preco_id: string | null;
@@ -6106,6 +6119,28 @@ export type Database = {
         Returns: number;
       };
       regional_preco_do_lead: { Args: { p_lead_id: string }; Returns: string | null };
+      // 0173 — regra do rastreador por regional.
+      regra_rastreador: {
+        Args: { p_tipo_veiculo_id: string; p_regional_id?: string | null };
+        Returns: { exige: boolean; limite: number; valor: number; origem: 'REGIONAL' | 'MATRIZ' }[];
+      };
+      rastreador_obrigatorio: {
+        Args: { p_fipe: number; p_tipo_veiculo_id: string; p_regional_id?: string | null };
+        Returns: boolean;
+      };
+      regional_de_quem_cota: { Args: Record<string, never>; Returns: string | null };
+      regras_rastreador_do_tipo: { Args: { p_tipo_veiculo_id: string }; Returns: RegraRastreadorLinha[] };
+      salvar_regra_rastreador_regional: {
+        Args: {
+          p_regional_id: string; p_tipo_veiculo_id: string; p_exige: boolean;
+          p_limite: number; p_valor: number; p_observacao?: string | null;
+        };
+        Returns: string;
+      };
+      remover_regra_rastreador_regional: {
+        Args: { p_regional_id: string; p_tipo_veiculo_id: string };
+        Returns: undefined;
+      };
       divergencia_regional_preco: {
         Args: { p_lead_id: string };
         Returns: DivergenciaRegionalPreco[];

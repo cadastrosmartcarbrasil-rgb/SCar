@@ -20,6 +20,7 @@ import { rotuloUnidade } from '@/lib/regional';
 import { useTiposVeiculo, usePlanos, useProdutos, useProdutosPorPlano, useTiposPorProduto, useTiposPorPlano } from '@/hooks/use-precificacao';
 import { planoAtendeTipo } from '@/lib/planos-oferta';
 import { produtoAtendeTipo, produtosParaTipo, regraRastreadorCobra, semRastreadorDaRegra } from '@/lib/produtos';
+import { useRegraRastreador } from '@/hooks/use-regra-rastreador';
 import { useVeiculosPagina, useVeiculo, useSaveVeiculo, useExcluirVeiculo } from '@/hooks/use-veiculos';
 import { useEmpresasRastreamento } from '@/hooks/use-rastreamento';
 import { useEmpresa } from '@/hooks/use-empresa';
@@ -197,6 +198,10 @@ function VeiculosConteudo() {
 
   // So o que atende o tipo do veiculo (0089). Avulso ja gravado que nao atende
   // continua na lista, marcado — esconder faria o proximo "salvar" apaga-lo calado.
+  // 0173 — a regra do rastreador da unidade do veiculo (ou da matriz).
+  const { data: regraRastreador } = useRegraRastreador(
+    form.tipo_veiculo_id ?? null, form.regional_preco_id ?? form.regional_id ?? null,
+  );
   const opcionaisDisp = useMemo(
     () => semRastreadorDaRegra(
       produtosParaTipo(
@@ -204,10 +209,10 @@ function VeiculosConteudo() {
         form.tipo_veiculo_id, tiposPorProduto, opcionais,
       ),
       // O rastreador opcional so abaixo do minimo do tipo (0090).
-      regraRastreadorCobra((tiposVeiculo ?? []).find((t) => t.id === form.tipo_veiculo_id), form.valor_fipe),
+      regraRastreadorCobra(regraRastreador, form.valor_fipe),
       opcionais,
     ),
-    [produtos, form.tipo_veiculo_id, tiposPorProduto, opcionais, tiposVeiculo, form.valor_fipe],
+    [produtos, form.tipo_veiculo_id, tiposPorProduto, opcionais, regraRastreador, form.valor_fipe],
   );
   const atendeOTipo = (id: string) => produtoAtendeTipo(id, form.tipo_veiculo_id, tiposPorProduto);
   const toggleSet = (setter: React.Dispatch<React.SetStateAction<Set<string>>>, id: string) =>
@@ -245,7 +250,8 @@ function VeiculosConteudo() {
     if (!form.tipo_veiculo_id || !(form.valor_fipe ?? 0)) { setValorCotado(null); return; }
     calcMensal.mutate(
       { fipe: form.valor_fipe ?? 0, tipoVeiculoId: form.tipo_veiculo_id, planoId, opcionaisIds: avulsosIds,
-        acrescimo: Number(form.valor_assistencia_profissional ?? 0) },
+        acrescimo: Number(form.valor_assistencia_profissional ?? 0),
+        regionalId: form.regional_preco_id ?? form.regional_id ?? null },
       {
         onSuccess: (valor) => {
           if (pedido !== pedidoCotacao.current) return;
@@ -339,7 +345,8 @@ function VeiculosConteudo() {
     const pedido = ++pedidoCotacao.current;
     calcMensal.mutate(
       { fipe: form.valor_fipe ?? 0, tipoVeiculoId: form.tipo_veiculo_id ?? null, planoId: form.plano_protecao_id ?? null, opcionaisIds: [...opcionais],
-        acrescimo: Number(form.valor_assistencia_profissional ?? 0) },
+        acrescimo: Number(form.valor_assistencia_profissional ?? 0),
+        regionalId: form.regional_preco_id ?? form.regional_id ?? null },
       {
         onSuccess: (valor) => {
           if (pedido !== pedidoCotacao.current) return;

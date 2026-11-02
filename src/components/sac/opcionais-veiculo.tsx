@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { useProdutos, useProdutosPorPlano, useTiposPorProduto, useTiposVeiculo } from '@/hooks/use-precificacao';
 import { useMensalidadeCalculada, useSalvarOpcionaisVeiculo, useVeiculoProdutos } from '@/hooks/use-veiculo-ficha';
 import { opcionaisOferecidos, regraRastreadorCobra } from '@/lib/produtos';
+import { useRegraRastreador } from '@/hooks/use-regra-rastreador';
 import { podeSincronizarMensalidade } from '@/lib/planos';
 import { formatCurrency } from '@/lib/utils';
 import type { VeiculosRow } from '@/lib/database.types';
@@ -35,7 +36,9 @@ export function ModalOpcionaisVeiculo({ veiculo, planoNome, onClose }: {
     () => (veiculo.plano_protecao_id ? porPlano?.[veiculo.plano_protecao_id] ?? [] : []),
     [porPlano, veiculo.plano_protecao_id],
   );
-  const tipo = (tipos ?? []).find((t) => t.id === veiculo.tipo_veiculo_id);
+  // 0173 — a regra do rastreador da unidade do veiculo (ou da matriz).
+  const regionalPreco = veiculo.regional_preco_id ?? veiculo.regional_id ?? null;
+  const { data: regraRastreador } = useRegraRastreador(veiculo.tipo_veiculo_id, regionalPreco);
   const oferecidos = useMemo(
     () => opcionaisOferecidos({
       produtos: produtos ?? [],
@@ -43,19 +46,19 @@ export function ModalOpcionaisVeiculo({ veiculo, planoNome, onClose }: {
       tiposPorProduto,
       idsDoPlano,
       contratados: atuais ?? [],
-      regraRastreadorCobra: regraRastreadorCobra(tipo, veiculo.valor_fipe),
+      regraRastreadorCobra: regraRastreadorCobra(regraRastreador, veiculo.valor_fipe),
     }),
-    [produtos, veiculo.tipo_veiculo_id, tiposPorProduto, idsDoPlano, atuais, tipo, veiculo.valor_fipe],
+    [produtos, veiculo.tipo_veiculo_id, tiposPorProduto, idsDoPlano, atuais, regraRastreador, veiculo.valor_fipe],
   );
 
   const novos = useMemo(() => [...(marcados ?? [])], [marcados]);
   const antes = useMensalidadeCalculada({
     fipe: veiculo.valor_fipe, tipoVeiculoId: veiculo.tipo_veiculo_id,
-    planoId: veiculo.plano_protecao_id, acrescimo: Number(veiculo.valor_assistencia_profissional ?? 0), avulsos: atuais ?? [], ativo: !!atuais,
+    planoId: veiculo.plano_protecao_id, acrescimo: Number(veiculo.valor_assistencia_profissional ?? 0), regionalId: regionalPreco, avulsos: atuais ?? [], ativo: !!atuais,
   });
   const depois = useMensalidadeCalculada({
     fipe: veiculo.valor_fipe, tipoVeiculoId: veiculo.tipo_veiculo_id,
-    planoId: veiculo.plano_protecao_id, acrescimo: Number(veiculo.valor_assistencia_profissional ?? 0), avulsos: novos, ativo: !!marcados,
+    planoId: veiculo.plano_protecao_id, acrescimo: Number(veiculo.valor_assistencia_profissional ?? 0), regionalId: regionalPreco, avulsos: novos, ativo: !!marcados,
   });
 
   const gravado = veiculo.valor_mensalidade != null ? Number(veiculo.valor_mensalidade) : null;
@@ -95,7 +98,7 @@ export function ModalOpcionaisVeiculo({ veiculo, planoNome, onClose }: {
     );
   }
 
-  const nomeTipo = tipo?.nome ?? 'sem tipo definido';
+  const nomeTipo = (tipos ?? []).find((t) => t.id === veiculo.tipo_veiculo_id)?.nome ?? 'sem tipo definido';
 
   return (
     <Modal open onClose={onClose} title={`Opcionais — ${veiculo.placa}`} tamanho="lg">
