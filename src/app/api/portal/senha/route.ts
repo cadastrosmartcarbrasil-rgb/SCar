@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { problemaDaNovaSenha } from '@/lib/portal-senha';
 
 /**
  * Troca da senha do associado.
@@ -13,18 +14,8 @@ export async function POST(request: Request) {
   const senha = String(body?.senha ?? '');
   const confirmacao = String(body?.confirmacao ?? '');
 
-  if (senha.length < 8) {
-    return NextResponse.json({ error: 'A senha precisa de ao menos 8 caracteres.' }, { status: 400 });
-  }
-  if (senha !== confirmacao) {
-    return NextResponse.json({ error: 'As senhas não conferem.' }, { status: 400 });
-  }
-  if (/^\d+$/.test(senha)) {
-    return NextResponse.json(
-      { error: 'Use letras e números — a senha não pode ser só números (nem o seu CPF).' },
-      { status: 400 },
-    );
-  }
+  const problema = problemaDaNovaSenha(senha, confirmacao);
+  if (problema) return NextResponse.json({ error: problema }, { status: 400 });
 
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();

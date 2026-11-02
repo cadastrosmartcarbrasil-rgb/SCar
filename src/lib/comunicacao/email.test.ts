@@ -71,6 +71,29 @@ describe('modelos (templates React Email)', () => {
     expect(e.html).not.toContain('ABC1D23');
   });
 
+  it('atraso: rastreador afirmado com IMEI na ficha, condicional sem; lembrete nao fala de rastreador', async () => {
+    const ex = exemploAviso('atraso', 7);
+    const com = await renderizarAviso('atraso', { ...ex, temRastreador: true }, rodape, { hoje: somarDias(ex.vencimento!, 7) });
+    const sem = await renderizarAviso('atraso', ex, rodape, { hoje: somarDias(ex.vencimento!, 7) });
+    expect(com.texto).toContain('Como o seu veículo possui rastreador');
+    expect(sem.texto).toContain('Caso o seu veículo possua rastreador');
+    expect((await r('aviso_vencimento', -5)).texto).not.toContain('rastreador');
+  });
+
+  it('sem botoes do app antigo (Android/iPhone)', async () => {
+    const e = await r('vence_hoje', 0);
+    for (const x of ['Android', 'iPhone', 'play.google.com', 'apps.apple.com', 'aplicativo']) expect(e.html).not.toContain(x);
+    expect(e.html).toContain('Acessar o portal');
+  });
+
+  it('recuperar senha: link no botao, sem senha nem CPF no corpo', async () => {
+    const e = await emails.recuperarSenha({ nome: 'MARIA DA SILVA', link: 'https://appsmartcar.com.br/portal/nova-senha?token_hash=abc&type=recovery' });
+    expect(e.html).toContain('token_hash=abc');
+    expect(e.texto).toContain('uma vez');
+    const tudo = `${e.assunto} ${e.texto}`.toLowerCase();
+    for (const p of ['seguro', 'sinistro', 'senha:', '351.693']) expect(tudo).not.toContain(p);
+  });
+
   it('escapa HTML do nome', async () => {
     const ex = { ...exemploAviso('vence_hoje', 0), nome: '<script>x' };
     expect((await renderizarAviso('vence_hoje', ex, rodape, { hoje: ex.vencimento! })).html).not.toContain('<script>');

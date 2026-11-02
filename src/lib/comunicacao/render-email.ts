@@ -5,8 +5,8 @@
  * Decisoes que moram aqui:
  * - linha digitavel e PIX vao no corpo (decisao do usuario, 02/11/2026);
  * - a placa nunca vai inteira (so "placa final NN");
- * - rastreador: o aviso de bloqueio do sinal NAO e enviado (temRastreador: false)
- *   ate a diretoria confirmar a regra e o texto;
+ * - rastreador (decisao de 02/11/2026: e a primeira acao da empresa pelo atraso):
+ *   com rastreador na ficha o atraso afirma o bloqueio do sinal; sem, o texto e condicional;
  * - dias ate/desde o vencimento contados em Sao Paulo, na hora do envio.
  */
 import { emails, type EmailRenderizado } from './templates';
@@ -66,7 +66,7 @@ export async function renderizarAviso(
   };
   if (template === 'vence_hoje') return emails.venceHoje(base);
   if (template === 'atraso') {
-    return emails.atraso({ ...base, diasAtraso: Math.max(1, relativo), temRastreador: false });
+    return emails.atraso({ ...base, diasAtraso: Math.max(1, relativo), temRastreador: d.temRastreador ? true : undefined });
   }
   const faltam = -relativo > 0 ? -relativo : Math.max(1, -d.offsetDias);
   return emails.lembrete({ ...base, diasParaVencer: faltam });

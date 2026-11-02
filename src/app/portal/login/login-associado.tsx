@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Loader2, LogIn, ShieldCheck } from 'lucide-react';
 import { LogoSmartCar } from '@/components/hotlink/marca';
@@ -103,6 +104,10 @@ export function LoginAssociado({ logoUrl }: { logoUrl: string | null }) {
               {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
               Entrar
             </button>
+
+            <Link href="/portal/recuperar" className="block text-center text-sm font-semibold text-cyan-700 hover:underline">
+              Esqueci minha senha
+            </Link>
 
             <p className="flex items-start gap-1.5 rounded-lg bg-slate-50 px-3 py-2.5 text-[0.7188rem] leading-relaxed text-slate-500">
               <ShieldCheck className="mt-px h-3.5 w-3.5 shrink-0 text-cyan-600" />

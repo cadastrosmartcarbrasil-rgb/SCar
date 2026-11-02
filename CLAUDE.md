@@ -787,8 +787,17 @@ pagamento**; **linha digitável no corpo**; provedor **Resend**; fuso **São Pau
   boas-vindas, aniversário; modo escuro) + logo em `public/email/`. `render-email.ts` (`renderizarAviso`, async) liga os 3 de
   cobrança à rotina, ao teste e à prévia do painel (`GET /api/v1/comunicacoes/email/previa`, renderiza no servidor). Placa só
   "placa final NN"; dias contados em São Paulo no envio; portal/logo pela origem do sistema; WhatsApp do rodapé = Empresa.
-  **Rastreador (`temRastreador: false`) não é citado** até a diretoria confirmar o bloqueio do sinal. Vitest transforma JSX
-  pelo `oxc` no `vitest.config.ts` (o tsconfig é `preserve`). Boas-vindas e aniversário ainda NÃO estão ligados.
+  **Decisões do usuário (02/11/2026):** o atraso AVISA o bloqueio do sinal do rastreador (é a primeira ação da empresa) —
+  afirmativo com `veiculos.rastreador_imei`, condicional sem; botões Android/iPhone RETIRADOS (app do sistema anterior);
+  a palavra "cartão" fica (haverá cartão); `bloqueado` saiu de `PALAVRAS_PROIBIDAS`. Vitest transforma JSX pelo `oxc` no
+  `vitest.config.ts` (o tsconfig é `preserve`). Boas-vindas e aniversário ainda NÃO estão ligados; o subdomínio de
+  relacionamento `relacionamento.appsmartcar.com.br` foi criado pelo usuário (para o aniversário).
+- **"Esqueci minha senha" do portal (02/11/2026):** `/portal/recuperar` → `POST /api/portal/recuperar` (resposta sempre
+  igual; 3/doc e 10/IP em 30 min) manda ao `clientes.email` (o e-mail do Auth é interno) o template `recuperarSenha` com
+  link `/portal/nova-senha?token_hash=…` (`generateLink` recovery; cria o usuário de Auth com senha aleatória se o associado
+  nunca entrou). A página confere o token SÓ no clique (`verifyOtp`; antivírus que abre o link não o gasta) e grava por
+  `/api/portal/senha`. Remetente `nao-responda@avisos.appsmartcar.com.br` (`EMAIL_SERVICO_FROM`). Regra da senha em
+  `src/lib/portal-senha.ts`. As três rotas estão no `PUBLIC_PATHS` do middleware.
 - **Regras puras:** `src/lib/comunicacao/cobranca.ts` (dados do aviso — testado contra tom de ameaça —, decisão de envio, backoff),
   `provedor.ts` (interface `EmailProvider` + `ResendProvider`; trocar por SES = um adaptador), `servidor.ts` (token, Svix).
 - **Não feito:** WhatsApp/SMS (falta a API oficial); os outros e-mails do sistema (2ª via, boas-vindas, voucher) ainda não

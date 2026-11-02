@@ -102,9 +102,10 @@ O painel fica vermelho com devolução > 2% ou spam > 0,05%.
   repositório mas ainda não são enviados.
 - Variáveis opcionais (sem elas vale o padrão do sistema): `EMAIL_LOGO_URL`, `PORTAL_LOGIN_URL`, `PORTAL_FATURAS_URL`,
   `APP_ANDROID_URL`, `APP_IOS_URL`, `DOC_ASSISTENCIA_URL`, `DOC_MANUAL_URL`, `DOC_REGIMENTO_URL`.
-- Pendências de conteúdo: o aviso do rastreador no atraso está desligado até a diretoria confirmar a regra; os botões
-  Android/iPhone ainda apontam para o app do sistema anterior; o texto manda usar "recuperação de senha", que o portal
-  ainda não tem; os documentos da boas-vindas estão em bit.ly (trocar por link direto).
+- Decisões (02/11/2026): o atraso avisa o bloqueio do sinal do rastreador; sem botões Android/iPhone; "cartão" fica.
+  Pendente: os documentos da boas-vindas estão em bit.ly (trocar por link direto).
+- "Esqueci minha senha" do portal: o e-mail sai de `nao-responda@avisos.appsmartcar.com.br` (`EMAIL_SERVICO_FROM` muda)
+  para o e-mail do cadastro do associado. Associado sem e-mail no cadastro precisa ligar para o atendimento.
 
 ## Não feito (próximos passos)
 - WhatsApp e SMS: a fila tem os estados e a régua para reaproveitar; falta o provedor (API oficial do WhatsApp).

@@ -415,21 +415,12 @@ export function AppAcesso({ links = LINKS_PADRAO }: { links?: Links }) {
         Seu plano e seus boletos na palma da mão
       </Text>
       <Text className="t-body" style={{ margin: '0 0 14px', fontSize: 14, lineHeight: '21px', color: COR.chumbo }}>
-        Consulte faturas, segunda via e dados do seu veículo no portal ou no aplicativo do associado.
-        Seu login é o seu <strong>CPF (somente números)</strong>. Esqueceu a senha? Use a opção de
-        recuperação na tela de entrada.
+        Consulte faturas, segunda via e dados do seu veículo no portal do associado.
+        Seu login é o seu <strong>CPF (somente números)</strong>. Esqueceu a senha? Use a opção
+        &quot;Esqueci minha senha&quot; na tela de entrada.
       </Text>
-      <Row>
-        <Column className="stack" style={{ paddingRight: 8 }}>
-          <BotaoApp href={links.portalLoginUrl}>Portal web</BotaoApp>
-        </Column>
-        <Column className="stack stack-gap" style={{ paddingRight: 8 }}>
-          <BotaoApp href={links.appAndroidUrl}>Android</BotaoApp>
-        </Column>
-        <Column className="stack stack-gap">
-          <BotaoApp href={links.appIosUrl}>iPhone (iOS)</BotaoApp>
-        </Column>
-      </Row>
+      {/* Botoes Android/iPhone retirados (decisao de 02/11/2026): o app atual e do sistema anterior. */}
+      <BotaoApp href={links.portalLoginUrl}>Acessar o portal</BotaoApp>
       <Text className="t-muted" style={{ margin: '12px 0 0', fontSize: 13, color: COR.neutro }}>
         Só precisa da segunda via?{' '}
         <Link href={links.portalFaturasUrl} className="lnk" style={{ color: '#0B6E93', fontWeight: 600 }}>

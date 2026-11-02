@@ -103,7 +103,7 @@ export default function BoasVindas(p: BoasVindasProps) {
 
       <SubTitulo>Seu primeiro acesso</SubTitulo>
       <Paragrafo style={{ marginBottom: 12 }}>
-        Acompanhe seu plano, boletos e dados do veículo no portal ou no aplicativo. Seu login é o seu{' '}
+        Acompanhe seu plano, boletos e dados do veículo no portal do associado. Seu login é o seu{' '}
         <strong>CPF/CNPJ (somente números)</strong>.{' '}
         {p.linkDefinirSenha
           ? 'Para sua segurança, você mesmo cria a sua senha pelo botão abaixo.'

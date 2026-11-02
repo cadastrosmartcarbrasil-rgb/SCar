@@ -62,3 +62,12 @@ export interface BoasVindasProps {
   empresa?: Partial<Empresa>;
   links?: Partial<Links>;
 }
+
+export interface RecuperarSenhaProps {
+  nome: string;
+  /** Link de uso unico para criar a nova senha (nunca gravado em log). */
+  link: string;
+  validadeMinutos?: number;
+  empresa?: Partial<Empresa>;
+  links?: Partial<Links>;
+}

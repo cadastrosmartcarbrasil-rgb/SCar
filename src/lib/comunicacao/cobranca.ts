@@ -20,6 +20,8 @@ export type DadosAviso = {
   offsetDias: number;
   /** "Modelo · placa final 23" — nunca a placa inteira na cobranca */
   veiculo?: string | null;
+  /** veiculo com rastreador na ficha: o atraso afirma o bloqueio do sinal; sem: texto condicional */
+  temRastreador?: boolean;
 };
 
 export type Rodape = {
@@ -35,8 +37,10 @@ export const RAZAO_SOCIAL_PADRAO = 'SMART CAR BRASIL PROTEÇÃO PATRIMONIAL MUTU
 /** Palavras que nao podem aparecer em e-mail de cobranca (tom de ameaca/alarme). */
 export const PALAVRAS_PROIBIDAS = [
   'urgente', 'ultimo aviso', 'último aviso', 'protesto', 'serasa', 'spc', 'negativa',
-  'judicial', 'processo', 'cancelamento imediato', 'bloqueado',
+  'judicial', 'processo', 'cancelamento imediato',
 ];
+// "bloqueado" saiu da lista (02/11/2026): o aviso de atraso diz, por decisao da diretoria,
+// que o sinal do rastreador e bloqueado enquanto houver contribuicao em aberto.
 
 export function dataBr(iso: string | null): string {
   if (!iso) return '';

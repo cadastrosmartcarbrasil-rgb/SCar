@@ -10,8 +10,9 @@ import type { Database } from '@/lib/database.types';
 // /vistoria/<token> e a vistoria no celular do cliente (0076) — o link tem
 // prazo proprio e e a unica capacidade de quem nao tem login.
 // /api/externa e a API de integracao (0151): autentica por CHAVE, nunca por sessao.
+// /portal/recuperar, /portal/nova-senha e /api/portal/recuperar: o "Esqueci minha senha" do portal (sem sessao; o link e de uso unico).
 // /api/v1/comunicacoes/email/{webhook,rotina} (0168): webhook pela assinatura do Resend, rotina pelo x-cron-secret ou sessao (a rota confere).
-const PUBLIC_PATHS = ['/api/externa', '/api/v1/comunicacoes/email/webhook', '/api/v1/comunicacoes/email/rotina', '/b', '/login', '/portal/login', '/auth/callback', '/cotacao', '/v', '/vistoria', '/revistoria', '/comunicar', '/manifest.webmanifest'];
+const PUBLIC_PATHS = ['/api/externa', '/api/v1/comunicacoes/email/webhook', '/api/v1/comunicacoes/email/rotina', '/b', '/login', '/portal/login', '/portal/recuperar', '/portal/nova-senha', '/api/portal/recuperar', '/auth/callback', '/cotacao', '/v', '/vistoria', '/revistoria', '/comunicar', '/manifest.webmanifest'];
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });

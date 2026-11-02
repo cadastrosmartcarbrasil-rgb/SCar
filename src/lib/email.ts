@@ -33,3 +33,12 @@ export const REMETENTE_COBRANCA_PADRAO = `Smart Car Brasil <cobranca@${DOMINIO_A
 export function remetenteCobranca(env: Record<string, string | undefined> = process.env): string {
   return preenchida(env.EMAIL_COBRANCA_FROM) ?? REMETENTE_COBRANCA_PADRAO;
 }
+
+/**
+ * Remetente dos e-mails de SERVICO do portal (recuperacao de senha): o mesmo subdominio
+ * verificado dos avisos, outro endereco. EMAIL_SERVICO_FROM manda; senao o padrao.
+ */
+export const REMETENTE_SERVICO_PADRAO = `Smart Car Brasil <nao-responda@${DOMINIO_AVISOS}>`;
+export function remetenteServico(env: Record<string, string | undefined> = process.env): string {
+  return preenchida(env.EMAIL_SERVICO_FROM) ?? REMETENTE_SERVICO_PADRAO;
+}

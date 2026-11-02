@@ -85,12 +85,17 @@ export async function rodarRotinaEmail(
 
     // o veiculo do boleto (modelo + final da placa); fatura agrupada nao tem
     const titulos = lote.map((i) => i.titulo_id).filter((x): x is string => !!x);
-    const veiculoDoTitulo = new Map<string, string | null>();
+    const veiculoDoTitulo = new Map<string, { rotulo: string | null; rastreador: boolean }>();
     if (titulos.length) {
       const { data: tv } = await admin.from('titulos_financeiros')
-        .select('id, veiculos(modelo, placa)').in('id', titulos);
-      for (const t of (tv ?? []) as { id: string; veiculos: { modelo: string | null; placa: string | null } | null }[]) {
-        veiculoDoTitulo.set(t.id, t.veiculos ? veiculoDoAviso(t.veiculos.modelo, t.veiculos.placa) : null);
+        .select('id, veiculos(modelo, placa, rastreador_imei)').in('id', titulos);
+      type V = { modelo: string | null; placa: string | null; rastreador_imei: string | null };
+      for (const t of (tv ?? []) as { id: string; veiculos: V | null }[]) {
+        if (!t.veiculos) continue;
+        veiculoDoTitulo.set(t.id, {
+          rotulo: veiculoDoAviso(t.veiculos.modelo, t.veiculos.placa),
+          rastreador: !!t.veiculos.rastreador_imei,
+        });
       }
     }
     const hoje = hojeSp();
@@ -121,7 +126,8 @@ export async function rodarRotinaEmail(
         pixCopiaCola: item.pix_copia_cola,
         linkBoleto: item.titulo_id ? linkDoBoleto(origem, item.titulo_id, item.data_vencimento) : null,
         offsetDias: offsets.get(item.regua_codigo) ?? 0,
-        veiculo: item.titulo_id ? veiculoDoTitulo.get(item.titulo_id) ?? null : null,
+        veiculo: item.titulo_id ? veiculoDoTitulo.get(item.titulo_id)?.rotulo ?? null : null,
+        temRastreador: item.titulo_id ? veiculoDoTitulo.get(item.titulo_id)?.rastreador : undefined,
       }, rodape, { origem, hoje });
 
       const res = await provedor.enviar({
