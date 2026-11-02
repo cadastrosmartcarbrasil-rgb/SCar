@@ -18,8 +18,9 @@ export async function POST(request: Request) {
   const s = createClient();
   const { data: { user } } = await s.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-  const { data: perfil } = await s.from('usuarios').select('papel, ativo').eq('id', user.id).maybeSingle();
-  if (!perfil?.ativo || !['admin', 'financeiro'].includes(perfil.papel)) {
+  // 0169: a celula cobranca_emails.editar (perfil ou extra; admin sempre)
+  const { data: pode } = await s.rpc('pode_emails_cobranca', { p_acao: 'editar' });
+  if (!pode) {
     return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
   }
   const body = (await request.json().catch(() => ({}))) as { email?: string; template?: string; offset_dias?: number };

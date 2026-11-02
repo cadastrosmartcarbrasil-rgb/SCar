@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { usePode } from '@/hooks/use-permissoes';
 import { toast } from 'sonner';
 import { AlertTriangle, Mail, PauseCircle, PlayCircle, RefreshCw, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -32,14 +33,22 @@ function Selo({ s }: { s: SituacaoEmail }) {
   return <span className={`rounded px-2 py-0.5 text-xs font-medium ${COR_SITUACAO[s] ?? 'bg-slate-100 text-slate-600'}`}>{ROTULO_SITUACAO_EMAIL[s] ?? s}</span>;
 }
 
-function Bloco({ titulo, children, acao }: { titulo: string; children: React.ReactNode; acao?: React.ReactNode }) {
+/** cobranca_emails.editar (0169): sem ela o painel e so consulta — o banco recusa de qualquer jeito. */
+const PodeEditar = createContext(false);
+const usePodeEditar = () => useContext(PodeEditar);
+
+function Bloco({ titulo, children, acao, travado = false }: {
+  titulo: string; children: React.ReactNode; acao?: React.ReactNode; travado?: boolean;
+}) {
   return (
     <section className="rounded-2xl border border-slate-200 bg-superficie p-4">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-display text-base font-semibold text-slate-900">{titulo}</h2>
-        {acao}
-      </div>
-      {children}
+      <fieldset disabled={travado} className="contents">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-display text-base font-semibold text-slate-900">{titulo}</h2>
+          {acao}
+        </div>
+        {children}
+      </fieldset>
     </section>
   );
 }
@@ -50,15 +59,24 @@ function pct(v: number) {
 
 export function PainelEmails() {
   const cfg = useEmailConfig();
+  const editar = usePode('cobranca_emails.editar');
   if (cfg.isLoading) return <p className="text-sm text-slate-500">Carregando…</p>;
   if (cfg.error) return <p className="text-sm text-rose-700">Erro ao ler: {(cfg.error as Error).message}</p>;
   if (!cfg.data) {
     return <p className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
-      Só a matriz (administrador e financeiro) acessa os e-mails de cobrança.
+      Você não tem acesso aos e-mails de cobrança. O administrador libera em Configurações → Usuários
+      (no perfil ou como extra): “Cobrança — e-mails de cobrança”.
     </p>;
   }
   return (
+    <PodeEditar.Provider value={editar}>
     <div className="space-y-5">
+      {!editar && (
+        <p className="rounded-xl border border-slate-200 bg-superficie-alta p-3 text-sm text-slate-700">
+          Acesso só de consulta. Para pausar, mudar a régua, a fila ou as supressões, o administrador libera
+          “Cobrança — e-mails de cobrança: editar”.
+        </p>
+      )}
       <Configuracao />
       <Indicadores />
       <Regua />
@@ -66,10 +84,12 @@ export function PainelEmails() {
       <Supressoes />
       <Previa />
     </div>
+    </PodeEditar.Provider>
   );
 }
 
 function Configuracao() {
+  const editar = usePodeEditar();
   const { data: cfg } = useEmailConfig();
   const salvar = useSalvarEmailConfig();
   const rodar = useRodarRotinaEmail();
@@ -95,6 +115,7 @@ function Configuracao() {
 
   return (
     <Bloco
+      travado={!editar}
       titulo="Situação dos envios"
       acao={
         <div className="flex flex-wrap gap-2">
@@ -216,7 +237,7 @@ function Regua() {
   const { data } = useEmailRegua();
   const salvar = useSalvarRegua();
   return (
-    <Bloco titulo="Régua de avisos">
+    <Bloco titulo="Régua de avisos" travado={!usePodeEditar()}>
       <p className="mb-3 text-sm text-slate-600">
         Só boletos emitidos pelo SCar e registrados no banco. Atraso conta do vencimento em dia útil.
         Boleto pago ou cancelado derruba os avisos que ainda não saíram.
@@ -252,6 +273,7 @@ function Fila() {
   const { data: regua } = useEmailRegua();
   const reenviar = useReenviarEmail();
   const cancelar = useCancelarEmail();
+  const editar = usePodeEditar();
   const nomes = useMemo(() => new Map((regua ?? []).map((r) => [r.codigo, r.nome])), [regua]);
   return (
     <Bloco titulo="Fila e histórico">
@@ -285,12 +307,12 @@ function Fila() {
                   <td className="p-2"><Selo s={i.status as SituacaoEmail} />{i.tentativas > 1 && <span className="ml-1 text-xs text-slate-500">{i.tentativas} tentativas</span>}</td>
                   <td className="p-2 text-xs text-slate-600">{i.erro ?? i.motivo ?? ''}</td>
                   <td className="p-2 whitespace-nowrap text-right">
-                    {['falhou', 'expirado', 'cancelado'].includes(i.status) && (
+                    {editar && ['falhou', 'expirado', 'cancelado'].includes(i.status) && (
                       <Button variant="ghost" className="px-2 py-1 text-xs" onClick={() => reenviar.mutate({ p_id: i.id }, {
                         onSuccess: () => toast.success('Voltou para a fila de hoje'), onError: (e) => toast.error(e.message),
                       })}>Reenviar</Button>
                     )}
-                    {i.status === 'pendente' && (
+                    {editar && i.status === 'pendente' && (
                       <Button variant="ghost" className="px-2 py-1 text-xs" onClick={() => cancelar.mutate({ p_id: i.id }, {
                         onSuccess: () => toast.success('Cancelado'), onError: (e) => toast.error(e.message),
                       })}>Cancelar</Button>
@@ -315,7 +337,7 @@ function Supressoes() {
   const [novo, setNovo] = useState('');
   const MOTIVO: Record<string, string> = { bounce_permanente: 'Devolvido (endereço inexistente)', reclamacao: 'Marcou como spam', manual: 'Manual' };
   return (
-    <Bloco titulo="Lista de supressão (nunca recebem)">
+    <Bloco titulo="Lista de supressão (nunca recebem)" travado={!usePodeEditar()}>
       <p className="mb-3 text-sm text-slate-600">Endereço devolvido em definitivo ou que marcou como spam entra aqui sozinho e não recebe mais nenhum aviso.</p>
       <div className="mb-3 grid gap-2 sm:grid-cols-3">
         <Input caixa="original" placeholder="Buscar e-mail" value={busca} onChange={(e) => setBusca(e.target.value)} />
@@ -371,14 +393,15 @@ function Previa() {
   const teste = useEnviarTesteEmail();
   const m = MODELOS.find((x) => x.valor === modelo) ?? MODELOS[0];
   const previa = usePreviaEmail(m.template, m.offset);
+  const editar = usePodeEditar();
   return (
     <Bloco titulo="Pré-visualização e envio de teste">
       <div className="mb-3 grid gap-2 sm:grid-cols-3">
         <Select value={modelo} onChange={(e) => setModelo(e.target.value)}>
           {MODELOS.map((x) => <option key={x.valor} value={x.valor}>{x.rotulo}</option>)}
         </Select>
-        <Input caixa="original" type="email" placeholder="Enviar teste para…" value={email} onChange={(e) => setEmail(e.target.value)} />
-        <Button variant="secondary" disabled={!email.trim() || teste.isPending} onClick={() => teste.mutate(
+        <Input caixa="original" type="email" placeholder="Enviar teste para…" value={email} disabled={!editar} onChange={(e) => setEmail(e.target.value)} />
+        <Button variant="secondary" disabled={!editar || !email.trim() || teste.isPending} onClick={() => teste.mutate(
           { email, template: m.template, offset_dias: m.offset },
           { onSuccess: () => toast.success('Teste enviado'), onError: (e) => toast.error(e.message) },
         )}><Send className="h-4 w-4" /> Enviar teste</Button>

@@ -5255,6 +5255,8 @@ export type Database = {
       pode_assistencia: { Args: Record<string, never>; Returns: boolean };
       pode_liberar_assistencia: { Args: Record<string, never>; Returns: boolean };
       minhas_permissoes: { Args: Record<string, never>; Returns: string[] };
+      // 0169 — a celula cobranca_emails.<ver|editar> da grade (perfil ou extra; admin sempre).
+      pode_emails_cobranca: { Args: { p_acao?: string }; Returns: boolean };
       publicar_versao_termo: { Args: { p_modelo_id: string; p_observacao?: string | null }; Returns: TermoVersaoRow };
       anexar_pdf_versao_termo: { Args: { p_versao_id: string; p_path: string; p_sha256: string }; Returns: undefined };
       definir_pdf_termo_modelo: {
