@@ -61,7 +61,12 @@ branch). Enquanto não forem feitas, a trava do SessionStart tem um furo conheci
   blocos nasceram editados à mão no servidor — **edite o `Caddyfile` no repositório, nunca em
   `/opt/scar`**, e nunca rode `git checkout Caddyfile` lá sem comparar antes. Os links do sistema são
   montados pelo `origin` da requisição, então nenhum ficou preso ao domínio antigo; o que era fixo
-  (cron da baixa, scripts de deploy, User-Agent do CNPJ) foi trocado. **E-mail (14/10/2026): nada sai
+  (cron da baixa, scripts de deploy, User-Agent do CNPJ) foi trocado.
+  **DNS (02/11/2026):** na zona da KingHost o `@` tem SÓ o A `177.153.194.175` (o VPS). Um AAAA
+  `2804:10:8001::209:231` (hospedagem KingHost) e os CNAMEs `avisos`/`www.avisos` → `web1141.kinghost.net`
+  apareceram ao criar hospedagem no painel e derrubaram o site (página padrão KingHost, "não seguro"):
+  apagados. **Nunca criar hospedagem de site na KingHost para este domínio**; os registros do Resend são
+  `resend._domainkey.avisos`, `send.avisos`, `rsend.avisos`, `_dmarc`. **E-mail (14/10/2026): nada sai
   mais como smartvida** — remetente `nao-responda@appsmartcar.com.br` e contato `contato@appsmartcar.com.br`,
   num lugar só (`src/lib/email.ts`, testado; env vazia conta como ausente). O `.env` do VPS foi limpo
   (0 ocorrências de smartvida, contêiner conferido em 14/10). Falta verificar o domínio no Resend. Ficam de propósito: o redirect de
