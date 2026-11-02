@@ -33,6 +33,7 @@ import {
   CalendarDays,
   PanelLeftClose,
   PanelLeftOpen,
+  Mail,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
@@ -70,6 +71,7 @@ export const GESTAO: Entrada[] = [
       { href: '/cobrancas/fila', label: 'Fila de Cobrança', icon: PhoneCall },
       { href: '/cobrancas/revistorias', label: 'Revistorias', icon: ScanEye, contador: 'revistorias' },
       { href: '/cobrancas/calendario', label: 'Calendário de Vencimentos', icon: CalendarDays },
+      { href: '/cobrancas/emails', label: 'E-mails de Cobrança', icon: Mail },
       { href: '/cobrancas/boletos', label: 'Boletos e Remessas', icon: Receipt },
     ],
   },

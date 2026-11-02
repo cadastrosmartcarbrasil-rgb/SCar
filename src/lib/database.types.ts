@@ -4003,6 +4003,95 @@ type Rel<Col extends string, RefRel extends string> = {
   referencedColumns: ['id'];
 };
 
+// ---- 0168: e-mails de cobranca ----
+export type EmailStatus =
+  | 'pendente' | 'enviando' | 'enviado' | 'entregue' | 'falhou' | 'bounce'
+  | 'reclamado' | 'suprimido' | 'cancelado' | 'expirado';
+export type EmailConfigRow = {
+  id: boolean;
+  pausado: boolean;
+  modo: 'sandbox' | 'live';
+  allowlist: string[];
+  limite_por_segundo: number;
+  lote_maximo: number;
+  janela_inicio: string;
+  janela_fim: string;
+  permite_domingo: boolean;
+  reply_to: string | null;
+  updated_at: string;
+  updated_by: string | null;
+};
+export type EmailReguaRow = {
+  codigo: string;
+  nome: string;
+  offset_dias: number;
+  template: 'aviso_vencimento' | 'vence_hoje' | 'atraso';
+  ativo: boolean;
+  ordem: number;
+  updated_at: string;
+};
+export type EmailOutboxRow = {
+  id: string;
+  titulo_id: string | null;
+  cliente_id: string | null;
+  regua_codigo: string;
+  template: string;
+  destinatario: string;
+  data_alvo: string;
+  assunto: string | null;
+  status: EmailStatus;
+  tentativas: number;
+  proxima_tentativa_em: string;
+  reservado_em: string | null;
+  message_id: string | null;
+  erro: string | null;
+  motivo: string | null;
+  criado_em: string;
+  enviado_em: string | null;
+  entregue_em: string | null;
+  atualizado_em: string;
+};
+export type EmailEventosRow = {
+  id: string;
+  provedor: string;
+  evento_externo: string;
+  tipo: string;
+  message_id: string | null;
+  outbox_id: string | null;
+  destinatario: string | null;
+  detalhe: string | null;
+  ocorrido_em: string | null;
+  recebido_em: string;
+};
+export type EmailSupressoesRow = {
+  id: string;
+  email: string;
+  motivo: 'bounce_permanente' | 'reclamacao' | 'manual';
+  origem_message_id: string | null;
+  detalhe: string | null;
+  ativo: boolean;
+  criado_em: string;
+  criado_por: string | null;
+  liberado_em: string | null;
+  liberado_por: string | null;
+  liberacao_motivo: string | null;
+};
+export type EmailLoteItem = {
+  id: string;
+  titulo_id: string | null;
+  cliente_id: string | null;
+  regua_codigo: string;
+  template: string;
+  destinatario: string;
+  tentativas: number;
+  cliente_nome: string | null;
+  valor: number | null;
+  data_vencimento: string | null;
+  linha_digitavel: string | null;
+  pix_copia_cola: string | null;
+  titulo_status: string | null;
+};
+
 type TableDef<R, Rels extends readonly unknown[] = []> = {
   Row: R;
   Insert: Insert<R>;
@@ -4272,9 +4361,34 @@ export type Database = {
       papel_permissoes: TableDef<PapelPermissoesRow, [Rel<'alterado_por', 'usuarios'>]>;
       perfil_permissoes: TableDef<PerfilPermissoesRow, [Rel<'alterado_por', 'usuarios'>]>;
       usuario_permissoes: TableDef<UsuarioPermissoesRow, [Rel<'usuario_id', 'usuarios'>, Rel<'concedido_por', 'usuarios'>]>;
+      email_config: TableDef<EmailConfigRow>;
+      email_regua: TableDef<EmailReguaRow>;
+      email_outbox: TableDef<EmailOutboxRow, [Rel<'titulo_id', 'titulos_financeiros'>, Rel<'cliente_id', 'clientes'>]>;
+      email_eventos: TableDef<EmailEventosRow>;
+      email_supressoes: TableDef<EmailSupressoesRow>;
     };
     Views: { [_ in never]: never };
     Functions: {
+      // ---- 0168: e-mails de cobranca ----
+      enfileirar_avisos_cobranca: { Args: { p_hoje?: string | null }; Returns: Record<string, unknown> };
+      reservar_lote_email: { Args: { p_limite?: number; p_agora?: string | null }; Returns: EmailLoteItem[] };
+      concluir_envio_email: {
+        Args: { p_id: string; p_status: string; p_message_id?: string | null; p_erro?: string | null; p_proxima?: string | null; p_assunto?: string | null };
+        Returns: undefined;
+      };
+      registrar_evento_email: {
+        Args: {
+          p_provedor: string; p_evento_externo: string; p_tipo: string; p_message_id: string | null;
+          p_destinatario?: string | null; p_detalhe?: string | null; p_permanente?: boolean; p_ocorrido_em?: string | null;
+        };
+        Returns: string;
+      };
+      email_suprimido: { Args: { p_email: string }; Returns: boolean };
+      suprimir_email_manual: { Args: { p_email: string; p_motivo: string }; Returns: undefined };
+      liberar_supressao_email: { Args: { p_id: string; p_motivo: string }; Returns: undefined };
+      reenviar_email: { Args: { p_id: string }; Returns: undefined };
+      cancelar_email: { Args: { p_id: string; p_motivo?: string | null }; Returns: undefined };
+      email_painel_resumo: { Args: { p_dias?: number }; Returns: Record<string, number> | null };
       // ---- 0055: mural interno ----
       memos_do_usuario: {
         Args: { p_incluir_lidos?: boolean; p_limite?: number };

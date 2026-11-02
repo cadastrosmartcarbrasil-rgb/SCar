@@ -22,3 +22,14 @@ function preenchida(valor: string | undefined | null): string | null {
 export function remetenteEmail(env: Record<string, string | undefined> = process.env): string {
   return preenchida(env.EMAIL_FROM) ?? preenchida(env.RESEND_FROM) ?? REMETENTE_PADRAO;
 }
+
+/**
+ * Remetente dos AVISOS DE COBRANCA (0168): subdominio proprio
+ * (avisos.appsmartcar.com.br) para a reputacao da cobranca nao contaminar o
+ * resto. EMAIL_COBRANCA_FROM manda; senao o padrao.
+ */
+export const DOMINIO_AVISOS = `avisos.${DOMINIO_EMAIL}`;
+export const REMETENTE_COBRANCA_PADRAO = `Smart Car Brasil <cobranca@${DOMINIO_AVISOS}>`;
+export function remetenteCobranca(env: Record<string, string | undefined> = process.env): string {
+  return preenchida(env.EMAIL_COBRANCA_FROM) ?? REMETENTE_COBRANCA_PADRAO;
+}
