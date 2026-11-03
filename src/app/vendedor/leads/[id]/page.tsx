@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FotosVistoria } from '@/components/vistoria/fotos-vistoria';
 import { LinkDaProposta } from '@/components/hotlink/cotacao-publica';
 import { AceitePresencial } from '@/components/vendas/aceite-presencial';
+import { EditarCotacao } from '@/components/vendas/editar-cotacao';
 import { DadosBasicosLead } from '@/components/vendas/dados-basicos-lead';
 import { useCotacoes, useLead, useMoverLead, useUploadCrlv } from '@/hooks/use-vendas';
 import { podeEditarCotacao } from '@/lib/crm';
@@ -33,6 +34,7 @@ export default function LeadVendedorPage({ params }: { params: Promise<{ id: str
   const mover = useMoverLead();
   const [vistoriaAberta, setVistoriaAberta] = useState(false);
   const [colhendoAceite, setColhendoAceite] = useState<CotacoesRow | null>(null);
+  const [ajustando, setAjustando] = useState<CotacoesRow | 'NOVA' | null>(null);
 
   if (isLoading) return <p className="text-sm text-slate-400">Carregando…</p>;
   if (!lead) {
@@ -134,6 +136,16 @@ export default function LeadVendedorPage({ params }: { params: Promise<{ id: str
 
       {/* A proposta com link proprio: o vendedor manda no WhatsApp e o cliente
           abre na hora, sem depender de e-mail. */}
+      {/* Lead sem proposta: gerar aqui mesmo, conferindo o veiculo */}
+      {(cotacoes ?? []).length === 0 && podeEditarCotacao(lead.status) && (
+        <Card>
+          <CardContent className="space-y-2 py-4">
+            <p className="text-sm text-slate-600">Este lead ainda não tem proposta.</p>
+            <Button className="w-full" onClick={() => setAjustando('NOVA')}>Gerar proposta</Button>
+          </CardContent>
+        </Card>
+      )}
+
       {(cotacoes ?? []).length > 0 && (
         <Card>
           <CardHeader>
@@ -157,6 +169,11 @@ export default function LeadVendedorPage({ params }: { params: Promise<{ id: str
                   <p className="-mt-1.5 text-[0.7188rem] text-slate-500">
                     Inclui {formatCurrency(Number(c.valor_assistencia_profissional))} de Assistência Profissional (o cliente não vê).
                   </p>
+                )}
+                {podeEditarCotacao(lead.status) && (
+                  <Button variant="secondary" className="w-full" onClick={() => setAjustando(c)}>
+                    Ajustar veículo e proposta
+                  </Button>
                 )}
                 <LinkDaProposta token={c.token} compacto celular={lead.celular} nome={lead.nome} />
                 {/* Com o cliente na frente, nao ha por que depender do celular
@@ -234,6 +251,9 @@ export default function LeadVendedorPage({ params }: { params: Promise<{ id: str
 
       {colhendoAceite && (
         <AceitePresencial lead={lead} cotacao={colhendoAceite} onClose={() => setColhendoAceite(null)} />
+      )}
+      {ajustando && (
+        <EditarCotacao lead={lead} cotacao={ajustando === 'NOVA' ? null : ajustando} onClose={() => setAjustando(null)} />
       )}
     </div>
   );

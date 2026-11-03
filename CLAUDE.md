@@ -6609,6 +6609,21 @@ no fim — o runner procura por "PASSARAM") e rode `npm run schema`.
 - **Antes de responder "não dá"** sobre acesso a repo/arquivo, confira o branch: o
   deploy e o trabalho vivem em `claude/claude-md-opcao-x-98kfj5`.
 
+## FICHA DO LEAD: VEÍCULO E PROPOSTA NO TOPO (03/11/2026, sem migration)
+Pedido do usuário: o lead em "Novo lead" não tinha como ajustar o veículo e reenviar a proposta (o "Editar" ficava no fim
+da página, depois do fechamento inteiro, e só mexia em plano/opcionais/FIPE).
+- **`<VeiculoEProposta>`** (`src/components/vendas/veiculo-proposta.tsx`) logo abaixo do cabeçalho de `/vendas/[id]`:
+  placa, marca/modelo/ano, tipo, FIPE (ou valor protegido) + a proposta VIGENTE (a mais nova) com *Reenviar no WhatsApp*,
+  copiar, abrir e colher aceite; anteriores recolhidas. Botão **Ajustar veículo e proposta** — ou **Gerar proposta**
+  quando o lead não tem cotação (o caso do lead NOVO). O card de cotações do fim da página saiu.
+- **`<EditarCotacao>` aceita `cotacao = null`** (gera a 1ª pelo `useSalvarCotacao`; desconto só depois, ao ajustar) e
+  ganhou a seção **Veículo**: placa com consulta FIPE, marca, modelo, ano, tipo (trocar tipo tira o plano que não atende),
+  FIPE, cota e a cascata FIPE. Ao salvar, o veículo vai para o LEAD (`useSalvarFichaLead`: placa, marca, modelo, ano,
+  código FIPE, tipo, cota, `valor_fipe`, `valor_fipe_mercado`) e a cotação recebe tipo e cota (`atualizar_cotacao`).
+- **Portal do vendedor** (`/vendedor/leads/[id]`): os mesmos botões, com o mesmo modal.
+- **Contatos e agenda** (`contatos-lead.tsx`) nasce RECOLHIDO: uma linha com o retorno marcado e o último contato;
+  *Registrar contato* abre o formulário e a linha do tempo; registrar fecha de novo.
+
 ## ESCALA PARA DESKTOP E COTAÇÃO DE APRESENTAÇÃO (31/10/2026, só visual — sem migration)
 Pedido do usuário: no PC sobrava espaço, a letra era pequena e a tela de cotação era estreita e sem presença.
 - **Causa da letra pequena:** ~900 classes `text-[11px]`/`text-[12px]`… em PIXEL (130 arquivos), iguais em qualquer monitor. Viraram

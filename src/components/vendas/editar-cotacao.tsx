@@ -2,14 +2,18 @@
 
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Lock, Percent, ShieldCheck, Loader2 } from 'lucide-react';
+import { Car, Lock, Percent, ShieldCheck, Loader2, Search } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { FormField, Input, Select, MoneyInput, PercentInput } from '@/components/ui/field';
 import {
   usePlanos, useProdutos, useProdutosPorPlano, useTiposPorProduto, useTiposPorPlano, useSugestoesPorPlano,
-  useLimiteFipe, useTiposVeiculo,
+  useLimiteFipe, useTiposVeiculo, useCotasParticipacao,
 } from '@/hooks/use-precificacao';
+import { useFipePorPlaca } from '@/hooks/use-fipe';
+import { FipeConsulta } from '@/components/fipe/fipe-consulta';
+import { normalizarPlaca } from '@/lib/placa';
+import { placaCompleta, tipoVeiculoSugerido } from '@/lib/venda-publica';
 import { acimaDoLimite, baseDoCalculo, type DecisaoLimite } from '@/lib/limite-fipe';
 import { AvisoLimiteFipe } from '@/components/vendas/aviso-limite-fipe';
 import { alternarOpcional, planosDoTipo, sugestoesDoPlano } from '@/lib/planos-oferta';
@@ -17,7 +21,7 @@ import { produtosParaTipo, regraRastreadorCobra, semRastreadorDaRegra } from '@/
 import { useRegraRastreador } from '@/hooks/use-regra-rastreador';
 import {
   useAtualizarCotacao, useProdutosObrigatorios, useSimularDesconto, useAprovarDesconto,
-  useRegrasAssistenciaProfissional, useCotacaoAoVivo,
+  useRegrasAssistenciaProfissional, useCotacaoAoVivo, useSalvarCotacao, useSalvarFichaLead,
 } from '@/hooks/use-vendas';
 import { calcularDesconto, percentualParaValorFinal, podeEditarCotacao } from '@/lib/crm';
 import { validarAssistenciaProfissional } from '@/lib/assistencia-profissional';
@@ -27,13 +31,15 @@ import { separarOpcionais } from '@/lib/vistoria';
 import { formatCurrency } from '@/lib/utils';
 import type { CotacoesRow, LeadsRow } from '@/lib/database.types';
 
-// Edicao da cotacao durante a negociacao: troca de plano, opcionais, FIPE e
-// desconto. Itens OBRIGATORIOS do plano aparecem travados (nao podem sair).
+// Ajuste da proposta durante a negociacao: o VEICULO (placa, marca, modelo,
+// ano, tipo, FIPE), o plano, os opcionais e o desconto, na mesma tela.
+// Itens OBRIGATORIOS do plano aparecem travados (nao podem sair).
+// Sem `cotacao` (lead que ainda nao tem proposta) a tela GERA a primeira.
 export function EditarCotacao({
   lead, cotacao, onClose,
 }: {
   lead: LeadsRow;
-  cotacao: CotacoesRow;
+  cotacao: CotacoesRow | null;
   onClose: () => void;
 }) {
   const { data: planos } = usePlanos();
@@ -43,29 +49,48 @@ export function EditarCotacao({
   const { data: tiposPorPlano } = useTiposPorPlano();
   const { data: tiposVeiculo } = useTiposVeiculo();
   const { data: sugestoesPorPlano } = useSugestoesPorPlano();
+  const { data: cotas } = useCotasParticipacao();
   const atualizar = useAtualizarCotacao();
+  const criarCotacao = useSalvarCotacao();
+  const salvarLead = useSalvarFichaLead();
   const aprovar = useAprovarDesconto();
+  const fipePorPlaca = useFipePorPlaca();
+  const nova = !cotacao;
+
+  // O veiculo: nasce do lead e pode ser corrigido aqui mesmo, antes de reenviar.
+  const [placa, setPlaca] = useState(lead.placa ?? '');
+  const [marca, setMarca] = useState(lead.marca ?? '');
+  const [modelo, setModelo] = useState(lead.modelo ?? '');
+  const [anoModelo, setAnoModelo] = useState<number | ''>(lead.ano_modelo ?? '');
+  const [codigoFipe, setCodigoFipe] = useState(lead.codigo_fipe ?? '');
+  const [tipoId, setTipoId] = useState<string>(cotacao?.tipo_veiculo_id ?? lead.tipo_veiculo_id ?? '');
+  const [cotaId, setCotaId] = useState<string>(cotacao?.cota_participacao_id ?? lead.cota_participacao_id ?? '');
+  const [cascata, setCascata] = useState(false);
+  const regionalId = cotacao?.regional_id ?? lead.regional_id ?? null;
 
   // 0165 — a FIPE do veiculo; acima do limite da tabela, o calculo usa o valor protegido.
-  const [fipeVeiculo, setFipeVeiculo] = useState<number | null>(Number(cotacao.valor_fipe_mercado ?? cotacao.fipe));
-  const [decisaoLimite, setDecisaoLimite] = useState<DecisaoLimite | null>(cotacao.valor_fipe_mercado ? 'LIMITE' : null);
-  const [valorProtegido, setValorProtegido] = useState<number | null>(cotacao.valor_fipe_mercado ? Number(cotacao.fipe) : null);
-  const { data: limiteFipe } = useLimiteFipe(cotacao.tipo_veiculo_id);
+  const mercadoInicial = cotacao ? cotacao.valor_fipe_mercado : lead.valor_fipe_mercado;
+  const baseInicial = cotacao ? cotacao.fipe : lead.valor_fipe;
+  const [fipeVeiculo, setFipeVeiculo] = useState<number | null>(
+    mercadoInicial != null ? Number(mercadoInicial) : baseInicial != null ? Number(baseInicial) : null);
+  const [decisaoLimite, setDecisaoLimite] = useState<DecisaoLimite | null>(mercadoInicial ? 'LIMITE' : null);
+  const [valorProtegido, setValorProtegido] = useState<number | null>(mercadoInicial ? Number(baseInicial) : null);
+  const { data: limiteFipe } = useLimiteFipe(tipoId || null);
   const acimaLimite = acimaDoLimite(fipeVeiculo, limiteFipe);
   const { base: fipe, mercado: fipeMercado } = baseDoCalculo({
     fipe: fipeVeiculo, limite: limiteFipe, decisao: decisaoLimite, valorProtegido,
   });
-  const [planoId, setPlanoId] = useState(cotacao.plano_id ?? '');
-  const [opcionais, setOpcionais] = useState<string[]>(cotacao.opcionais_ids ?? []);
-  const [desconto, setDesconto] = useState(Number(cotacao.desconto_percentual ?? 0));
+  const [planoId, setPlanoId] = useState(cotacao?.plano_id ?? lead.plano_id ?? '');
+  const [opcionais, setOpcionais] = useState<string[]>(cotacao?.opcionais_ids ?? []);
+  const [desconto, setDesconto] = useState(Number(cotacao?.desconto_percentual ?? 0));
   // 0158 — Assistencia Profissional: interna e fora do desconto
   const { data: regrasAp } = useRegrasAssistenciaProfissional(lead.id);
-  const [assistencia, setAssistencia] = useState<number | null>(Number(cotacao.valor_assistencia_profissional ?? 0) || null);
+  const [assistencia, setAssistencia] = useState<number | null>(Number(cotacao?.valor_assistencia_profissional ?? 0) || null);
   const erroAp = validarAssistenciaProfissional(assistencia, regrasAp);
   const [alcada, setAlcada] = useState<{ email: string; senha: string; justificativa: string } | null>(null);
 
-  const { data: obrigatorios } = useProdutosObrigatorios(cotacao.tipo_veiculo_id, planoId || null, fipe ?? 0);
-  const { data: simulacao } = useSimularDesconto(cotacao.id, desconto);
+  const { data: obrigatorios } = useProdutosObrigatorios(tipoId || null, planoId || null, fipe ?? 0);
+  const { data: simulacao } = useSimularDesconto(cotacao?.id ?? '', desconto);
 
   const idsObrigatorios = useMemo(
     () => (obrigatorios ?? []).map((o) => o.produto_id),
@@ -76,18 +101,18 @@ export function EditarCotacao({
   // So o que atende o tipo do veiculo (0089). O que ja esta na cotacao e nao
   // atende fica na lista, marcado, para nao sumir calado.
   // 0173 — a regra do rastreador da unidade que precificou a cotacao.
-  const { data: regraRastreador } = useRegraRastreador(cotacao.tipo_veiculo_id, cotacao.regional_id ?? null);
+  const { data: regraRastreador } = useRegraRastreador((tipoId || null), regionalId);
   const disponiveis = useMemo(
     () => semRastreadorDaRegra(
       produtosParaTipo(
         (produtos ?? []).filter((p) => p.status && !idsObrigatorios.includes(p.id)),
-        cotacao.tipo_veiculo_id, tiposPorProduto, opcionais,
+        (tipoId || null), tiposPorProduto, opcionais,
       ),
       // O rastreador opcional so abaixo do minimo (0090), pela regra da unidade (0173).
       regraRastreadorCobra(regraRastreador, fipe),
       opcionais,
     ),
-    [produtos, idsObrigatorios, cotacao.tipo_veiculo_id, tiposPorProduto, opcionais, regraRastreador, fipe],
+    [produtos, idsObrigatorios, tipoId, tiposPorProduto, opcionais, regraRastreador, fipe],
   );
 
   // O combo tambem carrega OPCIONAIS (plano_produtos). Eles nao sao
@@ -108,16 +133,16 @@ export function EditarCotacao({
   // consultor trocava plano/opcional sem saber quanto ficava.
   const avulsosCobrados = useMemo(() => avulsosDoVeiculo(opcionais, idsDoPlano), [opcionais, idsDoPlano]);
   const aoVivo = useCotacaoAoVivo({
-    fipe, tipoVeiculoId: cotacao.tipo_veiculo_id, planoId: planoId || null,
+    fipe, tipoVeiculoId: (tipoId || null), planoId: planoId || null,
     avulsos: avulsosCobrados, oferecidos: livres.filter((p) => !p.foraDoTipo).map((p) => p.id),
-    regionalId: cotacao.regional_id ?? null,
+    regionalId,
   });
   const atual = aoVivo.data?.atual ?? null;
   const precoOpcional = aoVivo.data?.precoOpcional ?? {};
   const itens = atual?.detalhamento_produtos ?? [];
-  const totalTabela = atual ? Number(atual.valor_total_mensalidade) : Number(cotacao.total_mensalidade);
-  const adesaoTabela = atual ? Number(atual.taxa_adesao ?? 0) : Number(cotacao.taxa_adesao ?? 0);
-  const mudouTabela = Math.abs(totalTabela - Number(cotacao.total_mensalidade)) > 0.004;
+  const totalTabela = atual ? Number(atual.valor_total_mensalidade) : Number(cotacao?.total_mensalidade ?? 0);
+  const adesaoTabela = atual ? Number(atual.taxa_adesao ?? 0) : Number(cotacao?.taxa_adesao ?? 0);
+  const mudouTabela = !!cotacao && Math.abs(totalTabela - Number(cotacao.total_mensalidade)) > 0.004;
 
   const limite = Number(simulacao?.limite_regional ?? 0);
   const previa = calcularDesconto(totalTabela, adesaoTabela, desconto, limite);
@@ -128,6 +153,49 @@ export function EditarCotacao({
     const incluidos = novo ? produtosPorPlano?.[novo] ?? [] : [];
     const sug = sugestoesDoPlano(novo || null, sugestoesPorPlano, disponiveis.map((d) => d.id), incluidos);
     setOpcionais(sug);
+  }
+
+  // Trocar o tipo: o plano que nao atende o tipo novo sai (o banco recusaria, 0162).
+  function trocarTipo(novo: string) {
+    setTipoId(novo);
+    if (planoId && !planosDoTipo((planos ?? []).filter((p) => p.id === planoId), novo || null, tiposPorPlano).length) {
+      setPlanoId('');
+      setOpcionais([]);
+      toast.message('O plano escolhido não atende este tipo de veículo — escolha outro.');
+    }
+  }
+
+  async function consultarPlaca() {
+    const p = normalizarPlaca(placa);
+    if (!placaCompleta(p)) return toast.error('Informe a placa completa');
+    const r = await fipePorPlaca.mutateAsync(p).catch(() => null);
+    if (!r?.configured) return toast.error('Consulta de placa não configurada no servidor');
+    const v = r.valor;
+    if (!v) { setCascata(true); return toast.message('Placa não encontrada na FIPE — busque pelo modelo abaixo.'); }
+    if (v.marca) setMarca(v.marca);
+    if (v.modelo) setModelo(v.modelo);
+    if (v.anoModelo) setAnoModelo(v.anoModelo);
+    if (v.codigoFipe) setCodigoFipe(v.codigoFipe);
+    if (v.valor != null) { setFipeVeiculo(v.valor); setDecisaoLimite(null); setValorProtegido(null); }
+    const sugestao = tipoVeiculoSugerido(v.bruto, (tiposVeiculo ?? []).map((t) => ({ id: t.id, nome: t.nome })));
+    if (sugestao && sugestao !== tipoId) trocarTipo(sugestao);
+    toast.success(`FIPE: ${formatCurrency(v.valor ?? 0)}`);
+  }
+
+  /** O veiculo do lead acompanha a proposta: e dele que o veiculo nasce na base. */
+  async function gravarVeiculoDoLead() {
+    await salvarLead.mutateAsync({
+      id: lead.id,
+      placa: placa ? normalizarPlaca(placa) : null,
+      marca: marca.trim() || null,
+      modelo: modelo.trim() || null,
+      ano_modelo: anoModelo === '' ? null : Number(anoModelo),
+      codigo_fipe: codigoFipe || null,
+      tipo_veiculo_id: tipoId || null,
+      cota_participacao_id: cotaId || null,
+      valor_fipe: fipe,
+      valor_fipe_mercado: fipeMercado,
+    });
   }
 
   if (!podeEditarCotacao(lead.status)) {
@@ -142,19 +210,37 @@ export function EditarCotacao({
     );
   }
 
-  function salvar(e: React.FormEvent) {
+  async function salvar(e: React.FormEvent) {
     e.preventDefault();
+    if (!tipoId) return toast.error('Selecione o tipo de veículo');
+    if (!fipeVeiculo) return toast.error('Informe o valor FIPE do veículo');
     if (erroAp) return toast.error(`Assistência Profissional: ${erroAp}`);
     if (!fipe) return toast.error('FIPE acima do limite da tabela: proteja pelo limite (valor protegido)');
+    if (nova) {
+      try {
+        await gravarVeiculoDoLead();
+        const c = await criarCotacao.mutateAsync({
+          leadId: lead.id, fipe, tipoVeiculoId: tipoId, cotaId: cotaId || null, planoId: planoId || null,
+          produtosIds: avulsosDoVeiculo(opcionais, idsDoPlano),
+          assistenciaProfissional: assistencia ?? 0, valorFipeMercado: fipeMercado,
+        });
+        toast.success(`Proposta gerada — ${formatCurrency(Number(c.total_com_desconto ?? c.total_mensalidade))}/mês. Desconto, se houver, em "Ajustar".`);
+        onClose();
+      } catch (err) { toast.error((err as Error).message); }
+      return;
+    }
     if (previa.exigeAprovacao) {
       // Desconto acima do limite da franquia: pede a alcada do gestor.
       setAlcada({ email: '', senha: '', justificativa: '' });
       return;
     }
+    try { await gravarVeiculoDoLead(); } catch (err) { return toast.error((err as Error).message); }
     atualizar.mutate(
       {
-        cotacaoId: cotacao.id,
+        cotacaoId: cotacao!.id,
         fipe,
+        tipoVeiculoId: tipoId,
+        cotaId: cotaId || null,
         planoId: planoId || null,
         limparPlano: !planoId,
         // so o que e vendido A PARTE: o combo entra pelo proprio plano
@@ -173,16 +259,19 @@ export function EditarCotacao({
     );
   }
 
-  function confirmarAlcada(e: React.FormEvent) {
+  async function confirmarAlcada(e: React.FormEvent) {
     e.preventDefault();
     if (!alcada?.email || !alcada.senha || !alcada.justificativa.trim()) {
       return toast.error('Preencha as credenciais do gestor e a justificativa');
     }
+    try { await gravarVeiculoDoLead(); } catch (err) { return toast.error((err as Error).message); }
     // 1) salva os itens/valores dentro do limite atual (sem desconto)
     atualizar.mutate(
       {
-        cotacaoId: cotacao.id,
+        cotacaoId: cotacao!.id,
         fipe,
+        tipoVeiculoId: tipoId,
+        cotaId: cotaId || null,
         planoId: planoId || null,
         limparPlano: !planoId,
         opcionaisIds: avulsosDoVeiculo(opcionais, idsDoPlano),
@@ -194,7 +283,7 @@ export function EditarCotacao({
           // 2) o gestor aplica o desconto de excecao com as proprias credenciais
           aprovar.mutate(
             {
-              cotacao_id: cotacao.id,
+              cotacao_id: cotacao!.id,
               percentual: desconto,
               justificativa: alcada.justificativa,
               email: alcada.email,
@@ -216,17 +305,77 @@ export function EditarCotacao({
   }
 
   return (
-    <Modal open onClose={onClose} title="Editar cotação" tamanho="lg">
+    <Modal open onClose={onClose} title={nova ? 'Gerar proposta' : 'Ajustar veículo e proposta'} tamanho="xl">
       <form onSubmit={salvar} className="space-y-3">
+        {/* O veiculo: o que mudar aqui vai para o lead e recalcula a proposta */}
+        <div className="rounded-lg border border-slate-200 p-3">
+          <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <Car className="h-3.5 w-3.5" /> Veículo
+          </p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <FormField label="Placa">
+              <div className="flex gap-1.5">
+                <Input value={placa} onChange={(e) => setPlaca(e.target.value.toUpperCase())} className="placa" maxLength={8} />
+                <Button type="button" variant="secondary" onClick={consultarPlaca} disabled={fipePorPlaca.isPending}
+                  title="Consultar a FIPE pela placa" className="shrink-0 px-2.5">
+                  {fipePorPlaca.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                </Button>
+              </div>
+            </FormField>
+            <FormField label="Marca">
+              <Input value={marca} onChange={(e) => setMarca(e.target.value)} />
+            </FormField>
+            <FormField label="Modelo">
+              <Input value={modelo} onChange={(e) => setModelo(e.target.value)} />
+            </FormField>
+            <FormField label="Ano modelo">
+              <Input type="number" value={anoModelo}
+                onChange={(e) => setAnoModelo(e.target.value === '' ? '' : Number(e.target.value))} />
+            </FormField>
+            <FormField label="Tipo de veículo" className="col-span-2 sm:col-span-1">
+              <Select value={tipoId} onChange={(e) => trocarTipo(e.target.value)}>
+                <option value="">Selecione</option>
+                {(tiposVeiculo ?? []).map((t) => (
+                  <option key={t.id} value={t.id}>{t.nome}</option>
+                ))}
+              </Select>
+            </FormField>
+            <FormField label="Valor FIPE do veículo">
+              <MoneyInput value={fipeVeiculo} onChange={(v) => { setFipeVeiculo(v); }} />
+            </FormField>
+            <FormField label="Cota de participação" className="col-span-2">
+              <Select value={cotaId} onChange={(e) => setCotaId(e.target.value)}>
+                <option value="">Pela faixa da tabela</option>
+                {(cotas ?? []).filter((c) => c.ativo !== false || c.id === cotaId).map((c) => (
+                  <option key={c.id} value={c.id}>{c.codigo} — {(Number(c.percentual) * 100).toLocaleString('pt-BR')}% da FIPE</option>
+                ))}
+              </Select>
+            </FormField>
+          </div>
+          <button type="button" onClick={() => setCascata((c) => !c)} className="mt-2 text-xs font-medium text-brand-600 underline">
+            {cascata ? 'Fechar a busca pelo modelo' : 'Buscar a FIPE pelo modelo'}
+          </button>
+          {cascata && (
+            <div className="mt-2">
+              <FipeConsulta
+                onSelecionar={(sel) => {
+                  if (sel.marcaNome) setMarca(sel.marcaNome);
+                  if (sel.modeloNome) setModelo(sel.modeloNome);
+                  if (sel.valor.anoModelo) setAnoModelo(sel.valor.anoModelo);
+                  if (sel.valor.codigoFipe) setCodigoFipe(sel.valor.codigoFipe);
+                  if (sel.valor.valor != null) { setFipeVeiculo(sel.valor.valor); setDecisaoLimite(null); setValorProtegido(null); }
+                }}
+              />
+            </div>
+          )}
+        </div>
+
         <div className="grid gap-3 sm:grid-cols-2">
-          <FormField label="Valor FIPE do veículo">
-            <MoneyInput value={fipeVeiculo} onChange={setFipeVeiculo} />
-          </FormField>
           <FormField label="Plano / combo">
             <Select value={planoId} onChange={(e) => trocarPlano(e.target.value)}>
               <option value="">Somente cobertura base</option>
-              {planosDoTipo((planos ?? []).filter((p) => p.ativo || p.id === planoId), cotacao.tipo_veiculo_id, tiposPorPlano)
-                .concat((planos ?? []).filter((p) => p.id === planoId && !planosDoTipo([p], cotacao.tipo_veiculo_id, tiposPorPlano).length))
+              {planosDoTipo((planos ?? []).filter((p) => p.ativo || p.id === planoId), (tipoId || null), tiposPorPlano)
+                .concat((planos ?? []).filter((p) => p.id === planoId && !planosDoTipo([p], (tipoId || null), tiposPorPlano).length))
                 .map((p) => (
                 <option key={p.id} value={p.id}>{p.nome}</option>
               ))}
@@ -235,7 +384,7 @@ export function EditarCotacao({
         </div>
         {acimaLimite && fipeVeiculo && limiteFipe != null && (
           <AvisoLimiteFipe fipe={fipeVeiculo} limite={limiteFipe}
-            tipoNome={(tiposVeiculo ?? []).find((t) => t.id === cotacao.tipo_veiculo_id)?.nome}
+            tipoNome={(tiposVeiculo ?? []).find((t) => t.id === (tipoId || null))?.nome}
             decisao={decisaoLimite} valorProtegido={valorProtegido}
             onDecisao={(d) => { setDecisaoLimite(d); if (d === 'LIMITE' && valorProtegido == null) setValorProtegido(limiteFipe); }}
             onValorProtegido={setValorProtegido}
@@ -319,6 +468,13 @@ export function EditarCotacao({
           </div>
         </div>
 
+        {nova ? (
+          <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
+            Mensalidade de tabela: <b className="tnum">{formatCurrency(totalTabela)}</b>
+            {adesaoTabela > 0 && <> · adesão <b className="tnum">{formatCurrency(adesaoTabela)}</b></>}.
+            O desconto, se houver, entra em <b>Ajustar</b> depois de gerar a proposta.
+          </p>
+        ) : (<>
         {/* Desconto com trava por regional */}
         <div className={`rounded-lg border p-3 ${previa.exigeAprovacao ? 'border-amber-300 bg-amber-50' : 'border-slate-200'}`}>
           <div className="flex flex-wrap items-end gap-3">
@@ -365,20 +521,22 @@ export function EditarCotacao({
               Acima do limite da franquia — ao salvar, será pedida a aprovação de um Gestor/Diretor.
             </p>
           )}
-          {cotacao.desconto_aprovado_por && (
+          {cotacao?.desconto_aprovado_por && (
             <p className="mt-1 text-xs text-violet-700">
               Desconto atual liberado por exceção{cotacao.desconto_justificativa ? `: ${cotacao.desconto_justificativa}` : ''}.
             </p>
           )}
         </div>
 
+        </>)}
+
         <CampoAssistenciaProfissional regras={regrasAp} valor={assistencia} onChange={setAssistencia} />
 
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>
-          <Button type="submit" disabled={atualizar.isPending}>
-            {atualizar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            {previa.exigeAprovacao ? 'Salvar e pedir aprovação' : 'Salvar cotação'}
+          <Button type="submit" disabled={atualizar.isPending || criarCotacao.isPending || salvarLead.isPending}>
+            {(atualizar.isPending || criarCotacao.isPending || salvarLead.isPending) ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            {nova ? 'Gerar proposta' : previa.exigeAprovacao ? 'Salvar e pedir aprovação' : 'Salvar proposta'}
           </Button>
         </div>
       </form>

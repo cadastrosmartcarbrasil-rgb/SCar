@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import {
-  AlarmClock, CalendarClock, CircleSlash, Loader2, Mail, MapPin, MessageCircle,
-  MessageSquare, Phone, Send,
+  AlarmClock, CalendarClock, ChevronDown, CircleSlash, Loader2, Mail, MapPin, MessageCircle,
+  MessageSquare, Phone, Plus, Send,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FormField, Input, Select } from '@/components/ui/field';
@@ -26,6 +26,10 @@ const ICONE_TIPO: Record<TipoInteracaoLead, React.ElementType> = {
   VISITA: MapPin,
   OBSERVACAO: MessageSquare,
 };
+
+function resumoContatos(n: number) {
+  return n === 0 ? 'nenhum contato' : n === 1 ? '1 contato' : `${n} contatos`;
+}
 
 const ATALHOS_RETORNO: { dias: number; rotulo: string }[] = [
   { dias: 0, rotulo: 'Hoje' },
@@ -51,6 +55,9 @@ export function ContatosLead({ lead, historico }: { lead: LeadsRow; historico: L
   const [observacao, setObservacao] = useState('');
   const [retorno, setRetorno] = useState('');
   const [notaRetorno, setNotaRetorno] = useState('');
+  // Recolhido por padrao: a ficha do lead e longa, e o formulario de contato so
+  // interessa na hora de registrar. Fechado mostra o retorno marcado e o ultimo contato.
+  const [aberto, setAberto] = useState(false);
 
   const situacao = situacaoAgenda(lead.proximo_contato_em);
   const parado = diasParado(lead.ultima_interacao_em, lead.created_at);
@@ -71,6 +78,7 @@ export function ContatosLead({ lead, historico }: { lead: LeadsRow; historico: L
         onSuccess: () => {
           toast.success(retorno ? 'Contato registrado e retorno agendado' : 'Contato registrado');
           setObservacao(''); setRetorno(''); setNotaRetorno(''); setResultado('FALOU');
+          setAberto(false);
         },
         onError: (err) => toast.error(err.message),
       },
@@ -111,14 +119,27 @@ export function ContatosLead({ lead, historico }: { lead: LeadsRow; historico: L
       retorno: null,
     })),
   ].sort((a, b) => new Date(b.quando).getTime() - new Date(a.quando).getTime());
+  const qtdContatos = (interacoes ?? []).length;
+  const ultimo = linha[0] ?? null;
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-superficie p-4">
       <header className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="flex items-center gap-1.5 text-sm font-semibold text-slate-800">
-          <CalendarClock className="h-4 w-4 text-cyan-600" /> Contatos e agenda
-        </h2>
-        <span className="text-[0.6875rem] text-slate-400">{rotuloParado(parado)}</span>
+        <button
+          type="button" onClick={() => setAberto((a) => !a)} aria-expanded={aberto}
+          className="flex min-w-0 items-center gap-1.5 text-left text-sm font-semibold text-slate-800"
+        >
+          <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition ${aberto ? '' : '-rotate-90'}`} />
+          <CalendarClock className="h-4 w-4 shrink-0 text-cyan-600" /> Contatos e agenda
+          <span className="text-[0.6875rem] font-normal text-slate-400">
+            · {resumoContatos(qtdContatos)} · {rotuloParado(parado)}
+          </span>
+        </button>
+        {!aberto && (
+          <Button type="button" variant="secondary" onClick={() => setAberto(true)} className="h-8 px-2.5 text-[0.75rem]">
+            <Plus className="h-3.5 w-3.5" /> Registrar contato
+          </Button>
+        )}
       </header>
 
       {/* Compromisso vigente */}
@@ -128,7 +149,7 @@ export function ContatosLead({ lead, historico }: { lead: LeadsRow; historico: L
       }`}>
         <AlarmClock className="h-3.5 w-3.5 shrink-0" />
         {situacao === 'SEM_AGENDA' ? (
-          <span>Sem retorno marcado — combine um abaixo para o lead não esfriar.</span>
+          <span>Sem retorno marcado — combine um ao registrar o contato, para o lead não esfriar.</span>
         ) : (
           <>
             <span className={`rounded px-1.5 py-0.5 text-[0.625rem] font-semibold ${SELO_AGENDA[situacao].cor}`}>
@@ -146,6 +167,14 @@ export function ContatosLead({ lead, historico }: { lead: LeadsRow; historico: L
         )}
       </div>
 
+      {!aberto && ultimo && (
+        <p className="mt-2 truncate text-[0.7188rem] text-slate-500">
+          Último: <span className="font-medium text-slate-600">{ultimo.titulo}</span>
+          {' '}· {formatDateTime(ultimo.quando)}{ultimo.texto ? ` — ${ultimo.texto}` : ''}
+        </p>
+      )}
+
+      {aberto && (<>
       {/* Registrar contato */}
       <form onSubmit={gravar} className="mt-3 space-y-3">
         <div className="flex flex-wrap gap-1.5">
@@ -249,6 +278,7 @@ export function ContatosLead({ lead, historico }: { lead: LeadsRow; historico: L
           })}
         </ol>
       )}
+      </>)}
     </section>
   );
 }

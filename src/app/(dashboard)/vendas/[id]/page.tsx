@@ -5,10 +5,11 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import {
-  ArrowLeft, Phone, Mail, Car, Copy, ChevronLeft, ChevronRight, CheckCircle2, XCircle, ShieldCheck,
-  Loader2, ExternalLink, Handshake, MessageCircle, Pencil, Percent, RotateCcw, TriangleAlert,
+  ArrowLeft, Phone, Mail, ChevronLeft, ChevronRight, CheckCircle2, XCircle, ShieldCheck,
+  Loader2, RotateCcw, TriangleAlert,
 } from 'lucide-react';
 import { EditarCotacao } from '@/components/vendas/editar-cotacao';
+import { VeiculoEProposta } from '@/components/vendas/veiculo-proposta';
 import {
   useLead, useCotacoes, useHistoricoLead, useMoverLead, useAutorizarEntrada,
 } from '@/hooks/use-vendas';
@@ -17,7 +18,7 @@ import { ModalCarne, SeletorMesesCarne } from '@/components/cobrancas/carne-veic
 import { DIAS_VENCIMENTO, MESES_CARNE_PADRAO, vencimentoPadraoAdesao } from '@/lib/carne';
 import { hojeSaoPaulo } from '@/lib/permissoes';
 import { Button } from '@/components/ui/button';
-import { ESTEIRA, STATUS_LEAD, acoesDoLead, podeEditarCotacao } from '@/lib/crm';
+import { ESTEIRA, STATUS_LEAD, acoesDoLead } from '@/lib/crm';
 import type { IntencaoAcao } from '@/lib/crm';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { CotacoesRow } from '@/lib/database.types';
@@ -26,7 +27,6 @@ import { ChecklistEntrada } from '@/components/vendas/checklist-entrada';
 import { ContatosLead } from '@/components/vendas/contatos-lead';
 import { ModalPerda } from '@/components/vendas/modal-perda';
 import { AceitePresencial } from '@/components/vendas/aceite-presencial';
-import { linkWhatsApp, mensagemDaProposta } from '@/lib/venda-publica';
 import { useChecklistLead } from '@/hooks/use-vendas';
 import { pendencias, situacaoDoAceite, valorDaCotacao } from '@/lib/vendas';
 import { usePode } from '@/hooks/use-permissoes';
@@ -50,7 +50,7 @@ export default function LeadDetailPage() {
   const [vencAdesao, setVencAdesao] = useState<string>(() => vencimentoPadraoAdesao(hojeSaoPaulo()));
   const [mesesCarne, setMesesCarne] = useState<number>(MESES_CARNE_PADRAO);
   const [carne, setCarne] = useState<{ veiculoId: string; meses: number; boasVindas?: boolean } | null>(null);
-  const [editando, setEditando] = useState<CotacoesRow | null>(null);
+  const [editando, setEditando] = useState<CotacoesRow | 'NOVA' | null>(null);
   const [perdendo, setPerdendo] = useState(false);
   const [colhendoAceite, setColhendoAceite] = useState<CotacoesRow | null>(null);
 
@@ -108,13 +108,14 @@ export default function LeadDetailPage() {
           </a>
           {lead.email && <span className="inline-flex items-center gap-1"><Mail className="h-3.5 w-3.5" /> {lead.email}</span>}
         </div>
-        {(lead.marca || lead.modelo) && (
-          <div className="mt-2 inline-flex items-center gap-1 rounded-lg bg-slate-50 px-2 py-1 text-sm text-slate-600">
-            <Car className="h-3.5 w-3.5" /> {[lead.marca, lead.modelo].filter(Boolean).join(' ')} {lead.ano_modelo ?? ''}
-            {lead.valor_fipe != null && <span className="ml-2 text-slate-400">FIPE {formatCurrency(lead.valor_fipe)}</span>}
-          </div>
-        )}
       </div>
+
+      {/* Veiculo e proposta: no topo, para ajustar e reenviar sem rolar a ficha */}
+      <VeiculoEProposta
+        lead={lead} cotacoes={cotacoes ?? []} origin={origin} textoProposta={tw.proposta}
+        onEditar={(c) => setEditando(c ?? 'NOVA')}
+        onColherAceite={setColhendoAceite}
+      />
 
       {/* Esteira */}
       <div className="rounded-2xl border border-slate-200 bg-superficie p-4">
@@ -324,94 +325,8 @@ export default function LeadDetailPage() {
         </section>
       )}
 
-      {/* Cotacoes */}
-      <div className="rounded-2xl border border-slate-200 bg-superficie p-4">
-        <p className="mb-2 text-xs font-medium uppercase text-slate-400">Cotações</p>
-        {(cotacoes ?? []).length === 0 ? (
-          <p className="text-sm text-slate-400">Nenhuma cotação gerada.</p>
-        ) : (
-          <ul className="space-y-2">
-            {(cotacoes ?? []).map((c) => {
-              const link = `${origin}/cotacao/${c.token}`;
-              return (
-                <li key={c.id} className="rounded-xl border border-slate-100 p-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-base font-semibold text-brand-700">
-                      {formatCurrency(Number(c.total_com_desconto ?? c.total_mensalidade))}/mes
-                      {Number(c.desconto_percentual) > 0 && (
-                        <span className="ml-2 text-xs font-normal text-slate-400 line-through">
-                          {formatCurrency(Number(c.total_mensalidade) + Number(c.valor_assistencia_profissional ?? 0))}
-                        </span>
-                      )}
-                    </span>
-                    <span className="text-[0.625rem] uppercase text-slate-400">{c.modo_envio === 'CONSOLIDADA' ? 'Consolidada' : 'Detalhada'}</span>
-                  </div>
-                  {Number(c.valor_assistencia_profissional) > 0 && (
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      Inclui {formatCurrency(Number(c.valor_assistencia_profissional))} de Assistência Profissional
-                      <span className="text-slate-400"> (uso interno — o cliente não vê)</span>
-                    </p>
-                  )}
-                  {Number(c.desconto_percentual) > 0 && (
-                    <p className="mt-0.5 inline-flex items-center gap-1 text-xs text-emerald-700">
-                      <Percent className="h-3 w-3" />
-                      Desconto de {Number(c.desconto_percentual).toFixed(2).replace('.', ',')}%
-                      {c.desconto_aprovado_por ? ' (exceção aprovada)' : ''}
-                      {c.adesao_com_desconto != null && Number(c.taxa_adesao) > 0
-                        ? ` · adesão ${formatCurrency(Number(c.adesao_com_desconto))}`
-                        : ''}
-                    </p>
-                  )}
-                  <p className="mt-0.5 text-xs text-slate-400">
-                    {formatDate(c.created_at)}
-                    {c.atualizada_em ? ` · editada em ${formatDate(c.atualizada_em)}` : ''}
-                  </p>
-                  <div className="mt-2 flex gap-2">
-                    <button
-                      onClick={() => { navigator.clipboard?.writeText(link); toast.success('Link copiado'); }}
-                      className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs font-medium text-slate-600"
-                    >
-                      <Copy className="h-3.5 w-3.5" /> Copiar link
-                    </button>
-                    <a href={link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs font-medium text-slate-600">
-                      <ExternalLink className="h-3.5 w-3.5" /> Abrir
-                    </a>
-                    {/* Mandar a proposta direto para o celular do lead */}
-                    <a
-                      href={linkWhatsApp(mensagemDaProposta(link, lead.nome, tw.proposta), lead.celular)}
-                      target="_blank" rel="noreferrer"
-                      className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100"
-                    >
-                      <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
-                    </a>
-                    {podeEditarCotacao(lead!.status) && (
-                      <button
-                        onClick={() => setEditando(c)}
-                        className="inline-flex items-center gap-1 rounded-lg bg-acao px-2.5 py-1.5 text-xs font-medium text-white"
-                      >
-                        <Pencil className="h-3.5 w-3.5" /> Editar
-                      </button>
-                    )}
-                    {/* Aceite com o cliente na frente: sem depender do celular dele */}
-                    {podeEditarCotacao(lead!.status) && !lead.aceite_em && (
-                      <button
-                        onClick={() => setColhendoAceite(c)}
-                        className="inline-flex items-center gap-1 rounded-lg bg-cyan-500 px-2.5 py-1.5 text-xs font-semibold text-navy hover:bg-cyan-400"
-                      >
-                        <Handshake className="h-3.5 w-3.5" /> Colher aceite
-                      </button>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-        <Link href="/vendas/novo" className="mt-3 inline-block text-xs font-medium text-brand-600">+ Nova cotação (novo lead)</Link>
-      </div>
-
       {editando && (
-        <EditarCotacao lead={lead} cotacao={editando} onClose={() => setEditando(null)} />
+        <EditarCotacao lead={lead} cotacao={editando === 'NOVA' ? null : editando} onClose={() => setEditando(null)} />
       )}
 
       {/* Perder exige motivo — mesma janela do Kanban */}
