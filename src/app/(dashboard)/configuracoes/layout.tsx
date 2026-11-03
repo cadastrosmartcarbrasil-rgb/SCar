@@ -22,7 +22,7 @@ export default async function ConfiguracoesLayout({ children }: { children: Reac
 
   if (perfil?.papel !== 'admin') {
     const { data: permissoes } = await supabase.rpc('minhas_permissoes');
-    const permitidas = abasConfiguracoesPermitidas(false, permissoes) ?? [];
+    const permitidas = abasConfiguracoesPermitidas(false, permissoes, perfil?.papel) ?? [];
     if (permitidas.length > 0) {
       return (
         <div className="space-y-6">

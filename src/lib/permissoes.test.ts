@@ -221,6 +221,11 @@ describe('configuracoes por aba e DRE (0141)', () => {
     expect(abasConfiguracoesPermitidas(false, ['cfg_cores.ver', 'cfg_plano_contas.editar', 'termos_modelos.ver']))
       .toEqual(['/configuracoes/cores', '/configuracoes/plano-contas', '/configuracoes/termos']);
     expect(abasConfiguracoesPermitidas(false, ['financeiro.ver'])).toEqual([]);
+    // Comunicados: quem publica (menos o gestor, que publica pelo portal da franquia)
+    expect(abasConfiguracoesPermitidas(false, ['comunicados.ver', 'comunicados.criar'], 'financeiro'))
+      .toEqual(['/configuracoes/comunicados']);
+    expect(abasConfiguracoesPermitidas(false, ['comunicados.criar'], 'gestor_regional')).toEqual([]);
+    expect(abasConfiguracoesPermitidas(false, ['comunicados.ver'], 'financeiro')).toEqual([]);
   });
 
   it('o que a pessoa faz na aba', () => {

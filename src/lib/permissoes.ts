@@ -378,12 +378,20 @@ const ACOES_CFG_ESCRITA = ['criar', 'editar', 'excluir'] as const;
  * as `cfg_*` com qualquer acao (Ver, Criar, Editar, Excluir), e Termos com qualquer `termos_modelos.*`.
  * Devolve os hrefs, na ordem das abas.
  */
-export function abasConfiguracoesPermitidas(admin: boolean, permissoes: string[] | null | undefined): string[] | null {
+export function abasConfiguracoesPermitidas(
+  admin: boolean, permissoes: string[] | null | undefined, papel?: string | null,
+): string[] | null {
   if (admin) return null; // null = todas
   const p = permissoes ?? [];
   const out: string[] = ABAS_CONFIGURACOES_BASE
     .filter((a) => ACOES_CFG.some((ac) => p.includes(`${a.chave}.${ac}`)))
     .map((a) => a.href);
+  // Comunicados (mural interno): quem publica pela matriz. O gestor regional
+  // publica pelo portal da franquia (/regional/comunicados), com os dois
+  // destinos dele — a tela da matriz ofereceria unidades que o banco recusa.
+  if (papel !== 'gestor_regional' && (p.includes('comunicados.criar') || p.includes('comunicados.editar'))) {
+    out.push('/configuracoes/comunicados');
+  }
   if (p.some((k) => k.startsWith('termos_modelos.'))) out.push('/configuracoes/termos');
   return out;
 }

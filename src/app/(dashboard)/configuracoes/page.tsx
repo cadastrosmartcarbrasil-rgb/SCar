@@ -10,6 +10,6 @@ export default async function ConfiguracoesIndex() {
   const { data: perfil } = await supabase.from('usuarios').select('papel').eq('id', user.id).maybeSingle();
   if (perfil?.papel === 'admin') redirect('/configuracoes/regionais');
   const { data: permissoes } = await supabase.rpc('minhas_permissoes');
-  const permitidas = abasConfiguracoesPermitidas(false, permissoes) ?? [];
+  const permitidas = abasConfiguracoesPermitidas(false, permissoes, perfil?.papel) ?? [];
   redirect(permitidas[0] ?? '/configuracoes/regionais');
 }

@@ -281,7 +281,7 @@ export function Sidebar({ papel, logoUrl, permissoes = null, ehVendedor = false 
     : [];
   // Configuracoes: o admin abre tudo; os demais veem o atalho quando o perfil
   // ou um extra libera alguma aba (0141) ou os modelos de Termos (0123).
-  const abasConfig = papel === 'admin' ? null : abasConfiguracoesPermitidas(false, permissoes);
+  const abasConfig = papel === 'admin' ? null : abasConfiguracoesPermitidas(false, permissoes, papel);
   const gestao = papel === 'admin'
     ? [...GESTAO, ...integracao, { href: '/configuracoes', label: 'Configurações', icon: Settings }]
     : abasConfig && abasConfig.length > 0
