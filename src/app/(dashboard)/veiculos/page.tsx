@@ -17,7 +17,8 @@ import { useAdiado } from '@/hooks/use-adiado';
 import { SITUACOES_LISTA, type SituacaoLista } from '@/lib/busca-cadastro';
 import { useRegionais, useVendedores, useUsuarios, useMarcas, useModelos } from '@/hooks/use-config';
 import { rotuloUnidade } from '@/lib/regional';
-import { useTiposVeiculo, usePlanos, useProdutos, useProdutosPorPlano, useTiposPorProduto, useTiposPorPlano } from '@/hooks/use-precificacao';
+import { useTiposVeiculo, usePlanos, useProdutos, useProdutosPorPlano, useTiposPorProduto, useTiposPorPlano, useLimiteFipe } from '@/hooks/use-precificacao';
+import { acimaDoLimite } from '@/lib/limite-fipe';
 import { planoAtendeTipo } from '@/lib/planos-oferta';
 import { produtoAtendeTipo, produtosParaTipo, regraRastreadorCobra, semRastreadorDaRegra } from '@/lib/produtos';
 import { useRegraRastreador } from '@/hooks/use-regra-rastreador';
@@ -214,6 +215,9 @@ function VeiculosConteudo() {
     ),
     [produtos, form.tipo_veiculo_id, tiposPorProduto, opcionais, regraRastreador, form.valor_fipe],
   );
+  // 0165 — acima da tabela do tipo o motor zera o casco: avisa em vez de calcular calado.
+  const { data: limiteFipe } = useLimiteFipe(form.tipo_veiculo_id ?? null);
+  const fipeAcimaLimite = acimaDoLimite(form.valor_fipe, limiteFipe);
   const atendeOTipo = (id: string) => produtoAtendeTipo(id, form.tipo_veiculo_id, tiposPorProduto);
   const toggleSet = (setter: React.Dispatch<React.SetStateAction<Set<string>>>, id: string) =>
     setter((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -782,7 +786,16 @@ function VeiculosConteudo() {
             </FormField>
             <p className="text-xs text-slate-400 sm:col-span-2">
               O valor FIPE e a base do cálculo da mensalidade.
+              {form.valor_fipe_mercado != null && (
+                <> Proteção limitada: este é o <b>valor protegido</b>; a FIPE do veículo é {formatCurrency(form.valor_fipe_mercado)}.</>
+              )}
             </p>
+            {fipeAcimaLimite && limiteFipe != null && (
+              <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 sm:col-span-2">
+                Acima do limite da tabela deste tipo ({formatCurrency(limiteFipe)}): a mensalidade calculada sai sem a
+                proteção do casco. Use como base o valor protegido (até o limite) e guarde a FIPE real na cotação.
+              </p>
+            )}
           </div>
 
           {/* Plano, opcionais e cobranca */}

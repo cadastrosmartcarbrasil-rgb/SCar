@@ -531,3 +531,18 @@ export function useDeletePlano() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['precificacao', 'planos'] }),
   });
 }
+
+/** 0165 — o maior FIPE que a tabela do tipo cobre (null = sem tabela, sem limite). */
+export function useLimiteFipe(tipoVeiculoId?: string | null) {
+  const supabase = createClient();
+  return useQuery<number | null>({
+    queryKey: ['precificacao', 'limite-fipe', tipoVeiculoId ?? ''],
+    enabled: !!tipoVeiculoId,
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('limite_fipe_tipo', { p_tipo_veiculo_id: tipoVeiculoId as string });
+      if (error) throw error;
+      return data == null ? null : Number(data);
+    },
+  });
+}

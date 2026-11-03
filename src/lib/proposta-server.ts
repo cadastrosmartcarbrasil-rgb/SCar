@@ -16,7 +16,7 @@ export async function carregarProposta(token: string, origem: string): Promise<{
   if (!/^[0-9a-f-]{36}$/i.test(token)) return null;
   const admin = createAdminClient();
   const { data: cot } = await admin.from('cotacoes')
-    .select('id, lead_id, token, created_at, enviada_em, modo_envio, fipe, itens, total_mensalidade, total_com_desconto, '
+    .select('id, lead_id, token, created_at, enviada_em, modo_envio, fipe, valor_fipe_mercado, itens, total_mensalidade, total_com_desconto, '
       + 'valor_assistencia_profissional, taxa_adesao, adesao_com_desconto, participacao, plano_id, cota_participacao_id, tipo_veiculo_id, regional_id')
     .eq('token', token).maybeSingle();
   if (!cot) return null;

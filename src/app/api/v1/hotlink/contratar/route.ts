@@ -37,7 +37,7 @@ export async function POST(req: Request) {
 
   const { data: lead } = await admin
     .from('leads')
-    .select('id, tipo_veiculo_id, valor_fipe, cota_participacao_id')
+    .select('id, tipo_veiculo_id, valor_fipe, valor_fipe_mercado, cota_participacao_id')
     .eq('id', sessao.lead_id)
     .maybeSingle();
 
@@ -83,6 +83,7 @@ export async function POST(req: Request) {
     .insert({
       lead_id: lead.id,
       fipe: lead.valor_fipe,
+      valor_fipe_mercado: lead.valor_fipe_mercado ?? null, // 0165
       tipo_veiculo_id: lead.tipo_veiculo_id,
       cota_participacao_id: lead.cota_participacao_id ?? null,
       plano_id: planoId,

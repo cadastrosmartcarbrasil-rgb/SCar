@@ -74,7 +74,9 @@ export type PropostaDados = {
   dataCotacao: string;
   validade: string;
   detalhada: boolean;
-  veiculo: { placa: string | null; modelo: string; ano: string | null; valorProtegido: number | null };
+  veiculo: { placa: string | null; modelo: string; ano: string | null; valorProtegido: number | null;
+    /** 0165 — FIPE de mercado quando a protecao e limitada (null = protegido pela FIPE). */
+    fipeMercado: number | null };
   plano: { nome: string | null };
   valores: {
     mensal: number;
@@ -98,6 +100,7 @@ export type PropostaDados = {
 export type FontesProposta = {
   cotacao: {
     token: string; created_at: string; enviada_em?: string | null; modo_envio: string | null; fipe: number | null;
+    valor_fipe_mercado?: number | null;
     itens: { produto_id: string | null; nome: string; valor: number; obrigatorio: boolean; categoria?: string | null }[];
     total_mensalidade: number; total_com_desconto?: number | null; valor_assistencia_profissional?: number | null;
     taxa_adesao: number | null; adesao_com_desconto?: number | null; participacao: number | null;
@@ -265,6 +268,7 @@ export function montarProposta(f: FontesProposta): PropostaDados {
       modelo: [lead?.marca, lead?.modelo].filter(Boolean).join(' ') || 'Veículo',
       ano: lead?.ano_modelo != null ? String(lead.ano_modelo) : null,
       valorProtegido: c.fipe != null ? Number(c.fipe) : null,
+      fipeMercado: c.valor_fipe_mercado != null ? Number(c.valor_fipe_mercado) : null,
     },
     plano: { nome: f.plano?.nome ?? null },
     valores: {

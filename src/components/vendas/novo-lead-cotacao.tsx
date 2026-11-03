@@ -29,6 +29,9 @@ import { avisoDeCaptura } from '@/lib/atribuicao';
 import { formatarDocumento, validarDocumento } from '@/lib/documento';
 import { avulsosParaCotacao, separarOpcionais } from '@/lib/vistoria';
 import { placaCompleta, tipoVeiculoSugerido } from '@/lib/venda-publica';
+import { acimaDoLimite, baseDoCalculo, tipoRastreamentoSemProtecao, type DecisaoLimite } from '@/lib/limite-fipe';
+import { useLimiteFipe } from '@/hooks/use-precificacao';
+import { AvisoLimiteFipe, FaixaProtecaoLimitada } from '@/components/vendas/aviso-limite-fipe';
 import { normalizarPlaca } from '@/lib/placa';
 import { cn, maskCelular, formatCurrency } from '@/lib/utils';
 import type { Combustivel, LeadsRow, OrigemFipe } from '@/lib/database.types';
@@ -85,6 +88,9 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
   const [valorFipe, setValorFipe] = useState<number | null>(null);
   const [codigoFipe, setCodigoFipe] = useState('');
   const [cotaId, setCotaId] = useState('');
+  // 0175 — FIPE acima da tabela do tipo: a decisao de quem cota e o valor protegido.
+  const [decisaoLimite, setDecisaoLimite] = useState<DecisaoLimite | null>(null);
+  const [valorProtegido, setValorProtegido] = useState<number | null>(null);
   // 0162 — a cota vem do modelo do catalogo; escolher na mao desliga o automatico.
   const [cotaManual, setCotaManual] = useState(false);
   const [modeloId, setModeloId] = useState<string | null>(null);
@@ -122,16 +128,31 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
   // 0173 — a regra do rastreador e a da UNIDADE de quem cota (a mesma que o
   // lead recebe), ou a da matriz. E ela que decide se o rastreador ja vem nos
   // contratados (obrigatorio) ou e oferecido como opcional.
+  const { data: limiteFipe } = useLimiteFipe(tipoVeiculoId || null);
+  const acimaLimite = acimaDoLimite(valorFipe, limiteFipe);
+  const { base: fipeCalculo, mercado: fipeMercado } = baseDoCalculo({
+    fipe: valorFipe, limite: limiteFipe, decisao: decisaoLimite, valorProtegido,
+  });
+  const tipoRastreio = tipoRastreamentoSemProtecao(tipos ?? []);
+  // Voltou para dentro da tabela (outro tipo ou outra FIPE): a decisao some.
+  useEffect(() => {
+    if (!acimaLimite) { setDecisaoLimite(null); setValorProtegido(null); }
+  }, [acimaLimite]);
+  function decidirLimite(d: DecisaoLimite) {
+    if (d === 'RASTREAMENTO' && tipoRastreio) { setTipoVeiculoId(tipoRastreio.id); return; }
+    setDecisaoLimite(d);
+    if (d === 'LIMITE' && valorProtegido == null && limiteFipe) setValorProtegido(limiteFipe);
+  }
   const { data: regionalCota } = useRegionalDeQuemCota();
   const { data: regraRastreador } = useRegraRastreador(tipoVeiculoId || null, regionalCota ?? null);
-  const rastreador = situacaoRastreador(regraRastreador, valorFipe);
+  const rastreador = situacaoRastreador(regraRastreador, fipeCalculo);
   const opcionais = useMemo(
     // ...e o rastreador opcional so abaixo do minimo (0090/0173).
     () => semRastreadorDaRegra(
       produtosParaTipo((produtos ?? []).filter((p) => !p.obrigatorio && p.status), tipoVeiculoId, tiposPorProduto),
-      regraRastreadorCobra(regraRastreador, valorFipe),
+      regraRastreadorCobra(regraRastreador, fipeCalculo),
     ),
-    [produtos, tipoVeiculoId, tiposPorProduto, regraRastreador, valorFipe],
+    [produtos, tipoVeiculoId, tiposPorProduto, regraRastreador, fipeCalculo],
   );
 
   // 0162 — os pre-marcados de cada plano, so do que esta sendo oferecido aqui.
@@ -146,7 +167,7 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
 
   // Um preco por plano, recalculado sozinho a cada mudanca de veiculo/opcional.
   const comparativo = useCotacaoComparativa({
-    fipe: valorFipe, tipoVeiculoId, cotaId: cotaId || null, avulsos: [...selecionados],
+    fipe: fipeCalculo, tipoVeiculoId, cotaId: cotaId || null, avulsos: [...selecionados],
     escolha, sugestoes, tiposPorPlano, regionalId: regionalCota ?? null,
   });
   const planos = useMemo(() => comparativo.data ?? [], [comparativo.data]);
@@ -225,6 +246,7 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
 
   async function gerar() {
     if (!valorFipe) return toast.error('Informe o valor FIPE do veículo');
+    if (tipoVeiculoId && !fipeCalculo) return toast.error('FIPE acima do limite da tabela: proteja pelo limite ou cote só o rastreamento');
     if (!tipoVeiculoId) return toast.error('Selecione o tipo de veículo');
     if (!escolhido) return toast.error('Escolha o plano da proposta');
     if (!nome.trim()) return toast.error('Informe o nome do lead');
@@ -245,7 +267,9 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
         modelo: modelo || null,
         ano_modelo: anoModelo === '' ? null : Number(anoModelo),
         combustivel: (combustivel || null) as Combustivel | null,
-        valor_fipe: valorFipe,
+        // 0175 — protecao pelo limite: o calculo usa o valor protegido; a FIPE fica ao lado.
+        valor_fipe: fipeCalculo,
+        valor_fipe_mercado: fipeMercado,
         codigo_fipe: codigoFipe || null,
         cota_participacao_id: cotaId || null,
         modelo_id: modeloId,
@@ -258,7 +282,8 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
       });
       await salvarCotacao.mutateAsync({
         leadId: lead.id,
-        fipe: valorFipe,
+        fipe: fipeCalculo as number,
+        valorFipeMercado: fipeMercado,
         tipoVeiculoId,
         cotaId: cotaId || null,
         planoId: escolhido.plano_id,
@@ -445,7 +470,19 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
               </div>
             </header>
 
-            {!valorFipe || !tipoVeiculoId ? (
+            {acimaLimite && valorFipe && limiteFipe != null && (
+              <div className="mb-3">
+                <AvisoLimiteFipe fipe={valorFipe} limite={limiteFipe}
+                  tipoNome={(tipos ?? []).find((t) => t.id === tipoVeiculoId)?.nome}
+                  decisao={decisaoLimite} valorProtegido={valorProtegido}
+                  onDecisao={decidirLimite} onValorProtegido={setValorProtegido}
+                  rastreamentoDisponivel={!!tipoRastreio} />
+              </div>
+            )}
+            {fipeMercado != null && fipeCalculo != null && (
+              <div className="mb-3"><FaixaProtecaoLimitada protegido={fipeCalculo} mercado={fipeMercado} /></div>
+            )}
+            {acimaLimite && !fipeCalculo ? null : !valorFipe || !tipoVeiculoId ? (
               <p className="rounded-2xl border border-dashed border-white/25 px-4 py-12 text-center text-base text-white/70">
                 Informe o valor FIPE e o tipo do veículo para ver os planos.
               </p>

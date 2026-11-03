@@ -58,13 +58,13 @@ begin
 
   insert into boletos_historico (id_externo, cliente_id, veiculo_id, tipo, vencimento_original, data_vencimento,
                                  valor, situacao, status_origem) values
-    ('m1', c_mut, v_mut, 'MONTHLY_PAYMENT', current_date - 3, current_date - 3, 120, 'aberto', 'OVERDUE'),
+    ('m1', c_mut, v_mut, 'MONTHLY_PAYMENT', current_date - 5, current_date - 5, 120, 'aberto', 'OVERDUE'),
     ('m2', c_velho, null, 'MONTHLY_PAYMENT', current_date - 45, current_date - 45, 90, 'aberto', 'OVERDUE'),
-    ('m3', c_novo, v_novo, 'MONTHLY_PAYMENT', current_date - 6, current_date - 6, 80, 'aberto', 'OVERDUE');
+    ('m3', c_novo, v_novo, 'MONTHLY_PAYMENT', current_date - 9, current_date - 9, 80, 'aberto', 'OVERDUE');
 
   -- ===================================================== (2) a trava da 24h
   select * into rec from vencidos_veiculo(v_mut, 1);
-  assert rec.boletos = 1 and rec.valor = 120 and rec.dias = 3, format('mutual: %s', row_to_json(rec));
+  assert rec.boletos = 1 and rec.valor = 120 and rec.dias = 5, format('mutual: %s', row_to_json(rec));
   select * into rec from vencidos_veiculo(v_velho, 1);
   assert rec.boletos = 1 and rec.dias = 45, 'boleto do Mutual sem veiculo vale para o veiculo do associado';
 
@@ -74,9 +74,11 @@ begin
   txt := array_to_string(rec.motivos, ' | ');
   assert txt like '%atraso%' and txt not ilike '%limite%', format('motivo legivel pela tela: %s', txt);
 
-  update empresa set dias_bloqueio_inadimplencia = 5;
+  -- (datas a 5 e 9 dias: com 3, o vencimento num sabado antes de feriado ainda
+  -- nao tinha vencido no dia util e a fila mudava conforme o calendario)
+  update empresa set dias_bloqueio_inadimplencia = 7;
   select * into rec from situacao_assistencia_veiculo(v_mut);
-  assert rec.pode_acionar, '3 dias de atraso com bloqueio a partir de 5: libera';
+  assert rec.pode_acionar, '5 dias de atraso com bloqueio a partir de 7: libera';
   update empresa set dias_bloqueio_inadimplencia = 1;
 
   -- ===================================================== (3) a rotina

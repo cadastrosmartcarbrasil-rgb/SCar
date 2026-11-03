@@ -317,6 +317,8 @@ export type VeiculosRow = Timestamps & {
   cor_id: string | null;
   uso: UsoVeiculo;
   valor_fipe: number | null;
+  /** 0165 — FIPE de mercado quando a protecao e limitada (a coluna de calculo guarda o valor protegido). */
+  valor_fipe_mercado: number | null;
   regional_id: string | null;
   vendedor_id: string | null;
   plano_protecao_id: string | null;
@@ -1263,6 +1265,8 @@ export type LeadsRow = Timestamps & {
   ano_modelo: number | null;
   combustivel: Combustivel | null;
   valor_fipe: number | null;
+  /** 0165 — FIPE de mercado quando a protecao e limitada (a coluna de calculo guarda o valor protegido). */
+  valor_fipe_mercado: number | null;
   codigo_fipe: string | null;
   cota_participacao_id: string | null;
   uso: UsoVeiculo;
@@ -1329,6 +1333,8 @@ export type CotacoesRow = {
   id: string;
   lead_id: string;
   fipe: number;
+  /** 0165 — FIPE de mercado quando a protecao e limitada (a coluna de calculo guarda o valor protegido). */
+  valor_fipe_mercado: number | null;
   tipo_veiculo_id: string | null;
   cota_participacao_id: string | null;
   itens: CotacaoItem[];
@@ -4727,6 +4733,10 @@ export type Database = {
           modelo_id: string; marca: string; modelo: string; cota_id: string | null;
           cota_codigo: string | null; cota_percentual: number | null; similaridade: number;
         }[];
+      };
+      limite_fipe_tipo: {
+        Args: { p_tipo_veiculo_id: string };
+        Returns: number | null;
       };
       participacao_do_plano: {
         Args: { p_fipe: number; p_tipo_veiculo_id: string; p_cota_id: string | null; p_plano_id: string | null };

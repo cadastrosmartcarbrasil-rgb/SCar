@@ -8,7 +8,10 @@ import { Button } from '@/components/ui/button';
 import { FormField, Input, Select, MoneyInput, PercentInput } from '@/components/ui/field';
 import {
   usePlanos, useProdutos, useProdutosPorPlano, useTiposPorProduto, useTiposPorPlano, useSugestoesPorPlano,
+  useLimiteFipe, useTiposVeiculo,
 } from '@/hooks/use-precificacao';
+import { acimaDoLimite, baseDoCalculo, type DecisaoLimite } from '@/lib/limite-fipe';
+import { AvisoLimiteFipe } from '@/components/vendas/aviso-limite-fipe';
 import { alternarOpcional, planosDoTipo, sugestoesDoPlano } from '@/lib/planos-oferta';
 import { produtosParaTipo, regraRastreadorCobra, semRastreadorDaRegra } from '@/lib/produtos';
 import { useRegraRastreador } from '@/hooks/use-regra-rastreador';
@@ -38,11 +41,20 @@ export function EditarCotacao({
   const { data: produtosPorPlano } = useProdutosPorPlano();
   const { data: tiposPorProduto } = useTiposPorProduto();
   const { data: tiposPorPlano } = useTiposPorPlano();
+  const { data: tiposVeiculo } = useTiposVeiculo();
   const { data: sugestoesPorPlano } = useSugestoesPorPlano();
   const atualizar = useAtualizarCotacao();
   const aprovar = useAprovarDesconto();
 
-  const [fipe, setFipe] = useState<number | null>(Number(cotacao.fipe));
+  // 0165 — a FIPE do veiculo; acima do limite da tabela, o calculo usa o valor protegido.
+  const [fipeVeiculo, setFipeVeiculo] = useState<number | null>(Number(cotacao.valor_fipe_mercado ?? cotacao.fipe));
+  const [decisaoLimite, setDecisaoLimite] = useState<DecisaoLimite | null>(cotacao.valor_fipe_mercado ? 'LIMITE' : null);
+  const [valorProtegido, setValorProtegido] = useState<number | null>(cotacao.valor_fipe_mercado ? Number(cotacao.fipe) : null);
+  const { data: limiteFipe } = useLimiteFipe(cotacao.tipo_veiculo_id);
+  const acimaLimite = acimaDoLimite(fipeVeiculo, limiteFipe);
+  const { base: fipe, mercado: fipeMercado } = baseDoCalculo({
+    fipe: fipeVeiculo, limite: limiteFipe, decisao: decisaoLimite, valorProtegido,
+  });
   const [planoId, setPlanoId] = useState(cotacao.plano_id ?? '');
   const [opcionais, setOpcionais] = useState<string[]>(cotacao.opcionais_ids ?? []);
   const [desconto, setDesconto] = useState(Number(cotacao.desconto_percentual ?? 0));
@@ -133,6 +145,7 @@ export function EditarCotacao({
   function salvar(e: React.FormEvent) {
     e.preventDefault();
     if (erroAp) return toast.error(`Assistência Profissional: ${erroAp}`);
+    if (!fipe) return toast.error('FIPE acima do limite da tabela: proteja pelo limite (valor protegido)');
     if (previa.exigeAprovacao) {
       // Desconto acima do limite da franquia: pede a alcada do gestor.
       setAlcada({ email: '', senha: '', justificativa: '' });
@@ -148,6 +161,7 @@ export function EditarCotacao({
         opcionaisIds: avulsosDoVeiculo(opcionais, idsDoPlano),
         descontoPercentual: desconto,
         assistenciaProfissional: assistencia ?? 0,
+        valorFipeMercado: fipeMercado,
       },
       {
         onSuccess: (c) => {
@@ -173,6 +187,7 @@ export function EditarCotacao({
         limparPlano: !planoId,
         opcionaisIds: avulsosDoVeiculo(opcionais, idsDoPlano),
         assistenciaProfissional: assistencia ?? 0,
+        valorFipeMercado: fipeMercado,
       },
       {
         onSuccess: () => {
@@ -204,8 +219,8 @@ export function EditarCotacao({
     <Modal open onClose={onClose} title="Editar cotação" tamanho="lg">
       <form onSubmit={salvar} className="space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
-          <FormField label="Valor FIPE">
-            <MoneyInput value={fipe} onChange={setFipe} />
+          <FormField label="Valor FIPE do veículo">
+            <MoneyInput value={fipeVeiculo} onChange={setFipeVeiculo} />
           </FormField>
           <FormField label="Plano / combo">
             <Select value={planoId} onChange={(e) => trocarPlano(e.target.value)}>
@@ -218,6 +233,15 @@ export function EditarCotacao({
             </Select>
           </FormField>
         </div>
+        {acimaLimite && fipeVeiculo && limiteFipe != null && (
+          <AvisoLimiteFipe fipe={fipeVeiculo} limite={limiteFipe}
+            tipoNome={(tiposVeiculo ?? []).find((t) => t.id === cotacao.tipo_veiculo_id)?.nome}
+            decisao={decisaoLimite} valorProtegido={valorProtegido}
+            onDecisao={(d) => { setDecisaoLimite(d); if (d === 'LIMITE' && valorProtegido == null) setValorProtegido(limiteFipe); }}
+            onValorProtegido={setValorProtegido}
+            rastreamentoDisponivel={false}
+            avisoRastreamento="Faça uma cotação nova com o tipo Rastreamento" />
+        )}
 
         {/* A composicao de AGORA, item a item, com o valor de cada um */}
         <div className="rounded-lg border border-slate-200 p-3">

@@ -4,6 +4,7 @@ import { normalizarPlaca } from '@/lib/placa';
 import type { CotacaoPlano } from '@/lib/database.types';
 import { ofertaDosPlanos } from '@/lib/hotlink-planos-server';
 import { ordenarPorPreferencia } from '@/lib/planos-oferta';
+import { acimaDoLimite, erroValorProtegido, tipoRastreamentoSemProtecao } from '@/lib/limite-fipe';
 
 /**
  * Cotacao publica do hotlink.
@@ -21,6 +22,8 @@ export async function POST(req: Request) {
   const tipoVeiculoId = String(body?.tipo_veiculo_id ?? '').trim();
   const placaBruta = String(body?.placa ?? '').trim();
   const fipeInformada = Number(body?.valor_fipe ?? 0);
+  // 0165 — FIPE acima da tabela: o visitante protege pelo limite informando o valor protegido.
+  const valorProtegido = Number(body?.valor_protegido ?? 0) || null;
 
   if (!token) return NextResponse.json({ error: 'Sessão expirada' }, { status: 400 });
   if (!tipoVeiculoId) return NextResponse.json({ error: 'Escolha o tipo do veículo' }, { status: 400 });
@@ -37,7 +40,9 @@ export async function POST(req: Request) {
   // achou no lead. Aqui so precisamos do VALOR: o da FIPE (ja no lead) ou o
   // que o visitante informou quando a placa nao foi encontrada.
   const placa = placaBruta ? normalizarPlaca(placaBruta) : '';
-  const valorFipe = fipeInformada || Number(lead.valor_fipe ?? 0);
+  // Com protecao limitada, `valor_fipe` do lead e o valor protegido: a FIPE de verdade esta ao lado.
+  const { data: atual } = await admin.from('leads').select('valor_fipe, valor_fipe_mercado').eq('id', lead.lead_id).maybeSingle();
+  const valorFipe = fipeInformada || Number(atual?.valor_fipe_mercado ?? atual?.valor_fipe ?? lead.valor_fipe ?? 0);
   if (!valorFipe || valorFipe <= 0) {
     return NextResponse.json(
       { error: 'Não consegui o valor do veículo. Informe o valor de mercado para cotar.' },
@@ -45,11 +50,39 @@ export async function POST(req: Request) {
     );
   }
 
+  // 0165 — acima do limite da tabela do tipo o motor zeraria o casco: a cotacao para e pergunta.
+  const { data: limiteBruto } = await admin.rpc('limite_fipe_tipo', { p_tipo_veiculo_id: tipoVeiculoId });
+  const limite = limiteBruto == null ? null : Number(limiteBruto);
+  let base = valorFipe;
+  let mercado: number | null = null;
+  if (acimaDoLimite(valorFipe, limite)) {
+    if (valorProtegido == null) {
+      await admin.from('leads').update({
+        placa: placa || null, tipo_veiculo_id: tipoVeiculoId, valor_fipe: valorFipe, valor_fipe_mercado: null,
+        origem_fipe: fipeInformada ? 'MANUAL' : 'API', ultima_interacao_em: new Date().toISOString(),
+      }).eq('id', lead.lead_id);
+      const { data: tipos } = await admin.from('tipos_veiculo').select('id, nome');
+      return NextResponse.json({
+        ok: true, valor_fipe: valorFipe, planos: [],
+        acima_limite: {
+          limite,
+          tipo_nome: (tipos ?? []).find((t) => t.id === tipoVeiculoId)?.nome ?? null,
+          rastreamento_tipo_id: tipoRastreamentoSemProtecao(tipos ?? [])?.id ?? null,
+        },
+      });
+    }
+    const erro = erroValorProtegido(valorProtegido, valorFipe, limite as number);
+    if (erro) return NextResponse.json({ error: erro }, { status: 422 });
+    base = valorProtegido;
+    mercado = valorFipe;
+  }
+
   // O tipo confirmado (ou corrigido) pelo visitante prevalece.
   await admin.from('leads').update({
     placa: placa || null,
     tipo_veiculo_id: tipoVeiculoId,
-    valor_fipe: valorFipe,
+    valor_fipe: base,
+    valor_fipe_mercado: mercado,
     origem_fipe: fipeInformada ? 'MANUAL' : 'API',
     ultima_interacao_em: new Date().toISOString(),
   }).eq('id', lead.lead_id);
@@ -74,7 +107,7 @@ export async function POST(req: Request) {
   const cotados = [];
   for (const p of (planos ?? []).filter((x) => oferta.atende(x.id))) {
     const { data, error } = await admin.rpc('cotar_plano', {
-      p_fipe: valorFipe, p_tipo_veiculo_id: tipoVeiculoId, p_plano_id: p.id, p_avulsos_ids: oferta.avulsosDo(p.id),
+      p_fipe: base, p_tipo_veiculo_id: tipoVeiculoId, p_plano_id: p.id, p_avulsos_ids: oferta.avulsosDo(p.id),
       p_regional_id: regionalPreco ?? null,
     });
     if (error) continue;
@@ -98,5 +131,8 @@ export async function POST(req: Request) {
   }
 
   // 0163 — o preferencial no topo (a pagina ja o deixa escolhido).
-  return NextResponse.json({ ok: true, valor_fipe: valorFipe, planos: ordenarPorPreferencia(cotados) });
+  return NextResponse.json({
+    ok: true, valor_fipe: valorFipe, planos: ordenarPorPreferencia(cotados),
+    protecao_limitada: mercado != null ? { valor_protegido: base, valor_fipe: mercado } : null,
+  });
 }

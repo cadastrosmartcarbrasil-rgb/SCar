@@ -158,7 +158,8 @@ export function PropostaCapa({ d, logo }: { d: PropostaDados; logo: string }) {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 18, alignItems: 'baseline', marginTop: 4, fontSize: 14, color: COR.textoClaro }}>
               {d.veiculo.ano && <span>Ano <b style={{ color: COR.branco }}>{d.veiculo.ano}</b></span>}
               {d.veiculo.valorProtegido != null && (
-                <span>Valor protegido (FIPE) <b style={{ color: COR.smart, fontSize: 18 }}>{moeda(d.veiculo.valorProtegido)}</b></span>
+                <span>{d.veiculo.fipeMercado != null ? 'Valor protegido' : 'Valor protegido (FIPE)'} <b style={{ color: COR.smart, fontSize: 18 }}>{moeda(d.veiculo.valorProtegido)}</b>
+                  {d.veiculo.fipeMercado != null && <> · FIPE {moeda(d.veiculo.fipeMercado)}</>}</span>
               )}
             </div>
           </div>
@@ -235,7 +236,12 @@ export function PropostaPlano({ d, logo }: { d: PropostaDados; logo: string }) {
           <Campo titulo="Veículo">{d.veiculo.modelo}</Campo>
           <Campo titulo="Placa"><span style={{ fontFamily: FONTE.mono }}>{d.veiculo.placa ?? '—'}</span></Campo>
           <Campo titulo="Ano modelo">{d.veiculo.ano ?? '—'}</Campo>
-          <Campo titulo="Valor protegido">{d.veiculo.valorProtegido != null ? moeda(d.veiculo.valorProtegido) : '—'}</Campo>
+          <Campo titulo="Valor protegido">
+            {d.veiculo.valorProtegido != null ? moeda(d.veiculo.valorProtegido) : '—'}
+            {d.veiculo.fipeMercado != null && (
+              <div style={{ fontSize: 11.5, fontWeight: 500, color: COR.chumbo }}>FIPE {moeda(d.veiculo.fipeMercado)} · limite da tabela</div>
+            )}
+          </Campo>
         </div>
         <div style={grade}>
           <Campo titulo="Valor mensal" destaque>{moeda(d.valores.mensal)}</Campo>

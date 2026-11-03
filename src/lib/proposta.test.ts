@@ -123,6 +123,13 @@ describe('proposta comercial v2', () => {
     expect(aceita.aceite).toEqual({ feito: true, em: '31/10/2026', desatualizada: false });
   });
 
+  it('proteção limitada: valor protegido e a FIPE de mercado ao lado (0165)', () => {
+    const d = montarProposta(fontes({}, { fipe: 250000, valor_fipe_mercado: 258010 }));
+    expect(d.veiculo.valorProtegido).toBe(250000);
+    expect(d.veiculo.fipeMercado).toBe(258010);
+    expect(montarProposta(fontes()).veiculo.fipeMercado).toBeNull();
+  });
+
   it('textos e auxiliares', () => {
     expect(tituloLegivel('SAÚDE SMART - DESCONTO')).toBe('Saúde Smart - Desconto');
     expect(tituloLegivel('Carro Reserva')).toBe('Carro Reserva');

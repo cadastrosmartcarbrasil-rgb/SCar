@@ -79,6 +79,7 @@ export async function POST(req: Request) {
     modelo: fipe.modelo,
     ano_modelo: fipe.anoModelo,
     valor_fipe: fipe.valor,
+    valor_fipe_mercado: null, // 0165: placa nova = FIPE nova; o limite e decidido na cotacao
     codigo_fipe: fipe.codigoFipe,
     origem_fipe: 'API',
     tipo_veiculo_id: tipoSugerido,

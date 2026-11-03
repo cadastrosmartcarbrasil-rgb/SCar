@@ -206,9 +206,11 @@ export function useSalvarCotacao() {
       produtosIds: string[]; modoEnvio?: string;
       /** 0158 — Assistencia Profissional: interna, fora do desconto, nunca vira item. */
       assistenciaProfissional?: number | null;
+      /** 0165 — FIPE de mercado quando `fipe` e o valor protegido (protecao pelo limite). */
+      valorFipeMercado?: number | null;
     }
   >({
-    mutationFn: async ({ leadId, fipe, tipoVeiculoId, cotaId, planoId, produtosIds, modoEnvio, assistenciaProfissional }) => {
+    mutationFn: async ({ leadId, fipe, tipoVeiculoId, cotaId, planoId, produtosIds, modoEnvio, assistenciaProfissional, valorFipeMercado }) => {
       const { data: { user } } = await supabase.auth.getUser();
       // 0081 — quem precifica e a unidade do ASSOCIADO (a do lead enquanto ele
       // nao existe). Sem isso o CRM gravaria a cotacao pelo preco da matriz.
@@ -242,6 +244,7 @@ export function useSalvarCotacao() {
         regional_id: (calc.regional_id as string | null) ?? null,
         valor_adicional_regional: Number(calc.adicional_regional ?? 0),
         valor_assistencia_profissional: Number(assistenciaProfissional ?? 0),
+        valor_fipe_mercado: valorFipeMercado ?? null,
         created_by: user?.id ?? null,
       }).select('*').single();
       if (error) throw error;
@@ -361,6 +364,8 @@ export interface AtualizarCotacaoInput {
   limparPlano?: boolean;
   /** 0158 — Assistencia Profissional (interna). Ausente = mantem. */
   assistenciaProfissional?: number | null;
+  /** 0165 — FIPE de mercado (protecao pelo limite; `fipe` = valor protegido). Ausente = mantem; null = sem limite. */
+  valorFipeMercado?: number | null;
 }
 
 export function useAtualizarCotacao() {
@@ -384,7 +389,19 @@ export function useAtualizarCotacao() {
         p_valor_assistencia_profissional: i.assistenciaProfissional ?? null,
       });
       if (error) throw error;
-      return data as CotacoesRow;
+      const c = data as CotacoesRow;
+      // 0165 — a FIPE de mercado vai DEPOIS do recalculo (a trava compara o valor
+      // protegido ja gravado com ela) e o lead acompanha: e dele que o veiculo nasce.
+      if (i.valorFipeMercado !== undefined && (c.valor_fipe_mercado ?? null) !== (i.valorFipeMercado ?? null)) {
+        const { data: c2, error: e2 } = await supabase.from('cotacoes')
+          .update({ valor_fipe_mercado: i.valorFipeMercado }).eq('id', c.id).select('*').single();
+        if (e2) throw e2;
+        const { error: e3 } = await supabase.from('leads')
+          .update({ valor_fipe: c2.fipe, valor_fipe_mercado: i.valorFipeMercado }).eq('id', c.lead_id);
+        if (e3) throw e3;
+        return c2 as CotacoesRow;
+      }
+      return c;
     },
     onSuccess: (c) => {
       qc.invalidateQueries({ queryKey: ['vendas', 'cotacoes', c.lead_id] });

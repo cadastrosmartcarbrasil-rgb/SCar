@@ -1,5 +1,7 @@
 'use client';
 
+import { AvisoLimiteFipe, FaixaProtecaoLimitada } from '@/components/vendas/aviso-limite-fipe';
+import type { DecisaoLimite } from '@/lib/limite-fipe';
 import { useCallback, useEffect, useState } from 'react';
 import {
   BadgeCheck, Camera, Car, CheckCircle2, ChevronRight, Copy, FileText, Loader2, Lock,
@@ -56,6 +58,13 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
     { marca: string | null; modelo: string | null; ano: number | null; valor_fipe: number } | null
   >(null);
   const [planos, setPlanos] = useState<PlanoCotado[]>([]);
+  // 0165 — FIPE acima da tabela do tipo: o visitante decide (limite, rastreamento ou nao segue).
+  const [limiteInfo, setLimiteInfo] = useState<
+    { limite: number; tipo_nome: string | null; rastreamento_tipo_id: string | null } | null
+  >(null);
+  const [decisaoLimite, setDecisaoLimite] = useState<DecisaoLimite | null>(null);
+  const [valorProtegido, setValorProtegido] = useState<number | null>(null);
+  const [limitada, setLimitada] = useState<{ valor_protegido: number; valor_fipe: number } | null>(null);
   const [planoId, setPlanoId] = useState('');
   // 0163 — os planos fora do preferencial so mostram o valor depois do clique.
   const [revelados, setRevelados] = useState<Set<string>>(new Set());
@@ -143,14 +152,25 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
     setErro(null);
     setEnviando(true);
     try {
-      const r = await chamar<{ valor_fipe: number; planos: PlanoCotado[] }>(
+      if (limiteInfo && decisaoLimite === 'RECUSAR') return;
+      const r = await chamar<{
+        valor_fipe: number; planos: PlanoCotado[];
+        acima_limite?: { limite: number; tipo_nome: string | null; rastreamento_tipo_id: string | null } | null;
+        protecao_limitada?: { valor_protegido: number; valor_fipe: number } | null;
+      }>(
         '/api/v1/hotlink/cotar',
         {
           token, tipo_veiculo_id: tipoVeiculoId, placa: contato.placa,
           valor_fipe: Number(valorInformado.replace(/\./g, '').replace(',', '.')) || 0,
+          valor_protegido: limiteInfo && decisaoLimite === 'LIMITE' ? valorProtegido : null,
         },
       );
       if (!veiculo) setVeiculo({ marca: null, modelo: null, ano: null, valor_fipe: Number(r.valor_fipe) });
+      if (r.acima_limite) {
+        setLimiteInfo({ ...r.acima_limite, limite: Number(r.acima_limite.limite) });
+        return;
+      }
+      setLimitada(r.protecao_limitada ?? null);
       setPlanos(r.planos);
       setPlanoId(planoInicial(r.planos, r.planos[Math.min(1, r.planos.length - 1)])?.plano_id ?? '');
       setEtapa('planos');
@@ -365,7 +385,7 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
               <div className="mt-1.5 grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {tipos.map((t) => (
                   <button
-                    key={t.id} type="button" onClick={() => setTipoVeiculoId(t.id)}
+                    key={t.id} type="button" onClick={() => { setTipoVeiculoId(t.id); setLimiteInfo(null); setDecisaoLimite(null); }}
                     className={`rounded-xl border px-3 py-2.5 text-[0.7812rem] font-semibold transition ${
                       tipoVeiculoId === t.id
                         ? 'border-cyan-500 bg-cyan-50 text-brand-800 ring-1 ring-cyan-400'
@@ -384,7 +404,25 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
             </p>
           )}
 
-          <Botao carregando={enviando} disabled={!tipoVeiculoId || identificando || (!veiculo && !valorInformado)}>
+          {limiteInfo && veiculo && (
+            <AvisoLimiteFipe fipe={veiculo.valor_fipe} limite={limiteInfo.limite} tipoNome={limiteInfo.tipo_nome}
+              decisao={decisaoLimite} valorProtegido={valorProtegido}
+              onDecisao={(d) => {
+                if (d === 'RASTREAMENTO' && limiteInfo.rastreamento_tipo_id) {
+                  setTipoVeiculoId(limiteInfo.rastreamento_tipo_id); setLimiteInfo(null); setDecisaoLimite(null);
+                  return;
+                }
+                setDecisaoLimite(d);
+                if (d === 'LIMITE' && valorProtegido == null) setValorProtegido(limiteInfo.limite);
+              }}
+              onValorProtegido={setValorProtegido}
+              rastreamentoDisponivel={!!limiteInfo.rastreamento_tipo_id}
+              textoRecusa="Não conseguimos proteger este veículo pela tabela atual. Fale com um consultor da Smart Car." />
+          )}
+
+          <Botao carregando={enviando}
+            disabled={!tipoVeiculoId || identificando || (!veiculo && !valorInformado)
+              || (!!limiteInfo && (decisaoLimite !== 'LIMITE' || !valorProtegido))}>
             Ver meus planos
           </Botao>
         </form>
@@ -396,6 +434,9 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
           <Titulo icone={ShieldCheck} texto="Escolha sua proteção"
             ajuda={veiculo ? `${[veiculo.marca, veiculo.modelo].filter(Boolean).join(' ') || 'Seu veículo'} · valor de referência ${dinheiro(veiculo.valor_fipe)}` : undefined} />
 
+          {limitada && (
+            <div className="mt-3"><FaixaProtecaoLimitada protegido={limitada.valor_protegido} mercado={limitada.valor_fipe} /></div>
+          )}
           <div className="mt-4 space-y-3">
             {planos.map((p) => {
               const ativo = p.plano_id === planoId;
