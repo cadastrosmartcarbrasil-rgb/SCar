@@ -391,6 +391,12 @@ function DetalheProtocolo({ protocolo, onVoltar }: { protocolo: ProtocoloLinha; 
           }}
           className="space-y-3"
         >
+          {protocolo.evento_id && (
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              Este protocolo é de um evento. Encerrar aqui não conclui o evento — para isso, conclua o
+              evento na tramitação (o protocolo é encerrado junto automaticamente).
+            </p>
+          )}
           <FormField label="Solução (obrigatória)">
             <Textarea
               rows={3}

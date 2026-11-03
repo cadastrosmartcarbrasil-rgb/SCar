@@ -135,6 +135,11 @@ export function TramitacaoEvento({
                   <option key={c.status} value={c.status}>{c.titulo}</option>
                 ))}
               </Select>
+              {(novoStatus === 'CONCLUIDO' || novoStatus === 'NEGADO') && (
+                <p className="mt-1 text-xs text-slate-500">
+                  O protocolo deste evento será encerrado junto.
+                </p>
+              )}
             </FormField>
           ) : (
             <p className="text-xs text-slate-500">
