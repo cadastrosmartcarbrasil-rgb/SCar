@@ -83,6 +83,9 @@ export function EditarCotacao({
   const [planoId, setPlanoId] = useState(cotacao?.plano_id ?? lead.plano_id ?? '');
   const [opcionais, setOpcionais] = useState<string[]>(cotacao?.opcionais_ids ?? []);
   const [desconto, setDesconto] = useState(Number(cotacao?.desconto_percentual ?? 0));
+  // Como a proposta chega ao cliente: item a item ou so o total.
+  const [modoEnvio, setModoEnvio] = useState<'DETALHADA' | 'CONSOLIDADA'>(
+    cotacao?.modo_envio === 'CONSOLIDADA' ? 'CONSOLIDADA' : 'DETALHADA');
   // 0158 — Assistencia Profissional: interna e fora do desconto
   const { data: regrasAp } = useRegrasAssistenciaProfissional(lead.id);
   const [assistencia, setAssistencia] = useState<number | null>(Number(cotacao?.valor_assistencia_profissional ?? 0) || null);
@@ -221,7 +224,7 @@ export function EditarCotacao({
         await gravarVeiculoDoLead();
         const c = await criarCotacao.mutateAsync({
           leadId: lead.id, fipe, tipoVeiculoId: tipoId, cotaId: cotaId || null, planoId: planoId || null,
-          produtosIds: avulsosDoVeiculo(opcionais, idsDoPlano),
+          produtosIds: avulsosDoVeiculo(opcionais, idsDoPlano), modoEnvio,
           assistenciaProfissional: assistencia ?? 0, valorFipeMercado: fipeMercado,
         });
         toast.success(`Proposta gerada — ${formatCurrency(Number(c.total_com_desconto ?? c.total_mensalidade))}/mês. Desconto, se houver, em "Ajustar".`);
@@ -243,6 +246,7 @@ export function EditarCotacao({
         cotaId: cotaId || null,
         planoId: planoId || null,
         limparPlano: !planoId,
+        modoEnvio,
         // so o que e vendido A PARTE: o combo entra pelo proprio plano
         opcionaisIds: avulsosDoVeiculo(opcionais, idsDoPlano),
         descontoPercentual: desconto,
@@ -274,6 +278,7 @@ export function EditarCotacao({
         cotaId: cotaId || null,
         planoId: planoId || null,
         limparPlano: !planoId,
+        modoEnvio,
         opcionaisIds: avulsosDoVeiculo(opcionais, idsDoPlano),
         assistenciaProfissional: assistencia ?? 0,
         valorFipeMercado: fipeMercado,
@@ -529,6 +534,19 @@ export function EditarCotacao({
         </div>
 
         </>)}
+
+        <div>
+          <p className="mb-1.5 text-sm font-medium text-slate-600">Envio ao cliente</p>
+          <div className="flex gap-2">
+            {(['DETALHADA', 'CONSOLIDADA'] as const).map((m) => (
+              <button key={m} type="button" onClick={() => setModoEnvio(m)}
+                className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                  modoEnvio === m ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
+                {m === 'DETALHADA' ? 'Detalhada (item a item)' : 'Consolidada (só o total)'}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <CampoAssistenciaProfissional regras={regrasAp} valor={assistencia} onChange={setAssistencia} />
 

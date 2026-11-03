@@ -6618,7 +6618,7 @@ da página, depois do fechamento inteiro, e só mexia em plano/opcionais/FIPE).
   quando o lead não tem cotação (o caso do lead NOVO). O card de cotações do fim da página saiu.
 - **`<EditarCotacao>` aceita `cotacao = null`** (gera a 1ª pelo `useSalvarCotacao`; desconto só depois, ao ajustar) e
   ganhou a seção **Veículo**: placa com consulta FIPE, marca, modelo, ano, tipo (trocar tipo tira o plano que não atende),
-  FIPE, cota e a cascata FIPE. Ao salvar, o veículo vai para o LEAD (`useSalvarFichaLead`: placa, marca, modelo, ano,
+  FIPE, cota, a cascata FIPE e o envio Detalhada/Consolidada. Ao salvar, o veículo vai para o LEAD (`useSalvarFichaLead`: placa, marca, modelo, ano,
   código FIPE, tipo, cota, `valor_fipe`, `valor_fipe_mercado`) e a cotação recebe tipo e cota (`atualizar_cotacao`).
 - **Portal do vendedor** (`/vendedor/leads/[id]`): os mesmos botões, com o mesmo modal.
 - **Contatos e agenda** (`contatos-lead.tsx`) nasce RECOLHIDO: uma linha com o retorno marcado e o último contato;
