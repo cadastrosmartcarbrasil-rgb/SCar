@@ -11,6 +11,7 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { AlertasVeiculo } from '@/components/veiculos/alertas-veiculo';
 import { CoberturasDetalhadas } from '@/components/veiculos/coberturas-veiculo';
+import { DescontoVeiculo } from '@/components/veiculos/desconto-veiculo';
 import {
   AcionamentosCadastro, EventosCadastro, FinanceiroCadastro, ProtocolosCadastro,
 } from '@/components/cadastro/vida-cadastro';
@@ -171,6 +172,11 @@ export default function FichaVeiculo({ params }: { params: { id: string } }) {
           <Card>
             <CardContent className="pt-5">
               <AlertasVeiculo veiculoId={v.id} />
+            </CardContent>
+          </Card>
+          <Card className="lg:col-span-3">
+            <CardContent className="pt-5">
+              <DescontoVeiculo veiculoId={v.id} />
             </CardContent>
           </Card>
           <div className="lg:col-span-3">

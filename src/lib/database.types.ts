@@ -396,7 +396,7 @@ export type TituloDescontoPedidosRow = {
 };
 
 export type DescontoPendente = {
-  origem: 'COTACAO' | 'TITULO';
+  origem: 'COTACAO' | 'TITULO' | 'VEICULO';
   id: string;
   lead_id: string | null;
   titulo_id: string | null;
@@ -5734,6 +5734,17 @@ export type Database = {
       };
       descontos_pendentes: { Args: Record<string, never>; Returns: DescontoPendente[] };
       descontos_pendentes_contagem: { Args: Record<string, never>; Returns: number };
+      // ---- 0179: desconto no veiculo da base ----
+      solicitar_desconto_veiculo: {
+        Args: { p_veiculo_id: string; p_tipo: string; p_valor: number; p_valido_ate?: string | null; p_justificativa?: string | null };
+        Returns: Record<string, unknown>;
+      };
+      remover_desconto_veiculo: { Args: { p_veiculo_id: string; p_motivo: string }; Returns: Record<string, unknown> };
+      decidir_desconto_veiculo: {
+        Args: { p_pedido_id: string; p_aprovar: boolean; p_motivo?: string | null };
+        Returns: Record<string, unknown>;
+      };
+      descontos_do_veiculo: { Args: { p_veiculo_id: string }; Returns: Record<string, unknown>[] };
       cliente_documentacao: {
         Args: { p_cliente: string };
         Returns: DocumentacaoCliente[];

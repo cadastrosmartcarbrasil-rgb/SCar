@@ -28,7 +28,7 @@ export default function DescontosPage() {
           <BadgePercent className="h-6 w-6 text-cyan-600" /> Descontos para aprovar
         </h1>
         <p className="text-sm text-slate-500">
-          Desconto na mensalidade das propostas e desconto pedido na edição de boleto. Enquanto o desconto da
+          Desconto na mensalidade das propostas, no cadastro do veículo da base e o pedido na edição de boleto. Enquanto o desconto da
           proposta não é aprovado, a venda não entra na base e os boletos não são emitidos.
         </p>
       </div>
@@ -58,6 +58,7 @@ function Pedido({ l }: { l: DescontoPendente }) {
   const [recusando, setRecusando] = useState(false);
   const [motivo, setMotivo] = useState('');
   const link = l.origem === 'COTACAO' && l.lead_id ? `/vendas/${l.lead_id}`
+    : l.origem === 'VEICULO' && l.cliente_id ? `/associados/${l.cliente_id}`
     : l.cliente_id ? `/associados/${l.cliente_id}?aba=financeiro` : null;
 
   async function acao(aprovar: boolean) {
@@ -73,7 +74,8 @@ function Pedido({ l }: { l: DescontoPendente }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-            {l.origem === 'COTACAO' ? 'Proposta (mensalidade)' : 'Edição de boleto'}
+            {l.origem === 'COTACAO' ? 'Proposta (mensalidade)'
+              : l.origem === 'VEICULO' ? 'Veículo da base (próximos boletos)' : 'Edição de boleto'}
             {l.regional ? ` · ${l.regional}` : ''}
           </p>
           {link
@@ -88,7 +90,7 @@ function Pedido({ l }: { l: DescontoPendente }) {
             </span>
           </p>
           <p className="text-xs text-slate-500">
-            {l.origem === 'COTACAO'
+            {l.origem !== 'TITULO'
               ? `Validade: ${textoValidade(l.valido_ate)}`
               : `Boleto com vencimento ${formatDate(l.vencimento)}`}
           </p>

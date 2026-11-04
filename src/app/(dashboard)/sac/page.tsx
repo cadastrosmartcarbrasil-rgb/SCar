@@ -32,6 +32,7 @@ import { CATEGORIAS_PROTOCOLO, PRIORIDADES } from '@/lib/protocolos';
 import { CentralProtocolos } from '@/components/protocolos/central-protocolos';
 import { ModalOpcionaisVeiculo } from '@/components/sac/opcionais-veiculo';
 import { CoberturasDetalhadas } from '@/components/veiculos/coberturas-veiculo';
+import { DescontoVeiculo } from '@/components/veiculos/desconto-veiculo';
 import { TermosDoCadastro } from '@/components/termos/termos-do-cadastro';
 import { usePode } from '@/hooks/use-permissoes';
 import { TabelaEventos } from '@/components/cadastro/vida-cadastro';
@@ -665,6 +666,9 @@ function CoberturasVeiculo({ veiculo }: { veiculo: VeiculoDetalhe }) {
   const [alterando, setAlterando] = useState(false);
   return (
     <div className="mt-4">
+      <div className="mb-4 rounded-xl border border-slate-200 bg-superficie p-4">
+        <DescontoVeiculo veiculoId={veiculo.id} />
+      </div>
       <CoberturasDetalhadas
         veiculo={veiculo}
         acaoOpcionais={(
