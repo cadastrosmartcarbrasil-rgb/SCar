@@ -78,3 +78,22 @@ describe('planilha da rastreadora', () => {
     expect(valorAQuestionar(c)).toEqual({ qtd: 3, valor: 74.7 });
   });
 });
+
+describe('modelo da planilha da rastreadora', () => {
+  it('o leitor reconhece todas as colunas do modelo', async () => {
+    const ExcelJS = (await import('exceljs')).default;
+    const { modeloRastreadoraXlsx, matrizDeXlsx } = await import('./planilha-xlsx');
+    const buf = await modeloRastreadoraXlsx(ExcelJS);
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(buf);
+    const ws = wb.getWorksheet('Veiculos')!;
+    ws.addRow(['BNR0H12', '9C2KC2200LR019536', '861740000000001', 24.9, '22/10/2022', '']);
+    const matriz = await matrizDeXlsx(ExcelJS, (await wb.xlsx.writeBuffer()) as ArrayBuffer);
+    const r = interpretarPlanilhaRastreadora(matriz);
+    expect(r.erros).toEqual([]);
+    expect(r.linhas).toEqual([{
+      linha: 2, placa: 'BNR0H12', chassi: '9C2KC2200LR019536', imei: '861740000000001',
+      valor: 24.9, instalado_em: '22/10/2022', retirado_em: null,
+    }]);
+  });
+});

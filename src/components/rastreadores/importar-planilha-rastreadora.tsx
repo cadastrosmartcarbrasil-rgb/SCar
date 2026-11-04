@@ -10,7 +10,7 @@ import { baixarCsv } from '@/components/financeiro/ui-financeiro';
 import { createClient } from '@/lib/supabase/client';
 import { lerTodas } from '@/lib/paginacao';
 import { matrizDeCsv } from '@/lib/precificacao-import';
-import { matrizDeXlsx as lerXlsx } from '@/lib/planilha-xlsx';
+import { matrizDeXlsx as lerXlsx, modeloRastreadoraXlsx } from '@/lib/planilha-xlsx';
 import { formatCurrency, cn } from '@/lib/utils';
 import { grafiasDaPlaca } from '@/lib/placa';
 import { usePode } from '@/hooks/use-permissoes';
@@ -25,6 +25,19 @@ import {
 // equipamento nao entra no parque — so a ficha e marcada.
 
 const ORDEM: SituacaoRastreadora[] = ['VINCULAR', 'FORA_DA_BASE', 'OUTRA_RASTREADORA', 'NAO_ENCONTRADO', 'JA_VINCULADO', 'RETIRADO'];
+
+async function baixarModelo() {
+  const ExcelJS = (await import('exceljs')).default;
+  const buffer = await modeloRastreadoraXlsx(ExcelJS);
+  const url = URL.createObjectURL(new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'modelo-planilha-rastreadora.xlsx';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 async function lerArquivo(f: File): Promise<string[][]> {
   if (/\.csv$/i.test(f.name)) return matrizDeCsv(await f.text());
@@ -183,7 +196,15 @@ export function ImportarPlanilhaRastreadora() {
               onChange={(e) => { escolherArquivo(e.target.files?.[0]); e.target.value = ''; }} />
           </label>
           {arquivo && <span className="text-sm text-slate-500">{arquivo}</span>}
+          <Button variant="ghost" onClick={() => baixarModelo().catch(() => toast.error('Não consegui gerar o modelo.'))}
+            className="ml-auto">
+            <Download className="mr-1 h-4 w-4" /> Baixar modelo (.xlsx)
+          </Button>
         </div>
+        <p className="mt-2 text-xs text-slate-500">
+          Colunas reconhecidas: <b>Placa</b> (obrigatória), Chassi, IMEI, Valor mensal, Data instalação, Data retirada. A planilha
+          da própria rastreadora também serve: o sistema acha a linha com &quot;Placa&quot; e lê as colunas pelo nome.
+        </p>
         {leitura?.erros.map((e) => <p key={e} className="mt-2 text-sm text-red-600">{e}</p>)}
         {!!leitura?.avisos.length && (
           <details className="mt-2 text-sm text-amber-700">

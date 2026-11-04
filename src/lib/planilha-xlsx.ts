@@ -96,3 +96,56 @@ export async function modeloFornecedoresXlsx(ExcelJS: ExcelJS): Promise<ArrayBuf
 
   return (await wb.xlsx.writeBuffer()) as ArrayBuffer;
 }
+
+/** As colunas do modelo da planilha da rastreadora (os nomes que o leitor reconhece). */
+export const COLUNAS_RASTREADORA: { titulo: string; largura: number; obrigatoria?: boolean; ajuda: string }[] = [
+  { titulo: 'Placa', largura: 12, obrigatoria: true,
+    ajuda: 'Obrigatória. Antiga (ABC1234) ou Mercosul (ABC1D23): o sistema casa as duas grafias.' },
+  { titulo: 'Chassi', largura: 22, ajuda: 'Opcional. Reserva quando a placa não casa (17 caracteres; mascarado com * é ignorado).' },
+  { titulo: 'IMEI', largura: 18, ajuda: 'Opcional. Número do equipamento (14 a 17 dígitos). Guarde aqui se a rastreadora informar.' },
+  { titulo: 'Valor mensal', largura: 14, ajuda: 'Opcional. O que a rastreadora cobra pelo veículo no mês (ex.: 24,90). Soma o total da fatura e o valor a questionar.' },
+  { titulo: 'Data instalação', largura: 16, ajuda: 'Opcional. DD/MM/AAAA.' },
+  { titulo: 'Data retirada', largura: 16, ajuda: 'Opcional. Preenchida = equipamento retirado: a linha não é vinculada.' },
+];
+
+/** Modelo .xlsx da planilha da rastreadora: aba "Veiculos" (só o cabeçalho) + aba "Instrucoes". */
+export async function modeloRastreadoraXlsx(ExcelJS: ExcelJS): Promise<ArrayBuffer> {
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'SCar';
+  const ws = wb.addWorksheet('Veiculos', { views: [{ state: 'frozen', ySplit: 1 }] });
+  ws.columns = COLUNAS_RASTREADORA.map((c) => ({ header: c.titulo, width: c.largura, style: { numFmt: '@' } }));
+  const cab = ws.getRow(1);
+  cab.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  cab.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF142445' } };
+  cab.alignment = { vertical: 'middle' };
+  cab.height = 22;
+  COLUNAS_RASTREADORA.forEach((c, i) => {
+    ws.getCell(1, i + 1).note = c.ajuda;
+    if (c.obrigatoria) ws.getCell(1, i + 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0BACE2' } };
+  });
+  // valor como número com 2 casas (o resto fica texto: o Excel não come zero do IMEI nem vira data o que não é)
+  ws.getColumn(4).numFmt = '#,##0.00';
+
+  const ins = wb.addWorksheet('Instrucoes');
+  ins.columns = [{ width: 22 }, { width: 90 }];
+  const linhas: [string, string][] = [
+    ['COMO USAR', ''],
+    ['1.', 'Preencha a aba "Veiculos", um veículo rastreado por linha. Só a PLACA é obrigatória.'],
+    ['2.', 'No sistema: Rastreadores → Planilha da rastreadora → escolha a rastreadora → escolha este arquivo.'],
+    ['3.', 'Antes de gravar aparece a conferência. Só "Vincular" grava (liga a ficha do veículo à rastreadora).'],
+    ['', ''],
+    ['TAMBÉM SERVE', 'A planilha da própria rastreadora (fatura): o sistema acha a linha com "Placa" e lê as colunas pelo nome. Coluna a mais é ignorada; linha de total também.'],
+    ['', ''],
+    ['EXEMPLO', 'Placa: BNR0H12 · Chassi: 9C2KC2200LR019536 · Valor mensal: 24,90 · Data instalação: 22/10/2022'],
+    ['', ''],
+    ['COLUNAS', ''],
+    ...COLUNAS_RASTREADORA.map((c) => [c.titulo, c.ajuda] as [string, string]),
+  ];
+  for (const [a, b] of linhas) {
+    const r = ins.addRow([a, b]);
+    if (!b && a) r.font = { bold: true, color: { argb: 'FF142445' } };
+    r.getCell(2).alignment = { wrapText: true, vertical: 'top' };
+    r.getCell(1).alignment = { vertical: 'top' };
+  }
+  return (await wb.xlsx.writeBuffer()) as ArrayBuffer;
+}
