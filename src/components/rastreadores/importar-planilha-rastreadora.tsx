@@ -15,6 +15,7 @@ import { formatCurrency, cn } from '@/lib/utils';
 import { grafiasDaPlaca } from '@/lib/placa';
 import { usePode } from '@/hooks/use-permissoes';
 import { useEmpresasRastreamento } from '@/hooks/use-rastreamento';
+import { CartoesRastreadoras, CHAVE_RESUMO_RASTREADORAS } from '@/components/rastreadores/cartoes-rastreadoras';
 import {
   interpretarPlanilhaRastreadora, conferirPlanilha, valorAQuestionar, ROTULO_SITUACAO,
   type Conferencia, type LeituraPlanilha, type SituacaoRastreadora, type VeiculoBase,
@@ -146,6 +147,7 @@ export function ImportarPlanilhaRastreadora() {
       }
       toast.success(`${aVincular.length} veículo(s) ligados a ${nome}.`);
       qc.invalidateQueries({ queryKey: ['veiculos'] });
+      qc.invalidateQueries({ queryKey: CHAVE_RESUMO_RASTREADORAS });
       qc.invalidateQueries({ queryKey: ['veiculo'] });
       await conferir(leitura, rastreadoraId);
     } catch (e) {
@@ -173,6 +175,8 @@ export function ImportarPlanilhaRastreadora() {
 
   return (
     <div className="space-y-4">
+      <CartoesRastreadoras selecionada={rastreadoraId}
+        onSelecionar={(id) => { setRastreadoraId(id); setConf(null); setLeitura(null); setArquivo(null); }} />
       <div className="rounded-2xl border border-slate-200 bg-superficie p-4">
         <h2 className="font-display text-base font-semibold text-slate-900">Planilha da rastreadora</h2>
         <p className="mt-1 text-sm text-slate-500">

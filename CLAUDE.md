@@ -910,6 +910,13 @@ Pedido do usuário: integrar com o painel de rastreadores pela documentação ht
   agente em 04/11** (autorizado); a questionar: 11 inativas no SCar, 10 com New Tracker no parque, 2 fora da base
   (R$ 572,70/mês).
 
+- **Modelo e cartões (04/11/2026):** botão *Baixar modelo (.xlsx)* (`modeloRastreadoraXlsx`, `src/lib/planilha-xlsx.ts`;
+  colunas Placa/Chassi/IMEI/Valor mensal/Data instalação/Data retirada) e um CARTÃO POR RASTREADORA no topo da aba
+  (`cartoes-rastreadoras.tsx`, regra pura `resumoPorRastreadora` em `src/lib/rastreadoras-resumo.ts`): veículos na base
+  por unidade, parque 2/3/4, "só pela ficha" (sem IMEI), ligados e fora da base, custo estimado (na base × custo do
+  equipamento no cadastro do fornecedor) e a lista dos veículos com CSV. Placa antiga × Mercosul casa (`placaCanonica`).
+  Retrato de 04/11: NEW TRACKER 1.162 · TOTAL TRAC 52 · ALERTA VIRTUAL 8 (SP1). A planilha subida NÃO é guardada.
+
 ## API EXTERNA (0151) — integração com outros sistemas (a 1ª: a rastreadora)
 Pedido do usuário (25/10/2026): "criar a API do software para integrar com outros sistemas; a primeira será com um
 software de rastreador, que fará o cruzamento das informações". **Leia `docs/modulos/api-externa.md` antes de mexer.**
