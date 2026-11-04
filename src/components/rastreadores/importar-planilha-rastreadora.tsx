@@ -12,6 +12,7 @@ import { lerTodas } from '@/lib/paginacao';
 import { matrizDeCsv } from '@/lib/precificacao-import';
 import { matrizDeXlsx as lerXlsx } from '@/lib/planilha-xlsx';
 import { formatCurrency, cn } from '@/lib/utils';
+import { grafiasDaPlaca } from '@/lib/placa';
 import { usePode } from '@/hooks/use-permissoes';
 import { useEmpresasRastreamento } from '@/hooks/use-rastreamento';
 import {
@@ -65,7 +66,7 @@ export function ImportarPlanilhaRastreadora() {
   );
 
   async function conferir(lida: LeituraPlanilha, rid: string) {
-    const placas = lida.linhas.map((l) => l.placa);
+    const placas = [...new Set(lida.linhas.flatMap((l) => grafiasDaPlaca(l.placa)))];
     const chassis = lida.linhas.map((l) => l.chassi).filter(Boolean) as string[];
     const lidos: VeiculoLido[] = [];
     for (const b of emBlocos(placas, 150)) {
@@ -257,7 +258,9 @@ export function ImportarPlanilhaRastreadora() {
                     </tr>))
                   : lista.map((i) => (
                     <tr key={i.linha} className="border-t border-slate-200">
-                      <td className="placa px-3 py-2">{i.placa}{i.casou_por === 'CHASSI' && <span className="ml-1 text-xs text-slate-400">(pelo chassi: {i.veiculo?.placa})</span>}</td>
+                      <td className="placa px-3 py-2">{i.placa}{i.casou_por === 'CHASSI' && <span className="ml-1 text-xs text-slate-400">(pelo chassi: {i.veiculo?.placa})</span>}
+                        {i.casou_por === 'PLACA' && i.veiculo?.placa && i.veiculo.placa !== i.placa && (
+                          <span className="ml-1 text-xs text-slate-400">(no SCar: {i.veiculo.placa})</span>)}</td>
                       <td className="px-3 py-2">
                         <span className={cn(ROTULO_SITUACAO[i.situacao].tom === 'alerta' && 'font-medium text-amber-700 dark:text-amber-300')}>
                           {ROTULO_SITUACAO[i.situacao].tom === 'alerta' && <AlertTriangle className="mr-1 inline h-3.5 w-3.5" />}

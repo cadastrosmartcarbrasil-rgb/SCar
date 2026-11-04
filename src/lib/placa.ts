@@ -21,6 +21,27 @@ export function placaValida(v: string): boolean {
   return /^[A-Z]{3}\d[A-Z0-9]\d{2}$/.test(p);
 }
 
+/**
+ * A mesma placa nos dois formatos: a Mercosul troca o 5o caractere (digito) por
+ * letra — 0=A, 1=B ... 9=J (ABC1234 -> ABC1C34). Devolve a forma ANTIGA, que serve
+ * de chave para casar as duas grafias. Fora do padrao devolve a placa normalizada.
+ */
+export function placaCanonica(v: string): string {
+  const p = normalizarPlaca(v);
+  if (!/^[A-Z]{3}\d[A-Z0-9]\d{2}$/.test(p)) return p;
+  const c = p[4];
+  if (/[A-J]/.test(c)) return p.slice(0, 4) + String(c.charCodeAt(0) - 65) + p.slice(5);
+  return p;
+}
+
+/** As duas grafias possiveis da placa (antiga e Mercosul), sem repetir. */
+export function grafiasDaPlaca(v: string): string[] {
+  const antiga = placaCanonica(v);
+  if (!/^[A-Z]{3}\d\d\d{2}$/.test(antiga)) return [normalizarPlaca(v)];
+  const mercosul = antiga.slice(0, 4) + String.fromCharCode(65 + Number(antiga[4])) + antiga.slice(5);
+  return [antiga, mercosul];
+}
+
 export async function consultarPlaca(placa: string): Promise<DadosPlaca> {
   const res = await fetch('/api/placa', {
     method: 'POST',

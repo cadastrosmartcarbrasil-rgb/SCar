@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { identificacaoVeiculo, normalizarPlaca, placaPendente, placaValida, validarIdentidadeVeiculo } from './placa';
+import { placaCanonica, grafiasDaPlaca } from './placa';
 
 describe('placa', () => {
   it('normaliza e valida antiga e Mercosul', () => {
@@ -48,5 +49,19 @@ describe('validarIdentidadeVeiculo (0136)', () => {
   });
   it('0 km que JA ganhou placa segue valido', () => {
     expect(validarIdentidadeVeiculo({ placa: 'ABC1D23', zero_km: true })).toBeNull();
+  });
+});
+
+describe('placa antiga x Mercosul', () => {
+  it('converte o 5o caractere (A=0 ... J=9)', () => {
+    expect(placaCanonica('BNR0H12')).toBe('BNR0712');
+    expect(placaCanonica('abc-1c34')).toBe('ABC1234');
+    expect(placaCanonica('ABC1234')).toBe('ABC1234');
+    expect(placaCanonica('ABC1K34')).toBe('ABC1K34'); // K nao tem par antigo
+  });
+  it('lista as duas grafias', () => {
+    expect(grafiasDaPlaca('BNR0712')).toEqual(['BNR0712', 'BNR0H12']);
+    expect(grafiasDaPlaca('BNR0H12')).toEqual(['BNR0712', 'BNR0H12']);
+    expect(grafiasDaPlaca('ABC1K34')).toEqual(['ABC1K34']);
   });
 });

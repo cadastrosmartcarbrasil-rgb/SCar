@@ -8,7 +8,7 @@
 // Nada aqui grava: a tela grava so o que for VINCULAR.
 
 import { normalizarCabecalho } from './precificacao-import';
-import { normalizarPlaca, placaValida } from './placa';
+import { normalizarPlaca, placaValida, placaCanonica } from './placa';
 import { parseMoedaBR } from './money';
 
 export interface LinhaRastreadora {
@@ -77,11 +77,12 @@ export function interpretarPlanilhaRastreadora(matriz: string[][]): LeituraPlani
       avisos.push(`Linha ${nLinha}: "${bruta}" não é uma placa — ignorada.`);
       continue;
     }
-    if (vistas.has(placa)) {
-      avisos.push(`Linha ${nLinha}: ${placa} repetida (já na linha ${vistas.get(placa)}) — ignorada.`);
+    const chave = placaCanonica(placa);
+    if (vistas.has(chave)) {
+      avisos.push(`Linha ${nLinha}: ${placa} repetida (já na linha ${vistas.get(chave)}) — ignorada.`);
       continue;
     }
-    vistas.set(placa, nLinha);
+    vistas.set(chave, nLinha);
     const valorTxt = col.valor >= 0 ? texto(l[col.valor]) : null;
     const imei = col.imei >= 0 ? String(l[col.imei] ?? '').replace(/\D/g, '') : '';
     linhas.push({
@@ -158,13 +159,14 @@ export function conferirPlanilha(
   // na placa repetida (nao deveria), o que esta na base vence
   const ordem = [...veiculos].sort((a, b) => Number(NA_BASE.includes(b.status)) - Number(NA_BASE.includes(a.status)));
   for (const v of ordem) {
-    if (v.placa && !porPlaca.has(v.placa)) porPlaca.set(v.placa, v);
+    // chave na forma antiga: a planilha e o SCar podem ter a placa em formatos diferentes (Mercosul)
+    if (v.placa && !porPlaca.has(placaCanonica(v.placa))) porPlaca.set(placaCanonica(v.placa), v);
     const ch = chassiUtil(v.chassi);
     if (ch && !porChassi.has(ch)) porChassi.set(ch, v);
   }
 
   const itens: ItemConferencia[] = linhas.map((l) => {
-    let veiculo = porPlaca.get(l.placa) ?? null;
+    let veiculo = porPlaca.get(placaCanonica(l.placa)) ?? null;
     let casou_por: ItemConferencia['casou_por'] = veiculo ? 'PLACA' : null;
     if (!veiculo && l.chassi) {
       veiculo = porChassi.get(l.chassi) ?? null;

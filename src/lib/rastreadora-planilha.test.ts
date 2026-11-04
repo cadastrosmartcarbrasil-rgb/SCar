@@ -34,6 +34,20 @@ describe('planilha da rastreadora', () => {
     expect(r.avisos.some((a) => a.includes('repetida'))).toBe(true);
   });
 
+  it('casa a placa antiga da planilha com a Mercosul do SCar (e o contrario)', () => {
+    const linhas = interpretarPlanilhaRastreadora([['Placa'], ['BNR0712'], ['QOW9I02']]).linhas;
+    const c = conferirPlanilha(linhas, [v({ id: 'a', placa: 'BNR0H12' }), v({ id: 'b', placa: 'QOW9802' })], R);
+    expect(c.itens.map((i) => [i.placa, i.situacao, i.veiculo?.id])).toEqual([
+      ['BNR0712', 'VINCULAR', 'a'], ['QOW9I02', 'VINCULAR', 'b'],
+    ]);
+  });
+
+  it('a mesma placa nos dois formatos na planilha conta uma vez', () => {
+    const r = interpretarPlanilhaRastreadora([['Placa'], ['BNR0712'], ['BNR0H12']]);
+    expect(r.linhas).toHaveLength(1);
+    expect(r.avisos[0]).toContain('repetida');
+  });
+
   it('chassi mascarado nao serve', () => {
     expect(chassiUtil('*****24132')).toBeNull();
     expect(chassiUtil('9c2kc2200lr019536')).toBe('9C2KC2200LR019536');
