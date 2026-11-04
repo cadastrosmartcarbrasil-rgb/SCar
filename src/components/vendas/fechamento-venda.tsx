@@ -106,9 +106,9 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
     () => (vendedores ?? []).find((v) => v.id === form.vendedor_id),
     [vendedores, form.vendedor_id],
   );
-  // 0145: a adesao e a da TABELA (cotacao aceita, com o desconto aprovado).
+  // 0178: a adesao e LIVRE (o consultor define, pode ser zero); a tabela so sugere.
   const { data: adesaoTabela } = useAdesaoTabela(lead.id);
-  const valorAdesao = adesaoTabela ?? Number(form.adesao_valor ?? 0);
+  const valorAdesao = form.adesao_valor != null ? Number(form.adesao_valor) : Number(adesaoTabela ?? 0);
   const rateio = ratearAdesao(
     valorAdesao,
     (form.adesao_forma ?? 'VENDEDOR_NA_HORA') as FormaAdesao,
@@ -532,14 +532,13 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
                 ))}
               </Select>
             </FormField>
-            <FormField label="Valor da adesão (tabela)">
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
-                {adesaoTabela != null
-                  ? <b className="tnum">{formatCurrency(adesaoTabela)}</b>
-                  : <span className="text-amber-700">Gere a cotação: a adesão sai da tabela</span>}
-              </div>
+            <FormField label="Valor da adesão">
+              <MoneyInput value={form.adesao_valor ?? null} onChange={(v) => set({ adesao_valor: v })} />
               <p className="mt-1 text-[0.6875rem] text-slate-500">
-                Vem da cotação aceita. Desconto só pela alçada, na cotação.
+                {adesaoTabela != null
+                  ? <>Sugestão da tabela: <button type="button" className="tnum font-medium text-cyan-700 hover:underline"
+                      onClick={() => set({ adesao_valor: adesaoTabela })}>{formatCurrency(adesaoTabela)}</button>. Livre — pode ser zero.</>
+                  : 'Livre — pode ser zero. Em branco, vale a sugestão da tabela.'}
               </p>
             </FormField>
             <FormField label="Forma de recebimento">

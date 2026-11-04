@@ -36,6 +36,7 @@ import {
   Mail,
   FileText,
   Send,
+  BadgePercent,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
@@ -43,9 +44,10 @@ import { ThemeToggle } from '@/components/ui/theme-toggle';
 import type { PapelUsuario } from '@/lib/database.types';
 import { abasConfiguracoesPermitidas, moduloDaRota } from '@/lib/permissoes';
 import { useRevistoriasEmAnaliseContagem } from '@/hooks/use-revistoria';
+import { useContagemDescontos } from '@/hooks/use-descontos';
 
 /** `contador`: numero vermelho ao lado do item (o que espera alguem agir). */
-export type Item = { href: string; label: string; icon: React.ElementType; contador?: 'revistorias' };
+export type Item = { href: string; label: string; icon: React.ElementType; contador?: 'revistorias' | 'descontos' };
 /** Item com sub-itens (Regionais e Cobranca). */
 type Grupo = { label: string; icon: React.ElementType; itens: Item[] };
 type Entrada = Item | Grupo;
@@ -160,9 +162,10 @@ function NavLink({ item, pathname, onNav, sub, compacto }: {
 /** O numero vermelho do menu. Vive num componente proprio: so consulta quem VE o item. */
 function ContadorMenu({ tipo, ponto }: { tipo: NonNullable<Item['contador']>; ponto?: boolean }) {
   const q = useRevistoriasEmAnaliseContagem();
-  const n = tipo === 'revistorias' ? q.data ?? 0 : 0;
+  const d = useContagemDescontos(tipo === 'descontos');
+  const n = tipo === 'revistorias' ? q.data ?? 0 : d.data ?? 0;
   if (n <= 0) return null;
-  const titulo = `${n} revistoria(s) esperando análise`;
+  const titulo = tipo === 'revistorias' ? `${n} revistoria(s) esperando análise` : `${n} desconto(s) esperando aprovação`;
   if (ponto) {
     return <span title={titulo} className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-navy" />;
   }
@@ -306,7 +309,12 @@ export function Sidebar({ papel, logoUrl, permissoes = null, ehVendedor = false 
     ...(ehVendedor || ['consultor_vendas', 'admin'].includes(papel ?? '')
       ? [{ href: '/vendedor', label: 'Meu Portal de Vendas', icon: UserRound }] : []),
   ];
-  const menuGestao: Entrada[] = [...portais, ...gestao];
+  // 0178 — a fila de descontos, so para quem aprova (alcada 'desconto').
+  const aprovaDesconto = papel === 'admin' || (permissoes ?? []).includes('desconto');
+  const descontos: Entrada[] = aprovaDesconto
+    ? [{ href: '/descontos', label: 'Descontos para aprovar', icon: BadgePercent, contador: 'descontos' }]
+    : [];
+  const menuGestao: Entrada[] = [...descontos, ...portais, ...gestao];
 
   async function sair() {
     await supabase.auth.signOut();

@@ -310,7 +310,15 @@ function ModalEditarBoleto({ titulo, onClose }: { titulo: TituloCliente; onClose
               observacao: form.observacao || null,
             },
             {
-              onSuccess: (t) => { toast.success(`Boleto atualizado — ${formatCurrency(Number(t.valor))}`); onClose(); },
+              onSuccess: (t) => {
+                // 0178: desconto maior pedido por quem nao aprova vira pedido para a diretoria.
+                if (Number(t.desconto ?? 0) + 0.004 < Number(form.desconto ?? 0)) {
+                  toast.success('Boleto atualizado. O desconto foi enviado para a aprovação da diretoria — o valor muda quando for aprovado.');
+                } else {
+                  toast.success(`Boleto atualizado — ${formatCurrency(Number(t.valor))}`);
+                }
+                onClose();
+              },
               onError: (err) => toast.error(err.message),
             },
           );
@@ -326,6 +334,7 @@ function ModalEditarBoleto({ titulo, onClose }: { titulo: TituloCliente; onClose
           </FormField>
           <FormField label="Desconto">
             <MoneyInput value={form.desconto} onChange={(v) => setForm({ ...form, desconto: v })} />
+            <p className="mt-1 text-[0.6875rem] text-slate-500">Aumentar o desconto depende da aprovação da diretoria.</p>
           </FormField>
           <FormField label="Acréscimo (juros/multa)">
             <MoneyInput value={form.acrescimo} onChange={(v) => setForm({ ...form, acrescimo: v })} />

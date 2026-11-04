@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Car, Lock, Percent, ShieldCheck, Loader2, Search } from 'lucide-react';
+import { Car, Lock, Percent, Loader2, Search, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { FormField, Input, Select, MoneyInput, PercentInput } from '@/components/ui/field';
@@ -20,10 +20,14 @@ import { alternarOpcional, planosDoTipo, sugestoesDoPlano } from '@/lib/planos-o
 import { produtosParaTipo, regraRastreadorCobra, semRastreadorDaRegra } from '@/lib/produtos';
 import { useRegraRastreador } from '@/hooks/use-regra-rastreador';
 import {
-  useAtualizarCotacao, useProdutosObrigatorios, useSimularDesconto, useAprovarDesconto,
+  useAtualizarCotacao, useProdutosObrigatorios, useSimularDesconto,
   useRegrasAssistenciaProfissional, useCotacaoAoVivo, useSalvarCotacao, useSalvarFichaLead,
 } from '@/hooks/use-vendas';
-import { calcularDesconto, percentualParaValorFinal, podeEditarCotacao } from '@/lib/crm';
+import { podeEditarCotacao } from '@/lib/crm';
+import {
+  calcularDescontoMensalidade, ROTULO_SITUACAO_DESCONTO, textoValidade, type TipoDesconto,
+} from '@/lib/desconto-mensalidade';
+import { useDefinirDesconto } from '@/hooks/use-descontos';
 import { validarAssistenciaProfissional } from '@/lib/assistencia-profissional';
 import { CampoAssistenciaProfissional } from '@/components/vendas/campo-assistencia-profissional';
 import { avulsosDoVeiculo } from '@/lib/planos';
@@ -53,7 +57,7 @@ export function EditarCotacao({
   const atualizar = useAtualizarCotacao();
   const criarCotacao = useSalvarCotacao();
   const salvarLead = useSalvarFichaLead();
-  const aprovar = useAprovarDesconto();
+  const definirDesconto = useDefinirDesconto();
   const fipePorPlaca = useFipePorPlaca();
   const nova = !cotacao;
 
@@ -82,7 +86,14 @@ export function EditarCotacao({
   });
   const [planoId, setPlanoId] = useState(cotacao?.plano_id ?? lead.plano_id ?? '');
   const [opcionais, setOpcionais] = useState<string[]>(cotacao?.opcionais_ids ?? []);
-  const [desconto, setDesconto] = useState(Number(cotacao?.desconto_percentual ?? 0));
+  // 0178 — desconto SO na mensalidade, em % ou R$/mes, com validade, sempre aprovado pela diretoria.
+  const [tipoDesc, setTipoDesc] = useState<TipoDesconto>(cotacao?.desconto_tipo === 'VALOR' ? 'VALOR' : 'PERCENTUAL');
+  const [valorDesc, setValorDesc] = useState<number | null>(
+    cotacao?.desconto_tipo === 'VALOR'
+      ? (Number(cotacao?.desconto_valor_informado ?? 0) || null)
+      : (Number(cotacao?.desconto_percentual ?? 0) || null));
+  const [validoAte, setValidoAte] = useState<string>(cotacao?.desconto_valido_ate?.slice(0, 10) ?? '');
+  const [justificativa, setJustificativa] = useState<string>(cotacao?.desconto_justificativa ?? '');
   // Como a proposta chega ao cliente: item a item ou so o total.
   const [modoEnvio, setModoEnvio] = useState<'DETALHADA' | 'CONSOLIDADA'>(
     cotacao?.modo_envio === 'CONSOLIDADA' ? 'CONSOLIDADA' : 'DETALHADA');
@@ -90,10 +101,9 @@ export function EditarCotacao({
   const { data: regrasAp } = useRegrasAssistenciaProfissional(lead.id);
   const [assistencia, setAssistencia] = useState<number | null>(Number(cotacao?.valor_assistencia_profissional ?? 0) || null);
   const erroAp = validarAssistenciaProfissional(assistencia, regrasAp);
-  const [alcada, setAlcada] = useState<{ email: string; senha: string; justificativa: string } | null>(null);
 
   const { data: obrigatorios } = useProdutosObrigatorios(tipoId || null, planoId || null, fipe ?? 0);
-  const { data: simulacao } = useSimularDesconto(cotacao?.id ?? '', desconto);
+  const { data: simulacao } = useSimularDesconto(cotacao?.id ?? '', 0);
 
   const idsObrigatorios = useMemo(
     () => (obrigatorios ?? []).map((o) => o.produto_id),
@@ -148,7 +158,8 @@ export function EditarCotacao({
   const mudouTabela = !!cotacao && Math.abs(totalTabela - Number(cotacao.total_mensalidade)) > 0.004;
 
   const limite = Number(simulacao?.limite_regional ?? 0);
-  const previa = calcularDesconto(totalTabela, adesaoTabela, desconto, limite);
+  const previa = calcularDescontoMensalidade(totalTabela, tipoDesc, valorDesc, limite);
+  const situacaoDesc = cotacao?.desconto_situacao ?? null;
 
   // 0162 — trocar de plano = comecar dos pre-marcados do plano novo (removiveis).
   function trocarPlano(novo: string) {
@@ -232,14 +243,15 @@ export function EditarCotacao({
       } catch (err) { toast.error((err as Error).message); }
       return;
     }
-    if (previa.exigeAprovacao) {
-      // Desconto acima do limite da franquia: pede a alcada do gestor.
-      setAlcada({ email: '', senha: '', justificativa: '' });
-      return;
+    if (previa.desconto > 0 && previa.acimaDoLimite) {
+      return toast.error(`O desconto passa do limite de ${limite.toFixed(2).replace('.', ',')}% da unidade`);
     }
-    try { await gravarVeiculoDoLead(); } catch (err) { return toast.error((err as Error).message); }
-    atualizar.mutate(
-      {
+    if (previa.desconto > 0 && !justificativa.trim()) {
+      return toast.error('Informe a justificativa do desconto (a diretoria lê para aprovar)');
+    }
+    try {
+      await gravarVeiculoDoLead();
+      await atualizar.mutateAsync({
         cotacaoId: cotacao!.id,
         fipe,
         tipoVeiculoId: tipoId,
@@ -249,64 +261,19 @@ export function EditarCotacao({
         modoEnvio,
         // so o que e vendido A PARTE: o combo entra pelo proprio plano
         opcionaisIds: avulsosDoVeiculo(opcionais, idsDoPlano),
-        descontoPercentual: desconto,
         assistenciaProfissional: assistencia ?? 0,
         valorFipeMercado: fipeMercado,
-      },
-      {
-        onSuccess: (c) => {
-          toast.success(`Cotação atualizada — ${formatCurrency(Number(c.total_com_desconto ?? c.total_mensalidade))}/mes`);
-          onClose();
-        },
-        onError: (err) => toast.error(err.message),
-      },
-    );
-  }
-
-  async function confirmarAlcada(e: React.FormEvent) {
-    e.preventDefault();
-    if (!alcada?.email || !alcada.senha || !alcada.justificativa.trim()) {
-      return toast.error('Preencha as credenciais do gestor e a justificativa');
-    }
-    try { await gravarVeiculoDoLead(); } catch (err) { return toast.error((err as Error).message); }
-    // 1) salva os itens/valores dentro do limite atual (sem desconto)
-    atualizar.mutate(
-      {
-        cotacaoId: cotacao!.id,
-        fipe,
-        tipoVeiculoId: tipoId,
-        cotaId: cotaId || null,
-        planoId: planoId || null,
-        limparPlano: !planoId,
-        modoEnvio,
-        opcionaisIds: avulsosDoVeiculo(opcionais, idsDoPlano),
-        assistenciaProfissional: assistencia ?? 0,
-        valorFipeMercado: fipeMercado,
-      },
-      {
-        onSuccess: () => {
-          // 2) o gestor aplica o desconto de excecao com as proprias credenciais
-          aprovar.mutate(
-            {
-              cotacao_id: cotacao!.id,
-              percentual: desconto,
-              justificativa: alcada.justificativa,
-              email: alcada.email,
-              senha: alcada.senha,
-            },
-            {
-              onSuccess: (r) => {
-                toast.success(`Desconto de ${desconto}% liberado por ${r.aprovado_por}`);
-                setAlcada(null);
-                onClose();
-              },
-              onError: (err) => toast.error(err.message),
-            },
-          );
-        },
-        onError: (err) => toast.error(err.message),
-      },
-    );
+      });
+      await definirDesconto.mutateAsync({
+        cotacaoId: cotacao!.id, tipo: tipoDesc, valor: previa.desconto > 0 ? Number(valorDesc ?? 0) : 0,
+        validoAte: previa.desconto > 0 && validoAte ? validoAte : null,
+        justificativa: previa.desconto > 0 ? justificativa : null,
+      });
+      toast.success(previa.desconto > 0
+        ? 'Proposta salva. O desconto segue para a aprovação da diretoria (se ainda não estava aprovado).'
+        : `Proposta salva — ${formatCurrency(totalTabela + (assistencia ?? 0))}/mês`);
+      onClose();
+    } catch (err) { toast.error((err as Error).message); }
   }
 
   return (
@@ -480,55 +447,79 @@ export function EditarCotacao({
             O desconto, se houver, entra em <b>Ajustar</b> depois de gerar a proposta.
           </p>
         ) : (<>
-        {/* Desconto com trava por regional */}
-        <div className={`rounded-lg border p-3 ${previa.exigeAprovacao ? 'border-amber-300 bg-amber-50' : 'border-slate-200'}`}>
+        {/* 0178 — desconto na MENSALIDADE (a adesao e livre, no fechamento), aprovado pela diretoria */}
+        <div className={`rounded-lg border p-3 ${previa.acimaDoLimite && previa.desconto > 0 ? 'border-rose-300 bg-rose-50' : 'border-slate-200'}`}>
+          <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <Percent className="h-3.5 w-3.5" /> Desconto na mensalidade
+          </p>
           <div className="flex flex-wrap items-end gap-3">
-            <FormField label="Desconto (%)">
-              <div className="w-28">
-                <PercentInput value={desconto || null} onChange={(v) => setDesconto(v ?? 0)} max={100} />
+            <FormField label="Tipo">
+              <div className="flex gap-1">
+                {(['PERCENTUAL', 'VALOR'] as const).map((t) => (
+                  <button key={t} type="button" onClick={() => { setTipoDesc(t); setValorDesc(null); }}
+                    className={`rounded-lg border px-3 py-2 text-sm font-medium ${tipoDesc === t
+                      ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
+                    {t === 'PERCENTUAL' ? '%' : 'R$ por mês'}
+                  </button>
+                ))}
               </div>
             </FormField>
-            <FormField label="ou o valor final (R$/mês)">
-              <div className="w-40">
-                <MoneyInput
-                  value={desconto > 0 ? previa.mensalidadeFinal : null}
-                  onChange={(v) => setDesconto(v == null ? 0 : percentualParaValorFinal(totalTabela, v))}
-                />
+            <FormField label={tipoDesc === 'PERCENTUAL' ? 'Desconto (%)' : 'Desconto (R$/mês)'}>
+              <div className="w-36">
+                {tipoDesc === 'PERCENTUAL'
+                  ? <PercentInput value={valorDesc} onChange={setValorDesc} max={100} />
+                  : <MoneyInput value={valorDesc} onChange={setValorDesc} />}
               </div>
             </FormField>
-            <p className="text-xs text-slate-500">
-              Limite da franquia: <strong>{limite.toFixed(2).replace('.', ',')}%</strong>
+            <FormField label="Válido até (vencimento)">
+              <Input type="date" value={validoAte} onChange={(e) => setValidoAte(e.target.value)} className="w-44" />
+            </FormField>
+            <p className="pb-2 text-xs text-slate-500">
+              Limite da unidade: <strong>{limite.toFixed(2).replace('.', ',')}%</strong>
             </p>
           </div>
+          {previa.desconto > 0 && (
+            <FormField label="Justificativa (vai para a diretoria)" className="mt-2">
+              <Input value={justificativa} onChange={(e) => setJustificativa(e.target.value)}
+                placeholder="Ex.: cliente com 3 veículos, proposta da concorrência" />
+            </FormField>
+          )}
 
           <div className="mt-2 grid gap-1 text-sm sm:grid-cols-2">
             <p className="text-slate-600">
               Mensalidade: <span className="tnum font-medium">{formatCurrency(previa.mensalidadeFinal + (assistencia ?? 0))}</span>
-              {previa.descontoMensalidade > 0 && (
-                <span className="ml-1 text-xs text-slate-400 line-through">
-                  {formatCurrency(totalTabela)}
+              {previa.desconto > 0 && (
+                <span className="ml-1 text-xs text-slate-400 line-through">{formatCurrency(totalTabela + (assistencia ?? 0))}</span>
+              )}
+              {previa.desconto > 0 && (
+                <span className="ml-1 text-xs text-slate-500">
+                  (− {formatCurrency(previa.desconto)} · {previa.percentual.toFixed(2).replace('.', ',')}% · {textoValidade(validoAte || null)})
                 </span>
               )}
             </p>
             <p className="text-slate-600">
-              Adesao: <span className="tnum font-medium">{formatCurrency(previa.adesaoFinal)}</span>
-              {previa.descontoAdesao > 0 && (
-                <span className="ml-1 text-xs text-slate-400 line-through">
-                  {formatCurrency(adesaoTabela)}
-                </span>
-              )}
+              Adesão sugerida: <span className="tnum font-medium">{formatCurrency(adesaoTabela)}</span>
+              <span className="ml-1 text-xs text-slate-400">— o valor cobrado é definido no fechamento</span>
             </p>
           </div>
 
-          {previa.exigeAprovacao && (
-            <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-amber-800">
-              <Percent className="h-3.5 w-3.5" />
-              Acima do limite da franquia — ao salvar, será pedida a aprovação de um Gestor/Diretor.
+          {previa.desconto > 0 && previa.acimaDoLimite && (
+            <p className="mt-2 text-xs font-medium text-rose-700">
+              Acima do limite da unidade — reduza o desconto para salvar.
             </p>
           )}
-          {cotacao?.desconto_aprovado_por && (
-            <p className="mt-1 text-xs text-violet-700">
-              Desconto atual liberado por exceção{cotacao.desconto_justificativa ? `: ${cotacao.desconto_justificativa}` : ''}.
+          {previa.desconto > 0 && !previa.acimaDoLimite && (
+            <p className="mt-2 text-xs text-slate-500">
+              Todo desconto passa pela aprovação da diretoria. Até lá a venda não entra na base e os boletos não são emitidos.
+            </p>
+          )}
+          {situacaoDesc && (
+            <p className={`mt-2 flex items-center gap-1.5 text-xs font-medium ${situacaoDesc === 'APROVADO'
+              ? 'text-emerald-700' : situacaoDesc === 'RECUSADO' ? 'text-rose-700' : 'text-amber-700'}`}>
+              {situacaoDesc === 'APROVADO' ? <CheckCircle2 className="h-3.5 w-3.5" />
+                : situacaoDesc === 'RECUSADO' ? <XCircle className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
+              Desconto atual: {ROTULO_SITUACAO_DESCONTO[situacaoDesc as 'PENDENTE']}
+              {situacaoDesc === 'RECUSADO' && cotacao?.desconto_decisao_motivo ? ` — ${cotacao.desconto_decisao_motivo}` : ''}
             </p>
           )}
         </div>
@@ -552,45 +543,13 @@ export function EditarCotacao({
 
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>
-          <Button type="submit" disabled={atualizar.isPending || criarCotacao.isPending || salvarLead.isPending}>
+          <Button type="submit" disabled={atualizar.isPending || criarCotacao.isPending || salvarLead.isPending || definirDesconto.isPending}>
             {(atualizar.isPending || criarCotacao.isPending || salvarLead.isPending) ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            {nova ? 'Gerar proposta' : previa.exigeAprovacao ? 'Salvar e pedir aprovação' : 'Salvar proposta'}
+            {nova ? 'Gerar proposta' : previa.desconto > 0 && situacaoDesc !== 'APROVADO' ? 'Salvar e pedir aprovação' : 'Salvar proposta'}
           </Button>
         </div>
       </form>
 
-      {/* Alcada de excecao */}
-      {alcada && (
-        <Modal open onClose={() => setAlcada(null)} title="Aprovação de desconto">
-          <form onSubmit={confirmarAlcada} className="space-y-3">
-            <p className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
-              O desconto de <strong>{desconto}%</strong> passa do limite de {limite}% da franquia.
-              Um Gestor/Diretor precisa autorizar com as próprias credenciais.
-            </p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <FormField label="E-mail do gestor">
-                <Input type="email" autoComplete="off" value={alcada.email}
-                  onChange={(e) => setAlcada({ ...alcada, email: e.target.value })} />
-              </FormField>
-              <FormField label="Senha do gestor">
-                <Input type="password" autoComplete="new-password" value={alcada.senha}
-                  onChange={(e) => setAlcada({ ...alcada, senha: e.target.value })} />
-              </FormField>
-              <FormField label="Justificativa" className="sm:col-span-2">
-                <Input value={alcada.justificativa}
-                  onChange={(e) => setAlcada({ ...alcada, justificativa: e.target.value })}
-                  placeholder="Ex.: cliente com 3 veículos, proposta da concorrência" />
-              </FormField>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="secondary" onClick={() => setAlcada(null)}>Voltar</Button>
-              <Button type="submit" disabled={aprovar.isPending || atualizar.isPending}>
-                <ShieldCheck className="h-4 w-4" /> Aprovar desconto
-              </Button>
-            </div>
-          </form>
-        </Modal>
-      )}
     </Modal>
   );
 }

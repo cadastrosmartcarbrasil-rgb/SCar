@@ -106,7 +106,7 @@ begin
   assert c.desconto_aprovado_por is null, 'dentro do limite nao precisa de aprovacao';
   assert c.total_com_desconto = round(c.total_mensalidade * 0.95, 2),
     format('mensalidade com desconto = %s', c.total_com_desconto);
-  assert c.adesao_com_desconto = round(c.taxa_adesao * 0.95, 2), 'adesao com desconto';
+  assert c.adesao_com_desconto = c.taxa_adesao, '0178: a adesao nao tem desconto (e livre no fechamento)';
 
   -- acima do limite pelo vendedor: bloqueia
   begin
@@ -116,28 +116,21 @@ begin
     assert sqlerrm like 'DESCONTO_ACIMA_DO_LIMITE%', format('mensagem inesperada: %s', sqlerrm);
   end;
 
-  -- gestor tambem precisa de justificativa
+  -- 0178: o limite da unidade e TETO para todos, inclusive para quem aprova
   perform set_config('request.jwt.claim.sub', u_gest::text, false);
   assert pode_aprovar_desconto(), 'gestor regional tem alcada';
   begin
-    perform aplicar_desconto_cotacao(c.id, 12, null);
-    raise exception 'excecao sem justificativa deveria falhar';
+    perform aplicar_desconto_cotacao(c.id, 12, 'Cliente com 3 veiculos na concorrencia');
+    raise exception 'desconto acima do limite deveria bloquear tambem o aprovador';
   exception when others then
-    assert sqlerrm like '%justificativa%', format('mensagem inesperada: %s', sqlerrm);
+    assert sqlerrm like 'DESCONTO_ACIMA_DO_LIMITE%', format('mensagem inesperada: %s', sqlerrm);
   end;
 
-  -- gestor libera a excecao
-  select * into c from aplicar_desconto_cotacao(c.id, 12, 'Cliente com 3 veiculos na concorrencia');
-  assert c.desconto_percentual = 12, 'desconto de excecao aplicado';
-  assert c.desconto_aprovado_por = u_gest, 'aprovador registrado';
-  assert c.desconto_justificativa is not null, 'justificativa gravada';
-  assert c.total_com_desconto = round(c.total_mensalidade * 0.88, 2), 'mensalidade com 12%';
-
-  -- voltar para dentro do limite limpa a aprovacao
+  -- 0178: desconto pedido pelo vendedor fica PENDENTE da diretoria
   perform set_config('request.jwt.claim.sub', u_vend::text, false);
   select * into c from atualizar_cotacao(c.id, null, null, null, null, null, null, 3);
-  assert c.desconto_aprovado_por is null and c.desconto_justificativa is null,
-    'desconto dentro do limite dispensa (e limpa) a aprovacao';
+  assert c.desconto_situacao = 'PENDENTE', format('desconto do vendedor aguarda a diretoria (%s)', c.desconto_situacao);
+  assert c.total_com_desconto = round(c.total_mensalidade * 0.97, 2), 'mensalidade com 3%';
 
   -- a trava tambem vale para insert direto (sem passar pela funcao)
   begin

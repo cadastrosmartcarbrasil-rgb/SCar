@@ -9,6 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { usePlanos, useTiposVeiculo } from '@/hooks/use-precificacao';
 import { podeEditarCotacao } from '@/lib/crm';
+import { ROTULO_SITUACAO_DESCONTO, textoValidade } from '@/lib/desconto-mensalidade';
 import { linkWhatsApp, mensagemDaProposta } from '@/lib/venda-publica';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { CotacoesRow, LeadsRow } from '@/lib/database.types';
@@ -131,7 +132,7 @@ function CartaoCotacao({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-base font-semibold text-brand-700">
           {formatCurrency(Number(c.total_com_desconto ?? c.total_mensalidade))}/mês
-          {Number(c.desconto_percentual) > 0 && (
+          {Number(c.desconto_valor_mensalidade) > 0 && (
             <span className="ml-2 text-xs font-normal text-slate-400 line-through">
               {formatCurrency(Number(c.total_mensalidade) + Number(c.valor_assistencia_profissional ?? 0))}
             </span>
@@ -148,14 +149,14 @@ function CartaoCotacao({
           <span className="text-slate-400"> (uso interno — o cliente não vê)</span>
         </p>
       )}
-      {Number(c.desconto_percentual) > 0 && (
-        <p className="mt-0.5 inline-flex items-center gap-1 text-xs text-emerald-700">
+      {Number(c.desconto_valor_mensalidade) > 0 && (
+        <p className={`mt-0.5 inline-flex flex-wrap items-center gap-1 text-xs ${c.desconto_situacao === 'APROVADO'
+          ? 'text-emerald-700' : c.desconto_situacao === 'RECUSADO' ? 'text-rose-700' : 'text-amber-700'}`}>
           <Percent className="h-3 w-3" />
-          Desconto de {Number(c.desconto_percentual).toFixed(2).replace('.', ',')}%
-          {c.desconto_aprovado_por ? ' (exceção aprovada)' : ''}
-          {c.adesao_com_desconto != null && Number(c.taxa_adesao) > 0
-            ? ` · adesão ${formatCurrency(Number(c.adesao_com_desconto))}`
-            : ''}
+          Desconto de {formatCurrency(Number(c.desconto_valor_mensalidade))}/mês
+          ({Number(c.desconto_percentual).toFixed(2).replace('.', ',')}%) · {textoValidade(c.desconto_valido_ate)}
+          {' — '}{c.desconto_situacao ? ROTULO_SITUACAO_DESCONTO[c.desconto_situacao as 'PENDENTE'] : 'aguardando aprovação'}
+          {c.desconto_situacao === 'RECUSADO' && c.desconto_decisao_motivo ? `: ${c.desconto_decisao_motivo}` : ''}
         </p>
       )}
       <p className="mt-0.5 text-xs text-slate-400">

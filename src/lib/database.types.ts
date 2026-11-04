@@ -304,6 +304,10 @@ export type VeiculosRow = Timestamps & {
   placa: string | null;
   /** 0136 — veiculo 0 km / placa pendente. Fica true como historico quando a placa chega. */
   zero_km: boolean;
+  /** 0178 — desconto aprovado por mes (R$) e ate quando vale. */
+  desconto_mensalidade: number;
+  desconto_mensalidade_ate: string | null;
+  desconto_cotacao_id: string | null;
   /** 0144 — data do pedido de cancelamento; sem evento nem 24h a partir dela. Limpa ao reativar. */
   cancelado_em: string | null;
   chassi: string | null;
@@ -370,7 +374,45 @@ export type FaturaItensRow = {
   veiculo_id: string | null;
   descricao: string;
   valor: number;
+  /** 0178 — desconto aplicado (valor ja e o liquido). */
+  desconto: number;
   created_at: string;
+};
+
+/** 0178 — pedido de desconto na edicao do boleto do SCar. */
+export type TituloDescontoPedidosRow = {
+  id: string;
+  titulo_id: string;
+  cliente_id: string | null;
+  valor_original: number;
+  desconto: number;
+  situacao: 'PENDENTE' | 'APROVADO' | 'RECUSADO' | 'CANCELADO';
+  motivo: string | null;
+  solicitado_por: string | null;
+  solicitado_em: string;
+  decidido_por: string | null;
+  decidido_em: string | null;
+  decisao_motivo: string | null;
+};
+
+export type DescontoPendente = {
+  origem: 'COTACAO' | 'TITULO';
+  id: string;
+  lead_id: string | null;
+  titulo_id: string | null;
+  cliente_id: string | null;
+  nome: string | null;
+  placa: string | null;
+  regional: string | null;
+  valor_tabela: number;
+  desconto: number;
+  percentual: number;
+  valor_final: number;
+  valido_ate: string | null;
+  vencimento: string | null;
+  justificativa: string | null;
+  solicitado_por: string | null;
+  solicitado_em: string;
 };
 
 export type StatusRastreador =
@@ -1357,6 +1399,14 @@ export type CotacoesRow = {
   desconto_aprovado_por: string | null;
   desconto_aprovado_em: string | null;
   desconto_justificativa: string | null;
+  /** 0178 — desconto so na mensalidade, com aprovacao da diretoria. */
+  desconto_tipo: 'PERCENTUAL' | 'VALOR';
+  desconto_valor_informado: number | null;
+  desconto_valido_ate: string | null;
+  desconto_situacao: 'PENDENTE' | 'APROVADO' | 'RECUSADO' | null;
+  desconto_solicitado_por: string | null;
+  desconto_solicitado_em: string | null;
+  desconto_decisao_motivo: string | null;
   atualizada_em: string | null;
   atualizada_por: string | null;
 };
@@ -4460,6 +4510,7 @@ export type Database = {
         AcionamentoEdicoesRow,
         [Rel<'acionamento_id', 'acionamentos_assistencia'>, Rel<'usuario_id', 'usuarios'>]
       >;
+      titulo_desconto_pedidos: TableDef<TituloDescontoPedidosRow, [Rel<'titulo_id', 'titulos_financeiros'>]>;
       associado_documentos: TableDef<
         AssociadoDocumentosRow,
         [Rel<'cliente_id', 'clientes'>, Rel<'lead_id', 'leads'>, Rel<'enviado_por', 'usuarios'>]
@@ -5669,6 +5720,20 @@ export type Database = {
       pode_aprovar_desconto: { Args: Record<string, never>; Returns: boolean };
       lead_em_negociacao: { Args: { p_lead_id: string }; Returns: boolean };
       // ---- 0034: rota de venda completa ----
+      definir_desconto_cotacao: {
+        Args: { p_cotacao_id: string; p_tipo: string; p_valor: number; p_valido_ate?: string | null; p_justificativa?: string | null };
+        Returns: CotacoesRow;
+      };
+      decidir_desconto_cotacao: {
+        Args: { p_cotacao_id: string; p_aprovar: boolean; p_motivo?: string | null };
+        Returns: CotacoesRow;
+      };
+      decidir_desconto_titulo: {
+        Args: { p_pedido_id: string; p_aprovar: boolean; p_motivo?: string | null };
+        Returns: TituloDescontoPedidosRow;
+      };
+      descontos_pendentes: { Args: Record<string, never>; Returns: DescontoPendente[] };
+      descontos_pendentes_contagem: { Args: Record<string, never>; Returns: number };
       cliente_documentacao: {
         Args: { p_cliente: string };
         Returns: DocumentacaoCliente[];

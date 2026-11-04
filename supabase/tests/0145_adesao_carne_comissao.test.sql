@@ -43,15 +43,18 @@ begin
   insert into cotacoes (lead_id, fipe, tipo_veiculo_id, total_mensalidade, taxa_adesao)
     values (l_id, 50000, tv, 150, 400) returning id into cot1;
 
+  -- 0178: a adesao e LIVRE — o valor digitado fica; em branco, vale a tabela.
   update leads set adesao_forma = 'BOLETO', adesao_valor = 999 where id = l_id;
+  assert (select adesao_valor from leads where id = l_id) = 999, 'o valor digitado fica (adesao livre)';
+  update leads set adesao_valor = null where id = l_id;
   assert (select adesao_valor from leads where id = l_id) = 400,
-    'o valor digitado tem de ser trocado pelo da tabela (cotacao)';
+    'em branco, a adesao vem da tabela (cotacao)';
 
   -- (created_at explicito: na mesma transacao o default now() empataria)
   insert into cotacoes (lead_id, fipe, tipo_veiculo_id, total_mensalidade, taxa_adesao, created_at)
     values (l_id, 52000, tv, 155, 450, now() + interval '1 second') returning id into cot2;
-  assert (select adesao_valor from leads where id = l_id) = 450,
-    'cotacao nova (sem aceite) muda a adesao do lead';
+  assert (select adesao_valor from leads where id = l_id) = 400,
+    '0178: com valor ja definido, cotacao nova nao muda a adesao do lead (e livre)';
 
   update leads set aceite_cotacao_id = cot1 where id = l_id;
   assert lead_adesao_tabela(l_id) = 400, 'a cotacao ACEITA manda';
