@@ -2,12 +2,13 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Satellite, CircleAlert, BarChart3, Settings2 } from 'lucide-react';
+import { Satellite, CircleAlert, BarChart3, Settings2, FileSpreadsheet } from 'lucide-react';
 import { PainelRastreadores } from '@/components/rastreadores/painel-rastreadores';
 import { DivergenciasRastreadores } from '@/components/rastreadores/divergencias-rastreadores';
 import { RelatoriosRastreadores } from '@/components/rastreadores/relatorios-rastreadores';
+import { ImportarPlanilhaRastreadora } from '@/components/rastreadores/importar-planilha-rastreadora';
 
-type Aba = 'parque' | 'divergencias' | 'relatorios';
+type Aba = 'parque' | 'divergencias' | 'relatorios' | 'planilha';
 
 export default function RastreadoresPage() {
   const [aba, setAba] = useState<Aba>('parque');
@@ -15,6 +16,7 @@ export default function RastreadoresPage() {
     { id: 'parque', label: 'Parque de equipamentos', icon: Satellite },
     { id: 'divergencias', label: 'Divergências', icon: CircleAlert },
     { id: 'relatorios', label: 'Relatórios', icon: BarChart3 },
+    { id: 'planilha', label: 'Planilha da rastreadora', icon: FileSpreadsheet },
   ];
 
   return (
@@ -47,6 +49,7 @@ export default function RastreadoresPage() {
       {aba === 'parque' && <PainelRastreadores />}
       {aba === 'divergencias' && <DivergenciasRastreadores />}
       {aba === 'relatorios' && <RelatoriosRastreadores />}
+      {aba === 'planilha' && <ImportarPlanilhaRastreadora />}
     </div>
   );
 }

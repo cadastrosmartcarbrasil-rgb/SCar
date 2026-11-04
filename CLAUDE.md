@@ -897,6 +897,19 @@ Pedido do usuário: integrar com o painel de rastreadores pela documentação ht
 - **Próximo:** rotina no VPS (posições 15 min, equipamentos diário), divergência **sem sinal há mais de 3 dias**
   (`DIAS_SEM_SINAL`, decisão do usuário). **Ocorrências de roubo/furto: depois** (decisão do usuário).
 
+## PLANILHA DA RASTREADORA — MULTITRAC / TOTAL TRAC (04/11/2026, sem migration)
+- **Rastreadores → aba "Planilha da rastreadora"** (`importar-planilha-rastreadora.tsx`, regras em
+  `src/lib/rastreadora-planilha.ts`, testadas): a fatura mensal da rastreadora por PLACA (chassi de 17, sem máscara,
+  como reserva). Escolhe a rastreadora, sobe .xlsx/.csv e vê a conferência: VINCULAR · JÁ VINCULADO · RASTREADOR DE
+  OUTRA EMPRESA · FORA DA BASE (cobrado) · NÃO ESTÁ NA BASE · RETIRADO, mais "ligados a ela e fora da fatura", com o
+  valor a questionar e CSV. **Vincular** só grava `veiculos.empresa_rastreamento_id` (rastreadores.editar).
+- **Sem IMEI (decisão do usuário):** o equipamento NÃO entra no parque (`rastreadores.imei` é obrigatório) — fica fora do
+  status 2/3/4, das divergências e da lista de cortes até a rastreadora mandar o IMEI.
+- **A rastreadora é MULTITRAC COMERCIO E MANUTENCAO DE RASTREADORES LTDA / TOTAL TRAC** (CNPJ 07.812.651/0001-25), não o
+  cadastro "TOTAL TRACKER EIRELI". Fatura de outubro/2026: 73 placas × R$ 24,90 = R$ 1.817,70; **50 vinculadas pelo
+  agente em 04/11** (autorizado); a questionar: 11 inativas no SCar, 10 com New Tracker no parque, 2 fora da base
+  (R$ 572,70/mês).
+
 ## API EXTERNA (0151) — integração com outros sistemas (a 1ª: a rastreadora)
 Pedido do usuário (25/10/2026): "criar a API do software para integrar com outros sistemas; a primeira será com um
 software de rastreador, que fará o cruzamento das informações". **Leia `docs/modulos/api-externa.md` antes de mexer.**
