@@ -6,7 +6,7 @@ import { somarBlocosCarga } from '@/lib/mutual';
 import type { CobrancaImportacaoBloco } from '@/lib/database.types';
 import {
   ENTIDADES_DA_SINCRONIA, PAGINAS_MAXIMAS_SINCRONIA, LOTE_CARGA_AGENDADOR,
-  PAGINAS_MAXIMAS_INVOICE, LOTE_BOLETOS_AGENDADOR, modoCapturaInvoice,
+  PAGINAS_MAXIMAS_INVOICE, LOTE_BOLETOS_AGENDADOR, loteAposFalha, modoCapturaInvoice,
   unidadesParaCarregar, equipesSemUnidade, resumoDaSincronia, type PassoSincronia,
 } from '@/lib/mutual-sincronia';
 
@@ -198,15 +198,25 @@ export async function POST(request: Request) {
   // renegociado/substituido (0121/0140), que os gatilhos protegem.
   {
     let cursor: string | null = null;
-    let lidos = 0, gravados = 0, blocos = 0;
+    let lidos = 0, gravados = 0, blocos = 0, reducoes = 0;
     let erro: string | null = null;
     let fim = false;
-    for (let i = 0; i < 1000; i++) {
+    let lote = LOTE_BOLETOS_AGENDADOR;
+    for (let i = 0; i < 2000; i++) {
       const resp: { data: CobrancaImportacaoBloco[] | null; error: { message: string } | null } =
         await supabase.rpc('cobranca_importar_historico_mutual', {
-          p_cursor: cursor, p_lote: LOTE_BOLETOS_AGENDADOR, p_confirmar: true,
+          p_cursor: cursor, p_lote: lote, p_confirmar: true,
         });
-      if (resp.error) { erro = resp.error.message; break; }
+      if (resp.error) {
+        // Bloco que estourou o tempo: o MESMO trecho de novo, menor. Desistir no
+        // primeiro erro deixava todo boleto depois dele fora do historico.
+        const menor = loteAposFalha(lote);
+        if (menor === null) { erro = resp.error.message; break; }
+        lote = menor;
+        reducoes += 1;
+        continue;
+      }
+      lote = LOTE_BOLETOS_AGENDADOR;
       const b: CobrancaImportacaoBloco | undefined = (resp.data ?? [])[0];
       if (!b) { fim = true; break; }
       blocos += 1;
@@ -220,7 +230,8 @@ export async function POST(request: Request) {
       ok: !erro && fim,
       detalhe: erro
         ? `${erro} (parou depois de ${blocos} bloco(s), ${gravados} gravado(s))`
-        : `${gravados} gravado(s)/atualizado(s) em ${lidos} lido(s), ${blocos} bloco(s)${fim ? '' : ' — NAO TERMINOU'}`,
+        : `${gravados} gravado(s)/atualizado(s) em ${lidos} lido(s), ${blocos} bloco(s)`
+          + `${reducoes ? `, ${reducoes} bloco(s) refeito(s) menores` : ''}${fim ? '' : ' — NAO TERMINOU'}`,
     });
   }
 

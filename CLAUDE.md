@@ -4218,6 +4218,14 @@ manda o link sozinho. Decisões do usuário: a equipe pode **liberar sem revisto
   (Bradesco) aparece paga em 29/10 com `last_change_type: MANUAL` e crédito 28/10 — provável baixa manual no
   Mutual espelhando o pagamento do SCar, não pagamento em dobro; confirmar no extrato do Bradesco
   (nosso número 02153107806 e 02153091938).
+  **🔴 A IMPORTAÇÃO DOS BOLETOS PARAVA NO MEIO (30/10 a 04/11/2026, caso RAPHAEL VALADAR CABRAL):** ele pagou
+  em 30/10 as 15 mensalidades de setembro por 2ª via do Mutual (Bradesco); a rotina CAPTUROU as vias em 01/11, mas
+  nenhuma entrou em `boletos_historico`. Um bloco de 2.000 de `cobranca_importar_historico_mutual` passava dos 8 s
+  do service_role (12,5 s medido) e a rotina desistia da passada no primeiro erro — nada acima de ~272100 era
+  importado. Corrigido: bloco recusado é refeito com metade do lote até 250 (`loteAposFalha`,
+  `src/lib/mutual-sincronia.ts`, testada). **Reimportado pelo agente em 04/11 (autorizado):** 13.442 boletos
+  novos (6.640 pagos); o Raphael ficou com as 15 vias pagas e os originais substituídos (0140). Sobram 2 sem
+  vencimento (ignorados de propósito). Conferir no log da rotina: `historico de boletos` ok.
   **ADDRESS ignora a paginação** (`/core/address/` devolve os ~45 mil endereços inteiros em toda página,
   array cru sem `next`): de 14 a 23/10 a rotina regravou o mesmo conjunto por até 17 min, todo dia, até o
   Mutual derrubar a conexão ("fetch failed"/502). Corrigido em `temProximaPagina` (página cheia = EXATAMENTE

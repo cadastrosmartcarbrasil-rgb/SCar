@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   ENTIDADES_DA_SINCRONIA, unidadesParaCarregar, equipesSemUnidade, resumoDaSincronia,
-  modoCapturaInvoice,
+  modoCapturaInvoice, loteAposFalha,
 } from './mutual-sincronia';
 
 describe('modoCapturaInvoice', () => {
@@ -70,5 +70,14 @@ describe('resumoDaSincronia', () => {
       { etapa: 'captura CONTRACT', ok: false, detalhe: 'HTTP 502' },
       { etapa: 'carga X', ok: true, detalhe: '' },
     ])).toBe('1/2 etapas ok; FALHOU: captura CONTRACT (HTTP 502)');
+  });
+});
+
+describe('loteAposFalha', () => {
+  it('divide pela metade ate o minimo e depois desiste', () => {
+    expect(loteAposFalha(2000)).toBe(1000);
+    expect(loteAposFalha(1000)).toBe(500);
+    expect(loteAposFalha(500)).toBe(250);
+    expect(loteAposFalha(250)).toBeNull();
   });
 });

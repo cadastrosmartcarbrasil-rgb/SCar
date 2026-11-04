@@ -85,6 +85,21 @@ export const PAGINAS_MAXIMAS_INVOICE = 700;
  *  (medido em 23/10/2026); 2.000 deixa folga no teto de 8 s do service_role. */
 export const LOTE_BOLETOS_AGENDADOR = 2000;
 
+/** Menor bloco que a importacao tenta antes de desistir da passada. */
+export const LOTE_BOLETOS_MINIMO = 250;
+
+/**
+ * Lote da proxima tentativa depois de um bloco recusado pelo banco. O bloco de
+ * 2.000 ja passou dos 8 s do service_role (12,5 s medido) e a rotina abandonava
+ * a passada inteira no primeiro erro: de 30/10 a 04/11/2026 os boletos com id
+ * acima de ~272100 nunca foram importados (caso RAPHAEL VALADAR CABRAL, 15 vias
+ * pagas em 30/10). Divide pela metade ate o minimo; abaixo dele, null = desistir.
+ */
+export function loteAposFalha(lote: number): number | null {
+  const menor = Math.floor(lote / 2);
+  return menor >= LOTE_BOLETOS_MINIMO ? menor : null;
+}
+
 /** Folga do incremental: o que mudou ate N dias antes da ultima captura completa. */
 export const MARGEM_INCREMENTAL_DIAS = 3;
 
