@@ -39,6 +39,7 @@ import { STATUS_ACIONAMENTO_LABEL } from '@/lib/assistencia';
 import { statusVeiculoResumo, primeiraAtivacao } from '@/lib/sac';
 import { textoAtraso } from '@/lib/revistoria';
 import { PainelRevistoriaSac } from '@/components/revistoria/painel-revistoria-sac';
+import { AvisoCnhAssociado } from '@/components/associados/documentos-associado';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type {
   ClientesRow, OpcionalVeiculo, PrioridadeAtendimento, TipoAtendimento, TipoFaturamento,
@@ -126,6 +127,8 @@ export default function SacPage() {
             celular={v360.associado.celular ?? v360.associado.telefone}
             diasAtraso={v360.financeiro.resumo.diasAtraso}
           />
+          <AvisoCnhAssociado clienteId={v360.associado.id} nome={v360.associado.nome_razao_social}
+                             celular={v360.associado.celular ?? v360.associado.telefone} apenasProblema />
           <AlertasBanner alertas={v360.alertas} />
 
           {/* Abas: Veiculos | Eventos do associado */}

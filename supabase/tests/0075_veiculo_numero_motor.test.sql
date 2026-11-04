@@ -61,6 +61,8 @@ begin
 
   insert into vistorias (lead_id, tipo, status, data_vistoria)
     values (l_id, 'inicial', 'PENDENTE', current_date) returning id into vist_id;
+  -- 0177: identidade e comprovante de endereco do lead
+  insert into associado_documentos (lead_id, tipo, url) values (l_id, 'RG', 't/rg.jpg'), (l_id, 'COMPROVANTE_ENDERECO', 't/c.pdf');
   insert into vistoria_anexos (vistoria_id, url, tipo) values
     (vist_id, 'f1.jpg', 'FRENTE'), (vist_id, 'f2.jpg', 'TRASEIRA'),
     (vist_id, 'f3.jpg', 'LATERAL_ESQUERDA'), (vist_id, 'f4.jpg', 'LATERAL_DIREITA'),
@@ -97,6 +99,8 @@ begin
 
   insert into vistorias (lead_id, tipo, status, data_vistoria)
     values (l_id, 'inicial', 'PENDENTE', current_date) returning id into vist_id;
+  -- 0177: identidade e comprovante de endereco do lead
+  insert into associado_documentos (lead_id, tipo, url) values (l_id, 'RG', 't/rg.jpg'), (l_id, 'COMPROVANTE_ENDERECO', 't/c.pdf');
   insert into vistoria_anexos (vistoria_id, url, tipo) values
     (vist_id, 'f1.jpg', 'FRENTE'), (vist_id, 'f2.jpg', 'TRASEIRA'),
     (vist_id, 'f3.jpg', 'LATERAL_ESQUERDA'), (vist_id, 'f4.jpg', 'LATERAL_DIREITA'),

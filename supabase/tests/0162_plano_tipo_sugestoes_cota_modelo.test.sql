@@ -72,6 +72,8 @@ begin
     crlv_qrcode = 'https://gov.br/crlv/162', plano_id = pl_todos
    where id = l_id;
   insert into vistorias (lead_id, tipo, status) values (l_id, 'inicial', 'PENDENTE') returning id into vist;
+  -- 0177: identidade e comprovante de endereco do lead
+  insert into associado_documentos (lead_id, tipo, url) values (l_id, 'RG', 't/rg.jpg'), (l_id, 'COMPROVANTE_ENDERECO', 't/c.pdf');
   insert into vistoria_anexos (vistoria_id, url, tipo)
   select vist, m.codigo || '.jpg', m.codigo from vistoria_fotos_modelo m where m.obrigatorio and m.ativo;
   select string_agg(item, '; ') into st from checklist_lead(l_id) c where not c.ok;

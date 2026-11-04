@@ -3548,6 +3548,62 @@ export type AcionamentoAnexosRow = {
   created_at: string;
 };
 
+export type TipoDocumentoAssociado =
+  'RG' | 'CNH' | 'CPF' | 'COMPROVANTE_ENDERECO' | 'CONTRATO_SOCIAL' | 'OUTRO';
+export type SituacaoDocumentoAssociado = 'AGUARDANDO' | 'CONFERIDO' | 'RECUSADO' | 'SUBSTITUIDO';
+
+/** 0177: documento pessoal do associado (ou do lead, antes da entrada). */
+export type AssociadoDocumentosRow = {
+  id: string;
+  cliente_id: string | null;
+  lead_id: string | null;
+  tipo: TipoDocumentoAssociado;
+  descricao: string | null;
+  numero: string | null;
+  validade: string | null;
+  url: string;
+  nome_arquivo: string | null;
+  mime: string | null;
+  tamanho_bytes: number | null;
+  situacao: SituacaoDocumentoAssociado;
+  conferido_por: string | null;
+  conferido_em: string | null;
+  motivo_recusa: string | null;
+  enviado_por: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DocumentacaoCliente = {
+  tem_identidade: boolean;
+  tem_comprovante: boolean;
+  cnh_validade: string | null;
+  cnh_vencida: boolean | null;
+  cnh_dias: number | null;
+  aguardando: number;
+  recusados: number;
+  total: number;
+};
+
+export type FilaDocumentoAssociado = {
+  documento_id: string;
+  cliente_id: string | null;
+  lead_id: string | null;
+  associado: string | null;
+  cpf_cnpj: string | null;
+  celular: string | null;
+  regional: string | null;
+  tipo: TipoDocumentoAssociado;
+  descricao: string | null;
+  validade: string | null;
+  situacao: SituacaoDocumentoAssociado;
+  motivo_recusa: string | null;
+  url: string;
+  nome_arquivo: string | null;
+  enviado_em: string;
+  evento_aberto: boolean;
+};
+
 export type ProdutoDoPlano = {
   produto_id: string;
   nome: string;
@@ -4403,6 +4459,10 @@ export type Database = {
       acionamento_edicoes: TableDef<
         AcionamentoEdicoesRow,
         [Rel<'acionamento_id', 'acionamentos_assistencia'>, Rel<'usuario_id', 'usuarios'>]
+      >;
+      associado_documentos: TableDef<
+        AssociadoDocumentosRow,
+        [Rel<'cliente_id', 'clientes'>, Rel<'lead_id', 'leads'>, Rel<'enviado_por', 'usuarios'>]
       >;
       acionamento_anexos: TableDef<
         AcionamentoAnexosRow,
@@ -5609,6 +5669,22 @@ export type Database = {
       pode_aprovar_desconto: { Args: Record<string, never>; Returns: boolean };
       lead_em_negociacao: { Args: { p_lead_id: string }; Returns: boolean };
       // ---- 0034: rota de venda completa ----
+      cliente_documentacao: {
+        Args: { p_cliente: string };
+        Returns: DocumentacaoCliente[];
+      };
+      auditoria_documentos_associados: {
+        Args: { p_filtro?: string; p_busca?: string | null; p_limite?: number };
+        Returns: FilaDocumentoAssociado[];
+      };
+      auditoria_documentos_resumo: {
+        Args: Record<string, never>;
+        Returns: { aguardando: number; cnh_vencida: number; cnh_a_vencer: number; recusados: number }[];
+      };
+      conferir_documento_associado: {
+        Args: { p_documento: string; p_aprovar: boolean; p_motivo?: string | null };
+        Returns: AssociadoDocumentosRow;
+      };
       checklist_lead: {
         Args: { p_lead_id: string };
         Returns: ItemChecklistLead[];

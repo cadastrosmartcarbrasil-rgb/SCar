@@ -9,6 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FotosVistoria } from '@/components/vistoria/fotos-vistoria';
+import { DocumentosAssociado } from '@/components/associados/documentos-associado';
 import { LinkDaProposta } from '@/components/hotlink/cotacao-publica';
 import { AceitePresencial } from '@/components/vendas/aceite-presencial';
 import { EditarCotacao } from '@/components/vendas/editar-cotacao';
@@ -216,6 +217,17 @@ export default function LeadVendedorPage({ params }: { params: Promise<{ id: str
           ) : (
             <FotosVistoria leadId={id} celular={lead.celular} nome={lead.nome} />
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-1.5">
+            <FileText className="h-4 w-4 text-slate-400" /> Documentos do associado
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <DocumentosAssociado leadId={id} nome={lead.nome} celular={lead.celular} compacto />
         </CardContent>
       </Card>
 

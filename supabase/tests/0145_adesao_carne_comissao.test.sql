@@ -61,6 +61,8 @@ begin
   raise notice 'OK adesao vem da cotacao aceita';
 
   insert into vistorias (lead_id, tipo, status) values (l_id, 'inicial', 'PENDENTE') returning id into vist;
+  -- 0177: identidade e comprovante de endereco do lead
+  insert into associado_documentos (lead_id, tipo, url) values (l_id, 'RG', 't/rg.jpg'), (l_id, 'COMPROVANTE_ENDERECO', 't/c.pdf');
   insert into vistoria_anexos (vistoria_id, url, tipo) values
     (vist,'a.jpg','FRENTE'), (vist,'b.jpg','TRASEIRA'), (vist,'c.jpg','LATERAL_ESQUERDA'),
     (vist,'d.jpg','LATERAL_DIREITA'), (vist,'e.jpg','CHASSI'), (vist,'f.jpg','HODOMETRO');

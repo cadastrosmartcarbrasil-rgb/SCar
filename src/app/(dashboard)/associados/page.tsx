@@ -14,6 +14,9 @@ import { Paginador } from '@/components/ui/paginador';
 import { useAdiado } from '@/hooks/use-adiado';
 import type { StatusCliente } from '@/lib/database.types';
 import { SePode } from '@/components/layout/se-pode';
+import Link from 'next/link';
+import { FileCheck2 } from 'lucide-react';
+import { useResumoAuditoriaDocumentos } from '@/hooks/use-documentos-associado';
 
 const SITUACAO_COR: Record<string, string> = {
   ativo: 'bg-emerald-50 text-emerald-700',
@@ -51,11 +54,14 @@ export default function AssociadosPage() {
           <h1 className="text-2xl font-semibold text-slate-900">Associados</h1>
           <p className="text-sm text-slate-500">Clique em um associado para abrir o painel completo.</p>
         </div>
-        <SePode chave="associados.criar">
-        <Button onClick={() => setAberto(true)}>
-          <Plus className="h-4 w-4" /> Novo Associado
-        </Button>
-        </SePode>
+        <div className="flex flex-wrap items-center gap-2">
+          <BotaoAuditoriaDocumentos />
+          <SePode chave="associados.criar">
+          <Button onClick={() => setAberto(true)}>
+            <Plus className="h-4 w-4" /> Novo Associado
+          </Button>
+          </SePode>
+        </div>
       </div>
 
       <div className="relative max-w-sm">
@@ -152,5 +158,18 @@ export default function AssociadosPage() {
         />
       </Modal>
     </div>
+  );
+}
+
+/** Atalho para a fila de documentos (0177), com o que espera alguem. */
+function BotaoAuditoriaDocumentos() {
+  const { data } = useResumoAuditoriaDocumentos();
+  const n = (data?.aguardando ?? 0) + (data?.cnh_vencida ?? 0);
+  return (
+    <Link href="/associados/documentos"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-superficie px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+      <FileCheck2 className="h-4 w-4" /> Auditoria de documentos
+      {n > 0 && <span className="tnum rounded-full bg-rose-600 px-1.5 text-[0.6875rem] font-bold leading-5 text-white">{n}</span>}
+    </Link>
   );
 }

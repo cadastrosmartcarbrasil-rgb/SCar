@@ -79,6 +79,8 @@ begin
   -- vistoria com fotos (ainda sem veiculo: nasce no lead)
   insert into vistorias (lead_id, tipo, status, data_vistoria)
     values (l_id, 'inicial', 'PENDENTE', current_date) returning id into vist_id;
+  -- 0177: identidade e comprovante de endereco do lead
+  insert into associado_documentos (lead_id, tipo, url) values (l_id, 'RG', 't/rg.jpg'), (l_id, 'COMPROVANTE_ENDERECO', 't/c.pdf');
   -- desde o 0040 o que conta e a POSE (vistoria_fotos_modelo), nao o numero
   -- de arquivos: faltando o hodometro, o checklist tem de barrar.
   insert into vistoria_anexos (vistoria_id, url, tipo) values
@@ -146,6 +148,8 @@ begin
     values (l_id, 60000, tv, 180, 500);
 
   insert into vistorias (lead_id, tipo, status) values (l_id, 'inicial', 'PENDENTE') returning id into vist_id;
+  -- 0177: identidade e comprovante de endereco do lead
+  insert into associado_documentos (lead_id, tipo, url) values (l_id, 'RG', 't/rg.jpg'), (l_id, 'COMPROVANTE_ENDERECO', 't/c.pdf');
   insert into vistoria_anexos (vistoria_id, url, tipo) values
     (vist_id, 'a.jpg', 'FRENTE'), (vist_id, 'b.jpg', 'TRASEIRA'),
     (vist_id, 'c.jpg', 'LATERAL_ESQUERDA'), (vist_id, 'd.jpg', 'LATERAL_DIREITA'),

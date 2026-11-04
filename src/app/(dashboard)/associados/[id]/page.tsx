@@ -17,6 +17,7 @@ import {
   LifeBuoy,
   ChevronRight,
   FileSignature,
+  Paperclip,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { AssociadoForm } from '@/components/associados/associado-form';
@@ -24,6 +25,7 @@ import { useAssociado, useComunicacoes } from '@/hooks/use-associado-panel';
 import {
   AcionamentosCadastro, EventosCadastro, FinanceiroCadastro, ProtocolosCadastro,
 } from '@/components/cadastro/vida-cadastro';
+import { DocumentosAssociado } from '@/components/associados/documentos-associado';
 import { TermosDoCadastro } from '@/components/termos/termos-do-cadastro';
 import { usePode } from '@/hooks/use-permissoes';
 import { statusVeiculoResumo } from '@/lib/sac';
@@ -33,7 +35,7 @@ import { formatarDocumento } from '@/lib/documento';
 import type { EnderecoAssociado } from '@/hooks/use-associados';
 import type { CanalComunicacao } from '@/lib/database.types';
 
-type Aba = 'dados' | 'veiculos' | 'financeiro' | 'eventos' | 'protocolos' | 'assistencia' | 'termos' | 'comunicacoes';
+type Aba = 'dados' | 'veiculos' | 'financeiro' | 'eventos' | 'protocolos' | 'assistencia' | 'anexos' | 'termos' | 'comunicacoes';
 
 export default function AssociadoPanel({ params }: { params: { id: string } }) {
   const id = params.id;
@@ -44,7 +46,7 @@ export default function AssociadoPanel({ params }: { params: { id: string } }) {
   // `?aba=financeiro` abre direto na aba (atalho da fila de revistorias).
   useEffect(() => {
     const pedida = new URLSearchParams(window.location.search).get('aba');
-    if (pedida && ['dados', 'veiculos', 'financeiro', 'eventos', 'protocolos', 'assistencia', 'termos', 'comunicacoes'].includes(pedida)) {
+    if (pedida && ['dados', 'veiculos', 'financeiro', 'eventos', 'protocolos', 'assistencia', 'anexos', 'termos', 'comunicacoes'].includes(pedida)) {
       setAba(pedida as Aba);
     }
   }, []);
@@ -59,6 +61,7 @@ export default function AssociadoPanel({ params }: { params: { id: string } }) {
     { id: 'eventos', label: 'Eventos', icon: AlertTriangle },
     { id: 'protocolos', label: 'Protocolos', icon: ClipboardList },
     { id: 'assistencia', label: 'Assistência 24h', icon: LifeBuoy },
+    { id: 'anexos', label: 'Anexos', icon: Paperclip },
     ...(verTermos ? [{ id: 'termos' as Aba, label: 'Termos', icon: FileSignature }] : []),
     { id: 'comunicacoes', label: 'Comunicações', icon: MessagesSquare },
   ];
@@ -117,6 +120,10 @@ export default function AssociadoPanel({ params }: { params: { id: string } }) {
         {aba === 'eventos' && <EventosCadastro clienteId={id} />}
         {aba === 'protocolos' && <ProtocolosCadastro clienteId={id} />}
         {aba === 'assistencia' && <AcionamentosCadastro clienteId={id} />}
+        {aba === 'anexos' && (
+          <DocumentosAssociado clienteId={id} nome={associado.nome_razao_social}
+                               celular={associado.celular || associado.telefone} />
+        )}
         {aba === 'termos' && <TermosDoCadastro clienteId={id} />}
         {aba === 'comunicacoes' && <AbaComunicacoes associadoId={id} />}
       </div>

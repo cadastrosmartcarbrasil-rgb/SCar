@@ -15,6 +15,7 @@ import { useEvento, useHistoricoProtocolo } from '@/hooks/use-eventos';
 import { useEquipeAtiva } from '@/hooks/use-config';
 import { TramitacaoEvento } from './tramitacao-evento';
 import { CartaoPrazoEvento, DocumentosEvento } from './prazo-regulatorio';
+import { AvisoCnhAssociado } from '@/components/associados/documentos-associado';
 import { useDocumentosEvento } from '@/hooks/use-prazo-eventos';
 import { EditarEventoModal } from './editar-evento';
 import { SePode } from '@/components/layout/se-pode';
@@ -84,6 +85,8 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
       <div className="space-y-4 lg:col-span-2">
         <AvisoTerceiroPendente eventoId={eventoId} possuiTerceiros={evento.possui_terceiros} />
         <CartaoPrazoEvento eventoId={eventoId} onVerDocumentos={() => setAba('documentos')} />
+        <AvisoCnhAssociado clienteId={evento.cliente_id} nome={cliente?.nome_razao_social}
+                           celular={cliente?.celular || cliente?.telefone} />
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">

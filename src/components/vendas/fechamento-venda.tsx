@@ -28,6 +28,7 @@ import { normalizarPlaca, placaValida } from '@/lib/placa';
 import type { DadosCrlv } from '@/lib/crlv';
 import type { LeadsRow } from '@/lib/database.types';
 import { FotosVistoria } from '@/components/vistoria/fotos-vistoria';
+import { DocumentosAssociado } from '@/components/associados/documentos-associado';
 import { ChecklistEntrada } from './checklist-entrada';
 import { LeitorCrlv } from './leitor-crlv';
 import { DivergenciaRegional } from './divergencia-regional';
@@ -507,6 +508,14 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
           {/* A vistoria e guiada pelo modelo de poses (0040): mesma lista que o
               vendedor ve no celular, e a mesma que o checklist cobra. */}
           <FotosVistoria leadId={lead.id} celular={lead.celular} nome={lead.nome} />
+
+          {/* 0177: identidade e comprovante de endereco do associado — item do
+              checklist da Auditoria. Ao autorizar, vao para a ficha dele. */}
+          <div className="mt-6 border-t border-slate-200 pt-4">
+            <p className="mb-2 text-sm font-semibold text-slate-800">Documentos do associado</p>
+            <DocumentosAssociado leadId={lead.id} clienteId={lead.cliente_existente_id}
+                                 nome={lead.nome} celular={lead.celular} compacto />
+          </div>
         </Secao>
 
         )}
