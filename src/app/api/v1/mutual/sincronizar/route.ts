@@ -164,6 +164,15 @@ export async function POST(request: Request) {
       });
       vendedores = eV ? `vendedores nao ligados: ${eV.message}` : (v ?? [])[0]?.mensagem;
 
+      // 0184: os opcionais do Mutual (de-para dos produtos) entram no veiculo.
+      // So acrescenta; falhar aqui nao derruba a carga.
+      const { data: op, error: eOp } = await supabase.rpc('mutual_aplicar_opcionais', {
+        p_regional_id: regionalId, p_confirmar: true,
+      });
+      vendedores = [vendedores, eOp
+        ? `opcionais nao gravados: ${eOp.message}`
+        : `${Number((op ?? [])[0]?.inseridos ?? 0)} opcional(is) gravado(s)`].filter(Boolean).join(' · ');
+
       cargas.push({
         unidade: nome,
         veiculos_criados: Number(soma.veiculos_criados),

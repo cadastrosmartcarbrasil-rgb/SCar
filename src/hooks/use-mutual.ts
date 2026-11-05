@@ -15,6 +15,7 @@ import type {
   MutualTipoVeiculoExterno,
   MutualPlanoExterno, MutualCategoriaVeiculo, MutualCargaLinha, MutualCargaResultado,
   MutualDesfazerResultado, MutualVendedorResumo, MutualVincularVendedores, Database,
+  MutualProdutoExterno, MutualAplicarOpcionais,
 } from '@/lib/database.types';
 
 // =====================================================================
@@ -898,6 +899,76 @@ export function useAplicarAssistenciaProfissional() {
     },
     onSuccess: () => {
       for (const k of [['mutual'], ['veiculos']]) void qc.invalidateQueries({ queryKey: k });
+    },
+  });
+}
+
+// =====================================================================
+// 0184 — de-para dos PRODUTOS do Mutual -> opcionais do SCar
+// =====================================================================
+
+/** Os produtos do Mutual dos veiculos migrados da unidade, com o destino gravado. */
+export function useMutualProdutos(unidade: string | null) {
+  const supabase = createClient();
+  return useQuery<MutualProdutoExterno[]>({
+    queryKey: ['mutual', 'produtos-externos', unidade],
+    enabled: !!unidade,
+    queryFn: ({ signal }) => naFila(async () => {
+      const { data, error } = await supabase.rpc('mutual_produtos_externos', { p_regional_id: unidade });
+      if (error) throw error;
+      return data ?? [];
+    }, signal),
+  });
+}
+
+/** Grava (ou desfaz, com acao nula) o destino de um produto do Mutual. */
+export function useDefinirProdutoMutual() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<void, Error, { chave: string; acao: string | null; produtoId: string | null; nome: string | null }>({
+    mutationFn: async ({ chave, acao, produtoId, nome }) => {
+      const { error } = await supabase.rpc('mutual_definir_produto', {
+        p_chave: chave, p_acao: acao, p_produto_id: produtoId, p_nome: nome,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['mutual', 'produtos-externos'] });
+      void qc.invalidateQueries({ queryKey: ['mutual', 'opcionais-simulacao'] });
+    },
+  });
+}
+
+/** A simulacao: quantos opcionais seriam gravados na unidade. */
+export function useSimularOpcionais(unidade: string | null) {
+  const supabase = createClient();
+  return useQuery<MutualAplicarOpcionais | null>({
+    queryKey: ['mutual', 'opcionais-simulacao', unidade],
+    enabled: !!unidade,
+    queryFn: ({ signal }) => naFila(async () => {
+      const { data, error } = await supabase.rpc('mutual_aplicar_opcionais', {
+        p_regional_id: unidade, p_confirmar: false,
+      });
+      if (error) throw error;
+      return (data ?? [])[0] ?? null;
+    }, signal),
+  });
+}
+
+/** Grava os opcionais do de-para nos veiculos migrados da unidade. */
+export function useAplicarOpcionais() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation<number, Error, { regionalId: string }>({
+    mutationFn: async ({ regionalId }) => {
+      const { data, error } = await supabase.rpc('mutual_aplicar_opcionais', {
+        p_regional_id: regionalId, p_confirmar: true,
+      });
+      if (error) throw error;
+      return Number((data ?? [])[0]?.inseridos ?? 0);
+    },
+    onSuccess: () => {
+      for (const k of [['mutual'], ['veiculos'], ['veiculo']]) void qc.invalidateQueries({ queryKey: k });
     },
   });
 }

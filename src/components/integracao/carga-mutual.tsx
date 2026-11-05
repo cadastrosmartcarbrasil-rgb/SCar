@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Upload, Undo2, Car, AlertTriangle, ShieldCheck, Bike, UserCheck } from 'lucide-react';
+import { Upload, Undo2, Car, AlertTriangle, ShieldCheck, Bike, UserCheck, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ErroLeitura } from '@/components/integracao/erro-leitura';
 import {
@@ -11,12 +11,16 @@ import {
   useClassificarPorTerceiros, useMutualVendedores, useVincularVendedores,
   useAssistenciaProfissionalMigrados, useAssistenciaProfissionalConfigs,
   useDefinirValorAssistenciaConfig, useAplicarAssistenciaProfissional,
+  useMutualProdutos, useDefinirProdutoMutual, useSimularOpcionais, useAplicarOpcionais,
 } from '@/hooks/use-mutual';
 import { MoneyInput } from '@/components/ui/field';
 import { formatCurrency } from '@/lib/utils';
 import { totaisApMigrados } from '@/lib/assistencia-profissional';
 import { useRegionais } from '@/hooks/use-config';
-import { usePlanos, useTiposVeiculo } from '@/hooks/use-precificacao';
+import { usePlanos, useTiposVeiculo, useProdutos } from '@/hooks/use-precificacao';
+import {
+  sugestaoDestinoProduto, totaisDeParaProdutos, valorDoDestino, lerDestino, ROTULO_ACAO_PRODUTO,
+} from '@/lib/mutual-produtos';
 import {
   resumoDaCarga, recusasPorMotivo, filaAntesDoCutover, cutoverLiberado, tiposPendentes,
   planosPendentes, idsPara90Pct, amplitudeFipe,
@@ -368,6 +372,7 @@ export function CargaMutual() {
       {unidade && <MotosPorProdutos unidade={unidade} nomeUnidade={nomeUnidade} />}
       {unidade && <VendedoresDosVeiculos unidade={unidade} nomeUnidade={nomeUnidade} />}
       {unidade && <AssistenciaProfissionalMigrados unidade={unidade} nomeUnidade={nomeUnidade} />}
+      {unidade && <ProdutosDosMigrados unidade={unidade} nomeUnidade={nomeUnidade} />}
 
       {!unidade && (
         <p className="text-sm text-slate-500">
@@ -984,6 +989,188 @@ function AssistenciaProfissionalMigrados({ unidade, nomeUnidade }: { unidade: st
             >
               {aplicar.isPending ? 'Gravando...' : `Gravar em ${t.aplicar} veículo(s)`}
             </Button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/**
+ * 0184 — OS OPCIONAIS DOS MIGRADOS. Politica (05/11/2026): o veiculo fica no
+ * plano essencial do tipo e o que ele contratou no Mutual vira opcional
+ * contratado. Cada produto do Mutual vai para um opcional do SCar, para a
+ * BASE do plano (nao grava nada) ou e ignorado. O boleto do migrado nao muda.
+ */
+function ProdutosDosMigrados({ unidade, nomeUnidade }: { unidade: string; nomeUnidade: string }) {
+  const linhasQ = useMutualProdutos(unidade);
+  const produtosQ = useProdutos();
+  const simQ = useSimularOpcionais(unidade);
+  const definir = useDefinirProdutoMutual();
+  const aplicar = useAplicarOpcionais();
+  const [soPendentes, setSoPendentes] = useState(true);
+
+  const linhas = linhasQ.data ?? [];
+  const t = totaisDeParaProdutos(linhas);
+  const opcionais = (produtosQ.data ?? []).filter((p) => p.status && !p.obrigatorio);
+  const visiveis = soPendentes ? linhas.filter((l) => !l.acao) : linhas;
+  const comSugestao = linhas.filter((l) => !l.acao && sugestaoDestinoProduto(l.nome));
+  const sim = simQ.data;
+
+  function gravar(chave: string, nome: string | null, valor: string) {
+    const { acao, produtoId } = lerDestino(valor);
+    definir.mutate(
+      { chave, acao, produtoId, nome },
+      { onError: (e) => toast.error(e.message) },
+    );
+  }
+
+  async function aceitarSugestoes() {
+    if (!window.confirm(`Marcar ${comSugestao.length} produto(s) com a sugestão (base do plano ou ignorar)?`)) return;
+    let ok = 0;
+    for (const l of comSugestao) {
+      try {
+        await definir.mutateAsync({ chave: l.chave, acao: sugestaoDestinoProduto(l.nome), produtoId: null, nome: l.nome });
+        ok += 1;
+      } catch (e) {
+        toast.error((e as Error).message);
+        break;
+      }
+    }
+    if (ok) toast.success(`${ok} produto(s) marcados`);
+  }
+
+  return (
+    <div className="rounded-xl border border-slate-200/80 p-4">
+      <h3 className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+        <Package className="h-4 w-4 text-cyan-600" aria-hidden /> Opcionais dos migrados — produto do Mutual → SCar
+      </h3>
+      <p className="mb-3 text-xs leading-relaxed text-slate-500">
+        O veículo fica no <strong>plano essencial</strong> do tipo dele; o que ele contratou no Mutual entra como
+        <strong> opcional contratado</strong>. Diga para onde vai cada produto: um opcional do SCar, a
+        <strong> base do plano</strong> (taxa, 24h, casco — não grava nada) ou <strong>ignorar</strong>.
+        O de-para vale para todas as unidades. Gravar <strong>não muda o boleto</strong> do migrado (segue o valor do
+        Mutual) e nunca apaga opcional incluído aqui. Falta um opcional? Cadastre em{' '}
+        <strong>Configurações → Produtos</strong>.
+      </p>
+
+      <ErroLeitura q={linhasQ} />
+      {linhasQ.isLoading && <p className="text-xs text-slate-500">Lendo os produtos dos veículos...</p>}
+      {!linhasQ.isLoading && !linhasQ.isError && linhas.length === 0 && (
+        <p className="text-xs text-slate-500">
+          Nenhum produto capturado para os veículos desta unidade — puxe <strong>Produtos dos veículos</strong>.
+        </p>
+      )}
+
+      {linhas.length > 0 && (
+        <>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+            {[
+              ['Produtos do Mutual', t.produtos],
+              ['Sem destino', t.semDePara],
+              ['Viram opcional', t.opcionais],
+              ['Base do plano', t.base],
+              ['Ignorados', t.ignorados],
+            ].map(([rotulo, valor]) => (
+              <div key={rotulo as string} className="rounded-lg bg-fundo p-2">
+                <p className="text-[0.6875rem] text-slate-500">{rotulo}</p>
+                <p className="tnum text-lg font-semibold text-slate-900">{valor}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
+            <label className="flex items-center gap-1.5 text-slate-600">
+              <input type="checkbox" checked={soPendentes} onChange={(e) => setSoPendentes(e.target.checked)} />
+              Só os sem destino
+            </label>
+            {comSugestao.length > 0 && (
+              <Button variant="secondary" disabled={definir.isPending} onClick={() => void aceitarSugestoes()}>
+                Aceitar as {comSugestao.length} sugestões (base / ignorar)
+              </Button>
+            )}
+          </div>
+
+          <ul className="mt-2 max-h-[28rem] space-y-1.5 overflow-y-auto pr-1">
+            {visiveis.map((l) => {
+              const sug = !l.acao ? sugestaoDestinoProduto(l.nome) : null;
+              return (
+                <li key={l.chave} className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200/80 p-2 text-xs">
+                  <span className="min-w-[220px] flex-1 font-medium text-slate-800">
+                    {l.nome ?? `(produto ${l.chave})`}
+                    <span className="tnum font-normal text-slate-500">
+                      {' '}· {l.veiculos_na_base} na base · {l.veiculos} no total · id {l.chave}
+                    </span>
+                  </span>
+                  {sug && (
+                    <button
+                      type="button"
+                      className="rounded-full bg-cyan-50 px-2 py-0.5 text-cyan-700 ring-1 ring-cyan-200"
+                      onClick={() => gravar(l.chave, l.nome, sug)}
+                      title="Aplicar a sugestão"
+                    >
+                      sugestão: {ROTULO_ACAO_PRODUTO[sug]}
+                    </button>
+                  )}
+                  <select
+                    className="h-8 min-w-[240px] rounded-md border border-slate-300 px-2 text-xs"
+                    value={valorDoDestino(l)}
+                    disabled={definir.isPending}
+                    onChange={(e) => gravar(l.chave, l.nome, e.target.value)}
+                  >
+                    <option value="">— sem destino —</option>
+                    <option value="BASE">{ROTULO_ACAO_PRODUTO.BASE}</option>
+                    <option value="IGNORAR">{ROTULO_ACAO_PRODUTO.IGNORAR}</option>
+                    <optgroup label="Opcional do SCar">
+                      {opcionais.map((p) => (
+                        <option key={p.id} value={`OPCIONAL:${p.id}`}>{p.nome}</option>
+                      ))}
+                      {l.acao === 'OPCIONAL' && l.produto_id && !opcionais.some((p) => p.id === l.produto_id) && (
+                        <option value={`OPCIONAL:${l.produto_id}`}>{l.produto_nome ?? 'produto inativo'}</option>
+                      )}
+                    </optgroup>
+                  </select>
+                </li>
+              );
+            })}
+            {visiveis.length === 0 && (
+              <li className="text-xs text-emerald-700">Todos os produtos desta unidade já têm destino.</li>
+            )}
+          </ul>
+
+          <div className="mt-3 rounded-lg bg-fundo p-3 text-xs text-slate-600">
+            <ErroLeitura q={simQ} />
+            {sim && (
+              <p>
+                Gravar agora: <strong className="tnum">{sim.a_inserir}</strong> opcional(is) em{' '}
+                <strong className="tnum">{sim.veiculos_alcancados}</strong> veículo(s).{' '}
+                <span className="text-slate-500">
+                  Já gravados {sim.ja_tinham} · já vêm no plano {sim.ja_no_plano} · não atendem o tipo {sim.fora_do_tipo}
+                  {sim.produtos_sem_de_para > 0 && <> · <strong className="text-amber-700">{sim.produtos_sem_de_para} produto(s) sem destino</strong></>}
+                </span>
+              </p>
+            )}
+            <div className="mt-2">
+              <Button
+                disabled={!sim || sim.a_inserir === 0 || aplicar.isPending}
+                onClick={() => {
+                  if (!sim) return;
+                  if (!window.confirm(
+                    `Gravar ${sim.a_inserir} opcional(is) em ${sim.veiculos_alcancados} veículo(s) de "${nomeUnidade}"?\n\n`
+                    + 'O boleto não muda. Opcional já incluído no SCar não é apagado. Confirmar?',
+                  )) return;
+                  aplicar.mutate(
+                    { regionalId: unidade },
+                    {
+                      onSuccess: (n) => toast.success(`${n} opcional(is) gravado(s)`),
+                      onError: (e) => toast.error(e.message),
+                    },
+                  );
+                }}
+              >
+                {aplicar.isPending ? 'Gravando...' : 'Gravar os opcionais nos veículos'}
+              </Button>
+            </div>
           </div>
         </>
       )}

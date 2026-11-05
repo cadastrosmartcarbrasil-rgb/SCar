@@ -3935,6 +3935,28 @@ export type MutualTipoVeiculoExterno = {
 };
 
 /** 0085 — o de-para de `plan_id` com o peso e a COBERTURA ACUMULADA. */
+/** 0184 — um produto do Mutual dos veiculos migrados, com o destino do de-para. */
+export type MutualProdutoExterno = {
+  chave: string;
+  nome: string | null;
+  veiculos: number;
+  veiculos_na_base: number;
+  acao: 'OPCIONAL' | 'BASE' | 'IGNORAR' | null;
+  produto_id: string | null;
+  produto_nome: string | null;
+};
+
+/** 0184 — o resultado de aplicar os opcionais do de-para (simulado ou gravado). */
+export type MutualAplicarOpcionais = {
+  veiculos_alcancados: number;
+  a_inserir: number;
+  ja_tinham: number;
+  ja_no_plano: number;
+  fora_do_tipo: number;
+  produtos_sem_de_para: number;
+  inseridos: number;
+};
+
 export type MutualPlanoExterno = {
   id_externo: string;
   nome: string | null;
@@ -6358,6 +6380,18 @@ export type Database = {
           regional_nome: string | null; produto_nome: string; subproduct_config_id: string | null;
           valor_mutual: number | null; valor_atual: number; situacao: 'APLICAR' | 'JA_APLICADO' | 'DIFERENTE' | 'SEM_VALOR';
         }[];
+      };
+      mutual_produtos_externos: {
+        Args: { p_regional_id?: string | null };
+        Returns: MutualProdutoExterno[];
+      };
+      mutual_definir_produto: {
+        Args: { p_chave: string; p_acao: string | null; p_produto_id?: string | null; p_nome?: string | null };
+        Returns: undefined;
+      };
+      mutual_aplicar_opcionais: {
+        Args: { p_regional_id?: string | null; p_confirmar?: boolean };
+        Returns: MutualAplicarOpcionais[];
       };
       mutual_assistencia_profissional_configs: {
         Args: Record<string, never>;
