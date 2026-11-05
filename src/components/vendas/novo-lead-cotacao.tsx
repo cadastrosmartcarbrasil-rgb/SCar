@@ -378,7 +378,7 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
       )}
 
       {/* No computador: dados do lado esquerdo, planos do lado direito. No celular: 1, 2, 3 em fila. */}
-      <div className={cn('grid gap-6 lg:items-start', apresentando ? 'lg:grid-cols-1' : 'lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]')}>
+      <div className={cn('grid gap-6 lg:items-start', apresentando ? 'lg:grid-cols-1' : 'lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:grid-rows-[auto_1fr]')}>
         {/* 1. Veiculo — a conversa comeca na placa */}
         <Secao passo={1} titulo="Veículo" className={cn('lg:col-start-1 lg:row-start-1', apresentando && 'hidden')}>
           <Campo label="Placa">
