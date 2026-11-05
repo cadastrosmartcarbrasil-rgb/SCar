@@ -192,6 +192,10 @@ export function ModalFornecedor({
             <FormField label="CNAE principal"><Input value={form.cnae_principal ?? ''} onChange={(e) => setF({ cnae_principal: e.target.value })} /></FormField>
           </div>
         )}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <FormField label="Inscrição estadual"><Input value={form.inscricao_estadual ?? ''} onChange={(e) => setF({ inscricao_estadual: e.target.value })} /></FormField>
+          <FormField label="Inscrição municipal"><Input value={form.inscricao_municipal ?? ''} onChange={(e) => setF({ inscricao_municipal: e.target.value })} /></FormField>
+        </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <FormField label="Pessoa de contato"><Input value={form.contato ?? ''} onChange={(e) => setF({ contato: e.target.value })} /></FormField>
           <FormField label="E-mail"><Input type="email" value={form.email ?? ''} onChange={(e) => setF({ email: e.target.value })} /></FormField>

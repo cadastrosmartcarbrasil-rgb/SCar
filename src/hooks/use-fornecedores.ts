@@ -41,6 +41,9 @@ export function useSaveFornecedor() {
         nome_fantasia: f.nome_fantasia || null,
         situacao_cadastral: f.situacao_cadastral || null,
         cnae_principal: f.cnae_principal || null,
+        // 0181: vao na Ordem de Servico
+        inscricao_estadual: f.inscricao_estadual?.trim() || null,
+        inscricao_municipal: f.inscricao_municipal?.trim() || null,
         contato: f.contato || null,
         email: f.email || null,
         telefone: f.telefone || null,

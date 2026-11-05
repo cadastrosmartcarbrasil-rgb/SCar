@@ -1,8 +1,9 @@
 import Link from 'next/link';
-import { History, KanbanSquare, Plus, Timer } from 'lucide-react';
+import { FileSignature, History, KanbanSquare, Plus, Timer } from 'lucide-react';
 import { KanbanBoard } from '@/components/eventos/kanban-board';
 import { HistoricoEventosLista } from '@/components/eventos/historico-eventos-lista';
 import { PainelPrazos } from '@/components/eventos/painel-prazos';
+import { ListaOrdensServico } from '@/components/eventos/ordem-servico/ordens-servico';
 import { SePode } from '@/components/layout/se-pode';
 
 // Tres abas: o PIPELINE (eventos do SCar, operados aqui), o PRAZO REGULATORIO
@@ -11,9 +12,11 @@ import { SePode } from '@/components/layout/se-pode';
 export default function EventosPage({ searchParams }: { searchParams: { aba?: string } }) {
   const historico = searchParams?.aba === 'historico';
   const prazos = searchParams?.aba === 'prazos';
+  const ordens = searchParams?.aba === 'ordens';
   const abas = [
-    { href: '/eventos', label: 'Pipeline', icon: KanbanSquare, ativo: !historico && !prazos },
+    { href: '/eventos', label: 'Pipeline', icon: KanbanSquare, ativo: !historico && !prazos && !ordens },
     { href: '/eventos?aba=prazos', label: 'Prazo regulatório (90 dias)', icon: Timer, ativo: prazos },
+    { href: '/eventos?aba=ordens', label: 'Ordens de Serviço', icon: FileSignature, ativo: ordens },
     { href: '/eventos?aba=historico', label: 'Histórico (Mutual)', icon: History, ativo: historico },
   ];
   return (
@@ -24,6 +27,8 @@ export default function EventosPage({ searchParams }: { searchParams: { aba?: st
           <p className="text-sm text-slate-500">
             {historico
               ? 'Eventos do sistema anterior dos associados já carregados — só consulta.'
+              : ordens
+              ? 'Ordens de serviço emitidas aos prestadores: prazo de entrega, envio e atrasos.'
               : prazos
               ? 'Prazo de regulação e liquidação de 90 dias (Art. 22, CNSP 491/2026) dos eventos em aberto.'
               : 'Arraste os protocolos entre as colunas para atualizar o status do pipeline.'}
@@ -55,7 +60,7 @@ export default function EventosPage({ searchParams }: { searchParams: { aba?: st
           );
         })}
       </div>
-      {historico ? <HistoricoEventosLista /> : prazos ? <PainelPrazos /> : <KanbanBoard />}
+      {historico ? <HistoricoEventosLista /> : ordens ? <ListaOrdensServico /> : prazos ? <PainelPrazos /> : <KanbanBoard />}
     </div>
   );
 }

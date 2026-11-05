@@ -166,6 +166,7 @@ export default function EmpresaPage() {
                 <FormField label="E-mail principal"><Input type="email" value={form.email_principal ?? ''} onChange={(e) => setF({ email_principal: e.target.value })} /></FormField>
                 <FormField label="E-mail financeiro"><Input type="email" value={form.email_financeiro ?? ''} onChange={(e) => setF({ email_financeiro: e.target.value })} /></FormField>
                 <FormField label="E-mail juridico/adm"><Input type="email" value={form.email_juridico ?? ''} onChange={(e) => setF({ email_juridico: e.target.value })} /></FormField>
+                <FormField label="E-mail do departamento de eventos (Ordem de Serviço)"><Input type="email" value={form.email_departamento_eventos ?? ''} onChange={(e) => setF({ email_departamento_eventos: e.target.value })} /></FormField>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <FormField label="Telefone fixo"><Input value={form.telefone_fixo ? formatarTelefone(form.telefone_fixo) : ''} onChange={(e) => setF({ telefone_fixo: soDigitos(e.target.value) })} placeholder="(00) 0000-0000" /></FormField>

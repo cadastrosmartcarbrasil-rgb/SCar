@@ -40,6 +40,8 @@ export function useSaveEmpresa() {
         email_principal: e.email_principal || null,
         email_financeiro: e.email_financeiro || null,
         email_juridico: e.email_juridico || null,
+        // 0181: vai na Ordem de Servico e e a resposta do e-mail ao prestador
+        email_departamento_eventos: e.email_departamento_eventos || null,
         telefone_fixo: e.telefone_fixo || null,
         whatsapp_principal: e.whatsapp_principal || null,
         whatsapp_suporte: e.whatsapp_suporte || null,

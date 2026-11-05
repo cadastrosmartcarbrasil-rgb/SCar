@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { CheckCircle2, Plus, Receipt, RotateCcw, Trash2 } from 'lucide-react';
+import { CheckCircle2, FileSignature, Plus, Receipt, RotateCcw, Trash2 } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { formatCurrency } from '@/lib/utils';
@@ -15,6 +15,10 @@ import { usePode } from '@/hooks/use-permissoes';
 import { usePlanoContas } from '@/hooks/use-config';
 import { useTerceirosEvento } from '@/hooks/use-terceiros';
 import { lancamentoDaCotacao } from '@/lib/terceiros';
+import { itensDaCotacao, ROTULO_TIPO_ITEM, SIGLA_TIPO_ITEM, type TipoItemOS } from '@/lib/ordem-servico';
+import { useOrdensServicoEvento } from '@/hooks/use-ordens-servico';
+import { EmitirOrdemServicoModal } from './ordem-servico/emitir-os';
+import { SeloStatusOS } from './ordem-servico/ordens-servico';
 import type { CotacoesPecasRow, ItensCotacaoRow, LancamentosFinanceirosRow, TipoReparo } from '@/lib/database.types';
 
 type Cotacao = CotacoesPecasRow & { itens_cotacao: ItensCotacaoRow[] };
@@ -26,6 +30,9 @@ type Cotacao = CotacoesPecasRow & { itens_cotacao: ItensCotacaoRow[] };
 // Aprovar a cotacao pergunta na hora se ja vai para o contas a pagar, com o
 // fornecedor, o valor e o evento preenchidos; o titulo gerado fica ligado a
 // cotacao (cotacoes_pecas.lancamento_id).
+// 0181: aprovar tambem oferece GERAR A ORDEM DE SERVICO (a formalizacao ao
+// prestador, pelo modelo de Termos) com o fornecedor e os itens da cotacao.
+// O contas a pagar segue como esta: a OS nao gera titulo.
 export function CotacaoPecas({
   eventoId,
   tipoReparo,
@@ -46,6 +53,8 @@ export function CotacaoPecas({
   const [fornecedorNome, setFornecedorNome] = useState('');
   const [perguntar, setPerguntar] = useState<Cotacao | null>(null);
   const [lancando, setLancando] = useState<Cotacao | null>(null);
+  const [emitindoOS, setEmitindoOS] = useState<Cotacao | null>(null);
+  const { data: ordens } = useOrdensServicoEvento(eventoId);
   const { data: terceiros } = useTerceirosEvento(eventoId);
   const { data: categorias } = usePlanoContas();
   const chave = ['eventos', eventoId, 'cotacoes', tipoReparo ?? 'all', terceiroId ?? 'todos'];
@@ -87,12 +96,13 @@ export function CotacaoPecas({
   });
 
   const addItem = useMutation({
-    mutationFn: async (v: { cotacaoId: string; desc: string; qtd: number; unit: number }) => {
+    mutationFn: async (v: { cotacaoId: string; desc: string; qtd: number; unit: number; tipo: TipoItemOS }) => {
       const { error } = await supabase.from('itens_cotacao').insert({
         cotacao_id: v.cotacaoId,
         descricao_peca: v.desc,
         quantidade: v.qtd,
         valor_unitario: v.unit,
+        tipo_item: v.tipo,
       });
       if (error) throw error;
     },
@@ -174,6 +184,8 @@ export function CotacaoPecas({
           onFornecedor={(id, rotulo) =>
             atualizar.mutate({ id: c.id, patch: { fornecedor_id: id || null, ...(id ? { fornecedor_nome: rotulo } : {}) } })}
           onLancar={() => setLancando(c)}
+          onGerarOS={() => setEmitindoOS(c)}
+          ordens={(ordens ?? []).filter((o) => o.cotacao_id === c.id)}
         />
       ))}
       {(cotacoes ?? []).length === 0 && (
@@ -184,7 +196,11 @@ export function CotacaoPecas({
         <Modal open onClose={() => setPerguntar(null)} title="Cotação aprovada" subtitulo={perguntar.fornecedor_nome}>
           <div className="space-y-4">
             <p className="text-sm text-slate-700">
-              Lançar agora no contas a pagar? O título de <b>{formatCurrency(perguntar.valor_total)}</b> já abre com o
+              <b>Gerar a Ordem de Serviço</b> ao prestador agora? Ela sai com o fornecedor e os itens desta cotação,
+              você completa o prazo de entrega e emite — fica no histórico e nos anexos do evento.
+            </p>
+            <p className="text-sm text-slate-700">
+              E o contas a pagar: o título de <b>{formatCurrency(perguntar.valor_total)}</b> já abre com o
               fornecedor, o evento e a classificação preenchidos — você confere, ajusta o vencimento e grava.
             </p>
             {!perguntar.fornecedor_id && (
@@ -195,12 +211,26 @@ export function CotacaoPecas({
             )}
             <div className="flex justify-end gap-2 border-t border-slate-200 pt-3">
               <Button type="button" variant="secondary" onClick={() => setPerguntar(null)}>Depois</Button>
-              <Button type="button" onClick={() => { setLancando(perguntar); setPerguntar(null); }}>
+              <Button type="button" variant="secondary" onClick={() => { setLancando(perguntar); setPerguntar(null); }}>
                 <Receipt className="h-4 w-4" /> Lançar no contas a pagar
+              </Button>
+              <Button type="button" onClick={() => { setEmitindoOS(perguntar); setPerguntar(null); }}>
+                <FileSignature className="h-4 w-4" /> Gerar Ordem de Serviço
               </Button>
             </div>
           </div>
         </Modal>
+      )}
+
+      {emitindoOS && (
+        <EmitirOrdemServicoModal
+          origem={{
+            eventoId, cotacaoId: emitindoOS.id, terceiroId: emitindoOS.evento_terceiro_id,
+            fornecedorId: emitindoOS.fornecedor_id, fornecedorNome: emitindoOS.fornecedor_nome,
+            itens: itensDaCotacao(emitindoOS.itens_cotacao ?? []),
+          }}
+          onClose={() => setEmitindoOS(null)}
+        />
       )}
 
       {lancando && (
@@ -231,11 +261,13 @@ const STATUS_COTACAO: Record<string, { rotulo: string; cor: string }> = {
 };
 
 function CotacaoCard({
-  cotacao, trata, onAddItem, onDelItem, onAprovar, onStatus, onFornecedor, onLancar,
+  cotacao, trata, onAddItem, onDelItem, onAprovar, onStatus, onFornecedor, onLancar, onGerarOS, ordens,
 }: {
   cotacao: Cotacao;
   trata: boolean;
-  onAddItem: (v: { cotacaoId: string; desc: string; qtd: number; unit: number }) => void;
+  onGerarOS: () => void;
+  ordens: { id: string; numero: string; status: string; evento_id: string }[];
+  onAddItem: (v: { cotacaoId: string; desc: string; qtd: number; unit: number; tipo: TipoItemOS }) => void;
   onDelItem: (id: string) => void;
   onAprovar: () => void;
   onStatus: (status: CotacoesPecasRow['status']) => void;
@@ -245,6 +277,7 @@ function CotacaoCard({
   const [desc, setDesc] = useState('');
   const [qtd, setQtd] = useState(1);
   const [unit, setUnit] = useState<number | null>(null);
+  const [tipo, setTipo] = useState<TipoItemOS>('PECA');
   const status = STATUS_COTACAO[cotacao.status] ?? { rotulo: cotacao.status, cor: '' };
   // Aprovada ou rejeitada a cotacao para de mudar: os itens sao o que foi decidido.
   const editavel = trata && cotacao.status === 'EM_ABERTO';
@@ -260,6 +293,12 @@ function CotacaoCard({
               <CheckCircle2 className="h-3 w-3" /> Lançado no contas a pagar
             </span>
           )}
+          {ordens.map((o) => (
+            <a key={o.id} href={`/eventos/${o.evento_id}?aba=ordens`}
+              className="inline-flex items-center gap-1 rounded bg-violet-50 px-2 py-0.5 text-xs text-violet-800 hover:underline">
+              <FileSignature className="h-3 w-3" /> {o.numero} <SeloStatusOS status={o.status} />
+            </a>
+          ))}
         </div>
         <span className="text-sm font-semibold text-brand-700">{formatCurrency(cotacao.valor_total)}</span>
       </div>
@@ -289,6 +328,14 @@ function CotacaoCard({
               </button>
             </>
           )}
+          {cotacao.status === 'APROVADA' && (
+            <button
+              onClick={onGerarOS}
+              className="inline-flex items-center gap-1 rounded border border-violet-300 px-2 py-0.5 text-xs font-medium text-violet-800 hover:bg-violet-50"
+            >
+              <FileSignature className="h-3.5 w-3.5" /> {ordens.some((o) => !['CANCELADA', 'SUBSTITUIDA'].includes(o.status)) ? 'Nova Ordem de Serviço' : 'Gerar Ordem de Serviço'}
+            </button>
+          )}
           {cotacao.status === 'APROVADA' && !cotacao.lancamento_id && (
             <button
               onClick={onLancar}
@@ -297,7 +344,7 @@ function CotacaoCard({
               <Receipt className="h-3.5 w-3.5" /> Lançar no contas a pagar
             </button>
           )}
-          {cotacao.status !== 'EM_ABERTO' && !cotacao.lancamento_id && (
+          {cotacao.status !== 'EM_ABERTO' && !cotacao.lancamento_id && ordens.length === 0 && (
             <button
               onClick={() => onStatus('EM_ABERTO')}
               className="inline-flex items-center gap-1 rounded border border-slate-200 px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-50"
@@ -312,6 +359,7 @@ function CotacaoCard({
         <tbody>
           {cotacao.itens_cotacao?.map((i) => (
             <tr key={i.id} className="border-t border-slate-100">
+              <td className="w-12 py-1 text-xs text-slate-500">{SIGLA_TIPO_ITEM[i.tipo_item ?? 'PECA']}</td>
               <td className="py-1">{i.descricao_peca}</td>
               <td className="py-1 text-center text-slate-500">{i.quantidade}x</td>
               <td className="tnum py-1 text-right">{formatCurrency(i.valor_unitario)}</td>
@@ -329,6 +377,10 @@ function CotacaoCard({
 
       {editavel && (
         <div className="mt-2 flex flex-wrap items-center gap-1">
+          <select value={tipo} onChange={(e) => setTipo(e.target.value as TipoItemOS)} aria-label="Tipo do item"
+            className="rounded border border-slate-300 bg-superficie px-1 py-1.5 text-xs">
+            {(['PECA', 'MAO_DE_OBRA'] as TipoItemOS[]).map((t) => <option key={t} value={t}>{ROTULO_TIPO_ITEM[t]}</option>)}
+          </select>
           <input
             value={desc}
             onChange={(e) => setDesc(e.target.value)}
@@ -349,7 +401,7 @@ function CotacaoCard({
           <button
             onClick={() => {
               if (!desc.trim()) return toast.error('Informe a peça ou serviço');
-              onAddItem({ cotacaoId: cotacao.id, desc, qtd: qtd > 0 ? qtd : 1, unit: unit ?? 0 });
+              onAddItem({ cotacaoId: cotacao.id, desc, qtd: qtd > 0 ? qtd : 1, unit: unit ?? 0, tipo });
               setDesc('');
               setQtd(1);
               setUnit(null);

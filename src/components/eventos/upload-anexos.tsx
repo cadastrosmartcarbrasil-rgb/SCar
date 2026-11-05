@@ -124,7 +124,13 @@ export function UploadAnexos({ eventoId }: { eventoId: string }) {
           const isImg = ['FOTO_AVARIA', 'FOTO_VEICULO', 'FOTO_LOCAL'].includes(a.tipo_documento);
           return (
             <li key={a.id} className="flex items-center justify-between p-3 text-sm">
-              <button onClick={() => abrir(a.arquivo_url)} className="flex items-center gap-2 text-left">
+              <button
+                onClick={() => (a.termo_emitido_id
+                  // 0181: o PDF da Ordem de Servico mora no bucket `termos` e abre pela rota dos termos
+                  ? window.open(`/api/v1/termos/pdf?emitido=${a.termo_emitido_id}`, '_blank')
+                  : abrir(a.arquivo_url))}
+                className="flex items-center gap-2 text-left"
+              >
                 {isImg ? (
                   <ImageIcon className="h-4 w-4 text-slate-400" />
                 ) : (

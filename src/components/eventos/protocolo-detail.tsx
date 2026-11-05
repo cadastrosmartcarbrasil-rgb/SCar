@@ -1,13 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { Clock, Paperclip, Wrench, Info, DollarSign, Users, ListChecks, Pencil, Send } from 'lucide-react';
+import { Clock, Paperclip, Wrench, Info, DollarSign, Users, ListChecks, Pencil, Send, FileSignature } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { ComunicacoesEvento } from './comunicacao/comunicacoes-evento';
 import { useComunicacoesEvento } from '@/hooks/use-comunicacoes';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { UploadAnexos } from './upload-anexos';
 import { CotacaoPecas } from './cotacao-pecas';
+import { OrdensServicoEvento } from './ordem-servico/ordens-servico';
+import { useOrdensServicoEvento } from '@/hooks/use-ordens-servico';
 import { EventoFinanceiro } from './evento-financeiro';
 import { AvisoTerceiroPendente, TerceirosEvento } from './terceiros-evento';
 import { useTerceirosEvento } from '@/hooks/use-terceiros';
@@ -23,7 +25,7 @@ import { PIPELINE_SINISTRO, TIPO_EVENTO_LABEL } from '@/types/domain';
 import { formatDate, formatCurrency } from '@/lib/utils';
 import type { StatusEvento, TipoEvento, Json } from '@/lib/database.types';
 
-type Aba = 'info' | 'comunicacoes' | 'documentos' | 'terceiros' | 'reparo' | 'financeiro' | 'anexos' | 'historico';
+type Aba = 'info' | 'comunicacoes' | 'documentos' | 'terceiros' | 'reparo' | 'ordens' | 'financeiro' | 'anexos' | 'historico';
 
 interface LocalEvento {
   cep?: string;
@@ -44,9 +46,10 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
   const { data: comunicacoes } = useComunicacoesEvento(eventoId);
   const abaInicial = useSearchParams()?.get('aba');
   const [aba, setAba] = useState<Aba>(
-    abaInicial === 'comunicacoes' || abaInicial === 'financeiro' ? abaInicial : 'info',
+    abaInicial === 'comunicacoes' || abaInicial === 'financeiro' || abaInicial === 'ordens' || abaInicial === 'reparo' ? abaInicial : 'info',
   );
   const [editando, setEditando] = useState(false);
+  const ordens = useOrdensServicoEvento(eventoId);
 
   if (isLoading || !evento) return <p className="text-sm text-slate-500">Carregando protocolo...</p>;
 
@@ -75,6 +78,7 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
     },
     { id: 'terceiros', label: `Terceiros (${terceiros?.length ?? 0})`, icon: Users },
     { id: 'reparo', label: 'Reparo', icon: Wrench },
+    { id: 'ordens', label: `Ordens de Serviço (${ordens.data?.length ?? 0})`, icon: FileSignature },
     { id: 'financeiro', label: 'Financeiro', icon: DollarSign },
     { id: 'anexos', label: 'Anexos', icon: Paperclip },
     { id: 'historico', label: 'Histórico', icon: Clock },
@@ -198,6 +202,7 @@ export function ProtocoloDetail({ eventoId }: { eventoId: string }) {
                 </div>
               )}
 
+              {aba === 'ordens' && <OrdensServicoEvento eventoId={eventoId} />}
               {aba === 'comunicacoes' && <ComunicacoesEvento eventoId={eventoId} protocolo={evento.numero_protocolo} />}
               {aba === 'documentos' && <DocumentosEvento eventoId={eventoId} />}
               {aba === 'terceiros' && <TerceirosEvento eventoId={eventoId} />}
