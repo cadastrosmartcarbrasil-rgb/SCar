@@ -5460,6 +5460,11 @@ export type Database = {
         Args: { p_cursor?: string | null; p_lote?: number; p_confirmar?: boolean };
         Returns: CobrancaImportacaoBloco[];
       };
+      mutual_baixar_mutualpay: {
+        Args: { p_confirmar?: boolean };
+        Returns: { invoice_id: string; cliente: string | null; tipo: string; forma: string;
+                   valor: number; taxa: number; data_credito: string; acao: string }[];
+      };
       mutual_baixar_por_substituto: {
         Args: { p_confirmar?: boolean };
         Returns: { boleto_id: string; cliente: string; competencia: string | null; valor: number;

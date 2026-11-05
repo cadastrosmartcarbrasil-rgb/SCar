@@ -256,6 +256,17 @@ export async function POST(request: Request) {
           detalhe: `${(data ?? []).length} mensalidade(s) baixada(s)/convertida(s)` });
   }
 
+  // ------------------------------ pagamentos do MutualPay (0185)
+  // Boleto/cartao pago pelo MutualPay (bank_id 15) vira recebimento baixado na
+  // conta MUTUALTECHPAG na data do credito, com a taxa como despesa.
+  {
+    const { data, error } = await supabase.rpc('mutual_baixar_mutualpay', { p_confirmar: true });
+    passos.push(error
+      ? { etapa: 'baixa do MutualPay', ok: false, detalhe: error.message }
+      : { etapa: 'baixa do MutualPay', ok: true,
+          detalhe: `${(data ?? []).filter((r) => r.acao !== 'JA_LANCADO').length} pagamento(s) lancado(s)` });
+  }
+
   const ok = passos.every((p) => p.ok);
   return NextResponse.json({
     ok,
