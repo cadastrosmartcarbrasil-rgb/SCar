@@ -56,6 +56,6 @@ begin
   select count(*) into n from mutual_produtos_externos(r1);
   assert n = 5, format('cinco beneficios distintos (veio %s)', n);
 
-  raise notice '=== TESTES 0186 (de-para pelo nome do beneficio) PASSARAM ===';
+  raise notice '=== TESTES 0186+0187 (de-para pelo nome do beneficio) PASSARAM ===';
 end;
 $$;
