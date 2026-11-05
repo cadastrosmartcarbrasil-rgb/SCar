@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { consultarPlacaNoServidor } from '@/lib/fipe-server';
+import { consultarPlacaNoServidor, registrarConsultaFipe } from '@/lib/fipe-server';
 import { normalizarPlaca } from '@/lib/placa';
 import { placaCompleta, tipoVeiculoSugerido } from '@/lib/venda-publica';
 
@@ -37,9 +37,13 @@ export async function POST(req: Request) {
   // estao la, em vez de serem digitados a mao no fim.
   const reg = consulta?.registro ?? null;
 
-  // Sem token da FIPE, placa desconhecida ou API fora: nao e erro — o visitante
-  // segue informando marca/modelo e o valor de mercado.
-  if (!fipe?.valor) {
+  // 0180 — Sem token da FIPE, placa desconhecida ou API fora: o visitante NAO
+  // digita o valor (o preco sairia de um numero dele). A pagina avisa que um
+  // consultor vai concluir a cotacao; o lead ja existe.
+  const consultaId = fipe?.valor
+    ? await registrarConsultaFipe(admin, fipe, { origem: 'PLACA', placa, leadId: lead.lead_id })
+    : null;
+  if (!fipe?.valor || !consultaId) {
     // Mesmo sem avaliacao o registro pode ter vindo: chassi nao depende do preco.
     if (reg) {
       await admin.from('leads').update({
@@ -80,6 +84,7 @@ export async function POST(req: Request) {
     ano_modelo: fipe.anoModelo,
     valor_fipe: fipe.valor,
     valor_fipe_mercado: null, // 0165: placa nova = FIPE nova; o limite e decidido na cotacao
+    fipe_consulta_id: consultaId,
     codigo_fipe: fipe.codigoFipe,
     origem_fipe: 'API',
     tipo_veiculo_id: tipoSugerido,

@@ -106,7 +106,7 @@ export type FontesProposta = {
     taxa_adesao: number | null; adesao_com_desconto?: number | null; participacao: number | null;
   };
   lead: { placa: string | null; marca: string | null; modelo: string | null; ano_modelo: string | number | null;
-    aceite_em?: string | null; aceite_cotacao_id?: string | null } | null;
+    aceite_em?: string | null; aceite_cotacao_id?: string | null; adesao_valor?: number | null } | null;
   cotacaoId: string;
   ultimaCotacaoId: string | null;
   plano: { nome: string } | null;
@@ -250,7 +250,10 @@ export function montarProposta(f: FontesProposta): PropostaDados {
   }));
   const { tiles, vidros } = tilesDeCobertura(itens, detalhada);
   const quando = c.enviada_em ?? c.created_at;
-  const adesao = Number(c.adesao_com_desconto ?? c.taxa_adesao ?? 0);
+  // 0180 — a adesao PRATICADA (definida pelo consultor no lead) vale para a
+  // proposta vigente; propostas antigas mostram o valor da propria cotacao.
+  const praticada = f.ultimaCotacaoId === f.cotacaoId ? f.lead?.adesao_valor ?? null : null;
+  const adesao = Number(praticada ?? c.adesao_com_desconto ?? c.taxa_adesao ?? 0);
   const ida = f.tipo?.km_reboque_ida ?? null;
   const volta = f.tipo?.km_reboque_volta ?? null;
   const lead = f.lead;

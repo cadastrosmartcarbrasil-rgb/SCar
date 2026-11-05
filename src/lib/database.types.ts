@@ -1309,6 +1309,10 @@ export type LeadsRow = Timestamps & {
   valor_fipe: number | null;
   /** 0165 — FIPE de mercado quando a protecao e limitada (a coluna de calculo guarda o valor protegido). */
   valor_fipe_mercado: number | null;
+  fipe_consulta_id: string | null;
+  adesao_sugerida: number | null;
+  adesao_alterada_por: string | null;
+  adesao_alterada_em: string | null;
   codigo_fipe: string | null;
   cota_participacao_id: string | null;
   uso: UsoVeiculo;
@@ -1366,6 +1370,13 @@ export type LeadsRow = Timestamps & {
   proximo_contato_nota: string | null;
 };
 
+export type FipeConsultasRow = {
+  id: string; origem: 'PLACA' | 'CODIGO'; placa: string | null; codigo_fipe: string | null;
+  ano_modelo: number | null; marca: string | null; modelo: string | null; combustivel: string | null;
+  valor: number; mes_referencia: string | null; lead_id: string | null; consultado_por: string | null;
+  consultado_em: string; payload: Record<string, unknown> | null;
+};
+
 export type CotacoesRow = {
   /** 0081 — quem precificou e quanto foi o adicional, congelados. */
   regional_id: string | null;
@@ -1377,6 +1388,11 @@ export type CotacoesRow = {
   fipe: number;
   /** 0165 — FIPE de mercado quando a protecao e limitada (a coluna de calculo guarda o valor protegido). */
   valor_fipe_mercado: number | null;
+  fipe_consulta_id: string | null;
+  fipe_codigo: string | null;
+  fipe_mes_referencia: string | null;
+  fipe_consultado_em: string | null;
+  cota_percentual: number | null;
   tipo_veiculo_id: string | null;
   cota_participacao_id: string | null;
   itens: CotacaoItem[];
@@ -4394,6 +4410,7 @@ export type Database = {
         ]
       >;
       cotacoes: TableDef<CotacoesRow, [Rel<'lead_id', 'leads'>]>;
+      fipe_consultas: TableDef<FipeConsultasRow>;
       lead_historico: TableDef<LeadHistoricoRow, [Rel<'lead_id', 'leads'>, Rel<'usuario_id', 'usuarios'>]>;
       lead_interacoes: TableDef<LeadInteracoesRow, [Rel<'lead_id', 'leads'>, Rel<'usuario_id', 'usuarios'>]>;
       fipe_precos_local: TableDef<FipePrecosLocalRow>;
@@ -5700,7 +5717,8 @@ export type Database = {
           p_desconto_percentual?: number | null;
           p_desconto_justificativa?: string | null;
           p_limpar_plano?: boolean;
-          p_valor_assistencia_profissional?: number | null;
+          p_fipe_consulta_id?: string | null;
+        p_valor_assistencia_profissional?: number | null;
         };
         Returns: CotacoesRow;
       };

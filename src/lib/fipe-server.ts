@@ -1,7 +1,9 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   combustivelEnum, parseValor, registroDaPlaca,
   type FipeValor, type RegistroPlaca,
 } from '@/lib/fipe';
+import { normalizarPlaca } from '@/lib/placa';
 
 /**
  * Consulta a Placa Fipe DIRETO do servidor.
@@ -59,4 +61,38 @@ export async function consultarPlacaNoServidor(placa: string): Promise<ConsultaP
   } catch {
     return null;
   }
+}
+
+/**
+ * 0180 — registra a consulta FIPE feita pelo SERVIDOR (`fipe_consultas`) e
+ * devolve o id. A venda so aceita valor FIPE e cota que venham de uma consulta
+ * registrada: o banco recusa (ou ignora) o valor digitado no navegador.
+ * `admin` = cliente service_role (a tabela nao aceita escrita da sessao).
+ */
+export async function registrarConsultaFipe(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  admin: SupabaseClient<any, any, any>,
+  v: FipeValor,
+  ctx: { origem: 'PLACA' | 'CODIGO'; placa?: string | null; leadId?: string | null; consultadoPor?: string | null },
+): Promise<string | null> {
+  if (!v.valor || v.valor <= 0) return null;
+  const { data, error } = await admin.from('fipe_consultas').insert({
+    origem: ctx.origem,
+    placa: ctx.placa ? normalizarPlaca(ctx.placa) : null,
+    codigo_fipe: v.codigoFipe,
+    ano_modelo: v.anoModelo,
+    marca: v.marca,
+    modelo: v.modelo,
+    combustivel: v.combustivel,
+    valor: v.valor,
+    mes_referencia: v.referencia,
+    lead_id: ctx.leadId ?? null,
+    consultado_por: ctx.consultadoPor ?? null,
+    payload: v.bruto,
+  }).select('id').single();
+  if (error) {
+    console.error('[fipe] consulta nao registrada:', error.message);
+    return null;
+  }
+  return data.id as string;
 }

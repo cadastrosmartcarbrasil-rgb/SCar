@@ -104,7 +104,7 @@ begin
 
   -- ===================== (F) snapshot da cotacao usa o plano
   assert position('participacao_do_plano(' in pg_get_functiondef(
-    'atualizar_cotacao(uuid, numeric, uuid, uuid, uuid, uuid[], text, numeric, text, boolean, numeric)'::regprocedure)) > 0,
+    (select oid from pg_proc where proname = 'atualizar_cotacao' limit 1))) > 0,
     'atualizar_cotacao grava a participacao do plano';
 
   -- ===================== (G) limites no banco

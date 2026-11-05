@@ -34,6 +34,11 @@ export default function NovoLeadVendedorPage() {
         ano_modelo: d.ano_modelo ?? null,
         combustivel: d.combustivel ?? null,
         valor_fipe: d.valor_fipe ?? null,
+        valor_fipe_mercado: d.valor_fipe_mercado ?? null,
+        // 0180 — o banco so aceita FIPE e cota que venham desta consulta
+        fipe_consulta_id: d.fipe_consulta_id ?? null,
+        adesao_valor: d.adesao_valor ?? null,
+        modelo_id: d.modelo_id ?? null,
         codigo_fipe: d.codigo_fipe ?? null,
         cota_participacao_id: d.cota_participacao_id ?? null,
         origem_fipe: d.origem_fipe ?? 'MANUAL',

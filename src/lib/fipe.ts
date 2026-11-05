@@ -63,6 +63,8 @@ export interface FipeValor {
   anoModelo: number | null;
   combustivel: string | null; // enum do banco
   bruto: Record<string, unknown>;
+  /** 0180 — id da consulta registrada pelo servidor; e ele que a venda grava. */
+  consultaId?: string | null;
 }
 
 /**

@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { registrarConsultaFipe } from '@/lib/fipe-server';
+import { normalizarPlaca } from '@/lib/placa';
 import {
   parseValor, combustivelEnum, registroDaPlaca,
   type FipeItem, type FipeValor,
@@ -60,7 +63,10 @@ export async function POST(request: Request) {
         // segundo era o motivo de o chassi "nao vir" com a consulta dizendo
         // sucesso — o dado sempre chegou.
         const lista = Array.isArray(data?.fipe) ? data.fipe : Array.isArray(data?.dados) ? data.dados : [];
-        const opcoes = lista.map(normalizarValor).filter((v: FipeValor) => v.valor != null);
+        const achados = lista.map(normalizarValor).filter((v: FipeValor) => v.valor != null);
+        // 0180 — cada opcao vira uma consulta registrada: e o id dela que a venda grava.
+        const placa = normalizarPlaca(String(params.placa ?? ''));
+        const opcoes = await comConsulta(achados, 'PLACA', placa, user.id);
         return NextResponse.json({
           configured: true,
           valor: opcoes[0] ?? null,
@@ -71,7 +77,9 @@ export async function POST(request: Request) {
       }
       case 'valor': {
         const o = Array.isArray(data?.fipe) ? data.fipe[0] : (data?.dados ?? data);
-        return NextResponse.json({ configured: true, valor: o ? normalizarValor(o) : null });
+        const v = o ? normalizarValor(o) : null;
+        const [valor] = v && v.valor != null ? await comConsulta([v], 'CODIGO', null, user.id) : [null];
+        return NextResponse.json({ configured: true, valor });
       }
       case 'modelos': {
         const d = data?.dados ?? data;
@@ -93,6 +101,17 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: 'Falha de rede ao consultar a FIPE', configured: true }, { status: 502 });
   }
+}
+
+async function comConsulta(
+  opcoes: FipeValor[], origem: 'PLACA' | 'CODIGO', placa: string | null, usuarioId: string,
+): Promise<FipeValor[]> {
+  if (opcoes.length === 0) return opcoes;
+  const admin = createAdminClient();
+  return Promise.all(opcoes.map(async (v) => ({
+    ...v,
+    consultaId: await registrarConsultaFipe(admin, v, { origem, placa, consultadoPor: usuarioId }),
+  })));
 }
 
 // { Label, Value } (ou variacoes) -> { cod, nome }

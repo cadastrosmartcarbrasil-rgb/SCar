@@ -463,8 +463,11 @@ export function FechamentoVenda({ lead }: { lead: LeadsRow }) {
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             <FormField label="Cor *"><CampoCor value={form.cor} onChange={(cor) => set({ cor })} /></FormField>
-            <FormField label="Valor FIPE *">
-              <MoneyInput value={form.valor_fipe ?? null} onChange={(v) => set({ valor_fipe: v })} />
+            {/* 0180 — so leitura: o valor FIPE sai da consulta (ajuste em "Ajustar veiculo e proposta") */}
+            <FormField label="Valor FIPE (consulta do sistema)">
+              <div className="flex h-10 items-center rounded-lg border border-slate-200 bg-superficie-alta px-3 text-sm font-semibold tnum text-slate-800">
+                {form.valor_fipe != null ? formatCurrency(Number(form.valor_fipe)) : '—'}
+              </div>
             </FormField>
             <FormField label="Plano contratado *">
               <Select value={form.plano_id ?? ''} onChange={(e) => set({ plano_id: e.target.value || null })}>

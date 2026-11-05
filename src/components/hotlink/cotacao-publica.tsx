@@ -51,7 +51,6 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
   const [jaAceito, setJaAceito] = useState(false);
 
   const [tipoVeiculoId, setTipoVeiculoId] = useState('');
-  const [valorInformado, setValorInformado] = useState('');
   const [identificando, setIdentificando] = useState(false);
   const [buscou, setBuscou] = useState(false);
   const [veiculo, setVeiculo] = useState<
@@ -161,7 +160,6 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
         '/api/v1/hotlink/cotar',
         {
           token, tipo_veiculo_id: tipoVeiculoId, placa: contato.placa,
-          valor_fipe: Number(valorInformado.replace(/\./g, '').replace(',', '.')) || 0,
           valor_protegido: limiteInfo && decisaoLimite === 'LIMITE' ? valorProtegido : null,
         },
       );
@@ -364,18 +362,20 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
             </div>
           )}
 
-          {/* Nao achou: nao e erro — o visitante informa o valor de mercado. */}
+          {/* 0180 — Nao achou: o visitante NAO digita o valor (o preco sairia dele). O
+              lead ja existe; o consultor conclui a cotacao. */}
           {buscou && !veiculo && (
-            <>
-              <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[0.75rem] leading-relaxed text-amber-900">
-                Não localizamos esta placa na tabela FIPE. Informe o valor de mercado do veículo
-                que a gente cota do mesmo jeito.
+            <div className="space-y-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[0.75rem] leading-relaxed text-amber-900">
+              <p>
+                Não conseguimos consultar a tabela FIPE desta placa agora. Confira a placa e tente de novo —
+                ou aguarde: um consultor da Smart Car já recebeu o seu contato e vai concluir a sua cotação.
               </p>
-              <Campo
-                rotulo="Valor de mercado do veículo" valor={valorInformado}
-                inputMode="decimal" prefixo="R$" onChange={setValorInformado}
-              />
-            </>
+              <button type="button" disabled={identificando}
+                onClick={() => identificar(contato.placa, token)}
+                className="font-semibold text-brand-800 underline">
+                Tentar de novo
+              </button>
+            </div>
           )}
 
           {/* O tipo vem dos dados da placa; fica visivel para o visitante conferir. */}
@@ -421,7 +421,7 @@ export function CotacaoPublica({ codigo, vendedor, tipos }: {
           )}
 
           <Botao carregando={enviando}
-            disabled={!tipoVeiculoId || identificando || (!veiculo && !valorInformado)
+            disabled={!tipoVeiculoId || identificando || !veiculo
               || (!!limiteInfo && (decisaoLimite !== 'LIMITE' || !valorProtegido))}>
             Ver meus planos
           </Botao>

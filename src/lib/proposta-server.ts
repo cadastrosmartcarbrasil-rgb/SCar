@@ -27,7 +27,7 @@ export async function carregarProposta(token: string, origem: string): Promise<{
   // Duas consultas em vez de embed: ha duas FKs entre cotacoes e leads (0042).
   const [{ data: lead }, { data: ultima }, { data: empresa }, plano, cota, tipo] = await Promise.all([
     admin.from('leads')
-      .select('placa, marca, modelo, ano_modelo, aceite_em, aceite_cotacao_id, vendedor_id, consultor_id, tipo_veiculo_id')
+      .select('placa, marca, modelo, ano_modelo, aceite_em, aceite_cotacao_id, vendedor_id, consultor_id, tipo_veiculo_id, adesao_valor')
       .eq('id', c.lead_id).maybeSingle(),
     admin.from('cotacoes').select('id').eq('lead_id', c.lead_id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
     admin.from('empresa')

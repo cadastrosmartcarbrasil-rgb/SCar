@@ -70,6 +70,10 @@ export function EditarCotacao({
   const [tipoId, setTipoId] = useState<string>(cotacao?.tipo_veiculo_id ?? lead.tipo_veiculo_id ?? '');
   const [cotaId, setCotaId] = useState<string>(cotacao?.cota_participacao_id ?? lead.cota_participacao_id ?? '');
   const [cascata, setCascata] = useState(false);
+  // 0180 — a consulta FIPE do servidor; o banco recalcula FIPE, cota e preco por ela.
+  const [consultaId, setConsultaId] = useState<string | null>(cotacao?.fipe_consulta_id ?? lead.fipe_consulta_id ?? null);
+  // 0180 — adesao praticada (nula = a sugerida pela tabela)
+  const [adesao, setAdesao] = useState<number | null>(lead.adesao_valor != null ? Number(lead.adesao_valor) : null);
   const regionalId = cotacao?.regional_id ?? lead.regional_id ?? null;
 
   // 0165 — a FIPE do veiculo; acima do limite da tabela, o calculo usa o valor protegido.
@@ -185,7 +189,8 @@ export function EditarCotacao({
     const r = await fipePorPlaca.mutateAsync(p).catch(() => null);
     if (!r?.configured) return toast.error('Consulta de placa não configurada no servidor');
     const v = r.valor;
-    if (!v) { setCascata(true); return toast.message('Placa não encontrada na FIPE — busque pelo modelo abaixo.'); }
+    if (!v || !v.consultaId) { setCascata(true); return toast.message('Placa não encontrada na FIPE — busque pelo modelo abaixo ou tente de novo.'); }
+    setConsultaId(v.consultaId);
     if (v.marca) setMarca(v.marca);
     if (v.modelo) setModelo(v.modelo);
     if (v.anoModelo) setAnoModelo(v.anoModelo);
@@ -209,6 +214,8 @@ export function EditarCotacao({
       cota_participacao_id: cotaId || null,
       valor_fipe: fipe,
       valor_fipe_mercado: fipeMercado,
+      fipe_consulta_id: consultaId,
+      ...(adesao !== (lead.adesao_valor != null ? Number(lead.adesao_valor) : null) ? { adesao_valor: adesao } : {}),
     });
   }
 
@@ -227,7 +234,11 @@ export function EditarCotacao({
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
     if (!tipoId) return toast.error('Selecione o tipo de veículo');
-    if (!fipeVeiculo) return toast.error('Informe o valor FIPE do veículo');
+    if (!fipeVeiculo) return toast.error('Consulte a FIPE pela placa ou pelo modelo');
+    if (nova && !consultaId) return toast.error('Consulte a FIPE pela placa ou pelo modelo antes de gerar a proposta');
+    if (adesao != null && (adesao < 0 || Math.round(adesao * 100) !== adesao * 100)) {
+      return toast.error('Adesão inválida: use um valor maior ou igual a zero, com até duas casas');
+    }
     if (erroAp) return toast.error(`Assistência Profissional: ${erroAp}`);
     if (!fipe) return toast.error('FIPE acima do limite da tabela: proteja pelo limite (valor protegido)');
     if (nova) {
@@ -237,6 +248,7 @@ export function EditarCotacao({
           leadId: lead.id, fipe, tipoVeiculoId: tipoId, cotaId: cotaId || null, planoId: planoId || null,
           produtosIds: avulsosDoVeiculo(opcionais, idsDoPlano), modoEnvio,
           assistenciaProfissional: assistencia ?? 0, valorFipeMercado: fipeMercado,
+          fipeConsultaId: consultaId,
         });
         toast.success(`Proposta gerada — ${formatCurrency(Number(c.total_com_desconto ?? c.total_mensalidade))}/mês. Desconto, se houver, em "Ajustar".`);
         onClose();
@@ -263,6 +275,7 @@ export function EditarCotacao({
         opcionaisIds: avulsosDoVeiculo(opcionais, idsDoPlano),
         assistenciaProfissional: assistencia ?? 0,
         valorFipeMercado: fipeMercado,
+        fipeConsultaId: consultaId,
       });
       await definirDesconto.mutateAsync({
         cotacaoId: cotacao!.id, tipo: tipoDesc, valor: previa.desconto > 0 ? Number(valorDesc ?? 0) : 0,
@@ -287,7 +300,12 @@ export function EditarCotacao({
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <FormField label="Placa">
               <div className="flex gap-1.5">
-                <Input value={placa} onChange={(e) => setPlaca(e.target.value.toUpperCase())} className="placa" maxLength={8} />
+                <Input value={placa} className="placa" maxLength={8}
+                  onChange={(e) => {
+                    setPlaca(e.target.value.toUpperCase());
+                    // placa nova = consulta nova (o banco recusa a FIPE de outra placa)
+                    if (consultaId) { setConsultaId(null); setFipeVeiculo(null); }
+                  }} />
                 <Button type="button" variant="secondary" onClick={consultarPlaca} disabled={fipePorPlaca.isPending}
                   title="Consultar a FIPE pela placa" className="shrink-0 px-2.5">
                   {fipePorPlaca.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
@@ -295,13 +313,13 @@ export function EditarCotacao({
               </div>
             </FormField>
             <FormField label="Marca">
-              <Input value={marca} onChange={(e) => setMarca(e.target.value)} />
+              <Input value={marca} readOnly={!!consultaId} onChange={(e) => setMarca(e.target.value)} />
             </FormField>
             <FormField label="Modelo">
-              <Input value={modelo} onChange={(e) => setModelo(e.target.value)} />
+              <Input value={modelo} readOnly={!!consultaId} onChange={(e) => setModelo(e.target.value)} />
             </FormField>
             <FormField label="Ano modelo">
-              <Input type="number" value={anoModelo}
+              <Input type="number" value={anoModelo} readOnly={!!consultaId}
                 onChange={(e) => setAnoModelo(e.target.value === '' ? '' : Number(e.target.value))} />
             </FormField>
             <FormField label="Tipo de veículo" className="col-span-2 sm:col-span-1">
@@ -312,16 +330,25 @@ export function EditarCotacao({
                 ))}
               </Select>
             </FormField>
-            <FormField label="Valor FIPE do veículo">
-              <MoneyInput value={fipeVeiculo} onChange={(v) => { setFipeVeiculo(v); }} />
+            {/* 0180 — so leitura: o valor sai da consulta FIPE do sistema */}
+            <FormField label="Valor FIPE (consulta do sistema)">
+              <div className={`flex h-10 items-center rounded-lg border px-3 text-sm tnum ${fipeVeiculo
+                ? 'border-slate-200 bg-superficie-alta font-semibold text-slate-800' : 'border-amber-300 bg-amber-50 text-amber-800'}`}>
+                {fipeVeiculo ? formatCurrency(fipeVeiculo) : 'Consulte a placa ou o modelo'}
+              </div>
+              {!consultaId && fipeVeiculo ? (
+                <p className="mt-1 text-xs text-amber-700">Proposta antiga, sem consulta registrada: consulte a placa para atualizar.</p>
+              ) : null}
             </FormField>
+            {/* 0180 — so leitura: a cota sai do modelo do catalogo e o banco recalcula */}
             <FormField label="Cota de participação" className="col-span-2">
-              <Select value={cotaId} onChange={(e) => setCotaId(e.target.value)}>
-                <option value="">Pela faixa da tabela</option>
-                {(cotas ?? []).filter((c) => c.ativo !== false || c.id === cotaId).map((c) => (
-                  <option key={c.id} value={c.id}>{c.codigo} — {(Number(c.percentual) * 100).toLocaleString('pt-BR')}% da FIPE</option>
-                ))}
-              </Select>
+              <div className="flex h-10 items-center rounded-lg border border-slate-200 bg-superficie-alta px-3 text-sm text-slate-700">
+                {(() => {
+                  const c = (cotas ?? []).find((x) => x.id === cotaId);
+                  return c ? `${c.codigo} — ${(Number(c.percentual) * 100).toLocaleString('pt-BR')}% da FIPE` : 'Pela faixa da tabela';
+                })()}
+              </div>
+              <p className="mt-1 text-xs text-slate-500">Definida pelo modelo do catálogo; o sistema recalcula ao salvar.</p>
             </FormField>
           </div>
           <button type="button" onClick={() => setCascata((c) => !c)} className="mt-2 text-xs font-medium text-brand-600 underline">
@@ -335,6 +362,8 @@ export function EditarCotacao({
                   if (sel.modeloNome) setModelo(sel.modeloNome);
                   if (sel.valor.anoModelo) setAnoModelo(sel.valor.anoModelo);
                   if (sel.valor.codigoFipe) setCodigoFipe(sel.valor.codigoFipe);
+                  if (!sel.valor.consultaId) { toast.error('A consulta FIPE não foi registrada. Tente de novo.'); return; }
+                  setConsultaId(sel.valor.consultaId);
                   if (sel.valor.valor != null) { setFipeVeiculo(sel.valor.valor); setDecisaoLimite(null); setValorProtegido(null); }
                 }}
               />
@@ -540,6 +569,15 @@ export function EditarCotacao({
         </div>
 
         <CampoAssistenciaProfissional regras={regrasAp} valor={assistencia} onChange={setAssistencia} />
+
+        {/* 0180 — adesao livre: a sugerida vem da tabela, o vendedor pode mudar (fica registrado quem) */}
+        <FormField label="Adesão (R$)">
+          <div className="w-48"><MoneyInput value={adesao ?? (adesaoTabela || null)} onChange={setAdesao} /></div>
+          <p className="mt-1 text-xs text-slate-500">
+            Sugerida pela tabela: <b>{formatCurrency(adesaoTabela)}</b>. Pode ser zero.
+            {adesao != null && <button type="button" className="ml-1 font-semibold text-brand-600 hover:underline" onClick={() => setAdesao(null)}>usar a sugerida</button>}
+          </p>
+        </FormField>
 
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>

@@ -49,6 +49,12 @@ describe('proposta comercial v2', () => {
     expect(d.link).toBe('https://appsmartcar.com.br/cotacao/tok');
   });
 
+  it('0180: a adesao praticada no lead vale so para a proposta vigente', () => {
+    const lead = { placa: 'QXV9D19', marca: 'Jeep', modelo: 'Compass', ano_modelo: 2020, adesao_valor: 180 };
+    expect(montarProposta(fontes({ lead })).valores.adesao).toBe(180);
+    expect(montarProposta(fontes({ lead, ultimaCotacaoId: 'c2' })).valores.adesao).toBe(250);
+  });
+
   it('casco aberto em itens, terceiros com o limite e carro reserva com os dias', () => {
     const d = montarProposta(fontes());
     const t = d.coberturas.map((c) => c.titulo);

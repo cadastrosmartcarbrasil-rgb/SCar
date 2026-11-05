@@ -21,7 +21,7 @@ export async function POST(req: Request) {
   const token = String(body?.token ?? '').trim();
   const tipoVeiculoId = String(body?.tipo_veiculo_id ?? '').trim();
   const placaBruta = String(body?.placa ?? '').trim();
-  const fipeInformada = Number(body?.valor_fipe ?? 0);
+  // 0180 — o valor FIPE vindo do visitante NAO e aceito: vale so a consulta do servidor.
   // 0165 — FIPE acima da tabela: o visitante protege pelo limite informando o valor protegido.
   const valorProtegido = Number(body?.valor_protegido ?? 0) || null;
 
@@ -41,11 +41,14 @@ export async function POST(req: Request) {
   // que o visitante informou quando a placa nao foi encontrada.
   const placa = placaBruta ? normalizarPlaca(placaBruta) : '';
   // Com protecao limitada, `valor_fipe` do lead e o valor protegido: a FIPE de verdade esta ao lado.
-  const { data: atual } = await admin.from('leads').select('valor_fipe, valor_fipe_mercado').eq('id', lead.lead_id).maybeSingle();
-  const valorFipe = fipeInformada || Number(atual?.valor_fipe_mercado ?? atual?.valor_fipe ?? lead.valor_fipe ?? 0);
+  const { data: atual } = await admin.from('leads').select('fipe_consulta_id').eq('id', lead.lead_id).maybeSingle();
+  const { data: consulta } = atual?.fipe_consulta_id
+    ? await admin.from('fipe_consultas').select('valor').eq('id', atual.fipe_consulta_id).maybeSingle()
+    : { data: null };
+  const valorFipe = Number(consulta?.valor ?? 0);
   if (!valorFipe || valorFipe <= 0) {
     return NextResponse.json(
-      { error: 'Não consegui o valor do veículo. Informe o valor de mercado para cotar.' },
+      { error: 'Não conseguimos consultar a tabela FIPE deste veículo agora. Tente de novo em instantes ou aguarde: um consultor vai concluir a sua cotação.' },
       { status: 422 },
     );
   }
@@ -59,7 +62,7 @@ export async function POST(req: Request) {
     if (valorProtegido == null) {
       await admin.from('leads').update({
         placa: placa || null, tipo_veiculo_id: tipoVeiculoId, valor_fipe: valorFipe, valor_fipe_mercado: null,
-        origem_fipe: fipeInformada ? 'MANUAL' : 'API', ultima_interacao_em: new Date().toISOString(),
+        origem_fipe: 'API', ultima_interacao_em: new Date().toISOString(),
       }).eq('id', lead.lead_id);
       const { data: tipos } = await admin.from('tipos_veiculo').select('id, nome');
       return NextResponse.json({
@@ -83,7 +86,7 @@ export async function POST(req: Request) {
     tipo_veiculo_id: tipoVeiculoId,
     valor_fipe: base,
     valor_fipe_mercado: mercado,
-    origem_fipe: fipeInformada ? 'MANUAL' : 'API',
+    origem_fipe: 'API',
     ultima_interacao_em: new Date().toISOString(),
   }).eq('id', lead.lead_id);
 

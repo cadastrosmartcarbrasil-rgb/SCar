@@ -21,7 +21,7 @@ import { produtosParaTipo, regraRastreadorCobra, semRastreadorDaRegra, situacaoR
 import { useRegionalDeQuemCota, useRegraRastreador } from '@/hooks/use-regra-rastreador';
 import {
   useAvisoDeCaptura, useCotacaoComparativa, useProdutosDoPlano, useRegrasAssistenciaProfissional,
-  useSalvarCotacao, useSaveLead, type PlanoComparado,
+  useSalvarCotacao, useSaveLead, useSalvarFichaLead, type PlanoComparado,
 } from '@/hooks/use-vendas';
 import { CampoAssistenciaProfissional } from '@/components/vendas/campo-assistencia-profissional';
 import { validarAssistenciaProfissional } from '@/lib/assistencia-profissional';
@@ -69,6 +69,7 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
   const { data: sugestoesPorPlano } = useSugestoesPorPlano();
   const fipePorPlaca = useFipePorPlaca();
   const salvarLead = useSaveLead();
+  const fichaLead = useSalvarFichaLead();
   const salvarCotacao = useSalvarCotacao();
   const criar = criarLead ?? ((d: NovoLead) => salvarLead.mutateAsync(d));
 
@@ -88,11 +89,14 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
   const [valorFipe, setValorFipe] = useState<number | null>(null);
   const [codigoFipe, setCodigoFipe] = useState('');
   const [cotaId, setCotaId] = useState('');
+  // 0180 — a consulta FIPE registrada pelo servidor: sem ela nao ha cotacao.
+  const [consultaId, setConsultaId] = useState<string | null>(null);
+  // 0180 — adesao praticada (nula = a sugerida pela tabela do plano escolhido)
+  const [adesao, setAdesao] = useState<number | null>(null);
   // 0175 — FIPE acima da tabela do tipo: a decisao de quem cota e o valor protegido.
   const [decisaoLimite, setDecisaoLimite] = useState<DecisaoLimite | null>(null);
   const [valorProtegido, setValorProtegido] = useState<number | null>(null);
-  // 0162 — a cota vem do modelo do catalogo; escolher na mao desliga o automatico.
-  const [cotaManual, setCotaManual] = useState(false);
+  // 0162/0180 — a cota vem do modelo do catalogo e o banco recalcula: nao ha escolha.
   const [modeloId, setModeloId] = useState<string | null>(null);
   const [origemFipe, setOrigemFipe] = useState<OrigemFipe>('MANUAL');
   const [mostrarCascata, setMostrarCascata] = useState(false);
@@ -120,7 +124,7 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
     if (catalogo.isFetching) return;
     const r = catalogo.data;
     setModeloId(r?.modelo_id ?? null);
-    if (!cotaManual) setCotaId(r?.cota_id ?? '');
+    setCotaId(r?.cota_id ?? '');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [catalogo.data, catalogo.isFetching]);
   // So o que atende o tipo do veiculo (0089): sem parabrisa para moto. O motor
@@ -220,11 +224,16 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
     // O registro vale mesmo quando a avaliacao nao vem (placa fora da FIPE):
     // chassi e motor nao dependem do preco.
     if (r?.registro) setRegistro(r.registro);
-    if (!v) {
+    setConsultaId(null);
+    setValorFipe(null);
+    if (!v || !v.consultaId) {
       setMostrarCascata(true);
-      toast.message('Placa não encontrada na FIPE — busque pelo modelo abaixo.');
+      toast.message(r?.configured === false
+        ? 'A consulta FIPE não está disponível agora. Tente de novo em instantes.'
+        : 'Placa não encontrada na FIPE — busque pelo modelo abaixo ou tente de novo.');
       return;
     }
+    setConsultaId(v.consultaId);
     if (v.marca) setMarca(v.marca);
     if (v.modelo) setModelo(v.modelo);
     if (v.anoModelo) setAnoModelo(v.anoModelo);
@@ -245,7 +254,10 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
   }
 
   async function gerar() {
-    if (!valorFipe) return toast.error('Informe o valor FIPE do veículo');
+    if (!valorFipe || !consultaId) return toast.error('Consulte a FIPE pela placa ou pelo modelo antes de cotar');
+    if (adesao != null && (adesao < 0 || Math.round(adesao * 100) !== adesao * 100)) {
+      return toast.error('Adesão inválida: use um valor maior ou igual a zero, com até duas casas');
+    }
     if (tipoVeiculoId && !fipeCalculo) return toast.error('FIPE acima do limite da tabela: proteja pelo limite ou cote só o rastreamento');
     if (!tipoVeiculoId) return toast.error('Selecione o tipo de veículo');
     if (!escolhido) return toast.error('Escolha o plano da proposta');
@@ -273,6 +285,7 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
         codigo_fipe: codigoFipe || null,
         cota_participacao_id: cotaId || null,
         modelo_id: modeloId,
+        fipe_consulta_id: consultaId,
         origem_fipe: origemFipe,
         // Registro do documento, quando a placa trouxe
         chassi: registro?.chassi ?? null,
@@ -290,7 +303,10 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
         produtosIds: avulsosParaCotacao(selecionados, idsDoPlano),
         modoEnvio,
         assistenciaProfissional: assistencia ?? 0,
+        fipeConsultaId: consultaId,
       });
+      // 0180 — a adesao digitada vai DEPOIS da cotacao: so entao a sugerida existe
+      if (adesao != null) await fichaLead.mutateAsync({ id: lead.id, adesao_valor: adesao });
       toast.success('Cotação gerada');
       aoConcluir(lead.id);
     } catch (e) {
@@ -393,6 +409,8 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
                 if (sel.modeloNome) setModelo(sel.modeloNome);
                 if (sel.valor.anoModelo) setAnoModelo(sel.valor.anoModelo);
                 if (sel.valor.combustivel) setCombustivel(sel.valor.combustivel as Combustivel);
+                if (!sel.valor.consultaId) return toast.error('A consulta FIPE não foi registrada. Tente de novo.');
+                setConsultaId(sel.valor.consultaId);
                 if (sel.valor.valor != null) setValorFipe(sel.valor.valor);
                 if (sel.valor.codigoFipe) setCodigoFipe(sel.valor.codigoFipe);
                 setOrigemFipe('API');
@@ -411,15 +429,18 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
           )}
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <Campo label="Marca"><Input value={marca} onChange={(e) => setMarca(e.target.value)} /></Campo>
-            <Campo label="Modelo"><Input value={modelo} onChange={(e) => setModelo(e.target.value)} /></Campo>
+            <Campo label="Marca"><Input value={marca} readOnly={!!consultaId} onChange={(e) => setMarca(e.target.value)} /></Campo>
+            <Campo label="Modelo"><Input value={modelo} readOnly={!!consultaId} onChange={(e) => setModelo(e.target.value)} /></Campo>
             <Campo label="Ano modelo">
-              <Input type="number" className="tnum" value={anoModelo}
+              <Input type="number" className="tnum" value={anoModelo} readOnly={!!consultaId}
                 onChange={(e) => setAnoModelo(e.target.value === '' ? '' : Number(e.target.value))} />
             </Campo>
-            <Campo label="Valor FIPE (R$) *">
-              <MoneyInput value={valorFipe} placeholder="0,00"
-                onChange={(v) => { setValorFipe(v); if (origemFipe === 'API') setOrigemFipe('MANUAL'); }} />
+            {/* 0180 — so leitura: o valor sai da consulta FIPE do sistema */}
+            <Campo label="Valor FIPE (consulta do sistema)">
+              <div className={cn('flex h-10 items-center rounded-lg border px-3 text-sm tnum',
+                valorFipe ? 'border-slate-200 bg-superficie-alta font-semibold text-slate-800' : 'border-amber-300 bg-amber-50 text-amber-800')}>
+                {valorFipe ? formatCurrency(valorFipe) : 'Consulte a placa ou o modelo'}
+              </div>
             </Campo>
             <Campo label="Tipo de veículo *">
               <Select value={tipoVeiculoId} onChange={(e) => setTipoVeiculoId(e.target.value)}>
@@ -427,20 +448,21 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
                 {(tipos ?? []).map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
               </Select>
             </Campo>
+            {/* 0180 — so leitura: a cota sai do modelo do catalogo e o banco recalcula */}
             <Campo label="Cota de participação">
-              <Select value={cotaId} onChange={(e) => { setCotaId(e.target.value); setCotaManual(true); }}>
-                <option value="">Padrão da faixa</option>
-                {(cotas ?? []).map((c) => (
-                  <option key={c.id} value={c.id}>{c.codigo} — {(c.percentual * 100).toLocaleString('pt-BR')}%</option>
-                ))}
-              </Select>
+              <div className="flex h-10 items-center rounded-lg border border-slate-200 bg-superficie-alta px-3 text-sm text-slate-700">
+                {(() => {
+                  const c = (cotas ?? []).find((x) => x.id === cotaId);
+                  return c ? `${c.codigo} — ${(c.percentual * 100).toLocaleString('pt-BR')}%` : 'Padrão da faixa';
+                })()}
+              </div>
             </Campo>
           </div>
           <p className="text-xs leading-snug text-slate-500">
             {catalogo.isFetching ? 'Procurando o modelo no catálogo...'
               : catalogo.data
                 ? catalogo.data.cota_codigo
-                  ? <>Cota do catálogo: <b>{catalogo.data.modelo}</b> ({catalogo.data.cota_codigo} — {(Number(catalogo.data.cota_percentual) * 100).toLocaleString('pt-BR')}%){cotaManual && ' · alterada à mão'}</>
+                  ? <>Cota do catálogo: <b>{catalogo.data.modelo}</b> ({catalogo.data.cota_codigo} — {(Number(catalogo.data.cota_percentual) * 100).toLocaleString('pt-BR')}%)</>
                   : <>Modelo <b>{catalogo.data.modelo}</b> sem cota no catálogo: vale a faixa.</>
                 : marca && modelo ? 'Modelo não achado no catálogo de Marcas/Modelos: vale a faixa.' : null}
           </p>
@@ -600,6 +622,15 @@ export function NovoLeadCotacao({ criarLead, aoConcluir, voltarPara }: {
             <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="opcional" />
           </Campo>
           <CampoAssistenciaProfissional regras={regrasAp} valor={assistencia} onChange={setAssistencia} />
+          {/* 0180 — adesao livre: vem a sugerida do plano escolhido, o vendedor pode mudar */}
+          <Campo label="Adesão (R$)">
+            <MoneyInput value={adesao ?? (escolhido ? escolhido.adesao : null)} onChange={(v) => setAdesao(v)} />
+            <p className="mt-1 text-xs text-slate-500">
+              {escolhido ? <>Sugerida pela tabela: <b>{formatCurrency(escolhido.adesao)}</b>.</> : 'Escolha o plano para ver a sugerida.'}
+              {' '}Pode ser zero. Fica registrado quem alterou.
+              {adesao != null && <button type="button" className="ml-1 font-semibold text-brand-600 hover:underline" onClick={() => setAdesao(null)}>usar a sugerida</button>}
+            </p>
+          </Campo>
           <div>
             <p className="mb-1.5 text-sm font-medium text-slate-600">Envio ao cliente</p>
             <div className="flex gap-2">
