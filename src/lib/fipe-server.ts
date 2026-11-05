@@ -70,7 +70,6 @@ export async function consultarPlacaNoServidor(placa: string): Promise<ConsultaP
  * `admin` = cliente service_role (a tabela nao aceita escrita da sessao).
  */
 export async function registrarConsultaFipe(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   admin: SupabaseClient<any, any, any>,
   v: FipeValor,
   ctx: { origem: 'PLACA' | 'CODIGO'; placa?: string | null; leadId?: string | null; consultadoPor?: string | null },
