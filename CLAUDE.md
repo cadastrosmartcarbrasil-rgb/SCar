@@ -784,7 +784,7 @@ participação; **CPF completo**. Próximo termo: **entrega de veículo** (reapr
 - **Termo:** modelo tipo `ORDEM_SERVICO` escopo `EVENTO` (Configurações → Termos), campos dos grupos Prestador, Evento e OS
   (`CAMPOS_TERMO`, `src/lib/termos.ts`); `«OS: Tabela de serviços e peças»` é bloco. **Importar Word reconhece os marcadores
   «Grupo: Campo»** (`camposDosMarcadores`, `src/lib/termos-word.ts`, com apelidos) e avisa os desconhecidos — o modelo do Cowork
-  converte 100%. No PDF a logo do Word vira a oficial (`trocarLogoDoModelo`). O Word perde as cores de fundo (o mammoth não
+  converte 100%. No PDF a logo do Word vira a oficial e o cabeçalho não a repete (`trocarLogoDoModelo`; a imagem do Word é data URL longa — procurar só o INÍCIO da tag no topo; vale em todos os PDFs de termo). O Word perde as cores de fundo (o mammoth não
   traz sombreamento); tabela e logo ficam. O número `{{NUMERO_DA_OS}}` e o protocolo `{{PROTOCOLO_DO_TERMO}}` são trocados no
   banco antes do hash. Reparo de **terceiro**: o bloco do veículo mostra o carro do terceiro. Condutor: a declaração mais recente
   do associado/condutor na Comunicação de Evento (0129); sem ela, em branco. Telefone do associado: o fixo, senão o celular.
@@ -980,7 +980,7 @@ software de rastreador, que fará o cruzamento das informações". **Leia `docs/
 ### Estado de validação (fim da fase)
 - **Migrations `0001`..`0181`** + `schema.sql` consolidado aplicam limpos no harness local.
 - **158 suites** em `supabase/tests/*.test.sql` — todas passando.
-- **Vitest: 1509 testes**, `npx tsc --noEmit` limpo e build OK.
+- **Vitest: 1512 testes**, `npx tsc --noEmit` limpo e build OK.
 
 ### Pendências conhecidas (decisões, não bugs)
 - **Logo oficial:** subir o arquivo em `Configurações → Empresa`. Os portais e páginas públicas

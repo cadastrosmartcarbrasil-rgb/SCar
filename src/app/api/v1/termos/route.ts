@@ -121,7 +121,8 @@ export async function POST(request: Request) {
           const fontes = await carregarFontesTermo(supabase, { emitidoPor: perfil.nome });
           const r = preencherTermo(versao.conteudo_html, fontes);
           const logo = await logoComoDataUrl(await logoOficial());
-          const pdf = await gerarPdf(htmlDoPdf(r.html, versao.nome, logo,
+          const l = trocarLogoDoModelo(r.html, logo);
+          const pdf = await gerarPdf(htmlDoPdf(l.html, versao.nome, l.logoNoCabecalho,
             `${versao.nome} — versão ${versao.numero} · publicada em ${new Date(versao.publicada_em).toLocaleDateString('pt-BR')}`));
           const path = `versoes/${c.modelo_id}/${versao.id}.pdf`;
           const admin = createAdminClient();
@@ -185,7 +186,8 @@ async function pdfDoEmitido(
     const rodape = `Protocolo ${e.protocolo} · ${versao} · `
       + `emitido em ${new Date(e.emitido_em).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })} · `
       + `SHA-256 do conteúdo: ${e.html_sha256}`;
-    const pdf = await gerarPdf(htmlDoPdf(e.conteudo_html, e.titulo, logo, rodape));
+    const l = trocarLogoDoModelo(e.conteudo_html, logo);
+    const pdf = await gerarPdf(htmlDoPdf(l.html, e.titulo, l.logoNoCabecalho, rodape));
     const path = `emitidos/${e.cliente_id}/${e.id}.pdf`;
     const admin = createAdminClient();
     const up = await admin.storage.from('termos').upload(path, pdf, { contentType: 'application/pdf', upsert: true });

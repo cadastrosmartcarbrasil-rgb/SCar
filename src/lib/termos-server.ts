@@ -210,9 +210,12 @@ export function exemploDaOS(base: FontesTermo): FontesTermo {
  * no PDF ela vira a logo OFICIAL da empresa, e o cabecalho nao repete a logo.
  */
 export function trocarLogoDoModelo(html: string, logo: string | null): { html: string; logoNoCabecalho: string | null } {
-  const inicio = html.slice(0, 4000);
-  const m = /<img\b[^>]*\bsrc="[^"]*"[^>]*>/.exec(inicio);
+  // A imagem do Word vem como data URL (dezenas de KB): procura-se so o INICIO
+  // da tag no topo do documento e a tag inteira no texto todo.
+  const ini = html.slice(0, 4000).search(/<img\b/i);
+  const m = ini < 0 ? null : /^<img\b[^>]*>/i.exec(html.slice(ini));
   if (!m) return { html, logoNoCabecalho: logo };
+  m.index = ini;
   if (!logo) return { html, logoNoCabecalho: null };
   const nova = `<img src="${logo}" alt="" style="max-height:70px;max-width:100%">`;
   return { html: html.slice(0, m.index) + nova + html.slice(m.index + m[0].length), logoNoCabecalho: null };
