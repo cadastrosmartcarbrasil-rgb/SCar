@@ -37,7 +37,7 @@ begin
   select pg_get_functiondef('registrar_termo_emitido(uuid,uuid,uuid,text,text[],boolean)'::regprocedure) into d;
   if position('0182:' in d) = 0 then
     d := replace(d, 'Este modelo e emitido pela Ordem de Servico do evento.',
-                    'Este modelo e do evento (0182): emita pela Ordem de Servico ou pela aba Termos do evento.');
+                    '0182: este modelo e do evento: emita pela Ordem de Servico ou pela aba Termos do evento.');
     if position('0182:' in d) > 0 then
       execute d;
     end if;
