@@ -199,7 +199,13 @@ export default function TermoEditarPage() {
           <Input value={f.nome ?? ''} disabled={ro} onChange={(e) => set({ nome: e.target.value })} />
         </FormField>
         <FormField label="Tipo de termo">
-          <Select value={f.tipo ?? 'CONTRATO'} disabled={ro} onChange={(e) => set({ tipo: e.target.value })}>
+          <Select value={f.tipo ?? 'CONTRATO'} disabled={ro || comPdf}
+            onChange={(e) => {
+              // 0181: Ordem de Servico e sempre de EVENTO, e o de evento so serve a OS
+              const tipo = e.target.value;
+              if (tipo === 'ORDEM_SERVICO') set({ tipo, escopo: 'EVENTO', visivel_portal: false });
+              else set({ tipo, ...(f.escopo === 'EVENTO' ? { escopo: 'ASSOCIADO' } : {}) });
+            }}>
             {TIPOS_TERMO.map((t) => <option key={t.valor} value={t.valor}>{t.rotulo}</option>)}
           </Select>
         </FormField>
@@ -210,13 +216,25 @@ export default function TermoEditarPage() {
         <FormField label="Documento">
           <Select value={f.escopo ?? 'ASSOCIADO'} disabled={ro || comPdf}
             title={comPdf ? 'Documento com PDF importado é sempre Geral. Retire o PDF para mudar.' : undefined}
-            onChange={(e) => set({ escopo: e.target.value as 'ASSOCIADO' | 'GERAL' })}>
-            <option value="ASSOCIADO">Preenchido por associado/veículo</option>
-            <option value="GERAL">Geral — o mesmo para todos (Regimento, Regulamento)</option>
+            onChange={(e) => set({ escopo: e.target.value as 'ASSOCIADO' | 'GERAL' | 'EVENTO' })}>
+            {f.escopo === 'EVENTO' ? (
+              <option value="EVENTO">Do evento — emitido na Ordem de Serviço</option>
+            ) : (
+              <>
+                <option value="ASSOCIADO">Preenchido por associado/veículo</option>
+                <option value="GERAL">Geral — o mesmo para todos (Regimento, Regulamento)</option>
+              </>
+            )}
           </Select>
         </FormField>
 
-        {f.escopo !== 'GERAL' && (
+        {f.escopo === 'EVENTO' && (
+          <p className="rounded-lg bg-cyan-50 px-3 py-2 text-xs text-cyan-900 lg:col-span-3">
+            Modelo da Ordem de Serviço: é emitido dentro do evento, ao aprovar a cotação do reparo (aba Reparo).
+            Use os campos dos grupos Prestador, Evento e OS. Nunca vai ao portal do associado.
+          </p>
+        )}
+        {f.escopo === 'ASSOCIADO' && (
           <>
             <Marcas titulo="Planos" vazio="Vale para todos os planos" valor={f.plano_ids ?? []}
               onChange={(v) => !ro && set({ plano_ids: v })}
@@ -234,11 +252,13 @@ export default function TermoEditarPage() {
         )}
 
         <div className="space-y-2 lg:col-span-2">
-          <label className="flex items-center gap-2 text-sm text-slate-700">
-            <input type="checkbox" checked={!!f.visivel_portal} disabled={ro}
-              onChange={(e) => set({ visivel_portal: e.target.checked })} />
-            Disponível no portal do associado (<em>Meus documentos</em>)
-          </label>
+          {f.escopo !== 'EVENTO' && (
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              <input type="checkbox" checked={!!f.visivel_portal} disabled={ro}
+                onChange={(e) => set({ visivel_portal: e.target.checked })} />
+              Disponível no portal do associado (<em>Meus documentos</em>)
+            </label>
+          )}
           <label className="flex items-center gap-2 text-sm text-slate-700">
             <input type="checkbox" checked={f.ativo !== false} disabled={ro}
               onChange={(e) => set({ ativo: e.target.checked })} />
@@ -312,7 +332,7 @@ export default function TermoEditarPage() {
               {pdfOriginal.isPending && ' Enviando…'}
             </p>
           )}
-          <EditorTermo value={f.rascunho_html ?? ''} somenteLeitura={ro}
+          <EditorTermo value={f.rascunho_html ?? ''} somenteLeitura={ro} escopo={f.escopo}
             onImportarPdf={f.escopo === 'GERAL' ? () => inputPdf.current?.click() : undefined}
             onChange={(html) => { if (html !== f.rascunho_html) set({ rascunho_html: html }); }} />
 
@@ -359,7 +379,7 @@ export default function TermoEditarPage() {
       <PreviaTermoModal
         aberto={previa}
         onFechar={() => setPrevia(false)}
-        pedido={{ modelo_id: id, rascunho_html: f.rascunho_html ?? '' }}
+        pedido={{ modelo_id: id, rascunho_html: f.rascunho_html ?? '', ...(f.escopo === 'EVENTO' ? { exemplo_os: true } : {}) }}
         geral={f.escopo === 'GERAL'}
       />
 

@@ -15,8 +15,11 @@
 import { agruparCoberturas, grupoDaCobertura, textoDoLimite, type GrupoCobertura, type ItemCobertura } from './coberturas';
 import { formatarCEP, formatarDocumento, formatarTelefone } from './documento';
 import { STATUS_RASTREADOR } from './rastreador';
+import { SIGLA_TIPO_ITEM, subtotalItem, totaisDaOS, type ItemOS } from './ordem-servico';
 
 export const MARCA_PROTOCOLO = '{{PROTOCOLO_DO_TERMO}}';
+/** O numero da OS (0181) tambem so existe na emissao: o banco troca esta marca. */
+export const MARCA_NUMERO_OS = '{{NUMERO_DA_OS}}';
 
 export const TIPOS_TERMO = [
   { valor: 'CONTRATO', rotulo: 'Contrato / Termo de adesão' },
@@ -25,6 +28,7 @@ export const TIPOS_TERMO = [
   { valor: 'ADITIVO', rotulo: 'Aditivo' },
   { valor: 'CANCELAMENTO', rotulo: 'Cancelamento' },
   { valor: 'DECLARACAO', rotulo: 'Declaração' },
+  { valor: 'ORDEM_SERVICO', rotulo: 'Ordem de Serviço (evento)' },
   { valor: 'OUTRO', rotulo: 'Outro' },
 ] as const;
 export type TipoTermo = (typeof TIPOS_TERMO)[number]['valor'];
@@ -37,7 +41,8 @@ export const USOS_VEICULO = [
   { valor: 'comercial', rotulo: 'Comercial / trabalho' },
 ] as const;
 
-export type GrupoCampo = 'Associado' | 'Veículo' | 'Plano e contrato' | 'Coberturas' | 'Empresa' | 'Emissão';
+export type GrupoCampo = 'Associado' | 'Veículo' | 'Plano e contrato' | 'Coberturas' | 'Empresa' | 'Emissão'
+  | 'Prestador' | 'Evento' | 'OS';
 
 export interface CampoTermo {
   chave: string;
@@ -137,9 +142,57 @@ export const CAMPOS_TERMO: CampoTermo[] = [
   C('Emissão', 'emissao.cidade_data', 'Cidade e data ("Cuiabá, 19 de outubro de 2026")'),
   C('Emissão', 'emissao.protocolo', 'Protocolo do termo'),
   C('Emissão', 'emissao.emitido_por', 'Emitido por', { opcional: true }),
+  C('Emissão', 'emissao.data_hora', 'Data e hora'),
+  C('Empresa', 'empresa.endereco_faturamento', 'Endereço de faturamento'),
+  C('Empresa', 'empresa.email_eventos', 'E-mail de eventos'),
+  // 0181 — Ordem de Servico do evento (modelos de escopo EVENTO)
+  C('Prestador', 'prestador.razao_social', 'Razão social / Nome'),
+  C('Prestador', 'prestador.nome_fantasia', 'Nome fantasia', { opcional: true }),
+  C('Prestador', 'prestador.documento', 'CNPJ/CPF'),
+  C('Prestador', 'prestador.inscricao', 'Inscrição estadual / municipal', { opcional: true }),
+  C('Prestador', 'prestador.endereco', 'Endereço completo'),
+  C('Prestador', 'prestador.cidade', 'Cidade'),
+  C('Prestador', 'prestador.uf', 'UF'),
+  C('Prestador', 'prestador.cep', 'CEP'),
+  C('Prestador', 'prestador.responsavel', 'Responsável', { opcional: true }),
+  C('Prestador', 'prestador.telefone', 'Telefone / WhatsApp'),
+  C('Prestador', 'prestador.email', 'E-mail'),
+  C('Evento', 'evento.protocolo', 'Protocolo'),
+  C('Evento', 'evento.data_ocorrencia', 'Data da ocorrência'),
+  C('Evento', 'evento.tipo', 'Tipo do evento', { opcional: true }),
+  C('Evento', 'evento.condutor_nome', 'Condutor nome'),
+  C('Evento', 'evento.condutor_cpf', 'Condutor CPF'),
+  C('Evento', 'evento.condutor_telefone', 'Condutor telefone'),
+  C('Evento', 'evento.participacao', 'Participação do associado (R$)'),
+  C('OS', 'os.numero', 'Número'),
+  C('OS', 'os.marca_mao_obra', '☒ se mão de obra', { tipo: 'marca' }),
+  C('OS', 'os.marca_pecas', '☒ se aquisição de peças', { tipo: 'marca' }),
+  C('OS', 'os.marca_autorizacao', '☒ se autorização', { tipo: 'marca' }),
+  C('OS', 'os.marca_retificacao', '☒ se retificação', { tipo: 'marca' }),
+  C('OS', 'os.os_anterior', 'OS retificada', { opcional: true }),
+  C('OS', 'os.reparo_de', 'Reparo do veículo de', { opcional: true }),
+  C('OS', 'os.tabela', 'Tabela de serviços e peças', { tipo: 'bloco' }),
+  C('OS', 'os.total_mao_obra', 'Total de mão de obra'),
+  C('OS', 'os.total_pecas', 'Total de peças'),
+  C('OS', 'os.total_autorizado', 'Valor total autorizado'),
+  C('OS', 'os.pecas_smartcar', 'Peças fornecidas pela Smart Car'),
+  C('OS', 'os.valor_liquido', 'Valor líquido a faturar'),
+  C('OS', 'os.inicio_previsto', 'Início previsto', { opcional: true }),
+  C('OS', 'os.prazo_dias', 'Prazo combinado (dias úteis)', { opcional: true }),
+  C('OS', 'os.data_limite', 'Data limite de entrega'),
+  C('OS', 'os.local_entrega', 'Local de entrega / retirada', { opcional: true }),
+  C('OS', 'os.garantia', 'Garantia (dias)', { opcional: true }),
+  C('OS', 'os.pagamento_previsto', 'Pagamento previsto', { opcional: true }),
+  C('OS', 'os.observacoes', 'Observações', { opcional: true }),
 ];
 
-export const GRUPOS_CAMPO: GrupoCampo[] = ['Associado', 'Veículo', 'Plano e contrato', 'Coberturas', 'Empresa', 'Emissão'];
+export const GRUPOS_CAMPO: GrupoCampo[] = ['Associado', 'Veículo', 'Plano e contrato', 'Coberturas', 'Empresa', 'Emissão',
+  'Prestador', 'Evento', 'OS'];
+
+/** Os grupos de Prestador/Evento/OS so fazem sentido no modelo de EVENTO (a Ordem de Servico). */
+export const GRUPOS_SO_EVENTO: GrupoCampo[] = ['Prestador', 'Evento', 'OS'];
+export const gruposDoEscopo = (escopo: string | null | undefined): GrupoCampo[] =>
+  escopo === 'EVENTO' ? GRUPOS_CAMPO : GRUPOS_CAMPO.filter((g) => !GRUPOS_SO_EVENTO.includes(g));
 
 const POR_CHAVE = new Map(CAMPOS_TERMO.map((c) => [c.chave, c]));
 export const campoPorChave = (k: string) => POR_CHAVE.get(k);
@@ -182,9 +235,28 @@ export interface FontesTermo {
   empresa?: {
     razao_social: string; nome_fantasia?: string | null; cnpj?: string | null; endereco?: Endereco;
     telefone_fixo?: string | null; whatsapp_principal?: string | null; email_principal?: string | null;
-    site?: string | null; regulamento_url?: string | null;
+    site?: string | null; regulamento_url?: string | null; email_departamento_eventos?: string | null;
   } | null;
   emissao: { em: Date; por?: string | null; cidade?: string | null };
+  /** 0181 — o prestador da Ordem de Servico (fornecedores). */
+  prestador?: {
+    razao_social: string; nome_fantasia?: string | null; documento?: string | null; tipo_pessoa?: string | null;
+    inscricao_estadual?: string | null; inscricao_municipal?: string | null; endereco?: Endereco;
+    contato?: string | null; whatsapp?: string | null; telefone?: string | null; email?: string | null;
+  } | null;
+  /** 0181 — o evento da Ordem de Servico. */
+  evento?: {
+    numero_protocolo?: string | null; data_ocorrencia?: string | null; tipo?: string | null;
+    valor_participacao?: number | null;
+    condutor?: { nome?: string | null; cpf?: string | null; telefone?: string | null } | null;
+  } | null;
+  /** 0181 — os dados digitados na emissao da OS (numero nulo = ainda nao emitida). */
+  os?: {
+    numero?: string | null; documento: 'AUTORIZACAO' | 'RETIFICACAO'; os_anterior?: string | null;
+    reparo_de?: string | null; itens: ItemOS[]; participacao?: number | null; pecas_smartcar?: number | null;
+    inicio?: string | null; prazo_dias?: number | null; limite?: string | null; local?: string | null;
+    garantia?: number | null; pagamento?: string | null; observacoes?: string | null;
+  } | null;
 }
 
 const BRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -205,6 +277,14 @@ export function dataDaEmissao(em: Date): { curta: string; extenso: string } {
   const p = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(em); // AAAA-MM-DD
   const [a, m, d] = p.split('-');
   return { curta: `${d}/${m}/${a}`, extenso: `${Number(d)} de ${MESES[Number(m) - 1]} de ${a}` };
+}
+
+/** '05/11/2026 14:32' em Sao Paulo (fuso do sistema). */
+export function dataHoraDaEmissao(em: Date): string {
+  const p = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+  }).format(em);
+  return p.replace(',', '');
 }
 
 function enderecoCompleto(e: Endereco): string {
@@ -327,7 +407,88 @@ export function valoresDoTermo(f: FontesTermo): Record<string, string> {
     'emissao.cidade_data': cidadeEmissao ? `${cidadeEmissao}, ${data.extenso}` : data.extenso,
     'emissao.protocolo': MARCA_PROTOCOLO,
     'emissao.emitido_por': txt(f.emissao.por),
+    'emissao.data_hora': dataHoraDaEmissao(f.emissao.em),
+    'empresa.endereco_faturamento': enderecoCompleto(emp?.endereco),
+    'empresa.email_eventos': txt(emp?.email_departamento_eventos),
+    ...valoresDaOS(f),
   };
+}
+
+/** 0181 — os campos de Prestador, Evento e OS (vazios fora da Ordem de Servico). */
+function valoresDaOS(f: FontesTermo): Record<string, string> {
+  const p = f.prestador ?? null;
+  const ev = f.evento ?? null;
+  const os = f.os ?? null;
+  const pe = p?.endereco ?? null;
+  const itens = os?.itens ?? [];
+  const participacao = os?.participacao ?? ev?.valor_participacao ?? null;
+  const t = totaisDaOS(itens, participacao, os?.pecas_smartcar ?? 0);
+  const temOs = !!os;
+  const inscricao = [p?.inscricao_estadual ? `IE ${txt(p.inscricao_estadual)}` : '',
+    p?.inscricao_municipal ? `IM ${txt(p.inscricao_municipal)}` : ''].filter(Boolean).join(' · ');
+  const docP = txt(p?.documento);
+  const cond = ev?.condutor ?? null;
+  return {
+    'prestador.razao_social': txt(p?.razao_social),
+    'prestador.nome_fantasia': txt(p?.nome_fantasia),
+    'prestador.documento': docP ? formatarDocumento(docP, docP.length > 11 ? 'PJ' : 'PF') : '',
+    'prestador.inscricao': inscricao,
+    'prestador.endereco': [[txt(pe?.logradouro), txt(pe?.numero)].filter(Boolean).join(', '), txt(pe?.complemento),
+      txt(pe?.bairro)].filter(Boolean).join(' - '),
+    'prestador.cidade': txt(pe?.cidade),
+    'prestador.uf': txt(pe?.uf),
+    'prestador.cep': pe?.cep ? formatarCEP(pe.cep) : '',
+    'prestador.responsavel': txt(p?.contato),
+    'prestador.telefone': p?.whatsapp ? formatarTelefone(p.whatsapp) : p?.telefone ? formatarTelefone(p.telefone) : '',
+    'prestador.email': txt(p?.email),
+    'evento.protocolo': txt(ev?.numero_protocolo),
+    'evento.data_ocorrencia': dataCurta(ev?.data_ocorrencia),
+    'evento.tipo': txt(ev?.tipo),
+    'evento.condutor_nome': txt(cond?.nome),
+    'evento.condutor_cpf': cond?.cpf ? formatarDocumento(cond.cpf, 'PF') : '',
+    'evento.condutor_telefone': cond?.telefone ? formatarTelefone(cond.telefone) : '',
+    'evento.participacao': participacao != null || temOs ? moeda(t.participacao) : '',
+    'os.numero': temOs ? (txt(os?.numero) || MARCA_NUMERO_OS) : '',
+    'os.marca_mao_obra': temOs ? marca(t.mao_obra > 0 || itens.some((i) => i.tipo === 'MAO_DE_OBRA')) : '',
+    'os.marca_pecas': temOs ? marca(itens.some((i) => i.tipo === 'PECA')) : '',
+    'os.marca_autorizacao': temOs ? marca(os?.documento !== 'RETIFICACAO') : '',
+    'os.marca_retificacao': temOs ? marca(os?.documento === 'RETIFICACAO') : '',
+    'os.os_anterior': txt(os?.os_anterior),
+    'os.reparo_de': txt(os?.reparo_de),
+    'os.total_mao_obra': temOs ? moeda(t.mao_obra) : '',
+    'os.total_pecas': temOs ? moeda(t.pecas) : '',
+    'os.total_autorizado': temOs ? moeda(t.autorizado) : '',
+    'os.pecas_smartcar': temOs ? moeda(t.pecas_smartcar) : '',
+    'os.valor_liquido': temOs ? moeda(t.liquido) : '',
+    'os.inicio_previsto': dataCurta(os?.inicio),
+    'os.prazo_dias': os?.prazo_dias != null ? `${os.prazo_dias} dia${os.prazo_dias === 1 ? '' : 's'} úte${os.prazo_dias === 1 ? 'il' : 'is'}` : '',
+    'os.data_limite': dataCurta(os?.limite),
+    'os.local_entrega': txt(os?.local),
+    'os.garantia': os?.garantia != null ? `${os.garantia} dias` : '',
+    'os.pagamento_previsto': dataCurta(os?.pagamento),
+    'os.observacoes': txt(os?.observacoes),
+  };
+}
+
+/** 0181 — a tabela inteira de servicos e pecas da OS. */
+function tabelaDaOS(f: FontesTermo): string {
+  const itens = f.os?.itens ?? [];
+  if (!itens.length) return '';
+  const t = totaisDaOS(itens, 0, 0);
+  const linhas = itens.map((i, n) =>
+    `<tr><td>${n + 1}</td><td>${SIGLA_TIPO_ITEM[i.tipo]}</td><td>${escaparHtml(i.descricao)}`
+    + `${i.codigo ? ` <small>(${escaparHtml(i.codigo)})</small>` : ''}</td>`
+    + `<td style="text-align:right">${Number(i.quantidade).toLocaleString('pt-BR')}</td>`
+    + `<td style="text-align:right">${moeda(i.valor_unitario)}</td>`
+    + `<td style="text-align:right">${moeda(subtotalItem(i))}</td></tr>`).join('');
+  const total = (rotulo: string, v: number, forte = false) =>
+    `<tr><td colspan="5" style="text-align:right">${forte ? `<strong>${rotulo}</strong>` : rotulo}</td>`
+    + `<td style="text-align:right">${forte ? `<strong>${moeda(v)}</strong>` : moeda(v)}</td></tr>`;
+  return '<table class="termo-tabela"><thead><tr><th>Item</th><th>Tipo</th><th>Descrição</th>'
+    + '<th style="text-align:right">Qtd.</th><th style="text-align:right">Unitário</th>'
+    + '<th style="text-align:right">Subtotal</th></tr></thead>'
+    + `<tbody>${linhas}${total('Mão de obra', t.mao_obra)}${total('Peças', t.pecas)}`
+    + `${total('Total dos itens', t.autorizado, true)}</tbody></table>`;
 }
 
 export function escaparHtml(s: string): string {
@@ -346,7 +507,7 @@ export function blocosDoTermo(f: FontesTermo): Record<string, string> {
     ? '<table class="termo-tabela"><thead><tr><th>Grupo</th><th>Cobertura</th><th>Origem</th><th>Limite</th></tr></thead>'
       + `<tbody>${linhas.join('')}</tbody></table>`
     : '';
-  return { 'coberturas.tabela': tabela };
+  return { 'coberturas.tabela': tabela, 'os.tabela': tabelaDaOS(f) };
 }
 
 // ---------------------------------------------------------------------------
@@ -397,7 +558,7 @@ export function renderizarTermo(
       if (!campo.opcional && !vazios.includes(chave)) vazios.push(chave);
       return esp + EM_BRANCO;
     }
-    return esp + (v === MARCA_PROTOCOLO ? v : escaparHtml(v));
+    return esp + (v === MARCA_PROTOCOLO || v === MARCA_NUMERO_OS ? v : escaparHtml(v));
   });
   return { html: alinharColunasDasTabelas(saida), vazios, desconhecidos };
 }

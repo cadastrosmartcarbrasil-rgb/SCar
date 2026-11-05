@@ -41,6 +41,31 @@ export function lerTokenDoBoleto(
 }
 
 // ---------------------------------------------------------------------------
+// Link da Ordem de Servico (0181): /os/<os>.<expira>.<assinatura>
+// Assinado com outro prefixo: um token de boleto nunca vale como token de OS.
+// ---------------------------------------------------------------------------
+export function tokenDaOS(osId: string, expira: number, segredo: string): string {
+  const conteudo = `${osId}.${expira}`;
+  return `${conteudo}.${assinar(segredo, `os:${conteudo}`)}`;
+}
+
+export function lerTokenDaOS(
+  token: string,
+  segredo: string,
+  agora: number = Math.floor(Date.now() / 1000),
+): { osId: string } | { erro: 'invalido' | 'expirado' } {
+  const partes = (token ?? '').split('.');
+  if (partes.length !== 3 || !segredo) return { erro: 'invalido' };
+  const [id, exp, sig] = partes;
+  if (!/^[0-9a-f-]{36}$/i.test(id) || !/^\d+$/.test(exp)) return { erro: 'invalido' };
+  const esperado = Buffer.from(assinar(segredo, `os:${id}.${exp}`));
+  const recebido = Buffer.from(sig);
+  if (esperado.length !== recebido.length || !timingSafeEqual(esperado, recebido)) return { erro: 'invalido' };
+  if (Number(exp) < agora) return { erro: 'expirado' };
+  return { osId: id };
+}
+
+// ---------------------------------------------------------------------------
 // Descadastro dos comunicados informativos: /descadastro/<email-base64url>.<assinatura>
 // Nao expira (o link fica no e-mail para sempre); so o e-mail que recebeu se descadastra.
 // ---------------------------------------------------------------------------

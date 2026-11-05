@@ -3,9 +3,9 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logoOficial } from '@/lib/marca-server';
 import {
-  carregarFontesTermo, gerarPdf, htmlDoPdf, logoComoDataUrl, preencherTermo, sha256,
+  carregarFontesTermo, exemploDaOS, gerarPdf, htmlDoPdf, logoComoDataUrl, preencherTermo, sha256, trocarLogoDoModelo,
 } from '@/lib/termos-server';
-import { MARCA_PROTOCOLO } from '@/lib/termos';
+import { MARCA_NUMERO_OS, MARCA_PROTOCOLO } from '@/lib/termos';
 import type { TermoEmitidoRow } from '@/lib/database.types';
 
 // TERMOS (0123) — uma rota, quatro acoes:
@@ -28,6 +28,8 @@ type Corpo = {
   veiculo_id?: string | null;
   visivel_portal?: boolean | null;
   observacao?: string | null;
+  /** 0181: previa do modelo da Ordem de Servico com um exemplo de prestador/itens. */
+  exemplo_os?: boolean;
 };
 
 const erro = (msg: string, status = 400) => NextResponse.json({ error: msg }, { status });
@@ -70,16 +72,19 @@ export async function POST(request: Request) {
         return erro('Seu perfil não tem acesso aos termos.', 403);
       }
       const t = await textoDoPedido(supabase, c, podeModelos);
-      const fontes = await carregarFontesTermo(supabase, {
+      let fontes = await carregarFontesTermo(supabase, {
         clienteId: c.cliente_id, veiculoId: c.veiculo_id, emitidoPor: perfil.nome,
       });
+      if (c.exemplo_os) fontes = exemploDaOS(fontes);
       const r = preencherTermo(t.html, fontes);
-      const corpo = r.html.split(MARCA_PROTOCOLO).join('(gerado na emissão)');
+      const corpo = r.html.split(MARCA_PROTOCOLO).join('(gerado na emissão)')
+        .split(MARCA_NUMERO_OS).join('OS-AAAA-000000');
       if (c.acao === 'previa') {
         return NextResponse.json({ titulo: t.titulo, html: corpo, vazios: r.vazios, desconhecidos: r.desconhecidos });
       }
       const logo = await logoComoDataUrl(await logoOficial());
-      const pdf = await gerarPdf(htmlDoPdf(corpo, t.titulo, logo, 'PRÉVIA — sem validade, documento não emitido.'));
+      const l = trocarLogoDoModelo(corpo, logo);
+      const pdf = await gerarPdf(htmlDoPdf(l.html, t.titulo, l.logoNoCabecalho, 'PRÉVIA — sem validade, documento não emitido.'));
       return new NextResponse(new Uint8Array(pdf), {
         headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': 'inline; filename="previa.pdf"' },
       });

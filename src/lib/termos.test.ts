@@ -202,3 +202,82 @@ describe('PDF original do documento geral (0166)', () => {
     expect(tamanhoArquivo(null)).toBe('—');
   });
 });
+
+import { campoDoMarcador, camposDosMarcadores } from './termos-word';
+import { MARCA_NUMERO_OS, gruposDoEscopo } from './termos';
+
+describe('Ordem de Servico (0181)', () => {
+  const os = () => fontes({
+    prestador: {
+      razao_social: 'OFICINA 173 LTDA', documento: '11222333000181', inscricao_estadual: '1234',
+      endereco: { logradouro: 'AV B', numero: '5', bairro: 'CENTRO', cidade: 'CUIABA', uf: 'MT', cep: '78000000' },
+      contato: 'PEDRO', whatsapp: '65988887777', email: 'o@x.com',
+    },
+    evento: { numero_protocolo: 'EVT-20261105-0001', data_ocorrencia: '2026-11-01', valor_participacao: 500,
+      condutor: { nome: 'JOAO DA SILVA', cpf: '52998224725', telefone: '65999998888' } },
+    os: {
+      documento: 'AUTORIZACAO', pecas_smartcar: 100, limite: '2026-11-20', inicio: '2026-11-06', prazo_dias: 10,
+      itens: [
+        { tipo: 'MAO_DE_OBRA', descricao: 'FUNILARIA', quantidade: 1, valor_unitario: 800 },
+        { tipo: 'PECA', descricao: 'PARACHOQUE <A>', quantidade: 2, valor_unitario: 250.5 },
+      ],
+    },
+  });
+  it('preenche prestador, evento, totais e marcas (CPF completo)', () => {
+    const v = valoresDoTermo(os());
+    expect(v['prestador.documento']).toBe('11.222.333/0001-81');
+    expect(v['prestador.inscricao']).toBe('IE 1234');
+    expect(v['prestador.telefone']).toBe('(65) 98888-7777');
+    expect(v['evento.condutor_cpf']).toBe('529.982.247-25');
+    expect(v['evento.participacao']).toMatch(/500,00/);
+    expect(v['os.total_autorizado']).toMatch(/1\.301,00/);
+    expect(v['os.valor_liquido']).toMatch(/701,00/);
+    expect(v['os.marca_mao_obra']).toBe('☒');
+    expect(v['os.marca_pecas']).toBe('☒');
+    expect(v['os.marca_autorizacao']).toBe('☒');
+    expect(v['os.marca_retificacao']).toBe('☐');
+    expect(v['os.numero']).toBe(MARCA_NUMERO_OS);
+    expect(v['os.data_limite']).toBe('20/11/2026');
+    expect(v['os.prazo_dias']).toBe('10 dias úteis');
+  });
+  it('a tabela de itens escapa o texto e traz o total', () => {
+    const b = blocosDoTermo(os())['os.tabela'];
+    expect(b).toContain('PARACHOQUE &lt;A&gt;');
+    expect(b).toContain('M.O.');
+    expect(b).toMatch(/Total dos itens.*1\.301,00/);
+  });
+  it('marca do numero da OS passa sem escapar', () => {
+    const r = renderizarTermo('<p>OS <span data-campo="os.numero">x</span></p>', valoresDoTermo(os()));
+    expect(r.html).toContain(MARCA_NUMERO_OS);
+  });
+  it('fora da OS os campos de OS ficam vazios', () => {
+    const v = valoresDoTermo(fontes());
+    expect(v['os.total_autorizado']).toBe('');
+    expect(v['prestador.razao_social']).toBe('');
+  });
+  it('grupos de Prestador/Evento/OS so no modelo de evento', () => {
+    expect(gruposDoEscopo('ASSOCIADO')).not.toContain('OS');
+    expect(gruposDoEscopo('EVENTO')).toContain('Prestador');
+  });
+});
+
+describe('marcadores «Grupo: Campo» do Word', () => {
+  it('reconhece pelo rotulo, sem acento/caixa, e pelos apelidos', () => {
+    expect(campoDoMarcador('Prestador: CNPJ/CPF')).toBe('prestador.documento');
+    expect(campoDoMarcador('veiculo: ano fabricacao/modelo')).toBe('veiculo.ano_fab_modelo');
+    expect(campoDoMarcador('Empresa: Endereço completo')).toBe('empresa.endereco');
+    expect(campoDoMarcador('Emissão: Emitida por')).toBe('emissao.emitido_por');
+    expect(campoDoMarcador('Emissão: Cidade e data (&quot;Cuiabá, 19 de outubro de 2026&quot;)')).toBe('emissao.cidade_data');
+    expect(campoDoMarcador('OS: ☒ se mão de obra')).toBe('os.marca_mao_obra');
+    expect(campoDoMarcador('Xpto: Nada')).toBeNull();
+  });
+  it('troca no HTML: bloco sozinho no paragrafo vira bloco; desconhecido fica e e listado', () => {
+    const r = camposDosMarcadores('<p>Nº: «OS: Número»</p><p>«OS: Tabela de serviços e peças»</p><p>«Foo: Bar»</p>');
+    expect(r.html).toContain('<span data-campo="os.numero">');
+    expect(r.html).toContain('<div data-campo="os.tabela"></div>');
+    expect(r.reconhecidos).toBe(2);
+    expect(r.desconhecidos).toEqual(['Foo: Bar']);
+    const rend = renderizarTermo(r.html, valoresDoTermo(fontes()), blocosDoTermo(fontes()));
+    expect(rend.desconhecidos).toEqual([]);
+  });
+});

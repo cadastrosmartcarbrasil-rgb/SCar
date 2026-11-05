@@ -55,7 +55,7 @@ export type StatusEvento =
   | 'ABERTO' | 'EM_ANALISE' | 'COTACAO_PECAS' | 'REPARO' | 'CONCLUIDO' | 'NEGADO';
 export type TipoDocumentoAnexo =
   | 'FOTO_AVARIA' | 'BOLETIM_OCORRENCIA' | 'CNH' | 'CRLV' | 'NOTA_FISCAL'
-  | 'FOTO_VEICULO' | 'FOTO_LOCAL' | 'CROQUI' | 'OUTRO';
+  | 'FOTO_VEICULO' | 'FOTO_LOCAL' | 'CROQUI' | 'OUTRO' | 'ORDEM_SERVICO';
 export type StatusCotacao = 'EM_ABERTO' | 'APROVADA' | 'REJEITADA';
 export type CodigoTemplate = 'BOAS_VINDAS' | 'LEMBRETE_BOLETO' | 'NOVO_EVENTO';
 export type ProvedorBanco = 'ASAAS' | 'PJBANK' | 'CORA' | 'INTER' | 'GERENCIANET' | 'SICREDI' | 'OUTRO';
@@ -1758,7 +1758,8 @@ export type TermoModeloRow = Timestamps & {
   nome: string;
   tipo: string;
   descricao: string | null;
-  escopo: 'ASSOCIADO' | 'GERAL';
+  /** EVENTO (0181) = modelo da Ordem de Servico, emitido no evento. */
+  escopo: 'ASSOCIADO' | 'GERAL' | 'EVENTO';
   rascunho_html: string;
   plano_ids: string[];
   tipo_veiculo_ids: string[];
@@ -1817,6 +1818,70 @@ export type TermoEmitidoRow = {
   cancelado_em: string | null;
   cancelamento_motivo: string | null;
   updated_at: string;
+  /** 0181 — termo de evento (Ordem de Servico); nulos nos termos do associado. */
+  evento_id: string | null;
+  fornecedor_id: string | null;
+};
+
+// ---- Ordem de Servico do evento (0181) --------------------------------------
+export type OrdemServicoRow = {
+  id: string;
+  numero: string;
+  termo_emitido_id: string | null;
+  evento_id: string;
+  cotacao_id: string | null;
+  evento_terceiro_id: string | null;
+  fornecedor_id: string;
+  cliente_id: string;
+  veiculo_id: string | null;
+  regional_id: string | null;
+  tipo_ordem: 'MAO_DE_OBRA' | 'PECAS' | 'MISTA';
+  documento: 'AUTORIZACAO' | 'RETIFICACAO';
+  os_anterior_id: string | null;
+  total_mao_obra: number;
+  total_pecas: number;
+  total_autorizado: number;
+  participacao_associado: number;
+  pecas_smartcar: number;
+  valor_liquido: number;
+  data_inicio_prevista: string | null;
+  prazo_dias_uteis: number | null;
+  data_limite_entrega: string;
+  data_entrega_real: string | null;
+  local_entrega: string | null;
+  garantia_dias: number | null;
+  pagamento_previsto: string | null;
+  observacoes: string | null;
+  status: 'EMITIDA' | 'ENVIADA' | 'EM_EXECUCAO' | 'ENTREGUE' | 'CANCELADA' | 'SUBSTITUIDA';
+  enviada_em: string | null;
+  entregue_por: string | null;
+  cancelada_em: string | null;
+  cancelada_por: string | null;
+  cancelamento_motivo: string | null;
+  substituida_por_id: string | null;
+  emitida_por: string | null;
+  emitida_em: string;
+  updated_at: string;
+};
+export type OrdemServicoItemRow = {
+  id: string;
+  ordem_servico_id: string;
+  ordem: number;
+  tipo: 'MAO_DE_OBRA' | 'PECA';
+  descricao: string;
+  codigo: string | null;
+  quantidade: number;
+  valor_unitario: number;
+  subtotal: number;
+};
+export type OrdemServicoEnvioRow = {
+  id: string;
+  ordem_servico_id: string;
+  canal: 'WHATSAPP' | 'EMAIL' | 'MANUAL' | 'DOWNLOAD';
+  destino: string | null;
+  observacao: string | null;
+  enviado_por: string | null;
+  enviado_em: string;
 };
 export type PortalDocumento = {
   origem: 'EMITIDO' | 'GERAL';
@@ -2154,6 +2219,9 @@ export type FornecedoresRow = Timestamps & {
   plataforma_url: string | null;
   custo_mensal_equipamento: number;
   api_config: Json;
+  // 0181: vao na Ordem de Servico
+  inscricao_estadual: string | null;
+  inscricao_municipal: string | null;
 };
 
 // ---- Assistencia 24h (0026) ------------------------------------------------
@@ -3074,6 +3142,8 @@ export type EmpresaRow = Timestamps & {
   painel_conta_ate: string | null;
   // Link do regulamento citado nos termos (0123).
   regulamento_url: string | null;
+  /** 0181 — e-mail do departamento de eventos (OS: nota fiscal e resposta do e-mail ao prestador). */
+  email_departamento_eventos: string | null;
   /** 0164 — dias de validade da proposta comercial. */
   validade_proposta_dias: number;
 };
@@ -3176,6 +3246,8 @@ export type AnexosEventoRow = {
   comunicacao_id?: string | null;
   pose?: string | null;
   enviado_pelo_envolvido?: boolean;
+  /** 0181 — anexo que aponta para o termo emitido (PDF da OS, bucket `termos`). */
+  termo_emitido_id?: string | null;
 };
 
 /** 0129: convite de comunicacao de evento (um link por envolvido). */
@@ -3246,6 +3318,9 @@ export type ItensCotacaoRow = {
   quantidade: number;
   valor_unitario: number;
   created_at: string;
+  /** 0181 — mao de obra x peca (vai para a OS) e codigo opcional. */
+  tipo_item: 'MAO_DE_OBRA' | 'PECA';
+  codigo: string | null;
 };
 
 export type NotasFiscaisEventoRow = {
@@ -4432,7 +4507,15 @@ export type Database = {
       termos_emitidos: TableDef<TermoEmitidoRow, [
         Rel<'modelo_id', 'termos_modelos'>, Rel<'versao_id', 'termos_versoes'>,
         Rel<'cliente_id', 'clientes'>, Rel<'veiculo_id', 'veiculos'>, Rel<'emitido_por', 'usuarios'>,
+        Rel<'evento_id', 'eventos_sinistro'>, Rel<'fornecedor_id', 'fornecedores'>,
       ]>;
+      ordens_servico: TableDef<OrdemServicoRow, [
+        Rel<'evento_id', 'eventos_sinistro'>, Rel<'fornecedor_id', 'fornecedores'>, Rel<'cliente_id', 'clientes'>,
+        Rel<'veiculo_id', 'veiculos'>, Rel<'termo_emitido_id', 'termos_emitidos'>, Rel<'regional_id', 'regionais'>,
+        Rel<'cotacao_id', 'cotacoes_pecas'>, Rel<'evento_terceiro_id', 'evento_terceiros'>,
+      ]>;
+      ordens_servico_itens: TableDef<OrdemServicoItemRow, [Rel<'ordem_servico_id', 'ordens_servico'>]>;
+      ordens_servico_envios: TableDef<OrdemServicoEnvioRow, [Rel<'ordem_servico_id', 'ordens_servico'>, Rel<'enviado_por', 'usuarios'>]>;
       cobranca_remessa_itens: TableDef<
         CobrancaRemessaItensRow,
         [Rel<'remessa_id', 'cobranca_remessas'>, Rel<'titulo_id', 'titulos_financeiros'>]
@@ -5501,6 +5584,19 @@ export type Database = {
         Returns: TermoEmitidoRow;
       };
       anexar_pdf_termo: { Args: { p_id: string; p_path: string; p_sha256: string; p_bytes: number }; Returns: undefined };
+      // 0181 — Ordem de Servico
+      emitir_ordem_servico: {
+        Args: { p_versao_id: string; p_dados: Json; p_html: string; p_campos_vazios?: string[] };
+        Returns: OrdemServicoRow;
+      };
+      anexar_pdf_ordem_servico: { Args: { p_os_id: string; p_path: string; p_sha256: string; p_bytes: number }; Returns: undefined };
+      registrar_envio_ordem_servico: {
+        Args: { p_os_id: string; p_canal: string; p_destino?: string | null; p_observacao?: string | null };
+        Returns: OrdemServicoRow;
+      };
+      mudar_status_ordem_servico: { Args: { p_os_id: string; p_status: string; p_data?: string | null }; Returns: OrdemServicoRow };
+      cancelar_ordem_servico: { Args: { p_os_id: string; p_motivo: string }; Returns: OrdemServicoRow };
+      somar_dias_uteis: { Args: { p_inicio: string; p_dias: number }; Returns: string };
       cancelar_termo_emitido: { Args: { p_id: string; p_motivo: string }; Returns: undefined };
       portal_termo_emitido: { Args: { p_id: string; p_visivel: boolean }; Returns: undefined };
       pode_ver_termo_emitido: { Args: { p_id: string }; Returns: boolean };

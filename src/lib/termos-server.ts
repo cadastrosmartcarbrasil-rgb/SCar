@@ -4,6 +4,7 @@ import { existsSync } from 'fs';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
 import type { ItemCobertura } from '@/lib/coberturas';
+import type { ItemOS } from '@/lib/ordem-servico';
 import {
   blocosDoTermo, documentoDoTermo, renderizarTermo, valoresDoTermo, type FontesTermo,
 } from '@/lib/termos';
@@ -19,7 +20,7 @@ export async function carregarFontesTermo(
   args: { clienteId?: string | null; veiculoId?: string | null; emitidoPor?: string | null },
 ): Promise<FontesTermo> {
   const { data: empresa } = await supabase.from('empresa')
-    .select('razao_social, nome_fantasia, cnpj, endereco, telefone_fixo, whatsapp_principal, email_principal, site, regulamento_url')
+    .select('razao_social, nome_fantasia, cnpj, endereco, telefone_fixo, whatsapp_principal, email_principal, site, regulamento_url, email_departamento_eventos')
     .limit(1).maybeSingle();
   const base: FontesTermo = {
     cliente: { nome_razao_social: '', cpf_cnpj: '', tipo_pessoa: 'PF' },
@@ -84,6 +85,137 @@ export async function carregarFontesTermo(
     if (cidade) base.emissao.cidade = cidade;
   }
   return base;
+}
+
+/** O que a tela manda para a OS (0181). Os totais sao recalculados aqui e no banco. */
+export type DadosOS = {
+  evento_id: string;
+  cotacao_id?: string | null;
+  evento_terceiro_id?: string | null;
+  fornecedor_id: string;
+  documento?: 'AUTORIZACAO' | 'RETIFICACAO';
+  os_anterior_id?: string | null;
+  itens: ItemOS[];
+  participacao_associado?: number | null;
+  pecas_smartcar?: number | null;
+  data_inicio_prevista?: string | null;
+  prazo_dias_uteis?: number | null;
+  data_limite_entrega?: string | null;
+  local_entrega?: string | null;
+  garantia_dias?: number | null;
+  pagamento_previsto?: string | null;
+  observacoes?: string | null;
+};
+
+/**
+ * As fontes da ORDEM DE SERVICO (0181), lidas pela sessao: o associado e o
+ * veiculo do evento (carregarFontesTermo) + prestador, evento, condutor e os
+ * dados digitados. Reparo de TERCEIRO: o bloco do veiculo mostra o carro dele.
+ */
+export async function carregarFontesOS(supabase: Db, d: DadosOS, emitidoPor: string | null): Promise<FontesTermo> {
+  const { data: ev, error } = await supabase.from('eventos_sinistro')
+    .select('id, numero_protocolo, data_ocorrencia, tipo_evento, valor_participacao, cliente_id, veiculo_id, tipos_evento(nome)')
+    .eq('id', d.evento_id).maybeSingle();
+  if (error) throw error;
+  if (!ev) throw new Error('Evento não encontrado (ou fora do seu acesso).');
+  const base = await carregarFontesTermo(supabase, { clienteId: ev.cliente_id, veiculoId: ev.veiculo_id, emitidoPor });
+  // A OS cita "Telefone" do associado: quem nao tem fixo, sai o celular.
+  if (!base.cliente.telefone && base.cliente.celular) base.cliente = { ...base.cliente, telefone: base.cliente.celular };
+
+  const [forn, ant, terc, decl] = await Promise.all([
+    supabase.from('fornecedores')
+      .select('razao_social, nome_fantasia, documento, tipo_pessoa, inscricao_estadual, inscricao_municipal, endereco, contato, whatsapp, telefone, email')
+      .eq('id', d.fornecedor_id).maybeSingle(),
+    d.os_anterior_id ? supabase.from('ordens_servico').select('numero').eq('id', d.os_anterior_id).maybeSingle() : null,
+    d.evento_terceiro_id ? supabase.from('evento_terceiros')
+      .select('nome, veiculo_placa, veiculo_marca, veiculo_modelo, veiculo_ano, veiculo_cor')
+      .eq('id', d.evento_terceiro_id).maybeSingle() : null,
+    // o condutor: a declaracao mais recente do associado (ou do condutor dele) na Comunicacao de Evento (0129)
+    supabase.from('evento_declaracoes')
+      .select('dados, created_at, evento_comunicacoes!inner(papel)')
+      .eq('evento_id', ev.id).in('evento_comunicacoes.papel', ['associado', 'condutor_associado'])
+      .order('created_at', { ascending: false }).limit(1),
+  ]);
+  if (!forn.data) throw new Error('Prestador não encontrado.');
+  base.prestador = forn.data as FontesTermo['prestador'];
+
+  type Decl = { condutor?: { nome?: string; cpf?: string; e_titular?: boolean }; identificacao?: { telefone?: string } };
+  const dd = ((decl.data ?? [])[0]?.dados ?? null) as Decl | null;
+  let condutor: { nome?: string | null; cpf?: string | null; telefone?: string | null } | null = null;
+  if (dd?.condutor) {
+    condutor = dd.condutor.e_titular
+      ? { nome: base.cliente.nome_razao_social, cpf: base.cliente.cpf_cnpj, telefone: base.cliente.celular ?? base.cliente.telefone ?? null }
+      : { nome: dd.condutor.nome ?? null, cpf: dd.condutor.cpf ?? null, telefone: dd.identificacao?.telefone ?? null };
+  }
+  const tipoNome = (ev as unknown as { tipos_evento: { nome: string } | null }).tipos_evento?.nome ?? ev.tipo_evento ?? null;
+  base.evento = {
+    numero_protocolo: ev.numero_protocolo, data_ocorrencia: ev.data_ocorrencia, tipo: tipoNome,
+    valor_participacao: ev.valor_participacao != null ? Number(ev.valor_participacao) : null, condutor,
+  };
+
+  let reparoDe: string | null = 'Associado';
+  const t = terc?.data ?? null;
+  if (t) {
+    reparoDe = `Terceiro: ${t.nome}`;
+    // o carro que vai para a oficina e o do terceiro
+    base.veiculo = {
+      placa: t.veiculo_placa ?? '', marca: t.veiculo_marca, modelo: t.veiculo_modelo,
+      ano_fabricacao: t.veiculo_ano, ano_modelo: null, cor: t.veiculo_cor, chassi: null, renavam: null,
+      data_ativacao: base.veiculo?.data_ativacao ?? null,
+    };
+  }
+  base.os = {
+    documento: d.documento ?? 'AUTORIZACAO',
+    os_anterior: (ant?.data as { numero?: string } | null)?.numero ?? null,
+    reparo_de: reparoDe,
+    itens: d.itens,
+    participacao: d.participacao_associado ?? base.evento.valor_participacao ?? 0,
+    pecas_smartcar: d.pecas_smartcar ?? 0,
+    inicio: d.data_inicio_prevista ?? null,
+    prazo_dias: d.prazo_dias_uteis ?? null,
+    limite: d.data_limite_entrega ?? null,
+    local: d.local_entrega ?? null,
+    garantia: d.garantia_dias ?? null,
+    pagamento: d.pagamento_previsto ?? null,
+    observacoes: d.observacoes ?? null,
+  };
+  return base;
+}
+
+/** Exemplo para a previa do MODELO em Configuracoes -> Termos (nada real). */
+export function exemploDaOS(base: FontesTermo): FontesTermo {
+  return {
+    ...base,
+    prestador: {
+      razao_social: 'PRESTADOR DE EXEMPLO LTDA', documento: '11222333000181', inscricao_estadual: '000000000',
+      endereco: { logradouro: 'RUA EXEMPLO', numero: '100', bairro: 'CENTRO', cidade: 'CUIABA', uf: 'MT', cep: '78000000' },
+      contato: 'RESPONSAVEL', whatsapp: '65999990000', email: 'prestador@exemplo.com',
+    },
+    evento: { numero_protocolo: 'EVT-AAAAMMDD-0000', data_ocorrencia: new Date().toISOString().slice(0, 10),
+      valor_participacao: 1500, condutor: { nome: base.cliente.nome_razao_social || 'CONDUTOR', cpf: base.cliente.cpf_cnpj, telefone: base.cliente.celular ?? null } },
+    os: {
+      documento: 'AUTORIZACAO', reparo_de: 'Associado', pecas_smartcar: 0, prazo_dias: 10,
+      inicio: new Date().toISOString().slice(0, 10), limite: new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10),
+      local: 'NA OFICINA DO PRESTADOR', garantia: 90, observacoes: 'Exemplo de observação.',
+      itens: [
+        { tipo: 'MAO_DE_OBRA', descricao: 'FUNILARIA E PINTURA', quantidade: 1, valor_unitario: 1200 },
+        { tipo: 'PECA', descricao: 'PARACHOQUE DIANTEIRO', quantidade: 1, valor_unitario: 890.5 },
+      ],
+    },
+  };
+}
+
+/**
+ * O Word do modelo traz a logo antiga (baixa resolucao) na primeira tabela:
+ * no PDF ela vira a logo OFICIAL da empresa, e o cabecalho nao repete a logo.
+ */
+export function trocarLogoDoModelo(html: string, logo: string | null): { html: string; logoNoCabecalho: string | null } {
+  const inicio = html.slice(0, 4000);
+  const m = /<img\b[^>]*\bsrc="[^"]*"[^>]*>/.exec(inicio);
+  if (!m) return { html, logoNoCabecalho: logo };
+  if (!logo) return { html, logoNoCabecalho: null };
+  const nova = `<img src="${logo}" alt="" style="max-height:70px;max-width:100%">`;
+  return { html: html.slice(0, m.index) + nova + html.slice(m.index + m[0].length), logoNoCabecalho: null };
 }
 
 /** Preenche o texto do modelo com as fontes. */

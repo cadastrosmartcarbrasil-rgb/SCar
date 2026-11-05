@@ -107,6 +107,8 @@ export type PreviaTermo = { titulo: string; html: string; vazios: string[]; desc
 export type PedidoPrevia = {
   modelo_id?: string; versao_id?: string; rascunho_html?: string;
   cliente_id?: string | null; veiculo_id?: string | null;
+  /** 0181: modelo da Ordem de Servico — preenche Prestador/Evento/OS com um exemplo. */
+  exemplo_os?: boolean;
 };
 
 export function usePreviaTermo() {
@@ -141,7 +143,7 @@ export function useTermosEmitidos(f: { clienteId?: string | null; veiculoId?: st
     queryFn: async () => {
       let q = supabase.from('termos_emitidos')
         .select('id, protocolo, modelo_id, versao_id, cliente_id, veiculo_id, regional_id, titulo, html_sha256, campos_vazios, pdf_path, pdf_sha256, pdf_bytes, visivel_portal, situacao, emitido_por, emitido_em, cancelado_por, cancelado_em, cancelamento_motivo, updated_at, veiculos(placa), usuarios!termos_emitidos_emitido_por_fkey(nome)')
-        .order('emitido_em', { ascending: false }).limit(200);
+        .is('evento_id', null).order('emitido_em', { ascending: false }).limit(200);
       if (f.veiculoId) q = q.eq('veiculo_id', f.veiculoId);
       else if (f.clienteId) q = q.eq('cliente_id', f.clienteId);
       const { data, error } = await q;

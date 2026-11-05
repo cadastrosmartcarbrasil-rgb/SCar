@@ -16,7 +16,7 @@ import {
   Undo2, Redo2, Braces, Square, FileUp, Search, X,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { CAMPOS_TERMO, GRUPOS_CAMPO, campoPorChave } from '@/lib/termos';
+import { CAMPOS_TERMO, campoPorChave, gruposDoEscopo } from '@/lib/termos';
 import { htmlDoWord } from '@/lib/termos-word';
 import { cn } from '@/lib/utils';
 
@@ -76,7 +76,9 @@ function Botao({ ativo, titulo, onClick, children, disabled }: {
   );
 }
 
-function SeletorCampo({ onEscolher, onFechar }: { onEscolher: (chave: string) => void; onFechar: () => void }) {
+function SeletorCampo({ onEscolher, onFechar, escopo }: {
+  onEscolher: (chave: string) => void; onFechar: () => void; escopo?: string | null;
+}) {
   const [busca, setBusca] = useState('');
   const lista = useMemo(() => {
     const t = busca.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -97,7 +99,7 @@ function SeletorCampo({ onEscolher, onFechar }: { onEscolher: (chave: string) =>
         <button type="button" onClick={onFechar} aria-label="Fechar"><X className="h-4 w-4 text-slate-400" /></button>
       </div>
       <div className="max-h-80 overflow-y-auto">
-        {GRUPOS_CAMPO.map((g) => {
+        {gruposDoEscopo(escopo).map((g) => {
           const itens = lista.filter((c) => c.grupo === g);
           if (!itens.length) return null;
           return (
@@ -123,8 +125,8 @@ function SeletorCampo({ onEscolher, onFechar }: { onEscolher: (chave: string) =>
   );
 }
 
-function Barra({ editor, onImportar, onImportarPdf }: {
-  editor: Editor; onImportar?: () => void; onImportarPdf?: () => void;
+function Barra({ editor, onImportar, onImportarPdf, escopo }: {
+  editor: Editor; onImportar?: () => void; onImportarPdf?: () => void; escopo?: string | null;
 }) {
   const [campos, setCampos] = useState(false);
   const naTabela = editor.isActive('table');
@@ -179,7 +181,7 @@ function Barra({ editor, onImportar, onImportarPdf }: {
           className="flex items-center gap-1 rounded-lg bg-cyan-500 px-3 py-1 text-sm font-semibold text-navy hover:bg-cyan-400">
           <Braces className="h-4 w-4" /> Inserir campo
         </button>
-        {campos && <SeletorCampo onEscolher={inserirCampo} onFechar={() => setCampos(false)} />}
+        {campos && <SeletorCampo onEscolher={inserirCampo} onFechar={() => setCampos(false)} escopo={escopo} />}
       </div>
     </div>
   );
@@ -191,7 +193,8 @@ function Barra({ editor, onImportar, onImportarPdf }: {
  * Importar PDF (so documento GERAL, 0166) e tratado por quem usa o editor:
  * o arquivo vira o proprio documento, nao texto.
  */
-export function EditorTermo({ value, onChange, somenteLeitura, onImportarPdf }: {
+export function EditorTermo({ value, onChange, somenteLeitura, onImportarPdf, escopo }: {
+  escopo?: string | null;
   value: string; onChange: (html: string) => void; somenteLeitura?: boolean; onImportarPdf?: () => void;
 }) {
   const arquivo = useRef<HTMLInputElement>(null);
@@ -225,10 +228,16 @@ export function EditorTermo({ value, onChange, somenteLeitura, onImportarPdf }: 
 
   async function importar(f: File) {
     try {
-      const { html, avisos } = await htmlDoWord(await f.arrayBuffer());
+      const { html, avisos, reconhecidos, desconhecidos } = await htmlDoWord(await f.arrayBuffer());
       if (editor && editor.getText().trim() && !window.confirm('Substituir o texto atual pelo do arquivo?')) return;
       editor?.commands.setContent(html, true);
-      toast.success(`Texto importado de ${f.name}. Agora troque os espaços em branco pelos campos.`);
+      toast.success(reconhecidos
+        ? `Texto importado de ${f.name}: ${reconhecidos} campo(s) «Grupo: Campo» reconhecido(s).`
+        : `Texto importado de ${f.name}. Agora troque os espaços em branco pelos campos.`);
+      if (desconhecidos.length) {
+        toast.warning(`Marcadores não reconhecidos (ficaram como texto): ${desconhecidos.slice(0, 6).join(' · ')}`
+          + `${desconhecidos.length > 6 ? '…' : ''}`, { duration: 15000 });
+      }
       if (avisos.length) toast.message(`O Word avisou: ${avisos.slice(0, 3).join(' · ')}`);
     } catch (e) {
       toast.error(`Não foi possível ler o arquivo: ${(e as Error).message}`);
@@ -238,7 +247,7 @@ export function EditorTermo({ value, onChange, somenteLeitura, onImportarPdf }: 
   if (!editor) return <div className="h-96 animate-pulse rounded-xl bg-slate-100" />;
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-superficie">
-      {!somenteLeitura && <Barra editor={editor} onImportar={() => arquivo.current?.click()} onImportarPdf={onImportarPdf} />}
+      {!somenteLeitura && <Barra editor={editor} onImportar={() => arquivo.current?.click()} onImportarPdf={onImportarPdf} escopo={escopo} />}
       <input ref={arquivo} type="file" accept=".docx" className="hidden"
         onChange={(e) => { const f = e.target.files?.[0]; if (f) void importar(f); e.target.value = ''; }} />
       <EditorContent editor={editor} className="termo-editor max-h-[70vh] min-h-[24rem] overflow-y-auto p-6" />
