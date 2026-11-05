@@ -281,3 +281,33 @@ describe('marcadores «Grupo: Campo» do Word', () => {
     expect(rend.desconhecidos).toEqual([]);
   });
 });
+
+import { tipoDeEvento } from './termos';
+
+describe('termo de entrega (0182)', () => {
+  const base: FontesTermo = {
+    cliente: { nome_razao_social: 'FULANO', cpf_cnpj: '52998224725', tipo_pessoa: 'PF' },
+    emissao: { em: new Date('2026-11-05T15:00:00Z') },
+  };
+  it('marca o recebedor e preenche o veiculo entregue', () => {
+    const v = valoresDoTermo({ ...base, entrega: {
+      recebedor_tipo: 'TERCEIRO', recebedor: { nome: 'CICLANO', documento: '11222333000181', telefone: '65999990000' },
+      veiculo: { placa: 'TER1A11', marca: 'FIAT', modelo: 'UNO', ano: '2020' }, data: '2026-11-04', abrangencia: 'PARCIAL',
+    } });
+    expect(v['entrega.marca_terceiro']).toBe('☒');
+    expect(v['entrega.marca_associado']).toBe('☐');
+    expect(v['recebedor.documento']).toBe('11.222.333/0001-81');
+    expect(v['entrega.data']).toBe('04/11/2026');
+    expect(v['veiculo_entregue.placa']).toBe('TER1A11');
+    expect(v['entrega.abrangencia']).toBe('Entrega parcial');
+  });
+  it('fora do termo de entrega os campos ficam vazios', () => {
+    const v = valoresDoTermo(base);
+    expect(v['entrega.marca_associado']).toBe('');
+    expect(v['recebedor.nome']).toBe('');
+  });
+  it('tipos de evento', () => {
+    expect(tipoDeEvento('ENTREGA_VEICULO')).toBe(true);
+    expect(tipoDeEvento('CONTRATO')).toBe(false);
+  });
+});

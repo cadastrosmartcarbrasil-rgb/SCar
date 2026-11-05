@@ -5,6 +5,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
 import type { ItemCobertura } from '@/lib/coberturas';
 import type { ItemOS } from '@/lib/ordem-servico';
+import type { DadosEntrega } from '@/lib/termo-entrega';
+export type { DadosEntrega } from '@/lib/termo-entrega';
 import {
   blocosDoTermo, documentoDoTermo, renderizarTermo, valoresDoTermo, type FontesTermo,
 } from '@/lib/termos';
@@ -202,7 +204,75 @@ export function exemploDaOS(base: FontesTermo): FontesTermo {
         { tipo: 'PECA', descricao: 'PARACHOQUE DIANTEIRO', quantidade: 1, valor_unitario: 890.5 },
       ],
     },
+    entrega: {
+      recebedor_tipo: 'ASSOCIADO',
+      recebedor: { nome: base.cliente.nome_razao_social || 'RECEBEDOR', documento: base.cliente.cpf_cnpj,
+        telefone: base.cliente.celular ?? base.cliente.telefone ?? null },
+      veiculo: { placa: base.veiculo?.placa ?? 'ABC1D23', marca: base.veiculo?.marca ?? 'MARCA',
+        modelo: base.veiculo?.modelo ?? 'MODELO', ano: anoDoVeiculo(base.veiculo?.ano_fabricacao, base.veiculo?.ano_modelo) || '2024' },
+      data: new Date().toISOString().slice(0, 10), abrangencia: 'TOTAL', descricao: null,
+    },
   };
+}
+
+const anoDoVeiculo = (fab?: number | null, mod?: number | null) =>
+  [fab, mod].filter((x) => x != null).join('/');
+
+/**
+ * As fontes do TERMO DE ENTREGA (0182), lidas pela sessao: associado/veiculo
+ * do evento, o evento, a OS escolhida (oficina + numero) e o recebedor — o
+ * associado ou o terceiro do evento (com o carro dele).
+ */
+export async function carregarFontesEntrega(supabase: Db, d: DadosEntrega, emitidoPor: string | null): Promise<FontesTermo> {
+  const { data: ev, error } = await supabase.from('eventos_sinistro')
+    .select('id, numero_protocolo, data_ocorrencia, tipo_evento, valor_participacao, cliente_id, veiculo_id, tipos_evento(nome)')
+    .eq('id', d.evento_id).maybeSingle();
+  if (error) throw error;
+  if (!ev) throw new Error('Evento não encontrado (ou fora do seu acesso).');
+  const base = await carregarFontesTermo(supabase, { clienteId: ev.cliente_id, veiculoId: ev.veiculo_id, emitidoPor });
+
+  const [terc, os] = await Promise.all([
+    d.recebedor_tipo === 'TERCEIRO' && d.evento_terceiro_id
+      ? supabase.from('evento_terceiros')
+        .select('nome, cpf_cnpj, celular, telefone, veiculo_placa, veiculo_marca, veiculo_modelo, veiculo_ano')
+        .eq('id', d.evento_terceiro_id).eq('evento_id', ev.id).maybeSingle()
+      : null,
+    d.ordem_servico_id
+      ? supabase.from('ordens_servico').select('numero, fornecedor_id').eq('id', d.ordem_servico_id).maybeSingle()
+      : null,
+  ]);
+  if (d.recebedor_tipo === 'TERCEIRO' && !terc?.data) throw new Error('Escolha o terceiro deste evento que recebe o veículo.');
+
+  const tipoNome = (ev as unknown as { tipos_evento: { nome: string } | null }).tipos_evento?.nome ?? ev.tipo_evento ?? null;
+  base.evento = {
+    numero_protocolo: ev.numero_protocolo, data_ocorrencia: ev.data_ocorrencia, tipo: tipoNome,
+    valor_participacao: ev.valor_participacao != null ? Number(ev.valor_participacao) : null, condutor: null,
+  };
+
+  const o = os?.data ?? null;
+  if (o?.fornecedor_id) {
+    const { data: f } = await supabase.from('fornecedores')
+      .select('razao_social, nome_fantasia, documento, tipo_pessoa, inscricao_estadual, inscricao_municipal, endereco, contato, whatsapp, telefone, email')
+      .eq('id', o.fornecedor_id).maybeSingle();
+    base.prestador = (f ?? null) as FontesTermo['prestador'];
+  }
+  // so o numero da OS: os demais campos da OS ficam vazios neste termo
+  base.os = o ? { numero: o.numero, documento: 'AUTORIZACAO', itens: [] } : null;
+
+  const t = terc?.data ?? null;
+  const c = base.cliente;
+  const v = base.veiculo;
+  base.entrega = {
+    recebedor_tipo: d.recebedor_tipo,
+    recebedor: t
+      ? { nome: t.nome, documento: t.cpf_cnpj, telefone: t.celular || t.telefone }
+      : { nome: c.nome_razao_social, documento: c.cpf_cnpj, tipo_pessoa: c.tipo_pessoa, telefone: c.celular || c.telefone },
+    veiculo: t
+      ? { placa: t.veiculo_placa, marca: t.veiculo_marca, modelo: t.veiculo_modelo, ano: t.veiculo_ano != null ? String(t.veiculo_ano) : null }
+      : { placa: v?.placa ?? null, marca: v?.marca ?? null, modelo: v?.modelo ?? null, ano: anoDoVeiculo(v?.ano_fabricacao, v?.ano_modelo) || null },
+    data: d.data_entrega, abrangencia: d.abrangencia, descricao: d.descricao ?? null,
+  };
+  return base;
 }
 
 /**

@@ -29,6 +29,7 @@ export const TIPOS_TERMO = [
   { valor: 'CANCELAMENTO', rotulo: 'Cancelamento' },
   { valor: 'DECLARACAO', rotulo: 'Declaração' },
   { valor: 'ORDEM_SERVICO', rotulo: 'Ordem de Serviço (evento)' },
+  { valor: 'ENTREGA_VEICULO', rotulo: 'Termo de entrega de veículo (evento)' },
   { valor: 'OUTRO', rotulo: 'Outro' },
 ] as const;
 export type TipoTermo = (typeof TIPOS_TERMO)[number]['valor'];
@@ -42,7 +43,7 @@ export const USOS_VEICULO = [
 ] as const;
 
 export type GrupoCampo = 'Associado' | 'Veículo' | 'Plano e contrato' | 'Coberturas' | 'Empresa' | 'Emissão'
-  | 'Prestador' | 'Evento' | 'OS';
+  | 'Prestador' | 'Evento' | 'OS' | 'Entrega' | 'Recebedor' | 'Veículo entregue';
 
 export interface CampoTermo {
   chave: string;
@@ -184,13 +185,30 @@ export const CAMPOS_TERMO: CampoTermo[] = [
   C('OS', 'os.garantia', 'Garantia (dias)', { opcional: true }),
   C('OS', 'os.pagamento_previsto', 'Pagamento previsto', { opcional: true }),
   C('OS', 'os.observacoes', 'Observações', { opcional: true }),
+  // 0182 — termo de entrega do veiculo reparado
+  C('Entrega', 'entrega.marca_associado', '☒ se associado', { tipo: 'marca' }),
+  C('Entrega', 'entrega.marca_terceiro', '☒ se terceiro', { tipo: 'marca' }),
+  C('Entrega', 'entrega.data', 'Data'),
+  C('Entrega', 'entrega.abrangencia', 'Total ou parcial', { opcional: true }),
+  C('Entrega', 'entrega.descricao', 'O que foi entregue', { opcional: true }),
+  C('Recebedor', 'recebedor.nome', 'Nome'),
+  C('Recebedor', 'recebedor.documento', 'CPF/CNPJ'),
+  C('Recebedor', 'recebedor.telefone', 'Telefone', { opcional: true }),
+  C('Veículo entregue', 'veiculo_entregue.placa', 'Placa'),
+  C('Veículo entregue', 'veiculo_entregue.marca', 'Marca / montadora'),
+  C('Veículo entregue', 'veiculo_entregue.modelo', 'Modelo'),
+  C('Veículo entregue', 'veiculo_entregue.ano', 'Ano', { opcional: true }),
 ];
 
 export const GRUPOS_CAMPO: GrupoCampo[] = ['Associado', 'Veículo', 'Plano e contrato', 'Coberturas', 'Empresa', 'Emissão',
-  'Prestador', 'Evento', 'OS'];
+  'Prestador', 'Evento', 'OS', 'Entrega', 'Recebedor', 'Veículo entregue'];
 
-/** Os grupos de Prestador/Evento/OS so fazem sentido no modelo de EVENTO (a Ordem de Servico). */
-export const GRUPOS_SO_EVENTO: GrupoCampo[] = ['Prestador', 'Evento', 'OS'];
+/** Os grupos de Prestador/Evento/OS/Entrega so fazem sentido no modelo de EVENTO (OS e termo de entrega). */
+export const GRUPOS_SO_EVENTO: GrupoCampo[] = ['Prestador', 'Evento', 'OS', 'Entrega', 'Recebedor', 'Veículo entregue'];
+
+/** Tipos de termo que sao do EVENTO (escopo EVENTO, nunca no portal). */
+export const TIPOS_DE_EVENTO = ['ORDEM_SERVICO', 'ENTREGA_VEICULO'] as const;
+export const tipoDeEvento = (t: string | null | undefined) => (TIPOS_DE_EVENTO as readonly string[]).includes(t ?? '');
 export const gruposDoEscopo = (escopo: string | null | undefined): GrupoCampo[] =>
   escopo === 'EVENTO' ? GRUPOS_CAMPO : GRUPOS_CAMPO.filter((g) => !GRUPOS_SO_EVENTO.includes(g));
 
@@ -256,6 +274,13 @@ export interface FontesTermo {
     reparo_de?: string | null; itens: ItemOS[]; participacao?: number | null; pecas_smartcar?: number | null;
     inicio?: string | null; prazo_dias?: number | null; limite?: string | null; local?: string | null;
     garantia?: number | null; pagamento?: string | null; observacoes?: string | null;
+  } | null;
+  /** 0182 — o termo de entrega: quem recebe, qual veiculo, quando. */
+  entrega?: {
+    recebedor_tipo: 'ASSOCIADO' | 'TERCEIRO';
+    recebedor: { nome?: string | null; documento?: string | null; tipo_pessoa?: string | null; telefone?: string | null };
+    veiculo: { placa?: string | null; marca?: string | null; modelo?: string | null; ano?: string | null };
+    data?: string | null; abrangencia?: 'TOTAL' | 'PARCIAL'; descricao?: string | null;
   } | null;
 }
 
@@ -411,6 +436,29 @@ export function valoresDoTermo(f: FontesTermo): Record<string, string> {
     'empresa.endereco_faturamento': enderecoCompleto(emp?.endereco),
     'empresa.email_eventos': txt(emp?.email_departamento_eventos),
     ...valoresDaOS(f),
+    ...valoresDaEntrega(f),
+  };
+}
+
+/** 0182 — os campos do termo de entrega (vazios fora dele). */
+function valoresDaEntrega(f: FontesTermo): Record<string, string> {
+  const en = f.entrega ?? null;
+  const r = en?.recebedor ?? null;
+  const v = en?.veiculo ?? null;
+  const doc = txt(r?.documento).replace(/\D/g, '');
+  return {
+    'entrega.marca_associado': en ? marca(en.recebedor_tipo === 'ASSOCIADO') : '',
+    'entrega.marca_terceiro': en ? marca(en.recebedor_tipo === 'TERCEIRO') : '',
+    'entrega.data': dataCurta(en?.data),
+    'entrega.abrangencia': en ? (en.abrangencia === 'PARCIAL' ? 'Entrega parcial' : 'Entrega total') : '',
+    'entrega.descricao': txt(en?.descricao),
+    'recebedor.nome': txt(r?.nome),
+    'recebedor.documento': doc ? formatarDocumento(doc, doc.length > 11 ? 'PJ' : 'PF') : '',
+    'recebedor.telefone': r?.telefone ? formatarTelefone(r.telefone) : '',
+    'veiculo_entregue.placa': txt(v?.placa),
+    'veiculo_entregue.marca': txt(v?.marca),
+    'veiculo_entregue.modelo': txt(v?.modelo),
+    'veiculo_entregue.ano': txt(v?.ano),
   };
 }
 

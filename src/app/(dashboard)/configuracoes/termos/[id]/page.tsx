@@ -18,7 +18,7 @@ import { usePode } from '@/hooks/use-permissoes';
 import { usePlanos, useTiposVeiculo } from '@/hooks/use-precificacao';
 import { useRegionais } from '@/hooks/use-config';
 import {
-  TIPOS_TERMO, USOS_VEICULO, camposDoTexto, rotuloCampo, campoPorChave, tamanhoArquivo, validarPdfTermo,
+  TIPOS_TERMO, USOS_VEICULO, camposDoTexto, tipoDeEvento, rotuloCampo, campoPorChave, tamanhoArquivo, validarPdfTermo,
 } from '@/lib/termos';
 import { formatDateTime } from '@/lib/utils';
 
@@ -201,9 +201,9 @@ export default function TermoEditarPage() {
         <FormField label="Tipo de termo">
           <Select value={f.tipo ?? 'CONTRATO'} disabled={ro || comPdf}
             onChange={(e) => {
-              // 0181: Ordem de Servico e sempre de EVENTO, e o de evento so serve a OS
+              // 0181/0182: OS e termo de entrega sao sempre de EVENTO, e o de evento so serve a eles
               const tipo = e.target.value;
-              if (tipo === 'ORDEM_SERVICO') set({ tipo, escopo: 'EVENTO', visivel_portal: false });
+              if (tipoDeEvento(tipo)) set({ tipo, escopo: 'EVENTO', visivel_portal: false });
               else set({ tipo, ...(f.escopo === 'EVENTO' ? { escopo: 'ASSOCIADO' } : {}) });
             }}>
             {TIPOS_TERMO.map((t) => <option key={t.valor} value={t.valor}>{t.rotulo}</option>)}
@@ -218,7 +218,7 @@ export default function TermoEditarPage() {
             title={comPdf ? 'Documento com PDF importado é sempre Geral. Retire o PDF para mudar.' : undefined}
             onChange={(e) => set({ escopo: e.target.value as 'ASSOCIADO' | 'GERAL' | 'EVENTO' })}>
             {f.escopo === 'EVENTO' ? (
-              <option value="EVENTO">Do evento — emitido na Ordem de Serviço</option>
+              <option value="EVENTO">Do evento — emitido na Ordem de Serviço ou na aba Termos do evento</option>
             ) : (
               <>
                 <option value="ASSOCIADO">Preenchido por associado/veículo</option>
@@ -230,8 +230,9 @@ export default function TermoEditarPage() {
 
         {f.escopo === 'EVENTO' && (
           <p className="rounded-lg bg-cyan-50 px-3 py-2 text-xs text-cyan-900 lg:col-span-3">
-            Modelo da Ordem de Serviço: é emitido dentro do evento, ao aprovar a cotação do reparo (aba Reparo).
-            Use os campos dos grupos Prestador, Evento e OS. Nunca vai ao portal do associado.
+            {f.tipo === 'ENTREGA_VEICULO'
+              ? 'Termo de entrega do veículo reparado: emitido na aba Termos do evento, um por entrega (total ou parcial). Use os grupos Entrega, Recebedor, Veículo entregue, Evento, Prestador e OS. Nunca vai ao portal do associado.'
+              : 'Modelo da Ordem de Serviço: é emitido dentro do evento, ao aprovar a cotação do reparo (aba Reparo). Use os campos dos grupos Prestador, Evento e OS. Nunca vai ao portal do associado.'}
           </p>
         )}
         {f.escopo === 'ASSOCIADO' && (

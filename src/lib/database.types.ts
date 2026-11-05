@@ -55,7 +55,8 @@ export type StatusEvento =
   | 'ABERTO' | 'EM_ANALISE' | 'COTACAO_PECAS' | 'REPARO' | 'CONCLUIDO' | 'NEGADO';
 export type TipoDocumentoAnexo =
   | 'FOTO_AVARIA' | 'BOLETIM_OCORRENCIA' | 'CNH' | 'CRLV' | 'NOTA_FISCAL'
-  | 'FOTO_VEICULO' | 'FOTO_LOCAL' | 'CROQUI' | 'OUTRO' | 'ORDEM_SERVICO';
+  | 'FOTO_VEICULO' | 'FOTO_LOCAL' | 'CROQUI' | 'OUTRO' | 'ORDEM_SERVICO'
+  | 'TERMO_ENTREGA' | 'TERMO_ENTREGA_ASSINADO';
 export type StatusCotacao = 'EM_ABERTO' | 'APROVADA' | 'REJEITADA';
 export type CodigoTemplate = 'BOAS_VINDAS' | 'LEMBRETE_BOLETO' | 'NOVO_EVENTO';
 export type ProvedorBanco = 'ASAAS' | 'PJBANK' | 'CORA' | 'INTER' | 'GERENCIANET' | 'SICREDI' | 'OUTRO';
@@ -1821,6 +1822,31 @@ export type TermoEmitidoRow = {
   /** 0181 — termo de evento (Ordem de Servico); nulos nos termos do associado. */
   evento_id: string | null;
   fornecedor_id: string | null;
+};
+
+// ---- Termo de entrega de veiculo (0182) -------------------------------------
+export type TermoEntregaRow = {
+  id: string;
+  termo_emitido_id: string;
+  evento_id: string;
+  cliente_id: string;
+  regional_id: string | null;
+  recebedor_tipo: 'ASSOCIADO' | 'TERCEIRO';
+  evento_terceiro_id: string | null;
+  ordem_servico_id: string | null;
+  fornecedor_id: string | null;
+  abrangencia: 'TOTAL' | 'PARCIAL';
+  descricao: string | null;
+  data_entrega: string;
+  situacao: 'AGUARDANDO_ASSINATURA' | 'ASSINADO' | 'CANCELADO';
+  assinado_anexo_id: string | null;
+  assinado_em: string | null;
+  assinado_registrado_por: string | null;
+  emitido_por: string | null;
+  emitido_em: string;
+  cancelado_em: string | null;
+  cancelado_por: string | null;
+  cancelamento_motivo: string | null;
 };
 
 // ---- Ordem de Servico do evento (0181) --------------------------------------
@@ -4514,6 +4540,11 @@ export type Database = {
         Rel<'veiculo_id', 'veiculos'>, Rel<'termo_emitido_id', 'termos_emitidos'>, Rel<'regional_id', 'regionais'>,
         Rel<'cotacao_id', 'cotacoes_pecas'>, Rel<'evento_terceiro_id', 'evento_terceiros'>,
       ]>;
+      termos_entrega: TableDef<TermoEntregaRow, [
+        Rel<'termo_emitido_id', 'termos_emitidos'>, Rel<'evento_id', 'eventos_sinistro'>,
+        Rel<'evento_terceiro_id', 'evento_terceiros'>, Rel<'ordem_servico_id', 'ordens_servico'>,
+        Rel<'fornecedor_id', 'fornecedores'>, Rel<'assinado_anexo_id', 'anexos_evento'>,
+      ]>;
       ordens_servico_itens: TableDef<OrdemServicoItemRow, [Rel<'ordem_servico_id', 'ordens_servico'>]>;
       ordens_servico_envios: TableDef<OrdemServicoEnvioRow, [Rel<'ordem_servico_id', 'ordens_servico'>, Rel<'enviado_por', 'usuarios'>]>;
       cobranca_remessa_itens: TableDef<
@@ -5597,6 +5628,16 @@ export type Database = {
       mudar_status_ordem_servico: { Args: { p_os_id: string; p_status: string; p_data?: string | null }; Returns: OrdemServicoRow };
       cancelar_ordem_servico: { Args: { p_os_id: string; p_motivo: string }; Returns: OrdemServicoRow };
       somar_dias_uteis: { Args: { p_inicio: string; p_dias: number }; Returns: string };
+      emitir_termo_entrega: {
+        Args: { p_versao_id: string; p_dados: Json; p_html: string; p_campos_vazios?: string[] };
+        Returns: TermoEntregaRow;
+      };
+      anexar_pdf_termo_entrega: { Args: { p_id: string; p_path: string; p_sha256: string; p_bytes: number }; Returns: undefined };
+      registrar_termo_entrega_assinado: {
+        Args: { p_id: string; p_path: string; p_nome: string | null; p_bytes: number | null };
+        Returns: TermoEntregaRow;
+      };
+      cancelar_termo_entrega: { Args: { p_id: string; p_motivo: string }; Returns: TermoEntregaRow };
       cancelar_termo_emitido: { Args: { p_id: string; p_motivo: string }; Returns: undefined };
       portal_termo_emitido: { Args: { p_id: string; p_visivel: boolean }; Returns: undefined };
       pode_ver_termo_emitido: { Args: { p_id: string }; Returns: boolean };

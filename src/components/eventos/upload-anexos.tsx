@@ -9,6 +9,13 @@ import type { TipoDocumentoAnexo } from '@/lib/database.types';
 import { LADO_MAXIMO, tamanhoLegivel } from '@/lib/imagem';
 import { formatDate } from '@/lib/utils';
 
+// Tipos que nascem pelo sistema (OS 0181, termo de entrega 0182): nao se escolhem no upload.
+const ROTULO_EXTRA: Record<string, string> = {
+  ORDEM_SERVICO: 'Ordem de Serviço',
+  TERMO_ENTREGA: 'Termo de entrega',
+  TERMO_ENTREGA_ASSINADO: 'Termo de entrega assinado',
+};
+
 const TIPOS: { value: TipoDocumentoAnexo; label: string }[] = [
   { value: 'FOTO_AVARIA', label: 'Foto de Avaria' },
   { value: 'BOLETIM_OCORRENCIA', label: 'Boletim de Ocorrência' },
@@ -141,7 +148,7 @@ export function UploadAnexos({ eventoId }: { eventoId: string }) {
                 </span>
               </button>
               <span className="tnum text-xs text-slate-400">
-                {a.tipo_documento} · {formatDate(a.created_at)}
+                {ROTULO_EXTRA[a.tipo_documento] ?? TIPOS.find((t) => t.value === a.tipo_documento)?.label ?? a.tipo_documento} · {formatDate(a.created_at)}
                 {a.tamanho_bytes != null && ` · ${tamanhoLegivel(a.tamanho_bytes)}`}
               </span>
             </li>
