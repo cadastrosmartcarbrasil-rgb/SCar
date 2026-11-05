@@ -11,6 +11,8 @@ describe('sugestaoDestinoProduto', () => {
     expect(sugestaoDestinoProduto('Assistência 24 Horas -')).toBe('BASE');
     expect(sugestaoDestinoProduto('ASSIST 24 HORAS - GUINCHO 100 KM IDA /100 KM VOLTA- 200 TOTAISMIG')).toBe('BASE');
     expect(sugestaoDestinoProduto('CHAVEIROMIG')).toBe('BASE');
+    expect(sugestaoDestinoProduto('A-PROTEçãO SMART BRASIL SE (35 A 40M)MIG')).toBe('BASE');
+    expect(sugestaoDestinoProduto('A- PROT SMART - MOTO RFC (R$ 16.000,01 A R$ 19.000,00)MIG')).toBe('BASE');
     expect(sugestaoDestinoProduto('Retorno ao domicílio - Táxi / Uber / Ônibus')).toBe('BASE');
     expect(sugestaoDestinoProduto('Proteção/ Roubo/ Furto / Colisão/ Perda Total/ (Incêndio, Após Colisão)')).toBe('BASE');
     expect(sugestaoDestinoProduto('PROTEÇÃO DE ROUBO, FURTO, COLISÃO, (INCÊNDIO EM CASO DE COLISÃO)MIG')).toBe('BASE');
@@ -19,6 +21,10 @@ describe('sugestaoDestinoProduto', () => {
   it('sugere IGNORAR para a assistencia profissional (tem tela propria)', () => {
     expect(sugestaoDestinoProduto('Assistência Profissional')).toBe('IGNORAR');
     expect(sugestaoDestinoProduto('7 ASSISTENCIA PROFISSIONAL 28MIG')).toBe('IGNORAR');
+    expect(sugestaoDestinoProduto('TELEMEDICINAMIG')).toBe('IGNORAR');
+    expect(sugestaoDestinoProduto('Benefícios Smart Vida')).toBe('IGNORAR');
+    expect(sugestaoDestinoProduto('Monitoramento — nível não informado (moto)')).toBe('IGNORAR');
+    expect(sugestaoDestinoProduto('Rastreador SP/SP')).toBe('IGNORAR');
   });
 
   it('nao sugere nada para o que e opcional (a pessoa escolhe qual)', () => {

@@ -41,10 +41,22 @@ const TRECHOS_BASE = [
   'ROUBO/ FURTO',
   'ROUBO, FURTO',
   'PERDA TOTAL',
+  'PROTECAO SMART',
+  'PROT SMART',
+  'TROCA DE PNEUS',
+  'DESTOMBAMENTO',
 ];
 
 /** Trechos de produto que NAO entram como opcional (tem tratamento proprio). */
-const TRECHOS_IGNORAR = ['ASSISTENCIA PROFISSIONAL'];
+const TRECHOS_IGNORAR = [
+  'ASSISTENCIA PROFISSIONAL',
+  // decisao do usuario (05/11/2026): ficam de fora
+  'TELEMEDICINA',
+  'SMART VIDA',
+  'MONITORAMENTO',
+  // o rastreador e regra do tipo / parque de equipamentos, nao opcional
+  'RASTREADOR',
+];
 
 /**
  * A sugestao para um produto ainda sem de-para. `null` = sem sugestao (a pessoa

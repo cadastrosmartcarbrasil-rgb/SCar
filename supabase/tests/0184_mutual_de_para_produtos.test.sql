@@ -51,21 +51,21 @@ begin
   -- (1) a tela
   select count(*) into n from mutual_produtos_externos(r1);
   assert n = 4, 'quatro produtos do Mutual na unidade';
-  select * into rec from mutual_produtos_externos(r1) where chave = '20';
-  assert rec.veiculos = 2 and rec.veiculos_na_base = 1 and rec.nome = 'Carros Reserva' and rec.acao is null,
+  select * into rec from mutual_produtos_externos(r1) where chave = 'sem_nivel:CARROS RESERVA:AUTO';
+  assert rec.veiculos = 2 and rec.veiculos_na_base = 1 and rec.nome like 'Carros Reserva%' and rec.acao is null,
     'peso do carro reserva: 2 veiculos, 1 na base, sem de-para';
 
   -- (2) o de-para
   begin
-    perform mutual_definir_produto('20', 'OPCIONAL', null, 'Carros Reserva');
+    perform mutual_definir_produto('sem_nivel:CARROS RESERVA:AUTO', 'OPCIONAL', null, 'Carros Reserva');
     assert false, 'OPCIONAL sem produto precisa ser recusado';
   exception when others then null;
   end;
-  perform mutual_definir_produto('10', 'BASE', null, 'Taxa Administrativa');
-  perform mutual_definir_produto('20', 'OPCIONAL', p_res, 'Carros Reserva');
-  perform mutual_definir_produto('30', 'OPCIONAL', p_vid, 'Vidros');
-  perform mutual_definir_produto('40', 'OPCIONAL', p_moto, 'B-PROTECAO TERCEIRO MOTO');
-  select acao, produto_nome into rec from mutual_produtos_externos(r1) where chave = '20';
+  perform mutual_definir_produto('nome:TAXA ADMINISTRATIVA', 'BASE', null, 'Taxa Administrativa');
+  perform mutual_definir_produto('sem_nivel:CARROS RESERVA:AUTO', 'OPCIONAL', p_res, 'Carros Reserva');
+  perform mutual_definir_produto('sem_nivel:VIDROS:AUTO', 'OPCIONAL', p_vid, 'Vidros');
+  perform mutual_definir_produto('nome:B PROTECAO TERCEIRO MOTO', 'OPCIONAL', p_moto, 'B-PROTECAO TERCEIRO MOTO');
+  select acao, produto_nome into rec from mutual_produtos_externos(r1) where chave = 'sem_nivel:CARROS RESERVA:AUTO';
   assert rec.acao = 'OPCIONAL' and rec.produto_nome = 'Carro Reserva 184', 'de-para gravado e lido';
 
   -- (3) simulacao
@@ -90,8 +90,8 @@ begin
   assert exists (select 1 from veiculo_produtos where veiculo_id = v1 and produto_id = p_scar), 'opcional do SCar preservado';
 
   -- desfazer o de-para
-  perform mutual_definir_produto('10', null);
-  select acao into rec from mutual_produtos_externos(r1) where chave = '10';
+  perform mutual_definir_produto('nome:TAXA ADMINISTRATIVA', null);
+  select acao into rec from mutual_produtos_externos(r1) where chave = 'nome:TAXA ADMINISTRATIVA';
   assert rec.acao is null, 'de-para desfeito';
 
   -- produto em uso no de-para nao se apaga
@@ -104,7 +104,7 @@ begin
   -- (6) gestor nao mexe
   perform set_config('request.jwt.claim.sub', u_ges::text, false);
   begin
-    perform mutual_definir_produto('10', 'BASE');
+    perform mutual_definir_produto('nome:TAXA ADMINISTRATIVA', 'BASE');
     assert false, 'gestor nao define o de-para';
   exception when others then
     if sqlerrm not like '%matriz%' then raise; end if;
