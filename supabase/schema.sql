@@ -74133,6 +74133,11 @@ grant  execute on all functions in schema public to service_role;
 -- 06/11/2026) e roda de novo. Re-executavel.
 -- ============================================================================
 
+-- Sem este indice, apagar um lancamento varre boletos_historico inteiro (FK on delete
+-- set null): 635 lancamentos x 158 mil linhas estouraram o tempo ao aplicar.
+create index if not exists idx_boletos_historico_lancamento
+  on boletos_historico (lancamento_id) where lancamento_id is not null;
+
 create or replace function mutual_baixar_mutualpay(p_confirmar boolean default false)
 returns table (
   invoice_id   text,
