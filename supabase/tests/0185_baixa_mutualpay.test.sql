@@ -14,7 +14,7 @@ begin
 
   insert into mutual_captura (entidade, id_externo, payload) values
     ('INVOICE', '7301', '{"bank_id":15,"invoice_status":"SUCCEEDED","invoice_type":"MONTHLY_PAYMENT","payment_type":"BILLET","paid_amount":376.5,"transaction_fee":1.49,"payment_date":"2026-11-03","credit_date":"2026-11-04","transaction_id":"TX1"}'),
-    ('INVOICE', '7302', '{"bank_id":15,"invoice_status":"SUCCEEDED","invoice_type":"MONTHLY_PAYMENT","payment_type":"CARD","paid_amount":278.5,"transaction_fee":7.62,"payment_date":"2026-11-04","credit_date":null,"transaction_id":"TX2"}'),
+    ('INVOICE', '7302', '{"bank_id":15,"invoice_status":"SUCCEEDED","invoice_type":"MONTHLY_PAYMENT","payment_type":"CARD","paid_amount":278.5,"transaction_fee":7.62,"payment_date":"2026-09-20","credit_date":null,"transaction_id":"TX2"}'),
     ('INVOICE', '7303', '{"bank_id":15,"invoice_status":"SUCCEEDED","invoice_type":"PRODUCT_FEE","payment_type":"BILLET","paid_amount":64,"transaction_fee":1.53,"payment_date":"2026-10-20","credit_date":"2026-10-20","transaction_id":"TX3"}'),
     ('INVOICE', '7304', '{"bank_id":15,"invoice_status":"SUCCEEDED","invoice_type":"MONTHLY_PAYMENT","payment_type":"BILLET","paid_amount":100,"transaction_fee":1.49,"payment_date":"2026-10-10","credit_date":"2026-10-12","transaction_id":"TX4"}'),
     ('INVOICE', '7305', '{"bank_id":1,"invoice_status":"SUCCEEDED","invoice_type":"MONTHLY_PAYMENT","payment_type":"BILLET","paid_amount":200,"payment_date":"2026-10-20","credit_date":"2026-10-21"}'),
@@ -42,7 +42,7 @@ begin
 
   for r in select * from mutual_baixar_mutualpay(true) loop
     if r.invoice_id = '7301' then assert r.acao = 'MENSALIDADE' and r.data_credito = date '2026-11-04', row_to_json(r)::text; end if;
-    if r.invoice_id = '7302' then assert r.acao = 'MENSALIDADE' and r.data_credito = date '2026-11-04' and r.forma = 'CARTAO', row_to_json(r)::text; end if;
+    if r.invoice_id = '7302' then assert r.acao = 'MENSALIDADE' and r.data_credito = date '2026-10-21' and r.forma = 'CARTAO', row_to_json(r)::text; end if;
     if r.invoice_id = '7303' then assert r.acao = 'NAO_IDENTIFICADO', row_to_json(r)::text; end if;
   end loop;
 
