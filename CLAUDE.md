@@ -6795,8 +6795,15 @@ Pesado, Diesel Leve) — e o que ele contratou no Mutual entra como **opcional c
   A API não diz "não contratado": quando a tela do Mutual diverge (OVS1811 terceiros, PGR6G88 e EIF4F91 vidros), a regra é
   `mutual_opcional_excecoes` + apagar o `veiculo_produtos` — apagar sem a exceção volta na rotina do dia seguinte.
   Motos seguem com RCF 15 mil moto (decisão do usuário), mesmo quando a tela diz 30/50 mil.
-  **Pendente:** ~240 itens `fora_do_tipo` — RCF 100 mil só liberado para pesados (carros/pick-ups ficam sem) e RCF 30/200 mil
-  não liberados para Caminhão Pesado (Configurações → Produtos); divergências de leitura em DNA5851 e QPH4E25 (terceiros 3864).
+  **✅ Fechado em 08/11/2026 (autorizado, com o usuário):** o usuário liberou os RCF nos tipos; as grafias de carro de
+  100 mil (`B COBERTURA PARA TERCEIROS ATE R 100 000 00`, `COBERTURA PARA TERCEIROS R 100 000 00`) passaram para o
+  "RCF-Terceiros 100.000" (carros), e a "R$ 100M (50% DM 50% DP)" ficou no "(50%DM-50%DP)" (pesados + Diesel Leve); os 58
+  passeios que tinham os dois perderam o 50/50. Pesados com Vidros I de carro → "Vidros I - Parabrisas (Pesados)" (BNR0H12,
+  IBW2F06, MGU7A48, NJW6J67, QBP5748); Fenômenos Auto em caminhão NÃO existe (decisão: desconsiderar, exceção em CYN8310,
+  CYV0A80, EMX4E30, FII3G87); ENO4443/FJE1C59 = Fenômenos Auto; QBV5051 virou Moto/MOTOCICLETA ESSENCIAL. A configuração
+  3864 (plano 117) é 30 mil no PGR6G88 e 50 mil em QPH4E25/JJL6F72/QGT2A42 — corrigido POR VEÍCULO (exceção), não na
+  configuração. Os 11 veículos com dois terceiros ficam assim (pagam pelos dois). Sobram 143 `fora_do_tipo`: motos com
+  "Fenômenos (Auto)" que já têm o Fenômenos Moto (nada falta). Rotina estável: `mutual_aplicar_opcionais(null,false)` = 0.
 - **Veículos de teste (05/11):** LLN4569 e QQQ9A64 apagados; EWH9B46, OBA9558, RRQ5I64, OAW0838 e NJL2972 têm histórico
   (OS da 24h paga, título, evento, protocolos, rastreadores) e ficaram, aguardando decisão.
 
