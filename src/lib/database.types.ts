@@ -5307,6 +5307,10 @@ export type Database = {
         Args: { p_regional_id?: string | null; p_meses?: number | null };
         Returns: Json;
       };
+      painel_produtos: {
+        Args: { p_regional_id?: string | null };
+        Returns: Json;
+      };
       regionais_painel_comparativo: {
         Args: {
           p_data_inicio: string;

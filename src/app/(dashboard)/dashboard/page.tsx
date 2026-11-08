@@ -1,14 +1,21 @@
 'use client';
 
 import { useState } from 'react';
-import { LayoutDashboard, LifeBuoy } from 'lucide-react';
+import { LayoutDashboard, LifeBuoy, Package } from 'lucide-react';
 import { VisaoGeral } from '@/components/dashboard/visao-geral';
 import { AssistenciaPainel } from '@/components/dashboard/assistencia-24h';
+import { ProdutosPainel } from '@/components/dashboard/produtos-painel';
 
-type Aba = 'geral' | 'assistencia';
+type Aba = 'geral' | 'produtos' | 'assistencia';
 
 const ABAS: { id: Aba; label: string; icon: React.ElementType; descricao: string }[] = [
   { id: 'geral', label: 'Visão Geral', icon: LayoutDashboard, descricao: 'A operação inteira numa tela: carteira, crescimento, eventos, comercial e financeiro.' },
+  {
+    id: 'produtos',
+    label: 'Produtos',
+    icon: Package,
+    descricao: 'Os opcionais contratados pela base: por tipo de veículo, os mais vendidos e quanto representam por mês.',
+  },
   {
     id: 'assistencia',
     label: 'Assistência 24h',
@@ -48,7 +55,7 @@ export default function DashboardPage() {
         })}
       </div>
 
-      {aba === 'geral' ? <VisaoGeral /> : <AssistenciaPainel />}
+      {aba === 'geral' ? <VisaoGeral /> : aba === 'produtos' ? <ProdutosPainel /> : <AssistenciaPainel />}
     </div>
   );
 }
