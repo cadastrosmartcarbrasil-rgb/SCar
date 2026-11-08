@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
-import type { RenegociacaoCliente, TiposBoletoAvulsoRow } from '@/lib/database.types';
+import type { RenegociacaoCliente, TiposBoletoAvulsoRow, VeiculoDoBoleto } from '@/lib/database.types';
 import type { ParcelaNegociada } from '@/lib/renegociacao';
 
 // 2a via vencida e boleto negociado (0121). As escritas passam pela rota do
@@ -68,6 +68,33 @@ export function useCancelarBoletos() {
     { cliente_id: string; origens: { origem: 'SCAR' | 'MUTUAL'; id: string }[]; motivo: string }
   >({
     mutationFn: (b) => postar('/api/v1/cobrancas/renegociacao', { acao: 'cancelar', ...b }),
+    onSettled: invalidar,
+  });
+}
+
+/** 0193: os veiculos que um boleto cobra e a parte de cada um. */
+export function useVeiculosDoBoleto(origem: 'SCAR' | 'MUTUAL', id: string | null) {
+  const supabase = createClient();
+  return useQuery<VeiculoDoBoleto[]>({
+    queryKey: ['renegociacoes', 'veiculos-do-boleto', origem, id ?? ''],
+    enabled: !!id,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('veiculos_do_boleto', { p_origem: origem, p_id: id as string });
+      if (error) throw error;
+      return (data ?? []) as VeiculoDoBoleto[];
+    },
+  });
+}
+
+/** 0193: tira um veiculo do boleto — boleto novo sem ele, e a baixa do antigo. */
+export function useTirarVeiculoDoBoleto() {
+  const invalidar = useInvalidar();
+  return useMutation<
+    { renegociacao_id: string; erros_baixa: number },
+    Error,
+    { origem: 'SCAR' | 'MUTUAL'; id: string; veiculo_id: string; valor_veiculo?: number | null; vencimento?: string | null; motivo: string }
+  >({
+    mutationFn: (b) => postar('/api/v1/cobrancas/renegociacao', { acao: 'tirar_veiculo', ...b }),
     onSettled: invalidar,
   });
 }

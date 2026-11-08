@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import {
-  Wallet, MessageCircle, Mail, Pencil, Barcode, QrCode, Copy, Repeat2, Loader2, Calculator, Ban, Printer,
+  Wallet, MessageCircle, Mail, Pencil, Barcode, QrCode, Copy, Repeat2, Loader2, Calculator, Ban, Printer, MinusCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
@@ -12,7 +12,8 @@ import { useTitulosCliente, useAjustarTitulo } from '@/hooks/use-protocolos';
 import { BoletosNegociados, ModalNegociarBoletos, useContatoAssociado } from '@/components/cobrancas/negociacao-boletos';
 import { ModalBoletoProRata } from '@/components/veiculos/cancelamento-veiculo';
 import { usePode } from '@/hooks/use-permissoes';
-import { ehBoletoAvulso, ehLinhaSicredi, mensagemDoBoleto, motivoNaoCancelavel, motivoNaoNegociavel } from '@/lib/renegociacao';
+import { ehBoletoAvulso, ehLinhaSicredi, mensagemDoBoleto, motivoNaoCancelavel, motivoNaoNegociavel, podeTirarVeiculo } from '@/lib/renegociacao';
+import { ModalTirarVeiculo } from '@/components/cobrancas/tirar-veiculo-boleto';
 import { ModalCancelarBoletos } from '@/components/cobrancas/cancelar-boletos';
 import {
   linkWhatsAppAssociado, mensagemPadrao, assuntoPadrao, linkEmail,
@@ -75,6 +76,8 @@ export function HistoricoFinanceiroLista({
   // 0157: cancelar boleto(s) com motivo — celula `cobranca.cancelar` (perfil ou extra).
   const podeCancelar = usePode('cobranca.cancelar');
   const [cancelando, setCancelando] = useState<TituloCliente[] | null>(null);
+  // 0193: tirar um veiculo do boleto que cobra varios (agrupado do Mutual ou do SCar).
+  const [tirando, setTirando] = useState<TituloCliente | null>(null);
   const cancelavel = (t: TituloCliente) => podeCancelar && !motivoNaoCancelavel(t);
   const marcavel = (t: TituloCliente) => !motivoNaoNegociavel(t) || cancelavel(t);
   const negociaveis = (titulos ?? []).filter(marcavel);
@@ -249,6 +252,12 @@ export function HistoricoFinanceiroLista({
                   <Repeat2 className="h-3.5 w-3.5" /> {t.status === 'vencido' ? '2a via (novo boleto)' : 'Negociar'}
                 </Button>
               )}
+              {podeTirarVeiculo(t) && (
+                <Button variant="ghost" className="px-2 py-1 text-xs" onClick={() => setTirando(t)}
+                  title="O boleto cobra vários veículos: emite um boleto novo sem o veículo que saiu">
+                  <MinusCircle className="h-3.5 w-3.5" /> Tirar um veículo
+                </Button>
+              )}
               {cancelavel(t) && (
                 <Button variant="ghost" className="px-2 py-1 text-xs text-rose-600" onClick={() => setCancelando([t])}>
                   <Ban className="h-3.5 w-3.5" /> Cancelar
@@ -270,6 +279,7 @@ export function HistoricoFinanceiroLista({
           onClose={() => setProRata(false)} />
       )}
       {editando && <ModalEditarBoleto titulo={editando} onClose={() => setEditando(null)} />}
+      {tirando && <ModalTirarVeiculo boleto={tirando} onClose={() => setTirando(null)} />}
       {cancelando && (
         <ModalCancelarBoletos clienteId={clienteId} selecionados={cancelando}
           onClose={() => { setCancelando(null); setMarcados(new Set()); }} />

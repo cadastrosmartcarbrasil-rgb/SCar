@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   motivoNaoCancelavel, validarMotivoCancelamento,
   baixaJaFeitaNoBanco, baixasPendentes, ehLinhaSicredi, mensagemDoBoleto, motivoNaoNegociavel, parcelasDaNegociacao,
-  podeNegociar, totalOriginais, validarNegociacao, valorNegociado,
+  podeNegociar, totalOriginais, validarNegociacao, valorNegociado, podeTirarVeiculo, contaTirarVeiculo,
 } from './renegociacao';
 
 const linha748 = '74891160007840200810039027231010100000000017200';
@@ -105,5 +105,35 @@ describe('cancelamento (0157)', () => {
     expect(validarMotivoCancelamento('   ')).not.toBeNull();
     expect(validarMotivoCancelamento(' abc ')).not.toBeNull();
     expect(validarMotivoCancelamento('duplicado')).toBeNull();
+  });
+});
+
+describe('0193: tirar um veiculo do boleto', () => {
+  const base = { id: 'b', status: 'aberto', valor: 400, data_vencimento: '2026-11-20', linha_digitavel: '74891160007840200810039027231010100000000040000' };
+  it('so o agrupado do Mutual (sem placa) e o do SCar oferecem', () => {
+    expect(podeTirarVeiculo({ ...base, origem: 'MUTUAL', placa: null })).toBe(true);
+    expect(podeTirarVeiculo({ ...base, origem: 'MUTUAL', placa: 'ABC1D23' })).toBe(false);
+    expect(podeTirarVeiculo({ ...base, origem: 'SCAR', placa: 'ABC1D23' })).toBe(true);
+    expect(podeTirarVeiculo({ ...base, origem: 'SCAR', status: 'pago' })).toBe(false);
+    expect(podeTirarVeiculo({ ...base, origem: 'MUTUAL', placa: null, linha_digitavel: null })).toBe(false);
+  });
+  const veic = (id: string, m: number, valor = 400, soma = 400, na_base = true) =>
+    ({ veiculo_id: id, na_base, mensalidade: m, valor_veiculo: soma === valor ? m : Math.round(valor * m / soma * 100) / 100, valor_boleto: valor, soma_pesos: soma });
+  it('a parte sugerida e o boleto novo', () => {
+    const vs = [veic('a', 100), veic('b', 100), veic('c', 200)];
+    expect(contaTirarVeiculo(vs, 'a', null)).toEqual({ parte: 100, novo: 300, bate: true, erro: null });
+    expect(contaTirarVeiculo(vs, 'a', 80).novo).toBe(320);
+  });
+  it('soma que nao bate avisa', () => {
+    const vs = [veic('a', 100, 500), veic('b', 100, 500), veic('c', 200, 500)];
+    const r = contaTirarVeiculo(vs, 'a', null);
+    expect(r.bate).toBe(false);
+    expect(r.parte).toBe(125);
+  });
+  it('recusas', () => {
+    expect(contaTirarVeiculo([veic('a', 400)], 'a', null).erro).toMatch(/um veículo só/);
+    expect(contaTirarVeiculo([veic('a', 100), veic('b', 300)], null, null).erro).toMatch(/Escolha/);
+    expect(contaTirarVeiculo([veic('a', 100), veic('b', 300)], 'a', 400).erro).toMatch(/não sobra/);
+    expect(contaTirarVeiculo([veic('a', 100), veic('b', 300, 400, 400, false)], 'a', null).erro).toMatch(/na base/);
   });
 });

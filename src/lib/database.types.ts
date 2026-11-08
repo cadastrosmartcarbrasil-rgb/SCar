@@ -1640,6 +1640,21 @@ export type RenegociacaoCliente = {
 
 // 0144: pro-rata pela data de vencimento do veiculo (ciclo pos-pago)
 /** 0191: um boleto que cobra o veiculo junto com outros, e o que acontece com ele na saida. */
+/** 0193: um veiculo de um boleto (SCar ou Mutual) e a parte dele. */
+export type VeiculoDoBoleto = {
+  veiculo_id: string;
+  placa: string | null;
+  chassi: string | null;
+  modelo: string | null;
+  status: string;
+  na_base: boolean;
+  mensalidade: number;
+  valor_veiculo: number;
+  valor_boleto: number;
+  soma_pesos: number;
+  fonte: 'RATEIO' | 'VEICULO' | 'CONTRATO' | 'ASSOCIADO';
+};
+
 export type AgrupadoDoCancelamento = {
   titulo_id: string;
   competencia: string;
@@ -5400,6 +5415,14 @@ export type Database = {
       cancelamentos_do_veiculo: { Args: { p_veiculo_id: string }; Returns: CancelamentoVeiculo[] };
       agrupados_do_cancelamento: { Args: { p_veiculo_id: string; p_data: string }; Returns: AgrupadoDoCancelamento[] };
       ajustar_agrupados_cancelamento: { Args: { p_cancelamento_id: string; p_titulos: string[] }; Returns: string[] };
+      veiculos_do_boleto: { Args: { p_origem: string; p_id: string }; Returns: VeiculoDoBoleto[] };
+      ajustar_boleto_sem_veiculo: {
+        Args: {
+          p_origem: string; p_id: string; p_veiculo_id: string; p_valor_veiculo?: number | null;
+          p_vencimento?: string | null; p_motivo?: string | null;
+        };
+        Returns: string;
+      };
       gerar_comissoes_titulo: { Args: { p_titulo_id: string }; Returns: number };
       rateio_mensalidade_titulo: {
         Args: { p_titulo_id: string; p_nivel?: number };

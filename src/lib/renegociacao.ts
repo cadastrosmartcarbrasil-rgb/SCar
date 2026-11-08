@@ -167,3 +167,50 @@ export const ROTULO_BAIXA: Record<OrigemBaixa['baixa_status'], string> = {
   ERRO: 'baixa recusada',
   SEM_REGISTRO: 'cancelado (não estava no banco)',
 };
+
+// ---------------------------------------------------------------------------
+// 0193: TIRAR UM VEICULO DE UM BOLETO (Boletos e 2a via)
+// ---------------------------------------------------------------------------
+
+/**
+ * O boleto oferece "Tirar um veiculo"? So o negociavel e que pode cobrar mais
+ * de um: o do Mutual sem veiculo (o agrupado, pelo contrato) e o do SCar (o
+ * banco confere se a fatura tem mais de um item).
+ */
+export function podeTirarVeiculo(b: BoletoNegociavel & { placa?: string | null }): boolean {
+  if (motivoNaoNegociavel(b)) return false;
+  return b.origem === 'MUTUAL' ? !b.placa : true;
+}
+
+export interface VeiculoNoBoleto {
+  veiculo_id: string;
+  na_base: boolean;
+  mensalidade: number;
+  valor_veiculo: number;
+  valor_boleto: number;
+  soma_pesos: number;
+}
+
+/**
+ * A conta da tela, igual a do banco: a parte do veiculo (a sugerida ou a
+ * informada), o boleto novo e se a soma das mensalidades bate com o boleto.
+ */
+export function contaTirarVeiculo(
+  veiculos: VeiculoNoBoleto[],
+  veiculoId: string | null,
+  parteInformada: number | null,
+): { parte: number; novo: number; bate: boolean; erro: string | null } {
+  const valor = veiculos[0]?.valor_boleto ?? 0;
+  const soma = veiculos[0]?.soma_pesos ?? 0;
+  const bate = Math.round(soma * 100) === Math.round(valor * 100);
+  const v = veiculos.find((x) => x.veiculo_id === veiculoId);
+  const parte = Math.round(((parteInformada ?? v?.valor_veiculo) ?? 0) * 100) / 100;
+  const novo = Math.round((valor - parte) * 100) / 100;
+  let erro: string | null = null;
+  if (veiculos.length < 2) erro = 'Este boleto cobra um veículo só: para tirá-lo, cancele o boleto.';
+  else if (!v) erro = 'Escolha o veículo que sai do boleto.';
+  else if (parte <= 0) erro = 'Informe quanto do boleto é deste veículo.';
+  else if (novo <= 0) erro = 'Tirando este veículo não sobra valor: cancele o boleto.';
+  else if (!veiculos.some((x) => x.veiculo_id !== veiculoId && x.na_base)) erro = 'Nenhum outro veículo deste boleto está na base.';
+  return { parte, novo, bate, erro };
+}

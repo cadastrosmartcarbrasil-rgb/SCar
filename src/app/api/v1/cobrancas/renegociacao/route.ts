@@ -12,6 +12,8 @@ import type { Json } from '@/lib/database.types';
 //   { acao: 'pro_rata', veiculo_id, ate, desde?, vencimento, origens?, observacao? }  (0144)
 //   { acao: 'baixar', renegociacao_id }   -> tenta de novo a baixa dos originais
 //   { acao: 'cancelar', cliente_id, origens:[{origem,id}], motivo }  (0157) -> so baixa, sem boleto novo
+//   { acao: 'tirar_veiculo', origem, id, veiculo_id, valor_veiculo?, vencimento?, motivo }  (0193)
+//       -> boleto novo sem o veiculo e baixa do antigo
 //
 // A ordem (criar pela sessao -> emitir -> fechar -> baixar) esta em
 // `src/lib/pagamentos/renegociacao-server.ts`.
@@ -27,7 +29,7 @@ export async function POST(request: Request) {
   if (!perfil) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
 
   const body = (await request.json().catch(() => ({}))) as {
-    acao?: 'criar' | 'baixar' | 'pro_rata' | 'cancelar';
+    acao?: 'criar' | 'baixar' | 'pro_rata' | 'cancelar' | 'tirar_veiculo';
     cliente_id?: string;
     veiculo_id?: string;
     tipo?: string;
@@ -40,6 +42,9 @@ export async function POST(request: Request) {
     desde?: string | null;
     vencimento?: string | null;
     motivo?: string | null;
+    origem?: 'SCAR' | 'MUTUAL';
+    id?: string;
+    valor_veiculo?: number | null;
   };
   const admin = createAdminClient();
 
@@ -81,6 +86,39 @@ export async function POST(request: Request) {
     if (error || !id) return NextResponse.json({ error: error?.message ?? 'Falha ao cancelar' }, { status: 400 });
     const erros = await baixarOriginais(admin, gw.gateway, id);
     return NextResponse.json({ ok: true, renegociacao_id: id, erros_baixa: erros });
+  }
+
+  // ---- TIRAR UM VEICULO de um boleto (0193): boleto novo sem ele, depois a baixa do antigo
+  if (body.acao === 'tirar_veiculo') {
+    if (!body.id || !body.veiculo_id || (body.origem !== 'SCAR' && body.origem !== 'MUTUAL')) {
+      return NextResponse.json({ error: 'origem, id e veiculo_id são obrigatórios' }, { status: 400 });
+    }
+    const { data: boleto } = body.origem === 'MUTUAL'
+      ? await admin.from('boletos_historico').select('cliente_id').eq('id', body.id).maybeSingle()
+      : await admin.from('titulos_financeiros').select('cliente_id').eq('id', body.id).maybeSingle();
+    if (!boleto?.cliente_id) return NextResponse.json({ error: 'Boleto não encontrado' }, { status: 404 });
+    const { data: cliente } = await admin.from('clientes').select(CAMPOS_CLIENTE).eq('id', boleto.cliente_id).maybeSingle();
+    if (!cliente) return NextResponse.json({ error: 'Associado não encontrado' }, { status: 404 });
+
+    let gw: Awaited<ReturnType<typeof resolverGateway>>;
+    try {
+      gw = await resolverGateway(admin, cliente.regional_id);
+    } catch (e) {
+      return NextResponse.json({ error: (e as Error).message }, { status: 400 });
+    }
+    const { data: id, error } = await supabase.rpc('ajustar_boleto_sem_veiculo', {
+      p_origem: body.origem,
+      p_id: body.id,
+      p_veiculo_id: body.veiculo_id,
+      p_valor_veiculo: body.valor_veiculo ?? null,
+      p_vencimento: body.vencimento ?? null,
+      p_motivo: body.motivo ?? '',
+    });
+    if (error || !id) return NextResponse.json({ error: error?.message ?? 'Falha ao ajustar' }, { status: 400 });
+
+    const r = await emitirRenegociacao(admin, gw, cliente, id, 'Proteção veicular — mensalidade');
+    if (!r.ok) return NextResponse.json({ error: r.erro, renegociacao_id: id }, { status: 400 });
+    return NextResponse.json({ ok: true, renegociacao_id: id, provedor: r.provedor, erros_baixa: r.erros_baixa });
   }
 
   // ---- boleto PRO-RATA avulso (0144): pela data de vencimento do veiculo
