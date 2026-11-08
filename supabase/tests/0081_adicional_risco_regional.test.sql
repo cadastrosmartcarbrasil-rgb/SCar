@@ -137,8 +137,8 @@ begin
   -- Quem vira dinheiro e a do VENDEDOR, em fn_calcular_comissao, sobre o titulo
   -- cheio — e essa funcao ficou intacta de proposito.
   select count(*) into n from pg_proc p join pg_namespace ns on ns.oid = p.pronamespace
-   where ns.nspname = 'public' and p.proname = 'fn_calcular_comissao'
-     and p.prosrc like '%coalesce(new.valor_pago, new.valor)%';
+   where ns.nspname = 'public' and p.proname = 'gerar_comissoes_titulo'   -- 0191: o trigger a chama
+     and p.prosrc like '%coalesce(t.valor_pago, t.valor)%';
   assert n = 1,
     'fn_calcular_comissao tem de seguir comissionando sobre o valor CHEIO do titulo';
 

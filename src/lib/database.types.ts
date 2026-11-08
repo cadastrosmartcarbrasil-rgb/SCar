@@ -1625,7 +1625,7 @@ export type OrigemRenegociacao = {
 };
 export type RenegociacaoCliente = {
   id: string;
-  tipo: 'SEGUNDA_VIA' | 'ACORDO' | 'PRO_RATA' | 'AVULSO' | 'CANCELAMENTO';
+  tipo: 'SEGUNDA_VIA' | 'ACORDO' | 'PRO_RATA' | 'AVULSO' | 'CANCELAMENTO' | 'AJUSTE_AGRUPADO';
   situacao: 'EMITINDO' | 'EMITIDA' | 'ERRO';
   erro: string | null;
   valor_original: number;
@@ -1639,6 +1639,21 @@ export type RenegociacaoCliente = {
 };
 
 // 0144: pro-rata pela data de vencimento do veiculo (ciclo pos-pago)
+/** 0191: um boleto que cobra o veiculo junto com outros, e o que acontece com ele na saida. */
+export type AgrupadoDoCancelamento = {
+  titulo_id: string;
+  competencia: string;
+  vencimento: string;
+  valor_atual: number;
+  valor_veiculo: number;
+  valor_novo: number;
+  novo_vencimento: string;
+  outros_veiculos: number;
+  registrado: boolean;
+  situacao: 'AJUSTAR' | 'PAGO' | 'DIVIDA' | 'PARCIAL' | 'EM_NEGOCIACAO';
+  motivo: string | null;
+};
+
 export type ProRataVeiculo = {
   valor_mensal: number;
   dia_vencimento: number;
@@ -5383,6 +5398,13 @@ export type Database = {
         Returns: string | null;
       };
       cancelamentos_do_veiculo: { Args: { p_veiculo_id: string }; Returns: CancelamentoVeiculo[] };
+      agrupados_do_cancelamento: { Args: { p_veiculo_id: string; p_data: string }; Returns: AgrupadoDoCancelamento[] };
+      ajustar_agrupados_cancelamento: { Args: { p_cancelamento_id: string; p_titulos: string[] }; Returns: string[] };
+      gerar_comissoes_titulo: { Args: { p_titulo_id: string }; Returns: number };
+      rateio_mensalidade_titulo: {
+        Args: { p_titulo_id: string; p_nivel?: number };
+        Returns: { veiculo_id: string; peso: number }[];
+      };
       revistoria_exigida: { Args: { p_cliente_id: string; p_origens?: Json | null }; Returns: RevistoriaExigida[] };
       solicitar_revistoria_cobranca: { Args: { p_veiculo_id: string; p_origem?: string }; Returns: RevistoriaSolicitada[] };
       revistoria_por_token: { Args: { p_token: string }; Returns: RevistoriaPublica[] };

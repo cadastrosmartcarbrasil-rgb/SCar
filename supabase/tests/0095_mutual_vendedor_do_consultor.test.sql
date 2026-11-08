@@ -152,6 +152,10 @@ begin
   update veiculos set cobranca_externa = false where id = v301;
   insert into titulos_financeiros (cliente_id, veiculo_id, valor, data_vencimento, status)
     values (cli, v301, 200, current_date, 'pendente') returning id into tit;
+  -- 0191: mensalidade e boleto de FATURA
+  with f as (insert into faturas (cliente_id, tipo_faturamento, veiculo_id, competencia, valor_total, vencimento, titulo_id)
+    values (cli, 'INDIVIDUAL_VEICULO', v301, '2099-01-01', 200, current_date, tit) returning id)
+  insert into fatura_itens (fatura_id, veiculo_id, descricao, valor) select id, v301, 'mensalidade', 200 from f;
   update titulos_financeiros set status = 'pago', valor_pago = 200 where id = tit;
   select count(*) into n from comissoes_vendas where veiculo_id = v301;
   assert n = 1, format('o titulo pago gera UMA comissao; gerou %s', n);
@@ -165,6 +169,9 @@ begin
     values (cli, 'KCO1M01', r_a, 'inativo', vd1) returning id into veic_comum;
   insert into titulos_financeiros (cliente_id, veiculo_id, valor, data_vencimento, status)
     values (cli, veic_comum, 300, current_date, 'pendente') returning id into tit;
+  with f as (insert into faturas (cliente_id, tipo_faturamento, veiculo_id, competencia, valor_total, vencimento, titulo_id)
+    values (cli, 'INDIVIDUAL_VEICULO', veic_comum, '2099-01-01', 300, current_date, tit) returning id)
+  insert into fatura_itens (fatura_id, veiculo_id, descricao, valor) select id, veic_comum, 'mensalidade', 300 from f;
   update titulos_financeiros set status = 'pago', valor_pago = 300 where id = tit;
   assert (select is_adesao from comissoes_vendas where titulo_id = tit),
     'veiculo comum: o 1o titulo pago continua sendo adesao';
@@ -173,8 +180,8 @@ begin
 
   -- a regra da 0081 se mantem: comissao sobre o valor CHEIO
   select count(*) into n from pg_proc p join pg_namespace ns on ns.oid = p.pronamespace
-   where ns.nspname = 'public' and p.proname = 'fn_calcular_comissao'
-     and p.prosrc like '%coalesce(new.valor_pago, new.valor)%';
+   where ns.nspname = 'public' and p.proname = 'gerar_comissoes_titulo'   -- 0191: o trigger a chama
+     and p.prosrc like '%coalesce(t.valor_pago, t.valor)%';
   assert n = 1, 'fn_calcular_comissao segue sobre o valor cheio';
 
   raise notice '=== TESTES 0095 (vendedor dos migrados) PASSARAM ===';

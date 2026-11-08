@@ -15,12 +15,13 @@ import { FormField, Input, Textarea } from '@/components/ui/field';
 import { usePode } from '@/hooks/use-permissoes';
 import { useTitulosCliente } from '@/hooks/use-protocolos';
 import {
-  useCancelamentosVeiculo, useCancelarVeiculo, useEmitirProRata, useProRataVeiculo,
+  useAgrupadosCancelamento, useCancelamentosVeiculo, useCancelarVeiculo, useEmitirProRata, useProRataVeiculo,
   type ResultadoCancelamento,
 } from '@/hooks/use-cancelamento';
 import { useContatoAssociado } from '@/components/cobrancas/negociacao-boletos';
 import {
-  boletosFuturosDoVeiculo, cicloJaPago, somarDias, validarCancelamento,
+  agrupadosAjustaveis, boletosFuturosDoVeiculo, cicloJaPago, cicloPagoNoAgrupado, reducaoDosAgrupados,
+  somarDias, validarCancelamento,
 } from '@/lib/pro-rata';
 import { mensagemDoBoleto } from '@/lib/renegociacao';
 import { linkWhatsAppAssociado } from '@/lib/protocolos';
@@ -88,17 +89,25 @@ export function ModalCancelamentoVeiculo({ veiculo, onClose }: { veiculo: Veicul
   const [cobrarEscolha, setCobrarEscolha] = useState<boolean | null>(null);
   const [vencimento, setVencimento] = useState(somarDias(hoje, 5));
   const [desmarcados, setDesmarcados] = useState<Set<string>>(new Set());
+  const [agrupDesmarcados, setAgrupDesmarcados] = useState<Set<string>>(new Set());
   const [resultado, setResultado] = useState<ResultadoCancelamento | null>(null);
 
   const pr = useProRataVeiculo(jaFora ? null : veiculo.id, data || null);
   const titulos = useTitulosCliente(veiculo.cliente_id, veiculo.id, 120);
+  // 0191: boletos que cobram este veiculo junto com outros (agrupado)
+  const agrup = useAgrupadosCancelamento(jaFora ? null : veiculo.id, data || null);
+  const idsAgrupados = useMemo(() => new Set((agrup.data ?? []).map((a) => a.titulo_id)), [agrup.data]);
   const futuros = useMemo(
-    () => boletosFuturosDoVeiculo(titulos.data ?? [], veiculo.id, data || hoje),
-    [titulos.data, veiculo.id, data, hoje],
+    () => boletosFuturosDoVeiculo(titulos.data ?? [], veiculo.id, data || hoje)
+      .filter((f) => !idsAgrupados.has(f.boleto.id)),   // os de varios veiculos vao pelo ajuste
+    [titulos.data, veiculo.id, data, hoje, idsAgrupados],
   );
-  const pago = !!pr.data && cicloJaPago(titulos.data ?? [], veiculo.id, {
+  const pago = !!pr.data && (cicloJaPago(titulos.data ?? [], veiculo.id, {
     inicio: pr.data.ciclo_inicio, fim: pr.data.ciclo_fim, vencimento: pr.data.vencimento_ciclo, dias: pr.data.dias_ciclo,
-  });
+  }) || cicloPagoNoAgrupado(agrup.data ?? [], pr.data.vencimento_ciclo));
+  const ajustaveis = agrupadosAjustaveis(agrup.data ?? []);
+  const ajustar = ajustaveis.filter((a) => !agrupDesmarcados.has(a.titulo_id));
+  const reducao = reducaoDosAgrupados(agrup.data ?? [], new Set(ajustar.map((a) => a.titulo_id)));
   // Padrao: cobra, salvo se o ciclo ja foi pago (cobraria os mesmos dias de novo) ou se da zero.
   const cobrar = cobrarEscolha ?? (!pago && Number(pr.data?.valor ?? 0) > 0);
   const baixar = futuros.filter((f) => f.baixavel && !desmarcados.has(f.boleto.id));
@@ -116,6 +125,7 @@ export function ModalCancelamentoVeiculo({ veiculo, onClose }: { veiculo: Veicul
         data_retorno: retorno ? dataRetorno : null, observacao: observacao.trim() || null,
         cobrar, vencimento: cobrar ? vencimento : null,
         origens: baixar.map((f) => ({ origem: f.boleto.origem === 'MUTUAL' ? 'MUTUAL' : 'SCAR', id: f.boleto.id })),
+        agrupados: ajustar.map((a) => a.titulo_id),
       });
       setResultado(r);
       toast.success('Veículo cancelado');
@@ -128,7 +138,8 @@ export function ModalCancelamentoVeiculo({ veiculo, onClose }: { veiculo: Veicul
     return (
       <Modal open onClose={onClose} title={`Cancelamento — ${identificacao(veiculo)}`} tamanho="lg">
         <ResultadoDoCancelamento r={resultado} veiculoId={veiculo.id} clienteId={veiculo.cliente_id}
-          retentar={{ cobrar, vencimento, origens: baixar.map((f) => ({ origem: f.boleto.origem === 'MUTUAL' ? 'MUTUAL' as const : 'SCAR' as const, id: f.boleto.id })) }}
+          retentar={{ cobrar, vencimento, origens: baixar.map((f) => ({ origem: f.boleto.origem === 'MUTUAL' ? 'MUTUAL' as const : 'SCAR' as const, id: f.boleto.id })),
+            agrupados: ajustar.map((a) => a.titulo_id) }}
           onNovo={setResultado} onClose={onClose} />
       </Modal>
     );
@@ -233,6 +244,46 @@ export function ModalCancelamentoVeiculo({ veiculo, onClose }: { veiculo: Veicul
               </ul>
             </div>
 
+            {(agrup.data?.length ?? 0) > 0 && (
+              <div>
+                <p className="mb-1 text-sm font-semibold text-slate-700">Boletos com outros veículos do associado (agrupados)</p>
+                <p className="mb-2 text-xs text-slate-500">
+                  Os marcados viram um <b>boleto novo sem este veículo</b> (os outros continuam cobrados) e o antigo recebe
+                  baixa no banco. O dia do pedido em diante deste veículo é cobrado pelo pró-rata acima.
+                </p>
+                <ul className="space-y-1">
+                  {(agrup.data ?? []).map((a) => {
+                    const pode = a.situacao === 'AJUSTAR';
+                    return (
+                      <li key={a.titulo_id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                        <label className="flex items-center gap-2">
+                          <input type="checkbox" className="h-4 w-4" disabled={!pode}
+                            checked={pode && !agrupDesmarcados.has(a.titulo_id)}
+                            onChange={() => setAgrupDesmarcados((st) => {
+                              const n = new Set(st); if (n.has(a.titulo_id)) n.delete(a.titulo_id); else n.add(a.titulo_id); return n;
+                            })} />
+                          <span>
+                            <span className="text-slate-500">Vence {formatDate(a.vencimento)} · {a.outros_veiculos + 1} veículos · </span>
+                            {pode ? (
+                              <>
+                                <s className="tnum text-slate-400">{formatCurrency(Number(a.valor_atual))}</s>{' '}
+                                <b className="tnum">{formatCurrency(Number(a.valor_novo))}</b>
+                                <span className="text-xs text-slate-500"> (sai {formatCurrency(Number(a.valor_veiculo))})</span>
+                                {a.novo_vencimento !== a.vencimento && (
+                                  <span className="text-xs text-amber-700"> · novo vencimento {formatDate(a.novo_vencimento)}</span>
+                                )}
+                              </>
+                            ) : <b className="tnum">{formatCurrency(Number(a.valor_atual))}</b>}
+                          </span>
+                        </label>
+                        {a.motivo && <span className="text-xs text-amber-700">{a.motivo}</span>}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+
             <FormField label="Observação (opcional)">
               <Input value={observacao} onChange={(e) => setObservacao(e.target.value)} />
             </FormField>
@@ -246,6 +297,10 @@ export function ModalCancelamentoVeiculo({ veiculo, onClose }: { veiculo: Veicul
                 <li>• A partir de <b>{formatDate(data || hoje)}</b>: sem Assistência 24h e sem abertura de evento para ele.</li>
                 <li>• Nenhum boleto novo é gerado para este veículo; o rastreador vai para devolução.</li>
                 <li>• <b>{baixar.length}</b> boleto(s) futuro(s) recebe(m) baixa no banco.</li>
+                {ajustar.length > 0 && (
+                  <li>• <b>{ajustar.length}</b> boleto(s) agrupado(s) refeito(s) sem este veículo
+                    (−{formatCurrency(reducao)} no total); os antigos recebem baixa.</li>
+                )}
                 <li>• {cobrar && pr.data ? <>Boleto do pró-rata de <b>{formatCurrency(Number(pr.data.valor))}</b>, vence {formatDate(vencimento)}.</> : 'Sem boleto do pró-rata.'}</li>
                 {retorno && dataRetorno && <li>• Lead de retorno em Vendas, agendado para <b>{formatDate(dataRetorno)}</b>.</li>}
                 <li>• Os outros veículos do associado <b>não mudam</b>.</li>
@@ -275,7 +330,7 @@ function ResultadoDoCancelamento({ r, veiculoId, clienteId, retentar, onNovo, on
   r: ResultadoCancelamento;
   veiculoId: string;
   clienteId: string;
-  retentar: { cobrar: boolean; vencimento: string; origens: { origem: 'MUTUAL' | 'SCAR'; id: string }[] };
+  retentar: { cobrar: boolean; vencimento: string; origens: { origem: 'MUTUAL' | 'SCAR'; id: string }[]; agrupados: string[] };
   onNovo: (r: ResultadoCancelamento) => void;
   onClose: () => void;
 }) {
@@ -283,6 +338,8 @@ function ResultadoDoCancelamento({ r, veiculoId, clienteId, retentar, onNovo, on
   const cancelar = useCancelarVeiculo();
   const contato = useContatoAssociado(clienteId);
   const c = r.cobranca;
+  const ag = r.agrupados;
+  const agFalhou = !!ag && (!!ag.erro || ag.ajustados.some((x) => !x.ok));
   const titulo = c && c.ok ? c.titulo : null;
   const msg = titulo ? mensagemDoBoleto({
     nome: contato.data?.nome_razao_social ?? '', substitui: false,
@@ -293,7 +350,14 @@ function ResultadoDoCancelamento({ r, veiculoId, clienteId, retentar, onNovo, on
 
   async function tentarDeNovo() {
     try {
-      const novo = await cancelar.mutateAsync({ acao: 'cobrar', cancelamento_id: r.cancelamento_id, ...retentar });
+      // so o que falhou: a cobranca que deu certo nao e pedida de novo
+      const novo = await cancelar.mutateAsync({
+        acao: 'cobrar', cancelamento_id: r.cancelamento_id,
+        cobrar: c && !c.ok ? retentar.cobrar : false,
+        vencimento: retentar.vencimento,
+        origens: c && !c.ok ? retentar.origens : [],
+        agrupados: agFalhou ? retentar.agrupados : [],
+      });
       onNovo(novo);
     } catch (e) { toast.error((e as Error).message); }
   }
@@ -339,6 +403,29 @@ function ResultadoDoCancelamento({ r, veiculoId, clienteId, retentar, onNovo, on
             <RefreshCw className="h-4 w-4" /> Tentar a cobrança de novo
           </Button>
         </div>
+      )}
+      {ag && (
+        <div className="space-y-2 rounded-xl border border-slate-200 p-3">
+          <p className="font-semibold text-slate-800">Boletos agrupados sem este veículo</p>
+          {ag.erro && <p className="text-xs text-rose-700">Não foi possível refazer: {ag.erro}</p>}
+          {ag.ajustados.map((x) => (
+            <p key={x.renegociacao_id} className={`text-xs ${x.ok ? 'text-slate-600' : 'text-rose-700'}`}>
+              {x.ok
+                ? (x.titulo
+                  ? <>Boleto novo de <b className="tnum">{formatCurrency(Number(x.titulo.valor))}</b>, vence {formatDate(x.titulo.data_vencimento)}
+                      {' '}<a className="text-cyan-700 underline" href={`/api/v1/cobrancas/boleto?titulo_id=${x.titulo.id}`} target="_blank" rel="noreferrer">PDF</a>
+                      {(x.erros_baixa ?? 0) > 0 ? ' · a baixa do antigo foi recusada: tente de novo no Histórico Financeiro (Boletos negociados).' : ' · antigo baixado.'}</>
+                  : 'Boleto antigo baixado (só tinha este veículo).')
+                : <>O banco recusou o boleto novo: {x.erro} O antigo continua valendo.</>}
+            </p>
+          ))}
+          <p className="text-[11px] text-slate-500">Mande os boletos novos ao associado pelo Histórico Financeiro (WhatsApp ou e-mail).</p>
+        </div>
+      )}
+      {agFalhou && !(c && !c.ok) && (
+        <Button variant="secondary" disabled={cancelar.isPending} onClick={tentarDeNovo}>
+          <RefreshCw className="h-4 w-4" /> Tentar os agrupados de novo
+        </Button>
       )}
       <CancelamentosRegistrados veiculoId={veiculoId} />
       <div className="flex justify-end"><Button onClick={onClose}>Fechar</Button></div>

@@ -108,6 +108,10 @@ begin
   update veiculos set valor_mensalidade = 175 where id = veic;
   insert into titulos_financeiros (cliente_id, veiculo_id, valor, data_vencimento, status)
     values (cli, veic, 175, v_hoje, 'pendente') returning id into t1;
+  -- 0191: mensalidade e boleto de FATURA
+  with f as (insert into faturas (cliente_id, tipo_faturamento, veiculo_id, competencia, valor_total, vencimento, titulo_id)
+    values (cli, 'INDIVIDUAL_VEICULO', veic, '2099-01-01', 175, v_hoje, t1) returning id)
+  insert into fatura_itens (fatura_id, veiculo_id, descricao, valor) select id, veic, 'mensalidade', 175 from f;
   update titulos_financeiros set status = 'pago', valor_pago = 175, data_pagamento = v_hoje where id = t1;
   select * into rec from comissoes_vendas where titulo_id = t1;
   assert not rec.is_adesao, 'mensalidade (a adesao ja foi do vendedor na hora)';
@@ -117,6 +121,10 @@ begin
   update regionais set paga_assistencia_profissional = false where id = r1;
   insert into titulos_financeiros (cliente_id, veiculo_id, valor, data_vencimento, status)
     values (cli, veic, 175, v_hoje, 'pendente') returning id into t2;
+  -- 0191: mensalidade e boleto de FATURA
+  with f as (insert into faturas (cliente_id, tipo_faturamento, veiculo_id, competencia, valor_total, vencimento, titulo_id)
+    values (cli, 'INDIVIDUAL_VEICULO', veic, '2099-02-01', 175, v_hoje, t2) returning id)
+  insert into fatura_itens (fatura_id, veiculo_id, descricao, valor) select id, veic, 'mensalidade', 175 from f;
   update titulos_financeiros set status = 'pago', valor_pago = 175, data_pagamento = v_hoje where id = t2;
   select * into rec from comissoes_vendas where titulo_id = t2;
   assert rec.valor_assistencia_profissional = 0 and rec.valor_comissao = 17.5,

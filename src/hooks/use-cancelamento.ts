@@ -3,7 +3,7 @@
 // Cancelamento do veiculo e boleto PRO-RATA (0144).
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
-import type { CancelamentoVeiculo, ProRataVeiculo } from '@/lib/database.types';
+import type { AgrupadoDoCancelamento, CancelamentoVeiculo, ProRataVeiculo } from '@/lib/database.types';
 
 /** O pro-rata calculado PELO BANCO (a fonte da verdade do valor). */
 export function useProRataVeiculo(veiculoId: string | null | undefined, ate: string | null, desde?: string | null) {
@@ -18,6 +18,23 @@ export function useProRataVeiculo(veiculoId: string | null | undefined, ate: str
       });
       if (error) throw error;
       return data?.[0] ?? null;
+    },
+  });
+}
+
+/** 0191: os boletos que cobram este veiculo junto com outros (agrupado) e o que acontece com eles. */
+export function useAgrupadosCancelamento(veiculoId: string | null | undefined, data: string | null) {
+  const supabase = createClient();
+  return useQuery<AgrupadoDoCancelamento[]>({
+    queryKey: ['veiculo', veiculoId ?? '', 'agrupados-cancelamento', data ?? ''],
+    enabled: !!veiculoId && !!data,
+    retry: false,
+    queryFn: async () => {
+      const { data: r, error } = await supabase.rpc('agrupados_do_cancelamento', {
+        p_veiculo_id: veiculoId as string, p_data: data as string,
+      });
+      if (error) throw error;
+      return r ?? [];
     },
   });
 }
@@ -50,6 +67,12 @@ export interface ResultadoCancelamento {
   cobranca: null
     | { ok: true; renegociacao_id: string; erros_baixa: number; titulo: TituloEmitido | null; resumo: string | null }
     | { ok: false; renegociacao_id?: string; erro: string };
+  /** 0191: os boletos agrupados refeitos sem o veiculo. */
+  agrupados?: null | {
+    ajustados: { renegociacao_id: string; ok: boolean; erro?: string; erros_baixa?: number;
+                 titulo: TituloEmitido | null }[];
+    erro?: string;
+  };
 }
 
 export interface PedidoCancelamento {
@@ -64,6 +87,8 @@ export interface PedidoCancelamento {
   cobrar: boolean;
   vencimento?: string | null;
   origens: { origem: 'MUTUAL' | 'SCAR'; id: string }[];
+  /** 0191: ids dos boletos agrupados a refazer sem o veiculo. */
+  agrupados?: string[];
 }
 
 function invalidarTudo(qc: ReturnType<typeof useQueryClient>) {

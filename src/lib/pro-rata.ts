@@ -185,3 +185,40 @@ export function validarCancelamento(args: {
   }
   return null;
 }
+
+// ---------------------------------------------------------------------------
+// 0191: o veiculo que sai de um boleto AGRUPADO (varios veiculos no mesmo
+// boleto). O banco devolve a previa (`agrupados_do_cancelamento`); estas regras
+// decidem o que a tela marca e o que conta como "ciclo ja pago".
+// ---------------------------------------------------------------------------
+export interface AgrupadoPrevia {
+  titulo_id: string;
+  competencia: string;
+  vencimento: string;
+  valor_atual: number;
+  valor_veiculo: number;
+  valor_novo: number;
+  situacao: string;
+}
+
+/** Os que viram boleto novo sem o veiculo (marcados por padrao). */
+export function agrupadosAjustaveis<T extends AgrupadoPrevia>(lista: T[]): T[] {
+  return lista.filter((a) => a.situacao === 'AJUSTAR')
+    .sort((a, b) => (a.vencimento < b.vencimento ? -1 : 1));
+}
+
+/**
+ * O boleto AGRUPADO do ciclo do pedido ja foi pago? Mesmo mes de vencimento do
+ * boleto do ciclo (o dia do agrupado pode nao ser o do veiculo).
+ */
+export function cicloPagoNoAgrupado(lista: AgrupadoPrevia[], vencimentoCiclo: string): boolean {
+  const mes = vencimentoCiclo.slice(0, 7);
+  return lista.some((a) => a.situacao === 'PAGO' && a.vencimento.slice(0, 7) === mes);
+}
+
+/** Quanto o associado deixa de pagar nos boletos ajustados. */
+export function reducaoDosAgrupados(lista: AgrupadoPrevia[], escolhidos: Set<string>): number {
+  const cent = lista.filter((a) => escolhidos.has(a.titulo_id))
+    .reduce((s, a) => s + Math.round(Number(a.valor_atual) * 100) - Math.round(Number(a.valor_novo) * 100), 0);
+  return cent / 100;
+}

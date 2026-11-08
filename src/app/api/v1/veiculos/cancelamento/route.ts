@@ -8,7 +8,8 @@ import type { Json } from '@/lib/database.types';
 // POST /api/v1/veiculos/cancelamento — cancela UM veiculo (0144).
 //   { veiculo_id, data, motivo, previsao_retorno, data_retorno?, observacao?,
 //     cobrar, vencimento?, origens:[{origem,id}] }
-//   { acao: 'cobrar', cancelamento_id, cobrar, vencimento?, origens }  -> tenta de novo a cobranca
+//     agrupados?: [titulo_id]  -> 0191: boletos de varios veiculos refeitos sem este
+//   { acao: 'cobrar', cancelamento_id, cobrar, vencimento?, origens, agrupados? }  -> tenta de novo a cobranca
 //
 // O cancelamento e a cobranca sao DOIS passos de proposito: o veiculo sai da
 // base na hora (e decisao do associado, nao do banco); se o banco recusar o
@@ -31,6 +32,7 @@ type Corpo = {
   cobrar?: boolean;
   vencimento?: string | null;
   origens?: { origem: string; id: string }[];
+  agrupados?: string[];
 };
 
 export async function POST(request: Request) {
@@ -43,7 +45,8 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as Corpo;
   const admin = createAdminClient();
   const origens = body.origens ?? [];
-  const querCobranca = !!body.cobrar || origens.length > 0;
+  const agrupados = (body.agrupados ?? []).filter((x) => typeof x === 'string');
+  const querCobranca = !!body.cobrar || origens.length > 0 || agrupados.length > 0;
 
   // Quem e o veiculo (e o cancelamento, quando e a nova tentativa da cobranca).
   let veiculoId = body.veiculo_id ?? null;
@@ -115,10 +118,39 @@ export async function POST(request: Request) {
   }
 
   if (!querCobranca || !gw) {
-    return NextResponse.json({ ok: true, cancelamento_id: cancelamentoId, cobranca: null });
+    return NextResponse.json({ ok: true, cancelamento_id: cancelamentoId, cobranca: null, agrupados: null });
   }
 
-  // 2) o boleto do pro-rata e a baixa dos boletos futuros do veiculo
+  // 2) 0191: os boletos AGRUPADOS (varios veiculos) refeitos sem este veiculo.
+  //    Independente do pro-rata: falhar aqui nao impede o resto.
+  let ajusteAgrupados: {
+    ajustados: { renegociacao_id: string; ok: boolean; erro?: string; erros_baixa?: number; titulo: unknown }[];
+    erro?: string;
+  } | null = null;
+  if (agrupados.length > 0 && cancelamentoId) {
+    const { data: ids, error: errAj } = await supabase.rpc('ajustar_agrupados_cancelamento', {
+      p_cancelamento_id: cancelamentoId, p_titulos: agrupados,
+    });
+    if (errAj) {
+      ajusteAgrupados = { ajustados: [], erro: errAj.message };
+    } else {
+      ajusteAgrupados = { ajustados: [] };
+      for (const id of (ids ?? []) as string[]) {
+        const r = await emitirRenegociacao(admin, gw, cliente, id, 'Proteção veicular — mensalidade');
+        const { data: titulo } = await admin.from('titulos_financeiros')
+          .select('id, valor, data_vencimento, linha_digitavel, pix_copia_cola, nosso_numero')
+          .eq('renegociacao_id', id).maybeSingle();
+        ajusteAgrupados.ajustados.push(r.ok
+          ? { renegociacao_id: id, ok: true, erros_baixa: r.erros_baixa, titulo }
+          : { renegociacao_id: id, ok: false, erro: r.erro, titulo: null });
+      }
+    }
+  }
+  if (!body.cobrar && origens.length === 0) {
+    return NextResponse.json({ ok: true, cancelamento_id: cancelamentoId, cobranca: null, agrupados: ajusteAgrupados });
+  }
+
+  // 3) o boleto do pro-rata e a baixa dos boletos futuros do veiculo
   const { data: reneg, error: errReneg } = await supabase.rpc('criar_renegociacao_pro_rata', {
     p_veiculo_id: veiculoId,
     p_ate: dataCancelamento,
@@ -131,11 +163,11 @@ export async function POST(request: Request) {
   if (errReneg) {
     return NextResponse.json({
       ok: true, cancelamento_id: cancelamentoId,
-      cobranca: { ok: false, erro: errReneg.message },
+      cobranca: { ok: false, erro: errReneg.message }, agrupados: ajusteAgrupados,
     });
   }
   if (!reneg) {
-    return NextResponse.json({ ok: true, cancelamento_id: cancelamentoId, cobranca: null });
+    return NextResponse.json({ ok: true, cancelamento_id: cancelamentoId, cobranca: null, agrupados: ajusteAgrupados });
   }
 
   const r = await emitirRenegociacao(admin, gw, cliente, reneg, 'Proteção veicular — pró-rata do cancelamento');
@@ -149,5 +181,6 @@ export async function POST(request: Request) {
       ? { ok: true, renegociacao_id: reneg, erros_baixa: r.erros_baixa, titulo,
           resumo: titulo ? `Boleto do pró-rata: ${formatCurrency(Number(titulo.valor))}, vence ${formatDate(titulo.data_vencimento)}` : null }
       : { ok: false, renegociacao_id: reneg, erro: r.erro },
+    agrupados: ajusteAgrupados,
   });
 }

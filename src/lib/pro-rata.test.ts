@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  boletosFuturosDoVeiculo, calcularProRata, cicloDaData, cicloJaPago, diasEntre,
-  textoDoProRata, validarCancelamento,
+  agrupadosAjustaveis, boletosFuturosDoVeiculo, calcularProRata, cicloDaData, cicloJaPago,
+  cicloPagoNoAgrupado, diasEntre, reducaoDosAgrupados, textoDoProRata, validarCancelamento,
 } from './pro-rata';
 
 // Os mesmos casos da suite supabase/tests/0144_cancelamento_pro_rata.test.sql.
@@ -107,5 +107,26 @@ describe('validarCancelamento', () => {
     expect(validarCancelamento({ ...ok, cobrar: true })).toMatch(/vencimento/);
     expect(validarCancelamento({ ...ok, cobrar: true, vencimento: '2026-10-28' })).toBeNull();
     expect(validarCancelamento({ ...ok, cobrar: true, vencimento: '2027-01-28' })).toMatch(/60 dias/);
+  });
+});
+
+// 0191: a saida de um veiculo do boleto agrupado.
+describe('agrupado no cancelamento', () => {
+  const lista = [
+    { titulo_id: 'c', competencia: '2026-12-01', vencimento: '2026-12-20', valor_atual: 400, valor_veiculo: 100, valor_novo: 300, situacao: 'AJUSTAR' },
+    { titulo_id: 'a', competencia: '2026-10-01', vencimento: '2026-10-20', valor_atual: 400, valor_veiculo: 100, valor_novo: 300, situacao: 'PAGO' },
+    { titulo_id: 'b', competencia: '2026-11-01', vencimento: '2026-11-15', valor_atual: 400.1, valor_veiculo: 100.05, valor_novo: 300.05, situacao: 'AJUSTAR' },
+    { titulo_id: 'd', competencia: '2026-09-01', vencimento: '2026-09-20', valor_atual: 400, valor_veiculo: 100, valor_novo: 300, situacao: 'DIVIDA' },
+  ];
+  it('so os AJUSTAR, em ordem de vencimento', () => {
+    expect(agrupadosAjustaveis(lista).map((a) => a.titulo_id)).toEqual(['b', 'c']);
+  });
+  it('ciclo pago no agrupado: mesmo mes do vencimento do ciclo', () => {
+    expect(cicloPagoNoAgrupado(lista, '2026-10-25')).toBe(true);
+    expect(cicloPagoNoAgrupado(lista, '2026-11-20')).toBe(false);
+  });
+  it('reducao em centavos, so dos escolhidos', () => {
+    expect(reducaoDosAgrupados(lista, new Set(['b', 'c']))).toBe(200.05);
+    expect(reducaoDosAgrupados(lista, new Set())).toBe(0);
   });
 });

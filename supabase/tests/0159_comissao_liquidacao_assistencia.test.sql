@@ -44,6 +44,10 @@ begin
   -- ===================================== mensalidade comum
   insert into titulos_financeiros (cliente_id, veiculo_id, valor, data_vencimento, status)
     values (cli, va, 200, v_hoje, 'pendente') returning id into t;
+  -- 0191: mensalidade e boleto de FATURA
+  with f as (insert into faturas (cliente_id, tipo_faturamento, veiculo_id, competencia, valor_total, vencimento, titulo_id)
+    values (cli, 'INDIVIDUAL_VEICULO', va, '2099-01-01', 200, v_hoje, t) returning id)
+  insert into fatura_itens (fatura_id, veiculo_id, descricao, valor) select id, va, 'mensalidade', 200 from f;
   update titulos_financeiros set status = 'pago', valor_pago = 205, data_pagamento = v_hoje where id = t;
   select * into rec from comissoes_vendas where titulo_id = t;
   assert rec.valor_comissao = 20 and rec.valor_assistencia_profissional = 20,
@@ -51,6 +55,10 @@ begin
 
   insert into titulos_financeiros (cliente_id, veiculo_id, valor, data_vencimento, status)
     values (cli, vb, 200, v_hoje, 'pendente') returning id into t;
+  -- 0191: mensalidade e boleto de FATURA
+  with f as (insert into faturas (cliente_id, tipo_faturamento, veiculo_id, competencia, valor_total, vencimento, titulo_id)
+    values (cli, 'INDIVIDUAL_VEICULO', vb, '2099-01-01', 200, v_hoje, t) returning id)
+  insert into fatura_itens (fatura_id, veiculo_id, descricao, valor) select id, vb, 'mensalidade', 200 from f;
   update titulos_financeiros set status = 'pago', valor_pago = 200, data_pagamento = v_hoje where id = t;
   select * into rec from comissoes_vendas where titulo_id = t;
   assert rec.valor_comissao = 20 and rec.valor_assistencia_profissional = 0,
@@ -58,6 +66,10 @@ begin
 
   insert into titulos_financeiros (cliente_id, veiculo_id, valor, data_vencimento, status)
     values (cli, vc, 150, v_hoje, 'pendente') returning id into t;
+  -- 0191: mensalidade e boleto de FATURA
+  with f as (insert into faturas (cliente_id, tipo_faturamento, veiculo_id, competencia, valor_total, vencimento, titulo_id)
+    values (cli, 'INDIVIDUAL_VEICULO', vc, '2099-01-01', 150, v_hoje, t) returning id)
+  insert into fatura_itens (fatura_id, veiculo_id, descricao, valor) select id, vc, 'mensalidade', 150 from f;
   update titulos_financeiros set status = 'pago', valor_pago = 150, data_pagamento = v_hoje where id = t;
   select * into rec from comissoes_vendas where titulo_id = t;
   assert rec.valor_comissao = 15 and rec.valor_assistencia_profissional = 0,
