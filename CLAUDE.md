@@ -2760,6 +2760,11 @@ categorias **Associados** e **Veículos**.
   `unirEventosCliente` (`eventos-historico.ts`, usada também por `/api/v1/sac/visao-360`) e
   `resumoHistoricoFinanceiro` (`historico-financeiro.ts`). Limite das fichas: 500 por fonte.
 - **`/assistencia?acionamento=<id>`** abre direto a OS (atalho das fichas).
+- **Aba Vistorias em `/veiculos/[id]` (09/11/2026, sem migration):** a vistoria de adesão (ligada ao veículo na
+  autorização, 0034) e as revistorias da 2ª via (0137), cada uma com situação (a do pedido de revistoria vence o status),
+  fotos e vídeos (uma por pose, a mais recente; reenvios contados), quem enviou e o link da venda de origem. Só leitura.
+  `src/components/veiculos/vistorias-veiculo.tsx`, hook `useVistoriasDoVeiculo`/`useCatalogoPoses`, regra pura
+  `src/lib/vistorias-veiculo.ts` (testada). Migrados do Mutual não têm foto (nunca importadas).
 - **Limite conhecido:** boleto/evento do Mutual sem `veiculo_id` (≈22% dos boletos, 242 dos 829
   eventos em 15/10) aparece na ficha do ASSOCIADO, não na do veículo; e fatura agrupada do SCar
   (sem veículo) idem. `veiculos.regional_id` e `regional_preco_id` apontam ambos para `regionais`:

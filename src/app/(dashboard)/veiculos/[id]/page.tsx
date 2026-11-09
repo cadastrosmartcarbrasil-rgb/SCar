@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import {
-  AlertTriangle, ArrowLeft, Ban, Car, ClipboardList, DollarSign, FileSignature, FileText, LifeBuoy, Pencil, ReceiptText, UserRound,
+  AlertTriangle, ArrowLeft, Ban, Camera, Car, ClipboardList, DollarSign, FileSignature, FileText, LifeBuoy, Pencil, ReceiptText, UserRound,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { AlertasVeiculo } from '@/components/veiculos/alertas-veiculo';
@@ -16,6 +16,7 @@ import {
   AcionamentosCadastro, EventosCadastro, FinanceiroCadastro, ProtocolosCadastro,
 } from '@/components/cadastro/vida-cadastro';
 import { TermosDoCadastro } from '@/components/termos/termos-do-cadastro';
+import { VistoriasDoVeiculo } from '@/components/veiculos/vistorias-veiculo';
 import { usePode } from '@/hooks/use-permissoes';
 import { CancelamentosRegistrados, ModalCancelamentoVeiculo } from '@/components/veiculos/cancelamento-veiculo';
 import { ModalCarne } from '@/components/cobrancas/carne-veiculo';
@@ -25,7 +26,7 @@ import { formatarDocumento } from '@/lib/documento';
 import { formatCurrency } from '@/lib/utils';
 import { identificacaoVeiculo } from '@/lib/placa';
 
-type Aba = 'dados' | 'financeiro' | 'eventos' | 'protocolos' | 'assistencia' | 'termos';
+type Aba = 'dados' | 'financeiro' | 'eventos' | 'protocolos' | 'assistencia' | 'vistorias' | 'termos';
 
 export default function FichaVeiculo({ params }: { params: { id: string } }) {
   const { data: v, isLoading, error } = useVeiculoFicha(params.id);
@@ -53,6 +54,7 @@ export default function FichaVeiculo({ params }: { params: { id: string } }) {
     { id: 'eventos', label: 'Eventos', icon: AlertTriangle },
     { id: 'protocolos', label: 'Protocolos', icon: ClipboardList },
     { id: 'assistencia', label: 'Assistência 24h', icon: LifeBuoy },
+    { id: 'vistorias', label: 'Vistorias', icon: Camera },
     ...(verTermos ? [{ id: 'termos' as Aba, label: 'Termos', icon: FileSignature }] : []),
   ];
 
@@ -188,6 +190,7 @@ export default function FichaVeiculo({ params }: { params: { id: string } }) {
       {aba === 'eventos' && <EventosCadastro clienteId={v.cliente_id} veiculoId={v.id} />}
       {aba === 'protocolos' && <ProtocolosCadastro clienteId={v.cliente_id} veiculoId={v.id} />}
       {aba === 'assistencia' && <AcionamentosCadastro clienteId={v.cliente_id} veiculoId={v.id} />}
+      {aba === 'vistorias' && <VistoriasDoVeiculo veiculoId={v.id} />}
       {aba === 'termos' && <TermosDoCadastro clienteId={v.cliente_id} veiculoId={v.id} />}
     </div>
   );

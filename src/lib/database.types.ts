@@ -761,6 +761,38 @@ export type VistoriaAnexosRow = {
   enviado_por: string | null;
   // 0076 — a foto veio pelo link do cliente? A Auditoria precisa da origem.
   enviado_pelo_cliente: boolean;
+  // 0137 — duracao do video da revistoria
+  duracao_segundos: number | null;
+};
+
+// 0137 — so o que a ficha do veiculo le (a escrita e por RPC).
+export type RevistoriasCobrancaRow = {
+  id: string;
+  vistoria_id: string | null;
+  cliente_id: string;
+  veiculo_id: string;
+  regional_id: string | null;
+  situacao: string;
+  origem: string;
+  dias_atraso: number | null;
+  vencimento_referencia: string | null;
+  enviado_em: string | null;
+  analisado_em: string | null;
+  observacao_analise: string | null;
+  motivo_reprovacao: string | null;
+  dispensa_justificativa: string | null;
+  created_at: string;
+  updated_at: string;
+};
+export type RevistoriaItensRow = {
+  codigo: string;
+  nome: string;
+  instrucao: string | null;
+  midia: 'FOTO' | 'VIDEO';
+  obrigatorio: boolean;
+  ordem: number;
+  ativo: boolean;
+  created_at: string;
 };
 
 export type AtendimentosRow = Timestamps & {
@@ -4629,6 +4661,8 @@ export type Database = {
       veiculo_alertas: TableDef<VeiculoAlertasRow, [Rel<'veiculo_id', 'veiculos'>, Rel<'tipo_alerta_id', 'tipos_alerta'>]>;
       contratos_adesao: TableDef<ContratosAdesaoRow, [Rel<'cliente_id', 'clientes'>, Rel<'veiculo_id', 'veiculos'>]>;
       vistorias: TableDef<VistoriasRow, [Rel<'veiculo_id', 'veiculos'>]>;
+      revistorias_cobranca: TableDef<RevistoriasCobrancaRow, [Rel<'vistoria_id', 'vistorias'>, Rel<'veiculo_id', 'veiculos'>]>;
+      revistoria_itens: TableDef<RevistoriaItensRow, []>;
       vistoria_anexos: TableDef<VistoriaAnexosRow, [Rel<'vistoria_id', 'vistorias'>]>;
       comunicacoes: TableDef<ComunicacoesRow, [Rel<'cliente_id', 'clientes'>]>;
       tipos_veiculo: TableDef<TiposVeiculoRow>;
