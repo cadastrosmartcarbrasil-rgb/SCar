@@ -4070,7 +4070,16 @@ aparece para quem cota e **nunca para o cliente**; limite configurável (padrão
   dos migrados* (por unidade): informar o valor de cada configuração (vê-se no Mutual) e *Gravar*. **O boleto do migrado
   não muda** (override do Mutual): gravar só separa a comissão. Valor já gravado e diferente não é trocado.
 - **Não feito:** extrato de comissão mostrando a parte da AP separada (o valor já está somado em `valor_comissao`);
-  descobrir pela API do Mutual o preço de cada configuração (hoje é digitado).
+  a tela/rotina ler o valor do catálogo sozinha (hoje lê só a tabela de valores informados).
+- **✅ IMPORTADA NOS VEÍCULOS DA BASE em 09/11/2026 (autorizado, pelo agente):** até ali nenhum veículo tinha o valor.
+  O produto novo (53) TEM o valor no catálogo de planos (`mutual_subprodutos_catalogo()`, "Nível N — Assistência
+  Profissional", valor = N × R$ 4, a mesma regra do legado): as 15 configurações que o catálogo cobre foram gravadas em
+  `mutual_assistencia_profissional_valores` (sem `definido_por`). Depois, SÓ veículos na base
+  (ativo/em_evento/vistoria_pendente/inadimplente) em APLICAR: **671 gravados, R$ 15.184/mês** — SP1 594 (R$ 14.184) ·
+  RP 74 (R$ 964) · GN 3 (R$ 36). Faltam **149 na base sem valor** (59 configurações fora do catálogo; SP1 141, RP 5,
+  MATRIZ 2, GN 1) — conferir o nível na tela do Mutual. Decisão do usuário: os inativos (1.380 com valor conhecido)
+  NÃO foram gravados. ⚠️ O botão *Gravar* da tela (`mutual_aplicar_assistencia_profissional`) grava também os
+  inativos — não usá-lo sem filtrar.
 
 - **🔴 CORRIGIDO NA 0159 (decisões do usuário, 28/10/2026) — vale sobre o texto acima:**
   **qualquer unidade cobra** a Assistência (o banco só confere o mínimo/máximo da unidade; o campo aparece para todos);
