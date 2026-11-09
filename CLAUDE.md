@@ -2770,6 +2770,15 @@ categorias **Associados** e **Veículos**.
   (sem veículo) idem. `veiculos.regional_id` e `regional_preco_id` apontam ambos para `regionais`:
   embed tem de ser `regionais!veiculos_regional_id_fkey(...)`.
 
+## EXCLUIR ANEXO DO EVENTO (09/11/2026, sem migration)
+Pedido do usuário: excluir anexo incluído errado. Aba **Anexos** do evento (`upload-anexos.tsx`): lixeira por arquivo
+para quem tem `eventos.editar` (o banco confere pela RLS `pode_tratar_evento`, 0077; delete bloqueado volta 0 linhas e a
+tela avisa), motivo obrigatório (≥ 5), o arquivo sai do bucket e fica `ANEXO_EXCLUIDO` no `historico_protocolo`.
+Documento do evento ligado ao anexo volta a não ter arquivo (`evento_documentos.anexo_id` é set null). Bloqueados
+(`motivoAnexoNaoExcluivel`, `src/lib/anexos-evento.ts`): via assinada do termo de entrega (troca pela aba Termos; FK
+restrict) e documentos gerados pelo sistema (OS, termo). Já tinham exclusão antes: fotos da vistoria da venda, anexos da
+OS da 24h, do financeiro, documentos do associado ainda não conferidos e anexos da comunicação de evento.
+
 ## EVENTOS (antes "Sinistros") — renomeação e Kanban compacto (17/10/2026, sem migration)
 - **O módulo chama-se EVENTOS** em toda a interface. Rotas: `/eventos`, `/eventos/[id]`,
   `/eventos/novo`, `/eventos/[id]/terceiros/...` e `/portal/eventos/novo`; componentes em

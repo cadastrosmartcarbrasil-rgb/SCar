@@ -3,9 +3,14 @@
 import { useCallback, useState } from 'react';
 import { useDropzone, type FileRejection } from 'react-dropzone';
 import { toast } from 'sonner';
-import { UploadCloud, FileText, Image as ImageIcon, Loader2 } from 'lucide-react';
-import { useAnexos, useUploadAnexo, useSignedUrl } from '@/hooks/use-eventos';
-import type { TipoDocumentoAnexo } from '@/lib/database.types';
+import { UploadCloud, FileText, Image as ImageIcon, Loader2, Trash2 } from 'lucide-react';
+import { useAnexos, useRemoverAnexoEvento, useUploadAnexo, useSignedUrl } from '@/hooks/use-eventos';
+import { usePode } from '@/hooks/use-permissoes';
+import { Modal } from '@/components/ui/modal';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/field';
+import { motivoAnexoNaoExcluivel, motivoExclusaoValido } from '@/lib/anexos-evento';
+import type { AnexosEventoRow, TipoDocumentoAnexo } from '@/lib/database.types';
 import { LADO_MAXIMO, tamanhoLegivel } from '@/lib/imagem';
 import { formatDate } from '@/lib/utils';
 
@@ -41,6 +46,11 @@ export function UploadAnexos({ eventoId }: { eventoId: string }) {
   const upload = useUploadAnexo(eventoId);
   const signedUrl = useSignedUrl();
   const [tipo, setTipo] = useState<TipoDocumentoAnexo>('FOTO_AVARIA');
+  // Excluir anexo incluido por engano: quem trata o evento (o banco confere).
+  const podeExcluir = usePode('eventos.editar');
+  const remover = useRemoverAnexoEvento(eventoId);
+  const [excluindo, setExcluindo] = useState<AnexosEventoRow | null>(null);
+  const [motivo, setMotivo] = useState('');
 
   const onDrop = useCallback(
     (files: File[]) => {
@@ -147,9 +157,25 @@ export function UploadAnexos({ eventoId }: { eventoId: string }) {
                   {a.nome_original ?? a.arquivo_url}
                 </span>
               </button>
-              <span className="tnum text-xs text-slate-400">
-                {ROTULO_EXTRA[a.tipo_documento] ?? TIPOS.find((t) => t.value === a.tipo_documento)?.label ?? a.tipo_documento} · {formatDate(a.created_at)}
-                {a.tamanho_bytes != null && ` · ${tamanhoLegivel(a.tamanho_bytes)}`}
+              <span className="flex items-center gap-2">
+                <span className="tnum text-xs text-slate-400">
+                  {ROTULO_EXTRA[a.tipo_documento] ?? TIPOS.find((t) => t.value === a.tipo_documento)?.label ?? a.tipo_documento} · {formatDate(a.created_at)}
+                  {a.tamanho_bytes != null && ` · ${tamanhoLegivel(a.tamanho_bytes)}`}
+                </span>
+                {podeExcluir && (() => {
+                  const bloqueio = motivoAnexoNaoExcluivel(a);
+                  return (
+                    <button
+                      type="button"
+                      title={bloqueio ?? 'Excluir anexo'}
+                      disabled={!!bloqueio}
+                      onClick={() => { setMotivo(''); setExcluindo(a); }}
+                      className="rounded-md p-1 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  );
+                })()}
               </span>
             </li>
           );
@@ -158,6 +184,37 @@ export function UploadAnexos({ eventoId }: { eventoId: string }) {
           <li className="p-4 text-center text-xs text-slate-400">Nenhum anexo enviado</li>
         )}
       </ul>
+
+      <Modal open={!!excluindo} onClose={() => setExcluindo(null)} title="Excluir anexo" subtitulo={excluindo?.nome_original ?? undefined}>
+        <div className="space-y-3">
+          <p className="text-sm text-slate-600">
+            O arquivo sai do evento e do armazenamento, sem volta. A exclusão e o motivo ficam no histórico do evento.
+          </p>
+          <Textarea
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+            rows={3}
+            placeholder="Motivo (ex.: foto de outro veículo, documento duplicado)"
+          />
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="secondary" onClick={() => setExcluindo(null)}>Voltar</Button>
+            <Button
+              type="button"
+              variant="danger"
+              disabled={!motivoExclusaoValido(motivo) || remover.isPending}
+              onClick={() => excluindo && remover.mutate(
+                { anexo: excluindo, motivo: motivo.trim() },
+                {
+                  onSuccess: () => { toast.success('Anexo excluído'); setExcluindo(null); },
+                  onError: (e) => toast.error((e as Error).message),
+                },
+              )}
+            >
+              {remover.isPending ? 'Excluindo...' : 'Excluir anexo'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

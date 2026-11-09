@@ -270,6 +270,36 @@ export function useUploadAnexo(eventoId: string) {
   });
 }
 
+// Excluir anexo incluido por engano. A RLS de delete e `pode_tratar_evento`
+// (0077): sem permissao o delete volta com 0 linhas (RLS nao levanta erro), por
+// isso o `.select('id')`. O arquivo sai do bucket e a exclusao fica no historico
+// do evento, com o motivo. Documento gerado pelo sistema (OS, termo) nao entra aqui.
+export function useRemoverAnexoEvento(eventoId: string) {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ anexo, motivo }: { anexo: AnexosEventoRow; motivo: string }) => {
+      const { data, error } = await supabase.from('anexos_evento').delete().eq('id', anexo.id).select('id');
+      if (error) {
+        if (error.code === '23503') throw new Error('Este arquivo é a via assinada de um termo de entrega: troque-a pela aba Termos.');
+        throw error;
+      }
+      if (!data?.length) throw new Error('Sem permissão para excluir anexo deste evento.');
+      await supabase.storage.from(BUCKET).remove([anexo.arquivo_url]);
+      const { data: u } = await supabase.auth.getUser();
+      await supabase.from('historico_protocolo').insert({
+        evento_id: eventoId,
+        usuario_origem_id: u.user?.id ?? null,
+        acao_realizada: 'ANEXO_EXCLUIDO',
+        observacoes: `Anexo excluido: ${anexo.nome_original ?? anexo.arquivo_url}. Motivo: ${motivo}`,
+      });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['eventos', eventoId] });
+    },
+  });
+}
+
 // Gera URL assinada temporaria para visualizar/baixar um anexo do bucket privado.
 export function useSignedUrl() {
   const supabase = createClient();
