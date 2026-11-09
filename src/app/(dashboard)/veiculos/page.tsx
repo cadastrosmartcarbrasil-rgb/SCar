@@ -22,7 +22,7 @@ import { acimaDoLimite } from '@/lib/limite-fipe';
 import { planoAtendeTipo } from '@/lib/planos-oferta';
 import { produtoAtendeTipo, produtosParaTipo, regraRastreadorCobra, semRastreadorDaRegra } from '@/lib/produtos';
 import { useRegraRastreador } from '@/hooks/use-regra-rastreador';
-import { useVeiculosPagina, useVeiculo, useSaveVeiculo, useExcluirVeiculo } from '@/hooks/use-veiculos';
+import { useVeiculosPagina, useVeiculo, useSaveVeiculo, useExcluirVeiculo, lerVeiculoAtual } from '@/hooks/use-veiculos';
 import { useEmpresasRastreamento } from '@/hooks/use-rastreamento';
 import { useEmpresa } from '@/hooks/use-empresa';
 import { DIAS_TOLERANCIA_PADRAO, avisoDeTolerancia, tolerancia } from '@/lib/inadimplencia';
@@ -335,8 +335,20 @@ function VeiculosConteudo() {
     setAberto(true);
   }
 
-  function editar(v: VeiculosRow) {
-    abrirFicha(v);
+  // A ficha abre com a linha LIDA AGORA do banco, nunca com a copia da lista:
+  // salvar uma copia velha regrava por cima o que mudou enquanto a tela estava
+  // aberta (outro atendente, a carga do Mutual, uma correcao feita por fora).
+  const [abrindoFicha, setAbrindoFicha] = useState<string | null>(null);
+  async function editar(v: VeiculosRow) {
+    if (abrindoFicha) return;
+    setAbrindoFicha(v.id);
+    try {
+      abrirFicha(await lerVeiculoAtual(v.id));
+    } catch (e) {
+      toast.error(`Não foi possível abrir a ficha: ${(e as Error).message}`);
+    } finally {
+      setAbrindoFicha(null);
+    }
   }
 
   function novo() {
@@ -562,9 +574,13 @@ function VeiculosConteudo() {
                       </Link>
                       <button
                         onClick={() => editar(v)}
-                        className="rounded p-1.5 text-slate-500 hover:bg-slate-100"
+                        disabled={abrindoFicha !== null}
+                        title="Editar cadastro"
+                        className="rounded p-1.5 text-slate-500 hover:bg-slate-100 disabled:opacity-50"
                       >
-                        <Pencil className="h-4 w-4" />
+                        {abrindoFicha === v.id
+                          ? <Loader2 className="h-4 w-4 animate-spin" />
+                          : <Pencil className="h-4 w-4" />}
                       </button>
                       <SePode chave="veiculos.excluir">
                       <button

@@ -4079,7 +4079,14 @@ aparece para quem cota e **nunca para o cliente**; limite configurável (padrão
   RP 74 (R$ 964) · GN 3 (R$ 36). Faltam **149 na base sem valor** (59 configurações fora do catálogo; SP1 141, RP 5,
   MATRIZ 2, GN 1) — conferir o nível na tela do Mutual. Decisão do usuário: os inativos (1.380 com valor conhecido)
   NÃO foram gravados. ⚠️ O botão *Gravar* da tela (`mutual_aplicar_assistencia_profissional`) grava também os
-  inativos — não usá-lo sem filtrar.
+  inativos — não usá-lo sem filtrar. **Depois, nível informado pelo usuário (tela do Mutual, "Nível N" = N × R$ 4),
+  gravado por placa → configuração** em `mutual_assistencia_profissional_valores` + nos veículos da base. GFT8C98
+  "não contratada" fica em 0, por isso a config 3606 NÃO tem valor e o QIL2I91 (mesma config) foi gravado direto no
+  veículo (R$ 16). O nível NÃO segue a ordem do id da configuração.
+- **🔴 A FICHA DE `/veiculos` ZERAVA O VALOR (09/11/2026, caso EFV6H51):** a edição abria com a linha da lista em
+  cache; salvar regravou `valor_assistencia_profissional = 0` por cima do que o agente acabara de gravar. Agora o
+  lápis lê o veículo direto do banco (`lerVeiculoAtual`, `src/hooks/use-veiculos.ts`) antes de abrir a ficha.
+  Limite: alteração feita por fora ENQUANTO a ficha está aberta ainda é sobrescrita ao salvar.
 
 - **🔴 CORRIGIDO NA 0159 (decisões do usuário, 28/10/2026) — vale sobre o texto acima:**
   **qualquer unidade cobra** a Assistência (o banco só confere o mínimo/máximo da unidade; o campo aparece para todos);

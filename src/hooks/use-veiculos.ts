@@ -101,6 +101,25 @@ export function useVeiculo(id: string | null | undefined) {
   });
 }
 
+/**
+ * Le o veiculo DIRETO do banco, sem cache — para abrir a ficha de edicao.
+ * A lista da tela e o `useVeiculo` guardam a linha de quando foram lidos; abrir
+ * a ficha com essa copia velha e salvar REGRAVA por cima o que mudou por fora
+ * enquanto a tela estava aberta (caso real, 09/11/2026: a Assistencia
+ * Profissional gravada na base voltou a zero ao salvar a ficha do EFV6H51).
+ */
+export async function lerVeiculoAtual(id: string): Promise<VeiculoComAssociado> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('veiculos')
+    .select('*, clientes(nome_razao_social, matricula)')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error('Veículo não encontrado (pode ter sido excluído).');
+  return data as unknown as VeiculoComAssociado;
+}
+
 /** Seletor de veiculo por placa (instalar rastreador): ate 20 resultados. */
 export function useBuscaVeiculos(termo: string) {
   const supabase = createClient();
