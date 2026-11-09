@@ -20,7 +20,8 @@ import { VistoriasDoVeiculo } from '@/components/veiculos/vistorias-veiculo';
 import { usePode } from '@/hooks/use-permissoes';
 import { CancelamentosRegistrados, ModalCancelamentoVeiculo } from '@/components/veiculos/cancelamento-veiculo';
 import { ModalCarne } from '@/components/cobrancas/carne-veiculo';
-import { useVeiculoFicha } from '@/hooks/use-vida-cadastro';
+import { useConsultoresDoCliente, useVeiculoFicha } from '@/hooks/use-vida-cadastro';
+import { rotuloConsultor } from '@/lib/consultor';
 import { primeiraAtivacao, statusVeiculoResumo } from '@/lib/sac';
 import { formatarDocumento } from '@/lib/documento';
 import { formatCurrency } from '@/lib/utils';
@@ -39,11 +40,13 @@ export default function FichaVeiculo({ params }: { params: { id: string } }) {
   const podeCarneAuditoria = usePode('vendas.fechar');
   const podeCarne = podeCarneCobranca || podeCarneAuditoria;
   const [carne, setCarne] = useState(false);
+  const consultorQ = useConsultoresDoCliente(v?.cliente_id, params.id);
 
   if (isLoading) return <p className="text-sm text-slate-500">Carregando veículo...</p>;
   if (error) return <p className="text-sm text-rose-600">Não foi possível carregar: {(error as Error).message}</p>;
   if (!v) return <p className="text-sm text-slate-500">Veículo não encontrado (ou fora da sua unidade).</p>;
 
+  const consultor = consultorQ.data?.[0] ?? null;
   const st = statusVeiculoResumo(v.status, false);
   const ativacao = primeiraAtivacao(v.data_ativacao);
   const voltar = `/veiculos/${v.id}`;
@@ -87,6 +90,13 @@ export default function FichaVeiculo({ params }: { params: { id: string } }) {
               {' · '}Matrícula {v.clientes.matricula ?? '-'} · {formatarDocumento(v.clientes.cpf_cnpj, v.clientes.tipo_pessoa as 'PF' | 'PJ')}
             </p>
           )}
+          <p className="mt-0.5 text-sm text-slate-500">
+            Consultor:{' '}
+            <b className={consultor?.vendedor_id ? 'font-semibold text-slate-800' : 'font-medium text-amber-700'}>
+              {consultorQ.isLoading ? '…' : rotuloConsultor(consultor)}
+            </b>
+            {consultor?.consultor_telefone && <span> · {consultor.consultor_telefone}</span>}
+          </p>
         </div>
         <div className="flex flex-col items-end gap-2">
           <span className={`rounded-md px-3 py-1 text-sm ${st.cor}`}>{st.label}</span>
@@ -150,6 +160,7 @@ export default function FichaVeiculo({ params }: { params: { id: string } }) {
                 <Item rotulo="Plano" valor={v.planos_protecao?.nome ?? 'Sem plano'} />
                 <Item rotulo="Tipo de veículo" valor={v.tipos_veiculo?.nome} />
                 <Item rotulo="Unidade" valor={v.regionais?.nome ?? 'Matriz'} />
+                <Item rotulo="Consultor" valor={consultorQ.isLoading ? '…' : rotuloConsultor(consultor)} />
                 <Item rotulo="Valor FIPE" valor={v.valor_fipe ? formatCurrency(v.valor_fipe) : null} />
                 <Item
                   rotulo="Mensalidade"

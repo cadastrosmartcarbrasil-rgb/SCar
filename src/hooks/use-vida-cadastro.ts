@@ -8,7 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { unirEventosCliente, type EventoScarLeitura, type EventoUnificado } from '@/lib/eventos-historico';
 import type {
-  PrioridadeAtendimento, StatusAcionamento, StatusAtendimento, TipoAtendimento, VeiculosRow,
+  ConsultorDoVeiculo, PrioridadeAtendimento, StatusAcionamento, StatusAtendimento, TipoAtendimento, VeiculosRow,
 } from '@/lib/database.types';
 
 type Alvo = { clienteId: string | null; veiculoId?: string | null };
@@ -122,6 +122,27 @@ export function useVeiculoFicha(id: string) {
         .maybeSingle();
       if (error) throw error;
       return data as unknown as VeiculoFicha | null;
+    },
+  });
+}
+
+/**
+ * 0195: o consultor de cada veiculo do associado (ou de um veiculo so).
+ * A chave fica sob ['veiculo', id] / ['cobranca'] para recarregar junto
+ * quando o veiculo ou a fila mudam.
+ */
+export function useConsultoresDoCliente(clienteId: string | null | undefined, veiculoId?: string | null) {
+  const supabase = createClient();
+  return useQuery<ConsultorDoVeiculo[]>({
+    queryKey: veiculoId ? ['veiculo', veiculoId, 'consultor'] : ['cobranca', 'consultores', clienteId],
+    enabled: !!clienteId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('consultores_do_cliente', {
+        p_cliente_id: clienteId as string,
+        p_veiculo_id: veiculoId ?? null,
+      });
+      if (error) throw error;
+      return (data ?? []) as ConsultorDoVeiculo[];
     },
   });
 }

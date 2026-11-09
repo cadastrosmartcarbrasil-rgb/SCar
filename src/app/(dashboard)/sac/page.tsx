@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import {
   Search, User, Phone, Mail, Loader2, CheckCircle2, XCircle, ShieldCheck,
   Layers, Pencil, SplitSquareHorizontal, ChevronLeft, Send,
-  Car, AlertTriangle, LifeBuoy, Bell, FileSignature, ClipboardCheck, X, Ticket, Satellite,
+  Car, AlertTriangle, LifeBuoy, Bell, FileSignature, ClipboardCheck, X, Ticket, Satellite, UserRound,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -46,6 +46,8 @@ import type {
   ClientesRow, OpcionalVeiculo, PrioridadeAtendimento, TipoAtendimento, TipoFaturamento,
 } from '@/lib/database.types';
 import { identificacaoVeiculo } from '@/lib/placa';
+import { useConsultoresDoCliente } from '@/hooks/use-vida-cadastro';
+import { consultoresAgrupados, rotuloConsultor } from '@/lib/consultor';
 
 type Aba = 'veiculos' | 'eventos' | 'protocolos';
 
@@ -223,6 +225,7 @@ function AssociadoHeader({ v360 }: { v360: Visao360 }) {
               <span>{a.tipo_pessoa} · {a.cpf_cnpj}</span>
               {a.telefone && <span className="inline-flex items-center gap-1"><Phone className="h-3.5 w-3.5" /> {a.telefone}</span>}
               {a.email && <span className="inline-flex items-center gap-1"><Mail className="h-3.5 w-3.5" /> {a.email}</span>}
+              <ConsultoresDoAssociadoSac clienteId={a.id} />
             </p>
           </div>
         </div>
@@ -524,6 +527,18 @@ function AtendimentoVeiculo({ clienteId, associado, veiculoId, podeTrocar, onTro
   );
 }
 
+/** 0195: o(s) consultor(es) dos veiculos do associado, junto do contato. */
+function ConsultoresDoAssociadoSac({ clienteId }: { clienteId: string }) {
+  const q = useConsultoresDoCliente(clienteId);
+  const grupos = consultoresAgrupados(q.data ?? []).filter((g) => g.vendedorId);
+  if (grupos.length === 0) return null;
+  return (
+    <span className="inline-flex items-center gap-1">
+      <UserRound className="h-3.5 w-3.5" /> Consultor: {grupos.map((g) => g.nome + (g.ativo ? '' : ' (inativo)')).join(', ')}
+    </span>
+  );
+}
+
 function VeiculoDetalheCard({ clienteId, veiculo }: { clienteId: string; veiculo: VeiculoDetalhe }) {
   const toggle = useToggleFaturamento();
   const setModo = (tipo: TipoFaturamento) => {
@@ -541,6 +556,8 @@ function VeiculoDetalheCard({ clienteId, veiculo }: { clienteId: string; veiculo
     </div>
   );
   const ativacao = primeiraAtivacao(veiculo.data_ativacao);
+  const consultorQ = useConsultoresDoCliente(clienteId, veiculo.id);
+  const consultor = consultorQ.data?.[0] ?? null;
   return (
     <Card>
       <CardContent className="pt-5">
@@ -561,6 +578,7 @@ function VeiculoDetalheCard({ clienteId, veiculo }: { clienteId: string; veiculo
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {dado('Consultor', consultorQ.isLoading ? '…' : rotuloConsultor(consultor), consultor?.consultor_telefone)}
           {dado('Chassi', veiculo.chassi)}
           {dado('Renavam', veiculo.renavam)}
           {dado('Ano', veiculo.ano_modelo)}

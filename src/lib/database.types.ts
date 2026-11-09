@@ -2620,6 +2620,19 @@ export type CobrancaFilaLinha = {
   total_registros: number;
   total_valor: number;
 };
+/** 0195: o consultor (vendedor) de cada veiculo do associado. */
+export type ConsultorDoVeiculo = {
+  veiculo_id: string;
+  placa: string | null;
+  chassi: string | null;
+  status: string;
+  vendedor_id: string | null;
+  consultor: string | null;
+  consultor_telefone: string | null;
+  consultor_email: string | null;
+  consultor_ativo: boolean | null;
+  consultor_regional: string | null;
+};
 export type CobrancaFilaResumo = { grupo: 'situacao' | 'faixa'; chave: string | null; clientes: number; valor: number };
 export type CobrancaParcelaSituacao = {
   numero: number;
@@ -5451,6 +5464,7 @@ export type Database = {
         Returns: string | null;
       };
       cancelamentos_do_veiculo: { Args: { p_veiculo_id: string }; Returns: CancelamentoVeiculo[] };
+      consultores_do_cliente: { Args: { p_cliente_id: string; p_veiculo_id?: string | null }; Returns: ConsultorDoVeiculo[] };
       agrupados_do_cancelamento: { Args: { p_veiculo_id: string; p_data: string }; Returns: AgrupadoDoCancelamento[] };
       ajustar_agrupados_cancelamento: { Args: { p_cancelamento_id: string; p_titulos: string[] }; Returns: string[] };
       veiculos_do_boleto: { Args: { p_origem: string; p_id: string }; Returns: VeiculoDoBoleto[] };

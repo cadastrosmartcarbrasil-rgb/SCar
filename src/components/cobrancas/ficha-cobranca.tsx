@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Ban, Loader2, MessageCircle, Phone, Plus, Repeat2, Trash2 } from 'lucide-react';
+import { Ban, Loader2, MessageCircle, Phone, Plus, Repeat2, Trash2, UserRound } from 'lucide-react';
 import { ModalHistoricoFinanceiro } from '@/components/sac/acoes-veiculo';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,8 @@ import { linkWhatsAppAssociado } from '@/lib/protocolos';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 import type { CobrancaAcordoSituacao, CobrancaFilaLinha } from '@/lib/database.types';
 import { useTextosWhatsApp } from '@/hooks/use-textos-whatsapp';
+import { useConsultoresDoCliente } from '@/hooks/use-vida-cadastro';
+import { consultoresAgrupados } from '@/lib/consultor';
 
 const hoje = () => new Date().toLocaleDateString('sv-SE'); // aaaa-mm-dd no fuso local
 
@@ -76,6 +78,7 @@ function Cabecalho({ linha }: { linha: CobrancaFilaLinha }) {
       <span><b className="tnum text-rose-700">{formatCurrency(Number(linha.valor_vencido))}</b> vencidos</span>
       <span className="tnum">{linha.boletos_vencidos} boleto(s)</span>
       <span className="tnum">{linha.dias_atraso} dias de atraso · desde {formatDate(linha.vencido_desde)}</span>
+      <ConsultoresDoAssociado clienteId={linha.cliente_id} />
       <span className="ml-auto flex gap-2">
         {fone && (
           <a href={`tel:${fone.replace(/\D/g, '')}`}
@@ -93,6 +96,31 @@ function Cabecalho({ linha }: { linha: CobrancaFilaLinha }) {
         )}
       </span>
     </div>
+  );
+}
+
+/** 0195: o consultor de cada veiculo, logo ao abrir o atendimento. */
+function ConsultoresDoAssociado({ clienteId }: { clienteId: string }) {
+  const q = useConsultoresDoCliente(clienteId);
+  if (q.isLoading) return <span className="text-xs text-slate-400">Consultor…</span>;
+  if (q.error) return <span className="text-xs text-rose-600">Consultor: não foi possível carregar</span>;
+  const grupos = consultoresAgrupados(q.data ?? []);
+  if (grupos.length === 0) return null;
+  const varios = grupos.length > 1;
+  return (
+    <span className="flex w-full flex-wrap items-center gap-x-4 gap-y-1 border-t border-slate-200 pt-2 text-sm">
+      <span className="inline-flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-slate-500">
+        <UserRound className="h-3.5 w-3.5" /> {varios ? 'Consultores' : 'Consultor'}
+      </span>
+      {grupos.map((g) => (
+        <span key={g.vendedorId ?? 'sem'} className={g.vendedorId ? 'text-slate-800' : 'text-amber-700'}>
+          <b className="font-semibold">{g.nome}</b>
+          {!g.ativo && <span className="text-xs text-slate-500"> (inativo)</span>}
+          {g.telefone && <span className="text-xs text-slate-500"> · {g.telefone}</span>}
+          {varios && <span className="text-xs text-slate-500"> · {g.placas.join(', ')}</span>}
+        </span>
+      ))}
+    </span>
   );
 }
 
