@@ -39,6 +39,8 @@ export function useSaveRegional() {
         cnpj: r.cnpj || null,
         endereco: r.endereco ?? {},
         responsavel_id: r.responsavel_id || null,
+        taxa_comissao_recorrente: r.taxa_comissao_recorrente ?? 0,
+        comissao_ativa: r.comissao_ativa ?? true,
       };
       if (r.id) {
         const { error } = await supabase.from('regionais').update(payload).eq('id', r.id);

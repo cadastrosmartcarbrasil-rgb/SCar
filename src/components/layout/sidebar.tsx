@@ -16,6 +16,7 @@ import {
   Target,
   Headset,
   Menu,
+  HandCoins,
   X,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
@@ -36,7 +37,11 @@ const GESTAO: Item[] = [
   { href: '/precificacao', label: 'Precificacao', icon: Calculator },
   { href: '/fornecedores', label: 'Fornecedores', icon: Store },
   { href: '/financeiro', label: 'Financeiro / DRE', icon: DollarSign },
+  { href: '/comissoes', label: 'Comissoes', icon: HandCoins },
 ];
+
+// Comissoes: matriz (admin/financeiro) gere; gestor regional ve a propria regional.
+const VE_COMISSOES: PapelUsuario[] = ['admin', 'financeiro', 'gestor_regional'];
 
 // Marca da cabine: usa a logo cadastrada em Configuracoes -> Empresa. Como a
 // logo tem tinta escura, vai numa placa branca para aparecer sobre o navy.
@@ -78,9 +83,10 @@ export function Sidebar({ papel, logoUrl }: { papel?: PapelUsuario; logoUrl?: st
   const router = useRouter();
   const supabase = createClient();
   const [aberto, setAberto] = useState(false);
+  const gestaoBase = GESTAO.filter((i) => i.href !== '/comissoes' || (papel && VE_COMISSOES.includes(papel)));
   const gestao = papel === 'admin'
-    ? [...GESTAO, { href: '/configuracoes', label: 'Configuracoes', icon: Settings }]
-    : GESTAO;
+    ? [...gestaoBase, { href: '/configuracoes', label: 'Configuracoes', icon: Settings }]
+    : gestaoBase;
 
   async function sair() {
     await supabase.auth.signOut();

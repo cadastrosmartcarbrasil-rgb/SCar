@@ -6,6 +6,7 @@ import { Plus, Pencil, Trash2, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { FormField, Input, Select } from '@/components/ui/field';
+import { formatPercent } from '@/lib/utils';
 import { useRegionais, useSaveRegional, useDeleteRegional, useUsuarios } from '@/hooks/use-config';
 import type { RegionaisRow } from '@/lib/database.types';
 
@@ -26,7 +27,7 @@ export default function RegionaisPage() {
   );
 
   function novo() {
-    setEditando({ nome: '', cnpj: '', endereco: {}, responsavel_id: null });
+    setEditando({ nome: '', cnpj: '', endereco: {}, responsavel_id: null, taxa_comissao_recorrente: 0, comissao_ativa: true });
     setAberto(true);
   }
   function editar(r: RegionaisRow) {
@@ -70,13 +71,14 @@ export default function RegionaisPage() {
               <th className="px-4 py-2">CNPJ</th>
               <th className="px-4 py-2">Cidade/UF</th>
               <th className="px-4 py-2">Responsavel</th>
+              <th className="px-4 py-2">Comissao regional</th>
               <th className="px-4 py-2 text-right">Acoes</th>
             </tr>
           </thead>
           <tbody>
             {isLoading && (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={6} className="px-4 py-6 text-center text-slate-400">
                   Carregando...
                 </td>
               </tr>
@@ -96,6 +98,11 @@ export default function RegionaisPage() {
                   </td>
                   <td className="px-4 py-2 text-slate-600">
                     {r.responsavel_id ? nomesUsuarios.get(r.responsavel_id) ?? '-' : '-'}
+                  </td>
+                  <td className="tnum px-4 py-2 text-slate-600">
+                    {r.comissao_ativa && Number(r.taxa_comissao_recorrente) > 0
+                      ? `${formatPercent(Number(r.taxa_comissao_recorrente))} recorrente`
+                      : 'Sem comissao'}
                   </td>
                   <td className="px-4 py-2">
                     <div className="flex justify-end gap-1">
@@ -121,7 +128,7 @@ export default function RegionaisPage() {
             })}
             {!isLoading && (regionais ?? []).length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={6} className="px-4 py-6 text-center text-slate-400">
                   Nenhuma regional cadastrada.
                 </td>
               </tr>
@@ -174,6 +181,36 @@ export default function RegionaisPage() {
               ))}
             </Select>
           </FormField>
+
+          <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Comissao da regional</p>
+            <div className="grid grid-cols-2 items-end gap-3">
+              <FormField label="Recorrente sobre a carteira recebida (%)">
+                <Input
+                  type="number"
+                  step="0.01"
+                  min={0}
+                  max={100}
+                  value={Number(((editando?.taxa_comissao_recorrente ?? 0) * 100).toFixed(2))}
+                  onChange={(e) =>
+                    setEditando((p) => ({ ...p, taxa_comissao_recorrente: (Number(e.target.value) || 0) / 100 }))
+                  }
+                />
+              </FormField>
+              <label className="flex items-center gap-2 pb-2 text-sm text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={editando?.comissao_ativa ?? true}
+                  onChange={(e) => setEditando((p) => ({ ...p, comissao_ativa: e.target.checked }))}
+                />
+                Regional recebe comissao
+              </label>
+            </div>
+            <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
+              Paga a regional sobre todos os boletos recebidos da carteira dela (alem da comissao de cada consultor).
+              Adesao nao e comissionada; o calculo comeca na competencia 11/2026.
+            </p>
+          </div>
 
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="secondary" onClick={() => setAberto(false)}>

@@ -79,6 +79,10 @@ export type RegionaisRow = Timestamps & {
   cnpj: string | null;
   endereco: Json;
   responsavel_id: string | null;
+  // 0025 — comissao da regional (override sobre a carteira recebida)
+  taxa_comissao_adesao: number;
+  taxa_comissao_recorrente: number;
+  comissao_ativa: boolean;
 };
 
 export type UsuariosRow = Timestamps & {
@@ -424,14 +428,75 @@ export type MovimentacoesCaixaRow = Timestamps & {
   lancamento_id: string | null;
 };
 
+export type BeneficiarioComissao = 'VENDEDOR' | 'REGIONAL';
+
 export type ComissoesVendasRow = Timestamps & {
   id: string;
-  vendedor_id: string;
+  vendedor_id: string | null;
   veiculo_id: string | null;
   titulo_id: string | null;
   valor_comissao: number;
   is_adesao: boolean;
   status_pagamento: StatusComissao;
+  // 0025 — ledger da gestao de comissoes
+  beneficiario: BeneficiarioComissao;
+  regional_id: string | null;
+  competencia: string | null;
+  base_calculo: number;
+  taxa: number;
+  lancamento_id: string | null;
+  lote_id: string | null;
+  data_pagamento: string | null;
+};
+
+export type ComissoesConfigRow = {
+  id: boolean;
+  competencia_inicial: string;
+  pagar_adesao: boolean;
+  exigir_vendedor_ativo: boolean;
+  dia_vencimento_padrao: number;
+  categoria_dre_id: string | null;
+  geracao_automatica: boolean;
+  dia_geracao_automatica: number;
+  updated_at: string;
+};
+
+export type ComissoesLotesRow = {
+  id: string;
+  competencia: string;
+  regional_id: string | null;
+  data_vencimento: string;
+  qtd_lancamentos: number;
+  qtd_itens: number;
+  valor_total: number;
+  origem: 'MANUAL' | 'AUTOMATICA';
+  created_by: string | null;
+  created_at: string;
+};
+
+export type ComissaoDesempenho = {
+  competencia: string;
+  regional_id: string | null;
+  regional_nome: string | null;
+  vendedor_id: string | null;
+  vendedor_nome: string;
+  boletos_emitidos: number;
+  valor_emitido: number;
+  boletos_recebidos: number;
+  valor_recebido: number;
+  comissao_vendedor: number;
+  comissao_regional: number;
+};
+
+export type ComissaoPrevia = {
+  beneficiario: BeneficiarioComissao;
+  vendedor_id: string | null;
+  regional_id: string | null;
+  favorecido: string;
+  regional_nome: string | null;
+  qtd_itens: number;
+  base_calculo: number;
+  valor_comissao: number;
 };
 
 export type EventosSinistroRow = Timestamps & {
@@ -868,7 +933,17 @@ export type Database = {
         [Rel<'cliente_id', 'clientes'>, Rel<'veiculo_id', 'veiculos'>]
       >;
       movimentacoes_caixa: TableDef<MovimentacoesCaixaRow>;
-      comissoes_vendas: TableDef<ComissoesVendasRow>;
+      comissoes_vendas: TableDef<
+        ComissoesVendasRow,
+        [
+          Rel<'vendedor_id', 'vendedores'>,
+          Rel<'regional_id', 'regionais'>,
+          Rel<'lancamento_id', 'lancamentos_financeiros'>,
+          Rel<'lote_id', 'comissoes_lotes'>,
+        ]
+      >;
+      comissoes_config: TableDef<ComissoesConfigRow>;
+      comissoes_lotes: TableDef<ComissoesLotesRow, [Rel<'regional_id', 'regionais'>, Rel<'created_by', 'usuarios'>]>;
       eventos_sinistro: TableDef<
         EventosSinistroRow,
         [
@@ -998,6 +1073,22 @@ export type Database = {
       financeiro_fluxo_mensal: {
         Args: { p_data_inicio: string; p_data_fim: string; p_regional_id?: string | null };
         Returns: FluxoMes[];
+      };
+      comissoes_desempenho: {
+        Args: { p_competencia: string; p_meses?: number; p_regional_id?: string | null };
+        Returns: ComissaoDesempenho[];
+      };
+      comissoes_previa_pagamento: {
+        Args: { p_competencia: string; p_regional_id?: string | null };
+        Returns: ComissaoPrevia[];
+      };
+      apurar_comissoes: {
+        Args: { p_competencia: string; p_regional_id?: string | null };
+        Returns: Json;
+      };
+      gerar_contas_pagar_comissoes: {
+        Args: { p_competencia: string; p_vencimento: string; p_regional_id?: string | null };
+        Returns: ComissoesLotesRow;
       };
       financeiro_aging: {
         Args: { p_regional_id?: string | null };

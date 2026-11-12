@@ -4,15 +4,18 @@
 > Mantenha este arquivo atualizado ao adicionar módulos/migrations (é barato e faz o projeto andar rápido).
 
 ## Estado atual (retomar aqui) — atualizado nesta sessão
-- **Branch:** `claude/financial-dre-improvements-6zfj3k` · migration nova: **`0024_financeiro_dre_pro`**.
-- **Migrations no repo:** `0001`..`0024` (todas validadas no harness pg local). **Deploy:** rodar a nova no
+- **Branch:** `claude/beautiful-euler-srebr5` · migration nova: **`0025_comissoes_gestao`**.
+- **Migrations no repo:** `0001`..`0025` (todas validadas no harness pg local). **Deploy:** rodar a nova no
   Supabase SQL Editor + no VPS `cd /opt/scar && git pull && sudo docker compose up -d --build`.
+- **Comissoes (gestao pela matriz)** em `/comissoes` (menu Gestao; admin/financeiro geram, gestor
+  regional so ve a propria regional). Detalhes na secao "Comissoes (0025)" abaixo. **Cadastrar as taxas**:
+  Configuracoes → Vendedores (recorrente) e Configuracoes → Regionais (recorrente da regional).
 - **Financeiro repaginado** (`/financeiro`, 3 abas): Contas a Pagar/Receber · Fluxo de Caixa · DRE.
   Detalhes na seção "Financeiro e DRE" abaixo.
 - **Campo de moeda corrigido em todo o sistema** (`MoneyInput`): nasce vazio com placeholder `0,00`
   (fim do "0" preso na frente), máscara por centavos ao digitar só números e respeito à vírgula/ponto
   quando o operador digita ou cola (`1.234,56` / `1234.56`). Lógica pura em `src/lib/money.ts`.
-- **Vitest:** 47 testes (`npm test`) — `sac.test.ts`, `money.test.ts`, `financeiro.test.ts`.
+- **Vitest:** 59 testes (`npm test`) — `sac.test.ts`, `money.test.ts`, `financeiro.test.ts`, `comissoes.test.ts`.
 - **Próximos passos oferecidos** (o usuário escolhe):
   1. **Cobranças** usando `dia_vencimento` + `valor_mensalidade` por veículo (ligar no `gerar_faturas_cliente`)
      e **espelhar as faturas em `lancamentos_financeiros`** para o DRE ver a receita recorrente.
@@ -151,6 +154,17 @@ antigas `gerar_dre`/`gerar_dre_resumo` seguem INTACTAS); valor sem categoria vir
 **SEGURANCA:** as RPCs de relatorio sao SECURITY DEFINER, entao `escopo_regional(uuid)` forca a
 regional de quem chama — so admin/financeiro (`tem_acesso_global`) leem consolidado; usuario sem
 regional nao le nada).
+· `0025_comissoes_gestao` (GESTAO DE COMISSOES: `regionais.taxa_comissao_recorrente/adesao/comissao_ativa`;
+`comissoes_config` (linha unica: `competencia_inicial`=2026-11-01, `pagar_adesao`=false,
+`exigir_vendedor_ativo`, `dia_vencimento_padrao`, automacao `geracao_automatica`/`dia_geracao_automatica`
+DESLIGADA); `comissoes_lotes` (auditoria de cada envio ao contas a pagar); `comissoes_vendas` vira LEDGER
+(`beneficiario` VENDEDOR|REGIONAL, `regional_id`, `competencia`, `base_calculo`, `taxa`, `lancamento_id`,
+`lote_id`, `data_pagamento`; unique por titulo x veiculo x beneficiario). `fn_calcular_comissao` REESCRITA
+(sem adesao). RPCs: `comissao_base_boletos` (invoker, rateia fatura agrupada por item), `apurar_comissoes`,
+`comissoes_desempenho`, `comissoes_previa_pagamento`, `gerar_contas_pagar_comissoes`,
+`gerar_contas_pagar_comissoes_automatico` (p/ pg_cron, sem grant a authenticated); trigger
+`fn_lanc_sincronizar_comissoes` (quitado→pago, cancelado→volta pendente). RLS do ledger: matriz tudo,
+gestor a regional, consultor so as proprias linhas de VENDEDOR).
 
 ## Módulos (status: todos funcionais)
 SAC / Atendimento (`/sac`: **veículo-first + lazy** — busca por Nome/CPF/Placa → `visao-360` traz
@@ -167,7 +181,8 @@ Também: toggle de faturamento Agrupado↔Individual, status financeiro, elegibi
 Vendas/CRM (`/vendas` mobile-first: captura de lead + FIPE por placa/cascata, cotação com
 link público `/cotacao/[token]` detalhada/consolidada + print-PDF, esteira com trava de
 Auditoria — só papel `auditoria`/`admin` clica "Autorizar Entrada" e efetiva cliente+veículo)
-· Associados (painel `/associados/[id]` com abas) · Veículos/Contratos · Eventos/Sinistros
+· Comissoes (`/comissoes`: painel por regional, ranking de consultores, emitidos x recebidos 3 meses,
+geracao do contas a pagar na data escolhida) · Associados (painel `/associados/[id]` com abas) · Veículos/Contratos · Eventos/Sinistros
 (protocolo, reparo próprio/terceiro, financeiro do evento) · Precificação (simulador + editor de
 tabela FIPE com reajuste %) · Empresa (logo/diretoria/mandatos/documentos) · Fornecedores (auto
 CNPJ/CEP) · Financeiro (ver secao propria) · Configurações (regionais, usuários,
@@ -213,6 +228,25 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
   Vazio, baixarCsv), `lancamento-modal.tsx` (form em secoes + previa do parcelamento),
   `baixa-modal.tsx`, `contas-financeiro.tsx`, `fluxo-caixa.tsx`, `dre-report.tsx`.
 
+## Comissoes (0025) — arquitetura
+- **Regra:** comissao so RECORRENTE (adesao nao e paga), a partir da competencia **11/2026**.
+  Competencia = mes de **vencimento** do boleto; base = valor **recebido** (so boleto pago comissiona) —
+  assim "emitidos x recebidos" do painel bate com a base. Taxas dos cadastros: `vendedores.taxa_comissao_recorrente`
+  (consultor) e `regionais.taxa_comissao_recorrente` (regional, sobre toda a carteira dela). Cada boleto gera
+  ate 2 linhas no ledger (VENDEDOR + REGIONAL). Boleto agrupado (titulo sem veiculo_id ligado a `faturas`) e
+  rateado por `fatura_itens` → cada veiculo comissiona o proprio consultor. Regional do boleto =
+  `veiculo.regional_id` → `cliente.regional_id`.
+- **Fluxo:** boleto pago → trigger grava as linhas (estorno remove as nao enviadas). `apurar_comissoes`
+  recalcula a competencia (so mexe no que NAO foi enviado). `gerar_contas_pagar_comissoes(comp, vencimento,
+  regional?)` cria 1 `lancamentos_financeiros` DESPESA por favorecido x regional (cat. 3.2.01, competencia =
+  comp, doc `COM-AAAAMM-…`), incluindo pendencias de meses anteriores pagas com atraso, e registra o lote.
+  Quitar o titulo no Financeiro marca as comissoes como pagas; cancelar devolve para pendente.
+- **Automacao pronta e desligada:** ligar em /comissoes → Politica + agendar no Supabase:
+  `select cron.schedule('comissoes-auto','0 6 * * *',$$ select gerar_contas_pagar_comissoes_automatico() $$);`
+- **Front:** `src/lib/comissoes.ts` (janela de meses, serie, resumo por regional, ranking por melhor recebimento
+  com desempate pela taxa, crescimento mes/3m — testado), `src/hooks/use-comissoes.ts`,
+  `src/app/(dashboard)/comissoes/page.tsx`, `src/components/comissoes/gerar-contas-pagar-modal.tsx`.
+
 ## Cota de participação (rateio no evento) — arquitetura
 - **Desacoplada do Plano.** O Plano define a mensalidade (produtos); a cota (% da FIPE no rateio)
   é uma dimensão própria resolvida por **precedência**: `veiculo.cota` (override) → `modelo.cota`
@@ -254,6 +288,9 @@ produtos, planos/combos (Prata/Ouro/Diamante), contas bancárias, integrações 
 ## Fluxo de validação (fazer SEMPRE antes de commitar)
 Há um Postgres 16 local para testar migrations de verdade (usuário `pgtest`, porta 5433, socket/host 127.0.0.1).
 Padrão usado nas sessões:
+0. (sessao nova) `useradd -m pgtest`; `initdb -D /home/pgtest/data -U pgtest`; `pg_ctl ... -o '-p 5433 -k /tmp'`.
+   `bootstrap.sql` = roles authenticated/anon/service_role, schemas auth/storage, `auth.users`, `auth.uid()` lendo
+   `request.jwt.claim.sub`, `storage.buckets/objects/foldername` e `alter default privileges` (como no Supabase).
 1. Subir pg como `pgtest`, dropar/recriar schemas `public/auth/storage` + roles `authenticated/anon/service_role`.
 2. Aplicar `bootstrap.sql` (stubs de `auth.users`, `auth.uid()`, `storage.*`) e depois todas as migrations em ordem com `ON_ERROR_STOP`.
 3. Rodar testes funcionais (ex.: triggers, baixa financeira, motor de preço) — validar valores esperados.
@@ -264,7 +301,7 @@ Só então: commit + push. (Docker build da imagem NÃO builda aqui: proxy bloqu
 ## Commit / deploy
 - Commits em PT, com footer:
   `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>` + linha `Claude-Session:`.
-- Push sempre para `origin claude/scar-project-btasdf`.
+- Push para a branch de trabalho da sessao (ultima: `origin claude/beautiful-euler-srebr5`).
 - **Atualizar produção:** (A) rodar a migration nova no Supabase SQL Editor; (B) no VPS:
   `cd /opt/scar && git pull && docker compose up -d --build`.
 - Raw URL de arquivo (branch tem `/`, use `refs/heads/`):

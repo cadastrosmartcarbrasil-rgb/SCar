@@ -156,7 +156,7 @@ export default function VendedoresPage() {
             </Select>
           </FormField>
           <div className="grid grid-cols-2 gap-3">
-            <FormField label="Comissao adesao (%)">
+            <FormField label="Comissao adesao (%) — nao paga hoje">
               <Input
                 type="number"
                 step="0.01"
@@ -179,6 +179,10 @@ export default function VendedoresPage() {
               />
             </FormField>
           </div>
+          <p className="text-[11px] leading-relaxed text-slate-500">
+            Politica atual: a comissao e so <b>recorrente</b>, sobre o valor recebido dos boletos dos veiculos do
+            consultor, a partir da competencia 11/2026. A taxa de adesao fica guardada mas nao e paga.
+          </p>
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="secondary" onClick={() => setAberto(false)}>
               Cancelar
