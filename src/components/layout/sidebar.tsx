@@ -37,6 +37,7 @@ import {
   FileText,
   Send,
   BadgePercent,
+  HandCoins,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
@@ -314,7 +315,11 @@ export function Sidebar({ papel, logoUrl, permissoes = null, ehVendedor = false 
   const descontos: Entrada[] = aprovaDesconto
     ? [{ href: '/descontos', label: 'Descontos para aprovar', icon: BadgePercent, contador: 'descontos' }]
     : [];
-  const menuGestao: Entrada[] = [...descontos, ...portais, ...gestao];
+  // 0198 — Gestao de comissoes: a matriz apura e gera; o gestor ve a unidade.
+  const comissoes: Entrada[] = ['admin', 'financeiro', 'gestor_regional'].includes(papel ?? '')
+    ? [{ href: '/comissoes', label: 'Comissões', icon: HandCoins }]
+    : [];
+  const menuGestao: Entrada[] = [...descontos, ...portais, ...comissoes, ...gestao];
 
   async function sair() {
     await supabase.auth.signOut();

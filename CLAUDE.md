@@ -30,6 +30,7 @@ aparece como `SCar`). Trabalho e deploy acontecem no branch **`claude/claude-md-
 | `claude/git-push-issue-to49ky` | parado, contido na trunk salvo 1 commit |
 | `claude/vehicle-trackers-module-jl4rjw` | totalmente contido na trunk |
 | `claude/assistencia-24h-dashboard-cqdb35` | sessão que caiu no branch errado; **não mesclar** (traz `0024`/`0025` que colidem) |
+| `claude/beautiful-euler-srebr5` | sessão de 12/11/2026 que nasceu do branch morto e fez a gestão de comissões sobre a `0024`; **não mesclar** (traz uma `0025` que colide). O trabalho foi refeito aqui na `0198` |
 
 > **CORREÇÃO — este arquivo dizia que o commit era "espelhado" em
 > `claude/financial-dre-improvements-6zfj3k`. Era falso**, e foi o que levou uma sessão a cortar
@@ -2603,6 +2604,7 @@ diretoria. Espelho em `src/lib/prazo-regulatorio.ts`)
 · `0160_plano_desconto_participacao` (PLANO ECONOMICO: `planos_protecao.desconto_base_percentual`/`multiplicador_participacao`; `cotar_plano` desconta os produtos obrigatorios (item com `valor_tabela`/`desconto_plano`) e multiplica a `franquia_participacao`; `multiplicador_participacao_plano`, `participacao_do_plano`; `calcular_participacao_veiculo` pelo plano do veiculo; `atualizar_cotacao` por troca de literal)
 · `0159_comissao_liquidacao_assistencia` (comissao na LIQUIDACAO: renegociacao paga comissiona, repartida pelos veiculos dos originais, avulso nao; comissao OU Assistencia — a unidade que repassa paga a Assistencia no lugar do percentual; qualquer unidade cobra a Assistencia dentro do limite; recria `fn_cotacao_valida_desconto`, `assistencia_profissional_regras`, `fn_calcular_comissao`)
 · `0158_assistencia_profissional` (ASSISTENCIA PROFISSIONAL: `regionais.paga_assistencia_profissional` + min/max (1/40); `cotacoes`/`veiculos.valor_assistencia_profissional`; `comissoes_vendas.valor_assistencia_profissional`; `fn_cotacao_valida_desconto` valida (unidade que paga, limite, so quando muda) e soma DEPOIS do desconto; `atualizar_cotacao` DROP + CREATE com `p_valor_assistencia_profissional`; `autorizar_entrada_lead` grava no INSERT do veiculo; `valor_mensalidade_veiculo` soma sem override; `fn_calcular_comissao` da a parte inteira ao vendedor da unidade que paga; `assistencia_profissional_regras`, `regional_assistencia_do_lead`; Mutual: `mutual_valor_assistencia_do_nome`, `mutual_assistencia_profissional_veiculos`/`_configs`, `mutual_definir_valor_assistencia_profissional`, `mutual_aplicar_assistencia_profissional`, tabela `mutual_assistencia_profissional_valores`)
+· `0198_comissoes_matriz` (GESTAO DE COMISSOES pela matriz, `/comissoes`: `regionais.comissao_matriz_destino` FRANQUIA|VENDEDORES|NENHUM (SMARTCARMATRIZ = VENDEDORES); `comissoes_config` (inicio 2026-11-01, consultor ativo, dia sugerido, automacao DESLIGADA); ledger `comissoes_matriz` (boleto x veiculo x beneficiario, SCar + Mutual via `cobranca_boletos_base`, competencia = mes de VENCIMENTO, so recebido, sem adesao) + `comissoes_matriz_lotes`; RPCs `apurar_comissoes_matriz`, `comissoes_matriz_desempenho`, `comissoes_matriz_previa`, `gerar_contas_pagar_comissoes_matriz`, `gerar_contas_pagar_comissoes_automatico` (so sem sessao); triggers em `lancamentos_financeiros` (quitou/cancelou/excluiu). NAO mexe em `fn_calcular_comissao`. Suite `0198_*`) — ver secao GESTAO DE COMISSOES.
 · `0195_consultor_do_veiculo` (`consultores_do_cliente`: o consultor de cada veiculo do associado; acesso por `cobranca_pode_cliente` ou `pode_regional` do associado/veiculo — o vendedor de outra unidade aparece)
 · `0194_painel_produtos` (aba PRODUTOS do Painel: `painel_produtos(regional)` jsonb com os opcionais (`veiculo_produtos`) dos veiculos na base por tipo, ranking, matriz produto x tipo, categorias e receita mensal pela tabela (`calcular_valor_produto`); staff + `escopo_regional`)
 · `0193_tirar_veiculo_do_boleto` (`veiculos_do_boleto`/`veiculos_do_boleto_mutual`: os veiculos de um boleto, Mutual pelo contrato; `ajustar_boleto_sem_veiculo`: AJUSTE_AGRUPADO pelo Historico; `cobranca_renegociacoes.veiculos_rateio` + `rateio_mensalidade_titulo` repartindo o boleto do Mutual sem veiculo)
@@ -2770,6 +2772,45 @@ categorias **Associados** e **Veículos**.
   eventos em 15/10) aparece na ficha do ASSOCIADO, não na do veículo; e fatura agrupada do SCar
   (sem veículo) idem. `veiculos.regional_id` e `regional_preco_id` apontam ambos para `regionais`:
   embed tem de ser `regionais!veiculos_regional_id_fkey(...)`.
+
+## GESTÃO DE COMISSÕES PELA MATRIZ (0198) — Gestão → Comissões (`/comissoes`)
+Pedido do usuário (12/11/2026): os portais (franquia `/regional/comissoes`, vendedor `/vendedor/comissoes`) já tinham o
+extrato; faltava a MATRIZ apurar, acompanhar e mandar ao contas a pagar. Decisões do usuário: seguir os cadastros de
+vendedores e regionais; **a 1ª comissão do SCar é a de NOVEMBRO/2026 e adesão NÃO é paga** — já começa como recorrência;
+painel por regional com ranking de consultores pelo melhor recebimento e os últimos 3 meses de emitidos × recebidos;
+contas a pagar gerado pelo financeiro **na data escolhida** (automático fica pronto e desligado).
+- **Fonte:** `cobranca_boletos_base()` (SCar + Mutual antes do corte). **Medido em 12/11/2026: ~95% do recebido de
+  novembro ainda é boleto do Mutual** — por isso a comissão NÃO sai de `comissoes_vendas` (que só conhece título do SCar).
+- **Competência = mês de VENCIMENTO** (a do Mutual vem deslocada um mês; o vencimento é a régua do Painel de
+  Inadimplência). Base = valor recebido; boleto aberto/cancelado não comissiona. Taxa de recebimento do painel = recebido
+  dos vencidos ÷ valor vencido (boleto que não venceu não entra em taxa).
+- **A quem a matriz paga** (`regionais.comissao_matriz_destino`, Configurações → Regionais, caixa *Comissão da franquia*):
+  **FRANQUIA** (padrão) = recebido da carteira × `taxa_comissao_recorrente` da regional; título DESPESA da MATRIZ
+  (`regional_id` nulo — se levasse a unidade, cairia no financeiro da franquia como se ela pagasse); a franquia repassa
+  aos consultores pelo portal dela, como antes. **VENDEDORES** (a SMART CAR MATRIZ, que não tem franqueado) = recebido dos
+  veículos do consultor × taxa do vendedor, ou a Assistência Profissional no lugar (0159); título na unidade com
+  `vendedor_id` (como o repasse da 0037). No SCar reaproveita a linha de `comissoes_vendas` (mesmo valor) e a marca
+  `pago` ao enviar, para o portal não repassar de novo. **NENHUM** = não paga.
+- **Ledger `comissoes_matriz`:** uma linha por boleto × veículo × beneficiário; situação derivada (sem lançamento =
+  pendente · com lançamento = a pagar · `data_pagamento` = paga). Apurar apaga e regrava SÓ o que não foi enviado.
+  Mutual sem placa reparte por `veiculos_do_boleto_mutual`; SCar agrupado por `rateio_mensalidade_titulo`.
+- **Contas a pagar:** `gerar_contas_pagar_comissoes_matriz(comp, vencimento, regional?)` reapura a competência e as 5
+  anteriores (o Mutual não dispara trigger: pagamento atrasado entra no envio seguinte), cria 1 título por favorecido ×
+  unidade (`regional_categoria_movimento('COMISSAO_PAGAR')` = 4.1.2.01, doc `COM-AAAAMM-…`) e o lote. Quitou → paga;
+  cancelou/excluiu → volta a pendente (e a `comissoes_vendas` reaproveitada volta a `pendente`).
+- **Automático (desligado):** ligar em /comissoes → Política e agendar
+  `select cron.schedule('comissoes-matriz','0 9 * * *',$$ select gerar_contas_pagar_comissoes_automatico() $$);`
+  (gera no dia escolhido o mês anterior; só roda sem sessão — `cobranca_escopo()` trata `auth.uid()` nulo como global).
+- **Acesso:** apurar/gerar/prévia/lotes só `tem_acesso_global()`; painel também ao gestor regional (só a unidade dele,
+  `escopo_regional`); consultor não vê (o extrato dele é o portal). Menu: item *Comissões* para admin/financeiro/gestor.
+- **Estimativa de novembro em 12/11 (mês aberto, só leitura):** franquias RP ~R$ 14,3 mil · SP1 ~R$ 8,6 mil · GN
+  ~R$ 3,0 mil; consultores da MATRIZ ~R$ 750 (só 4 dos 135 têm taxa).
+- **Não feito / decidir:** espelhar na franquia o "a receber" (3.1.1.06) quando a matriz gera o título dela; a AP no modo
+  FRANQUIA (hoje a franquia recebe o % sobre o valor cheio); `fn_calcular_comissao` segue gerando comissão de ADESÃO no
+  boleto de adesão do SCar para o portal da franquia (a regra "adesão não é paga" vale para a gestão da matriz).
+- **Puras:** `src/lib/comissoes.ts` (janela, série, resumo por regional, ranking, crescimento) com testes; tela
+  `src/app/(dashboard)/comissoes/page.tsx`, modal `src/components/comissoes/gerar-contas-pagar-modal.tsx`, hooks
+  `src/hooks/use-comissoes.ts`.
 
 ## CONSULTOR DO VEÍCULO NA COBRANÇA E NA FICHA (0195)
 Pedido do usuário (09/11/2026): ao abrir o atendimento na Fila de Cobrança, mostrar o consultor; e na identificação do

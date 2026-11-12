@@ -163,6 +163,92 @@ export type RegionaisRow = Timestamps & {
   email: string | null;
   ativo: boolean;
   inativada_em: string | null;
+  /** 0198 — a quem a matriz paga a comissao desta unidade. */
+  comissao_matriz_destino: ComissaoMatrizDestino;
+};
+
+export type ComissaoMatrizDestino = 'FRANQUIA' | 'VENDEDORES' | 'NENHUM';
+
+/** 0198 — politica da gestao de comissoes (linha unica). */
+export type ComissoesConfigRow = {
+  id: boolean;
+  competencia_inicial: string;
+  exigir_vendedor_ativo: boolean;
+  dia_vencimento_padrao: number;
+  geracao_automatica: boolean;
+  dia_geracao_automatica: number;
+  updated_at: string;
+};
+
+/** 0198 — cada envio das comissoes ao contas a pagar. */
+export type ComissoesMatrizLotesRow = {
+  id: string;
+  competencia: string;
+  regional_id: string | null;
+  data_vencimento: string;
+  qtd_lancamentos: number;
+  qtd_itens: number;
+  valor_total: number;
+  origem: 'MANUAL' | 'AUTOMATICA';
+  created_by: string | null;
+  created_at: string;
+};
+
+/** 0198 — ledger da matriz: boleto x veiculo x beneficiario. */
+export type ComissoesMatrizRow = {
+  id: string;
+  competencia: string;
+  regional_id: string;
+  beneficiario: 'FRANQUIA' | 'VENDEDOR';
+  vendedor_id: string | null;
+  origem: 'SCAR' | 'MUTUAL';
+  boleto_id: string;
+  veiculo_id: string | null;
+  comissao_venda_id: string | null;
+  vencimento: string | null;
+  data_recebimento: string | null;
+  base_calculo: number;
+  taxa: number;
+  valor_assistencia_profissional: number;
+  valor_comissao: number;
+  lancamento_id: string | null;
+  lote_id: string | null;
+  data_pagamento: string | null;
+  created_at: string;
+};
+
+export type ComissaoMatrizDesempenho = {
+  competencia: string;
+  regional_id: string | null;
+  regional_nome: string | null;
+  destino: ComissaoMatrizDestino | null;
+  taxa_regional: number | null;
+  vendedor_id: string | null;
+  vendedor_nome: string;
+  vendedor_ativo: boolean;
+  taxa_vendedor: number | null;
+  boletos_emitidos: number;
+  valor_emitido: number;
+  boletos_vencidos: number;
+  valor_vencido: number;
+  boletos_recebidos: number;
+  valor_recebido: number;
+  valor_recebido_vencidos: number;
+  comissao_franquia: number;
+  comissao_vendedor: number;
+};
+
+export type ComissaoMatrizPrevia = {
+  beneficiario: 'FRANQUIA' | 'VENDEDOR';
+  regional_id: string;
+  regional_nome: string;
+  vendedor_id: string | null;
+  favorecido: string;
+  chave_pix: string | null;
+  qtd_itens: number;
+  base_calculo: number;
+  valor_comissao: number;
+  competencia_min: string;
 };
 
 export type UsuariosRow = Timestamps & {
@@ -4529,6 +4615,15 @@ export type Database = {
       >;
       movimentacoes_caixa: TableDef<MovimentacoesCaixaRow>;
       comissoes_vendas: TableDef<ComissoesVendasRow>;
+      comissoes_config: TableDef<ComissoesConfigRow>;
+      comissoes_matriz_lotes: TableDef<
+        ComissoesMatrizLotesRow,
+        [Rel<'regional_id', 'regionais'>, Rel<'created_by', 'usuarios'>]
+      >;
+      comissoes_matriz: TableDef<
+        ComissoesMatrizRow,
+        [Rel<'regional_id', 'regionais'>, Rel<'vendedor_id', 'vendedores'>, Rel<'lancamento_id', 'lancamentos_financeiros'>]
+      >;
       eventos_sinistro: TableDef<
         EventosSinistroRow,
         [
@@ -4794,6 +4889,22 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      comissoes_matriz_desempenho: {
+        Args: { p_competencia: string; p_meses?: number; p_regional_id?: string | null };
+        Returns: ComissaoMatrizDesempenho[];
+      };
+      comissoes_matriz_previa: {
+        Args: { p_competencia: string; p_regional_id?: string | null };
+        Returns: ComissaoMatrizPrevia[];
+      };
+      apurar_comissoes_matriz: {
+        Args: { p_competencia: string; p_regional_id?: string | null };
+        Returns: Json;
+      };
+      gerar_contas_pagar_comissoes_matriz: {
+        Args: { p_competencia: string; p_vencimento: string; p_regional_id?: string | null };
+        Returns: ComissoesMatrizLotesRow;
+      };
       // ---- 0168: e-mails de cobranca ----
       enfileirar_avisos_cobranca: { Args: { p_hoje?: string | null }; Returns: Record<string, unknown> };
       reservar_lote_email: { Args: { p_limite?: number; p_agora?: string | null }; Returns: EmailLoteItem[] };

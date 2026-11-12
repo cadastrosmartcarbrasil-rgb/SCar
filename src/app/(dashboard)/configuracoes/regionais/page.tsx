@@ -17,7 +17,8 @@ import {
 import { buscarCep } from '@/lib/cep';
 import { formatCurrency } from '@/lib/utils';
 import { avisoDeInativacao, pendenciasDaUnidade } from '@/lib/regional';
-import type { RegionaisRow } from '@/lib/database.types';
+import type { ComissaoMatrizDestino, RegionaisRow } from '@/lib/database.types';
+import { DESTINO_COMISSAO } from '@/lib/comissoes';
 
 /** O endereco da unidade e jsonb; estes sao os campos que a tela mantem. */
 type Endereco = {
@@ -422,6 +423,22 @@ export default function RegionaisPage() {
                 />
               </FormField>
             </div>
+            <FormField label="Gestão de comissões — a matriz paga a quem?" className="mt-3">
+              <Select
+                value={editando?.comissao_matriz_destino ?? 'FRANQUIA'}
+                onChange={(e) =>
+                  setEditando((p) => ({ ...p, comissao_matriz_destino: e.target.value as ComissaoMatrizDestino }))
+                }
+              >
+                {(Object.keys(DESTINO_COMISSAO) as ComissaoMatrizDestino[]).map((k) => (
+                  <option key={k} value={k}>{DESTINO_COMISSAO[k].rotulo}</option>
+                ))}
+              </Select>
+              <p className="mt-1 text-xs text-slate-500">
+                {DESTINO_COMISSAO[editando?.comissao_matriz_destino ?? 'FRANQUIA'].detalhe} Só recorrência, a partir
+                de 11/2026 (adesão não é paga). Ver Gestão → Comissões.
+              </p>
+            </FormField>
           </div>
 
           <FormField label="Desconto máximo de venda">

@@ -69,6 +69,9 @@ export function useSaveRegional() {
         paga_assistencia_profissional: r.paga_assistencia_profissional ?? false,
         assistencia_profissional_min: r.assistencia_profissional_min ?? 1,
         assistencia_profissional_max: r.assistencia_profissional_max ?? 40,
+        // Gestao de comissoes (0198): a quem a matriz paga. So vai quando o
+        // form trouxe o campo — nunca reseta a escolha por omissao.
+        ...(r.comissao_matriz_destino ? { comissao_matriz_destino: r.comissao_matriz_destino } : {}),
       };
       if (r.id) {
         const { error } = await supabase.from('regionais').update(payload).eq('id', r.id);
