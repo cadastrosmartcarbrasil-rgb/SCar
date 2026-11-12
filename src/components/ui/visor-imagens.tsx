@@ -13,6 +13,8 @@ export interface ImagemDoVisor {
   url?: string;
   /** Caminho no bucket, para abrir o arquivo original em outra aba. */
   original?: string | null;
+  /** Video (anexo do evento, 0196): toca no proprio visor. */
+  video?: boolean;
 }
 
 /**
@@ -54,7 +56,7 @@ export function VisorImagens({ imagens, id, onTrocar, onFechar, onAbrirOriginal 
       {...fundo}
       role="dialog"
       aria-modal="true"
-      aria-label={`Foto ${atual.titulo}`}
+      aria-label={`${atual.video ? 'Vídeo' : 'Foto'} ${atual.titulo}`}
     >
       <header className="flex items-start justify-between gap-3 text-white" onClick={(e) => e.stopPropagation()}>
         <div className="min-w-0">
@@ -85,7 +87,11 @@ export function VisorImagens({ imagens, id, onTrocar, onFechar, onAbrirOriginal 
       <div className="flex min-h-0 flex-1 items-center gap-2 py-3" onClick={(e) => e.stopPropagation()}>
         <Seta lado="esq" ativo={!!imagens[i - 1]} onClick={() => imagens[i - 1] && onTrocar(imagens[i - 1].id)} />
         <div className="flex h-full min-w-0 flex-1 items-center justify-center">
-          {atual.url ? (
+          {atual.url && atual.video ? (
+            // key: trocar de video recarrega o player
+            <video key={atual.id} src={atual.url} controls autoPlay playsInline
+              className="max-h-full max-w-full rounded-lg bg-black" />
+          ) : atual.url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={atual.url} alt={atual.titulo} className="max-h-full max-w-full rounded-lg object-contain" />
           ) : (

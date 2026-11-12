@@ -56,7 +56,7 @@ export type StatusEvento =
 export type TipoDocumentoAnexo =
   | 'FOTO_AVARIA' | 'BOLETIM_OCORRENCIA' | 'CNH' | 'CRLV' | 'NOTA_FISCAL'
   | 'FOTO_VEICULO' | 'FOTO_LOCAL' | 'CROQUI' | 'OUTRO' | 'ORDEM_SERVICO'
-  | 'TERMO_ENTREGA' | 'TERMO_ENTREGA_ASSINADO';
+  | 'TERMO_ENTREGA' | 'TERMO_ENTREGA_ASSINADO' | 'VIDEO';
 export type StatusCotacao = 'EM_ABERTO' | 'APROVADA' | 'REJEITADA';
 export type CodigoTemplate = 'BOAS_VINDAS' | 'LEMBRETE_BOLETO' | 'NOVO_EVENTO';
 export type ProvedorBanco = 'ASAAS' | 'PJBANK' | 'CORA' | 'INTER' | 'GERENCIANET' | 'SICREDI' | 'OUTRO';

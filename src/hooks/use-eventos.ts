@@ -2,7 +2,8 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
-import { comprimirImagem, validarArquivo } from '@/lib/imagem';
+import { comprimirImagem, tamanhoLegivel, validarArquivo } from '@/lib/imagem';
+import { comprimirVideo, duracaoDoVideo, ehVideo, validarVideo, VIDEO_ANEXO_MAX_BYTES } from '@/lib/video';
 import type {
   EventosSinistroRow,
   StatusEvento,
@@ -237,13 +238,29 @@ export function useUploadAnexo(eventoId: string) {
   const supabase = createClient();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ file: bruto, tipo }: { file: File; tipo: TipoDocumentoAnexo }) => {
-      // Foto de avaria sai do celular com 8-12 MB. Reduz aqui, no navegador
-      // (1600px, JPEG), como na vistoria de vendas: o perito ve o mesmo detalhe
-      // e o upload nao morre no 4G do patio. PDF e XML sobem como vieram.
-      const recusa = validarArquivo(bruto, { aceitaPdf: true, aceitaOutros: /\.xml$/i });
-      if (recusa) throw new Error(recusa);
-      const file = await comprimirImagem(bruto);
+    mutationFn: async ({ file: bruto, tipo: tipoEscolhido, onProgresso }: {
+      file: File; tipo: TipoDocumentoAnexo; onProgresso?: (fracao: number) => void;
+    }) => {
+      let file: File;
+      let tipo = tipoEscolhido;
+      if (ehVideo(bruto)) {
+        // 0196: video ate 90 s, reduzido no navegador (1280px, ~1,2 Mbps) e ate 50 MB no banco.
+        const duracao = await duracaoDoVideo(bruto);
+        const recusaVideo = validarVideo(bruto, duracao);
+        if (recusaVideo) throw new Error(recusaVideo);
+        file = await comprimirVideo(bruto, onProgresso);
+        if (file.size > VIDEO_ANEXO_MAX_BYTES) {
+          throw new Error(`O vídeo ficou com ${tamanhoLegivel(file.size)} e o limite é 50 MB. Envie um trecho menor.`);
+        }
+        tipo = 'VIDEO';
+      } else {
+        // Foto de avaria sai do celular com 8-12 MB. Reduz aqui, no navegador
+        // (1600px, JPEG), como na vistoria de vendas: o perito ve o mesmo detalhe
+        // e o upload nao morre no 4G do patio. PDF e XML sobem como vieram.
+        const recusa = validarArquivo(bruto, { aceitaPdf: true, aceitaOutros: /\.xml$/i });
+        if (recusa) throw new Error(recusa);
+        file = await comprimirImagem(bruto);
+      }
 
       const ext = file.name.split('.').pop();
       // path = {evento_id}/{timestamp}-{rand}.{ext}  (RLS valida o prefixo evento_id)
@@ -251,7 +268,7 @@ export function useUploadAnexo(eventoId: string) {
 
       const { error: upErr } = await supabase.storage
         .from(BUCKET)
-        .upload(path, file, { cacheControl: '3600', upsert: false });
+        .upload(path, file, { cacheControl: '3600', upsert: false, contentType: file.type || undefined });
       if (upErr) throw upErr;
 
       const { data: userData } = await supabase.auth.getUser();
@@ -263,7 +280,11 @@ export function useUploadAnexo(eventoId: string) {
         tamanho_bytes: file.size,
         uploaded_by: userData.user?.id ?? null,
       });
-      if (insErr) throw insErr;
+      if (insErr) {
+        // O teto do banco recusa depois do upload: nao deixa arquivo orfao no bucket.
+        await supabase.storage.from(BUCKET).remove([path]);
+        throw insErr;
+      }
       return path;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['eventos', eventoId, 'anexos'] }),
@@ -301,6 +322,25 @@ export function useRemoverAnexoEvento(eventoId: string) {
 }
 
 // Gera URL assinada temporaria para visualizar/baixar um anexo do bucket privado.
+/** URLs assinadas EM LOTE para a galeria de anexos do evento (uma chamada, nao uma por foto). */
+export function useUrlsAssinadasEvento(paths: string[]) {
+  const supabase = createClient();
+  const lista = [...new Set(paths.filter(Boolean))].sort();
+  return useQuery<Record<string, string>>({
+    queryKey: ['eventos', 'anexos-urls', lista],
+    enabled: lista.length > 0,
+    staleTime: 8 * 60_000, // o link expira em 10 min
+    gcTime: 8 * 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.storage.from(BUCKET).createSignedUrls(lista, 60 * 10);
+      if (error) throw error;
+      const mapa: Record<string, string> = {};
+      (data ?? []).forEach((d) => { if (d.path && d.signedUrl) mapa[d.path] = d.signedUrl; });
+      return mapa;
+    },
+  });
+}
+
 export function useSignedUrl() {
   const supabase = createClient();
   return useMutation({
