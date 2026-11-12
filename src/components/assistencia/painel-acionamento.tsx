@@ -14,7 +14,7 @@ import {
   useBuscaVeiculoAssistencia, useSituacaoAssistencia, useElegibilidadeAssistencia,
   useServicosAssistencia, useAbrirAcionamento, usePrestadoresDoServico, usePrestadores, useCotacoes,
   useRegistrarCotacao, useConfirmarPrestador, useConcluirAcionamento, useCancelarAcionamento,
-  useEnviarVoucher, useAcionamento, useHistoricoAssistenciaVeiculo,
+  useEnviarVoucher, useAcionamento, useHistoricoAssistenciaVeiculo, useKmReboqueVeiculo,
   useAtualizarAcionamento, useTrocarPrestador, useEdicoesAcionamento, useDefinirTrajeto,
   useRegistrarNegado, useNegarAcionamento, useExcluirAcionamento,
   type VeiculoAssistencia, type AbrirAcionamentoInput, type AcionamentoComRel,
@@ -28,7 +28,7 @@ import {
   coordenadaDe, enderecoLinha, linksNavegacao, rotuloRota, type EnderecoGeo,
 } from '@/lib/geo';
 import {
-  avaliarBloqueio, rotuloLimite, calcularKmExcedente, calcularTotalOS,
+  avaliarBloqueio, rotuloLimite, calcularKmExcedente, calcularTotalOS, servicoComFranquiaDoTipo, franquiaEfetiva,
   STATUS_ACIONAMENTO_LABEL, paraCampoDataHora, doCampoDataHora, rotuloAgendamento,
   MOTIVOS_NEGATIVA, rotuloMotivoNegativa, validarNegativa, motivoNegativaSugerido, rotuloNegados,
   acionamentoFinalizado, acionamentoEditavel, podeNegarAcionamento, podeExcluirAcionamento,
@@ -49,6 +49,8 @@ export function PainelAcionamento({ placaInicial }: { placaInicial?: string | nu
   const { data: elegibilidade } = useElegibilidadeAssistencia(veiculo?.id ?? null);
   const { data: servicos } = useServicosAssistencia(true);
   const { data: historico } = useHistoricoAssistenciaVeiculo(veiculo?.id ?? null);
+  // 0197: a franquia do reboque sai do tipo do veiculo.
+  const { data: kmTipo } = useKmReboqueVeiculo(veiculo?.id ?? null);
 
   // Placa vinda do SAC: seleciona sozinho quando ha um unico resultado.
   useEffect(() => {
@@ -173,7 +175,8 @@ export function PainelAcionamento({ placaInicial }: { placaInicial?: string | nu
                       <span className="block text-sm font-semibold text-slate-800">{s.descricao}</span>
                       <span className="block text-xs text-slate-500">
                         {formatCurrency(Number(s.valor_padrao))}
-                        {s.cobra_km_excedente ? ` + ${formatCurrency(Number(s.valor_km_excedente))}/km após ${s.km_franquia}km` : ''}
+                        {s.cobra_km_excedente ? ` + ${formatCurrency(Number(s.valor_km_excedente))}/km após ${franquiaEfetiva(s, kmTipo?.km)}km` : ''}
+                        {s.franquia_pelo_tipo && kmTipo?.km != null ? ` (${kmTipo.tipo ?? 'tipo do veículo'})` : ''}
                       </span>
                       {e && (
                         <span className={`mt-1 inline-block rounded px-1.5 py-0.5 text-[0.6875rem] ${esgotado ? 'bg-rose-50 text-rose-700' : e.computa_limite ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
@@ -259,7 +262,7 @@ export function PainelAcionamento({ placaInicial }: { placaInicial?: string | nu
 // Modal de abertura (com liberacao de superior quando bloqueado)
 // ---------------------------------------------------------------------------
 function ModalAcionar({
-  veiculo, servico, bloqueio, onClose, onAberto, onNegar,
+  veiculo, servico: servicoBase, bloqueio, onClose, onAberto, onNegar,
 }: {
   veiculo: VeiculoAssistencia;
   servico: ServicosAssistenciaRow;
@@ -268,6 +271,8 @@ function ModalAcionar({
   onAberto: (id: string) => void;
   onNegar: () => void;
 }) {
+  const { data: kmTipo } = useKmReboqueVeiculo(veiculo.id);
+  const servico = servicoComFranquiaDoTipo(servicoBase, kmTipo?.km);
   const abrir = useAbrirAcionamento();
   const definirTrajeto = useDefinirTrajeto();
   const atualizar = useAtualizarAcionamento();
@@ -473,10 +478,12 @@ export function OrdemServico({ acionamentoId, onVoltar }: { acionamentoId: strin
   const [trocando, setTrocando] = useState(false);
   const [cancelando, setCancelando] = useState(false);
 
-  const servico = useMemo(
-    () => servicos?.find((s) => s.id === a?.servico_id) ?? null,
-    [servicos, a?.servico_id],
-  );
+  // 0197: franquia do reboque pelo tipo do veiculo do acionamento.
+  const { data: kmTipo } = useKmReboqueVeiculo(a?.veiculo_id ?? null);
+  const servico = useMemo(() => {
+    const s = servicos?.find((x) => x.id === a?.servico_id) ?? null;
+    return s ? servicoComFranquiaDoTipo(s, kmTipo?.km) : null;
+  }, [servicos, a?.servico_id, kmTipo?.km]);
 
   if (!a) return <p className="text-sm text-slate-400">Carregando acionamento...</p>;
 

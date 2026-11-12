@@ -61,6 +61,7 @@ export function useSaveServicoAssistencia() {
         cobra_km_excedente: s.cobra_km_excedente ?? false,
         valor_km_excedente: s.valor_km_excedente ?? 0,
         km_franquia: s.km_franquia ?? 0,
+        franquia_pelo_tipo: s.franquia_pelo_tipo ?? false,
         computa_limite: s.computa_limite ?? false,
         limite_quantidade: s.limite_quantidade ?? 1,
         limite_janela_meses: s.limite_janela_meses ?? 12,
@@ -1011,6 +1012,25 @@ export function usePainelFrotaSituacao(regionalId?: string | null) {
       });
       if (error) throw error;
       return data ?? [];
+    },
+  });
+}
+
+/** 0197: km de IDA do reboque do tipo do veiculo (Configuracoes -> Tipos de Veiculo). Null = nao informado. */
+export function useKmReboqueVeiculo(veiculoId: string | null | undefined) {
+  const supabase = createClient();
+  return useQuery<{ km: number | null; tipo: string | null }>({
+    queryKey: ['assistencia', 'km-reboque', veiculoId],
+    enabled: !!veiculoId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('veiculos')
+        .select('tipos_veiculo(nome, km_reboque_ida)')
+        .eq('id', veiculoId!)
+        .maybeSingle();
+      if (error) throw error;
+      const t = (data as { tipos_veiculo: { nome: string; km_reboque_ida: number | null } | null } | null)?.tipos_veiculo;
+      return { km: t?.km_reboque_ida ?? null, tipo: t?.nome ?? null };
     },
   });
 }

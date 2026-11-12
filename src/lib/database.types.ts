@@ -2321,6 +2321,8 @@ export type ServicosAssistenciaRow = Timestamps & {
   cobra_km_excedente: boolean;
   valor_km_excedente: number;
   km_franquia: number;
+  /** 0197: reboque/guincho — a franquia sai do km_reboque_ida do tipo do veiculo. */
+  franquia_pelo_tipo: boolean;
   computa_limite: boolean;
   limite_quantidade: number;
   limite_janela_meses: number;

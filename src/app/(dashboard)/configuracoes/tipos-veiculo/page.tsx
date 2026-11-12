@@ -19,7 +19,9 @@ export default function TiposVeiculoPage() {
       <p className="text-sm text-slate-500">
         Categorias de veículo que determinam a matriz de preços (ex.: Passeio, Moto, Pick-up/Van,
         Diesel Leve). O <b>km do reboque</b> (ida e volta) é o limite da Assistência 24h que a proposta
-        mostra ao cliente; em branco, a proposta diz &quot;conforme o tipo do veículo&quot;.
+        mostra ao cliente e, desde a 0197, a <b>franquia da OS</b> nos serviços de reboque/guincho marcados
+        em Assistência 24h → Serviços 24h (vale o km de <b>ida</b>: a rota da OS é do resgate ao destino).
+        Em branco, a proposta diz &quot;conforme o tipo do veículo&quot; e a OS usa o km do serviço.
       </p>
       <div className="flex gap-2">
         <Input value={novo} onChange={(e) => setNovo(e.target.value)} placeholder="Ex.: Passeio" className="mt-0" />

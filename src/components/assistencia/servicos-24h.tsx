@@ -61,7 +61,7 @@ export function Servicos24h() {
                 <td className="tnum px-4 py-2 text-right">{formatCurrency(Number(s.valor_padrao))}</td>
                 <td className="px-4 py-2 text-slate-600">
                   {s.cobra_km_excedente
-                    ? `${formatCurrency(Number(s.valor_km_excedente))}/km após ${s.km_franquia} km`
+                    ? `${formatCurrency(Number(s.valor_km_excedente))}/km após ${s.franquia_pelo_tipo ? 'o km do tipo de veículo' : `${s.km_franquia} km`}`
                     : <span className="text-slate-400">Não cobra</span>}
                 </td>
                 <td className="px-4 py-2 text-slate-600">
@@ -129,13 +129,27 @@ export function Servicos24h() {
                 <FormField label="Valor padrão do KM excedente">
                   <MoneyInput value={edit?.valor_km_excedente ?? 0} onChange={(v) => setEdit({ ...edit, valor_km_excedente: v ?? 0 })} />
                 </FormField>
-                <FormField label="KM de franquia (inclusos)">
+                <FormField label={edit?.franquia_pelo_tipo ? 'KM de franquia (reserva, tipo sem km)' : 'KM de franquia (inclusos)'}>
                   <Input
                     type="number" min={0}
                     value={edit?.km_franquia ?? 0}
                     onChange={(e) => setEdit({ ...edit, km_franquia: Number(e.target.value) })}
                   />
                 </FormField>
+                <label className="flex items-start gap-2 text-sm text-slate-700 sm:col-span-2">
+                  <input
+                    type="checkbox" className="mt-0.5"
+                    checked={edit?.franquia_pelo_tipo ?? false}
+                    onChange={(e) => setEdit({ ...edit, franquia_pelo_tipo: e.target.checked })}
+                  />
+                  <span>
+                    Reboque/guincho: franquia pelo <strong>tipo do veículo</strong>
+                    <span className="block text-xs text-slate-500">
+                      Usa o &quot;km do reboque (ida)&quot; de Configurações → Tipos de Veículo (o mesmo que a proposta mostra).
+                      Tipo sem km informado usa o valor acima.
+                    </span>
+                  </span>
+                </label>
               </div>
             )}
           </div>

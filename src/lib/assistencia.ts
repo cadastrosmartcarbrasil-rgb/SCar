@@ -24,6 +24,29 @@ export interface ServicoCalculo {
   km_franquia: number;
 }
 
+/**
+ * 0197: franquia efetiva do servico para o veiculo. Servico marcado
+ * `franquia_pelo_tipo` (reboque/guincho) usa o km de IDA do reboque do tipo do
+ * veiculo (Configuracoes -> Tipos de Veiculo); sem ele, o km do proprio servico.
+ * Espelho de `franquia_km_servico` (SQL).
+ */
+export function franquiaEfetiva(
+  servico: { km_franquia: number; franquia_pelo_tipo?: boolean | null },
+  kmReboqueTipo: number | null | undefined,
+): number {
+  if (servico.franquia_pelo_tipo && kmReboqueTipo != null) return Number(kmReboqueTipo);
+  return Number(servico.km_franquia ?? 0);
+}
+
+/** O servico com a franquia ja resolvida para o veiculo (o resto da tela segue igual). */
+export function servicoComFranquiaDoTipo<T extends { km_franquia: number; franquia_pelo_tipo?: boolean | null }>(
+  servico: T,
+  kmReboqueTipo: number | null | undefined,
+): T {
+  const km = franquiaEfetiva(servico, kmReboqueTipo);
+  return km === Number(servico.km_franquia ?? 0) ? servico : { ...servico, km_franquia: km };
+}
+
 /** KM que passam da franquia do servico (nunca negativo). */
 export function calcularKmExcedente(kmPercorrido: number | null | undefined, kmFranquia: number): number {
   const km = Number(kmPercorrido ?? 0);

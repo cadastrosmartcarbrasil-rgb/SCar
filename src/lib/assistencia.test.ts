@@ -415,3 +415,15 @@ describe('pedido negado e exclusao (0134)', () => {
     expect(rotuloMotivoNegativa('FORA_DA_AREA')).toBe('Fora da área de atendimento');
   });
 });
+
+describe('franquia do reboque pelo tipo (0197)', () => {
+  it('servico marcado usa o km do tipo; sem km, o do servico', async () => {
+    const { franquiaEfetiva, servicoComFranquiaDoTipo } = await import('./assistencia');
+    const reb = { cobra_km_excedente: true, valor_km_excedente: 3, km_franquia: 50, franquia_pelo_tipo: true };
+    expect(franquiaEfetiva(reb, 200)).toBe(200);
+    expect(franquiaEfetiva(reb, null)).toBe(50);
+    expect(franquiaEfetiva({ ...reb, franquia_pelo_tipo: false }, 1000)).toBe(50);
+    expect(servicoComFranquiaDoTipo(reb, 1000).km_franquia).toBe(1000);
+    expect(servicoComFranquiaDoTipo(reb, null)).toBe(reb);
+  });
+});
