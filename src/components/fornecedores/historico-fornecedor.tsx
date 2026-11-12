@@ -170,6 +170,13 @@ function LinhaHistorico({ l, onAbrir }: { l: LancamentoHistoricoFornecedor; onAb
           <selo.icon className="h-3 w-3" /> {origem.rotulo}
         </span>
         {origem.referencia && <span className="block font-mono text-[0.6875rem] text-slate-400">{origem.referencia}</span>}
+        {(l.evento_terceiros?.nome || l.eventos_sinistro?.clientes?.nome_razao_social) && (
+          <span className="block text-[0.6875rem] text-slate-500">
+            {l.evento_terceiros
+              ? `Terceiro: ${l.evento_terceiros.nome}`
+              : `Associado: ${l.eventos_sinistro?.clientes?.nome_razao_social}`}
+          </span>
+        )}
       </td>
       <td className="tnum px-4 py-2.5 text-slate-600">{formatDate(l.data_vencimento)}</td>
       <td className="tnum px-4 py-2.5 text-right font-medium text-slate-800">{formatCurrency(l.valor_original)}</td>

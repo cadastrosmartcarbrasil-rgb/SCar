@@ -2980,6 +2980,17 @@ vencido. Medido: 498 abertos (R$ 96,6 mil) com o mês pago por outra via + 163 d
 - **Depende de `mutual_captura`** para a referência: boleto importado depois do corte sem captura fica sem grupo (não é
   tocado). As colunas guardam a referência, então apagar a captura no corte não desfaz nada.
 
+## FINANCEIRO — ASSOCIADO/TERCEIRO DO EVENTO NA LISTA (12/11/2026, sem migration)
+Pedido do usuário: nas contas a pagar lançadas pelos Eventos a lista mostrava só o fornecedor. Agora a coluna
+Favorecido traz, embaixo do fornecedor, **"Evento EVT-… · Associado: NOME"** (o dono do evento, `eventos_sinistro.cliente_id`)
+ou **"Terceiro: NOME (EVT-…-T01)"** quando o título é do terceiro. O associado entra pelo embed
+`eventos_sinistro(numero_protocolo, clientes!eventos_sinistro_cliente_id_fkey(...))` — o nome da FK é obrigatório
+(`evento_terceiros` liga eventos e clientes e deixa o embed ambíguo). Busca e CSV também procuram/levam associado e
+número do evento; o histórico do fornecedor mostra o associado/terceiro. Regra pura `rotuloFavorecido` (`associadoEvento`).
+**Selo "Sem evento vinculado"** (`eventoSemVinculo`, `src/lib/terceiros.ts`): despesa nas contas 4.1.4.02/4.1.4.03 sem
+`evento_id` — medido em 12/11: ~48 reparos assim, criados pelo extrato (OFX) ou digitados no Financeiro; para eles não
+há associado a mostrar. O lançamento pelo evento (aba Financeiro do evento) já liga.
+
 ## CONTAS A PAGAR — ESTORNO, EXCLUSÃO E COTAÇÃO (0132)
 Pedido do usuário (21/10/2026): filtro de fornecedor, estornar pagamento já feito (admin/financeiro ou extra),
 excluir conta não paga e, nos eventos, ao aprovar a cotação ir direto ao lançamento com o fornecedor escolhido.

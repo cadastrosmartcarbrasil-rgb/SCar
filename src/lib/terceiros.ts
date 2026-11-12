@@ -102,14 +102,41 @@ export function rotuloFavorecido(l: {
   terceiro?: { nome: string; codigo: string } | null;
   associado?: string | null;
   evento?: string | null;
+  /** O associado DONO do evento (eventos_sinistro.cliente_id): quem o reparo/indenizacao atende. */
+  associadoEvento?: string | null;
 }): { nome: string; detalhe: string | null } {
   const ev = l.evento ? `Evento ${l.evento}` : null;
   const junta = (...p: (string | null)[]) => p.filter(Boolean).join(' · ') || null;
-  if (l.tipo === 'RECEITA') return { nome: l.associado ?? '', detalhe: ev };
-  if (l.fornecedor) return { nome: l.fornecedor, detalhe: junta(ev, l.terceiro ? `ref. terceiro ${l.terceiro.codigo}` : null) };
-  if (l.terceiro) return { nome: l.terceiro.nome, detalhe: junta(`Indenização a terceiro ${l.terceiro.codigo}`, ev) };
+  const assocEv = l.associadoEvento ?? null;
+  // Quem o titulo atende, para a conta do evento: o terceiro, senao o associado do evento.
+  const atendido = l.terceiro
+    ? `Terceiro: ${l.terceiro.nome} (${l.terceiro.codigo})`
+    : assocEv ? `Associado: ${assocEv}` : null;
+  if (l.tipo === 'RECEITA') {
+    const nome = l.associado ?? assocEv ?? '';
+    return { nome, detalhe: junta(ev, l.associado && assocEv && assocEv !== l.associado ? `Associado: ${assocEv}` : null) };
+  }
+  if (l.fornecedor) return { nome: l.fornecedor, detalhe: junta(ev, atendido) };
+  if (l.terceiro) {
+    return {
+      nome: l.terceiro.nome,
+      detalhe: junta(`Indenização a terceiro ${l.terceiro.codigo}`, ev, assocEv ? `Associado: ${assocEv}` : null),
+    };
+  }
   if (l.associado) return { nome: l.associado, detalhe: junta(l.evento ? 'Indenização ao associado' : null, ev) };
-  return { nome: '', detalhe: ev };
+  return { nome: '', detalhe: junta(ev, atendido) };
+}
+
+/**
+ * Despesa classificada como custo de evento (reparo/indenizacao) que nao esta
+ * ligada a evento nenhum: a lista nao tem como dizer de quem e o reparo.
+ * Acontece com o lancamento criado a partir do extrato (OFX) ou digitado direto
+ * no Financeiro.
+ */
+export const CONTAS_DE_EVENTO = ['4.1.4.02', '4.1.4.03'];
+export function eventoSemVinculo(l: { tipo: string; evento_id?: string | null; status?: string | null; codigoConta?: string | null }): boolean {
+  return l.tipo === 'DESPESA' && !l.evento_id && l.status !== 'cancelado'
+    && !!l.codigoConta && CONTAS_DE_EVENTO.includes(l.codigoConta);
 }
 
 // ---------------------------------------------------------------------------

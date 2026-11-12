@@ -15,7 +15,7 @@ import {
 import { usePlanoContas } from '@/hooks/use-config';
 import { acoesDoTitulo, diasAtraso, saldoTitulo, situacaoTitulo } from '@/lib/financeiro';
 import { rotuloFornecedor } from '@/lib/fornecedores';
-import { rotuloFavorecido } from '@/lib/terceiros';
+import { rotuloFavorecido, eventoSemVinculo } from '@/lib/terceiros';
 import { SeletorFornecedor } from '@/components/fornecedores/seletor-fornecedor';
 import { ExcluirLancamentoModal, PagamentosModal } from './acoes-titulo';
 import { somarMoeda } from '@/lib/money';
@@ -97,7 +97,8 @@ export function ContasFinanceiro({
     const termo = busca.trim().toLowerCase();
     if (!termo) return lancamentos ?? [];
     return (lancamentos ?? []).filter((l) =>
-      [l.descricao, l.numero_documento, l.fornecedores?.razao_social, l.fornecedores?.nome_fantasia, l.evento_terceiros?.nome, l.clientes?.nome_razao_social, l.centros_custo?.nome]
+      [l.descricao, l.numero_documento, l.fornecedores?.razao_social, l.fornecedores?.nome_fantasia, l.evento_terceiros?.nome, l.evento_terceiros?.codigo, l.clientes?.nome_razao_social,
+        l.eventos_sinistro?.numero_protocolo, l.eventos_sinistro?.clientes?.nome_razao_social, l.centros_custo?.nome]
         .filter(Boolean)
         .some((campo) => String(campo).toLowerCase().includes(termo)),
     );
@@ -230,7 +231,7 @@ export function ContasFinanceiro({
           <input
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar descrição, documento ou favorecido"
+            placeholder="Buscar descrição, documento, favorecido, associado ou nº do evento"
             className="w-72 rounded-lg border border-slate-300 py-1.5 pl-8 pr-3 text-sm focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
           />
         </div>
@@ -295,11 +296,20 @@ export function ContasFinanceiro({
                   <td className="px-4 py-2.5 text-slate-600">
                     {(() => {
                       const f = favorecido(l);
-                      if (!f.nome && !f.detalhe) return <span className="text-slate-300">—</span>;
+                      const solto = semEvento(l);
+                      if (!f.nome && !f.detalhe && !solto) return <span className="text-slate-300">—</span>;
                       return (
                         <>
                           {f.nome || <span className="text-amber-600">sem favorecido</span>}
-                          {f.detalhe && <span className="block text-[0.6875rem] text-slate-400">{f.detalhe}</span>}
+                          {f.detalhe && <span className="block text-[0.6875rem] text-slate-500">{f.detalhe}</span>}
+                          {solto && (
+                            <span
+                              className="mt-0.5 inline-block rounded bg-amber-50 px-1.5 py-0.5 text-[0.6875rem] text-amber-700"
+                              title="Despesa de evento sem evento vinculado: edite e ligue ao evento, ou lance pela aba Financeiro do evento."
+                            >
+                              Sem evento vinculado
+                            </span>
+                          )}
                         </>
                       );
                     })()}
@@ -445,6 +455,13 @@ function favorecido(l: LancamentoComRel) {
     terceiro: l.evento_terceiros ?? null,
     associado: l.clientes?.nome_razao_social ?? null,
     evento: l.eventos_sinistro?.numero_protocolo ?? null,
+    associadoEvento: l.eventos_sinistro?.clientes?.nome_razao_social ?? null,
+  });
+}
+
+function semEvento(l: LancamentoComRel): boolean {
+  return eventoSemVinculo({
+    tipo: l.tipo, evento_id: l.evento_id, status: l.status, codigoConta: l.categorias_dre?.codigo_estruturado ?? null,
   });
 }
 

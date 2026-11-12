@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   erroFavorecidoEvento, lancamentoDaCotacao, resumoFinanceiroEvento, rotuloVinculo, terceiroPendente,
-  rotuloFavorecido, tipoFavorecido, validarTerceiro,
+  rotuloFavorecido, tipoFavorecido, validarTerceiro, eventoSemVinculo,
 } from './terceiros';
 
 describe('validarTerceiro', () => {
@@ -121,5 +121,29 @@ describe('rotuloFavorecido', () => {
   it('fora de evento, so o nome', () => {
     expect(rotuloFavorecido({ tipo: 'DESPESA', fornecedor: 'ALUGUEL' })).toEqual({ nome: 'ALUGUEL', detalhe: null });
     expect(rotuloFavorecido({ tipo: 'DESPESA' })).toEqual({ nome: '', detalhe: null });
+  });
+  it('fornecedor do evento mostra o associado do evento', () => {
+    expect(rotuloFavorecido({ tipo: 'DESPESA', fornecedor: 'FUNILARIA', evento: 'EVT-1', associadoEvento: 'MARIA' }))
+      .toEqual({ nome: 'FUNILARIA', detalhe: 'Evento EVT-1 · Associado: MARIA' });
+  });
+  it('fornecedor do reparo do terceiro mostra o terceiro, nao o associado', () => {
+    expect(rotuloFavorecido({
+      tipo: 'DESPESA', fornecedor: 'FUNILARIA', evento: 'EVT-1', associadoEvento: 'MARIA',
+      terceiro: { nome: 'JOSE', codigo: 'EVT-1-T01' },
+    })).toEqual({ nome: 'FUNILARIA', detalhe: 'Evento EVT-1 · Terceiro: JOSE (EVT-1-T01)' });
+  });
+  it('terceiro indenizado mostra tambem o associado do evento', () => {
+    expect(rotuloFavorecido({
+      tipo: 'DESPESA', terceiro: { nome: 'JOSE', codigo: 'EVT-1-T01' }, evento: 'EVT-1', associadoEvento: 'MARIA',
+    })).toEqual({ nome: 'JOSE', detalhe: 'Indenização a terceiro EVT-1-T01 · Evento EVT-1 · Associado: MARIA' });
+  });
+});
+
+describe('eventoSemVinculo', () => {
+  it('reparo sem evento e marcado; com evento, cancelado ou outra conta, nao', () => {
+    expect(eventoSemVinculo({ tipo: 'DESPESA', evento_id: null, status: 'pendente', codigoConta: '4.1.4.02' })).toBe(true);
+    expect(eventoSemVinculo({ tipo: 'DESPESA', evento_id: 'x', status: 'pendente', codigoConta: '4.1.4.02' })).toBe(false);
+    expect(eventoSemVinculo({ tipo: 'DESPESA', evento_id: null, status: 'cancelado', codigoConta: '4.1.4.03' })).toBe(false);
+    expect(eventoSemVinculo({ tipo: 'DESPESA', evento_id: null, status: 'pago', codigoConta: '4.1.4.01' })).toBe(false);
   });
 });

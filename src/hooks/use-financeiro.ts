@@ -23,8 +23,8 @@ export interface LancamentoComRel extends LancamentosFinanceirosRow {
   centros_custo?: { nome: string } | null;
   /** 0103 — terceiro do evento (favorecido quando nao ha fornecedor). */
   evento_terceiros?: { codigo: string; nome: string } | null;
-  /** 0156 — o numero do evento, para a lista do financeiro. */
-  eventos_sinistro?: { numero_protocolo: string | null } | null;
+  /** 0156 — o numero do evento e o associado dono dele, para a lista do financeiro. */
+  eventos_sinistro?: { numero_protocolo: string | null; clientes?: { nome_razao_social: string } | null } | null;
 }
 
 export interface FiltroLancamentos {
@@ -58,7 +58,7 @@ export function useLancamentos(filtro?: FiltroLancamentos) {
         .select(
           '*, fornecedores(razao_social, nome_fantasia), clientes(nome_razao_social), ' +
             'categorias_dre(codigo_estruturado, nome), centros_custo(nome), evento_terceiros(codigo, nome), ' +
-            'eventos_sinistro(numero_protocolo)',
+            'eventos_sinistro(numero_protocolo, clientes!eventos_sinistro_cliente_id_fkey(nome_razao_social))',
         )
         .order('data_vencimento', { ascending: true });
       if (filtro?.id) {
@@ -86,7 +86,6 @@ export function useLancamentos(filtro?: FiltroLancamentos) {
 }
 
 export interface LancamentoHistoricoFornecedor extends LancamentoComRel {
-  eventos_sinistro?: { numero_protocolo: string | null } | null;
   acionamentos_assistencia?: { id: string; codigo_os: string | null; protocolo: string | null }[] | null;
   baixas_financeiras?: {
     id: string; data_pagamento: string; valor_liquido: number; valor_pago: number;
@@ -108,7 +107,7 @@ export function useHistoricoFornecedor(fornecedorId: string | null | undefined) 
         .from('lancamentos_financeiros')
         .select(
           '*, categorias_dre(codigo_estruturado, nome), centros_custo(nome), evento_terceiros(codigo, nome), ' +
-            'eventos_sinistro(numero_protocolo), acionamentos_assistencia(id, codigo_os, protocolo), ' +
+            'eventos_sinistro(numero_protocolo, clientes!eventos_sinistro_cliente_id_fkey(nome_razao_social)), acionamentos_assistencia(id, codigo_os, protocolo), ' +
             'baixas_financeiras(id, data_pagamento, valor_liquido, valor_pago, forma_pagamento, contas_bancarias(nome))',
         )
         .eq('fornecedor_id', fornecedorId!)
