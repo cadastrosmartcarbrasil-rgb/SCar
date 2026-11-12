@@ -214,6 +214,11 @@ function Campo({ titulo, children, destaque }: { titulo: string; children: React
 
 export function PropostaPlano({ d, logo }: { d: PropostaDados; logo: string }) {
   const reboque = textoReboque(d.reboque);
+  // Mais de 12 coberturas = 5+ linhas de cards: compacta cards e linhas da tabela da 24h (2 niveis) para a folha A4
+  // nao cortar a Assistencia 24h. Nenhuma cobertura e escondida: o que cresce e a compactacao, nao um limite de itens.
+  const nivel = d.coberturas.length > 15 ? 2 : d.coberturas.length > 12 ? 1 : 0;
+  const compacto = nivel > 0;
+  const alturaLinha = [27, 23, 19][nivel];
   const grade: CSSProperties = { display: 'grid', gridTemplateColumns: '1.6fr 1fr 1fr 1.3fr', gap: 16, alignItems: 'center', padding: '14px 0' };
   return (
     <section style={{ ...folha, padding: '30px 40px 24px', display: 'flex', flexDirection: 'column', gap: 12,
@@ -260,19 +265,21 @@ export function PropostaPlano({ d, logo }: { d: PropostaDados; logo: string }) {
       </div>
 
       {d.coberturas.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${d.coberturas.length > 9 ? 4 : 3}, minmax(0, 1fr))`, gap: 8 }}>
-          {d.coberturas.slice(0, 12).map((c, k) => (
+        // Sempre 3 colunas e NENHUM texto cortado: o card cresce em altura (minHeight, nao height) e o titulo e o
+        // detalhe quebram de linha. Com 4 colunas sobravam ~110 px de texto e "Incendio apos colisao" virava
+        // "Incendio apos c..." (nowrap + reticencias, detalhe preso em 2 linhas). A folga da pagina absorve as linhas extras.
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: compacto ? 6 : 8, alignItems: 'stretch' }}>
+          {d.coberturas.map((c, k) => (
             <div key={`${c.titulo}-${k}`} style={{ display: 'flex', alignItems: 'center', gap: 9, background: COR.branco,
-              border: `1px solid ${COR.linha}`, borderRadius: 12, padding: '7px 10px', height: 54, boxSizing: 'border-box' }}>
+              border: `1px solid ${COR.linha}`, borderRadius: 12, padding: ['7px 10px', '4px 10px', '3px 10px'][nivel], minHeight: [54, 44, 40][nivel], boxSizing: 'border-box' }}>
               <div style={{ flex: 'none', width: 32, height: 32, borderRadius: '50%', background: COR.iconeFundo,
                 display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Icone nome={c.icone} tamanho={18} />
               </div>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 13.5, fontWeight: 700, lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.titulo}</div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 700, lineHeight: 1.2, overflowWrap: 'break-word' }}>{c.titulo}</div>
                 {c.detalhe && (
-                  <div style={{ marginTop: 1, fontSize: 11.5, lineHeight: 1.25, color: COR.chumbo, display: '-webkit-box',
-                    WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{c.detalhe}</div>
+                  <div style={{ marginTop: 1, fontSize: 11.5, lineHeight: 1.25, color: COR.chumbo, overflowWrap: 'break-word' }}>{c.detalhe}</div>
                 )}
               </div>
             </div>
@@ -304,7 +311,7 @@ export function PropostaPlano({ d, logo }: { d: PropostaDados; logo: string }) {
           <div style={{ flex: 'none', width: 200 }}>Limite</div>
         </div>
         {ASSISTENCIA_24H_PROPOSTA.map((s, k) => (
-          <div key={s.servico} style={{ display: 'flex', alignItems: 'center', padding: '0 16px', height: 27,
+          <div key={s.servico} style={{ display: 'flex', alignItems: 'center', padding: '0 16px', height: alturaLinha, flex: 'none',
             borderTop: `1px solid ${COR.linhaFraca}`, background: k % 2 ? COR.zebra : COR.branco, fontSize: 12.5, whiteSpace: 'nowrap' }}>
             <div style={{ flex: 'none', width: 176, fontWeight: 700 }}>{s.servico}</div>
             <div style={{ flex: 1, color: COR.chumbo, overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.inclui}</div>
