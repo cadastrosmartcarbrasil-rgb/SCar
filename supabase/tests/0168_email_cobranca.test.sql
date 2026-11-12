@@ -88,6 +88,10 @@ begin
   raise notice 'OK pagamento cancela o aviso pendente';
 
   -- ============================================================ reservar
+  -- O calendario do teste e fixo (enfileirar/reservar recebem p_hoje/p_agora), mas
+  -- proxima_tentativa_em nasce com default now() = relogio REAL. Sem isso, a partir
+  -- de 12/11/2026 o item fica "no futuro" em relacao a meio_dia e nada e reservado.
+  update email_outbox set proxima_tentativa_em = meio_dia - interval '1 hour' where status = 'pendente';
   perform set_config('request.jwt.claim.sub', u_adm::text, false);
   begin
     perform * from reservar_lote_email(10, meio_dia);
