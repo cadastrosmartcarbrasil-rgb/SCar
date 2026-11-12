@@ -2990,6 +2990,13 @@ número do evento; o histórico do fornecedor mostra o associado/terceiro. Regra
 **Selo "Sem evento vinculado"** (`eventoSemVinculo`, `src/lib/terceiros.ts`): despesa nas contas 4.1.4.02/4.1.4.03 sem
 `evento_id` — medido em 12/11: ~48 reparos assim, criados pelo extrato (OFX) ou digitados no Financeiro; para eles não
 há associado a mostrar. O lançamento pelo evento (aba Financeiro do evento) já liga.
+**Vincular ao evento pelo Financeiro (12/11/2026):** no modal da conta a pagar aberto pelo Financeiro há o campo
+**Evento relacionado** (`<SeletorEvento>`, `src/components/eventos/seletor-evento.tsx`; busca por nº do evento — com ou
+sem "EVT-", ou só os dígitos finais —, placa ou nome do associado, `useBuscaEventosVinculo`/`useContextoEvento` em
+`src/hooks/use-evento-vinculo.ts`, regra pura `termosBuscaEvento`). Ligado, o modal mostra o mesmo bloco do evento
+(terceiro, indenização ao associado) e vale a regra do favorecido (trigger `fn_lanc_evento_favorecido`: sem fornecedor,
+escolher o terceiro ou a indenização). Sem unidade, o título herda a do evento. A lista ganhou o filtro **"Só despesas
+de evento sem vínculo"** (dentro do período escolhido).
 
 ## CONTAS A PAGAR — ESTORNO, EXCLUSÃO E COTAÇÃO (0132)
 Pedido do usuário (21/10/2026): filtro de fornecedor, estornar pagamento já feito (admin/financeiro ou extra),

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   erroFavorecidoEvento, lancamentoDaCotacao, resumoFinanceiroEvento, rotuloVinculo, terceiroPendente,
-  rotuloFavorecido, tipoFavorecido, validarTerceiro, eventoSemVinculo,
+  rotuloFavorecido, tipoFavorecido, validarTerceiro, eventoSemVinculo, termosBuscaEvento, protocoloCasa,
 } from './terceiros';
 
 describe('validarTerceiro', () => {
@@ -145,5 +145,22 @@ describe('eventoSemVinculo', () => {
     expect(eventoSemVinculo({ tipo: 'DESPESA', evento_id: 'x', status: 'pendente', codigoConta: '4.1.4.02' })).toBe(false);
     expect(eventoSemVinculo({ tipo: 'DESPESA', evento_id: null, status: 'cancelado', codigoConta: '4.1.4.03' })).toBe(false);
     expect(eventoSemVinculo({ tipo: 'DESPESA', evento_id: null, status: 'pago', codigoConta: '4.1.4.01' })).toBe(false);
+  });
+});
+
+describe('termosBuscaEvento', () => {
+  it('numero do evento com ou sem EVT e traco', () => {
+    expect(termosBuscaEvento('EVT-20261021-0025').protocolo).toBe('202610210025');
+    expect(termosBuscaEvento('0025').protocolo).toBe('0025');
+    expect(termosBuscaEvento('20261021-0025').protocolo).toBe('202610210025');
+  });
+  it('placa e nome', () => {
+    expect(termosBuscaEvento('abc1d23')).toMatchObject({ placa: 'ABC1D23', protocolo: null });
+    expect(termosBuscaEvento('Gilmar Aguiar')).toMatchObject({ nome: 'Gilmar Aguiar', placa: null, protocolo: null });
+    expect(termosBuscaEvento('a')).toEqual({ protocolo: null, placa: null, nome: null });
+  });
+  it('protocoloCasa compara so os digitos', () => {
+    expect(protocoloCasa('EVT-20261021-0025', '0025')).toBe(true);
+    expect(protocoloCasa('EVT-20261021-0025', '0026')).toBe(false);
   });
 });

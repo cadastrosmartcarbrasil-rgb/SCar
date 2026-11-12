@@ -8,6 +8,8 @@ import { Modal } from '@/components/ui/modal';
 import { FormField, Input, MoneyInput, Select, Textarea } from '@/components/ui/field';
 import { SeletorFornecedor } from '@/components/fornecedores/seletor-fornecedor';
 import { SeletorAssociado } from '@/components/associados/seletor-associado';
+import { SeletorEvento } from '@/components/eventos/seletor-evento';
+import { useContextoEvento } from '@/hooks/use-evento-vinculo';
 import { usePlanoContas, useRegionais } from '@/hooks/use-config';
 import { opcoesParaEscolher } from '@/lib/regional';
 import { useCentrosCusto, useSaveLancamento } from '@/hooks/use-financeiro';
@@ -64,7 +66,7 @@ export function LancamentoModal({
   aberto,
   onClose,
   inicial,
-  evento,
+  evento: eventoDaTela,
   onSalvo,
 }: {
   aberto: boolean;
@@ -98,6 +100,27 @@ export function LancamentoModal({
 
   const set = (patch: Form) => setForm((p) => ({ ...p, ...patch }));
   const receita = form.tipo === 'RECEITA';
+
+  // Aberto pelo Financeiro (sem o contexto da tela do evento): o evento ligado
+  // ao titulo e lido do banco, e pode ser escolhido/trocado aqui.
+  const { data: contextoCarregado } = useContextoEvento(eventoDaTela ? null : form.evento_id);
+  const evento: ContextoEvento | undefined = eventoDaTela ?? contextoCarregado ?? undefined;
+  const vinculaPeloFinanceiro = !eventoDaTela && !receita;
+
+  function vincularEvento(e: { id: string; regional_id: string | null } | null) {
+    if (!e) {
+      // Desvincular: a indenizacao ao associado do evento deixa de fazer sentido.
+      const eraIndenizacao = !!contextoCarregado?.associado && form.cliente_id === contextoCarregado.associado.id;
+      return set({ evento_id: null, evento_terceiro_id: null, ...(eraIndenizacao ? { cliente_id: null } : {}) });
+    }
+    set({
+      evento_id: e.id,
+      evento_terceiro_id: null,
+      cliente_id: null,
+      // Sem unidade escolhida, o titulo vai para a unidade do evento.
+      regional_id: form.regional_id ?? e.regional_id ?? null,
+    });
+  }
 
   // Indenizacao ao proprio associado do evento (0156): o favorecido e ele,
   // sem fornecedor nem terceiro.
@@ -245,6 +268,20 @@ export function LancamentoModal({
               </Select>
             </FormField>
           </div>
+
+          {vinculaPeloFinanceiro && (
+            <FormField label="Evento relacionado (opcional)">
+              <SeletorEvento
+                escolhido={form.evento_id ? contextoCarregado?.evento ?? null : null}
+                onEscolher={(e) => vincularEvento(e)}
+                onLimpar={() => vincularEvento(null)}
+              />
+              <p className="mt-1 text-[0.7188rem] text-slate-500">
+                Reparo, peça ou indenização de evento: ligue ao evento para o associado/terceiro e o número aparecerem
+                na lista e na aba Financeiro do evento.
+              </p>
+            </FormField>
+          )}
 
           {form.evento_id && evento && (
             <div className="space-y-2 rounded-xl border border-cyan-200 bg-cyan-50/50 p-3">

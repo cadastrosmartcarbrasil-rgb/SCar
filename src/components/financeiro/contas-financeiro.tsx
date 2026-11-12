@@ -69,6 +69,7 @@ export function ContasFinanceiro({
   const [centroCustoId, setCentroCustoId] = useState('');
   const [fornecedorId, setFornecedorId] = useState('');
   const [busca, setBusca] = useState('');
+  const [soSemEvento, setSoSemEvento] = useState(false);
 
   const [editando, setEditando] = useState<Partial<LancamentoComRel> | null>(null);
   const [baixando, setBaixando] = useState<LancamentoComRel | null>(null);
@@ -95,14 +96,15 @@ export function ContasFinanceiro({
 
   const lista = useMemo(() => {
     const termo = busca.trim().toLowerCase();
-    if (!termo) return lancamentos ?? [];
-    return (lancamentos ?? []).filter((l) =>
+    const base = soSemEvento ? (lancamentos ?? []).filter(semEvento) : lancamentos ?? [];
+    if (!termo) return base;
+    return base.filter((l) =>
       [l.descricao, l.numero_documento, l.fornecedores?.razao_social, l.fornecedores?.nome_fantasia, l.evento_terceiros?.nome, l.evento_terceiros?.codigo, l.clientes?.nome_razao_social,
         l.eventos_sinistro?.numero_protocolo, l.eventos_sinistro?.clientes?.nome_razao_social, l.centros_custo?.nome]
         .filter(Boolean)
         .some((campo) => String(campo).toLowerCase().includes(termo)),
     );
-  }, [lancamentos, busca]);
+  }, [lancamentos, busca, soSemEvento]);
 
   const totais = useMemo(() => {
     const receber = lista.filter((l) => l.tipo === 'RECEITA' && l.status !== 'cancelado');
@@ -226,6 +228,11 @@ export function ContasFinanceiro({
             permiteCadastrar={false}
           />
         </div>
+        <label className="flex cursor-pointer items-center gap-1.5 text-xs text-slate-600"
+          title="Reparos e indenizações (4.1.4.02 / 4.1.4.03) que não estão ligados a evento nenhum">
+          <input type="checkbox" checked={soSemEvento} onChange={(e) => setSoSemEvento(e.target.checked)} />
+          Só despesas de evento sem vínculo
+        </label>
         <div className="relative ml-auto">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input

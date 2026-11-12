@@ -206,3 +206,29 @@ export function lancamentoDaCotacao(
     competencia: ctx.hoje,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Vincular um titulo do Financeiro a um evento
+// ---------------------------------------------------------------------------
+/**
+ * O que procurar a partir do texto digitado: o numero do evento (com ou sem
+ * "EVT-", com ou sem traco), a placa e o nome do associado.
+ */
+export function termosBuscaEvento(bruto: string): { protocolo: string | null; placa: string | null; nome: string | null } {
+  const t = (bruto ?? '').trim();
+  if (t.length < 2) return { protocolo: null, placa: null, nome: null };
+  const alnum = t.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const semEvt = alnum.replace(/^EVT/, '');
+  const digitos = semEvt.replace(/\D/g, '');
+  // Protocolo: EVT-AAAAMMDD-NNNN. Quem digita "0025" ou "20261021-0025" procura pelos digitos.
+  const protocolo = digitos.length >= 3 && digitos.length === semEvt.length ? digitos : null;
+  const placa = alnum.length >= 3 && alnum.length <= 7 && /[A-Z]/.test(alnum) && /\d/.test(alnum) ? alnum : null;
+  const nome = /[A-Za-zÀ-ÿ]/.test(t) && t.replace(/[^A-Za-zÀ-ÿ ]/g, '').trim().length >= 3
+    ? t.replace(/[%_,()*]/g, ' ').trim() : null;
+  return { protocolo, placa, nome };
+}
+
+/** "EVT-20261021-0025" casa "202610210025", "0025", "20261021-0025". */
+export function protocoloCasa(numero: string | null | undefined, digitos: string): boolean {
+  return (numero ?? '').replace(/\D/g, '').includes(digitos);
+}
