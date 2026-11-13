@@ -3,7 +3,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import type {
+  ComissaoDaMatriz,
   ComissaoRelatorioLinha,
+  ComissoesFranquiaLotesRow,
   ComissaoMatrizDesempenho,
   ComissaoMatrizPrevia,
   ComissoesConfigRow,
@@ -161,6 +163,67 @@ export function useRelatorioConsultores(inicio: string, fim: string, regionalId:
         valor_assistencia: Number(l.valor_assistencia),
         valor_comissao: Number(l.valor_comissao),
       }));
+    },
+  });
+}
+
+/** 0200 — o relatorio do PROPRIO vendedor (portal), a mesma fonte da matriz. */
+export function useRelatorioVendedor(inicio: string, fim: string, ativo = true) {
+  const supabase = createClient();
+  return useQuery<ComissaoRelatorioLinha[]>({
+    queryKey: ['comissoes-matriz', 'relatorio-vendedor', inicio, fim],
+    enabled: ativo && Boolean(inicio && fim && fim >= inicio),
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('vendedor_comissoes_relatorio_json', { p_inicio: inicio, p_fim: fim });
+      if (error) throw error;
+      return ((data ?? []) as ComissaoRelatorioLinha[]).map((l) => ({
+        ...l,
+        valor_recebido: Number(l.valor_recebido),
+        taxa: Number(l.taxa),
+        valor_assistencia: Number(l.valor_assistencia),
+        valor_comissao: Number(l.valor_comissao),
+      }));
+    },
+  });
+}
+
+/** 0200 — o que a franquia tem a receber da matriz no periodo (credito). */
+export function useComissaoDaMatriz(regionalId: string | null, inicio: string, fim: string) {
+  const supabase = createClient();
+  return useQuery<ComissaoDaMatriz | null>({
+    queryKey: ['comissoes-matriz', 'da-matriz', regionalId, inicio, fim],
+    enabled: Boolean(inicio && fim && fim >= inicio),
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('regional_comissao_da_matriz', {
+        p_regional_id: regionalId || null, p_inicio: inicio, p_fim: fim,
+      });
+      if (error) throw error;
+      if (!data) return null;
+      const d = data as Record<string, unknown>;
+      return {
+        destino: d.destino as ComissaoDaMatriz['destino'],
+        taxa: Number(d.taxa), base_recebida: Number(d.base_recebida), valor_estimado: Number(d.valor_estimado),
+        apurado: Number(d.apurado), a_pagar: Number(d.a_pagar), pago: Number(d.pago),
+      };
+    },
+  });
+}
+
+/** 0200 — repasse da franquia: 1 titulo por consultor, pelo periodo do credito. */
+export function useGerarRepasseFranquia() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (p: { regionalId: string | null; inicio: string; fim: string; vencimento: string }) => {
+      const { data, error } = await supabase.rpc('regional_gerar_repasse_comissoes', {
+        p_regional_id: p.regionalId || null, p_inicio: p.inicio, p_fim: p.fim, p_vencimento: p.vencimento,
+      });
+      if (error) throw error;
+      return data as ComissoesFranquiaLotesRow;
+    },
+    onSuccess: () => {
+      invalidar(qc);
+      qc.invalidateQueries({ queryKey: ['regional'] });
     },
   });
 }

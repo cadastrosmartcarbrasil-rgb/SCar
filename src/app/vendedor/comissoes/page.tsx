@@ -1,125 +1,24 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Download, HandCoins, Wallet } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Select } from '@/components/ui/field';
-import {
-  FiltroPeriodo, Indicador, Vazio, baixarCsv, periodoPreset, type Periodo,
-} from '@/components/financeiro/ui-financeiro';
-import { useComissoesDoVendedor } from '@/hooks/use-vendedor';
-import { resumoComissoes } from '@/lib/vendedor';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { Info } from 'lucide-react';
+import { RelatorioConsultores } from '@/components/comissoes/relatorio-consultores';
 
 export default function ComissoesVendedorPage() {
-  const [periodo, setPeriodo] = useState<Periodo>(() => periodoPreset('mes'));
-  const [status, setStatus] = useState('');
-  const { data: comissoes, isLoading } = useComissoesDoVendedor({ ...periodo, status });
-
-  const totais = useMemo(() => resumoComissoes(comissoes ?? []), [comissoes]);
-
-  function exportar() {
-    baixarCsv(`minhas-comissoes-${periodo.inicio}-a-${periodo.fim}.csv`, [
-      ['Data', 'Placa', 'Associado', 'Tipo', 'Valor', 'Situação'],
-      ...(comissoes ?? []).map((c) => [
-        c.created_at.slice(0, 10), c.placa ?? '', c.associado ?? '',
-        c.is_adesao ? 'Adesão' : 'Recorrente', Number(c.valor_comissao), c.status_pagamento,
-      ]),
-    ]);
-  }
-
   return (
     <div className="space-y-4">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Minhas comissões</h1>
         <p className="mt-0.5 text-sm text-slate-500">
-          O que você tem a receber e o que já foi pago.
+          A comissão de cada boleto recebido dos seus associados, pelo dia em que o pagamento creditou no banco.
         </p>
       </header>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Indicador titulo="A receber" valor={totais.pendente} icon={HandCoins} tom="alerta"
-          detalhe="Ainda não repassado pela franquia" carregando={isLoading} />
-        <Indicador titulo="Recebido no período" valor={totais.pago} icon={Wallet} tom="receita"
-          detalhe="Já pago a você" carregando={isLoading} />
-        <Indicador titulo="Total no período" valor={totais.total} icon={HandCoins} tom="neutro"
-          detalhe={`${formatCurrency(totais.adesao)} de adesão · ${formatCurrency(totais.recorrente)} recorrente`}
-          carregando={isLoading} />
-      </div>
+      <RelatorioConsultores matriz={false} regionais={[]} vendedor />
 
-      <FiltroPeriodo periodo={periodo} onChange={setPeriodo}>
-        <Select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full sm:w-40">
-          <option value="">Todas</option>
-          <option value="pendente">A receber</option>
-          <option value="pago">Pagas</option>
-        </Select>
-        <Button variant="secondary" onClick={exportar} disabled={(comissoes ?? []).length === 0}>
-          <Download className="mr-1.5 h-4 w-4" /> Exportar
-        </Button>
-      </FiltroPeriodo>
-
-      <Card>
-        <CardContent className="p-4">
-          {isLoading ? (
-            <p className="py-6 text-center text-sm text-slate-400">Carregando…</p>
-          ) : (comissoes ?? []).length === 0 ? (
-            <Vazio
-              icon={HandCoins}
-              titulo="Nenhuma comissão no período"
-              descricao="A comissão aparece aqui quando a sua venda entra na base e o título e liquidado."
-            />
-          ) : (
-            <div className="-mx-4 overflow-x-auto sm:mx-0">
-              <table className="w-full min-w-[600px] text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200 text-left text-[0.6875rem] uppercase tracking-wide text-slate-400">
-                    <th className="py-2.5 font-semibold">Data</th>
-                    <th className="py-2.5 font-semibold">Associado</th>
-                    <th className="py-2.5 font-semibold">Placa</th>
-                    <th className="py-2.5 font-semibold">Tipo</th>
-                    <th className="py-2.5 text-right font-semibold">Valor</th>
-                    <th className="py-2.5 font-semibold">Situação</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
-                  {(comissoes ?? []).map((c) => (
-                    <tr key={c.id}>
-                      <td className="tnum py-2.5 text-slate-600">{formatDate(c.created_at)}</td>
-                      <td className="py-2.5 font-medium text-slate-800">{c.associado ?? '—'}</td>
-                      <td className="py-2.5 font-mono text-xs uppercase text-slate-500">{c.placa ?? '—'}</td>
-                      <td className="py-2.5">
-                        <span className={`rounded-full px-2 py-0.5 text-[0.6875rem] font-medium ${
-                          c.is_adesao ? 'bg-cyan-50 text-cyan-700' : 'bg-slate-100 text-slate-600'
-                        }`}>
-                          {c.is_adesao ? 'Adesão' : 'Recorrente'}
-                        </span>
-                      </td>
-                      <td className="tnum py-2.5 text-right font-semibold text-slate-800">
-                        {formatCurrency(c.valor_comissao)}
-                      </td>
-                      <td className="py-2.5">
-                        <span className={`rounded-full px-2 py-0.5 text-[0.6875rem] font-medium ring-1 ring-inset ${
-                          c.status_pagamento === 'pago'
-                            ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
-                            : 'bg-amber-50 text-amber-700 ring-amber-200'
-                        }`}>
-                          {c.status_pagamento === 'pago' ? 'Paga' : 'A receber'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <p className="rounded-xl border border-slate-200 bg-superficie px-3 py-2.5 text-[0.7188rem] leading-relaxed text-slate-500">
-        A adesão recebida por você <b>na hora</b> fica integralmente com você e não passa pelo
-        financeiro da empresa — por isso ela não aparece neste extrato. O que está aqui é o que a
-        empresa recebeu (boleto, PIX ou cartão) e vai repassar a você.
+      <p className="flex items-start gap-1.5 rounded-xl border border-slate-200 bg-superficie px-3 py-2.5 text-xs leading-relaxed text-slate-500">
+        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+        Aqui está só a comissão recorrente. A adesão é tratada à parte, em boleto avulso próprio, e não se mistura
+        com a recorrência.
       </p>
     </div>
   );

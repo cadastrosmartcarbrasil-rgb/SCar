@@ -1,147 +1,139 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
-import { BarChart3, Download } from 'lucide-react';
+import { HandCoins, Info, Landmark } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Select } from '@/components/ui/field';
-import {
-  FiltroPeriodo, Indicador, Vazio, baixarCsv, periodoPreset, type Periodo,
-} from '@/components/financeiro/ui-financeiro';
-import { useComissoesRegional, useRepassarComissao } from '@/hooks/use-regional';
-import { somarMoeda } from '@/lib/money';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { FormField, Input } from '@/components/ui/field';
+import { Modal } from '@/components/ui/modal';
+import { RelatorioConsultores } from '@/components/comissoes/relatorio-consultores';
 import { useUnidadeAtual } from '@/components/regional/contexto-unidade';
+import { useComissaoDaMatriz, useGerarRepasseFranquia } from '@/hooks/use-comissoes';
+import { formatCurrency } from '@/lib/utils';
 
-export default function ComissoesRegionalPage() {
-  const [periodo, setPeriodo] = useState<Periodo>(() => periodoPreset('mes'));
-  const { regionalId } = useUnidadeAtual();
-  const [status, setStatus] = useState('');
-  const { data: comissoes, isLoading } = useComissoesRegional({ regionalId, ...periodo, status });
-  const repassar = useRepassarComissao();
+const dataBR = (s: string) => `${s.slice(8, 10)}/${s.slice(5, 7)}/${s.slice(0, 4)}`;
 
-  // Repassar = virar contas a pagar da unidade. O titulo nasce no financeiro
-  // da franquia (conta 4.1.2.01) e a baixa e feita la.
-  function repassarComissao(id: string, vendedor: string) {
-    repassar.mutate(id, {
-      onSuccess: () => toast.success(`Repasse de ${vendedor} lançado no financeiro da unidade`),
+function diasDepois(n: number) {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * O que a franquia recebe da matriz no período (pela data do crédito): a taxa
+ * da unidade sobre o recebido da carteira — a mesma conta da Gestão de comissões.
+ */
+function ComissaoDaMatrizCard({ regionalId, periodo }: { regionalId: string | null; periodo: { inicio: string; fim: string } }) {
+  const { data, isLoading } = useComissaoDaMatriz(regionalId, periodo.inicio, periodo.fim);
+  if (isLoading || !data || data.destino !== 'FRANQUIA') return null;
+  const pct = `${(data.taxa * 100).toFixed(2).replace('.', ',').replace(',00', '')}%`;
+  return (
+    <Card>
+      <CardContent className="flex flex-wrap items-center gap-x-8 gap-y-2 pt-4 text-sm">
+        <span className="flex items-center gap-2 font-semibold text-slate-800">
+          <Landmark className="h-4 w-4 text-cyan-600" aria-hidden /> A receber da matriz no período
+        </span>
+        <span className="tnum">
+          <span className="text-slate-500">Recebido da carteira </span>{formatCurrency(data.base_recebida)}
+          <span className="text-slate-500"> × {pct} = </span>
+          <b className="text-slate-900">{formatCurrency(data.valor_estimado)}</b>
+        </span>
+        <span className="tnum text-xs text-slate-500">
+          Lançado pela matriz: {formatCurrency(data.apurado)} · a pagar {formatCurrency(data.a_pagar)} · pago {formatCurrency(data.pago)}
+        </span>
+      </CardContent>
+    </Card>
+  );
+}
+
+function GerarRepasse({
+  regionalId, nome, periodo, aRepassar, invertido,
+}: {
+  regionalId: string | null; nome: string; periodo: { inicio: string; fim: string }; aRepassar: number; invertido: boolean;
+}) {
+  const [aberto, setAberto] = useState(false);
+  const [vencimento, setVencimento] = useState(() => diasDepois(5));
+  const gerar = useGerarRepasseFranquia();
+
+  function confirmar() {
+    gerar.mutate({ regionalId, ...periodo, vencimento }, {
+      onSuccess: (l) => {
+        toast.success(`${l.qtd_lancamentos} título(s) no contas a pagar da unidade — ${formatCurrency(l.valor_total)}`);
+        setAberto(false);
+      },
       onError: (e: unknown) => toast.error((e as Error).message),
     });
   }
 
-  const totais = useMemo(() => {
-    const lista = comissoes ?? [];
-    return {
-      total: somarMoeda(...lista.map((c) => Number(c.valor_comissao))),
-      pendente: somarMoeda(...lista.filter((c) => c.status_pagamento === 'pendente').map((c) => Number(c.valor_comissao))),
-      adesao: somarMoeda(...lista.filter((c) => c.is_adesao).map((c) => Number(c.valor_comissao))),
-    };
-  }, [comissoes]);
+  return (
+    <>
+      <Card>
+        <CardContent className="flex flex-wrap items-center justify-between gap-3 pt-4">
+          <div className="text-sm">
+            <p className="flex items-center gap-1.5 font-semibold text-slate-800">
+              <HandCoins className="h-4 w-4 text-amber-600" aria-hidden /> Repasse aos consultores
+            </p>
+            <p className="text-xs text-slate-500">
+              Um título por consultor no contas a pagar da unidade, com tudo o que creditou de {dataBR(periodo.inicio)} a{' '}
+              {dataBR(periodo.fim)} e ainda não foi repassado. A baixa é feita em Financeiro.
+            </p>
+          </div>
+          <Button onClick={() => setAberto(true)} disabled={invertido || aRepassar <= 0}>
+            Gerar repasse ({formatCurrency(aRepassar)})
+          </Button>
+        </CardContent>
+      </Card>
 
-  function exportar() {
-    baixarCsv(`comissoes-${periodo.inicio}-a-${periodo.fim}.csv`, [
-      ['Data', 'Vendedor', 'Placa', 'Tipo', 'Valor', 'Situação'],
-      ...(comissoes ?? []).map((c) => [
-        c.created_at.slice(0, 10), c.vendedor_nome, c.placa ?? '',
-        c.is_adesao ? 'Adesão' : 'Recorrente', Number(c.valor_comissao), c.status_pagamento,
-      ]),
-    ]);
-  }
+      <Modal open={aberto} onClose={() => setAberto(false)} title="Gerar repasse do período">
+        <div className="space-y-4 text-sm">
+          <p className="text-slate-600">
+            {nome}: <b>{formatCurrency(aRepassar)}</b> a repassar, crédito de {dataBR(periodo.inicio)} a {dataBR(periodo.fim)}.
+            Cada consultor ganha um título com os boletos dele; cancelar o título devolve os boletos para o próximo repasse.
+          </p>
+          <FormField label="Vencimento dos títulos">
+            <Input type="date" value={vencimento} onChange={(e) => setVencimento(e.target.value)} />
+          </FormField>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setAberto(false)}>Voltar</Button>
+            <Button onClick={confirmar} disabled={!vencimento || gerar.isPending}>
+              {gerar.isPending ? 'Gerando…' : 'Gerar no contas a pagar'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    </>
+  );
+}
+
+export default function ComissoesRegionalPage() {
+  const { regionalId, nome } = useUnidadeAtual();
 
   return (
     <div className="space-y-5">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Comissões</h1>
         <p className="mt-0.5 text-sm text-slate-500">
-          O que a unidade deve aos vendedores e o que já foi repassado.
+          A comissão recorrente da equipe, pelo dia em que o recebimento creditou no banco — os mesmos números da matriz.
         </p>
       </header>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Indicador titulo="Comissão no período" valor={totais.total} icon={BarChart3} tom="neutro"
-          detalhe={`${(comissoes ?? []).length} lançamento(s)`} />
-        <Indicador titulo="A repassar" valor={totais.pendente} icon={BarChart3} tom="alerta"
-          detalhe="Pendente de pagamento ao vendedor" />
-        <Indicador titulo="De adesão" valor={totais.adesao} icon={BarChart3} tom="destaque"
-          detalhe="Primeira mensalidade da venda" />
-      </div>
+      <RelatorioConsultores
+        matriz={false}
+        regionais={[]}
+        unidade={{ id: regionalId, nome }}
+        extra={({ periodo, aRepassar, invertido }) => (
+          <div className="space-y-3">
+            <ComissaoDaMatrizCard regionalId={regionalId} periodo={periodo} />
+            <GerarRepasse regionalId={regionalId} nome={nome} periodo={periodo} aRepassar={aRepassar} invertido={invertido} />
+          </div>
+        )}
+      />
 
-      <FiltroPeriodo periodo={periodo} onChange={setPeriodo}>
-        <label className="block">
-          <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-400">Situação</span>
-          <Select className="mt-1 w-40 py-1.5" value={status} onChange={(e) => setStatus(e.target.value)}>
-            <option value="">Todas</option>
-            <option value="pendente">Pendente</option>
-            <option value="pago">Pago</option>
-          </Select>
-        </label>
-        <Button variant="secondary" className="ml-auto" onClick={exportar} disabled={(comissoes ?? []).length === 0}>
-          <Download className="h-4 w-4" /> Exportar
-        </Button>
-      </FiltroPeriodo>
-
-      <Card>
-        <CardContent className="overflow-x-auto pt-5">
-          {isLoading ? (
-            <p className="py-6 text-center text-sm text-slate-400">Carregando...</p>
-          ) : (comissoes ?? []).length === 0 ? (
-            <Vazio icon={BarChart3} titulo="Nenhuma comissão no período"
-              descricao="As comissões aparecem aqui quando uma venda da equipe entra na base." />
-          ) : (
-            <table className="w-full min-w-[700px] text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-left text-[0.6875rem] uppercase tracking-wide text-slate-400">
-                  <th className="py-2.5 font-semibold">Data</th>
-                  <th className="py-2.5 font-semibold">Vendedor</th>
-                  <th className="py-2.5 font-semibold">Veiculo</th>
-                  <th className="py-2.5 font-semibold">Tipo</th>
-                  <th className="py-2.5 text-right font-semibold">Valor</th>
-                  <th className="py-2.5 font-semibold">Situação</th>
-                  <th className="py-2.5" />
-                </tr>
-              </thead>
-              <tbody>
-                {(comissoes ?? []).map((c) => (
-                  <tr key={c.id} className="border-b border-slate-50 last:border-0">
-                    <td className="tnum py-2.5 text-slate-600">{formatDate(c.created_at)}</td>
-                    <td className="py-2.5 font-medium text-slate-800">{c.vendedor_nome}</td>
-                    <td className="py-2.5 font-mono text-xs text-slate-500">{c.placa ?? '—'}</td>
-                    <td className="py-2.5">
-                      <span className={`rounded-full px-2 py-0.5 text-[0.6875rem] font-medium ${
-                        c.is_adesao ? 'bg-cyan-50 text-cyan-700' : 'bg-slate-100 text-slate-600'
-                      }`}>
-                        {c.is_adesao ? 'Adesão' : 'Recorrente'}
-                      </span>
-                    </td>
-                    <td className="tnum py-2.5 text-right font-semibold text-slate-800">{formatCurrency(c.valor_comissao)}</td>
-                    <td className="py-2.5">
-                      <span className={`rounded-full px-2 py-0.5 text-[0.6875rem] font-medium ring-1 ring-inset ${
-                        c.status_pagamento === 'pago'
-                          ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
-                          : 'bg-amber-50 text-amber-700 ring-amber-200'
-                      }`}>
-                        {c.status_pagamento === 'pago' ? 'Pago' : 'A repassar'}
-                      </span>
-                    </td>
-                    <td className="py-2.5 text-right">
-                      {c.status_pagamento !== 'pago' && (
-                        <button
-                          onClick={() => repassarComissao(c.id, c.vendedor_nome)}
-                          disabled={repassar.isPending}
-                          className="rounded-lg px-2 py-1 text-[0.75rem] font-semibold text-brand-700 hover:bg-brand-50 disabled:opacity-50"
-                        >
-                          Repassar
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </CardContent>
-      </Card>
+      <p className="flex items-start gap-1.5 rounded-xl border border-slate-200 bg-superficie px-3 py-2.5 text-xs text-slate-500">
+        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+        A adesão não entra aqui: ela é cobrada em boleto avulso próprio e nunca se mistura com a recorrência.
+      </p>
     </div>
   );
 }

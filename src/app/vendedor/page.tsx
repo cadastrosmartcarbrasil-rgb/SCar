@@ -77,7 +77,7 @@ export default function PainelVendedorPage() {
         <Indicador
           titulo="Comissão a receber" valor={p?.comissao_pendente} icon={HandCoins} tom="alerta"
           carregando={isLoading}
-          detalhe={`Já recebido no período: ${formatCurrency(p?.comissao_paga)}`}
+          detalhe={`Do período, pelo crédito · já pago: ${formatCurrency(p?.comissao_paga)}`}
         />
         <Indicador
           titulo="Minha carteira" valor={p?.veiculos_ativos} icon={Car} tom="neutro"

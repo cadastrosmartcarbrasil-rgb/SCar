@@ -138,7 +138,8 @@ begin
     format('titulo da franquia e da MATRIZ, na data escolhida: %s', row_to_json(rec));
   select * into rec from lancamentos_financeiros where id = lv;
   assert rec.regional_id = rm and rec.valor_original = 31.50, 'titulo do consultor na unidade dele';
-  assert (select status_pagamento from comissoes_vendas where id = cv) = 'pago', 'portal nao repassa de novo';
+  -- 0200: a comissao do SCar so vira paga na QUITACAO (nao ao gerar)
+  assert (select status_pagamento from comissoes_vendas where id = cv) = 'pendente', 'gerar nao marca paga (0200)';
 
   begin
     perform gerar_contas_pagar_comissoes_matriz(date '2026-11-01', date '2026-12-10');
@@ -158,6 +159,7 @@ begin
   assert (select status from lancamentos_financeiros where id = lv) = 'quitado', 'baixa total quita';
   assert (select count(*) from comissoes_matriz where lancamento_id = lv and data_pagamento = date '2026-12-10') = 2,
     'quitou: comissoes pagas';
+  assert (select status_pagamento from comissoes_vendas where id = cv) = 'pago', 'quitou: a do SCar fica paga (0200)';
   update lancamentos_financeiros set status = 'cancelado' where id = lf;
   assert (select count(*) from comissoes_matriz where boleto_id = hf1 and lancamento_id is null) = 1,
     'cancelou: volta a pendente';

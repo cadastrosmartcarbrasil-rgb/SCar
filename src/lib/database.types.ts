@@ -181,6 +181,30 @@ export type ComissoesConfigRow = {
 };
 
 /** 0198 — cada envio das comissoes ao contas a pagar. */
+export type ComissoesFranquiaLotesRow = {
+  id: string;
+  regional_id: string;
+  periodo_inicio: string;
+  periodo_fim: string;
+  data_vencimento: string;
+  qtd_lancamentos: number;
+  qtd_itens: number;
+  valor_total: number;
+  created_by: string | null;
+  created_at: string;
+};
+
+/** 0200 — o que a franquia tem a receber da matriz no periodo (credito). */
+export type ComissaoDaMatriz = {
+  destino: 'FRANQUIA' | 'VENDEDORES' | 'NENHUM';
+  taxa: number;
+  base_recebida: number;
+  valor_estimado: number;
+  apurado: number;
+  a_pagar: number;
+  pago: number;
+};
+
 export type ComissoesMatrizLotesRow = {
   id: string;
   competencia: string;
@@ -4934,6 +4958,18 @@ export type Database = {
       };
       apurar_comissoes_matriz: {
         Args: { p_competencia: string; p_regional_id?: string | null };
+        Returns: Json;
+      };
+      regional_gerar_repasse_comissoes: {
+        Args: { p_regional_id: string | null; p_inicio: string; p_fim: string; p_vencimento: string };
+        Returns: ComissoesFranquiaLotesRow;
+      };
+      regional_comissao_da_matriz: {
+        Args: { p_regional_id: string | null; p_inicio: string; p_fim: string };
+        Returns: Json;
+      };
+      vendedor_comissoes_relatorio_json: {
+        Args: { p_inicio: string; p_fim: string };
         Returns: Json;
       };
       gerar_contas_pagar_comissoes_matriz: {

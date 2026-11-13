@@ -67,8 +67,9 @@ begin
   assert rec.leads_convertidos = 1, 'convertidos, veio ' || rec.leads_convertidos;
   assert rec.leads_abertos = 1, 'em aberto, veio ' || rec.leads_abertos;
   assert rec.taxa_conversao = 50.0, 'taxa de conversao, veio ' || rec.taxa_conversao;
-  assert rec.comissao_pendente = 500, 'comissao pendente, veio ' || rec.comissao_pendente;
-  assert rec.comissao_paga = 120, 'comissao paga no periodo, veio ' || rec.comissao_paga;
+  -- 0200: a comissao do painel sai do relatorio da matriz (boletos creditados,
+  -- sem adesao); sem boleto recebido no periodo, zero
+  assert rec.comissao_pendente = 0 and rec.comissao_paga = 0, 'comissao pela fonte da matriz, veio ' || rec.comissao_pendente;
   -- dia herdado da franquia (a Amanda nao definiu o proprio)
   assert rec.dia_entrada = 5, 'dia de entrada herdado da franquia, veio ' || rec.dia_entrada;
   assert rec.dia_recorrencia = 20, 'dia de recorrencia herdado, veio ' || rec.dia_recorrencia;

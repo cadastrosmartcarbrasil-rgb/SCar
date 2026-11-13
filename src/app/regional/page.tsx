@@ -11,6 +11,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Indicador, FiltroPeriodo, Vazio, periodoPreset, type Periodo } from '@/components/financeiro/ui-financeiro';
 import { useDesempenhoEquipe, usePainelRegional } from '@/hooks/use-regional';
+import { useRelatorioConsultores } from '@/hooks/use-comissoes';
+import { resumoPorConsultor, totaisRelatorio } from '@/lib/comissoes-relatorio';
 import { formatCurrency } from '@/lib/utils';
 import { avisoCobrancaExterna, composicaoDaCarteira } from '@/lib/regional';
 import { useUnidadeAtual } from '@/components/regional/contexto-unidade';
@@ -24,6 +26,9 @@ export default function PainelRegionalPage() {
   const filtro = { regionalId, ...periodo };
   const { data: p, isLoading } = usePainelRegional(filtro);
   const { data: equipe } = useDesempenhoEquipe(filtro);
+  // comissao da equipe pela MESMA fonte da matriz (0200): credito no periodo, sem adesao
+  const { data: relatorio, isLoading: carregandoCom } = useRelatorioConsultores(periodo.inicio, periodo.fim, regionalId);
+  const com = totaisRelatorio(resumoPorConsultor(relatorio ?? []));
   // Retrato de HOJE da inadimplencia (o mesmo numero da tela de cobranca).
   const { data: cob, isLoading: carregandoCob } = useCobrancaCarteira(regionalId);
 
@@ -124,9 +129,9 @@ export default function PainelRegionalPage() {
             : 'Leads que entraram na base no período'}
         />
         <Indicador
-          titulo="Comissão a pagar" valor={p?.comissao_vendedores_pend} icon={HandCoins} tom="alerta"
-          carregando={isLoading}
-          detalhe={`Hoje · já repassado (total): ${formatCurrency(p?.comissao_vendedores_paga)}`}
+          titulo="Comissão da equipe a repassar" valor={Math.round((com.comissao - com.paga) * 100) / 100}
+          icon={HandCoins} tom="alerta" carregando={carregandoCom}
+          detalhe={`Do período (crédito) · já pago: ${formatCurrency(com.paga)}`}
         />
       </div>
 

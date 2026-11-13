@@ -1,12 +1,12 @@
 'use client';
 
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useMemo, useState, type ReactNode } from 'react';
 import { ChevronDown, ChevronRight, FileSpreadsheet, FileText, Info, Search, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FormField, Input, Select } from '@/components/ui/field';
 import { Indicador, Vazio } from '@/components/financeiro/ui-financeiro';
 import { baixarExcelPlanilhas, imprimirRelatorios } from '@/components/financeiro/exportar';
-import { useRelatorioConsultores } from '@/hooks/use-comissoes';
+import { useRelatorioConsultores, useRelatorioVendedor } from '@/hooks/use-comissoes';
 import {
   SITUACAO_COMISSAO, filtrarRelatorio, periodoDoAtalho, resumoPorConsultor, tabelasDoRelatorio, totaisRelatorio,
   type SituacaoComissao,
@@ -23,9 +23,14 @@ const TOM: Record<'ok' | 'aviso' | 'neutro' | 'fora', string> = {
   fora: 'bg-slate-100 text-slate-400',
 };
 
-function Selo({ s }: { s: SituacaoComissao }) {
+function Selo({ s, rotulos }: { s: SituacaoComissao; rotulos?: Partial<Record<SituacaoComissao, string>> }) {
   const m = SITUACAO_COMISSAO[s];
-  return <span className={`whitespace-nowrap rounded-full px-1.5 py-0.5 text-[0.6875rem] font-semibold ${TOM[m.tom]}`}>{m.rotulo}</span>;
+  const tom = rotulos?.[s] && s === 'PELA_FRANQUIA' ? 'aviso' : m.tom;
+  return (
+    <span className={`whitespace-nowrap rounded-full px-1.5 py-0.5 text-[0.6875rem] font-semibold ${TOM[tom]}`}>
+      {rotulos?.[s] ?? m.rotulo}
+    </span>
+  );
 }
 
 const ATALHOS = [
@@ -40,26 +45,38 @@ const ATALHOS = [
  * CRÉDITO — o dia em que o recebimento caiu no banco —, não pelo vencimento.
  */
 export function RelatorioConsultores({
-  matriz, regionais,
+  matriz, regionais, unidade, vendedor = false, extra,
 }: {
   matriz: boolean;
   regionais: { id: string; nome: string }[];
+  /** portal da franquia (0200): a unidade fixa; "pela franquia" vira "a repassar" */
+  unidade?: { id: string | null; nome: string };
+  /** portal do vendedor (0200): so os boletos dele */
+  vendedor?: boolean;
+  /** bloco a mais logo abaixo dos indicadores (ex.: gerar o repasse do periodo) */
+  extra?: (ctx: { periodo: { inicio: string; fim: string }; aRepassar: number; invertido: boolean }) => ReactNode;
 }) {
   const [periodo, setPeriodo] = useState(() => periodoDoAtalho('mes'));
-  const [regionalId, setRegionalId] = useState('');
+  const [regionalSel, setRegionalId] = useState('');
+  const regionalId = unidade ? (unidade.id ?? '') : regionalSel;
+  const rotulos = unidade ? { PELA_FRANQUIA: 'A repassar' } : vendedor ? { PELA_FRANQUIA: 'A receber da franquia' } : undefined;
   const [vendedorId, setVendedorId] = useState('');
   const [busca, setBusca] = useState('');
   const [aberto, setAberto] = useState<string | null>(null);
 
   const invertido = periodo.fim < periodo.inicio;
-  const { data, isLoading, error } = useRelatorioConsultores(periodo.inicio, periodo.fim, regionalId || null, !invertido);
+  const qMatriz = useRelatorioConsultores(periodo.inicio, periodo.fim, regionalId || null, !invertido && !vendedor);
+  const qVend = useRelatorioVendedor(periodo.inicio, periodo.fim, !invertido && vendedor);
+  const { data, isLoading, error } = vendedor ? qVend : qMatriz;
   const todas = useMemo(() => data ?? [], [data]);
   const linhas = useMemo(() => filtrarRelatorio(todas, vendedorId, busca), [todas, vendedorId, busca]);
   const resumo = useMemo(() => resumoPorConsultor(linhas), [linhas]);
   const totais = useMemo(() => totaisRelatorio(resumo), [resumo]);
   const consultores = useMemo(() => resumoPorConsultor(todas), [todas]);
 
-  const nomeRegional = regionalId ? regionais.find((r) => r.id === regionalId)?.nome ?? 'Regional' : 'Todas as regionais';
+  const nomeRegional = unidade ? unidade.nome
+    : vendedor ? 'Minhas comissões'
+    : regionalId ? regionais.find((r) => r.id === regionalId)?.nome ?? 'Regional' : 'Todas as regionais';
   const escopo = [nomeRegional, vendedorId ? consultores.find((c) => (c.vendedorId ?? '__sem__') === vendedorId)?.nome : null]
     .filter(Boolean).join(' · ');
   const nomeArquivo = `comissoes-consultores-${periodo.inicio}-a-${periodo.fim}`;
@@ -101,7 +118,7 @@ export function RelatorioConsultores({
                 </Select>
               </FormField>
             )}
-            <FormField label="Consultor" className="w-64">
+            {!vendedor && <FormField label="Consultor" className="w-64">
               <Select value={vendedorId} onChange={(e) => setVendedorId(e.target.value)}>
                 <option value="">Todos os consultores</option>
                 {consultores.map((c) => (
@@ -110,7 +127,7 @@ export function RelatorioConsultores({
                   </option>
                 ))}
               </Select>
-            </FormField>
+            </FormField>}
             <FormField label="Buscar" className="min-w-[14rem] flex-1">
               <div className="relative">
                 <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -150,9 +167,13 @@ export function RelatorioConsultores({
           detalhe={`${totais.consultores} consultor(es) com comissão`} />
         <Indicador titulo="Paga / no contas a pagar" valor={totais.paga + totais.aPagar} carregando={isLoading}
           detalhe={`Paga ${formatCurrency(totais.paga)} · a pagar ${formatCurrency(totais.aPagar)}`} />
-        <Indicador titulo="A apurar · pela franquia" valor={totais.aApurar + totais.pelaFranquia} tom="alerta" carregando={isLoading}
-          detalhe={`A apurar ${formatCurrency(totais.aApurar)} · pela franquia ${formatCurrency(totais.pelaFranquia)}`} />
+        <Indicador titulo={unidade ? 'A repassar' : 'A apurar · pela franquia'} valor={totais.aApurar + totais.pelaFranquia}
+          tom="alerta" carregando={isLoading}
+          detalhe={unidade ? 'Ainda sem título no contas a pagar da unidade'
+            : `A apurar ${formatCurrency(totais.aApurar)} · pela franquia ${formatCurrency(totais.pelaFranquia)}`} />
       </div>
+
+      {extra?.({ periodo, aRepassar: totaisRelatorio(consultores).pelaFranquia, invertido })}
 
       <Card>
         <CardHeader>
@@ -180,12 +201,12 @@ export function RelatorioConsultores({
               <tbody>
                 {resumo.map((r) => {
                   const chave = r.vendedorId ?? '__sem__';
-                  const exp = aberto === chave;
+                  const exp = aberto === chave || (vendedor && aberto === null);
                   const det = exp ? linhas.filter((l) => (l.vendedor_id ?? '__sem__') === chave) : [];
                   return (
                     <Fragment key={chave}>
                       <tr className="tnum cursor-pointer border-b border-slate-100 hover:bg-slate-50"
-                        onClick={() => setAberto(exp ? null : chave)}>
+                        onClick={() => setAberto(exp ? (vendedor ? '' : null) : chave)}>
                         <td className="py-2 pr-3 font-medium text-slate-800">
                           <span className="inline-flex items-center gap-1">
                             {exp ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
@@ -235,7 +256,7 @@ export function RelatorioConsultores({
                                     </td>
                                     <td className="px-2 py-1 text-right font-semibold">{formatCurrency(l.valor_comissao)}</td>
                                     <td className="px-2 py-1">
-                                      <Selo s={l.situacao} />
+                                      <Selo s={l.situacao} rotulos={rotulos} />
                                       {l.documento && <span className="ml-1 text-slate-400">{l.documento}</span>}
                                     </td>
                                   </tr>

@@ -8,6 +8,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { FiltroPeriodo, Vazio, periodoPreset, type Periodo } from '@/components/financeiro/ui-financeiro';
 import { ModalVendedor } from '@/components/vendedores/modal-vendedor';
 import { useDesempenhoEquipe } from '@/hooks/use-regional';
+import { useRelatorioConsultores } from '@/hooks/use-comissoes';
+import { resumoPorConsultor } from '@/lib/comissoes-relatorio';
 import { useAlternarVendedorAtivo, useVendedoresLista } from '@/hooks/use-vendedores';
 import { formatCurrency } from '@/lib/utils';
 import {
@@ -30,6 +32,15 @@ export default function EquipeRegionalPage() {
   const [filtro, setFiltro] = useState<FiltroEquipe>('ativos');
   const { regionalId } = useUnidadeAtual();
   const { data: equipe, isLoading } = useDesempenhoEquipe({ regionalId, ...periodo });
+  // comissao pela MESMA fonte da matriz (0200): boletos creditados no periodo, sem adesao
+  const { data: relatorio } = useRelatorioConsultores(periodo.inicio, periodo.fim, regionalId);
+  const comissaoPor = useMemo(() => {
+    const m = new Map<string, { total: number; aRepassar: number }>();
+    for (const r of resumoPorConsultor(relatorio ?? [])) {
+      if (r.vendedorId) m.set(r.vendedorId, { total: r.comissao, aRepassar: Math.round((r.comissao - r.paga) * 100) / 100 });
+    }
+    return m;
+  }, [relatorio]);
 
   // A franquia cadastra a propria equipe aqui dentro — sem voltar ao sistema
   // de gestao. `listar_vendedores` ja limita a unidade de quem chama, e a RLS
@@ -169,7 +180,7 @@ export default function EquipeRegionalPage() {
                   <th className="py-2.5 text-right font-semibold">Convertidos</th>
                   <th className="py-2.5 text-right font-semibold">Conversão</th>
                   <th className="py-2.5 text-right font-semibold">Comissão no período</th>
-                  <th className="py-2.5 text-right font-semibold">A pagar hoje</th>
+                  <th className="py-2.5 text-right font-semibold">A repassar</th>
                   <th className="py-2.5 text-right font-semibold">Ações</th>
                 </tr>
               </thead>
@@ -206,9 +217,9 @@ export default function EquipeRegionalPage() {
                         {v.leads === 0 ? '—' : `${v.taxa_conversao.toFixed(1).replace('.', ',')}%`}
                       </span>
                     </td>
-                    <td className="tnum py-2.5 text-right text-slate-700">{formatCurrency(v.comissao_total)}</td>
-                    <td className={`tnum py-2.5 text-right font-semibold ${v.comissao_pendente > 0 ? 'text-amber-700' : 'text-slate-400'}`}>
-                      {formatCurrency(v.comissao_pendente)}
+                    <td className="tnum py-2.5 text-right text-slate-700">{formatCurrency(comissaoPor.get(v.vendedor_id)?.total ?? 0)}</td>
+                    <td className={`tnum py-2.5 text-right font-semibold ${(comissaoPor.get(v.vendedor_id)?.aRepassar ?? 0) > 0 ? 'text-amber-700' : 'text-slate-400'}`}>
+                      {formatCurrency(comissaoPor.get(v.vendedor_id)?.aRepassar ?? 0)}
                     </td>
                     <td className="py-2.5 text-right">
                       <div className="inline-flex gap-1">
@@ -259,9 +270,9 @@ export default function EquipeRegionalPage() {
                   <td className="tnum py-3 text-right">{lista.reduce((s, v) => s + v.leads, 0)}</td>
                   <td className="tnum py-3 text-right">{lista.reduce((s, v) => s + v.convertidos, 0)}</td>
                   <td />
-                  <td className="tnum py-3 text-right">{formatCurrency(lista.reduce((s, v) => s + Number(v.comissao_total), 0))}</td>
+                  <td className="tnum py-3 text-right">{formatCurrency(lista.reduce((s, v) => s + (comissaoPor.get(v.vendedor_id)?.total ?? 0), 0))}</td>
                   <td className="tnum py-3 text-right font-bold text-amber-700">
-                    {formatCurrency(lista.reduce((s, v) => s + Number(v.comissao_pendente), 0))}
+                    {formatCurrency(lista.reduce((s, v) => s + (comissaoPor.get(v.vendedor_id)?.aRepassar ?? 0), 0))}
                   </td>
                   <td />
                 </tr>
