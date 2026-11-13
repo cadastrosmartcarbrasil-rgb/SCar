@@ -88,6 +88,13 @@ begin
   raise notice 'OK pagamento cancela o aviso pendente';
 
   -- ============================================================ reservar
+  -- O teste simula o relogio (meio_dia de 11/11), mas a fila nasce com
+  -- proxima_tentativa_em = now() (relogio REAL). Sem ancorar, depois de 11/11 12h
+  -- nada fica "pronto" no instante simulado e o lote volta vazio. Ancora a fila
+  -- como se a rotina tivesse enfileirado as 06h do dia simulado.
+  update email_outbox set proxima_tentativa_em = timestamptz '2026-11-11 06:00:00-03'
+   where status = 'pendente';
+
   perform set_config('request.jwt.claim.sub', u_adm::text, false);
   begin
     perform * from reservar_lote_email(10, meio_dia);
