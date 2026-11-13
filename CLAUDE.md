@@ -4247,8 +4247,21 @@ Pedido do usuário: o carnê no padrão que a Smart Car já usa (modelo Sicredi 
 - **Texto das instruções:** sem "não receber após N dias" (o cadastro no Sicredi não define isso hoje); manda ao portal e
   ao contato da Empresa.
 
-## CANCELAMENTO DE BOLETO(S) COM MOTIVO (0157) — ⏳ ESCRITA, AINDA NÃO APLICADA
+## CANCELAMENTO DE BOLETO(S) COM MOTIVO (0157) — ✅ APLICADA E EM USO
 Pedido do usuário (28/10/2026): cancelar um ou vários boletos, com motivo, liberado por perfil ou extra.
+**✅ APLICADA e CONFERIDA em 13/11/2026** (`criar_cancelamento_boletos` existe e exige `perfil_pode('cobranca','cancelar')`
++ `cobranca_pode_cliente`; a célula está concedida a financeiro, gestor regional e **cobrança**). **EM USO REAL:** 40
+cancelamentos na base — **32 feitos por uma usuária do perfil Cobrança**, de 28/10 a 12/11/2026 —, 51 boletos de origem,
+**todos `BAIXADO` no Sicredi, 0 erro**. Conferido também em sessão simulada (transação revertida) com outra usuária de
+cobrança **sem permissão extra**: a célula, o escopo, a lista de boletos e a própria RPC passaram — o perfil basta.
+- **⚠️ O ALCANCE É `regionais_do_usuario()`, não o escopo da cobrança.** O botão vive no Histórico Financeiro, cuja lista
+  vem de `titulos_do_cliente`/`boletos_mutual_do_cliente` — e as duas travam em `pode_regional(cl.regional_id)`, enquanto
+  a Fila de Cobrança usa `cobranca_escopo()` (papel `cobranca` sem unidade = Brasil). Quem é da cobrança **sem unidade no
+  cadastro só enxerga boleto se tiver as UNIDADES DE ATUAÇÃO marcadas** (`supervisor_regionais`, 0131). Medido em
+  13/11/2026: 4 das 5 têm as 4 unidades e alcançam os 7.295 associados; a 5ª, presa a RIBEIRÃO PRETO, alcança 3.885 e
+  **não cancela boleto dos outros 3.410** (consistente com a Fila dela, que também só mostra RP).
+- **Gotcha:** `boletos_historico_select` é só `tem_acesso_global()` — a cobrança NÃO lê a tabela direto, só pelas RPCs
+  security definer. Tela nova que consultar `boletos_historico` pelo cliente nascerá vazia para ela.
 - **Permissão = a célula `cobranca.cancelar`**, que existia desde a 0111 e nada usava (seed: financeiro; admin
   sempre; os demais pela grade do perfil ou como extra da 0116). **Nenhuma estrutura de permissão nova.**
 - **Sem caminho paralelo: é a máquina da 2ª via (0121).** `criar_cancelamento_boletos(cliente, origens, motivo)`
