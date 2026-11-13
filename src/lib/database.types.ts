@@ -214,6 +214,9 @@ export type ComissoesMatrizRow = {
   lancamento_id: string | null;
   lote_id: string | null;
   data_pagamento: string | null;
+  /** 0199 — dia em que o recebimento creditou no banco (estimado = data do pagamento). */
+  data_credito: string | null;
+  credito_estimado: boolean;
   created_at: string;
 };
 
@@ -236,6 +239,30 @@ export type ComissaoMatrizDesempenho = {
   valor_recebido_vencidos: number;
   comissao_franquia: number;
   comissao_vendedor: number;
+};
+
+/** 0199 — uma linha por boleto x veiculo recebido no periodo (pela data do credito). */
+export type ComissaoRelatorioLinha = {
+  data_credito: string;
+  credito_estimado: boolean;
+  data_pagamento: string | null;
+  vencimento: string | null;
+  origem: 'SCAR' | 'MUTUAL';
+  boleto_id: string;
+  regional_id: string;
+  regional_nome: string;
+  quem_paga: 'MATRIZ' | 'FRANQUIA' | 'NENHUM';
+  vendedor_id: string | null;
+  vendedor_nome: string;
+  vendedor_ativo: boolean;
+  associado: string | null;
+  placa: string | null;
+  valor_recebido: number;
+  taxa: number;
+  valor_assistencia: number;
+  valor_comissao: number;
+  situacao: 'PAGO' | 'A_PAGAR' | 'PENDENTE' | 'NAO_APURADO' | 'PELA_FRANQUIA' | 'CONSULTOR_INATIVO' | 'SEM_COMISSAO' | 'SEM_CONSULTOR';
+  documento: string | null;
 };
 
 export type ComissaoMatrizPrevia = {
@@ -4892,6 +4919,14 @@ export type Database = {
       comissoes_matriz_desempenho: {
         Args: { p_competencia: string; p_meses?: number; p_regional_id?: string | null };
         Returns: ComissaoMatrizDesempenho[];
+      };
+      comissoes_consultores_relatorio_json: {
+        Args: { p_inicio: string; p_fim: string; p_regional_id?: string | null; p_vendedor_id?: string | null };
+        Returns: Json;
+      };
+      comissoes_consultores_relatorio: {
+        Args: { p_inicio: string; p_fim: string; p_regional_id?: string | null; p_vendedor_id?: string | null };
+        Returns: ComissaoRelatorioLinha[];
       };
       comissoes_matriz_previa: {
         Args: { p_competencia: string; p_regional_id?: string | null };

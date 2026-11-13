@@ -19,9 +19,29 @@ export interface TabelaExportavel {
 }
 
 export async function baixarExcel(nomeArquivo: string, t: TabelaExportavel) {
+  return baixarExcelPlanilhas(nomeArquivo, [t]);
+}
+
+/** Varias tabelas no mesmo arquivo, uma por aba (`aba` = nome da aba, ate 31). */
+export async function baixarExcelPlanilhas(
+  nomeArquivo: string,
+  tabelas: (TabelaExportavel & { aba?: string })[],
+) {
   const ExcelJS = (await import('exceljs')).default;
   const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet(t.titulo.slice(0, 31) || 'Relatório');
+  tabelas.forEach((t, i) => adicionarAba(wb, t, (t.aba ?? t.titulo).slice(0, 31) || `Relatório ${i + 1}`));
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nomeArquivo.endsWith('.xlsx') ? nomeArquivo : `${nomeArquivo}.xlsx`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function adicionarAba(wb: import('exceljs').Workbook, t: TabelaExportavel, nome: string) {
+  const ws = wb.addWorksheet(nome.replace(/[\\/?*[\]:]/g, ' '));
   ws.addRow([t.titulo]).font = { bold: true, size: 13 };
   if (t.subtitulo) ws.addRow([t.subtitulo]).font = { italic: true, color: { argb: 'FF555555' } };
   ws.addRow([]);
@@ -38,14 +58,6 @@ export async function baixarExcel(nomeArquivo: string, t: TabelaExportavel) {
     col.width = Math.min(48, Math.max(12, h.length + 4));
     if (moeda.has(i)) col.numFmt = '#,##0.00;[Red]-#,##0.00';
   });
-  const buf = await wb.xlsx.writeBuffer();
-  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = nomeArquivo.endsWith('.xlsx') ? nomeArquivo : `${nomeArquivo}.xlsx`;
-  a.click();
-  URL.revokeObjectURL(url);
 }
 
 const esc = (s: Celula) =>
@@ -58,9 +70,24 @@ const fmt = (v: Celula, moeda: boolean) =>
 
 /** Abre a tabela numa janela propria e chama a impressao (PDF pelo navegador). */
 export function imprimirRelatorio(t: TabelaExportavel) {
-  const moeda = new Set(t.colunasMoeda ?? []);
-  const linha = (l: Celula[], tag: 'td' | 'th') =>
-    `<tr>${l.map((v, i) => `<${tag} class="${moeda.has(i) ? 'n' : ''}">${fmt(v, moeda.has(i))}</${tag}>`).join('')}</tr>`;
+  imprimirRelatorios([t]);
+}
+
+/** Varias tabelas no mesmo PDF, cada uma comecando em pagina nova. */
+export function imprimirRelatorios(tabelas: TabelaExportavel[]) {
+  const t = tabelas[0];
+  if (!t) return;
+  const secao = (tb: TabelaExportavel, i: number) => {
+    const moeda = new Set(tb.colunasMoeda ?? []);
+    const linha = (l: Celula[], tag: 'td' | 'th') =>
+      `<tr${tag === 'td' && String(l[0] ?? '').startsWith('Subtotal ') ? ' class="sub"' : ''}>${l
+        .map((v, j) => `<${tag} class="${moeda.has(j) ? 'n' : ''}">${fmt(v, moeda.has(j))}</${tag}>`)
+        .join('')}</tr>`;
+    return `<section${i > 0 ? ' style="page-break-before:always"' : ''}>
+<h1>${esc(tb.titulo)}</h1>${tb.subtitulo ? `<p>${esc(tb.subtitulo)}</p>` : ''}
+<table><thead>${linha(tb.cabecalho, 'th')}</thead><tbody>${tb.linhas.map((l) => linha(l, 'td')).join('')}</tbody>
+${tb.rodape ? `<tfoot>${linha(tb.rodape, 'td')}</tfoot>` : ''}</table></section>`;
+  };
   const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${esc(t.titulo)}</title>
 <style>
   body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:24px;font-size:11px}
@@ -68,11 +95,10 @@ export function imprimirRelatorio(t: TabelaExportavel) {
   table{border-collapse:collapse;width:100%} th,td{border-bottom:1px solid #ddd;padding:4px 6px;text-align:left;vertical-align:top}
   th{background:#eef2f8;font-weight:bold} td.n,th.n{text-align:right;white-space:nowrap}
   tfoot td{font-weight:bold;border-top:2px solid #333}
+  tr.sub td{font-weight:bold;background:#f6f8fb;border-bottom:1px solid #999}
   @page{size:A4 landscape;margin:12mm}
 </style></head><body>
-<h1>${esc(t.titulo)}</h1>${t.subtitulo ? `<p>${esc(t.subtitulo)}</p>` : ''}
-<table><thead>${linha(t.cabecalho, 'th')}</thead><tbody>${t.linhas.map((l) => linha(l, 'td')).join('')}</tbody>
-${t.rodape ? `<tfoot>${linha(t.rodape, 'td')}</tfoot>` : ''}</table>
+${tabelas.map(secao).join('')}
 <p style="margin-top:12px">Emitido em ${new Date().toLocaleString('pt-BR')}</p>
 <script>window.onload=function(){window.print()}</script></body></html>`;
   const w = window.open('', '_blank');

@@ -6,7 +6,8 @@ import {
   Bar, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
 import {
-  Award, BadgePercent, Building2, Download, FileOutput, HandCoins, Info, Receipt, RefreshCw, Settings2,
+  Award, BadgePercent, Building2, Download, FileOutput, FileSpreadsheet, HandCoins, Info, LayoutDashboard, Receipt,
+  RefreshCw, Settings2,
   TrendingDown, TrendingUp, Trophy, Wallet,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { FormField, Input, Select } from '@/components/ui/field';
 import { Indicador, Vazio, baixarCsv } from '@/components/financeiro/ui-financeiro';
 import { GerarContasPagarModal } from '@/components/comissoes/gerar-contas-pagar-modal';
+import { RelatorioConsultores } from '@/components/comissoes/relatorio-consultores';
 import { useRegionais } from '@/hooks/use-config';
 import { useMeuPapel } from '@/hooks/use-vendas';
 import {
@@ -87,6 +89,7 @@ export default function ComissoesPage() {
   const matriz = papel === 'admin' || papel === 'financeiro';
   const podeVer = matriz || papel === 'gestor_regional';
 
+  const [aba, setAba] = useState<'painel' | 'relatorio'>('painel');
   const [competencia, setCompetencia] = useState(mesAtual);
   const [regionalId, setRegionalId] = useState('');
   const [modalGerar, setModalGerar] = useState(false);
@@ -149,6 +152,36 @@ export default function ComissoesPage() {
     );
   }
 
+  const abas = (
+    <nav className="flex flex-wrap gap-1 border-b border-slate-200" aria-label="Seções das comissões">
+      {([
+        { id: 'painel', rotulo: 'Painel por regional', icon: LayoutDashboard },
+        { id: 'relatorio', rotulo: 'Relatório por consultor', icon: FileSpreadsheet },
+      ] as const).map((a) => (
+        <button key={a.id} type="button" onClick={() => setAba(a.id)} aria-current={aba === a.id ? 'page' : undefined}
+          className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm transition ${
+            aba === a.id ? 'border-cyan-500 font-semibold text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+          <a.icon className="h-4 w-4" aria-hidden /> {a.rotulo}
+        </button>
+      ))}
+    </nav>
+  );
+
+  if (aba === 'relatorio') {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Comissões</h1>
+          <p className="mt-0.5 text-sm text-slate-500">
+            Relatório por consultor pela data do crédito no banco, exportável em Excel e PDF.
+          </p>
+        </div>
+        {abas}
+        <RelatorioConsultores matriz={matriz} regionais={(regionais ?? []).map((r) => ({ id: r.id, nome: r.nome }))} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -185,6 +218,8 @@ export default function ComissoesPage() {
           )}
         </div>
       </div>
+
+      {abas}
 
       {!comissionavel && (
         <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">

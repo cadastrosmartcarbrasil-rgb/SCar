@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import type {
+  ComissaoRelatorioLinha,
   ComissaoMatrizDesempenho,
   ComissaoMatrizPrevia,
   ComissoesConfigRow,
@@ -136,5 +137,30 @@ export function useGerarContasPagarComissoes() {
       return data as ComissoesMatrizLotesRow;
     },
     onSuccess: () => invalidar(qc),
+  });
+}
+
+/** 0199 — relatorio por consultor, pela DATA DO CREDITO no banco. */
+export function useRelatorioConsultores(inicio: string, fim: string, regionalId: string | null, ativo = true) {
+  const supabase = createClient();
+  return useQuery<ComissaoRelatorioLinha[]>({
+    queryKey: ['comissoes-matriz', 'relatorio', inicio, fim, regionalId],
+    enabled: ativo && Boolean(inicio && fim && fim >= inicio),
+    queryFn: async () => {
+      // jsonb numa resposta so: a lista de linhas seria cortada em 1.000
+      const { data, error } = await supabase.rpc('comissoes_consultores_relatorio_json', {
+        p_inicio: inicio,
+        p_fim: fim,
+        p_regional_id: regionalId || null,
+      });
+      if (error) throw error;
+      return ((data ?? []) as ComissaoRelatorioLinha[]).map((l) => ({
+        ...l,
+        valor_recebido: Number(l.valor_recebido),
+        taxa: Number(l.taxa),
+        valor_assistencia: Number(l.valor_assistencia),
+        valor_comissao: Number(l.valor_comissao),
+      }));
+    },
   });
 }
